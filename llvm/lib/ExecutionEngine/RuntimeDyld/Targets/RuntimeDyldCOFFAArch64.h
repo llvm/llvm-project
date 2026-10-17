@@ -66,6 +66,15 @@ static void write32AArch64Addr(void *T, uint64_t s, uint64_t p, int shift) {
   using namespace llvm::support::endian;
 
   uint64_t Imm = (s >> shift) - (p >> shift);
+  // ADRP's page offset is 21 bits signed (+/-4 GiB); fail loudly rather than
+  // truncate into a wild pointer.
+  if (!isInt<21>(static_cast<int64_t>(Imm))) {
+    report_fatal_error(Twine("ADRP target out of range: target=") + Twine(s) +
+                       " pc=" + Twine(p) +
+                       " delta=" + Twine(s > p ? s - p : p - s) +
+                       (s > p ? " (target above pc)" : " (target below pc)") +
+                       " -- needs a 21-bit signed page offset (+/-4 GiB)");
+  }
   uint32_t ImmLo = (Imm & 0x3) << 29;
   uint32_t ImmHi = (Imm & 0x1FFFFC) << 3;
   uint64_t Mask = (0x3 << 29) | (0x1FFFFC << 3);
@@ -107,6 +116,48 @@ public:
   Align getStubAlignment() override { return Align(8); }
 
   unsigned getMaxStubSize() const override { return 20; }
+
+  /// GOT slot in this section's stub area holding the address of \p Name, so
+  /// an ADRP can reach external symbols (e.g. DLL exports) beyond +/-4 GiB.
+  /// computeSectionStubBufSize reserves getMaxStubSize() per relocation, which
+  /// covers the 8 bytes.
+  uint64_t getGOTEntryOffset(unsigned SectionID, StubMap &Stubs, StringRef Name,
+                             bool CreateIfMissing) {
+    // Key on the symbol alone; ~0 cannot collide with a branch stub's offset.
+    RelocationValueRef Key;
+    Key.SectionID = SectionID;
+    Key.Offset = ~uint64_t(0);
+    Key.SymbolName = Name.data();
+
+    // RelocationValueRef compares symbol-name pointers rather than their
+    // contents, but paired COFF relocations need not carry the same pointer.
+    for (const auto &[StubKey, StubOffset] : Stubs)
+      if (StubKey.SectionID == SectionID && StubKey.Offset == ~uint64_t(0) &&
+          StubKey.SymbolName && StringRef(StubKey.SymbolName) == Name)
+        return StubOffset;
+    if (!CreateIfMissing)
+      return ~uint64_t(0);
+
+    SectionEntry &Sec = Sections[SectionID];
+    uint64_t EntryOffset = alignTo(Sec.getStubOffset(), 8);
+    Sec.advanceStubOffset(EntryOffset + 8 - Sec.getStubOffset());
+    Stubs[Key] = EntryOffset;
+
+    // Have the resolver write the symbol's absolute address into the slot.
+    RelocationEntry RE(SectionID, EntryOffset, COFF::IMAGE_REL_ARM64_ADDR64, 0,
+                       /*IsPCRel=*/false, Log2_64(8));
+    addRelocationForSymbol(RE, Name);
+
+    LLVM_DEBUG(dbgs() << " Created GOT entry for " << Name << " at offset "
+                      << EntryOffset << "\n");
+    return EntryOffset;
+  }
+
+  /// ADD (immediate, no shift): the second half of the ADRP+ADD idiom.
+  static bool isAddImmediate(uint32_t Inst) {
+    // sf 0 0 100010 sh imm12 Rn Rd with sh == 0; excludes ADDS (bit 29).
+    return (Inst & 0x7FC00000) == 0x11000000;
+  }
 
   std::tuple<uint64_t, uint64_t, uint64_t>
   generateRelocationStub(unsigned SectionID, StringRef TargetName,
@@ -231,14 +282,56 @@ public:
     case COFF::IMAGE_REL_ARM64_PAGEBASE_REL21: {
       uint32_t orig = read32le(Displacement);
       Addend = ((orig >> 29) & 0x3) | ((orig >> 3) & 0x1FFFFC);
+
+      // External symbols are routinely beyond ADRP's +/-4 GiB on Windows and
+      // there is no veneer, so route ADRP+ADD through a GOT slot. Only that
+      // idiom qualifies: ADRP+LDR reads the symbol's contents, and a non-zero
+      // addend cannot be expressed by a slot holding plain `sym`. LLVM codegen
+      // emits direct addresses as a MOVaddr pseudo and expands it after
+      // scheduling into this adjacent ADRP+ADD pair.
+      if (IsExtern && Addend == 0 &&
+          RelType == COFF::IMAGE_REL_ARM64_PAGEBASE_REL21) {
+        uint32_t NextInst = read32le(Displacement + 4);
+        if (isAddImmediate(NextInst) && ((NextInst >> 10) & 0xFFF) == 0) {
+          TargetOffset = getGOTEntryOffset(SectionID, Stubs, TargetName,
+                                           /*CreateIfMissing=*/true);
+          TargetSectionID = SectionID;
+          TargetName = StringRef();
+          IsExtern = false;
+          Addend = 0;
+        }
+      }
       break;
     }
     case COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L:
     case COFF::IMAGE_REL_ARM64_PAGEOFFSET_12A: {
       uint32_t orig = read32le(Displacement);
       Addend = ((orig >> 10) & 0xFFF);
+
+      // Partner of the ADRP above; no slot means that ADRP was left alone.
+      if (IsExtern && Addend == 0 &&
+          RelType == COFF::IMAGE_REL_ARM64_PAGEOFFSET_12A) {
+        uint64_t GOTOffset = getGOTEntryOffset(SectionID, Stubs, TargetName,
+                                               /*CreateIfMissing=*/false);
+        if (GOTOffset != ~uint64_t(0) && isAddImmediate(orig)) {
+          // ADD Xd, Xn, #imm -> LDR Xd, [Xn, #imm]: load the slot instead.
+          uint32_t Rd = orig & 0x1F;
+          uint32_t Rn = (orig >> 5) & 0x1F;
+          write32le(AddendSection.getAddressWithOffset(Offset),
+                    0xF9400000u | (Rn << 5) | Rd);
+
+          // 12L so the resolver scales the immediate for a 64-bit load.
+          RelType = COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L;
+          TargetOffset = GOTOffset;
+          TargetSectionID = SectionID;
+          TargetName = StringRef();
+          IsExtern = false;
+          Addend = 0;
+        }
+      }
       break;
     }
+
     case COFF::IMAGE_REL_ARM64_ADDR64: {
       Addend = read64le(Displacement);
       break;

@@ -1,5 +1,6 @@
+
 // RUN: llvm-mc -triple aarch64-windows -filetype obj -o %t.obj %s
-// RUN: llvm-rtdyld -triple aarch64-windows -dummy-extern dummy=0x79563413 -dummy-extern dummyA=0x78566879 -target-addr-start=40960000000000 -verify -check %s %t.obj
+// RUN: llvm-rtdyld -triple aarch64-windows -dummy-extern dummy=0x79563413 -dummy-extern dummyA=0x78566879 -dummy-extern far_data=0x1122334455667788 -dummy-extern near_data=40960000001000 -target-addr-start=40960000000000 -verify -check %s %t.obj
 
   .text
   .def _bnamed
@@ -79,6 +80,34 @@ adrp1:
 ldr1:
   ldr  x0, [x0, #:lo12:_const]
   ret
+
+# A far external address formed with ADRP+ADD is rewritten to ADRP+LDR through
+# a pointer slot in this section's stub area.
+# rtdyld-check: decode_operand(far_adrp, 1) = (stub_addr(COFF_AArch64.s.tmp.obj/.text, far_data)[32:12] - far_adrp[32:12])
+# rtdyld-check: (*{4}far_ldr)[31:22] = 0x3e5
+# rtdyld-check: decode_operand(far_ldr, 2) = stub_addr(COFF_AArch64.s.tmp.obj/.text, far_data)[11:3]
+# rtdyld-check: *{8}stub_addr(COFF_AArch64.s.tmp.obj/.text, far_data) = 0x1122334455667788
+  .globl _test_far_external_address
+  .align 2
+_test_far_external_address:
+far_adrp:
+  adrp x0, far_data
+far_ldr:
+  add x0, x0, far_data@PAGEOFF
+  ret
+
+# A non-zero page-offset addend cannot use a slot holding plain `sym`. Keep the
+# original ADRP+ADD pair instead of partially rewriting it to address the slot.
+# rtdyld-check: (*{4}near_addend_add)[31:22] = 0x244
+# rtdyld-check: decode_operand(near_addend_add, 2) = (near_data+8)[11:0]
+  .globl _test_external_address_with_addend
+  .align 2
+_test_external_address_with_addend:
+  adrp x0, near_data
+near_addend_add:
+  add x0, x0, near_data@PAGEOFF+8
+  ret
+
 
   .globl  _test_add_reloc
   .align  2
