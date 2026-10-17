@@ -10139,7 +10139,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     const GlobalValue *GV = G->getGlobal();
     const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
+        (!TT.isOSWindowsOrUEFI() || TT.isOSBinFormatELF() ||
+         TT.isOSBinFormatMachO()))
       return false;
   }
 
