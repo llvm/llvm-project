@@ -3161,6 +3161,14 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsTailCall)
     return false;
 
+  // On Windows, callers of functions whose calling convention guarantees tail
+  // calls need a frame pointer. Allow SelectionDAG isel to handle these calls,
+  // as that is where it gets requested.
+  if (Subtarget->isTargetWindows() &&
+      (CC == CallingConv::Tail || CC == CallingConv::SwiftTail ||
+       (CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt)))
+    return false;
+
   // FIXME: we could and should support this, but for now correctness at -O0 is
   // more important.
   if (Subtarget->isTargetILP32())

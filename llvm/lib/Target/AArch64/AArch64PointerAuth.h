@@ -21,6 +21,14 @@ constexpr AArch64PACKey::ID InitFiniKey = AArch64PACKey::IA;
 /// .fini_array. The value is ptrauth_string_discriminator("init_fini")
 constexpr unsigned InitFiniPointerConstantDiscriminator = 0xD9D4;
 
+/// Controls whether, for PAUTH_EPILOGUE_ENTRY_SP, we use the hint-space
+/// AUTI[AB]1716 instruction to authenticate the LR value, or whether we use
+/// an AUTI[AB] LR, X16 instruction instead.
+constexpr bool authenticatesLRViaX17(bool BranchProtectionPAuthLR,
+                                     bool HasPAuth) {
+  return BranchProtectionPAuthLR || !HasPAuth;
+}
+
 /// Variants of check performed on an authenticated pointer.
 ///
 /// In cases such as authenticating the LR value when performing a tail call
