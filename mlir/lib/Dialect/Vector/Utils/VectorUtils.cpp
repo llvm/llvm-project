@@ -328,8 +328,9 @@ bool vector::isLinearizableVector(VectorType type) {
 ///
 /// If the pre-conditions are met, the method checks for each destination
 /// dimension `d`:
-///   (1) destDimSize[rankDiff + d] <= maskShape[d]
-///   (2) destDimSize[rankDiff + d] <= index[d] + maskSize[d]
+///   (1) maskShape[d] <= destDimSize[rankDiff + d]
+///   (2) index[d] + maskSize[d] <= destDimSize[rankDiff + d]
+///   (3) maskShape[d] <= maskSize[d]
 ///
 /// rankDiff = rank(dest) - rank(mask).
 ///
@@ -388,7 +389,8 @@ static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
   if (cstIndices.size() != baseShape.size())
     return false;
 
-  // Go over all destination dims and check (1) and (2). Take into account that:
+  // Go over all destination dims and check (1), (2) and (3). Take into account
+  // that:
   //  * The number of mask sizes will match the rank of the vector to
   //    load/store. This could be lower than the rank of the destination tensor.
   //  * Mask sizes could be larger than the corresponding mask shape (hence
@@ -399,7 +401,8 @@ static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
     if (/*(1)*/ maskShape[i] > baseShape[rankDiff + i] ||
         /*(2)*/ baseShape[rankDiff + i] <
             (std::clamp(cstMaskSizes[i], int64_t(0), maskShape[i]) +
-             cstIndices[i]))
+             cstIndices[i]) ||
+        /*(3)*/ maskShape[i] > cstMaskSizes[i])
       return false;
   }
 

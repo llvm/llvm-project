@@ -2521,6 +2521,50 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+
+    /// Return the flags for a bounds attribute of kind \p K.
+    static BoundsAttrFlags get(AttributeCommonInfo::Kind K);
+  };
+  static BoundsAttributedType::BoundsAttrKind
+  getBoundsAttrKind(const BoundsAttrFlags &);
+
+  /// Check the type shape for counted_by, sized_by and their _or_null variants.
+  /// The caller checks declaration context, count expressions, flexible array
+  /// member eligibility and nesting.
+  ///
+  /// \p Flags selects the attribute variant. For void pointers, counted_by is
+  /// treated as a byte count outside the -fbounds-safety attribute model. Set
+  /// \c Flags.CountInBytes in this case if \p UpdateFlags is true.
+  /// \p AttrSpelling, \p AllowRedecl and \p AttrArg are reserved for that model
+  /// (see LangOptions::hasBoundsSafetyAttributes).
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped. Returns
+  /// true if the shape is valid, after the warning for an array of structs with
+  /// flexible array members, and, under the -fbounds-safety attribute model,
+  /// after an error on a pointer, with \c Flags.CountInBytes set so that type
+  /// construction can recover.
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   Expr *AttrArg = nullptr,
+                                   bool UpdateFlags = true);
+
+  /// Check a counted_by-family attribute in type position and initialize
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
+  /// and function declarator chunks enclosing the attribute.
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped (see
+  /// ValidateBoundsAttrTypeShape).
+  bool ValidateBoundsAttrTypeForTypePosition(
+      QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
+      SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);
+
   /// Check if applying the specified attribute variant from the "counted by"
   /// family of attributes to FieldDecl \p FD is semantically valid. If
   /// semantically invalid diagnostics will be emitted explaining the problems.

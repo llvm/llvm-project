@@ -3452,7 +3452,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
       InsertPt = BitPosI->getInsertionPointAfterDef();
     else
-      InsertPt = DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+      InsertPt = DT->getRoot()->getFirstNonPHIOrAlloca();
     if (!InsertPt)
       return false;
     FreezeInst *BitPosFrozen =
