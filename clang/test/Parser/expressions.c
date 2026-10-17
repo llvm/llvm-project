@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c17 %s
+// RUN: %clang_cc1 -std=c23 -Wpre-c23-compat -fsyntax-only -verify=expected,c23 %s
+// RUN: %clang_cc1 -std=c23 -triple x86_64-apple-darwin10 -fsyntax-only -verify=expected,notls %s
 
 void test1(void) {
   if (sizeof (int){ 1}) {}   // sizeof compound literal
@@ -72,4 +74,18 @@ void callee(double, double);
 void test8(void) {
   callee(foobar,   // expected-error {{use of undeclared identifier 'foobar'}}
          fizbin);  // expected-error {{use of undeclared identifier 'fizbin'}}
+}
+
+void test9(void) {
+  (void)(static int){1}; // c17-error {{expected expression}} \
+                         // c23-warning {{compound literal storage-class specifiers are incompatible with C standards before C23}}
+
+  (void)(register int){2}; // c17-error {{expected expression}} \
+                           // c23-warning {{compound literal storage-class specifiers are incompatible with C standards before C23}}
+
+  (void)(constexpr int){3}; // c17-error {{use of undeclared identifier 'constexpr'}} \
+                            // c23-warning {{compound literal storage-class specifiers are incompatible with C standards before C23}}
+
+  (void)(_Thread_local static int){4}; // c17-error {{expected expression}} notls-error {{thread-local storage is not supported for the current target}} \
+                                       // c23-warning {{compound literal storage-class specifiers are incompatible with C standards before C23}}
 }
