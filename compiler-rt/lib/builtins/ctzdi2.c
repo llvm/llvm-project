@@ -16,7 +16,7 @@
 
 #if !defined(__clang__) &&                                                     \
     ((defined(__sparc__) && defined(__arch64__)) || defined(__mips64) ||       \
-     (defined(__riscv) && __SIZEOF_POINTER__ >= 8))
+     (defined(__riscv) && __SIZEOF_POINTER__ >= 8) || defined(__alpha__))
 // On 64-bit architectures with neither a native clz instruction nor a native
 // ctz instruction, gcc resolves __builtin_ctz to __ctzdi2 rather than
 // __ctzsi2, leading to infinite recursion.
