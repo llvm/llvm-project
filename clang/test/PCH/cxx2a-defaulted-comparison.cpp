@@ -39,6 +39,21 @@ namespace LookupContext {
   }
 }
 
+namespace Foreign {
+  struct S { int value; };
+}
+namespace OutOfLine {
+  template<class T> struct C {
+    T m;
+    constexpr bool operator==(const C &) const;
+  };
+  constexpr bool operator==(Foreign::S a, Foreign::S b) {
+    return a.value == b.value;
+  }
+  template<class T>
+  constexpr bool C<T>::operator==(const C &) const = default;
+}
+
 #else
 
 namespace LookupContext {
@@ -48,6 +63,12 @@ namespace LookupContext {
     bool operator<(const A &, const A &) = delete;
     bool cmp = N::f<A>() < N::f<A>();
   }
+}
+
+namespace Caller {
+  bool operator==(Foreign::S, Foreign::S) = delete;
+  static_assert(OutOfLine::C<Foreign::S>{{1}} == OutOfLine::C<Foreign::S>{{1}});
+  static_assert(!(OutOfLine::C<Foreign::S>{{1}} == OutOfLine::C<Foreign::S>{{2}}));
 }
 
 #endif

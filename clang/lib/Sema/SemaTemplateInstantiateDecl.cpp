@@ -5832,8 +5832,10 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
   return false;
 }
 
-bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
-                                                      FunctionDecl *Tmpl) {
+static bool
+substDefaultedFunctionInfo(Sema &SemaRef, FunctionDecl *New,
+                           const FunctionDecl *Tmpl,
+                           const MultiLevelTemplateArgumentList &TemplateArgs) {
   // Transfer across any unqualified lookups.
   if (auto *DFI = Tmpl->getDefaultedOrDeletedInfo()) {
     SmallVector<DeclAccessPair, 32> Lookups;
@@ -5855,6 +5857,13 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                    : DFI);
   }
 
+  return false;
+}
+
+bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
+                                                      FunctionDecl *Tmpl) {
+  if (substDefaultedFunctionInfo(SemaRef, New, Tmpl, TemplateArgs))
+    return true;
   SemaRef.SetDeclDefaulted(New, Tmpl->getLocation());
   return false;
 }
@@ -6224,6 +6233,19 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   };
 
   if (PatternDecl->isDefaulted()) {
+    ContextRAII SavedContext(*this, Function);
+    if (!Function->getDefaultedOrDeletedInfo() &&
+        PatternDecl->getDefaultedOrDeletedInfo()) {
+      MultiLevelTemplateArgumentList TemplateArgs =
+          getTemplateInstantiationArgs(
+              Function, PatternDecl->getLexicalDeclContext(), /*Final=*/false,
+              std::nullopt, /*RelativeToPrimary=*/false, PatternDecl);
+      if (substDefaultedFunctionInfo(*this, Function, PatternDecl,
+                                     TemplateArgs)) {
+        Function->setInvalidDecl();
+        return;
+      }
+    }
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
