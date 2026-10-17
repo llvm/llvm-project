@@ -19,7 +19,7 @@ ASTSignals ASTSignals::derive(const ParsedAST &AST) {
   trace::Span Span("ASTSignals::derive");
   ASTSignals Signals;
   Signals.InsertionDirective = preferredIncludeDirective(
-      AST.tuPath(), AST.getLangOpts(),
+      AST.tuPath().raw(), AST.getLangOpts(),
       AST.getIncludeStructure().MainFileIncludes, AST.getLocalTopLevelDecls());
   const SourceManager &SM = AST.getSourceManager();
   findExplicitReferences(
