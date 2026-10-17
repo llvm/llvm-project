@@ -137,3 +137,6 @@ int g(std::expected<int, Error> e) {
                               // because `e` does.
 }
 ```
+
+GoogleTest assertions such as `ASSERT_TRUE(e.has_value())` are not recognized
+yet; support for them is planned.
