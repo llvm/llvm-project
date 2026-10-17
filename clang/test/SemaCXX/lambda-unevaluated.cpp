@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
 // RUN: %clang_cc1 -std=c++23 %s -verify
+// RUN: %clang_cc1 -std=c++26 %s -verify
 
 template <auto> struct Nothing {};
 Nothing<[]() { return 0; }()> nothing;
@@ -283,10 +284,21 @@ static_assert(__is_same_as(int, helper<int>));
 } // namespace GH138018
 
 namespace GH172814 {
-auto t() {
+auto a() {
+  int x = 0;
+  return [](auto w = [&] { x += w(); }); // expected-error {{lambda expression in default argument cannot capture any entity}} \
+                                         // expected-error {{expected body of lambda expression}}
+}
+
+auto b() {
   int x = 0;
   return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
 };
+
+auto c() {
+  int x = 0;
+  return []<class T>(T w = [&] { return x; }) {}; // expected-error {{lambda expression in default argument cannot capture any entity}}
+}
 }
 
 namespace GH176534 {
@@ -317,4 +329,64 @@ struct S {
   // expected-note@+1 {{'x' declared here}}
   void c(int x, int = sizeof([=] { return x; }));
 };
+}
+
+namespace GH48768 {
+auto a(auto x = 1, auto = []<auto = x> {}());               // expected-error {{default argument references parameter 'x'}}
+void b(auto x, auto = []<auto = x> {});                     // expected-error {{default argument references parameter 'x'}}
+auto c = [](auto x, int = []<auto = x> { return 0; }()) {}; // expected-error {{default argument references parameter 'x'}}
+void d(auto x, auto = []<template<auto = x> class> {});     // expected-error {{default argument references parameter 'x'}}
+
+constexpr int e(int x, auto y, auto z, int n = [](auto x) { return sizeof(x); }(123)) {
+  return x + y + z + n;
+}
+static_assert(e(1, 2, char(3)) == 6 + sizeof(int));
+
+constexpr int f(auto *x, int n = []<class T = decltype(*x), auto N = sizeof(T)> { return N; }()) noexcept([]<class T = decltype(*x)> { return sizeof(T) == 1; }()) {
+  return n;
+}
+static_assert(f(static_cast<int *>(nullptr)) == sizeof(int));
+static_assert(f(static_cast<char *>(nullptr)) == 1);
+static_assert(noexcept(f(static_cast<char *>(nullptr), 0)));
+static_assert(!noexcept(f(static_cast<int *>(nullptr), 0)));
+
+constexpr int g(auto, int n = []<class T, unsigned N>(const T (&)[N]) { return sizeof(T) + N; }("abc")) {
+  return n;
+}
+static_assert(g(0) == 5);
+
+template <class T>
+constexpr int h(T x, auto y, int n = []<auto N = sizeof(x) + sizeof(y)> { return N; }()) {
+  return n;
+}
+static_assert(h('a', 0) == 1 + sizeof(int));
+
+auto i = [](auto x) {
+  return [](auto y, int n = []<class T = decltype(y), auto N = 2 * sizeof(x) + sizeof(T)> { return N; }()) { return n; };
+};
+static_assert(i(0)('a') == 2 * sizeof(int) + 1);
+static_assert(i('a')(0) == 2 + sizeof(int));
+
+template <auto> struct A {};
+template <class> constexpr auto j() noexcept {
+  return [](auto x, int n = [](auto) noexcept { return 0; }(123)) noexcept([]<class T = decltype(x)> { return sizeof(T) == 1; }()) -> A<[]<auto N = sizeof(x)> { return N; }()> { return {}; };
+}
+static_assert(__is_same(decltype(j<void>()('a')), A<sizeof(char)>));
+static_assert(__is_same(decltype(j<void>()(0)), A<sizeof(int)>));
+static_assert(noexcept(j<void>()('a')) && !noexcept(j<void>()(0)));
+
+template <class T> struct B { // expected-note {{B defined here}}
+  static constexpr int a(auto x);
+  void b(auto) requires ([](auto) { return true; }(T{}));
+};
+template <class T> constexpr int B<T>::a(auto x) {
+  return [](auto y) { return sizeof(y) + sizeof(T); }(x);
+}
+static_assert(B<char>::a(0) == 1 + sizeof(int));
+
+template <class T>
+void B<T>::b(auto) requires ([](auto) { return true; }(T{})) {} // expected-error {{out-of-line definition of 'b' does not match any declaration}}
+
+template <template <class T> requires requires(T t) { t; } class> struct C {};
+static_assert([](auto x) { return x; }(1) == 1);
 }

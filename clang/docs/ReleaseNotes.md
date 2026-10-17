@@ -1024,6 +1024,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an issue where Clang would allow invoking consteval functions outside
   of a manifestly constant evaluated context. (#GH183415, #GH169139)
 
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
