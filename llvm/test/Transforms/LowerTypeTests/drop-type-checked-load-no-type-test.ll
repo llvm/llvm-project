@@ -1,5 +1,5 @@
-; A checked load is dropped even with no @llvm.type.test anywhere in the
-; module, and that alone triggers the vcall_visibility metadata erasure.
+;; A checked load is dropped even with no @llvm.type.test anywhere in the
+;; module, and that alone triggers the vcall_visibility metadata erasure.
 ; RUN: opt -S -passes="drop-type-tests<all>" < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
