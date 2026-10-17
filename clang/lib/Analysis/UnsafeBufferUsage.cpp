@@ -2382,6 +2382,184 @@ public:
   SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
+static bool hasUnsafeBufferUsageFieldAttr(const FieldDecl *FD) {
+  // The attribute on an anonymous struct or union does not apply to its
+  // members, and such a field has no name to report.
+  if (FD->isAnonymousStructOrUnion())
+    return false;
+  const auto *Attr = FD->getAttr<UnsafeBufferUsageAttr>();
+  return Attr && Attr->getCategory().empty();
+}
+
+// Returns true if Sema added `Init` for a field that the initializer list
+// leaves out. Sema places such initializers at the end of the list, `ListEnd`.
+static bool isImplicitFieldInit(const Expr *Init, SourceLocation ListEnd) {
+  if (!Init)
+    return true;
+  Init = Init->IgnoreImplicit();
+  if (isa<ImplicitValueInitExpr, NoInitExpr, CXXDefaultInitExpr>(Init) ||
+      Init->getBeginLoc().isInvalid())
+    return true;
+  if (Init->getBeginLoc() != ListEnd)
+    return false;
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(Init))
+    return llvm::all_of(CE->arguments(), llvm::IsaPred<CXXDefaultArgExpr>);
+  if (const auto *ILE = dyn_cast<InitListExpr>(Init))
+    return llvm::all_of(ILE->inits(), [ListEnd](const Expr *E) {
+      return isImplicitFieldInit(E, ListEnd);
+    });
+  return false;
+}
+
+// Calls `Callback` on each initializer in `Inits`, the semantic initializers of
+// an aggregate of type `RD`, with the field it initializes (null for a base).
+static void forEachFieldInit(
+    const RecordDecl *RD, ArrayRef<Expr *> Inits, const FieldDecl *UnionField,
+    llvm::function_ref<void(const Expr *, const FieldDecl *)> Callback) {
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    size_t NumBases = std::min<size_t>(CXXRD->getNumBases(), Inits.size());
+    for (const Expr *Init : Inits.take_front(NumBases))
+      Callback(Init, nullptr);
+    Inits = Inits.drop_front(NumBases);
+  }
+  if (RD->isUnion()) {
+    if (UnionField && !Inits.empty())
+      Callback(Inits.front(), UnionField);
+    return;
+  }
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->isUnnamedBitField())
+      continue;
+    if (Inits.empty())
+      return;
+    Callback(Inits.front(), FD);
+    Inits = Inits.drop_front();
+  }
+}
+
+using FieldInitList =
+    SmallVector<std::pair<const Expr *, const FieldDecl *>, 1>;
+
+// Collects the written initializers of annotated fields in the semantic form
+// `ILE`. Lists that Sema created for brace elision or for designators such as
+// `.a.b` are searched too, since they are not visited on their own.
+static void findUnsafeFieldInits(const InitListExpr *ILE,
+                                 FieldInitList &Found) {
+  // A list with designators is a syntactic form without a semantic one.
+  if (ILE->getType()->isDependentType() || ILE->containsErrors() ||
+      ILE->hasDesignatedInit())
+    return;
+  SourceLocation ListEnd = ILE->getEndLoc();
+  auto Visit = [&](const Expr *Init, const FieldDecl *FD) {
+    if (isImplicitFieldInit(Init, ListEnd))
+      return;
+    if (FD && hasUnsafeBufferUsageFieldAttr(FD))
+      Found.emplace_back(Init, FD);
+    if (const auto *Inner = dyn_cast<InitListExpr>(Init->IgnoreImplicit());
+        Inner && Inner->isSemanticForm() && !Inner->getSyntacticForm())
+      findUnsafeFieldInits(Inner, Found);
+  };
+  if (ILE->getType()->isArrayType()) {
+    for (const Expr *Init : ILE->inits())
+      Visit(Init, nullptr);
+    return;
+  }
+  const RecordDecl *RD = ILE->getType()->getAsRecordDecl();
+  if (!RD || ILE->isTransparent())
+    return;
+  forEachFieldInit(RD, ILE->inits(), ILE->getInitializedFieldInUnion(), Visit);
+}
+
+static void findUnsafeFieldInits(const CXXParenListInitExpr *PLIE,
+                                 FieldInitList &Found) {
+  if (PLIE->getType()->isDependentType() || PLIE->containsErrors())
+    return;
+  const RecordDecl *RD = PLIE->getType()->getAsRecordDecl();
+  if (!RD)
+    return;
+  // Only the user specified initializers are written in the source.
+  forEachFieldInit(RD, PLIE->getUserSpecifiedInitExprs(),
+                   PLIE->getInitializedFieldInUnion(),
+                   [&](const Expr *Init, const FieldDecl *FD) {
+                     if (FD && hasUnsafeBufferUsageFieldAttr(FD))
+                       Found.emplace_back(Init, FD);
+                   });
+}
+
+static FieldInitList findUnsafeFieldInits(const Expr *E) {
+  FieldInitList Found;
+  if (const auto *ILE = dyn_cast<InitListExpr>(E))
+    findUnsafeFieldInits(ILE, Found);
+  else if (const auto *PLIE = dyn_cast<CXXParenListInitExpr>(E))
+    findUnsafeFieldInits(PLIE, Found);
+  return Found;
+}
+
+/// An initialization of a field annotated with `[[clang::unsafe_buffer_usage]]`
+/// by aggregate initialization, e.g. `S s = {.ptr = p}` or `S s(p)`, or by a
+/// constructor's member initializer list.
+class UnsafeBufferUsageFieldInitGadget : public WarningGadget {
+  constexpr static const char *const OpTag = "field_init_expr";
+  // The semantic form of the aggregate initialization, or null.
+  const Expr *Op = nullptr;
+  // The member initializer, or null.
+  const CXXCtorInitializer *CtorInit = nullptr;
+
+public:
+  UnsafeBufferUsageFieldInitGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UnsafeBufferUsageFieldInit),
+        Op(Result.getNodeAs<Expr>(OpTag)) {}
+
+  UnsafeBufferUsageFieldInitGadget(const CXXCtorInitializer *CtorInit)
+      : WarningGadget(Kind::UnsafeBufferUsageFieldInit), CtorInit(CtorInit) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UnsafeBufferUsageFieldInit;
+  }
+
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    const Expr *Agg = nullptr;
+    // A list is reached once, in whichever form its parent holds. Nested lists
+    // written with braces are reached on their own.
+    if (const auto *ILE = dyn_cast<InitListExpr>(S))
+      Agg = ILE->isSemanticForm() ? ILE : ILE->getSemanticForm();
+    else if (const auto *PLIE = dyn_cast<CXXParenListInitExpr>(S))
+      Agg = PLIE;
+    if (!Agg || findUnsafeFieldInits(Agg).empty())
+      return false;
+    Result.addNode(OpTag, DynTypedNode::create(*Agg));
+    return true;
+  }
+
+  static bool matches(const CXXCtorInitializer *Init,
+                      const UnsafeBufferUsageHandler &Handler) {
+    return Init->isWritten() && Init->isAnyMemberInitializer() &&
+           hasUnsafeBufferUsageFieldAttr(Init->getAnyMember()) &&
+           !Handler.isSafeBufferOptOut(Init->getSourceLocation());
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    if (CtorInit) {
+      Handler.handleUnsafeFieldInit(CtorInit->getAnyMember(),
+                                    CtorInit->getSourceRange());
+      return;
+    }
+    for (const auto &[Init, FD] : findUnsafeFieldInits(Op))
+      Handler.handleUnsafeFieldInit(FD, Init->getSourceRange());
+  }
+
+  SourceLocation getSourceLoc() const override {
+    return CtorInit ? CtorInit->getSourceLocation() : Op->getBeginLoc();
+  }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
 // Warning gadget for unsafe invocation of span::data method.
 // Triggers when the pointer returned by the invocation is immediately
 // cast to a larger type.
@@ -4993,6 +5171,13 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
                 WarningGadgets, Tracker);
   }
+  // Member initializers are not statements, so they are matched here.
+  if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(D)) {
+    for (const CXXCtorInitializer *Init : CtorD->inits())
+      if (UnsafeBufferUsageFieldInitGadget::matches(Init, Handler))
+        WarningGadgets.push_back(
+            std::make_unique<UnsafeBufferUsageFieldInitGadget>(Init));
+  }
   applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
                std::move(Tracker), Handler, EmitSuggestions);
 }
@@ -5016,6 +5201,7 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
     void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
                                           bool IsRelatedToDecl,
                                           ASTContext &Ctx) override {}
+    void handleUnsafeFieldInit(const FieldDecl *, SourceRange) override {}
     bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
       return false;
     }
