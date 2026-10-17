@@ -32290,7 +32290,16 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
         (VT.is512BitVector() && !Subtarget.useBWIRegs() &&
          EltSizeInBits < 32)) {
       // Pre-mask the amount modulo using the wider vector.
+      unsigned OrigOpc = Op.getOpcode();
       Op = DAG.getNode(Op.getOpcode(), DL, VT, Op0, Op1, AmtMod);
+
+      // If constant folding turned the funnel shift into a BUILD_VECTOR (e.g.
+      // ucmp(x, x) was expanded to a zero vector by the legalizer), don't try
+      // to split a non-funnel-shift node: its operands are scalars, not
+      // sub-vectors. Let the generic legalizer handle it instead.
+      if (Op.getOpcode() != OrigOpc)
+        return Op;
+
       return splitVectorOp(Op, DAG, DL);
     }
 
