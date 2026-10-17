@@ -803,6 +803,21 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, uint64_t Offset,
     uint64_t AlignOffset) const {
 
+  // The code below is allocating one StackProbeSize at a time,
+  // then inserting a "probe" (write of 0), in order to hit any guard pages.
+  // A probe is only needed every StackProbeSize (no skipping entire pages).
+  //
+  // StackProbeSize (PAGE_SIZE)
+  //   /        \
+  //  |----------|----------|------> rsp decreasing
+  //  ^                     ^  ^
+  //  |                     |  |
+  //  CurrentOffset    Offset  (Offset + AlignOffset)
+  //
+  // Offset: size we are being asked to allocate on the stack, in bytes.
+  // AlignOffset: extra amount to allocate (< StackProbeSize),
+  //   needed to satisfy any alignment for calling conventions, etc.
+
   const bool NeedsDwarfCFI = needsDwarfCFI(MF);
   const bool HasFP = hasFP(MF);
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
@@ -835,10 +850,8 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
     CurrentOffset = StackProbeSize - AlignOffset;
   }
 
-  // For the next N - 1 pages, just probe. I tried to take advantage of
-  // natural probes but it implies much more logic and there was very few
-  // interesting natural probes to interleave.
-  while (CurrentOffset + StackProbeSize < Offset) {
+  // For the next N - 1 pages, just probe.
+  while (CurrentOffset + StackProbeSize <= Offset) {
     BuildStackAdjustment(MBB, MBBI, DL, -StackProbeSize, /*InEpilogue=*/false)
         .setMIFlag(MachineInstr::FrameSetup);
 
@@ -856,9 +869,12 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
     CurrentOffset += StackProbeSize;
   }
 
-  // No need to probe the tail, it is smaller than a Page.
-  uint64_t ChunkSize = Offset - CurrentOffset;
-  if (ChunkSize == SlotSize) {
+  const uint64_t ChunkSize = Offset - CurrentOffset;
+  // We may not require a tail allocation. For example, this can happen
+  // if Offset is a multiple of StackProbeSize, and AlignOffset = 0.
+  if (ChunkSize == 0)
+    return;
+  else if (ChunkSize == SlotSize) {
     // Use push for slot sized adjustments as a size optimization,
     // like emitSPUpdate does when not probing.
     unsigned Reg = Is64Bit ? X86::RAX : X86::EAX;
@@ -867,6 +883,8 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
         .addReg(Reg, RegState::Undef)
         .setMIFlag(MachineInstr::FrameSetup);
   } else {
+    assert(!(ChunkSize > StackProbeSize) &&
+           "Tail allocation greater than page size");
     BuildStackAdjustment(MBB, MBBI, DL, -ChunkSize, /*InEpilogue=*/false)
         .setMIFlag(MachineInstr::FrameSetup);
   }
