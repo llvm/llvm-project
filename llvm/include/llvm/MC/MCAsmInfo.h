@@ -353,9 +353,6 @@ protected:
   /// false.
   bool SupportsDebugInformation = false;
 
-  /// Default exception handling model for the target.  Defaults to None.
-  ExceptionHandling ExceptionsType = ExceptionHandling::None;
-
   /// True if target uses CFI unwind information for other purposes than EH
   /// (debugging / sanitizers) when the exception model is
   /// `ExceptionHandling::None`.
@@ -654,7 +651,6 @@ public:
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
-  ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
   bool usesCFIWithoutEH(ExceptionHandling EH) const {
