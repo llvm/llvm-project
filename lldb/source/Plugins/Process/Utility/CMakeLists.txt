@@ -18,14 +18,14 @@ add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   RegisterInfoWindows_x86_64.cpp
   RegisterTypeDetector_arm64.cpp
   RegisterInfos_x86_64_with_base_shared.cpp
-  RegisterInfoPOSIX_arm.cpp
-  RegisterInfoPOSIX_arm64.cpp
-  RegisterInfoPOSIX_loongarch64.cpp
-  RegisterInfoPOSIX_ppc64le.cpp
-  RegisterInfoPOSIX_ppc64.cpp
-  RegisterInfoPOSIX_riscv32.cpp
-  RegisterInfoPOSIX_riscv64.cpp
-  RegisterInfoPOSIXDynamic_riscv32.cpp
+  RegisterInfo_arm.cpp
+  RegisterInfo_arm64.cpp
+  RegisterInfo_loongarch64.cpp
+  RegisterInfo_ppc64le.cpp
+  RegisterInfo_ppc64.cpp
+  RegisterInfo_riscv32.cpp
+  RegisterInfo_riscv64.cpp
+  RegisterInfoDynamic_riscv32.cpp
 
   LINK_COMPONENTS
     Support
