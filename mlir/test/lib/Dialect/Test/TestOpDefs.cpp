@@ -2392,3 +2392,24 @@ LogicalResult test::getConfiguredLegacyFoldResults(
     results.push_back(getConfiguredReplacement(op, operands, element));
   return success();
 }
+
+OpFoldResults test::getConfiguredFoldResults(Operation *op,
+                                             ArrayRef<Attribute> operands,
+                                             StringRef name) {
+  std::optional<ConfiguredFold> fold = consumeFoldConfig(op, name);
+  if (!fold)
+    return failure();
+  if (!fold->replace)
+    return success(fold->inPlace);
+  OpFoldResults results =
+      llvm::map_to_vector(fold->replace, [&](Attribute element) {
+        return getConfiguredReplacement(op, operands, element);
+      });
+  results.setModifiedInPlace(fold->inPlace);
+  return results;
+}
+
+OpFoldResults TestFoldDispatchOp::fold(FoldAdaptor adaptor) {
+  return getConfiguredFoldResults(getOperation(), adaptor.getOperands(),
+                                  "fold");
+}

@@ -21,11 +21,51 @@
 
 using namespace mlir;
 
+// The fallback TypeID resolver rejects a trait instantiated with a type from
+// an anonymous namespace, so the test dialect lives in a named namespace.
+namespace op_fold_results_test {
+/// The fold of the op below. The test fixture clears it after each test.
+static std::function<OpFoldResults(Operation *)> opFoldFn;
+
+template <typename OpT>
+struct FoldAdaptorImpl {
+  FoldAdaptorImpl(ArrayRef<Attribute> operands, OpT) : operands(operands) {}
+  ArrayRef<Attribute> getOperands() const { return operands; }
+  ArrayRef<Attribute> operands;
+};
+
+/// An op with two results that defines `OpFoldResults fold(FoldAdaptor)`.
+struct PartialFoldOp : public Op<PartialFoldOp, OpTrait::NResults<2>::Impl,
+                                 OpTrait::VariadicOperands> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PartialFoldOp)
+  using Op::Op;
+  using FoldAdaptor = FoldAdaptorImpl<PartialFoldOp>;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+  static StringRef getOperationName() { return "fold_test.partial"; }
+  OpFoldResults fold(FoldAdaptor) {
+    return opFoldFn ? opFoldFn(getOperation()) : failure();
+  }
+};
+
+struct FoldTestDialect : public Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FoldTestDialect)
+  static constexpr StringLiteral getDialectNamespace() { return "fold_test"; }
+  explicit FoldTestDialect(MLIRContext *context)
+      : Dialect(getDialectNamespace(), context,
+                TypeID::get<FoldTestDialect>()) {
+    addOperations<PartialFoldOp>();
+  }
+};
+} // namespace op_fold_results_test
+
+using namespace op_fold_results_test;
+
 namespace {
 class OpFoldResultsTest : public ::testing::Test {
 protected:
   OpFoldResultsTest() : builder(&context) {
     context.allowUnregisteredDialects();
+    context.loadDialect<FoldTestDialect>();
     i32 = builder.getI32Type();
     f32 = builder.getF32Type();
   }
@@ -34,6 +74,7 @@ protected:
     // Destroy users before the ops that define their operands.
     for (Operation *op : llvm::reverse(ops))
       op->destroy();
+    opFoldFn = nullptr;
   }
 
   /// Create an op with the given result types and operands. The fixture
@@ -198,16 +239,20 @@ class OpFoldResultsDeathTest : public OpFoldResultsTest {};
 
 TEST_F(OpFoldResultsDeathTest, ValueReplacementOfIncorrectType) {
   Operation *producer = createOp({f32});
-  Operation *op = createOp({i32, i32});
-  EXPECT_DEATH((void)normalize(
-                   op, replacements({producer->getResult(0), OpFoldResult()})),
-               "incorrect fold result type");
+  Operation *op = createOp({i32, i32}, "fold_test.partial");
+  opFoldFn = [&](Operation *) -> OpFoldResults {
+    return replacements({producer->getResult(0), OpFoldResult()});
+  };
+  EXPECT_DEATH((void)op->fold(), "incorrect fold result type");
 }
 
 TEST_F(OpFoldResultsDeathTest, ReplacementCountMismatch) {
-  Operation *op = createOp({i32, i32});
+  Operation *op = createOp({i32, i32}, "fold_test.partial");
   Attribute attr = builder.getI32IntegerAttr(1);
-  EXPECT_DEATH((void)normalize(op, replacements({attr, attr, attr})),
+  opFoldFn = [&](Operation *) -> OpFoldResults {
+    return replacements({attr, attr, attr});
+  };
+  EXPECT_DEATH((void)op->fold(),
                "expected one replacement per operation result");
 }
 
@@ -421,8 +466,8 @@ TEST_F(OpFoldResultsTest, LegacyDynamicFoldHookMayForwardAnotherResult) {
   Operation *op = createOp({i32, i32}, "test_fold.legacy_op");
   Attribute attr = builder.getI32IntegerAttr(1);
 
-  // Replacement 0 is result 1, which the fold also replaces. The legacy
-  // adapter does not reject this.
+  // Replacement 0 is result 1, which the fold also replaces. The
+  // replaced-result check applies only to `OpFoldResults fold(FoldAdaptor)`.
   legacyFoldFn = [&](Operation *foldedOp,
                      SmallVectorImpl<OpFoldResult> &results) {
     results.push_back(foldedOp->getResult(1));

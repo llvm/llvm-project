@@ -81,11 +81,13 @@ protected:
 };
 } // namespace detail
 
-/// The result of a fold of any op, as the fold returns it. Replacement i is an
-/// Attribute (replace result i with a constant), a Value (replace result i with
-/// that value), or null or op->getResult(i) (keep result i). A separate bit
-/// records an in-place change of the op. The fold dispatch turns it into a
-/// NormalizedOpFoldResults before a driver reads it.
+/// The result of a fold of any op, as the fold returns it. An op with exactly
+/// one fixed result defines its folder with OpFoldResult; any other op can
+/// return OpFoldResults directly. Replacement i is an Attribute (replace result
+/// i with a constant), a Value (replace result i with that value), or null or
+/// op->getResult(i) (keep result i). A separate bit records an in-place change
+/// of the op. The fold dispatch turns it into a NormalizedOpFoldResults before
+/// a driver reads it.
 class [[nodiscard]] OpFoldResults : public detail::OpFoldResultsBase {
 public:
   /// Failure: the fold did not apply and the IR is unchanged.
@@ -142,6 +144,9 @@ public:
   /// Return true if the op has at least one result and the fold replaces all
   /// of them.
   bool replacesAll() const;
+  /// Return the replacement of result `i`; null keeps the result. If there is
+  /// no replacement, every index reads as keep.
+  OpFoldResult operator[](unsigned i) const;
   /// Return the replacements: none, or one per result of the op, where null
   /// keeps the result. The returned range points into this object.
   ArrayRef<OpFoldResult> getReplacements() const LLVM_LIFETIME_BOUND;
@@ -161,6 +166,16 @@ namespace detail {
 /// Convert the result of a single-result fold of `op`: null is a failure, the
 /// op's own result means "in place", and anything else replaces the result.
 OpFoldResults convertSingleResultFold(Operation *op, OpFoldResult result);
+
+/// Return the normalized `result` without its replacements if a replacement
+/// names another result of `op` that `result` also replaces, because the
+/// outcome would depend on the order in which a driver replaces the results. A
+/// forwarding fold can return such a result where an op can use its own
+/// results: in a graph region or in an unreachable block. The in-place bit
+/// stays.
+NormalizedOpFoldResults
+dropReplacementsOfReplacedResults(Operation *op,
+                                  NormalizedOpFoldResults result);
 } // namespace detail
 } // namespace mlir
 
