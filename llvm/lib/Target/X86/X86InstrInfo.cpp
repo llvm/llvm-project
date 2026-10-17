@@ -21,6 +21,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -6962,6 +6963,9 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::BLSMSK64rr:
   case X86::BLSMSK64rm:
     return Subtarget.hasBLSFalseDeps() && !ForLoadFold; // Preserve load folding
+  case X86::SETCCr:
+    // Folding the destination gives SETCCm, which has no partial update.
+    return Subtarget.hasSETCCFalseDeps() && !ForLoadFold;
   }
 
   return false;
@@ -7001,6 +7005,14 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(const MachineInstr &MI,
   else
     ReadsReg = MI.readsRegister(Reg, &RI);
   if (ReadsReg != HasNDDPartialWrite)
+    return 0;
+
+  // Most SETcc follow a recent write of their destination, but the merge with
+  // it only tends to matter when it is part of a loop-carried dependency
+  // chain. A block that branches to itself is a cheap proxy for that, which
+  // leaves loops of several blocks alone.
+  if (MI.getOpcode() == X86::SETCCr &&
+      !MI.getParent()->isSuccessor(MI.getParent()))
     return 0;
 
   // If any instructions in the clearance range are reading Reg, insert a
@@ -7364,6 +7376,73 @@ unsigned X86InstrInfo::getUndefRegClearance(const MachineInstr &MI,
   return 0;
 }
 
+/// SETcc writes only the low byte of its destination, so it waits for the last
+/// write of the full register. Zero the 32-bit super-register to break that
+/// dependency. A zero idiom right before the SETcc would clobber the flags it
+/// reads, so the xor goes in front of the instruction that sets them when the
+/// register is not used in between; otherwise a mov right before the SETcc.
+static void breakSETCCDependency(MachineInstr &MI, const X86InstrInfo &TII,
+                                 const TargetRegisterInfo &TRI) {
+  Register Reg = MI.getOperand(0).getReg();
+  if (isHReg(Reg))
+    return;
+  Register SuperReg = getX86SubSuperRegister(Reg, 32);
+  MachineBasicBlock &MBB = *MI.getParent();
+
+  // The rest of the super-register (e.g. AH for AL) must be dead after the
+  // SETcc. getPartialRegUpdateClearance has already excluded a SETcc that
+  // reads the super-register, i.e. one that merges into live upper bits.
+  LiveRegUnits LiveUnits(TRI);
+  LiveUnits.addLiveOuts(MBB);
+  for (MachineInstr &I :
+       make_range(MBB.rbegin(), MachineBasicBlock::reverse_iterator(MI)))
+    if (!I.isDebugInstr())
+      LiveUnits.stepBackward(I);
+  LiveUnits.removeReg(Reg);
+  if (!LiveUnits.available(SuperReg))
+    return;
+
+  MachineInstr *FlagsDef = nullptr;
+  bool SuperRegWritten = false, SuperRegUsed = false;
+  for (MachineInstr &I : make_range(
+           std::next(MachineBasicBlock::reverse_iterator(MI)), MBB.rend())) {
+    if (I.isDebugInstr())
+      continue;
+    if (I.modifiesRegister(X86::EFLAGS, &TRI)) {
+      // If the flags cannot be ready before the value the SETcc merges into,
+      // the merge adds no latency.
+      if (!SuperRegWritten && (I.readsRegister(SuperReg, &TRI) ||
+                               I.modifiesRegister(SuperReg, &TRI)))
+        return;
+      if (!SuperRegUsed && !I.isCall() && !I.readsRegister(X86::EFLAGS, &TRI))
+        FlagsDef = &I;
+      break;
+    }
+    SuperRegWritten |= I.modifiesRegister(SuperReg, &TRI);
+    SuperRegUsed |= SuperRegWritten || I.readsRegister(SuperReg, &TRI);
+  }
+
+  if (FlagsDef) {
+    BuildMI(MBB, FlagsDef, MI.getDebugLoc(), TII.get(X86::XOR32rr), SuperReg)
+        .addReg(SuperReg, RegState::Undef)
+        .addReg(SuperReg, RegState::Undef)
+        ->addRegisterDead(X86::EFLAGS, &TRI);
+    // Debug values in between would now see the zero.
+    for (MachineInstr &I :
+         make_range(std::next(FlagsDef->getIterator()), MI.getIterator()))
+      if (I.isDebugValue() &&
+          any_of(I.debug_operands(), [&](const MachineOperand &MO) {
+            return MO.isReg() && MO.getReg() &&
+                   TRI.regsOverlap(MO.getReg(), SuperReg);
+          }))
+        I.setDebugValueUndef();
+  } else {
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(X86::MOV32ri), SuperReg)
+        .addImm(0);
+  }
+  MI.addRegisterKilled(SuperReg, &TRI, true);
+}
+
 void X86InstrInfo::breakPartialRegDependency(MachineInstr &MI,
                                              unsigned OpNum) const {
   Register Reg = MI.getOperand(OpNum).getReg();
@@ -7424,6 +7503,8 @@ void X86InstrInfo::breakPartialRegDependency(MachineInstr &MI,
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
     MI.addRegisterKilled(Reg, &RI, true);
+  } else if (MI.getOpcode() == X86::SETCCr) {
+    breakSETCCDependency(MI, *this, RI);
   } else if ((X86::GR16RegClass.contains(Reg) ||
               X86::GR8RegClass.contains(Reg)) &&
              X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
