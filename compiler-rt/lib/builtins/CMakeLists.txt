@@ -933,23 +933,23 @@ set(hexagon_SOURCES
   hexagon/dfminmax.S
   hexagon/dfmul.S
   hexagon/dfsqrt.S
-  hexagon/divdi3.S
-  hexagon/divsi3.S
   hexagon/fastmath2_dlib_asm.S
   hexagon/fastmath2_ldlib_asm.S
   hexagon/fastmath_dlib_asm.S
+  hexagon/hexagon_divdi3.S
+  hexagon/hexagon_divsi3.S
+  hexagon/hexagon_moddi3.S
+  hexagon/hexagon_modsi3.S
+  hexagon/hexagon_udivdi3.S
+  hexagon/hexagon_udivmoddi4.S
+  hexagon/hexagon_udivmodsi4.S
+  hexagon/hexagon_udivsi3.S
+  hexagon/hexagon_umoddi3.S
+  hexagon/hexagon_umodsi3.S
   hexagon/memcpy_forward_vp4cp4n2.S
   hexagon/memcpy_likely_aligned.S
-  hexagon/moddi3.S
-  hexagon/modsi3.S
   hexagon/sfdiv_opt.S
   hexagon/sfsqrt_opt.S
-  hexagon/udivdi3.S
-  hexagon/udivmoddi4.S
-  hexagon/udivmodsi4.S
-  hexagon/udivsi3.S
-  hexagon/umoddi3.S
-  hexagon/umodsi3.S
   hexagon/ieee_qfloat_conv_hf_to_b_rne.S
   hexagon/ieee_qfloat_fast_convert_hf_to_b_rne.S
   hexagon/ieee_qfloat_conv_hf_to_h_rne.S
