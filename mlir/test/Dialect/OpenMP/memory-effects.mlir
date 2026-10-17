@@ -5,6 +5,15 @@ func.func @masked_recursive_memory_effects() {
   // expected-remark@+1 {{recursive memory effects}}
   omp.masked {
     omp.terminator
-  } {test_recursive_memory_effects}
+  }
+  return
+}
+
+// Check the trait on omp.master itself, independently of its body.
+func.func @master_recursive_memory_effects() {
+  // expected-remark@+1 {{recursive memory effects}}
+  omp.master {
+    omp.terminator
+  }
   return
 }

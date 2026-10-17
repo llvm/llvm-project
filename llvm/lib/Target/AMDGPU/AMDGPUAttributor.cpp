@@ -156,7 +156,31 @@ public:
         SubArch(M.getTargetTriple().getSubArch()),
         Features(
             AMDGPU::getFeatureBitset(AMDGPU::getGPUKindFromSubArch(SubArch))),
-        CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {}
+        CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {
+    unsigned COV = CodeObjectVersion;
+    ImplicitArgRanges = {
+        {MULTIGRID_SYNC_ARG,
+         {AMDGPU::getMultigridSyncArgImplicitArgPosition(COV), 8}},
+        {HOSTCALL_PTR, {AMDGPU::getHostcallImplicitArgPosition(COV), 8}},
+        {DEFAULT_QUEUE, {AMDGPU::getDefaultQueueImplicitArgPosition(COV), 8}},
+        {COMPLETION_ACTION,
+         {AMDGPU::getCompletionActionImplicitArgPosition(COV), 8}}};
+    if (COV >= 5) {
+      ImplicitArgRanges.push_back(
+          {HEAP_PTR, {AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8}});
+      ImplicitArgRanges.push_back(
+          {QUEUE_PTR, {AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8}});
+    }
+
+    int64_t Begin = INT64_MAX, End = 0;
+    for (auto [Mask, Range] : ImplicitArgRanges) {
+      ImplicitArgsMask |= Mask;
+      Begin = std::min(Begin, Range.Offset);
+      End = std::max(End, Range.Offset + Range.Size);
+    }
+
+    ImplicitArgsRange = AA::RangeTy(Begin, End - Begin);
+  }
 
   TargetMachine &TM;
 
@@ -191,6 +215,19 @@ public:
 
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
+
+  /// The implicit kernel arguments at a fixed offset from implicitarg_ptr,
+  /// with their ranges.
+  ArrayRef<std::pair<ImplicitArgumentMask, AA::RangeTy>>
+  getImplicitArgRanges() const {
+    return ImplicitArgRanges;
+  }
+
+  /// The mask of the implicit arguments in getImplicitArgRanges().
+  uint32_t getImplicitArgsMask() const { return ImplicitArgsMask; }
+
+  /// The range covering all the implicit arguments in getImplicitArgRanges().
+  AA::RangeTy getImplicitArgsRange() const { return ImplicitArgsRange; }
 
   /// Get the features of the module target.
   const AMDGPU::AMDGPUFeatureBitset &getFeatures() const { return Features; }
@@ -233,6 +270,9 @@ private:
 
   /// Get the constant access bitmap for \p C.
   uint8_t getConstantAccess(const Constant *C) {
+    if (isa<ConstantData>(C))
+      return NONE;
+
     const auto &It = ConstantStatus.find(C);
     if (It != ConstantStatus.end())
       return It->second.value();
@@ -304,6 +344,10 @@ private:
   const Triple::SubArchType SubArch;
   const AMDGPU::AMDGPUFeatureBitset Features;
   const unsigned CodeObjectVersion;
+  SmallVector<std::pair<ImplicitArgumentMask, AA::RangeTy>, 6>
+      ImplicitArgRanges;
+  uint32_t ImplicitArgsMask = 0;
+  AA::RangeTy ImplicitArgsRange;
 };
 
 struct AAAMDAttributes
@@ -549,35 +593,37 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         removeAssumedBits(QUEUE_PTR);
     }
 
-    if (funcRetrievesMultigridSyncArg(A, COV)) {
+    uint32_t Retrieved = getRetrievedImplicitArgs(A);
+
+    if (Retrieved & MULTIGRID_SYNC_ARG) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) &&
              "multigrid_sync_arg needs implicitarg_ptr");
       removeAssumedBits(MULTIGRID_SYNC_ARG);
     }
 
-    if (funcRetrievesHostcallPtr(A, COV)) {
+    if (Retrieved & HOSTCALL_PTR) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "hostcall needs implicitarg_ptr");
       removeAssumedBits(HOSTCALL_PTR);
     }
 
-    if (funcRetrievesHeapPtr(A, COV)) {
+    if (Retrieved & HEAP_PTR) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "heap_ptr needs implicitarg_ptr");
       removeAssumedBits(HEAP_PTR);
     }
 
-    if (isAssumed(QUEUE_PTR) && funcRetrievesQueuePtr(A, COV)) {
+    if (isAssumed(QUEUE_PTR) && (Retrieved & QUEUE_PTR)) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "queue_ptr needs implicitarg_ptr");
       removeAssumedBits(QUEUE_PTR);
     }
 
-    if (isAssumed(LDS_KERNEL_ID) && funcRetrievesLDSKernelId(A)) {
+    if (isAssumed(LDS_KERNEL_ID) && (Retrieved & LDS_KERNEL_ID)) {
       removeAssumedBits(LDS_KERNEL_ID);
     }
 
-    if (isAssumed(DEFAULT_QUEUE) && funcRetrievesDefaultQueue(A, COV))
+    if (isAssumed(DEFAULT_QUEUE) && (Retrieved & DEFAULT_QUEUE))
       removeAssumedBits(DEFAULT_QUEUE);
 
-    if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A, COV))
+    if (isAssumed(COMPLETION_ACTION) && (Retrieved & COMPLETION_ACTION))
       removeAssumedBits(COMPLETION_ACTION);
 
     if (isAssumed(FLAT_SCRATCH_INIT) && needFlatScratchInit(A))
@@ -667,80 +713,68 @@ private:
     return false;
   }
 
-  bool funcRetrievesMultigridSyncArg(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
+  /// Returns the implicit kernel arguments that may be read through the
+  /// pointer returned by the implicitarg_ptr call \p Call.
+  uint32_t getImplicitArgsReadThrough(Attributor &A, const CallBase &Call) {
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    uint32_t ArgsMask = InfoCache.getImplicitArgsMask();
+    const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
+        *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
+    if (!PointerInfoAA || !PointerInfoAA->getState().isValidState())
+      return ArgsMask;
 
-  bool funcRetrievesHostcallPtr(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesDefaultQueue(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getDefaultQueueImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesCompletionAction(Attributor &A, unsigned COV) {
-    auto Pos = llvm::AMDGPU::getCompletionActionImplicitArgPosition(COV);
-    AA::RangeTy Range(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesHeapPtr(Attributor &A, unsigned COV) {
-    if (COV < 5)
-      return false;
-    AA::RangeTy Range(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesQueuePtr(Attributor &A, unsigned COV) {
-    if (COV < 5)
-      return false;
-    AA::RangeTy Range(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, Range);
-  }
-
-  bool funcRetrievesImplicitKernelArg(Attributor &A, AA::RangeTy Range) {
-    // Check if this is a call to the implicitarg_ptr builtin and it
-    // is used to retrieve the hostcall pointer. The implicit arg for
-    // hostcall is not used only if every use of the implicitarg_ptr
-    // is a load that clearly does not retrieve any byte of the
-    // hostcall pointer. We check this by tracing all the uses of the
-    // initial call to the implicitarg_ptr intrinsic.
-    auto DoesNotLeadToKernelArgLoc = [&](Instruction &I) {
-      auto &Call = cast<CallBase>(I);
-      if (Call.getIntrinsicID() != Intrinsic::amdgcn_implicitarg_ptr)
+    // An implicit argument is not read if every access that may read any byte
+    // of it is droppable. Check the accesses once for all the implicit
+    // arguments, and stop once all of them may be read.
+    uint32_t Read = 0;
+    auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool) {
+      if (Acc.getRemoteInst()->isDroppable())
         return true;
+      for (const AA::RangeTy &AccRange : Acc.getRanges()) {
+        for (auto [Mask, Range] : InfoCache.getImplicitArgRanges()) {
+          if (AccRange.mayOverlap(Range))
+            Read |= Mask;
+        }
+      }
 
-      const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
-          *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
-      if (!PointerInfoAA || !PointerInfoAA->getState().isValidState())
-        return false;
-
-      return PointerInfoAA->forallInterferingAccesses(
-          Range, [](const AAPointerInfo::Access &Acc, bool IsExact) {
-            return Acc.getRemoteInst()->isDroppable();
-          });
+      return Read != ArgsMask;
     };
 
-    bool UsedAssumedInformation = false;
-    return !A.checkForAllCallLikeInstructions(DoesNotLeadToKernelArgLoc, *this,
-                                              UsedAssumedInformation);
+    if (!PointerInfoAA->forallInterferingAccesses(
+            InfoCache.getImplicitArgsRange(), CheckAccess))
+      return ArgsMask;
+    return Read;
   }
 
-  bool funcRetrievesLDSKernelId(Attributor &A) {
-    auto DoesNotRetrieve = [&](Instruction &I) {
+  /// Returns the implicit kernel arguments that may be retrieved by the
+  /// function.
+  uint32_t getRetrievedImplicitArgs(Attributor &A) {
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    uint32_t All = InfoCache.getImplicitArgsMask() | LDS_KERNEL_ID;
+    uint32_t Retrieved = 0;
+    auto CheckCall = [&](Instruction &I) {
       auto &Call = cast<CallBase>(I);
-      return Call.getIntrinsicID() != Intrinsic::amdgcn_lds_kernel_id;
+      switch (Call.getIntrinsicID()) {
+      case Intrinsic::amdgcn_implicitarg_ptr:
+        Retrieved |= getImplicitArgsReadThrough(A, Call);
+        break;
+      case Intrinsic::amdgcn_lds_kernel_id:
+        Retrieved |= LDS_KERNEL_ID;
+        break;
+      default:
+        // Other calls do not retrieve anything.
+        return true;
+      }
+
+      // Stop once everything may be retrieved.
+      return Retrieved != All;
     };
+
     bool UsedAssumedInformation = false;
-    return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
-                                              UsedAssumedInformation);
+    if (!A.checkForAllCallLikeInstructions(CheckCall, *this,
+                                           UsedAssumedInformation))
+      return All;
+    return Retrieved;
   }
 
   // Returns true if FlatScratchInit is needed, i.e., no-flat-scratch-init is

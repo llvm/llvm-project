@@ -11,11 +11,73 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace clang::CodeGenUtils {
+
+//===----------------------------------------------------------------------===//
+// Library builtins (PowerPC64 and AIX)
+//===----------------------------------------------------------------------===//
+
+StringRef getTargetBuiltinLibFunctionName(unsigned BuiltinID,
+                                          const TargetInfo &Target) {
+  const llvm::Triple &Triple = Target.getTriple();
+
+  // TODO: This mutation should also be applied to other targets other than
+  // PPC, after backend supports IEEE 128-bit style libcalls.
+  if (Triple.isPPC64() &&
+      &Target.getLongDoubleFormat() == &llvm::APFloat::IEEEquad()) {
+    // TODO: This list should be expanded or refactored after all
+    // GCC-compatible std libcall builtins are implemented.
+    static const llvm::SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
+        {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
+        {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
+        {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
+        {Builtin::BI__builtin___sprintf_chk, "__sprintf_chkieee128"},
+        {Builtin::BI__builtin___vfprintf_chk, "__vfprintf_chkieee128"},
+        {Builtin::BI__builtin___vprintf_chk, "__vprintf_chkieee128"},
+        {Builtin::BI__builtin___vsnprintf_chk, "__vsnprintf_chkieee128"},
+        {Builtin::BI__builtin___vsprintf_chk, "__vsprintf_chkieee128"},
+        {Builtin::BI__builtin_fprintf, "__fprintfieee128"},
+        {Builtin::BI__builtin_printf, "__printfieee128"},
+        {Builtin::BI__builtin_snprintf, "__snprintfieee128"},
+        {Builtin::BI__builtin_sprintf, "__sprintfieee128"},
+        {Builtin::BI__builtin_vfprintf, "__vfprintfieee128"},
+        {Builtin::BI__builtin_vprintf, "__vprintfieee128"},
+        {Builtin::BI__builtin_vsnprintf, "__vsnprintfieee128"},
+        {Builtin::BI__builtin_vsprintf, "__vsprintfieee128"},
+        {Builtin::BI__builtin_fscanf, "__fscanfieee128"},
+        {Builtin::BI__builtin_scanf, "__scanfieee128"},
+        {Builtin::BI__builtin_sscanf, "__sscanfieee128"},
+        {Builtin::BI__builtin_vfscanf, "__vfscanfieee128"},
+        {Builtin::BI__builtin_vscanf, "__vscanfieee128"},
+        {Builtin::BI__builtin_vsscanf, "__vsscanfieee128"},
+        {Builtin::BI__builtin_nexttowardf128, "__nexttowardieee128"},
+    };
+    return F128Builtins.lookup(BuiltinID);
+  }
+
+  // The AIX library functions frexpl, ldexpl, and modfl are for 128-bit
+  // IBM 'long double' (i.e. __ibm128). Map to the 'double' versions
+  // if it is 64-bit 'long double' mode.
+  if (Triple.isOSAIX() &&
+      &Target.getLongDoubleFormat() == &llvm::APFloat::IEEEdouble()) {
+    static const llvm::SmallDenseMap<unsigned, StringRef, 4>
+        AIXLongDouble64Builtins{
+            {Builtin::BI__builtin_frexpl, "frexp"},
+            {Builtin::BI__builtin_ldexpl, "ldexp"},
+            {Builtin::BI__builtin_modfl, "modf"},
+    };
+    return AIXLongDouble64Builtins.lookup(BuiltinID);
+  }
+
+  return StringRef();
+}
 
 //===----------------------------------------------------------------------===//
 // Arm and AArch64

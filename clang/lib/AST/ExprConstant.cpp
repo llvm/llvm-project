@@ -10625,11 +10625,11 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
   // to 1 in those cases.
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
     return Ctx.getDeclAlign(DRE->getDecl(),
-                            /*RefAsPointee*/ true);
+                            /*ForAlignOf=*/true);
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(E))
     return Ctx.getDeclAlign(ME->getMemberDecl(),
-                            /*RefAsPointee*/ true);
+                            /*ForAlignOf=*/true);
 
   return GetAlignOfType(Ctx, E->getType(), ExprKind);
 }
