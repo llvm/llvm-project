@@ -158,6 +158,12 @@ page](https://llvm.org/releases/).
   Both modes fill every storage byte including struct padding.
   PowerPC vector locals (`vector(real(4))` etc.) are not initialized.
 
+- Added `-fkeep-inline-functions` and `-fno-keep-inline-functions`. With
+  `-fkeep-inline-functions`, a procedure marked with
+  `!dir$ inlinealways <name>` keeps its definition, even if it has been
+  inlined into every caller or has no callers at all. Call-site inlining
+  directives do not count. See [Directives](Directives.md) for details.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang

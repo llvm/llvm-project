@@ -357,6 +357,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
+  Args.addOptInFlag(CmdArgs, options::OPT_fkeep_inline_functions,
+                    options::OPT_fno_keep_inline_functions);
   Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
                   options::OPT_fno_fp_sum_reassociation);
 
@@ -1337,16 +1339,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
        Args.filtered(options::OPT_clang_ignored_gcc_optimization_f_Group)) {
     D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
     A->claim();
-  }
-
-  // -fkeep-inline-functions/-fno-keep-inline-functions are real Clang options
-  // but are not supported by Flang; warn and ignore them.
-  for (options::ID Opt : {options::OPT_fkeep_inline_functions,
-                          options::OPT_fno_keep_inline_functions}) {
-    if (const Arg *A = Args.getLastArg(Opt)) {
-      D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
-      A->claim();
-    }
   }
 
   const InputInfo &Input = Inputs[0];

@@ -3720,6 +3720,31 @@ private:
           currentFunctionUnit->getSubprogramSymbol().name().ToString();
       if (dir.v.value().ToString() == symName) {
         func->setAttr("llvm.always_inline", builder->getUnitAttr());
+        if (getLoweringOptions().getKeepInlineFunctions()) {
+          // With -fkeep-inline-functions, this procedure must survive even if
+          // it ends up with no callers. That is normally checked much later,
+          // in CodeGenAction::executeAction(), by scanning the generated LLVM
+          // IR, but that scan is too late for a procedure that is never
+          // called: the FIR inliner pass (mlir::createInlinerPass) treats any
+          // discardable (non-public) procedure with zero remaining symbol
+          // uses as dead and erases it once it is done inlining, and it does
+          // this regardless of -fkeep-inline-functions and even at -O0. A
+          // procedure with no callers has zero uses before that pass even
+          // starts, so it would be gone long before the later scan has a
+          // chance to see it.
+          //
+          // Attaching a self-referencing symbol attribute here protects it:
+          // the inliner's own use analysis scans every operation's attribute
+          // dictionary for symbol references, exactly as it would for a real
+          // call, so the procedure is never considered dead. Unlike an SSA
+          // value (e.g. a dead, self-referencing func.constant), a plain
+          // attribute is not touched by dead-code elimination, so it survives
+          // the many canonicalization and simplification passes that run
+          // between here and the inliner, including the inliner's own
+          // internal per-SCC canonicalizer.
+          func->setAttr("flang.keep_inline_functions_ref",
+                        mlir::SymbolRefAttr::get(func));
+        }
       }
     }
   }

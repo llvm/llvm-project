@@ -154,6 +154,19 @@ contains
     ...
   end function
   ```
+  By default, once an internal procedure has been inlined into every caller,
+  its definition may be removed. Module procedures, including `PRIVATE` ones,
+  and external procedures keep their definitions without the flag. With
+  `-fkeep-inline-functions`, the definition of an internal procedure is kept
+  as well. On ELF targets it is added to `llvm.compiler.used`, so the
+  compiler keeps it but the linker may still discard it; other object formats
+  use `llvm.used`. For a module or external procedure, the flag only adds
+  that reference. Unlike Clang, where the flag applies to all inline
+  functions, in Flang it applies only to procedures that name themselves in
+  `!dir$ inlinealways <name>`. The call-site forms (`!dir$ inline`,
+  `!dir$ forceinline`, and `!dir$ inlinealways` without a name) do not make
+  the callee eligible. A procedure with no callers at all is also kept, at
+  every optimization level, matching Clang.
 * `!dir$ noinline` works in the same way as the `inline` directive, but prevents
   any attempt of inlining by the compiler on a function call statement.
 
