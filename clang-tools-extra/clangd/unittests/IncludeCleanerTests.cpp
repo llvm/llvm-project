@@ -100,6 +100,25 @@ TEST(IncludeCleaner, StdlibUnused) {
               ElementsAre(Pointee(writtenInclusion("<queue>"))));
 }
 
+TEST(IncludeCleaner, StdlibNamesDeclaredByProject) {
+  auto TU = TestTU::withCode(R"c(
+    #include "sys/stddef.h"
+    #include "sys/string.h"
+    struct s { int a; };
+    int x = offsetof(struct s, a);
+    int foo(const char *a, const char *b) { return strcmp(a, b); }
+  )c");
+  TU.Filename = "main.c";
+  TU.AdditionalFiles["sys/stddef.h"] =
+      guard("#define offsetof(t, m) __builtin_offsetof(t, m)");
+  TU.AdditionalFiles["sys/string.h"] =
+      guard("int strcmp(const char *, const char *);");
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+}
+
 TEST(IncludeCleaner, GetUnusedHeaders) {
   llvm::StringLiteral MainFile = R"cpp(
     #include "a.h"
@@ -296,7 +315,8 @@ $insert_vector[[]]
     // IWYU pragma: private, include "public.h"
     void foobar();
   )cpp");
-  TU.AdditionalFiles["header.h"] = guard(R"cpp(
+  TU.AdditionalFiles["header.h"] = guard("#include \"vector_impl.h\"");
+  TU.AdditionalFiles["vector_impl.h"] = guard(R"cpp(
   namespace std { class vector {}; }
   )cpp");
 
