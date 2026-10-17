@@ -481,6 +481,42 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   ];
 }
 
+def LoopTripCountVersioning
+    : Pass<"loop-tripcount-versioning", "mlir::func::FuncOp"> {
+  let summary = "Version innermost loops on a likely constant trip count";
+  let description = [{
+    Adds a runtime check and two variants of an innermost loop whose trip count
+    is likely to equal a compile-time constant, so that one variant has a
+    constant trip count that LLVM can fully unroll, or at least vectorize
+    without a minimum-iteration check and remainder loop. Both variants are the
+    original loop with only the bound changed, so the transformation is always
+    legal; the heuristics decide only where it is worthwhile.
+
+    The first heuristic takes the constant from the declared extent of an
+    explicit-shape array whose leading dimension the loop indexes: for
+    `a(1:n, :)` on `a(4, :)` the innermost loop runs `1..n`, and versioning on
+    `n == 4` gives the fast variant a trip count of 4. Further heuristics may
+    be added in the future.
+
+    Candidates are limited by the declared extent (`max-section-extent`) and
+    by the size of the fully unrolled fast variant, extent times FIR operations
+    in the loop body (`max-unrolled-ops`). The latter is a heuristic proxy for
+    LLVM's full-unroll decision, which is made on target-costed instructions
+    after lowering; the default is chosen so that simple elemental bodies
+    stay under LLVM's -O3 threshold.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
+  let options = [
+    Option<"maxSectionExtent", "max-section-extent", "unsigned",
+           /*default=*/"32",
+           "Do not version on declared extents larger than this; 0 disables">,
+    Option<"maxUnrolledOps", "max-unrolled-ops", "unsigned",
+           /*default=*/"300",
+           "Do not version if the declared extent times the number of FIR "
+           "operations in the loop body exceeds this; 0 removes the limit">
+  ];
+}
+
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
