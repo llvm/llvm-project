@@ -1190,6 +1190,7 @@ def S_GETREG_B32 : S_GETREG_B32_Pseudo<
 // A version of the pseudo for reading hardware register fields that are
 // known to remain the same during the course of the run. Has no side
 // effects and doesn't read MODE.
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def S_GETREG_B32_const : S_GETREG_B32_Pseudo;
 
 let Defs = [MODE], Uses = [MODE] in {
