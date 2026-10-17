@@ -25,6 +25,8 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  // TODO: Consider limiting to C++23 and later
+  // unless pre-C++23 implementations (e.g. `tl::expected`) get supported.
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
