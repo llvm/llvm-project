@@ -151,12 +151,6 @@ struct InstructionMapper {
   /// at index i in \p UnsignedVec for each index i.
   SmallVector<MachineBasicBlock::iterator> InstrList;
 
-  // Set if we added an illegal number in the previous step.
-  // Since each illegal number is unique, we only need one of them between
-  // each range of legal numbers. This lets us make sure we don't add more
-  // than one illegal number per range.
-  bool AddedIllegalLastTime = false;
-
   /// Maps \p *It to a legal integer.
   ///
   /// Updates \p CanOutlineWithPrevInstr, \p HaveLegalRange, \p InstrListForMBB,
@@ -168,10 +162,6 @@ struct InstructionMapper {
       bool &HaveLegalRange, unsigned &NumLegalInBlock,
       SmallVector<unsigned> &UnsignedVecForMBB,
       SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
-    // We added something legal, so we should unset the AddedLegalLastTime
-    // flag.
-    AddedIllegalLastTime = false;
-
     // If we have at least two adjacent legal instructions (which may have
     // invisible instructions in between), remember that.
     if (CanOutlineWithPrevInstr)
@@ -217,15 +207,12 @@ struct InstructionMapper {
       MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
       SmallVector<unsigned> &UnsignedVecForMBB,
       SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
-    // Can't outline an illegal instruction. Set the flag.
-    CanOutlineWithPrevInstr = false;
-
     // Only add one illegal number per range of legal numbers.
-    if (AddedIllegalLastTime)
+    if (!CanOutlineWithPrevInstr)
       return IllegalInstrNumber;
 
-    // Remember that we added an illegal number last time.
-    AddedIllegalLastTime = true;
+    // Can't outline an illegal instruction. Set the flag.
+    CanOutlineWithPrevInstr = false;
     unsigned MINumber = IllegalInstrNumber;
 
     InstrListForMBB.push_back(It);
@@ -359,10 +346,8 @@ struct InstructionMapper {
           break;
 
         case InstrType::Invisible:
-          // Normally this is set by mapTo(Blah)Unsigned, but we just want to
-          // skip this instruction. So, unset the flag here.
+          // Invisible instructions do not change the mapped sequence.
           ++NumInvisible;
-          AddedIllegalLastTime = false;
           break;
         }
       }
