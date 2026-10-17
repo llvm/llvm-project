@@ -79,12 +79,6 @@ kernel void test_invalid_store_stride(__global float *ptr) {
     coop_mat_store(ptr, a, ROW_MAJOR, stride); // expected-error {{stride argument for load/store of cooperative matrix must have type 'size_t'}}
 }
 
-// Cooperative matrix element type must match the pointed-to buffer type.
-kernel void test_load_element_pointer_mismatch(__global int *iptr) {
-    MatA_t a;
-    a = coop_mat_load(iptr, ROW_MAJOR, 16); // expected-error {{inconsistent between cooperative matrix element type and buffer pointer type}}
-}
-
 // Invalid value for fourth coop_mat_mulAdd argument.
 kernel void test_invalid_muladd_matrix_operand_type() {
     MatA_t a;
@@ -182,4 +176,9 @@ void test_coop_mat_init_invalid(void) {
 void test_coop_mat_length_invalid(void) {
   int Value = 0;
   int len = coop_mat_length(Value); // expected-error {{argument must be a valid cooperative matr}}
+}
+
+// Test of pointer to coop_mat
+void test_pointer_to_coop_mat(void) {
+    MatA_t *p = 0; // expected-error {{pointer to cooperative matrix type is not allowed}}
 }

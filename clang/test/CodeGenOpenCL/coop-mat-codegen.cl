@@ -6,8 +6,6 @@
 // RUN:   -finclude-default-header -emit-llvm -O0 -o - %s \
 // RUN:   | FileCheck %s
 
-// expected-no-diagnostics
-
 #define SCOPE     memory_scope_sub_group
 #define USE_A     CLK_COOPERATIVE_MATRIX_A
 #define USE_B     CLK_COOPERATIVE_MATRIX_B
@@ -23,7 +21,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
 // coop_mat_load -> __spirv_CooperativeMatrixLoadKHR
 //     Also verifies CooperativeMatrixType lowers to spirv.CooperativeMatrixKHR
 //     TargetExtType (visible in the call signature).
-kernel void test_load(__global float *ptr) {
+kernel void test_load(__global float *ptr, __global uchar4 *ptr4, __global char *ptrc) {
     MatA_t a_1;
     a_1 = coop_mat_load(ptr, ROW_MAJOR, 16);
     (void)a_1;
@@ -34,6 +32,10 @@ kernel void test_load(__global float *ptr) {
     (void)a_3;
     MatA_t a_4 = (coop_mat_load(ptr, ROW_MAJOR, 16));
     (void)a_4;
+    MatA_t a_5 = coop_mat_load(ptr4, ROW_MAJOR, 16);
+    (void)a_5;
+    MatA_t a_6 = coop_mat_load(ptrc, ROW_MAJOR, 64);
+    (void)a_6;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_load
 // CHECK: call
@@ -48,14 +50,24 @@ kernel void test_load(__global float *ptr) {
 // CHECK: call
 // CHECK-SAME: target("spirv.CooperativeMatrixKHR"
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
+// CHECK: call
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
+// CHECK: call
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 
 // coop_mat_store -> __spirv_CooperativeMatrixStoreKHR
-kernel void test_store(__global float *ptr) {
-    MatA_t a;
-    coop_mat_store(ptr, a, ROW_MAJOR, 16);
-    (void)a;
+kernel void test_store(__global float *ptr, __global float4 *ptr4) {
+    MatA_t a_1;
+    coop_mat_store(ptr, a_1, ROW_MAJOR, 16);
+    (void)a_1;
+    MatA_t a_2;
+    coop_mat_store(ptr4, a_2, ROW_MAJOR, 16);
+    (void)a_2;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_store
+// CHECK: call {{.*}} @__spirv_CooperativeMatrixStoreKHR
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixStoreKHR
 
 // coop_mat_mulAdd -> __spirv_CooperativeMatrixMulAddKHR
