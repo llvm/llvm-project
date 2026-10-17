@@ -591,10 +591,17 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
   GlobalsInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getDefaultGlobalsAddressSpace());
+  VTableComponentPtrTy = GlobalsInt8PtrTy;
   ProgramPtrTy =
       llvm::PointerType::get(LLVMContext, DL.getProgramAddressSpace());
   ConstGlobalsPtrTy = llvm::PointerType::get(
       LLVMContext, C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
+
+  // SPIR-V can only cast a function pointer to the generic address space.
+  unsigned GenericAS = C.getTargetAddressSpace(LangAS::opencl_generic);
+  if (getTriple().isSPIROrSPIRV() && !getTriple().isSPIRVLogical() &&
+      DL.getProgramAddressSpace() != GenericAS)
+    VTableComponentPtrTy = llvm::PointerType::get(LLVMContext, GenericAS);
 
   // Build C++20 Module initializers.
   // TODO: Add Microsoft here once we know the mangling required for the
