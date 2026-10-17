@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++20 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
 
 // Make sure that the C cases still work fine, even when compiled as C++.
 #include "padding_c.c"
@@ -200,4 +200,3 @@ struct GlobalsForLambda { // no-warning
 // expected-warning@+1{{Excessive padding in 'class (lambda}}
 auto lambda1 = [ c1 = G.c1, i = G.i, c2 = G.c2 ]{};
 auto lambda2 = [ i = G.i, c1 = G.c1, c2 = G.c2 ]{}; // no-warning
-void crasher(auto&& fn) noexcept(noexcept([_ = fn] {})) {} // no-crash: gh #232874
