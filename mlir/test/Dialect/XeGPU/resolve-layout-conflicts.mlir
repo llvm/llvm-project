@@ -406,6 +406,27 @@ gpu.func @step_muli_clone_via_anchor(%arg0: i64, %arg1: memref<32x32xf32>) kerne
   gpu.return
 }
 
+// Rematerializing `arith.index_castui` for the second consumer layout also
+// clones its `vector.step` operand, so the two casts do not share a producer.
+// CHECK-LABEL: gpu.func @step_index_castui_clone_via_anchor
+// CHECK:         %[[STEP0:.*]] = vector.step
+// CHECK:         %[[STEP1:.*]] = vector.step
+// CHECK:         arith.index_castui %[[STEP0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex> to vector<32xi32>
+// CHECK:         arith.index_castui %[[STEP1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex> to vector<32xi32>
+// CHECK-NOT:     xegpu.convert_layout {{.*}} : vector<32xi32>
+gpu.func @step_index_castui_clone_via_anchor(%arg0: memref<32x32xi32>) kernel {
+  %step = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
+  %cast = arith.index_castui %step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex> to vector<32xi32>
+  %col2d = vector.shape_cast %cast {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>} : vector<32xi32> to vector<32x1xi32>
+  %colb = vector.broadcast %col2d {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x1xi32> to vector<32x32xi32>
+  %row2d = vector.shape_cast %cast {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32xi32> to vector<1x32xi32>
+  %rowb = vector.broadcast %row2d {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<1x32xi32> to vector<32x32xi32>
+  %off = arith.addi %colb, %rowb {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>} : vector<32x32xi32>
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<32x32xi32> -> !xegpu.tensor_desc<32x32xi32>
+  xegpu.store_nd %off, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>}> : vector<32x32xi32>, !xegpu.tensor_desc<32x32xi32>
+  gpu.return
+}
+
 // CHECK-LABEL: func.func @extract_source_conflict_with_order
 // CHECK-DAG:     %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 0, 1]>} : () -> vector<2x4x16x32xf16>
 // CHECK-DAG:     %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
