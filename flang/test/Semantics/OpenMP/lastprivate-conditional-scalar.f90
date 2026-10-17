@@ -161,3 +161,85 @@ subroutine bar()
   enddo
   !$omp end do
 end
+
+
+! The same scalar-intrinsic restriction applies to conditional lastprivate on
+! OpenMP target constructs (the check runs in semantics, before device
+! lowering), so unsupported entity kinds are rejected there too.
+subroutine target_items(n, a)
+  integer :: n, i, a(n)
+  integer :: s
+  real :: r
+  character(len=8) :: c
+  integer :: arr(10)
+  type t
+    integer :: a
+  end type
+  type(t) :: dt
+  class(t), allocatable :: poly
+  integer, pointer :: ptr
+  integer, target :: tgt
+
+  ! Scalar intrinsic list items are accepted on a target construct.
+  !$omp target parallel do map(tofrom: s) map(to: a) lastprivate(conditional: s)
+  do i = 1, n
+    if (a(i) > 0) s = a(i)
+  enddo
+  !$omp end target parallel do
+
+  !$omp target parallel do map(tofrom: r) map(to: a) lastprivate(conditional: r)
+  do i = 1, n
+    if (a(i) > 0) r = a(i)
+  enddo
+  !$omp end target parallel do
+
+!ERROR: A list item that appears in a LASTPRIVATE clause with the CONDITIONAL modifier must be a scalar variable with intrinsic type, as defined by the Fortran language, excluding character type, but 'c' is not
+  !$omp target parallel do map(tofrom: c) map(to: a) lastprivate(conditional: c)
+  do i = 1, n
+    if (a(i) > 0) c = 'x'
+  enddo
+  !$omp end target parallel do
+
+!ERROR: A list item that appears in a LASTPRIVATE clause with the CONDITIONAL modifier must be a scalar variable with intrinsic type, as defined by the Fortran language, excluding character type, but 'arr' is not
+  !$omp target parallel do map(tofrom: arr) map(to: a) lastprivate(conditional: arr)
+  do i = 1, n
+    if (a(i) > 0) arr(1) = a(i)
+  enddo
+  !$omp end target parallel do
+
+!ERROR: An array element cannot appear in a LASTPRIVATE clause
+  !$omp target parallel do map(tofrom: arr) map(to: a) lastprivate(conditional: arr(1))
+  do i = 1, n
+    if (a(i) > 0) arr(1) = a(i)
+  enddo
+  !$omp end target parallel do
+
+!ERROR: A list item that appears in a LASTPRIVATE clause with the CONDITIONAL modifier must be a scalar variable with intrinsic type, as defined by the Fortran language, excluding character type, but 'dt' is not
+  !$omp target parallel do map(tofrom: dt) map(to: a) lastprivate(conditional: dt)
+  do i = 1, n
+    if (a(i) > 0) dt%a = a(i)
+  enddo
+  !$omp end target parallel do
+
+!ERROR: A structure component cannot appear in a LASTPRIVATE clause
+  !$omp target parallel do map(tofrom: dt) map(to: a) lastprivate(conditional: dt%a)
+  do i = 1, n
+    if (a(i) > 0) dt%a = a(i)
+  enddo
+  !$omp end target parallel do
+
+  ptr => tgt
+!ERROR: A POINTER or ALLOCATABLE list item is not yet supported by Flang in a LASTPRIVATE clause with the CONDITIONAL modifier, 'ptr'
+  !$omp target parallel do map(tofrom: ptr) map(to: a) lastprivate(conditional: ptr)
+  do i = 1, n
+    if (a(i) > 0) ptr = a(i)
+  enddo
+  !$omp end target parallel do
+
+!ERROR: A list item that appears in a LASTPRIVATE clause with the CONDITIONAL modifier must be a scalar variable with intrinsic type, as defined by the Fortran language, excluding character type, but 'poly' is not
+  !$omp target parallel do map(to: a) lastprivate(conditional: poly)
+  do i = 1, n
+    if (a(i) > 0) poly = t(a(i))
+  enddo
+  !$omp end target parallel do
+end
