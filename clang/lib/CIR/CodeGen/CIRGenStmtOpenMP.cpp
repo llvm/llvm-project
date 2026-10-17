@@ -105,6 +105,27 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
   return res;
 }
 
+/// Checks, emits clauses for, and emits an omp.parallel for the `parallel`
+/// directive at \p parallelItem, deferring to \p emitBody for the region's
+/// contents.
+template <typename DirectiveTy>
+static mlir::LogicalResult emitParallel(
+    CIRGenFunction &cgf, const DirectiveTy &s, const omp::ConstructQueue &queue,
+    omp::ConstructQueue::const_iterator parallelItem, mlir::Location begin,
+    mlir::Location end, llvm::function_ref<mlir::LogicalResult()> emitBody) {
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, parallelItem)))
+    return mlir::failure();
+
+  mlir::omp::ParallelOperands parallelOps;
+  if (mlir::failed(emitParallelClauses(cgf, cgf.getCIRGenModule(),
+                                       cgf.getBuilder(), begin,
+                                       parallelItem->clauses, parallelOps)))
+    return mlir::failure();
+
+  return emitParallelOp(cgf, s, queue, parallelItem, begin, end, parallelOps,
+                        emitBody);
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   mlir::Location begin = getLoc(s.getBeginLoc());
@@ -114,22 +135,216 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
       omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
   omp::ConstructQueue::const_iterator item = queue.begin();
 
-  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
-    return mlir::failure();
-
-  mlir::omp::ParallelOperands clauseOps;
-  if (mlir::failed(emitParallelClauses(*this, getCIRGenModule(), builder, begin,
-                                       item->clauses, clauseOps)))
-    return mlir::failure();
-
-  return emitParallelOp(
-      *this, s, queue, item, begin, end, clauseOps,
-      [&]() -> mlir::LogicalResult {
-        // emitStmt() rejects CapturedStmt directly; the parent construct
-        // must unwrap it, so emit the inner statement instead.
+  return emitParallel(
+      *this, s, queue, item, begin, end, [&]() -> mlir::LogicalResult {
+        // emitStmt() rejects CapturedStmt directly; the
+        // parent construct must unwrap it, so emit the
+        // inner statement instead.
         const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
-        return emitStmt(cs->getCapturedStmt(), /*useCurrentScope=*/true);
+        return emitStmt(cs->getCapturedStmt(),
+                        /*useCurrentScope=*/true);
       });
+}
+
+/// Emits a single Sema-generated pre-init statement for an OpenMP loop
+/// directive: a VarDecl's DeclStmt is lowered directly (it has no
+/// initializer CIRGenFunction::emitStmt can handle on its own), everything
+/// else goes through the general statement emitter.
+static mlir::LogicalResult emitPreinit(CIRGenFunction &cgf,
+                                       const Stmt *preInit) {
+  if (const auto *declStmt = dyn_cast<DeclStmt>(preInit)) {
+    for (const Decl *d : declStmt->decls())
+      cgf.emitVarDecl(cast<VarDecl>(*d));
+    return mlir::success();
+  }
+  return cgf.emitStmt(preInit, /*useCurrentScope=*/true);
+}
+
+/// Emits the Sema-generated pre-init statements for an OpenMP loop directive.
+static mlir::LogicalResult emitPreinits(CIRGenFunction &cgf,
+                                        const Stmt *preInits) {
+  if (!preInits)
+    return mlir::success();
+
+  if (const auto *compound = dyn_cast<CompoundStmt>(preInits)) {
+    for (const Stmt *stmt : compound->body())
+      if (emitPreinit(cgf, stmt).failed())
+        return mlir::failure();
+    return mlir::success();
+  }
+
+  return emitPreinit(cgf, preInits);
+}
+
+/// Emits an omp.loop_nest that iterates a normalized `[0, tripCount)` range
+/// and recomputes the real induction variable each iteration using the given
+/// update expression.
+static mlir::LogicalResult
+emitOMPLoopNest(CIRGenFunction &cgf, const ForStmt &forStmt, mlir::Value lb,
+                mlir::Value ub, mlir::Value step, const VarDecl *ivDecl,
+                const Expr *update) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(forStmt.getSourceRange());
+
+  auto loopNestOp = mlir::omp::LoopNestOp::create(
+      builder, loc, /*collapse_num_loops=*/1, lb, ub, step,
+      /*loop_inclusive=*/false, /*tile_sizes=*/nullptr);
+  mlir::Block *block = new mlir::Block();
+  loopNestOp.getRegion().push_back(block);
+  block->addArgument(lb.getType(), loc);
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(block);
+
+  // Store the normalized counter block argument into the normalized loop
+  // variable's storage location, then let Sema's update expression recompute
+  // the real induction variable from it.
+  mlir::Value iv = block->getArgument(0);
+  Address ivAddr = cgf.getAddrOfLocalVar(ivDecl);
+  mlir::Value civVal =
+      builder.createBuiltinIntCast(loc, iv, ivAddr.getElementType());
+  builder.createStore(loc, civVal, ivAddr);
+  cgf.emitIgnoredExpr(update);
+
+  mlir::LogicalResult bodyRes = mlir::success();
+  if (forStmt.getBody())
+    if (cgf.emitStmt(forStmt.getBody(), /*useCurrentScope=*/true).failed())
+      bodyRes = mlir::failure();
+
+  mlir::omp::YieldOp::create(builder, cgf.getLoc(forStmt.getEndLoc()));
+  return bodyRes;
+}
+
+/// Evaluates the clauses allowed on the `for` directive; none are supported
+/// yet, so every eligible clause is reported as NYI.
+static mlir::LogicalResult
+emitWsloopClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
+                  CIRGenBuilderTy &builder, mlir::Location loc,
+                  llvm::ArrayRef<const OMPClause *> clauses,
+                  mlir::omp::WsloopOperands &clauseOps) {
+  OpenMPClauseEmitter ce(cgf, cgm, builder, loc, clauses);
+  return ce.emitNYI</*supported=*/>(
+      /*nyi=*/OpenMPNYIClauseList<
+          OMPAllocateClause, OMPCollapseClause, OMPFirstprivateClause,
+          OMPLastprivateClause, OMPLinearClause, OMPNowaitClause,
+          OMPOrderClause, OMPOrderedClause, OMPPrivateClause,
+          OMPReductionClause, OMPScheduleClause>{},
+      llvm::omp::Directive::OMPD_for);
+}
+
+/// Creates a module-level `omp.private` op (a "privatizer") for a scalar
+/// of CIR type elemTy.
+static mlir::omp::PrivateClauseOp
+createCounterPrivatizer(CIRGenModule &cgm, mlir::Location loc,
+                        llvm::StringRef baseName, mlir::Type elemTy) {
+  // getGlobalValue() is an O(1) cache lookup, unlike
+  // mlir::SymbolTable::lookupSymbolIn()'s O(n) module scan.
+  unsigned uniquingCounter = 0;
+  llvm::SmallString<64> name = mlir::SymbolTable::generateSymbolName<64>(
+      (baseName + ".privatizer").str(),
+      [&](llvm::StringRef candidate) {
+        return cgm.getGlobalValue(candidate) != nullptr;
+      },
+      uniquingCounter);
+
+  mlir::ModuleOp mod = cgm.getModule();
+  mlir::OpBuilder b(mod.getContext());
+  b.setInsertionPointToEnd(mod.getBody());
+  auto privatizer = mlir::omp::PrivateClauseOp::create(
+      b, loc, mlir::TypeRange{}, b.getStringAttr(name),
+      mlir::TypeAttr::get(elemTy));
+  cgm.insertGlobalSymbol(privatizer);
+  return privatizer;
+}
+
+/// Registers a loop counter as predetermined-private on the omp.wsloop op.
+static Address addPrivateCounter(CIRGenFunction &cgf, CIRGenModule &cgm,
+                                 mlir::Location loc, const VarDecl *privateVd,
+                                 mlir::omp::WsloopOperands &clauseOps) {
+  cgf.emitVarDecl(*privateVd);
+  Address moldAddr = cgf.getAddrOfLocalVar(privateVd);
+
+  mlir::omp::PrivateClauseOp privatizer = createCounterPrivatizer(
+      cgm, loc, privateVd->getName(), moldAddr.getElementType());
+
+  clauseOps.privateVars.push_back(moldAddr.getPointer());
+  clauseOps.privateSyms.push_back(
+      mlir::FlatSymbolRefAttr::get(privatizer.getSymNameAttr()));
+  return moldAddr;
+}
+
+/// Lowers an OMPLoopDirective's `for` directive to an omp.wsloop +
+/// omp.loop_nest.
+static mlir::LogicalResult
+emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
+                       omp::ConstructQueue::const_iterator item) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+  mlir::Location loc = cgf.getLoc(s.getBeginLoc());
+
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, item)))
+    return mlir::failure();
+
+  mlir::omp::WsloopOperands clauseOps;
+  if (emitWsloopClauses(cgf, cgm, builder, loc, item->clauses, clauseOps)
+          .failed())
+    return mlir::failure();
+
+  const CapturedStmt *capturedStmt = s.getInnermostCapturedStmt();
+  const auto *forStmt = cast<ForStmt>(capturedStmt->getCapturedStmt());
+
+  if (emitPreinits(cgf, s.getPreInits()).failed())
+    return mlir::failure();
+
+  // Allocate storage for Sema's normalized 0-based loop counter.
+  const auto *ivDecl =
+      cast<VarDecl>(cast<DeclRefExpr>(s.getIterationVariable())->getDecl());
+  cgf.emitVarDecl(*ivDecl);
+  llvm::SmallVector<CIRGenFunction::DeclMapRevertingRAII, 4> counterShadows;
+  llvm::SmallVector<std::pair<const VarDecl *, Address>, 4> counterMolds;
+  counterShadows.reserve(s.counters().size());
+  counterMolds.reserve(s.counters().size());
+  for (auto [counter, privateCounter] :
+       llvm::zip_equal(s.counters(), s.private_counters())) {
+    const auto *vd = cast<VarDecl>(cast<DeclRefExpr>(counter)->getDecl());
+    const auto *privateVd =
+        cast<VarDecl>(cast<DeclRefExpr>(privateCounter)->getDecl());
+    counterShadows.emplace_back(cgf, vd);
+    counterMolds.emplace_back(
+        vd, addPrivateCounter(cgf, cgm, loc, privateVd, clauseOps));
+  }
+
+  mlir::Value tripCountCir = cgf.emitScalarExpr(s.getNumIterations());
+  auto cirIntType = mlir::cast<cir::IntType>(tripCountCir.getType());
+  mlir::Value zero = builder.createBuiltinIntCast(
+      loc, builder.getConstInt(loc, cirIntType, 0));
+  mlir::Value one = builder.createBuiltinIntCast(
+      loc, builder.getConstInt(loc, cirIntType, 1));
+  mlir::Value tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
+
+  auto wsloopOp = mlir::omp::WsloopOp::create(builder, loc, clauseOps);
+  mlir::Block *innerBlock = new mlir::Block();
+  // Ensures the block arguments match BlockArgOpenMPOpInterface's expected
+  // order.
+  for (auto &counterMold : counterMolds)
+    innerBlock->addArgument(counterMold.second.getPointer().getType(), loc);
+  wsloopOp.getRegion().push_back(innerBlock);
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(innerBlock);
+
+  // Bind each counter to its private block argument.
+  for (unsigned idx = 0; idx < counterMolds.size(); ++idx) {
+    const VarDecl *vd = counterMolds[idx].first;
+    Address moldAddr = counterMolds[idx].second;
+    Address privAddr(innerBlock->getArgument(idx), moldAddr.getElementType(),
+                     moldAddr.getAlignment());
+    cgf.replaceAddrOfLocalVar(vd, privAddr);
+    cgf.symbolTable.insert(vd, privAddr.getPointer());
+  }
+
+  return emitOMPLoopNest(cgf, *forStmt, zero, tripCount, one, ivDecl,
+                         s.updates()[0]);
 }
 
 mlir::LogicalResult
@@ -181,8 +396,9 @@ CIRGenFunction::emitOMPFuseDirective(const OMPFuseDirective &s) {
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPForDirective(const OMPForDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPForDirective");
-  return mlir::failure();
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  return emitOMPWorksharingLoop(*this, s, queue.begin());
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPForSimdDirective(const OMPForSimdDirective &s) {
@@ -216,9 +432,22 @@ CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelForDirective(const OMPParallelForDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPParallelForDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator parallelItem = queue.begin();
+  assert(parallelItem->id == llvm::omp::OMPD_parallel &&
+         "expected 'parallel' to be the outermost directive");
+
+  return emitParallel(
+      *this, s, queue, parallelItem, begin, end, [&]() -> mlir::LogicalResult {
+        omp::ConstructQueue::const_iterator forItem = std::next(parallelItem);
+        assert(forItem != queue.end() && forItem->id == llvm::omp::OMPD_for &&
+               "expected a 'for' directive nested in 'parallel'");
+        return emitOMPWorksharingLoop(*this, s, forItem);
+      });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPParallelForSimdDirective(
     const OMPParallelForSimdDirective &s) {
@@ -387,6 +616,28 @@ emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s,
   return res;
 }
 
+/// Checks, emits clauses for, and emits an omp.target for the `target`
+/// directive at \p targetItem, deferring to \p emitBody for the region's
+/// contents.
+template <typename DirectiveTy>
+static mlir::LogicalResult emitTarget(
+    CIRGenFunction &cgf, const DirectiveTy &s, const omp::ConstructQueue &queue,
+    omp::ConstructQueue::const_iterator targetItem, mlir::Location begin,
+    mlir::Location end, llvm::function_ref<mlir::LogicalResult()> emitBody) {
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, targetItem)))
+    return mlir::failure();
+
+  mlir::omp::TargetExtOperands targetOps;
+  llvm::SmallVector<const VarDecl *> mapSyms;
+  if (mlir::failed(emitTargetClauses(cgf, cgf.getCIRGenModule(),
+                                     cgf.getBuilder(), begin,
+                                     targetItem->clauses, targetOps, mapSyms)))
+    return mlir::failure();
+
+  return emitTargetOp(cgf, s, queue, targetItem, begin, end, targetOps, mapSyms,
+                      emitBody);
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
   mlir::Location begin = getLoc(s.getBeginLoc());
@@ -396,22 +647,12 @@ CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
       omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
   omp::ConstructQueue::const_iterator item = queue.begin();
 
-  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
-    return mlir::failure();
-
-  mlir::omp::TargetExtOperands clauseOps;
-  llvm::SmallVector<const VarDecl *> mapSyms;
-  if (mlir::failed(emitTargetClauses(*this, getCIRGenModule(), builder, begin,
-                                     item->clauses, clauseOps, mapSyms)))
-    return mlir::failure();
-
-  return emitTargetOp(*this, s, queue, item, begin, end, clauseOps, mapSyms,
-                      [&]() -> mlir::LogicalResult {
-                        const CapturedStmt *cs =
-                            s.getCapturedStmt(llvm::omp::OMPD_target);
-                        return emitStmt(cs->getCapturedStmt(),
-                                        /*useCurrentScope=*/true);
-                      });
+  return emitTarget(
+      *this, s, queue, item, begin, end, [&]() -> mlir::LogicalResult {
+        const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_target);
+        return emitStmt(cs->getCapturedStmt(),
+                        /*useCurrentScope=*/true);
+      });
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPTeamsDirective(const OMPTeamsDirective &s) {
@@ -456,49 +697,55 @@ mlir::LogicalResult CIRGenFunction::emitOMPTargetParallelDirective(
       omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
   omp::ConstructQueue::const_iterator targetItem = queue.begin();
   assert(targetItem->id == llvm::omp::OMPD_target &&
-         "expected 'target' to be the outermost leaf");
+         "expected 'target' to be the outermost directive");
 
-  if (mlir::failed(checkSynthesizedClauses(*this, s, targetItem)))
-    return mlir::failure();
-
-  mlir::omp::TargetExtOperands targetOps;
-  llvm::SmallVector<const VarDecl *> mapSyms;
-  if (mlir::failed(emitTargetClauses(*this, getCIRGenModule(), builder, begin,
-                                     targetItem->clauses, targetOps, mapSyms)))
-    return mlir::failure();
-
-  return emitTargetOp(
-      *this, s, queue, targetItem, begin, end, targetOps, mapSyms,
-      [&]() -> mlir::LogicalResult {
+  return emitTarget(
+      *this, s, queue, targetItem, begin, end, [&]() -> mlir::LogicalResult {
         omp::ConstructQueue::const_iterator parallelItem =
             std::next(targetItem);
         assert(parallelItem != queue.end() &&
                parallelItem->id == llvm::omp::OMPD_parallel &&
-               "expected a 'parallel' leaf nested in 'target'");
+               "expected a 'parallel' directive nested in 'target'");
 
-        if (mlir::failed(checkSynthesizedClauses(*this, s, parallelItem)))
-          return mlir::failure();
-
-        mlir::omp::ParallelOperands parallelOps;
-        if (mlir::failed(emitParallelClauses(*this, getCIRGenModule(), builder,
-                                             begin, parallelItem->clauses,
-                                             parallelOps)))
-          return mlir::failure();
-
-        return emitParallelOp(*this, s, queue, parallelItem, begin, end,
-                              parallelOps, [&]() -> mlir::LogicalResult {
-                                const CapturedStmt *cs =
-                                    s.getCapturedStmt(llvm::omp::OMPD_parallel);
-                                return emitStmt(cs->getCapturedStmt(),
-                                                /*useCurrentScope=*/true);
-                              });
+        return emitParallel(*this, s, queue, parallelItem, begin, end,
+                            [&]() -> mlir::LogicalResult {
+                              const CapturedStmt *cs =
+                                  s.getCapturedStmt(llvm::omp::OMPD_parallel);
+                              return emitStmt(cs->getCapturedStmt(),
+                                              /*useCurrentScope=*/true);
+                            });
       });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTargetParallelForDirective(
     const OMPTargetParallelForDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPTargetParallelForDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator targetItem = queue.begin();
+  assert(targetItem->id == llvm::omp::OMPD_target &&
+         "expected 'target' to be the outermost directive");
+
+  return emitTarget(
+      *this, s, queue, targetItem, begin, end, [&]() -> mlir::LogicalResult {
+        omp::ConstructQueue::const_iterator parallelItem =
+            std::next(targetItem);
+        assert(parallelItem != queue.end() &&
+               parallelItem->id == llvm::omp::OMPD_parallel &&
+               "expected a 'parallel' directive nested in 'target'");
+
+        return emitParallel(
+            *this, s, queue, parallelItem, begin, end,
+            [&]() -> mlir::LogicalResult {
+              omp::ConstructQueue::const_iterator forItem =
+                  std::next(parallelItem);
+              assert(forItem != queue.end() &&
+                     forItem->id == llvm::omp::OMPD_for &&
+                     "expected a 'for' directive nested in 'parallel'");
+              return emitOMPWorksharingLoop(*this, s, forItem);
+            });
+      });
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPTaskLoopDirective(const OMPTaskLoopDirective &s) {
