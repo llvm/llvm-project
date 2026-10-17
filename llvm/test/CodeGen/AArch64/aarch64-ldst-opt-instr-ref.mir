@@ -69,8 +69,14 @@
   !14 = distinct !DICompositeType(tag: DW_TAG_class_type, size: 128, identifier: "_ZTSN4llvm9StringRefE")
   
 name:            _ZNK4llvm9StringRef4sizeEv
+body:             |
+  bb.0 (%ir-block.entry):
+    RET_ReallyLR
 ---
 name:            _ZNK4llvm9StringRef4dataEv
+body:             |
+  bb.0 (%ir-block.entry):
+    RET_ReallyLR
 ...
 name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE
 debugValueSubstitutions: []
