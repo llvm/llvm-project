@@ -3017,6 +3017,26 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
 
+  // Emit raw section data from llvm.raw.sections metadata. Each operand is
+  // a tuple of {section_name, alignment, flags, data}.
+  if (const NamedMDNode *RawSections =
+          M.getNamedMetadata("llvm.raw.sections")) {
+    for (const MDNode *Op : RawSections->operands()) {
+      auto *SectionName = cast<MDString>(Op->getOperand(0));
+      auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
+      auto *Data = cast<MDString>(Op->getOperand(3));
+
+      if (MCSection *Section = TLOF.getNamedSection(
+              SectionName->getString(), SectionKind::getMetadata())) {
+        OutStreamer->pushSection();
+        OutStreamer->switchSection(Section);
+        OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
+        OutStreamer->emitBytes(Data->getString());
+        OutStreamer->popSection();
+      }
+    }
+  }
+
   if (Target.isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
 
