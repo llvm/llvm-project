@@ -48,7 +48,7 @@ LIBC_INLINE_VAR constexpr int EXP_MASK = 0x07;
 //                 [-2^(-4) * log(2), 2^(-4) * log(2)]);
 // > dirtyinfnorm(exp(x) - (1 + x + x^2 * P),
 //                [-2^(-4) * log(2), 2^(-4) * log(2)]);
-//   0x1.6828...p-57 < 1.5 * 2^-57.
+//   0x1.6828...p-57 < 2^-56.
 LIBC_INLINE_VAR constexpr double EXP_P_COEFFS[6] = {
     0x1.000000000002ep-1,  // p_0
     0x1.555555555549cp-3,  // p_1
@@ -77,6 +77,13 @@ LIBC_INLINE_VAR constexpr double EXP2_MID[8] = {
     0x1.4bfdad5362a27p0, 0x1.6a09e667f3bcdp0, 0x1.8ace5422aa0dbp0,
     0x1.ae89f995ad3adp0, 0x1.d5818dcfba487p0,
 };
+
+// Splitting -2^-3 * log(2) ~ hi + lo with 38-bit-precision hi part so that
+// kd * MLOG_2_EXP2_HI is exact for |kd| < 2^14:
+// > hi = round(-2^-3 * log(2), 38, RN);
+// > lo = round(-2^-3 * log(2) - hi, D, RN);
+LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_HI = -0x1.62e42fefap-4;
+LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_MID = -0x1.cf79abc9e3b3ap-43;
 
 #else // !LIBC_MATH_HAS_SMALL_TABLES
 
