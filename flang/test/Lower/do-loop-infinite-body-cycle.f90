@@ -190,3 +190,52 @@ end subroutine
 ! CHECK: <<DoConstruct~>>
 ! CHECK: <<End DoConstruct~>>
 ! CHECK: <<End DoConstruct~>>
+
+! A backward GO TO whose cycle control can leave for the end of the body. The
+! IF falls through to the rest of the body, so the region's yield stays
+! reachable and the loop qualifies; whether the cycle is left is up to the
+! program, as for a DO WHILE.
+subroutine escapable_backward_goto(a, b, n)
+  real :: a(n), b(n), s
+  integer :: n, i
+  do i = 1, n
+    s = a(i)
+10  s = s * 0.9
+    if (s > 0.1) goto 10
+    b(i) = s
+  end do
+end subroutine
+
+! CHECK: Subroutine escapable_backward_goto
+! CHECK: <<DoConstruct~>>
+
+! The loop keeps its structured form, with the backward branch inside the
+! region holding the body.
+! FIR-LABEL: func.func @_QPescapable_backward_goto
+! FIR:         fir.do_loop
+! FIR:           scf.execute_region no_inline {
+! FIR:           ^[[TGT:bb[0-9]+]]:  // 2 preds
+! FIR:             cf.cond_br %{{.*}}, ^[[GOTO:bb[0-9]+]], ^[[REST:bb[0-9]+]]
+! FIR:           ^[[GOTO]]:
+! FIR-NEXT:        cf.br ^[[TGT]]
+! FIR:           ^[[REST]]:
+! FIR:             scf.yield
+
+! An escapable cycle next to one that cannot be left. Each GO TO is checked on
+! its own, so the exit-free cycle still disqualifies the loop.
+subroutine escapable_and_exit_free_cycles(a, b, n)
+  real :: a(n), b(n), s
+  integer :: n, i
+  do i = 1, n
+    s = a(i)
+10  s = s * 0.9
+    if (s > 0.1) goto 10
+    if (s < 0.0) then
+20    goto 20
+    end if
+    b(i) = s
+  end do
+end subroutine
+
+! CHECK: Subroutine escapable_and_exit_free_cycles
+! CHECK: <<DoConstruct!>>
