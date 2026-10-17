@@ -60,6 +60,19 @@ void PluginManager::init() {
           this))
     REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
 
+  if (auto Err = iterateDevices([this](ol_device_handle_t Device) {
+        ol_platform_handle_t Platform;
+        ol_platform_backend_t Backend;
+        if (!HostDevice &&
+            !olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                             &Platform) &&
+            !olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                               sizeof(Backend), &Backend) &&
+            Backend == OL_PLATFORM_BACKEND_HOST)
+          HostDevice = Device;
+      }))
+    REPORT() << "Failed to iterate devices: " << toString(std::move(Err));
+
   ODBG(ODT_Init) << "RTLs loaded!";
 }
 
