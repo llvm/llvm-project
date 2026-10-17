@@ -40,15 +40,15 @@ body:             |
     successors: %bb.2, %bb.1
 
     %7 = nofpexcept V_CMP_NEQ_F32_e64 0, 0, 0, undef %3, 0, implicit $mode, implicit $exec
-    $vcc = COPY killed %7
+    $vcc = COPY %7
     S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
   bb.1:
     successors: %bb.3
 
     %4 = nofpexcept V_ADD_F32_e32 undef %6, undef %5, implicit $mode, implicit $exec
-    undef %12.sub0 = COPY killed %4
-    %17 = COPY killed %12
+    undef %12.sub0 = COPY %4
+    %17 = COPY %12
     S_BRANCH %bb.3
 
   bb.2:
@@ -57,18 +57,18 @@ body:             |
     %8 = nofpexcept V_MAC_F32_e32 undef %3, undef %9, undef %8, implicit $mode, implicit $exec
     undef %13.sub0 = COPY %8
     %13.sub1 = COPY %8
-    %13.sub2 = COPY killed %8
-    %0 = COPY killed %13
-    %17 = COPY killed %0
+    %13.sub2 = COPY %8
+    %0 = COPY %13
+    %17 = COPY %0
 
   bb.3:
-    %1 = COPY killed %17
+    %1 = COPY %17
     FLAT_STORE_DWORD undef %10, %1.sub2, 0, 0, implicit $exec, implicit $flat_scr
     %14 = COPY %1.sub1
-    %16 = COPY killed %1.sub0
-    undef %15.sub0 = COPY killed %16
-    %15.sub1 = COPY killed %14
-    FLAT_STORE_DWORDX2 undef %11, killed %15, 0, 0, implicit $exec, implicit $flat_scr
+    %16 = COPY %1.sub0
+    undef %15.sub0 = COPY %16
+    %15.sub1 = COPY %14
+    FLAT_STORE_DWORDX2 undef %11, %15, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
 ...

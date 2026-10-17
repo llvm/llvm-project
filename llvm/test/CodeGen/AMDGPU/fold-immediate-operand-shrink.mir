@@ -684,30 +684,11 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 518144, implicit $exec
-    ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 killed [[V_MOV_B32_e32_]], [[COPY]], implicit-def dead $vcc, implicit $exec
+    ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[V_MOV_B32_e32_]], [[COPY]], implicit-def dead $vcc, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e32_]]
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 518144, implicit $exec
-    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 killed %1, %0, 0, implicit $exec
-   S_ENDPGM 0, implicit %2
-...
-
----
-name: shrink_add_kill_flags_src1
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $vgpr0
-    ; GCN-LABEL: name: shrink_add_kill_flags_src1
-    ; GCN: liveins: $vgpr0
-    ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 518144, implicit $exec
-    ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[V_MOV_B32_e32_]], killed [[COPY]], implicit-def dead $vcc, implicit $exec
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e32_]]
-    %0:vgpr_32 = COPY $vgpr0
-    %1:vgpr_32 = V_MOV_B32_e32 518144, implicit $exec
-    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %1, killed %0, 0, implicit $exec
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %1, %0, 0, implicit $exec
    S_ENDPGM 0, implicit %2
 ...
 
