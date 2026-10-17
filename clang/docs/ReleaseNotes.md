@@ -1125,6 +1125,10 @@ features cannot lower the translation-unit ABI level;
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
 
+- Added support for the `aarch64-unknown-uefi` target triple. Like
+  `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
+  Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
