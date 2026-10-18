@@ -242,6 +242,8 @@ struct AllocMatchInfo {
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
                             function_ref<bool(uint64_t)> IsPresentInProfile) {
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   for (Function &F : M) {
@@ -262,8 +264,8 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
         StringRef CalleeName = CalledFunction->getName();
         // True if we are calling a heap allocation function that supports
         // hot/cold variants.
-        bool IsAlloc = isAllocationWithHotColdVariant(
-            InstrumentationOptions::Global, CalledFunction, TLI);
+        bool IsAlloc =
+            isAllocationWithHotColdVariant(Opts, CalledFunction, TLI);
         // True for the first iteration below, indicating that we are looking at
         // a leaf node.
         bool IsLeaf = true;
@@ -836,7 +838,8 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
   // Return immediately if the module doesn't contain any function or global
   // variables.
   if (M.empty() && M.globals().empty())

@@ -4692,6 +4692,10 @@ static SDValue splitVectorOp(SDValue Op, SelectionDAG &DAG, const SDLoc &dl) {
   unsigned NumOps = Op.getNumOperands();
   EVT VT = Op.getValueType();
 
+  // We've already folded to a BUILD_VECTOR, just return the original.
+  if (Op.getOpcode() == ISD::BUILD_VECTOR)
+    return Op;
+
   // Extract the LHS Lo/Hi vectors
   SmallVector<SDValue> LoOps(NumOps, SDValue());
   SmallVector<SDValue> HiOps(NumOps, SDValue());
@@ -31079,11 +31083,12 @@ static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (VT.getScalarSizeInBits() < 16 || VT.getScalarSizeInBits() > 64)
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i16 && SVT != MVT::i32 && SVT != MVT::i64)
     return false;
 
   if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
-      (VT.getScalarSizeInBits() > 16 || Subtarget.hasBWI()))
+      (SVT != MVT::i16 || Subtarget.hasBWI()))
     return true;
 
   bool LShift = (VT.is128BitVector() && Subtarget.hasSSE2()) ||
@@ -31115,11 +31120,15 @@ static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (!Subtarget.hasInt256() || VT.getScalarSizeInBits() < 16)
+  if (!Subtarget.hasInt256())
+    return false;
+
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i16 && SVT != MVT::i32 && SVT != MVT::i64)
     return false;
 
   // vXi16 supported only on AVX-512, BWI
-  if (VT.getScalarSizeInBits() == 16 && !Subtarget.hasBWI())
+  if (SVT == MVT::i16 && !Subtarget.hasBWI())
     return false;
 
   if (Subtarget.hasAVX512() &&
@@ -31127,7 +31136,7 @@ static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
     return true;
 
   bool LShift = VT.is128BitVector() || VT.is256BitVector();
-  bool AShift = LShift &&  VT != MVT::v2i64 && VT != MVT::v4i64;
+  bool AShift = LShift && VT != MVT::v2i64 && VT != MVT::v4i64;
   return (Opcode == ISD::SRA) ? AShift : LShift;
 }
 
@@ -32241,6 +32250,11 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
       uint64_t ShYAmt = IsFSHR ? ShiftAmt : (EltSizeInBits - ShiftAmt);
       assert((ShXAmt + ShYAmt) == EltSizeInBits && "Illegal funnel shift");
       MVT WideVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
+
+      // If the shift amount is zero, we can just return the appropriate
+      // operand. We can get here via splitting during legalization.
+      if (ShiftAmt == 0)
+        return IsFSHR ? Op1 : Op0;
 
       if (EltSizeInBits == 8 &&
           (Subtarget.hasXOP() ||
@@ -47300,6 +47314,21 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
                          DAG.getBitcast(MVT::v8f16, Src.getOperand(0)),
                          DAG.getVectorIdxConstant(0, DL));
     }
+    using namespace SDPatternMatch;
+    SDValue FpOp;
+    if (Subtarget.hasSSE2() && N0.hasOneUse() &&
+        sd_match(Src, m_OneUse(m_Srl(m_OneUse(m_BitCast(m_Value(
+                                         FpOp, m_SpecificVT(MVT::f32)))),
+                                     m_SpecificInt(16)))) &&
+        !ISD::isNormalLoad(FpOp.getNode())) {
+      SDLoc DL(N);
+      SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, FpOp);
+      Vec = DAG.getBitcast(MVT::v4i32, Vec);
+      Vec = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, MVT::v4i32, Vec, 16,
+                                       DAG);
+      return DAG.getExtractVectorElt(DL, VT, DAG.getBitcast(MVT::v8f16, Vec),
+                                     0);
+    }
   }
 
   // Since MMX types are special and don't usually play with other vector types,
@@ -52405,6 +52434,22 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
     if (TLI.SimplifyDemandedBits(SDValue(N, 0),
                                  APInt::getAllOnes(NumBitsPerElt), DCI))
       return SDValue(N, 0);
+  }
+
+  if (Opcode == X86ISD::PINSRW && Subtarget.hasSSE41()) {
+    using namespace SDPatternMatch;
+    SDValue FpOp;
+    if (sd_match(Scl, m_OneUse(m_Srl(m_OneUse(m_BitCast(m_Value(
+                                         FpOp, m_SpecificVT(MVT::f32)))),
+                                     m_SpecificInt(16)))) &&
+        !ISD::isNormalLoad(FpOp.getNode())) {
+      SDLoc DL(N);
+      SDValue SrcVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, FpOp);
+      int Mask[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+      Mask[N->getConstantOperandVal(2)] = 9;
+      return DAG.getVectorShuffle(VT, DL, Vec, DAG.getBitcast(VT, SrcVec),
+                                  Mask);
+    }
   }
 
   // Attempt to combine insertion patterns to a shuffle.
