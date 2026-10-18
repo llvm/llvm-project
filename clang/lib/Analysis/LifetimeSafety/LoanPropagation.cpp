@@ -356,14 +356,7 @@ llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
   if (const auto *UF = llvm::dyn_cast<UseFact>(F))
     return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
   if (const auto *OEF = llvm::dyn_cast<OriginEscapesFact>(F))
-    return PImpl->buildOriginFlowChain(OEF, OEF->getEscapedOriginID(),
-                                       TargetLoan, Cfg);
+    return PImpl->buildOriginFlowChain(OEF, TargetLoan, Cfg);
   llvm_unreachable("Unhandled Fact type");
-}
-llvm::SmallVector<OriginID>
-LoanPropagationAnalysis::buildOriginFlowChain(const OriginEscapesFact *OEF,
-                                              const LoanID TargetLoan,
-                                              const CFG *Cfg) const {
-  return PImpl->buildOriginFlowChain(OEF, TargetLoan, Cfg);
 }
 } // namespace clang::lifetimes::internal

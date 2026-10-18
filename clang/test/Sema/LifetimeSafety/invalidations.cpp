@@ -578,8 +578,7 @@ struct SinkOwnerBorrow {
 struct SinkInteriorBorrow {
   const char *dest_; // expected-note {{this field dangles}}
 
-  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}} \
-                                                                       // expected-note {{result of call to 'data' aliases the storage of parameter 'dest'}}
+  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}}
     if (n > 0)
       dest->clear(); // expected-note {{parameter 'dest' is invalidated here}}
   }
@@ -599,14 +598,14 @@ struct S {
     std::vector<std::string> strings;
     FieldFromLocalVector = *strings.begin(); // expected-warning {{local variable 'strings' escapes to the field 'FieldFromLocalVector' and is later invalidated}} \
                                              // expected-note {{result of call to 'begin' aliases the storage of local variable 'strings'}} \
-                                             // expected-note {{expression aliases the storage of local variable 'strings'}}
+                                             // expected-note {{result of call to 'operator*' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}}
     strings.push_back("1");                  // expected-note {{local variable 'strings' is invalidated here}}
   }
 
   void InvalidatedFieldByValueParamVector(std::vector<std::string> strings) {
     FieldFromByValueParamVector = *strings.begin(); // expected-warning {{parameter 'strings' escapes to the field 'FieldFromByValueParamVector' and is later invalidated}} \
                                                     // expected-note {{result of call to 'begin' aliases the storage of parameter 'strings'}} \
-                                                    // expected-note {{expression aliases the storage of parameter 'strings'}}
+                                                    // expected-note {{result of call to 'operator*' aliases the storage of parameter 'strings' because the implicit object parameter is inferred as lifetimebound}}
     strings.push_back("1");                         // expected-note {{parameter 'strings' is invalidated here}}
   }
 
@@ -628,7 +627,7 @@ struct S {
 
   void InvalidatedFieldDelete() {
     int *p = new int; // expected-warning {{allocated object escapes to the field 'FieldFromNew' and is later invalidated}}
-    FieldFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
+    FieldFromNew = p;
     delete p;         // expected-note {{allocated object is freed here}}
   }
 
@@ -663,7 +662,7 @@ void InvalidatedGlobalLocalVector() {
   std::vector<std::string> strings;
   GlobalFromLocalVector = *strings.begin(); // expected-warning {{local variable 'strings' escapes to the global variable 'GlobalFromLocalVector' and is later invalidated}} \
                                             // expected-note {{result of call to 'begin' aliases the storage of local variable 'strings'}} \
-                                            // expected-note {{expression aliases the storage of local variable 'strings'}}
+                                            // expected-note {{result of call to 'operator*' aliases the storage of local variable 'strings' because the implicit object parameter is inferred as lifetimebound}}
   strings.push_back("1");                   // expected-note {{local variable 'strings' is invalidated here}}
 }
 
@@ -679,7 +678,7 @@ void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{par
 
 void InvalidatedGlobalDelete() {
   int *p = new int;  // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
-  GlobalFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
+  GlobalFromNew = p;
   delete p;          // expected-note {{allocated object is freed here}}
 }
 

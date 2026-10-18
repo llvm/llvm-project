@@ -57,12 +57,6 @@ public:
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;
 
-  /// Like the above, starting from the origin \p OEF lets escape. Empty if it
-  /// does not hold \p TargetLoan.
-  llvm::SmallVector<OriginID> buildOriginFlowChain(const OriginEscapesFact *OEF,
-                                                   const LoanID TargetLoan,
-                                                   const CFG *Cfg) const;
-
 private:
   class Impl;
   std::unique_ptr<Impl> PImpl;
