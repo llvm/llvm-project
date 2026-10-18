@@ -9734,95 +9734,6 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
   return Info;
 }
 
-/// Build the body of a defaulted postfix increment or decrement operator
-/// function. C++2d [over.inc.default]p3:
-///   The implicit definition of a defaulted postfix increment or decrement
-///   operator function F that is not defined as deleted for a type C is
-///   equivalent to:
-///     C tmp(c);
-///     ++c;      // or --c
-///     return tmp;
-///   where tmp is a variable defined for exposition only, and c is an lvalue
-///   that denotes *this if F is an implicit object member function, or the
-///   first parameter of F otherwise.
-static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
-                                                    PostfixOperatorKind Kind,
-                                                    SourceLocation Loc) {
-  Sema::CompoundScopeRAII CompoundScope(S);
-
-  // Build an expression denoting 'c'.
-  auto BuildObject = [&]() -> ExprResult {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-        MD && MD->isImplicitObjectMemberFunction()) {
-      ExprResult This = S.ActOnCXXThis(Loc);
-      if (This.isInvalid())
-        return ExprError();
-      return S.CreateBuiltinUnaryOp(Loc, UO_Deref, This.get());
-    }
-    ParmVarDecl *Param = FD->getParamDecl(0);
-    return S.BuildDeclarationNameExpr(
-        CXXScopeSpec(), DeclarationNameInfo(Param->getDeclName(), Loc), Param);
-  };
-
-  // C tmp(c);
-  ExprResult Init = BuildObject();
-  if (Init.isInvalid())
-    return StmtError();
-  QualType C = FD->getReturnType();
-  IdentifierInfo *TmpName = &S.Context.Idents.get("__tmp");
-  VarDecl *Tmp =
-      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, TmpName, C,
-                      S.Context.getTrivialTypeSourceInfo(C, Loc), SC_None);
-  Expr *InitArgs[] = {Init.get()};
-  S.AddInitializerToDecl(Tmp,
-                         ParenListExpr::Create(S.Context, Loc, InitArgs, Loc),
-                         /*DirectInit=*/true);
-  if (Tmp->isInvalidDecl())
-    return StmtError();
-  StmtResult TmpStmt = S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(Tmp), Loc, Loc);
-  if (TmpStmt.isInvalid())
-    return StmtError();
-
-  // ++c; or --c;
-  ExprResult Obj = BuildObject();
-  if (Obj.isInvalid())
-    return StmtError();
-  UnaryOperatorKind Opc =
-      Kind == PostfixOperatorKind::Increment ? UO_PreInc : UO_PreDec;
-  ExprResult Prefix;
-  if (Obj.get()->getType()->isOverloadableType()) {
-    UnresolvedSet<16> Fns;
-    if (auto *DFI = FD->getDefaultedOrDeletedInfo())
-      Fns.assign(DFI->getUnqualifiedLookups().begin(),
-                 DFI->getUnqualifiedLookups().end());
-    Prefix = S.CreateOverloadedUnaryOp(Loc, Opc, Fns, Obj.get(),
-                                       /*RequiresADL=*/true);
-  } else {
-    Prefix = S.CreateBuiltinUnaryOp(Loc, Opc, Obj.get());
-  }
-  if (Prefix.isInvalid())
-    return StmtError();
-  StmtResult PrefixStmt = S.ActOnExprStmt(Prefix, /*DiscardedValue=*/true);
-  if (PrefixStmt.isInvalid())
-    return StmtError();
-
-  // return tmp;
-  ExprResult TmpRef = S.BuildDeclarationNameExpr(
-      CXXScopeSpec(), DeclarationNameInfo(TmpName, Loc), Tmp);
-  if (TmpRef.isInvalid())
-    return StmtError();
-  StmtResult Return = S.BuildReturnStmt(Loc, TmpRef.get());
-  if (Return.isInvalid())
-    return StmtError();
-  // 'tmp' is the only variable returned by this function, so it qualifies for
-  // the named return value optimization.
-  if (cast<ReturnStmt>(Return.get())->getNRVOCandidate() == Tmp)
-    Tmp->setNRVOVariable(true);
-
-  Stmt *Stmts[] = {TmpStmt.get(), PrefixStmt.get(), Return.get()};
-  return S.ActOnCompoundStmt(Loc, Loc, Stmts, /*IsStmtExpr=*/false);
-}
-
 bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
                                                    PostfixOperatorKind Kind) {
   assert(Kind != PostfixOperatorKind::None &&
@@ -10043,6 +9954,95 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
   }
 
   return false;
+}
+
+/// Build the body of a defaulted postfix increment or decrement operator
+/// function. C++2d [over.inc.default]p3:
+///   The implicit definition of a defaulted postfix increment or decrement
+///   operator function F that is not defined as deleted for a type C is
+///   equivalent to:
+///     C tmp(c);
+///     ++c;      // or --c
+///     return tmp;
+///   where tmp is a variable defined for exposition only, and c is an lvalue
+///   that denotes *this if F is an implicit object member function, or the
+///   first parameter of F otherwise.
+static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
+                                                    PostfixOperatorKind Kind,
+                                                    SourceLocation Loc) {
+  Sema::CompoundScopeRAII CompoundScope(S);
+
+  // Build an expression denoting 'c'.
+  auto BuildObject = [&]() -> ExprResult {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && MD->isImplicitObjectMemberFunction()) {
+      ExprResult This = S.ActOnCXXThis(Loc);
+      if (This.isInvalid())
+        return ExprError();
+      return S.CreateBuiltinUnaryOp(Loc, UO_Deref, This.get());
+    }
+    ParmVarDecl *Param = FD->getParamDecl(0);
+    return S.BuildDeclarationNameExpr(
+        CXXScopeSpec(), DeclarationNameInfo(Param->getDeclName(), Loc), Param);
+  };
+
+  // C tmp(c);
+  ExprResult Init = BuildObject();
+  if (Init.isInvalid())
+    return StmtError();
+  QualType C = FD->getReturnType();
+  IdentifierInfo *TmpName = &S.Context.Idents.get("__tmp");
+  VarDecl *Tmp =
+      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, TmpName, C,
+                      S.Context.getTrivialTypeSourceInfo(C, Loc), SC_None);
+  Expr *InitArgs[] = {Init.get()};
+  S.AddInitializerToDecl(Tmp,
+                         ParenListExpr::Create(S.Context, Loc, InitArgs, Loc),
+                         /*DirectInit=*/true);
+  if (Tmp->isInvalidDecl())
+    return StmtError();
+  StmtResult TmpStmt = S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(Tmp), Loc, Loc);
+  if (TmpStmt.isInvalid())
+    return StmtError();
+
+  // ++c; or --c;
+  ExprResult Obj = BuildObject();
+  if (Obj.isInvalid())
+    return StmtError();
+  UnaryOperatorKind Opc =
+      Kind == PostfixOperatorKind::Increment ? UO_PreInc : UO_PreDec;
+  ExprResult Prefix;
+  if (Obj.get()->getType()->isOverloadableType()) {
+    UnresolvedSet<16> Fns;
+    if (auto *DFI = FD->getDefaultedOrDeletedInfo())
+      Fns.assign(DFI->getUnqualifiedLookups().begin(),
+                 DFI->getUnqualifiedLookups().end());
+    Prefix = S.CreateOverloadedUnaryOp(Loc, Opc, Fns, Obj.get(),
+                                       /*RequiresADL=*/true);
+  } else {
+    Prefix = S.CreateBuiltinUnaryOp(Loc, Opc, Obj.get());
+  }
+  if (Prefix.isInvalid())
+    return StmtError();
+  StmtResult PrefixStmt = S.ActOnExprStmt(Prefix, /*DiscardedValue=*/true);
+  if (PrefixStmt.isInvalid())
+    return StmtError();
+
+  // return tmp;
+  ExprResult TmpRef = S.BuildDeclarationNameExpr(
+      CXXScopeSpec(), DeclarationNameInfo(TmpName, Loc), Tmp);
+  if (TmpRef.isInvalid())
+    return StmtError();
+  StmtResult Return = S.BuildReturnStmt(Loc, TmpRef.get());
+  if (Return.isInvalid())
+    return StmtError();
+  // 'tmp' is the only variable returned by this function, so it qualifies for
+  // the named return value optimization.
+  if (cast<ReturnStmt>(Return.get())->getNRVOCandidate() == Tmp)
+    Tmp->setNRVOVariable(true);
+
+  Stmt *Stmts[] = {TmpStmt.get(), PrefixStmt.get(), Return.get()};
+  return S.ActOnCompoundStmt(Loc, Loc, Stmts, /*IsStmtExpr=*/false);
 }
 
 void Sema::DefineDefaultedPostfixOperator(SourceLocation UseLoc,
