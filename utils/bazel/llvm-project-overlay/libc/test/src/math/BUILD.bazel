@@ -157,6 +157,24 @@ math_mpfr_test(
 # TODO: Add dfmal, dmull test.  Missing stdlib/rand dependency.
 
 math_mpfr_test(
+    name = "dfmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "dmull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
     name = "dsqrtl",
     hdrs = ["SqrtTest.h"],
 )
@@ -309,6 +327,15 @@ math_mpfr_test(
 # TODO: Add ffmal test.  Missing stdlib/rand dependency.
 
 math_mpfr_test(
+    name = "ffmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
     name = "floor",
     hdrs = ["FloorTest.h"],
 )
@@ -346,6 +373,15 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
     name = "fmax",
     hdrs = ["FMaxTest.h"],
 )
@@ -362,6 +398,15 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "fmul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmull",
     hdrs = ["MulTest.h"],
     deps = [
         "//libc:rand",
