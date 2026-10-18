@@ -28,6 +28,7 @@ class AsmPrinter;
 class APInt;
 class DwarfCompileUnit;
 class DIELoc;
+class GlobalValue;
 class TargetRegisterInfo;
 class MachineLocation;
 
@@ -143,6 +144,21 @@ protected:
 
   /// Emit a dwarf op address for the given GlobalValue \p GV.
   virtual void emitOpAddress(const GlobalVariable *GV) = 0;
+
+  /// Whether a relocated address operand, as needed by DW_OP_addr, can be
+  /// emitted into this output form. A location list is backed by a plain byte
+  /// buffer, which cannot carry a relocation.
+  virtual bool supportsRelocatedAddress() const { return false; }
+
+  /// Whether a global's address is spelled through the address pool, whose
+  /// index is plain data, rather than as a relocated address.
+  bool usesAddressPool() const;
+
+  /// Emit a relocated address operand. Only called when
+  /// supportsRelocatedAddress() returns true.
+  virtual void emitRelocatedAddress(const MCSymbol *Sym) {
+    llvm_unreachable("relocated address unsupported by this output form");
+  }
 
   /// Start emitting data to the temporary buffer. The data stored in the
   /// temporary buffer can be committed to the main output using
@@ -294,8 +310,10 @@ public:
   unsigned getOrCreateBaseType(unsigned BitSize, dwarf::TypeKind Encoding);
 
   /// Emit all remaining operations in the DIExpressionCursor. The
-  /// cursor must not contain any DW_OP_LLVM_arg operations.
-  void addExpression(DIExpressionCursor &&Expr);
+  /// cursor must not contain any DW_OP_LLVM_arg operations. Returns false if
+  /// an operation could not be emitted, in which case the caller is
+  /// responsible for discarding the partial expression.
+  bool addExpression(DIExpressionCursor &&Expr);
 
   /// Emit all remaining operations in the DIExpressionCursor.
   /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
@@ -545,6 +563,9 @@ class DIEDwarfExpression final : public DwarfExpression {
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void emitOpAddress(const GlobalVariable *GV) override;
+
+  bool supportsRelocatedAddress() const override { return true; }
+  void emitRelocatedAddress(const MCSymbol *Sym) override;
 
   void enableTemporaryBuffer() override;
   void disableTemporaryBuffer() override;

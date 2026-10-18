@@ -1,5 +1,4 @@
 ;; Check that GlobalISel describes a variable holding the address of a global by
-; XFAIL: *
 ;; naming the symbol, matching the SelectionDAG path in
 ;; DebugInfo/X86/dbg-value-globaladdr.ll. The IRTranslator builds the same
 ;; DBG_VALUE, and LiveDebugValues and the DWARF emitter are shared, so the
