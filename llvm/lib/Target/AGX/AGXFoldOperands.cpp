@@ -63,49 +63,68 @@ bool AGXFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   const AGXRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  auto IsUniformCopy = [&](const MachineInstr &MI) {
+    if (!MI.isCopy())
+      return false;
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    return Dst.isVirtual() && Src.isPhysical() &&
+           !MI.getOperand(1).getSubReg() &&
+           AGX::getRegInfo(Src, *TRI).isUniform();
+  };
+
+  SmallVector<MachineInstr *, 32> Worklist;
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
+      if (IsUniformCopy(MI))
+        Worklist.push_back(&MI);
+
   bool Changed = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &Copy : make_early_inc_range(MBB)) {
-      if (!Copy.isCopy())
-        continue;
-      Register Dst = Copy.getOperand(0).getReg();
-      Register Src = Copy.getOperand(1).getReg();
-      if (!Dst.isVirtual() || !Src.isPhysical() ||
-          Copy.getOperand(1).getSubReg())
-        continue;
-      AGX::RegInfo SrcInfo = AGX::getRegInfo(Src, *TRI);
-      if (!SrcInfo.isUniform())
+  while (!Worklist.empty()) {
+    MachineInstr &Copy = *Worklist.pop_back_val();
+    Register Dst = Copy.getOperand(0).getReg();
+    Register Src = Copy.getOperand(1).getReg();
+
+    for (MachineOperand &Use :
+         make_early_inc_range(MRI.use_nodbg_operands(Dst))) {
+      MachineInstr &UseMI = *Use.getParent();
+      MCRegister Folded = Src;
+      if (Use.getSubReg())
+        Folded = TRI->getSubReg(Src, Use.getSubReg());
+      if (!Folded)
         continue;
 
-      for (MachineOperand &Use :
-           make_early_inc_range(MRI.use_nodbg_operands(Dst))) {
-        MachineInstr &UseMI = *Use.getParent();
-        if (UseMI.isCopy() || UseMI.isPHI() || UseMI.isRegSequence() ||
-            UseMI.isInlineAsm())
-          continue;
-        unsigned OpIdx = UseMI.getOperandNo(&Use);
-        if (OpIdx >= UseMI.getDesc().getNumOperands())
-          continue;
-        const TargetRegisterClass *RC = TII->getRegClass(UseMI.getDesc(),
-                                                         OpIdx);
-        MCRegister Folded = Src;
-        if (Use.getSubReg())
-          Folded = TRI->getSubReg(Src, Use.getSubReg());
-        if (!Folded || !RC || !RC->contains(Folded))
-          continue;
-        if (RC == &AGX::BASE64RegClass &&
-            AGX::getRegInfo(Folded, *TRI).HalfIndex >= MaxUniformBaseHalf)
-          continue;
-        Use.setReg(Folded);
-        Use.setSubReg(0);
-        Use.setIsKill(false);
-        Changed = true;
+      // Copies of parts of a uniform tuple become uniform copies themselves.
+      if (UseMI.isCopy()) {
+        if (Use.getSubReg() && UseMI.getOperand(0).getReg().isVirtual()) {
+          Use.setReg(Folded);
+          Use.setSubReg(0);
+          Use.setIsKill(false);
+          Worklist.push_back(&UseMI);
+          Changed = true;
+        }
+        continue;
       }
+      if (UseMI.isPHI() || UseMI.isRegSequence() || UseMI.isInlineAsm())
+        continue;
+      unsigned OpIdx = UseMI.getOperandNo(&Use);
+      if (OpIdx >= UseMI.getDesc().getNumOperands())
+        continue;
+      const TargetRegisterClass *RC = TII->getRegClass(UseMI.getDesc(), OpIdx);
+      if (!RC || !RC->contains(Folded))
+        continue;
+      if (RC == &AGX::BASE64RegClass &&
+          AGX::getRegInfo(Folded, *TRI).HalfIndex >= MaxUniformBaseHalf)
+        continue;
+      Use.setReg(Folded);
+      Use.setSubReg(0);
+      Use.setIsKill(false);
+      Changed = true;
+    }
 
-      if (MRI.use_nodbg_empty(Dst)) {
-        Copy.eraseFromParent();
-        Changed = true;
-      }
+    if (MRI.use_nodbg_empty(Dst)) {
+      Copy.eraseFromParent();
+      Changed = true;
     }
   }
   return Changed;

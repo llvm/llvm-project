@@ -102,7 +102,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BITREVERSE, MVT::i16, Promote);
   setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTTZ}, MVT::i16, Promote);
   setOperationAction({ISD::CTLZ, ISD::CTTZ}, MVT::i64, Custom);
-  setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, MVT::i64, Custom);
+  setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA, ISD::MUL}, MVT::i64,
+                     Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
   setOperationAction({ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT,
                       ISD::SSUBSAT},
@@ -156,6 +157,12 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Expand);
+
+  // There is no library to call: memory intrinsics that AGXCodeGenPrepare
+  // leaves alone are always expanded into loads and stores.
+  MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = ~0U;
+  MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = ~0U;
+  MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;
 }
 
 EVT AGXTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -348,6 +355,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRL:
   case ISD::SRA:
     return lowerShift64(Op, DAG);
+  case ISD::MUL:
+    return lowerMUL64(Op, DAG);
   case ISD::CTLZ:
   case ISD::CTTZ:
     return lowerCTLZ_CTTZ64(Op, DAG);
@@ -624,6 +633,32 @@ SDValue AGXTargetLowering::lowerShift64(SDValue Op, SelectionDAG &DAG) const {
     NewHi = DAG.getSelect(DL, MVT::i32, Big, Fill, HiS);
   }
   return join64(DAG, DL, NewLo, NewHi);
+}
+
+SDValue AGXTargetLowering::lowerMUL64(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  auto IsExt32 = [](SDValue V, unsigned Opc) {
+    return V.getOpcode() == Opc && V.getOperand(0).getValueType() == MVT::i32;
+  };
+  // 32 x 32 -> 64-bit products are a single imadd.
+  if ((IsExt32(A, ISD::ZERO_EXTEND) && IsExt32(B, ISD::ZERO_EXTEND)) ||
+      (IsExt32(A, ISD::SIGN_EXTEND) && IsExt32(B, ISD::SIGN_EXTEND)))
+    return Op;
+
+  // lo(a) * lo(b) as a 64-bit product, plus the cross products in the high
+  // half.
+  auto [ALo, AHi] = split64(DAG, DL, A);
+  auto [BLo, BHi] = split64(DAG, DL, B);
+  SDValue P = DAG.getNode(ISD::MUL, DL, MVT::i64,
+                          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, ALo),
+                          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, BLo));
+  auto [PLo, PHi] = split64(DAG, DL, P);
+  SDValue Cross = DAG.getNode(ISD::ADD, DL, MVT::i32,
+                              DAG.getNode(ISD::MUL, DL, MVT::i32, ALo, BHi),
+                              DAG.getNode(ISD::MUL, DL, MVT::i32, AHi, BLo));
+  return join64(DAG, DL, PLo, DAG.getNode(ISD::ADD, DL, MVT::i32, PHi, Cross));
 }
 
 SDValue AGXTargetLowering::lowerCTLZ_CTTZ64(SDValue Op,

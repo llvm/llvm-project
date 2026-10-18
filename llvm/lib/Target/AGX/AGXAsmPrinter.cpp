@@ -87,7 +87,7 @@ void AGXAsmPrinter::emitFunctionBodyStart() {
                               Twine(getGPRCount(*MF)) + " x 32-bit");
   OutStreamer->emitRawComment(" threadgroup memory: " +
                               Twine(MFI->getThreadgroupSize()) + " bytes");
-  OutStreamer->emitRawComment(" stack: " +
+  OutStreamer->emitRawComment(" stack size: " +
                               Twine(AGXFrameLowering::getStackAdjustUnits(*MF) *
                                     4) +
                               " bytes");

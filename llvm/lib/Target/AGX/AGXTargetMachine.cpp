@@ -115,6 +115,10 @@ public:
     disablePass(&PatchableFunctionID);
     disablePass(&ShrinkWrapID);
     disablePass(&PostRAMachineSinkingID);
+    // Keep the block order of the structurizer: execution mask code falls
+    // through from each construct into the next, as the vendor and Mesa
+    // compilers lay it out.
+    disablePass(&MachineBlockPlacementID);
   }
 
   AGXTargetMachine &getAGXTargetMachine() const {

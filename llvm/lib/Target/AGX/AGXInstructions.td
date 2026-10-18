@@ -322,22 +322,6 @@ def : Pat<(i32 (mulhs i32:$a, i32:$b)),
           (EXTRACT_SUBREG (IMADD_I64_FROM32 MOD_SX, $a, MOD_SX, $b, 0,
                                             (i64 0), 0), sub1)>;
 
-// 64-bit multiply from 32-bit pieces.
-def : Pat<(i64 (mul i64:$a, i64:$b)),
-          (REG_SEQUENCE GPR64,
-            (EXTRACT_SUBREG
-              (IMADD_I64_FROM32 0, (EXTRACT_SUBREG $a, sub0),
-                                0, (EXTRACT_SUBREG $b, sub0), 0, (i64 0), 0),
-              sub0), sub0,
-            (IMADD_I32 0, (EXTRACT_SUBREG $a, sub0), 0,
-                       (EXTRACT_SUBREG $b, sub1), 0,
-              (IMADD_I32 0, (EXTRACT_SUBREG $a, sub1), 0,
-                         (EXTRACT_SUBREG $b, sub0), 0,
-                (EXTRACT_SUBREG
-                  (IMADD_I64_FROM32 0, (EXTRACT_SUBREG $a, sub0),
-                                    0, (EXTRACT_SUBREG $b, sub0), 0, (i64 0),
-                                    0), sub1), 0), 0), sub1)>;
-
 //===----------------------------------------------------------------------===//
 // Shifts and bit fields
 //===----------------------------------------------------------------------===//

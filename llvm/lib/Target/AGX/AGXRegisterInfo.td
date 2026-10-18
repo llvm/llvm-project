@@ -128,10 +128,6 @@ def SRC32 : RegisterClass<"AGX", [i32, f32, v2i16, v2f16, v2bf16], 32,
                           (add GPR32, UGPR32)> {
   let isAllocatable = 0;
 }
-def SRC64 : RegisterClass<"AGX", [i64, f64, v2i32, v2f32], 32,
-                          (add GPR64, UGPR64)> {
-  let isAllocatable = 0;
-}
 // 64-bit memory base addresses: general purpose or uniform register pairs.
 def BASE64 : RegisterClass<"AGX", [i64], 32, (add GPR32x2, UGPR64)> {
   let isAllocatable = 0;

@@ -25,6 +25,7 @@
 
 #include "AGX.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -65,6 +66,7 @@ class AGXAnnotateControlFlowImpl {
   bool insertElse(CondBrInst *Term);
   bool handleLoop(CondBrInst *Term);
   bool closeControlFlow(BasicBlock *BB);
+  bool layoutBlocks();
 
   CallInst *createCall(IRBuilder<> &IRB, Intrinsic::ID ID,
                        ArrayRef<Value *> Args = {}) {
@@ -248,5 +250,24 @@ bool AGXAnnotateControlFlowImpl::run() {
   if (!Stack.empty())
     report_fatal_error("AGX: failed to annotate the control flow graph (it "
                        "is not structured)");
+  Changed |= layoutBlocks();
+  return Changed;
+}
+
+/// Execution mask code runs each construct in order, falling through from
+/// the then part into the flow block and from the loop body into the latch.
+/// The reverse post-order of the structured graph is that order; it becomes
+/// the block layout, which machine block placement leaves alone.
+bool AGXAnnotateControlFlowImpl::layoutBlocks() {
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  bool Changed = false;
+  BasicBlock *Prev = nullptr;
+  for (BasicBlock *BB : RPOT) {
+    if (Prev && Prev->getNextNode() != BB) {
+      BB->moveAfter(Prev);
+      Changed = true;
+    }
+    Prev = BB;
+  }
   return Changed;
 }

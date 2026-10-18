@@ -81,13 +81,17 @@ defvar DeviceAS = [0, 1, 4];
 defvar LocalAS = [3];
 defvar PrivateAS = [5];
 
+// The address space check is only emitted for fragments flagged as loads or
+// stores.
 multiclass AGXLoadFrags<list<int> AS> {
-  let AddressSpaces = AS in {
+  let AddressSpaces = AS, IsLoad = 1 in {
   def _load : PatFrag<(ops node:$ptr), (load node:$ptr)>;
   def _extloadi8 : PatFrag<(ops node:$ptr), (extloadi8 node:$ptr)>;
   def _zextloadi8 : PatFrag<(ops node:$ptr), (zextloadi8 node:$ptr)>;
   def _extloadi16 : PatFrag<(ops node:$ptr), (extloadi16 node:$ptr)>;
   def _zextloadi16 : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)>;
+  }
+  let AddressSpaces = AS, IsStore = 1 in {
   def _store : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$ptr)>;
   def _truncstorei8 : PatFrag<(ops node:$val, node:$ptr),
                               (truncstorei8 node:$val, node:$ptr)>;

@@ -13,7 +13,7 @@
 //   AGX_ELSE %end       else_fcmp r0l, eq, 0.0, 0.0, 1; jmp_exec_none %end
 //   AGX_LOOP brk, %hdr  while_icmp r0l, eq, brk, 0, 1;  jmp_exec_any %hdr
 //   AGX_LOOP_BEGIN      if_fcmp r0l, eq, 0.0, 0.0, 1 (push_exec 1)
-//   AGX_END_CF          pop_exec r0l, 1
+//   AGX_END_CF          pop_exec r0l, 1, at the start of the block
 //   AGX_BR %bb          jmp_exec_any %bb; jmp_exec_none %bb
 //
 // The jumps only skip code no thread executes; the execution mask
@@ -122,9 +122,17 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             .addImm(FPImmZero)
             .addImm(1);
         break;
-      case AGX::AGX_END_CF:
-        BuildMI(MBB, I, DL, TII.get(AGX::POP_EXEC)).addImm(0).addImm(1);
+      case AGX::AGX_END_CF: {
+        // The construct reconverges at the start of the block. Scheduling
+        // may have moved instructions of the block above the pseudo, since
+        // they have no dependency on it: the pop goes first (like
+        // SILowerControlFlow::emitEndCf), after any earlier pops.
+        MachineBasicBlock::iterator Pos = MBB.begin();
+        while (Pos != I && Pos->getOpcode() == AGX::POP_EXEC)
+          ++Pos;
+        BuildMI(MBB, Pos, DL, TII.get(AGX::POP_EXEC)).addImm(0).addImm(1);
         break;
+      }
       case AGX::AGX_BR: {
         MachineBasicBlock *Target = MI.getOperand(0).getMBB();
         if (!MBB.isLayoutSuccessor(Target)) {

@@ -308,5 +308,6 @@ class AGXRegOperand<RegisterClass rc, string type, string ns = "AGX">
 // after operand folding, 8-bit immediates.
 def Src16Op : AGXRegOperand<SRC16, "OPERAND_SRC">;
 def Src32Op : AGXRegOperand<SRC32, "OPERAND_SRC">;
-def Src64Op : AGXRegOperand<SRC64, "OPERAND_SRC">;
+// 64-bit sources cannot be uniform registers.
+def Src64Op : AGXRegOperand<GPR64, "OPERAND_SRC">;
 def Base64Op : AGXRegOperand<BASE64, "OPERAND_REGISTER", "MCOI">;

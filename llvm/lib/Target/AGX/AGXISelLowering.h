@@ -30,6 +30,7 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSETCC64(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMUL64(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ64(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) const;
