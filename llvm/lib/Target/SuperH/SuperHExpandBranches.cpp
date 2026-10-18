@@ -87,7 +87,7 @@ bool SuperHExpandBR::expand<SH::BRCC>(Block &MBB, BlockIt MBBI) {
       // Skip 4 instructions ahead. with flipped condition
       CC = TII->getOppositeCondCode(CC);
       BuildMI(MBB, MBBI, DL, TII->getBrCond(CC, HasDelaySlot))
-        .addImm(2);
+        .addImm(0);
 
       // Load branch destination.
       BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
