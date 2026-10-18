@@ -1,0 +1,6 @@
+# REQUIRES: systemz-registered-target
+## z/OS assembly uses '*' comments, but llvm-mc's disassembler input always
+## uses '#' comments, so directives are recognized there.
+# RUN: llvm-mc --triple=s390x-ibm-zos --disassemble --verify %s
+
+0x00 0x00 # expected-warning {{invalid instruction encoding}}

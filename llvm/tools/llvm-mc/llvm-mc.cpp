@@ -13,6 +13,7 @@
 
 #include "Disassembler.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -47,6 +48,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 
@@ -123,7 +125,11 @@ static cl::opt<unsigned> CommentColumn("comment-column",
                                        cl::desc("Asm comments indentation"),
                                        cl::init(40));
 
-enum OutputFileType { OFT_Null, OFT_AssemblyFile, OFT_ObjectFile };
+enum OutputFileType {
+  OFT_Null,
+  OFT_AssemblyFile,
+  OFT_ObjectFile
+};
 static cl::opt<OutputFileType>
     FileType("filetype", cl::init(OFT_AssemblyFile),
              cl::desc("Choose an output file type:"),
@@ -221,11 +227,11 @@ static cl::opt<bool> ValidateCFI("validate-cfi",
                                  cl::desc("Validate the CFI directives"),
                                  cl::cat(MCCategory));
 
-static cl::list<std::string> Verify(
-    "verify", cl::CommaSeparated, cl::ValueOptional,
-    cl::desc("Verify emitted diagnostics against '<prefix>-<kind>' comments in "
-             "the input (default prefix: 'expected')"),
-    cl::value_desc("prefixes"), cl::cat(MCCategory));
+static cl::list<std::string>
+    Verify("verify", cl::CommaSeparated, cl::ValueOptional,
+           cl::desc("Check diagnostics against '<prefix>-<kind>' comments in "
+                    "the input (default prefix: 'expected')"),
+           cl::value_desc("prefixes"), cl::cat(MCCategory));
 
 enum ActionType {
   AC_AsLex,
@@ -273,8 +279,8 @@ static const Target *GetTarget(const char *ProgName) {
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(ArchName, TheTriple,
+                                                         Error);
   if (!TheTarget) {
     WithColor::error(errs(), ProgName) << Error;
     return nullptr;
@@ -285,8 +291,8 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<ToolOutputFile>
-GetOutputStream(StringRef Path, sys::fs::OpenFlags Flags) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path,
+    sys::fs::OpenFlags Flags) {
   std::error_code EC;
   auto Out = std::make_unique<ToolOutputFile>(Path, EC, Flags);
   if (EC) {
@@ -310,12 +316,13 @@ static void setDwarfDebugFlags(int argc, char **argv) {
 
 static std::string DwarfDebugProducer;
 static void setDwarfDebugProducer() {
-  if (!getenv("DEBUG_PRODUCER"))
+  if(!getenv("DEBUG_PRODUCER"))
     return;
   DwarfDebugProducer += getenv("DEBUG_PRODUCER");
 }
 
-static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
+static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
+                      raw_ostream &OS) {
 
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
@@ -332,7 +339,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
 }
 
 static int fillCommandLineSymbols(MCAsmParser &Parser) {
-  for (auto &I : DefineSymbol) {
+  for (auto &I: DefineSymbol) {
     auto Pair = StringRef(I).split('=');
     auto Sym = Pair.first;
     auto Val = Pair.second;
@@ -356,7 +363,8 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
-  std::unique_ptr<MCAsmParser> Parser(createMCAsmParser(SrcMgr, Ctx, Str, MAI));
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
@@ -367,7 +375,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   }
 
   int SymbolResult = fillCommandLineSymbols(*Parser);
-  if (SymbolResult)
+  if(SymbolResult)
     return SymbolResult;
   Parser->setShowParsedOperands(ShowInstOperands);
   Parser->setTargetParser(*TAP);
@@ -426,10 +434,27 @@ int main(int argc, char **argv) {
 
   const char *ProgName = argv[0];
 
-  bool VerifyEnabled = Verify.getNumOccurrences() > 0;
-  if (VerifyEnabled && Action == AC_AsLex) {
+  // A bare --verify (or a stray comma) yields empty values; ignore them.
+  SmallVector<StringRef> VerifyPrefixes;
+  for (StringRef Prefix : Verify) {
+    if (Prefix.empty())
+      continue;
+    if (!isAlpha(Prefix[0]) || !all_of(Prefix, [](char C) {
+          return isAlnum(C) || C == '-' || C == '_';
+        })) {
+      WithColor::error(errs(), ProgName)
+          << "invalid prefix '" << Prefix
+          << "' for --verify: prefixes must start with a letter and contain "
+             "only alphanumeric characters, hyphens and underscores\n";
+      return 1;
+    }
+    VerifyPrefixes.push_back(Prefix);
+  }
+  if (Verify.getNumOccurrences() && VerifyPrefixes.empty())
+    VerifyPrefixes.push_back("expected");
+  if (!VerifyPrefixes.empty() && Action == AC_AsLex) {
     WithColor::error(errs(), ProgName)
-        << "-verify is not supported with -as-lex\n";
+        << "--verify is not supported with --as-lex\n";
     return 1;
   }
 
@@ -510,43 +535,27 @@ int main(int argc, char **argv) {
   Ctx.setObjectFileInfo(MOFI.get());
 
   std::optional<SourceMgrDiagnosticVerifier> Verifier;
-  if (VerifyEnabled) {
-    std::vector<std::string> Prefixes;
-    for (StringRef Prefix : Verify)
-      if (!Prefix.empty())
-        Prefixes.push_back(Prefix.str());
-    // A bare '-verify' (no '=value'), an explicit empty prefix list, and a
-    // list that parses to only empty strings (e.g. a stray comma) all mean
-    // "use the default prefix".
-    if (Prefixes.empty())
-      Prefixes = {"expected"};
-
-    // Scope directive scanning to single-line comments recognized by the
-    // target (plus '//' and '#' when allowed) so directive-like text in
-    // operands or string literals is ignored.
-    std::vector<std::string> CommentPrefixes;
-    auto AddCommentPrefix = [&](StringRef Prefix) {
-      if (!Prefix.empty() && !llvm::is_contained(CommentPrefixes, Prefix))
-        CommentPrefixes.push_back(Prefix.str());
-    };
-    StringRef TargetComment = MAI->getCommentString();
-    // AsmLexer::isAtStartOfComment also accepts a single '#' when
-    // CommentString is "##" (X86 Darwin), which subsumes "##".
-    if (TargetComment == "##")
-      TargetComment = "#";
-    AddCommentPrefix(TargetComment);
-    if (MAI->shouldAllowAdditionalComments()) {
-      AddCommentPrefix("//");
-      AddCommentPrefix("#");
+  bool SawError = false;
+  if (!VerifyPrefixes.empty()) {
+    // Only recognize directives in comments. llvm-mc's disassembler input
+    // only supports '#' comments.
+    SmallVector<StringRef, 3> CommentPrefixes;
+    if (Action == AC_Assemble) {
+      CommentPrefixes.push_back(MAI->getCommentString());
+      if (MAI->shouldAllowAdditionalComments())
+        CommentPrefixes.append({"//", "#"});
+    } else {
+      CommentPrefixes.push_back("#");
     }
-
-    Verifier.emplace(SrcMgr, errs(), Prefixes, CommentPrefixes);
-    // Install on both Ctx and SrcMgr: most parser/disassembler diagnostics go
-    // through SrcMgr, while some (e.g. DWARF CFI checker diagnostics via
-    // MCContext::reportError/reportWarning) go directly through Ctx.
-    Ctx.setDiagnosticHandler(
-        [&](const SMDiagnostic &Diag, bool, const SourceMgr &,
-            std::vector<const MDNode *> &) { Verifier->process(Diag); });
+    Verifier.emplace(SrcMgr, errs(), VerifyPrefixes, CommentPrefixes);
+    // Most diagnostics are reported through SrcMgr, but some (e.g. from the
+    // CFI checker) are only reported through Ctx, so route both to Ctx.
+    Ctx.setDiagnosticHandler([&](const SMDiagnostic &Diag, bool,
+                                 const SourceMgr &,
+                                 std::vector<const MDNode *> &) {
+      SawError |= Diag.getKind() == SourceMgr::DK_Error;
+      Verifier->process(Diag);
+    });
     SrcMgr.setDiagHandler(
         [](const SMDiagnostic &Diag, void *Ctx) {
           static_cast<MCContext *>(Ctx)->diagnose(Diag);
@@ -732,17 +741,20 @@ int main(int argc, char **argv) {
     Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
                                     Ctx, HexBytes, NumBenchmarkRuns);
 
-  // Under -verify, the exit code reflects whether the diagnostics matched
-  // what was expected, not whether assembling/disassembling itself hit an
-  // error: an expected error is a successful run.
-  if (Verifier)
-    Res = Verifier->verify() ? 0 : 1;
-
   // Keep output if no errors.
   if (Res == 0) {
     Out->keep();
     if (DwoOut)
       DwoOut->keep();
+  }
+
+  // Under --verify, a run whose errors were all expected succeeds. Failures
+  // that were not reported as diagnostics (e.g. an invalid --defsym) cannot
+  // be expected and still fail.
+  if (Verifier) {
+    bool Verified = Verifier->verify();
+    if (Res == 0 || SawError)
+      Res = Verified ? 0 : 1;
   }
 
   return Res;

@@ -157,55 +157,31 @@ prints in Intel/MASM syntax.
 Choose DWARF debug sections compression.
 :::
 
-:::{option} --verify=<prefixes>
-
-Instead of just printing diagnostics, check them against `<prefix>-error`,
-`<prefix>-warning`, `<prefix>-note` and `<prefix>-remark` comments in
-the input, similar to Clang's `-verify` flag. `<prefixes>` is a
-comma-separated list of prefixes to recognize; a bare `--verify` (with no
-`=<prefixes>`) is equivalent to `--verify=expected`.
-
-A directive has the form:
+:::{option} --verify[=<prefixes>]
+Check diagnostics against directives in comments of the input instead of
+printing them, similar to Clang's `-verify`. `<prefixes>` is a comma-separated
+list of directive prefixes (default: `expected`). A directive has the form
 
 ```text
 <prefix>-<kind>[-re][@<offset>] {{<text>}}
 ```
 
-`<kind>` is one of `error`, `warning`, `note` or `remark`. Without
-an `@<offset>`, the directive applies to its own line; `@+N`/`@-N`
-apply to the line `N` lines below/above, `@above`/`@below` apply to
-the nearest non-directive line above/below, and `@unknown` matches
-diagnostics reported without a source location. By default `<text>` is matched as a substring of
-the diagnostic's message; with the `-re` suffix, any `{{...}}` block
-nested inside `<text>` is matched as a regular expression instead (the
-rest of `<text>` is matched literally), for example:
+where `<kind>` is `error`, `warning`, `note` or `remark`, and `<text>` must be
+a substring of the diagnostic message (with `-re`, `{{...}}` blocks inside
+`<text>` are regular expressions). Without `@<offset>`, the directive applies
+to its own line; `@+N` and `@-N` refer to the line `N` lines below or above,
+`@above` and `@below` to the nearest non-directive line, and `@unknown` to
+diagnostics without a location. For example:
 
 ```asm
-## Matches only diagnostics containing this exact text.
-.foo
-# expected-error@-1 {{unknown directive}}
-
-## Matches any diagnostic starting with "unknown" and ending with
-## "directive"; only the nested {{.*}} is a regex, the surrounding text
-## is literal.
-.foo
-# expected-error-re@-1 {{unknown {{.*}} directive}}
+.foo # expected-error {{unknown directive}}
 ```
 
-A directive must appear within a comment recognized by the target being
-assembled for (its own comment string, plus `//` and `#` if the target
-allows additional comment forms); text that merely resembles a directive
-elsewhere on the line is ignored. Directives are matched line-based (at most
-one directive per line, with nothing other than whitespace following the
-closing `}}`), so they are not recognized inside `/*` and `*/` block comments.
-Use a single-line comment form instead.
-
-Under `--verify`, the process exit code reflects whether the diagnostics
-matched what was expected, not whether assembling/disassembling itself
-produced an error: a fully expected error is a successful (exit code 0) run.
-`--verify` is not supported together with `--as-lex`, since `--as-lex`
-does not report its errors as diagnostics with a message or location.
-
+Directives are only recognized in single-line comments, at most one per line.
+The exit status is 0 if every diagnostic matches a directive and every
+directive matches at least one diagnostic. Unlike Clang, directives take no
+count and match any number of identical diagnostics on their line, and
+`expected-no-diagnostics` is not needed.
 :::
 
 ## EXIT STATUS

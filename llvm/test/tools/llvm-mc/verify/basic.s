@@ -1,67 +1,62 @@
-## Tests for llvm-mc's -verify=<prefixes> diagnostic-verification mode.
+## Tests for llvm-mc's --verify diagnostic-verification mode.
 
 # REQUIRES: riscv-registered-target
-# RUN: rm -rf %t && split-file %s %t
+# RUN: rm -rf %t && split-file %s %t && cd %t
 
-## Matching expected-error directives: a plain substring match, a '-re'
-## regex match (note the nested {{...}} for the regex portion itself), an
-## '@+1' forward offset, and '@above'/'@below' offsets all pass.
-# RUN: llvm-mc -triple riscv32 -verify %t/match.s
+## Matching directives: a substring match, a '-re' regex match, '@+N' and
+## '@-N' offsets, '@above'/'@below', and directives in '#' and '//' comments.
+# RUN: llvm-mc --triple=riscv32 --verify match.s
 
-## Malformed '-re' regex directives (missing closing '}}' or invalid regex
-## syntax) and out-of-bounds line offsets fail verification with an error at
-## the directive.
-# RUN: not llvm-mc -triple riscv32 -verify %t/invalid-regex.s 2>&1 \
-# RUN:   | FileCheck %t/invalid-regex.s --check-prefix=INVALID-REGEX
-# RUN: not llvm-mc -triple riscv32 -verify %t/invalid-offset.s 2>&1 \
-# RUN:   | FileCheck %t/invalid-offset.s --check-prefix=INVALID-OFFSET
+## Custom prefixes are recognized instead of 'expected', but not as the suffix
+## of a longer word such as 'uncheck'.
+# RUN: llvm-mc --triple=riscv32 --verify=check,alt custom-prefix.s
 
-## Custom '-verify=<prefixes>' prefixes (including a comma-separated list)
-## are recognized instead of 'expected', and prefixes that merely end with
-## '<prefix>' (such as 'other-check' or 'uncheck') are ignored.
-# RUN: llvm-mc -triple riscv32 -verify=check,alt %t/match-custom-prefix.s
+## Malformed '-re' directives fail verification.
+# RUN: not llvm-mc --triple=riscv32 --verify invalid-regex.s 2>&1 \
+# RUN:   | FileCheck invalid-regex.s
 
-## A diagnostic whose text matches an expected-* comment but whose kind
-## doesn't (e.g. expected-warning for an actual error) is a "near miss": it
-## still counts as not produced, since it wasn't a full match.
-# RUN: not llvm-mc -triple riscv32 -verify %t/near-miss.s 2>&1 \
-# RUN:   | FileCheck %t/near-miss.s --check-prefix=NEAR-MISS
+## A diagnostic that matches the text but not the kind of a directive.
+# RUN: not llvm-mc --triple=riscv32 --verify near-miss.s 2>&1 \
+# RUN:   | FileCheck near-miss.s
 
-## A diagnostic with no matching expected-* comment fails verification.
-# RUN: not llvm-mc -triple riscv32 -verify %t/unexpected.s 2>&1 \
-# RUN:   | FileCheck %t/unexpected.s --check-prefix=UNEXPECTED
+## Diagnostics without a matching directive fail verification, including when
+## the directive-like text is outside of a comment.
+# RUN: not llvm-mc --triple=riscv32 --verify unexpected.s 2>&1 \
+# RUN:   | FileCheck unexpected.s
+# RUN: not llvm-mc --triple=riscv32 --verify outside-comment.s 2>&1 \
+# RUN:   | FileCheck outside-comment.s
 
-## An expected-error that is never produced fails verification.
-# RUN: not llvm-mc -triple riscv32 -verify %t/missing.s 2>&1 \
-# RUN:   | FileCheck %t/missing.s --check-prefix=MISSING
+## A directive that is never matched fails verification.
+# RUN: not llvm-mc --triple=riscv32 --verify missing.s 2>&1 \
+# RUN:   | FileCheck missing.s
 
-## An expected-error in a '.include'd file that emits no diagnostics is still
-## checked by verify().
-# RUN: not llvm-mc -triple riscv32 -verify -I %t %t/main-include.s 2>&1 \
-# RUN:   | FileCheck %t/included-missing.s --check-prefix=INCLUDE-MISSING
+## A file without diagnostics or directives passes.
+# RUN: llvm-mc --triple=riscv32 --verify no-diagnostics.s
 
-## A directive-looking magic string outside of a comment is not treated as a
-## directive, so the resulting diagnostic is still unexpected.
-# RUN: not llvm-mc -triple riscv32 -verify %t/outside-comment.s 2>&1 \
-# RUN:   | FileCheck %t/outside-comment.s --check-prefix=UNEXPECTED
+## Diagnostics reported through MCContext rather than SourceMgr (e.g. by the
+## CFI checker) are checked too.
+# RUN: llvm-mc --triple=riscv32 --verify --validate-cfi --filetype=null cfi.s
 
-## A file with no diagnostics and no expected-* directives passes.
-# RUN: llvm-mc -triple riscv32 -verify %t/no-diagnostics.s
+## Disassembler diagnostics are checked too.
+# RUN: llvm-mc --triple=riscv32 --disassemble --verify disassemble.txt
 
-## Diagnostics reported through MCContext (e.g. by the DWARF CFI checker,
-## which doesn't go through SourceMgr's diagnostic handler) are also
-## checked, not just diagnostics from the assembler/parser.
-# RUN: llvm-mc -triple riscv32 -verify -validate-cfi -filetype=null %t/cfi.s
+## Output files are not kept if assembling failed, even if all errors were
+## expected.
+# RUN: llvm-mc --triple=riscv32 --verify --filetype=obj -o match.o match.s
+# RUN: not ls match.o
 
-## Disassembler diagnostics (e.g. invalid instruction encodings) are also
-## checked under -disassemble -verify.
-# RUN: llvm-mc -triple riscv32 -disassemble -verify %t/disassemble.txt
+## Errors that are not reported as diagnostics cannot be expected.
+# RUN: not llvm-mc --triple=riscv32 --verify --defsym=bad no-diagnostics.s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DEFSYM
+# DEFSYM: error: defsym must be of the form: sym=value: bad
 
-## -verify is rejected together with -as-lex, since -as-lex doesn't report
-## its errors as diagnostics with a message/location at all.
-# RUN: not llvm-mc -triple riscv32 -verify -as-lex %t/no-diagnostics.s 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=AS-LEX-ERR
-# AS-LEX-ERR: -verify is not supported with -as-lex
+# RUN: not llvm-mc --triple=riscv32 --verify=1x no-diagnostics.s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-PREFIX
+# BAD-PREFIX: error: invalid prefix '1x' for --verify: prefixes must start with a letter and contain only alphanumeric characters, hyphens and underscores
+
+# RUN: not llvm-mc --triple=riscv32 --verify --as-lex no-diagnostics.s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=AS-LEX
+# AS-LEX: error: --verify is not supported with --as-lex
 
 #--- match.s
 .foo_directive
@@ -79,78 +74,62 @@
 # expected-error@below {{unknown directive}}
 .below_directive
 
-## Multiple expected-note directives on the same line whose substrings both
-## match the first emitted note ("unexpected extra operand for instruction")
-## still match both notes because unmatched directives are preferred over
-## reusing an already-matched one.
+.qux_directive # expected-error {{unknown directive}}
+.quux_directive // expected-error {{unknown directive}}
+
 sfence.vma a0, 0x10
 # expected-error@-1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2 {{r}}
+# expected-note@-2 {{unexpected extra operand for instruction}}
 # expected-note@-3 {{register must be a GPR}}
+
+#--- custom-prefix.s
+.foo_directive
+# check-error@-1 {{unknown directive}}
+# uncheck-error@-2 {{not a match for --verify=check,alt}}
+# expected-error@-3 {{not a match for --verify=check,alt}}
+
+.bar_directive
+# alt-error@-1 {{unknown directive}}
 
 #--- invalid-regex.s
 addi a0, a0, 1
 # expected-error-re@-1 {{unclosed {{regex}}
 # expected-error-re@-2 {{invalid {{[}} regex}}
-# INVALID-REGEX: error: found start of regex with no end '}}'
-# INVALID-REGEX: error: invalid regex:
-
-#--- invalid-offset.s
-addi a0, a0, 1
-# expected-error@-99 {{before start}}
-# expected-error@+99 {{past end}}
-# INVALID-OFFSET: error: line offset '-99' is before the start of the file
-# INVALID-OFFSET: error: line offset '+99' is past the end of the file
-
-#--- match-custom-prefix.s
-.foo_directive
-# check-error@-1 {{unknown directive}}
-# other-check-error@-2 {{not a match for -verify=check,alt}}
-# uncheck-error@-3 {{not a match for -verify=check,alt}}
-
-.bar_directive
-# alt-error@-1 {{unknown directive}}
+# CHECK: error: found start of regex with no end '}}'
+# CHECK: error: invalid regex:
 
 #--- near-miss.s
 .foo_directive
 # expected-warning@-1 {{unknown directive}}
-# NEAR-MISS: 'error' diagnostic emitted when expecting a 'warning'
-# NEAR-MISS: expected warning "unknown directive" was not produced
+# CHECK: error: 'error' diagnostic emitted when expecting a 'warning'
+# CHECK: error: expected warning "unknown directive" was not produced
 
 #--- unexpected.s
 .foo_directive
-# UNEXPECTED: error: unknown directive
+# CHECK: error: unknown directive
+
+#--- outside-comment.s
+.foo_directive expected-error {{unknown directive}}
+# CHECK: error: unknown directive
 
 #--- missing.s
 addi a0, a0, 1
 # expected-error@-1 {{this will never happen}}
-# MISSING: expected error "this will never happen" was not produced
-
-#--- main-include.s
-.include "included-missing.s"
-
-#--- included-missing.s
-addi a0, a0, 1
-# expected-error@-1 {{this will never happen}}
-# INCLUDE-MISSING: expected error "this will never happen" was not produced
-
-#--- outside-comment.s
-.foo_directive  expected-error {{unknown directive}}
-# UNEXPECTED: error: unknown directive
+# CHECK: error: expected error "this will never happen" was not produced
 
 #--- no-diagnostics.s
 addi a0, a0, 1
 
 #--- cfi.s
-	.text
-	.globl	f
-	.type	f,@function
+  .text
+  .globl f
+  .type f,@function
 f:
-	.cfi_startproc
-	.cfi_same_value a0
-	li a0, 10
-	# expected-error@-1 {{changed register X10, that register X10's unwinding rule uses, but there is no CFI directives about it}}
-	.cfi_endproc
+  .cfi_startproc
+  .cfi_same_value a0
+  li a0, 10
+  # expected-error@-1 {{changed register X10, that register X10's unwinding rule uses, but there is no CFI directives about it}}
+  .cfi_endproc
 
 #--- disassemble.txt
 0x00 0x00 0x00 0x00 # expected-warning {{invalid instruction encoding}}
