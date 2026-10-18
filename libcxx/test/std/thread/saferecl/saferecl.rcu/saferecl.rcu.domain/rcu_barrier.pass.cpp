@@ -126,6 +126,7 @@ int main(int, char**) {
           std::rcu_barrier();
           std::this_thread::sleep_for(std::chrono::microseconds(5));
         }
+        std::rcu_barrier();
       }));
     }
 
@@ -175,6 +176,7 @@ int main(int, char**) {
           std::rcu_barrier();
           std::this_thread::sleep_for(std::chrono::microseconds(5));
         }
+        std::rcu_barrier();
       }));
     }
 
