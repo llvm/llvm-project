@@ -1980,6 +1980,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        ISD::SRA});
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
 
+  if (Subtarget.is64Bit())
+    setTargetDAGCombine(ISD::ABDS);
+
   if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
 
@@ -24883,6 +24886,33 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default:
     break;
+  case ISD::ABDS: {
+    if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i64)
+      break;
+    if (Subtarget.hasStdExtZbb())
+      break;
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    auto PeelSExtI32 = [](SDValue V) -> SDValue {
+      if (V.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+          cast<VTSDNode>(V.getOperand(1))->getVT() == MVT::i32)
+        return V.getOperand(0);
+      return SDValue();
+    };
+    SDValue A = PeelSExtI32(LHS);
+    SDValue B = PeelSExtI32(RHS);
+    if (!A || !B)
+      break;
+    SDValue Cond =
+        DAG.getSetCC(DL, Subtarget.getXLenVT(), LHS, RHS, ISD::SETLT);
+    auto MakeSubW = [&](SDValue X, SDValue Y) {
+      SDValue S = DAG.getNode(ISD::SUB, DL, MVT::i64, X, Y);
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, S,
+                         DAG.getValueType(MVT::i32));
+    };
+    return DAG.getNode(ISD::SELECT, DL, MVT::i64, Cond, MakeSubW(B, A),
+                       MakeSubW(A, B));
+  }
   case RISCVISD::SplitF64: {
     SDValue Op0 = N->getOperand(0);
     // If the input to SplitF64 is just BuildPairF64 then the operation is
