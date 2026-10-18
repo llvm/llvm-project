@@ -47,6 +47,7 @@ bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
+void noteValueLocation(InterpState &S, const Pointer &Ptr);
 
 /// Checks if a pointer is in range.
 inline bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr,
@@ -116,6 +117,13 @@ bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
 }
 
 inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
+  // Descriptors store the number of elements as unsigned.
+  if (NumElems > std::numeric_limits<unsigned>::max()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_large)
+        << NumElems;
+    return false;
+  }
+
   uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
   if (Limit != 0 && NumElems > Limit) {
     S.FFDiag(S.Current->getSource(OpPC),

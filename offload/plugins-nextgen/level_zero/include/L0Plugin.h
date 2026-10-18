@@ -44,10 +44,21 @@ public:
 
   llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
                                   void *HostPtr, TargetAllocTy Kind,
-                                  size_t Alignment) override;
-  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                         TargetAllocTy Kind) override;
+                                  size_t Alignment,
+                                  GenericProfilerTy *ProfilerPtr) override;
+  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                         GenericProfilerTy *ProfilerPtr) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+  /// Get kernel indirect access flags from all allocators in this context.
+  ze_kernel_indirect_access_flags_t getIndirectFlags() {
+    ze_kernel_indirect_access_flags_t Flags = 0;
+    for (auto &[Device, Allocator] : DeviceAllocators)
+      Flags |= Allocator->getIndirectFlags();
+    if (HostAllocator)
+      Flags |= HostAllocator->getIndirectFlags();
+    return Flags;
+  }
 
   /// Initialize per-plugin-context memory allocators. Runs the pool
   /// probe L0 calls up-front so the first user allocation is not delayed.
@@ -87,9 +98,6 @@ private:
   /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
 
-  // Table containing per-thread information for each Context using TLS.
-  L0ContextTLSTableTy ContextTLSTable;
-
   /// L0 plugin options.
   L0OptionsTy Options;
 
@@ -100,10 +108,6 @@ private:
 public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() = default;
-
-  L0ContextTLSTy &getContextTLS(ze_context_handle_t Context) {
-    return ContextTLSTable.get(Context);
-  }
 
   const L0OptionsTy &getOptions() { return Options; }
 

@@ -195,6 +195,13 @@ public:
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
                                     std::int64_t i);
 
+  /// Create an integer constant of \p integerType with value \p value. The
+  /// bit width of \p value must match the width of \p integerType. Use this
+  /// for values that do not fit in std::int64_t, such as the limits of
+  /// 128-bit integers.
+  mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
+                                    const llvm::APInt &value);
+
   /// Create an integer of \p integerType where all the bits have been set to
   /// ones. Safe to use regardless of integerType bitwidth.
   mlir::Value createAllOnesInteger(mlir::Location loc, mlir::Type integerType);

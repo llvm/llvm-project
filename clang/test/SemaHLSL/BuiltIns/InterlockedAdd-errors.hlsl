@@ -3,13 +3,15 @@
 // RUN:   -disable-llvm-passes -verify
 
 // InterlockedAdd is provided as a set of address-space-qualified overloads
-// (groupshared/device, {int,uint,int64_t,uint64_t}, 2-arg/3-arg). All arg
-// mismatches surface as "no matching function" with 16 candidates. The
-// candidate notes come from synthesized FunctionDecls with no source
-// location, so they are matched with `@*:*`.
+// (groupshared/device, {int,uint,int64_t,uint64_t}, 2-arg/3-arg). Invalid
+// calls surface as "no matching function" with 16 candidates. The candidate
+// notes come from synthesized FunctionDecls with no source location, so they
+// are matched with `@*:*`.
 
-groupshared int   gs_i32;
-groupshared float gs_f32;
+groupshared int     gs_i32;
+groupshared uint    gs_u32;
+groupshared int64_t gs_i64;
+groupshared float   gs_f32;
 struct S { int x; };
 groupshared S     gs_s;
 
@@ -44,8 +46,26 @@ void struct_dest(int v) {
 
 void mismatched_orig_type(int v) {
   uint orig;
-  InterlockedAdd(gs_i32, v, orig); // expected-error{{no matching function for call to 'InterlockedAdd'}}
-  // expected-note@*:* 16 {{candidate function}}
+  InterlockedAdd(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'int' to 'uint'}}
+}
+
+void reverse_mismatched_orig_type(uint v) {
+  int orig;
+  InterlockedAdd(gs_u32, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'unsigned int' to 'int'}}
+}
+
+void wide_mismatched_orig_type(int64_t v) {
+  uint64_t orig;
+  InterlockedAdd(gs_i64, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'long' to 'uint64_t' (aka 'unsigned long')}}
+}
+
+void float_orig_type(int v) {
+  float orig;
+  InterlockedAdd(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
 // The tests below exercise direct invocations of the underlying clang builtin

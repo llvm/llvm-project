@@ -140,11 +140,25 @@ public:
 
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
-  /// Find the mangled name for a function
+  /// Build the asm label for the declaration of a function so that calls to it
+  /// are routed through ResolveFunctionCallLabel.
   ///
   /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
-  /// \returns The mangled name of the function (if available)
-  std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
+  /// \returns The label, or an empty string if \p id is not a function.
+  std::string GetFunctionCallLabel(PdbCompilandSymId id);
+
+  /// Build the asm label for a method that was declared in the field list of
+  /// its class.
+  ///
+  /// \param method_type The type of the method in the field list.
+  /// \param qualified_name The name of the method including its class.
+  /// \returns The label of the definition of the method, or an empty string
+  /// if the method is not defined in this module.
+  std::string GetMethodCallLabel(llvm::codeview::TypeIndex method_type,
+                                 llvm::StringRef qualified_name);
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
@@ -292,6 +306,14 @@ private:
 
   llvm::StringRef StripMangledFunctionName(llvm::StringRef mangled,
                                            PdbTypeSymId func_ty);
+
+  std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
+
+  /// Find the S_GPROC32/S_LPROC32 record named \p qualified_name whose type is
+  /// \p method_type.
+  std::optional<PdbCompilandSymId>
+  FindMethodDefinition(llvm::StringRef qualified_name,
+                       llvm::codeview::TypeIndex method_type);
 
   llvm::BumpPtrAllocator m_allocator;
 

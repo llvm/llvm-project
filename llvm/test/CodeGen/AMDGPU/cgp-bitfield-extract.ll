@@ -29,9 +29,9 @@
 ; GCN-NOT: lshr
 ; GCN: s_cbranch_scc{{[0-1]}}
 
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70008
-; GCN: .LBB0_3:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008
+; GCN: .LBB0_2:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70008
 
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
@@ -174,11 +174,11 @@ ret:
 
 ; GCN: s_cbranch_scc{{[0-1]}} .LBB3_2
 ; GCN: s_lshr_b64 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s[[[LO2:[0-9]+]]:[[HI2:[0-9]+]]], 30
-; GCN: s_and_b32 s{{[0-9]+}},  s[[LO]], 0x7f
+; GCN: s_and_b32 s{{[0-9]+}},  s[[LO]], 0xff
 
-; GCN: .LBB3_3:
+; GCN: .LBB3_2:
 ; GCN: s_lshr_b64 s[[[LO3:[0-9]+]]:[[HI3:[0-9]+]]], s[[[LO4:[0-9]+]]:[[HI4:[0-9]+]]], 30
-; GCN: s_and_b32 s{{[0-9]+}},  s[[LO3]], 0xff
+; GCN: s_and_b32 s{{[0-9]+}},  s[[LO3]], 0x7f
 
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
@@ -223,10 +223,10 @@ ret:
 
 ; GCN: s_cbranch_scc{{[0-1]}} .LBB4_2
 
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7000f
-
-; GCN: .LBB4_3:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
+
+; GCN: .LBB4_2:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7000f
 
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_low32(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
@@ -269,10 +269,10 @@ ret:
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_high32:
 ; GCN: s_cbranch_scc{{[0-1]}} .LBB5_2
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70003
-
-; GCN: .LBB5_3:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
+
+; GCN: .LBB5_2:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70003
 
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_high32(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {

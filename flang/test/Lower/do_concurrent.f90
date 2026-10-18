@@ -14,8 +14,8 @@ subroutine sub1(n)
    implicit none
    integer :: n, m, i, j, k
    integer, dimension(n) :: a
-!CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFsub1En"}
-!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub1Ea"}
+!CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFsub1En")
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFsub1Ea")
 
 !CHECK: %[[LB1:.*]] = arith.constant 1 : i32
 !CHECK: %[[LB1_CVT:.*]] = fir.convert %[[LB1]] : (i32) -> index

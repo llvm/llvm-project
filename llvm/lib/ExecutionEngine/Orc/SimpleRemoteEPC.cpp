@@ -380,7 +380,7 @@ void SimpleRemoteEPC::handleCallWrapper(
   assert(ES && "No ExecutionSession attached");
   D->dispatch(makeGenericNamedTask(
       [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() mutable {
-        ES->runJITDispatchHandler(
+        ES->runCallControllerHandler(
             [this, RemoteSeqNo](shared::WrapperFunctionBuffer WFR) {
               auto [ResultTag, Payload] = encodeResultMessage(std::move(WFR));
               if (auto Err =

@@ -1,6 +1,7 @@
 add_lldb_unittest(TargetTests
   ABITest.cpp
   DynamicRegisterInfoTest.cpp
+  ExecutableModuleTest.cpp
   ExecutionContextTest.cpp
   LanguageTest.cpp
   LocateModuleCallbackTest.cpp
@@ -18,14 +19,17 @@ add_lldb_unittest(TargetTests
   StackFrameRecognizerTest.cpp
   SummaryStatisticsTest.cpp
   TargetAPIMutexTest.cpp
+  TargetGroupTest.cpp
   FindFileTest.cpp
 
   LINK_COMPONENTS
       Option
       Support
   LINK_LIBS
+      lldbCommands
       lldbCore
       lldbHost
+      lldbInterpreter
       lldbPluginObjectFileBreakpad
       lldbPluginObjectFileELF
       lldbPluginObjectFileMachO

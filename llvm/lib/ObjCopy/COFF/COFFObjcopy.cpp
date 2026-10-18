@@ -32,6 +32,19 @@ static bool isDebugSection(const Section &Sec) {
   return Sec.Name.starts_with(".debug");
 }
 
+// The COMDAT selection is stored in the section definition symbol's aux
+// record, so it must be kept even if no relocation references it.
+static bool isComdatSectionDefinition(const Object &Obj, const Symbol &Sym) {
+  if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC && Sym.Sym.Value == 0 &&
+      Sym.Sym.NumberOfAuxSymbols != 0 && Sym.TargetSectionId > 0) {
+    // Looks like a section definition symbol, check if it is a COMDAT.
+    const Section *Sec = Obj.findSection(Sym.TargetSectionId);
+    return Sec && Sec->Name == Sym.Name &&
+           (Sec->Header.Characteristics & IMAGE_SCN_LNK_COMDAT);
+  }
+  return false;
+}
+
 static uint64_t getNextRVA(const Object &Obj) {
   if (Obj.getSections().empty())
     return 0;
@@ -232,6 +245,9 @@ static Error handleArgs(const CommonConfig &Config,
                                      "' because it is named in a relocation");
       return true;
     }
+
+    if (isComdatSectionDefinition(Obj, Sym))
+      return false;
 
     if (!Sym.Referenced) {
       // With --strip-unneeded, GNU objcopy removes all unreferenced local

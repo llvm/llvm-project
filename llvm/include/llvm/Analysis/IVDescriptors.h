@@ -437,7 +437,7 @@ public:
   /// Returns floating-point induction operator that does not allow
   /// reassociation (transforming the induction requires an override of normal
   /// floating-point rules).
-  Instruction *getExactFPMathInst() {
+  Instruction *getExactFPMathInst() const {
     if (IK == IK_FpInduction && InductionBinOp &&
         !InductionBinOp->hasAllowReassoc())
       return InductionBinOp;

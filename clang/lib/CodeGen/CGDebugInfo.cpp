@@ -1221,6 +1221,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::SatULongFract:
     Encoding = llvm::dwarf::DW_ATE_unsigned_fixed;
     break;
+  case BuiltinType::MetaInfo:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
 
   BTName = BT->getName(CGM.getLangOpts());
@@ -5275,9 +5277,19 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete
   // call site debug info.
-  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
-    EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
-                     Func);
+  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined()) {
+    // If this is a CXX method, use getFunctionDeclaration which checks the
+    // SPCache first otherwise calls CreateCXXMemberFunction. This ensures that
+    // debug info generated for a declaration here is consistent with that
+    // generated for methods via other means.
+    if (isa<CXXMethodDecl>(CalleeDecl->getCanonicalDecl())) {
+      if (auto *SP = getFunctionDeclaration(CalleeDecl))
+        Func->setSubprogram(SP);
+    } else {
+      EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
+                       Func);
+    }
+  }
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {

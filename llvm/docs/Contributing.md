@@ -98,10 +98,9 @@ the git integration can be run from
 `clang/tools/clang-format/git-clang-format`.
 :::
 
-The LLVM project has migrated to GitHub Pull Requests as its review process.
+The LLVM project uses GitHub Pull Requests for code review.
 For more information about the workflow of using GitHub Pull Requests see our
-{ref}`GitHub <github-reviews>` documentation. We still have a read-only
-[LLVM's Phabricator](https://reviews.llvm.org) instance.
+{ref}`GitHub <github-reviews>` documentation.
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review.

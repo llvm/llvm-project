@@ -60,13 +60,13 @@ func.func @test_host_data_hoisting_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.
 func.func @test_host_data_hoisting_ref_to_box() {
   %1 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr", uniq_name = "_QFEptr"}
   // CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "ptr", uniq_name = "_QFEptr"}>
-  %4 = fir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  // CHECK: %[[DECLARE:.*]] = fir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %4 = fir.declare %1 uniq_name("_QFEptr") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  // CHECK: %[[DECLARE:.*]] = fir.declare %[[ALLOCA]] uniq_name("_QFEptr") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   // Second pointer variable (unused in host_data region)
   %ptr2_alloca = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr2", uniq_name = "_QFEptr2"}
-  %ptr2_decl = fir.declare %ptr2_alloca {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr2"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %ptr2_decl = fir.declare %ptr2_alloca uniq_name("_QFEptr2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   %5 = fir.address_of(@_QFEtgt) : !fir.ref<i32>
-  %6 = fir.declare %5 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEtgt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %6 = fir.declare %5 uniq_name("_QFEtgt") fortran_attrs<target> : (!fir.ref<i32>) -> !fir.ref<i32>
   %8 = fir.embox %6 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
   fir.store %8 to %4 : !fir.ref<!fir.box<!fir.ptr<i32>>>
   fir.store %8 to %ptr2_decl : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -100,17 +100,17 @@ func.func @test_host_data_hoisting_ref_to_box() {
 // per host_data, each inserted right before its host_data.
 func.func @multiple_host_data_(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "arr"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFmultiple_host_dataEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFmultiple_host_dataEarr") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %2 = fir.rebox %1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
   %3 = acc.use_device var(%2 : !fir.box<!fir.array<?xf32>>) name("arr") -> !fir.box<!fir.array<?xf32>>
   acc.host_data dataOperands(%3 : !fir.box<!fir.array<?xf32>>) {
     %4 = fir.dummy_scope : !fir.dscope
-    %5 = fir.declare %3 dummy_scope %4 arg 1 {uniq_name = "_QFmultiple_host_dataEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+    %5 = fir.declare %3 dummy_scope %4 arg 1 uniq_name("_QFmultiple_host_dataEarr") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
     acc.terminator
   }
   acc.host_data dataOperands(%3 : !fir.box<!fir.array<?xf32>>) {
     %4 = fir.dummy_scope : !fir.dscope
-    %5 = fir.declare %3 dummy_scope %4 arg 1 {uniq_name = "_QFmultiple_host_dataEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+    %5 = fir.declare %3 dummy_scope %4 arg 1 uniq_name("_QFmultiple_host_dataEarr") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
     acc.terminator
   }
   return
@@ -133,9 +133,9 @@ func.func @multiple_host_data_(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_nam
 // Test single use_device (to ref-of-box) used by multiple host_data.
 func.func @test_ref_to_box_multiple_host_data() {
   %1 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr", uniq_name = "_QFEptr"}
-  %4 = fir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %4 = fir.declare %1 uniq_name("_QFEptr") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   %5 = fir.address_of(@_QFEtgt) : !fir.ref<i32>
-  %6 = fir.declare %5 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEtgt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %6 = fir.declare %5 uniq_name("_QFEtgt") fortran_attrs<target> : (!fir.ref<i32>) -> !fir.ref<i32>
   %8 = fir.embox %6 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
   fir.store %8 to %4 : !fir.ref<!fir.box<!fir.ptr<i32>>>
   %9 = acc.use_device varPtr(%4 : !fir.ref<!fir.box<!fir.ptr<i32>>>) name("ptr") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
