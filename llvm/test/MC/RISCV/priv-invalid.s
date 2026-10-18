@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -verify < %s
+# RUN: llvm-mc --triple=riscv32 --verify %s
 
 mret 0x10 # expected-error:6 {{unexpected extra operand for instruction}}
 
