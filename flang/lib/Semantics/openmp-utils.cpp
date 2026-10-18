@@ -2493,6 +2493,12 @@ static void AppendConstructTraitsForDirective(
     add(llvm::omp::TraitProperty::construct_dispatch_dispatch);
 }
 
+static SomeExpr NormalizeMetadirectiveCondition(const SomeExpr &expr);
+namespace {
+template <typename T>
+bool AreSameMetadirectiveCondition(const T &left, const T &right);
+} // namespace
+
 static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     const parser::OmpTraitSelector &selector, llvm::omp::VariantMatchInfo &vmi,
     SemanticsContext &semaCtx,
@@ -2616,6 +2622,24 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
                    : std::make_pair(nullptr, false);
   };
 
+  // Identify each distinct runtime condition, so that different conditions
+  // are not strict subsets of each other.
+  llvm::SmallVector<SomeExpr, 4> runtimeConditions;
+  auto getConditionKey = [&](const DynamicUserCondition &condition) {
+    const SomeExpr *expr{GetExpr(context, *condition.expr)};
+    if (!expr ||
+        evaluate::IsActuallyConstant(
+            evaluate::Fold(context.foldingContext(), common::Clone(*expr))))
+      return std::string{};
+    SomeExpr normalized{NormalizeMetadirectiveCondition(*expr)};
+    auto *it{llvm::find_if(runtimeConditions, [&](const SomeExpr &condition) {
+      return AreSameMetadirectiveCondition(condition, normalized);
+    })};
+    if (it == runtimeConditions.end())
+      it = &runtimeConditions.emplace_back(std::move(normalized));
+    return std::to_string(it - runtimeConditions.begin() + 1);
+  };
+
   for (const parser::OmpClause &clause : clauses.v) {
     if (clause.Id() == llvm::omp::Clause::OMPC_when) {
       const auto *ctxSel{GetContextSelector(clause)};
@@ -2629,6 +2653,8 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
+      if (dynamicCondition)
+        rawVMI.UserCondition = getConditionKey(*dynamicCondition);
       if (llvm::any_of(
               rawVMI.ConstructTraits, [](llvm::omp::TraitProperty property) {
                 return llvm::omp::getOpenMPContextTraitSetForProperty(
@@ -2787,6 +2813,13 @@ struct ConditionSymbols : evaluate::Traverse<ConditionSymbols, bool, false> {
     symbols.push_back(&symbol);
     return true;
   }
+  // Expr equality compares the length, but Traverse doesn't visit it.
+  bool operator()(const evaluate::ArrayConstructor<
+      evaluate::Type<common::TypeCategory::Character>> &x) const {
+    if (const auto *len{x.LEN()})
+      (*this)(*len);
+    return Base::operator()(x);
+  }
   std::vector<const Symbol *> &symbols;
 };
 
@@ -2839,6 +2872,12 @@ bool isRepeatableMetadirectiveCondition(const SomeExpr &expr) {
 }
 } // namespace
 
+static SomeExpr NormalizeMetadirectiveCondition(const SomeExpr &expr) {
+  MetadirectiveConditionNormalizer normalizer;
+  evaluate::rewrite::Mutator normalize{normalizer};
+  return normalize(expr);
+}
+
 bool IsRepeatableMetadirectiveCondition(
     const parser::ScalarExpr &condition, SemanticsContext &context) {
   const SomeExpr *expr{GetExpr(context, condition)};
@@ -2854,10 +2893,9 @@ bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
       !isRepeatableMetadirectiveCondition(*rightExpr))
     return false;
 
-  MetadirectiveConditionNormalizer normalizer;
-  evaluate::rewrite::Mutator normalize{normalizer};
   return AreSameMetadirectiveCondition(
-      normalize(*leftExpr), normalize(*rightExpr));
+      NormalizeMetadirectiveCondition(*leftExpr),
+      NormalizeMetadirectiveCondition(*rightExpr));
 }
 
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
