@@ -447,7 +447,7 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @takes_big_uses_arg(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
-  // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[LOADED:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
 
   // Two byval arguments: an operand that names no storage gets its own
@@ -465,7 +465,7 @@ module attributes {
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
   // The entry holds one load and the return, so the unused first parameter
   // got nothing.
-  // CHECK-NEXT:   %[[LOADED:.*]] = cir.load %[[B]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NEXT:   %[[LOADED:.*]] = cir.load align(8) %[[B]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
 
   cir.func @caller_two(%s: !rec_Big, %t: !rec_Big) -> !rec_Big

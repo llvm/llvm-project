@@ -49,16 +49,14 @@ class TargetTransformInfo;
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// IRBuilder inserter that adds new instructions to the worklist and new
   /// assumptions to the AssumptionCache.
-  class LLVM_ABI IRBuilderInstCombineInserter final
-      : public IRBuilderDefaultInserter {
+  class IRBuilderInstCombineInserter final : public IRBuilderDefaultInserter {
     InstCombiner &IC;
 
   public:
-    ~IRBuilderInstCombineInserter() override;
     IRBuilderInstCombineInserter(InstCombiner &IC) : IC(IC) {}
 
-    void InsertHelper(Instruction *I, const Twine &Name,
-                      BasicBlock::iterator InsertPt) const override;
+    LLVM_ABI void InsertHelper(Instruction *I, const Twine &Name,
+                               BasicBlock::iterator InsertPt) const;
   };
 
   /// Only used to call target specific intrinsic combining.

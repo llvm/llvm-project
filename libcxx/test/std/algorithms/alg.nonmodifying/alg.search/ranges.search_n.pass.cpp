@@ -170,6 +170,22 @@ constexpr void test_iterators() {
     }
   }
 
+  { // pattern has negative length. See https://wg21.link/LWG426.
+    {
+      int a[]  = {6, 7, 8};
+      auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 3)), -1, 7);
+      assert(base(ret.begin()) == a);
+      assert(base(ret.end()) == a);
+    }
+    {
+      int a[]    = {6, 7, 8};
+      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 3)));
+      auto ret   = std::ranges::search_n(range, -1, 7);
+      assert(base(ret.begin()) == a);
+      assert(base(ret.end()) == a);
+    }
+  }
+
   { // range has zero length
     {
       std::array<int, 0> a = {};

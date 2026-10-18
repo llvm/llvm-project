@@ -46,6 +46,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -879,6 +880,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else if (columns > std::numeric_limits<int>::max()) {
+      diags.Report(clang::diag::err_drv_large_columns)
+          << arg->getOption().getName() << arg->getValue()
+          << std::numeric_limits<int>::max();
     } else {
       opts.fixedFormColumns = columns;
     }
@@ -905,6 +910,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_fimplicit_none_ext,
                                     clang::options::OPT_fno_implicit_none_ext,
                                     false));
+
+  // -f{no-}implicit-module-prefix
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitModulePrefix,
+      args.hasFlag(clang::options::OPT_fimplicit_module_prefix,
+                   clang::options::OPT_fno_implicit_module_prefix, false));
 
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
