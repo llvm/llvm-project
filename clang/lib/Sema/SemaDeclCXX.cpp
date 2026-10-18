@@ -9611,39 +9611,10 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
         InitializationKind::CreateDirect(Loc, Loc, Loc);
     InitializationSequence Seq(S, Entity, InitKind, Args);
     if (Seq.Failed()) {
-      if (Diagnose) {
-        OverloadCandidateSet &Cands = Seq.getFailedCandidateSet();
-        OverloadingResult OR =
-            Seq.getFailureKind() ==
-                    InitializationSequence::FK_ConstructorOverloadFailed
-                ? Seq.getFailedOverloadResult()
-                : OR_No_Viable_Function;
-        OverloadCandidateSet::iterator Best;
-        switch (OR) {
-        case OR_Deleted:
-          NoteCallsDeleted(diag::DefaultedPostfixOperatorStep::Constructor,
-                           Cands.BestViableFunction(S, Loc, Best) == OR_Deleted
-                               ? Best->Function
-                               : nullptr);
-          break;
-        case OR_Ambiguous:
-          Cands.NoteCandidates(
-              PartialDiagnosticAt(
-                  Loc, S.PDiag(diag::note_defaulted_postfix_operator_ambiguous)
-                           << FD << /*copy construction*/ 0 << C),
-              S, OCD_AmbiguousCandidates, Args, /*Opc=*/"", Loc);
-          break;
-        case OR_No_Viable_Function:
-          Cands.NoteCandidates(
-              PartialDiagnosticAt(
-                  Loc, S.PDiag(diag::note_defaulted_postfix_operator_no_viable)
-                           << FD << /*copy construction*/ 0 << C),
-              S, OCD_AllCandidates, Args, /*Opc=*/"", Loc);
-          break;
-        case OR_Success:
-          llvm_unreachable("initialization sequence did not fail");
-        }
-      }
+      // FIXME: This emits errors rather than notes explaining why the
+      // function is deleted.
+      if (Diagnose)
+        Seq.Diagnose(S, Entity, InitKind, Args);
       return Deleted();
     }
     for (const InitializationSequence::Step &Step : Seq.steps()) {
@@ -9712,7 +9683,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(
               Loc, S.PDiag(diag::note_defaulted_postfix_operator_ambiguous)
-                       << FD << (int)Kind << C),
+                       << FD << !IsIncrement << C),
           S, OCD_AmbiguousCandidates, Args, IsIncrement ? "++" : "--", Loc);
     return Deleted();
 
@@ -9726,7 +9697,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     // member postfix operator (whose object argument is not a parameter).
     if (Diagnose)
       S.Diag(Loc, diag::note_defaulted_postfix_operator_no_viable)
-          << FD << (int)Kind << C;
+          << FD << !IsIncrement << C;
     return Deleted();
   }
 

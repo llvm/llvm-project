@@ -104,7 +104,7 @@ struct DeletedCopy {
   DeletedCopy(const DeletedCopy &) = delete; // expected-note {{'DeletedCopy' has been explicitly marked deleted here}}
   DeletedCopy operator++(int) = default; // #DeletedCopy
   // expected-warning@#DeletedCopy {{explicitly defaulted postfix increment operator is implicitly deleted}}
-  // expected-note@#DeletedCopy {{defaulted 'operator++' is implicitly deleted because it would invoke a deleted constructor}}
+  // expected-error@#DeletedCopy {{call to deleted constructor of 'DeletedCopy'}}
   // expected-note@#DeletedCopy {{replace 'default' with 'delete'}}
 };
 
@@ -113,7 +113,7 @@ struct MoveOnly {
   MoveOnly(MoveOnly &&); // expected-note {{copy constructor is implicitly deleted because 'MoveOnly' has a user-declared move constructor}}
   MoveOnly operator++(int) = default; // #MoveOnly
   // expected-warning@#MoveOnly {{explicitly defaulted postfix increment operator is implicitly deleted}}
-  // expected-note@#MoveOnly {{defaulted 'operator++' is implicitly deleted because it would invoke a deleted constructor}}
+  // expected-error@#MoveOnly {{call to implicitly-deleted copy constructor of 'MoveOnly'}}
   // expected-note@#MoveOnly {{replace 'default' with 'delete'}}
 };
 
@@ -123,7 +123,7 @@ struct AmbiguousCopy {
   AmbiguousCopy(AmbiguousCopy &, long = 0); // expected-note {{candidate constructor}}
   AmbiguousCopy operator++(int) = default; // #AmbiguousCopy
   // expected-warning@#AmbiguousCopy {{explicitly defaulted postfix increment operator is implicitly deleted}}
-  // expected-note@#AmbiguousCopy {{defaulted 'operator++' is implicitly deleted because copy construction of an lvalue of type 'AmbiguousCopy' is ambiguous}}
+  // expected-error@#AmbiguousCopy {{call to constructor of 'AmbiguousCopy' is ambiguous}}
   // expected-note@#AmbiguousCopy {{replace 'default' with 'delete'}}
 };
 
@@ -169,7 +169,7 @@ struct NotFirst {
   NotFirst operator++(int);
 };
 NotFirst NotFirst::operator++(int) = default; // expected-error {{defaulting this postfix increment operator would delete it after its first declaration}}
-// expected-note@-1 {{defaulted 'operator++' is implicitly deleted because it would invoke a deleted constructor}}
+// expected-error@-1 {{call to deleted constructor of 'NotFirst'}}
 
 // No warning is produced for a template instantiation, but the function is
 // still deleted.

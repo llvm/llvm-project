@@ -10730,13 +10730,11 @@ def warn_defaulted_postfix_operator_deleted : Warning<
   "explicitly defaulted %sub{select_defaulted_postfix_operator_kind}0 is "
   "implicitly deleted">, InGroup<DefaultedFunctionDeleted>;
 def note_defaulted_postfix_operator_no_viable : Note<
-  "defaulted %0 is implicitly deleted because there is no viable "
-  "%select{constructor to copy|prefix 'operator++' for|prefix 'operator--' "
-  "for}1 an lvalue of type %2">;
+  "defaulted %0 is implicitly deleted because there is no viable prefix "
+  "%select{'operator++'|'operator--'}1 for an lvalue of type %2">;
 def note_defaulted_postfix_operator_ambiguous : Note<
-  "defaulted %0 is implicitly deleted because %select{copy construction of|"
-  "prefix 'operator++' for|prefix 'operator--' for}1 an lvalue of type %2 "
-  "is ambiguous">;
+  "defaulted %0 is implicitly deleted because prefix "
+  "%select{'operator++'|'operator--'}1 for an lvalue of type %2 is ambiguous">;
 // The %select indices of the operations in the following note are given by
 // diag::DefaultedPostfixOperatorStep.
 def note_defaulted_postfix_operator_inaccessible : Note<
