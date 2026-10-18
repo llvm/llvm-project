@@ -50,6 +50,8 @@ class Error;
 /// It is intentionally a short name to make qualified usage concise.
 namespace cl {
 
+class LibraryOptionsContext;
+
 //===----------------------------------------------------------------------===//
 // Command line option processing entry point.
 //
@@ -65,6 +67,15 @@ namespace cl {
 // that give precedence to earlier occurrences, you will need to extend this
 // function to support it correctly.
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
+                                      StringRef Overview = "",
+                                      raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
+                                      const char *EnvVar = nullptr);
+
+// Like ParseCommandLineOptions, but sets per-context libraries' options in
+// Context instead of their global().
+LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
+                                      ArrayRef<const char *> Args,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
                                       vfs::FileSystem *VFS = nullptr,
@@ -2176,18 +2187,32 @@ public:
           Fn) const = 0;
 
   /// Parses the option spelled by Args[0], which may take Args[1] as its
-  /// value, and sets \p Consumed to the number of arguments it spans. The
-  /// strings in \p Args and the memory from \p Alloc remain valid until
-  /// reset().
-  virtual Error parse(ArrayRef<const char *> Args, unsigned &Consumed,
-                      BumpPtrAllocator &Alloc) = 0;
+  /// value, into \p Opts, which is global() or a copy of it, and sets
+  /// \p Consumed to the number of arguments it spans. The strings in \p Args
+  /// and the memory from \p Alloc remain valid as long as \p Opts is used.
+  virtual Error parse(void *Opts, ArrayRef<const char *> Args,
+                      unsigned &Consumed, BumpPtrAllocator &Alloc) = 0;
+
+  /// Returns the values that ParseCommandLineOptions sets.
+  virtual void *global() = 0;
+
+  /// Returns a copy of global() allocated from \p Alloc.
+  virtual void *copyGlobal(BumpPtrAllocator &Alloc) const = 0;
 
   /// Restores the default values.
   virtual void reset() = 0;
 
+  /// Whether every reader of the options goes through a context's
+  /// LibraryOptionsContext, so that they need not be set in global().
+  bool isPerContext() const { return PerContext; }
+
 protected:
+  explicit LibraryOptions(bool PerContext = false) : PerContext(PerContext) {}
   // Registrations are static and never destroyed through this class.
   ~LibraryOptions() = default;
+
+private:
+  bool PerContext;
 };
 
 /// Makes ParseCommandLineOptions recognize \p L's options. A name that is also

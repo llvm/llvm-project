@@ -3,7 +3,7 @@
 #
 # The workflow keeps no state: on every invocation, the commits that should be benchmarked
 # are recomputed from Git and the ones that have been benchmarked are recomputed from LNT
-# and from the Github Actions API. It then dispatches libcxx-benchmark-commit.yml for the
+# and from the Github Actions API. It then dispatches libcxx-lnt-pipeline.yml for the
 # difference, within a budget. This makes the system converge towards having data for all
 # the desired commits, without necessarily ever reaching that state (as new commits land).
 #
@@ -22,11 +22,6 @@ on:
     inputs:
       dry-run:
         description: 'Report what would be requested, but request nothing'
-        required: false
-        type: boolean
-        default: false
-      allow-missing-machine:
-        description: 'Plan for machines that have no data in LNT yet. Needed to seed a new machine.'
         required: false
         type: boolean
         default: false
@@ -69,7 +64,7 @@ jobs:
   request-runs:
     permissions:
       contents: read
-      actions: write # to dispatch libcxx-benchmark-commit.yml
+      actions: write # to dispatch libcxx-lnt-pipeline.yml
     needs:
       - select-machines
     strategy:
@@ -87,7 +82,6 @@ jobs:
       MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
       LNT_URL: ${{ matrix.lnt-url }}
 
-      ALLOW_MISSING_MACHINE: ${{ inputs.allow-missing-machine || 'false' }}
       DRY_RUN: ${{ inputs.dry-run || 'false' }}
     steps:
       # Anchor commits are stable through time (except for the single new anchor commit every
@@ -150,14 +144,9 @@ jobs:
 
       - name: Determine which commits are missing from LNT
         run: |
-          allow_missing=()
-          if [ "${ALLOW_MISSING_MACHINE}" = "true" ]; then
-            allow_missing=(--allow-missing-machine)
-          fi
-
-          libcxx/utils/ci/lnt/plan-benchmarks --commit-list "${RUNNER_TEMP}/anchors.txt"                            \
-                                              --lnt-url "${LNT_URL}" --test-suite libcxx                            \
-                                              --machine "${MACHINE}" --samples "${SAMPLES}" "${allow_missing[@]}"   \
+          libcxx/utils/ci/lnt/plan-benchmarks --commit-list "${RUNNER_TEMP}/anchors.txt"          \
+                                              --lnt-url "${LNT_URL}" --test-suite libcxx          \
+                                              --machine "${MACHINE}" --samples "${SAMPLES}"       \
                                               --output plan.jsonl
 
       - name: Request the missing runs

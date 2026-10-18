@@ -1,0 +1,115 @@
+# This file defines a reusable workflow that runs the libc++ benchmarks against the given version of
+# libstdc++, using the given machine setup, and uploads the resulting LNT report as an artifact.
+
+name: "[libc++] Run benchmarks against libstdc++"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      libstdcxx-version:
+        description: 'The version of libstdc++ to benchmark. This is the major version of GCC being installed to get libstdc++ (e.g. 16).'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The name of the LNT machine to report the results as'
+        required: true
+        type: string
+      setup:
+        description: 'The setup of the machine to benchmark on, as a JSON object (see libcxx/utils/ci/lnt/README.md)'
+        required: true
+        type: string
+      filter:
+        description: 'An optional filter to determine which benchmarks to run'
+        required: false
+        type: string
+      artifact-name:
+        description: 'The name of the artifact to upload the LNT report as'
+        required: true
+        type: string
+
+jobs:
+  run-benchmarks:
+    name: Run benchmarks on ${{ inputs.lnt-machine }}
+    runs-on: ${{ fromJSON(inputs.setup).runner }}
+    container: ${{ fromJSON(inputs.setup).container || null }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      BENCHMARK_SUITE_VERSION: ${{ fromJSON(inputs.setup).benchmark-suite-version }}
+      COMPILER: ${{ fromJSON(inputs.setup).cxx }}
+      LIBSTDCXX_VERSION: ${{ inputs.libstdcxx-version }}
+      LIT_PARAMS: ${{ join(fromJSON(inputs.setup).lit-params, ' ') }}
+      LNT_MACHINE: ${{ inputs.lnt-machine }}
+      XCODE_VERSION: ${{ fromJSON(inputs.setup).xcode-version }}
+    steps:
+      - name: Checkout the LLVM monorepo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The benchmark suite is checked out at the version pinned in machines.json, which requires the
+          # full history to be available.
+          fetch-depth: 0
+          fetch-tags: true
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
+
+      - name: Select Xcode
+        if: runner.os == 'macOS'
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies via Homebrew
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install ninja cmake python@3.14 gcc@${LIBSTDCXX_VERSION}
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          "${COMPILER}" --version
+          python3 --version
+
+      - name: Setup virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/utils/ci/lnt/requirements.txt
+
+      - name: Run the benchmarks
+        env:
+          FILTER: ${{ inputs.filter }}
+        run: |
+          read -ra configured_params <<< "${LIT_PARAMS}"
+          lit_args=()
+          for param in "${configured_params[@]}"; do
+            lit_args+=(--param "${param}")
+          done
+          if [ -n "${FILTER}" ]; then
+            lit_args+=(--filter "${FILTER}")
+          fi
+
+          libcxx/utils/ci/lnt/run-libstdcxx-benchmarks                  \
+            --gcc "g++-${LIBSTDCXX_VERSION}"                            \
+            --compiler "${COMPILER}"                                    \
+            --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
+            --machine "${LNT_MACHINE}"                                  \
+            --output result.json                                        \
+            -- "${lit_args[@]}"
+
+          cat result.json
+
+      - name: Upload the LNT report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: result.json
+          if-no-files-found: error

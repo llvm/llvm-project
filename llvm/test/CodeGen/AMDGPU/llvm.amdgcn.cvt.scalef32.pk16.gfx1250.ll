@@ -3,7 +3,6 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 < %s | FileCheck -check-prefix=GFX1250-GISEL %s
 
 define void @test_scalef32_pk16_bf6_f32_vv(<16 x float> %src, float %scale, ptr addrspace(1) %out) {
-; GFX1210-SDAG-LABEL: test_scalef32_pk16_bf6_f32_vv:
 ; GFX1250-SDAG-LABEL: test_scalef32_pk16_bf6_f32_vv:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0

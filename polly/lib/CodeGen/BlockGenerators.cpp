@@ -213,12 +213,6 @@ Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
 
 void BlockGenerator::copyInstScalar(ScopStmt &Stmt, Instruction *Inst,
                                     ValueMapT &BBMap, LoopToScevMapT &LTS) {
-  // We do not generate debug intrinsics as we did not investigate how to
-  // copy them correctly. At the current state, they just crash the code
-  // generation as the meta-data operands are not correctly copied.
-  if (isa<DbgInfoIntrinsic>(Inst))
-    return;
-
   Instruction *NewInst = Inst->clone();
 
   // Replace old operands with the new ones.

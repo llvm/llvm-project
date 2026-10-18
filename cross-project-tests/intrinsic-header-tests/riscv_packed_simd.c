@@ -51,6 +51,10 @@ unsigned test_cls_64(int64_t a) { return __riscv_cls_64(a); }
 // RV64:        rev{{[[:space:]]}}
 uint64_t test_rev_64(uint64_t a) { return __riscv_rev_64(a); }
 
+// RV64-LABEL: test_rev16_64:
+// RV64:        rev16{{[[:space:]]}}
+uint64_t test_rev16_64(uint64_t a) { return __riscv_rev16_64(a); }
+
 // RV64-LABEL: test_slx_64:
 // RV64:        slx{{[[:space:]]}}
 uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
@@ -3722,6 +3726,62 @@ int16x4_t test_ppairo_i16x4(int16x4_t rs1, int16x4_t rs2) {
 // RV64:        ppairo.h
 uint16x4_t test_ppairo_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
   return __riscv_ppairo_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_i32x2:
+// RV32:        mv
+// RV64:        pack
+int32x2_t test_ppaire_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppaire_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u32x2:
+// RV32:        mv
+// RV64:        pack
+uint32x2_t test_ppaire_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppaire_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i32x2:
+// RV32:        mv
+// RV64:        ppaireo.w
+int32x2_t test_ppaireo_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppaireo_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u32x2:
+// RV32:        mv
+// RV64:        ppaireo.w
+uint32x2_t test_ppaireo_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppaireo_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i32x2:
+// RV32:        mv
+// RV64:        ppairoe.w
+int32x2_t test_ppairoe_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppairoe_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u32x2:
+// RV32:        mv
+// RV64:        ppairoe.w
+uint32x2_t test_ppairoe_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppairoe_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i32x2:
+// RV32:        mv
+// RV64:        ppairo.w
+int32x2_t test_ppairo_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppairo_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u32x2:
+// RV32:        mv
+// RV64:        ppairo.w
+uint32x2_t test_ppairo_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppairo_u32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_psext_b_i16x2:

@@ -2108,6 +2108,12 @@ class RVPBinaryIntrinsic
   def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
   def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
 
+  // Packed Narrowing Clip.
+  def int_riscv_pnclipu  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipru : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclip   : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipr  : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2139,6 +2145,10 @@ class RVPBinaryIntrinsic
                              LLVMMatchType<0>],
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Reverse the order of the 16-bit halfwords of a 64-bit value (RV64 only).
+  def int_riscv_rev16_64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                              [IntrNoMem, IntrSpeculatable]>;
 
   // Packed Sign and Zero Extend.
   class RVPExtIntrinsic

@@ -1731,6 +1731,12 @@ class ExceptionInfoResponse(Response):
         breakMode: ExceptionBreakMode
         description: Optional[str] = None
         details: Optional[ExceptionDetails] = None
+        lldb_stop_reason_extended_info: Optional[Dict[str, Any]] = field(
+            metadata={"alias": "$__lldb_stopReasonExtendedInfo"}, default=None
+        )
+        lldb_extended_crash_information: Optional[Dict[str, Any]] = field(
+            metadata={"alias": "$__lldb_extendedCrashInformation"}, default=None
+        )
 
     body: Body
 

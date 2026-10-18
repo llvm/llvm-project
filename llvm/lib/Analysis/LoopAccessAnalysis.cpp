@@ -248,8 +248,7 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
 static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
-    AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    AssumptionCache *AC, ScalarEvolution::LoopGuards &LoopGuards) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -313,9 +312,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
-  if (!LoopGuards)
-    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
-  MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
+  MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
@@ -347,7 +344,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
-    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
+    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
     // FIXME: two independent off-by-EltSize bugs on this branch:
     //  1. StartOffset here is actually the HIGHEST offset, because it is
@@ -444,7 +441,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards) {
   auto &DL = Lp->getHeader()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
@@ -460,7 +457,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -481,6 +478,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     ScStart = PtrExpr;
     ScEnd = SE->getAddExpr(PtrExpr, EltSizeSCEV);
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
+    assert(AR->getLoop() == Lp && "LoopGuards must be the guards of Lp");
     const SCEV *Step = AR->getStepRecurrence(*SE);
     // The address of the last accessed element, if it can be computed
     // precisely.
@@ -2995,16 +2993,13 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
 
-  if (!LoopGuards)
-    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-
-  auto SrcEnd = SE.applyLoopGuards(SrcEnd_, *LoopGuards);
-  auto SinkStart = SE.applyLoopGuards(SinkStart_, *LoopGuards);
+  auto SrcEnd = SE.applyLoopGuards(SrcEnd_, LoopGuards);
+  auto SinkStart = SE.applyLoopGuards(SinkStart_, LoopGuards);
   if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
     return true;
 
-  auto SinkEnd = SE.applyLoopGuards(SinkEnd_, *LoopGuards);
-  auto SrcStart = SE.applyLoopGuards(SrcStart_, *LoopGuards);
+  auto SinkEnd = SE.applyLoopGuards(SinkEnd_, LoopGuards);
+  auto SrcStart = SE.applyLoopGuards(SrcStart_, LoopGuards);
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart);
 }
 
@@ -3194,10 +3189,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::NoDep;
     }
   } else {
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+    Dist = SE.applyLoopGuards(Dist, LoopGuards);
   }
 
   // Negative distances are not plausible dependencies.
@@ -4099,7 +4091,9 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                DominatorTree *DT, LoopInfo *LI,
                                AssumptionCache *AC, bool AllowPartial)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(nullptr), TheLoop(L), AllowPartial(AllowPartial) {
+      PtrRtChecking(nullptr), TheLoop(L),
+      LoopGuards(ScalarEvolution::LoopGuards::collectOnDemand(L, *SE)),
+      AllowPartial(AllowPartial) {
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   if (TTI && !TTI->enableScalableVectorization())
     // Scale the vector width by 2 as rough estimate to also consider
