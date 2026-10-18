@@ -767,18 +767,22 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       // Pre-population creates the first trampoline for each block with no net
       // size growth, so there are no existing trampolines to scan in that case.
       if (BB && Offset + TrampolineSize != 0) {
-        for (auto &[AnchorBB, IBB] : FunctionTrampolines) {
-          if (AnchorBB != BB || IBB.get() == TrampolineBB)
+        for (auto &[AnchorBB, Trampoline] : FunctionTrampolines) {
+          if (AnchorBB != BB || Trampoline.get() == TrampolineBB)
             continue;
           OldTrampolinesEnd =
-              std::max(OldTrampolinesEnd, IBB->getOutputEndAddress());
-          IBB->setOutputStartAddress(IBB->getOutputStartAddress() + Offset);
-          IBB->setOutputEndAddress(IBB->getOutputEndAddress() + Offset);
+              std::max(OldTrampolinesEnd, Trampoline->getOutputEndAddress());
+          Trampoline->setOutputStartAddress(
+              Trampoline->getOutputStartAddress() + Offset);
+          Trampoline->setOutputEndAddress(Trampoline->getOutputEndAddress() +
+                                          Offset);
         }
       }
 
       if (BB && Offset)
         BB->setOutputEndAddress(OldBBEnd + Offset);
+      const uint64_t TrampolineAddress =
+          BB ? OldTrampolinesEnd + Offset : FragmentSize;
       Offset += TrampolineSize;
 
       MCInst Inst;
@@ -793,9 +797,6 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       if (TargetBB)
         TrampolineBB->addSuccessor(TargetBB, Count);
       TrampolineBB->setExecutionCount(Count);
-      const uint64_t TrampolineAddress =
-          BB ? BB->getOutputEndAddress() + (OldTrampolinesEnd - OldBBEnd)
-             : FragmentSize;
       TrampolineBB->setOutputStartAddress(TrampolineAddress);
       TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
       TrampolineBB->setFragmentNum(FF.getFragmentNum());
@@ -835,7 +836,8 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         BinaryBasicBlock *IBB = Pair.second.get();
         if (IBB->getFragmentNum() != TrampolineBB->getFragmentNum())
           continue;
-        if (IBB == TrampolineBB || Pair.first == BB)
+        // BB's trampolines, including the new one, are already placed.
+        if (Pair.first == BB)
           continue;
         adjustBasicBlockAddress(IBB, OldTrampolinesEnd, Offset);
       }
