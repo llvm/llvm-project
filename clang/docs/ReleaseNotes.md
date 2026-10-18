@@ -1030,6 +1030,11 @@ features cannot lower the translation-unit ABI level;
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
 
+- Clang no longer crashes when taking the address of, or binding a reference
+  to, a global register variable. Taking the address is now diagnosed as in C,
+  binding a `const` reference uses a temporary holding the register's value,
+  and binding a non-const reference is diagnosed. (#GH233283)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
