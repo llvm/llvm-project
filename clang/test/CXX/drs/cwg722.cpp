@@ -47,10 +47,10 @@ void h() {
 // CHECK-NEXT:  |     `-DeclRefExpr {{.+}} 'std::nullptr_t ()' lvalue Function {{.+}} 'g' 'std::nullptr_t ()'
 // CHECK-NEXT:  `-ImplicitCastExpr {{.+}} 'void *' <NullToPointer>
 // CHECK-NEXT:    `-BuiltinBitCastExpr {{.+}} 'std::nullptr_t' <LValueToRValueBitCast>
-// CHECK-NEXT:      `-MaterializeTemporaryExpr {{.+}} 'void *' xvalue
-// CHECK-NEXT:        `-CXXStaticCastExpr {{.+}} 'void *' static_cast<void *> <NoOp>
-// CHECK-NEXT:          `-ImplicitCastExpr {{.+}} 'void *' <BitCast> part_of_explicit_cast
-// CHECK-NEXT:            `-UnaryOperator {{.+}} 'int *' prefix '&' cannot overflow
-// CHECK-NEXT:              `-DeclRefExpr {{.+}} 'int' lvalue Var {{.+}} 'i' 'int'
+// CHECK-NEXT:      `-MaterializeTemporaryExpr {{.+}} 'void *const' lvalue
+// CHECK:               `-CXXStaticCastExpr {{.+}} 'void *' static_cast<void *> <NoOp>
+// CHECK-NEXT:            `-ImplicitCastExpr {{.+}} 'void *' <BitCast> part_of_explicit_cast
+// CHECK-NEXT:              `-UnaryOperator {{.+}} 'int *' prefix '&' cannot overflow
+// CHECK-NEXT:                `-DeclRefExpr {{.+}} 'int' lvalue Var {{.+}} 'i' 'int'
 }
 #endif

@@ -8552,7 +8552,7 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
   auto note = [&](int Construct, QualType NoteTy, SourceLocation NoteLoc) {
     if (Info)
       Info->Note(NoteLoc, diag::note_constexpr_bit_cast_invalid_subtype)
-          << NoteTy << Construct << Ty;
+          << NoteTy << Construct << Ty.getUnqualifiedType();
     return false;
   };
 

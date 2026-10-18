@@ -56,3 +56,14 @@ constexpr To bit_cast(const From &from) {
 constexpr __int128_t foo = bit_cast<__int128_t>((long double)0);
 // expected-error@-1{{constexpr variable 'foo' must be initialized by a constant expression}}
 // expected-note@-2{{in call to 'bit_cast<__int128, long double>((long double)0)'}}
+
+volatile int volatile_int;
+int from_volatile = __builtin_bit_cast(int, volatile_int);
+
+struct volatile_bit_field {
+  volatile unsigned b : 8; // expected-note {{bit-field is declared here}}
+};
+unsigned from_volatile_bit_field(volatile_bit_field &v) {
+  // expected-error@+1 {{non-const reference cannot bind to bit-field 'b'}}
+  return __builtin_bit_cast(unsigned, v.b);
+}

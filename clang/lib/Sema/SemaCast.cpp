@@ -3404,19 +3404,6 @@ void CastOperation::CheckBuiltinBitCast() {
     return;
   }
 
-  if (SrcExpr.get()->isGLValue() &&
-      (SrcExpr.get()->getObjectKind() != OK_Ordinary ||
-       SrcExpr.get()->refersToGlobalRegisterVar())) {
-    SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
-    if (SrcExpr.isInvalid())
-      return;
-    SrcType = SrcExpr.get()->getType();
-  }
-
-  if (SrcExpr.get()->isPRValue())
-    SrcExpr = Self.CreateMaterializeTemporaryExpr(SrcType, SrcExpr.get(),
-                                                  /*IsLValueReference=*/false);
-
   CharUnits DestSize = Self.Context.getTypeSizeInChars(DestType);
   CharUnits SourceSize = Self.Context.getTypeSizeInChars(SrcType);
   if (DestSize != SourceSize) {
@@ -3440,6 +3427,15 @@ void CastOperation::CheckBuiltinBitCast() {
     SrcExpr = ExprError();
     return;
   }
+
+  // The operand binds as it would to the 'const From &' of std::bit_cast.
+  QualType RefType = Self.Context.getLValueReferenceType(SrcType.withConst());
+  SrcExpr = Self.PerformCopyInitialization(
+      InitializedEntity::InitializeParameter(Self.Context, RefType,
+                                             /*Consumed=*/false),
+      SrcExpr.get()->getBeginLoc(), SrcExpr);
+  if (SrcExpr.isInvalid())
+    return;
 
   Kind = CK_LValueToRValueBitCast;
 }
