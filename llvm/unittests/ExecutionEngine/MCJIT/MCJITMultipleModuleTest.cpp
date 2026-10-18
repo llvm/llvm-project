@@ -103,6 +103,26 @@ TEST_F(MCJITMultipleModuleTest, two_module_case) {
   checkAdd(ptr);
 }
 
+// Modules without a target triple take the JIT's.
+TEST_F(MCJITMultipleModuleTest, empty_triple_case) {
+  SKIP_UNSUPPORTED_PLATFORM;
+
+  std::unique_ptr<Module> A, B;
+  Function *FA, *FB;
+  createTwoModuleCase(A, FA, B, FB);
+  A->setTargetTriple(Triple());
+  B->setTargetTriple(Triple());
+  Module *MA = A.get();
+  Module *MB = B.get();
+
+  createJIT(std::move(A));
+  TheJIT->addModule(std::move(B));
+
+  const Triple &TT = TheJIT->getTargetMachine()->getTargetTriple();
+  EXPECT_EQ(MA->getTargetTriple(), TT);
+  EXPECT_EQ(MB->getTargetTriple(), TT);
+}
+
 // Module A { Function FA },
 // Module B { Function FB },
 // execute FB then FA
