@@ -427,7 +427,12 @@ void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
 }
 
 void Preprocessor::HandlePragmaMark(Token &MarkTok) {
-  assert(CurPPLexer && "No current lexer?");
+  // __pragma uses a captured token stream, so there is no lexer from which to
+  // read the uninterpreted text. Ignore the mark and consume its arguments.
+  if (!CurLexer) {
+    DiscardUntilEndOfDirective();
+    return;
+  }
 
   SmallString<64> Buffer;
   CurLexer->ReadToEndOfLine(&Buffer);

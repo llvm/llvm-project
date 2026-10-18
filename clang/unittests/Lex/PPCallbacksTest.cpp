@@ -554,6 +554,22 @@ TEST_F(PPCallbacksTest, CollectMarks) {
   ASSERT_EQ(" - trivia", Marks[3].Trivia);
 }
 
+TEST_F(PPCallbacksTest, CollectMarksWithMicrosoftPragmas) {
+  LangOpts.MicrosoftExt = 1;
+  const char *Source =
+      "#pragma mark - before\n"
+      "__pragma(mark ignored)\n"
+      "__pragma(mark _Pragma(\"mark inner's trivia\") ignored)\n"
+      "#pragma mark - after\n";
+
+  auto Marks = PragmaMarkCall(Source);
+
+  ASSERT_EQ(3u, Marks.size());
+  EXPECT_EQ(" - before", Marks[0].Trivia);
+  EXPECT_EQ(" inner's trivia", Marks[1].Trivia);
+  EXPECT_EQ(" - after", Marks[2].Trivia);
+}
+
 TEST_F(PPCallbacksTest, DirectiveExprRanges) {
   const auto &Results1 = DirectiveExprRange("#if FLUZZY_FLOOF\n#endif\n");
   EXPECT_EQ(Results1.size(), 1U);
