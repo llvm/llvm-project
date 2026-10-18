@@ -9229,20 +9229,6 @@ static bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
                      [&] { Cache.CheapOpcodes.insert(Key); });
 }
 
-/// Find the innermost loop starting from \p L, for which at least a single
-/// value in \p VL is not invariant.
-static const Loop *findInnermostNonInvariantLoop(const Loop *L,
-                                                 ArrayRef<Value *> VL) {
-  assert(L && "Expected valid loop");
-  auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
-    return all_of(make_isa_range<Instruction>(VL),
-                  [L](Instruction *I) { return L->isLoopInvariant(I); });
-  };
-  while (L && IsLoopInvariant(L, VL))
-    L = L->getParentLoop();
-  return L;
-}
-
 /// Get the loop nest for the given loop.
 ArrayRef<const Loop *> BoUpSLP::getLoopNest(const Loop *L) {
   assert(L && "Expected valid loop");
@@ -16260,25 +16246,6 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
-/// Get the assumed loop trip count for the loop \p L.
-static unsigned getLoopTripCount(const VectorizeOptions &Opts, const Loop *L,
-                                 ScalarEvolution &SE) {
-  if (Opts.slp_cost_loop_trip_count == 0)
-    return 1;
-  unsigned Scale = SE.getSmallConstantTripCount(L);
-  if (Scale == 0)
-    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
-  if (Scale != 0) {
-    // Multiple exiting blocks - choose the minimum between trip count (scale)
-    // and LoopAwareTripCount, since the multiple exit loops can be terminated
-    // early.
-    if (!L->getExitingBlock())
-      return std::min(Opts.slp_cost_loop_trip_count, Scale);
-    return Scale;
-  }
-  return Opts.slp_cost_loop_trip_count;
-}
-
 uint64_t BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
                                            Instruction *U) {
   BasicBlock *Parent = nullptr;
@@ -16380,7 +16347,8 @@ uint64_t BoUpSLP::getLoopNestScale(const Loop *L) {
   // Use SaturatingMultiply to clamp at uint64_t max on deep/large nests
   // rather than wrapping around.
   for (const Loop *Cur : reverse(Chain)) {
-    uint64_t TC = std::max<uint64_t>(1, getLoopTripCount(Opts, Cur, *SE));
+    uint64_t TC = std::max<uint64_t>(
+        1, getLoopTripCount(Cur, *SE, Opts.slp_cost_loop_trip_count));
     Scale = SaturatingMultiply(Scale, TC);
     LoopNestScaleCache.try_emplace(Cur, std::max<uint64_t>(1, Scale));
   }
@@ -19142,35 +19110,6 @@ InstructionCost BoUpSLP::getSpillCost() {
   }
 
   return Cost;
-}
-
-/// Checks if the \p IE1 instructions is followed by \p IE2 instruction in the
-/// buildvector sequence.
-static bool isFirstInsertElement(const InsertElementInst *IE1,
-                                 const InsertElementInst *IE2) {
-  if (IE1 == IE2)
-    return false;
-  const auto *I1 = IE1;
-  const auto *I2 = IE2;
-  const InsertElementInst *PrevI1;
-  const InsertElementInst *PrevI2;
-  unsigned Idx1 = *getElementIndex(IE1);
-  unsigned Idx2 = *getElementIndex(IE2);
-  do {
-    if (I2 == IE1)
-      return true;
-    if (I1 == IE2)
-      return false;
-    PrevI1 = I1;
-    PrevI2 = I2;
-    if (I1 && (I1 == IE1 || I1->hasOneUse()) &&
-        getElementIndex(I1).value_or(Idx2) != Idx2)
-      I1 = dyn_cast<InsertElementInst>(I1->getOperand(0));
-    if (I2 && ((I2 == IE2 || I2->hasOneUse())) &&
-        getElementIndex(I2).value_or(Idx1) != Idx1)
-      I2 = dyn_cast<InsertElementInst>(I2->getOperand(0));
-  } while ((I1 && PrevI1 != I1) || (I2 && PrevI2 != I2));
-  llvm_unreachable("Two different buildvectors not expected.");
 }
 
 namespace {
@@ -23879,12 +23818,6 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
 static Instruction *propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   SmallVector<Value *> Insts(make_isa_range<Instruction>(VL));
   return llvm::propagateMetadata(Inst, Insts);
-}
-
-static DebugLoc getDebugLocFromPHI(PHINode &PN) {
-  if (DebugLoc DL = PN.getDebugLoc())
-    return DL;
-  return DebugLoc::getUnknown();
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
@@ -35154,34 +35087,6 @@ private:
 static RecurKind getRdxKind(Value *V) {
   return HorizontalReduction::getRdxKind(V);
 }
-static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
-  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
-    return cast<FixedVectorType>(IE->getType())->getNumElements();
-
-  unsigned AggregateSize = 1;
-  auto *IV = cast<InsertValueInst>(InsertInst);
-  Type *CurrentType = IV->getType();
-  do {
-    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
-      for (auto *Elt : ST->elements())
-        if (Elt != ST->getElementType(0)) // check homogeneity
-          return std::nullopt;
-      AggregateSize *= ST->getNumElements();
-      CurrentType = ST->getElementType(0);
-    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
-      AggregateSize *= AT->getNumElements();
-      CurrentType = AT->getElementType();
-    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
-      AggregateSize *= VT->getNumElements();
-      return AggregateSize;
-    } else if (CurrentType->isSingleValueType()) {
-      return AggregateSize;
-    } else {
-      return std::nullopt;
-    }
-  } while (true);
-}
-
 static void findBuildAggregateRec(Instruction *LastInsertInst,
                                   TargetTransformInfo *TTI,
                                   SmallVectorImpl<Value *> &BuildVectorOpds,
@@ -35247,57 +35152,6 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
     return true;
 
   return false;
-}
-
-/// Try and get a reduction instruction from a phi node.
-///
-/// Given a phi node \p P in a block \p ParentBB, consider possible reductions
-/// if they come from either \p ParentBB or a containing loop latch.
-///
-/// \returns A candidate reduction value if possible, or \code nullptr \endcode
-/// if not possible.
-static Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
-                                      BasicBlock *ParentBB, LoopInfo *LI) {
-  // There are situations where the reduction value is not dominated by the
-  // reduction phi. Vectorizing such cases has been reported to cause
-  // miscompiles. See PR25787.
-  auto DominatedReduxValue = [&](Value *R) {
-    return isa<Instruction>(R) &&
-           DT->dominates(P->getParent(), cast<Instruction>(R)->getParent());
-  };
-
-  Instruction *Rdx = nullptr;
-
-  // Return the incoming value if it comes from the same BB as the phi node.
-  if (P->getIncomingBlock(0) == ParentBB) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
-  } else if (P->getIncomingBlock(1) == ParentBB) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
-  }
-
-  if (Rdx && DominatedReduxValue(Rdx))
-    return Rdx;
-
-  // Otherwise, check whether we have a loop latch to look at.
-  Loop *BBL = LI->getLoopFor(ParentBB);
-  if (!BBL)
-    return nullptr;
-  BasicBlock *BBLatch = BBL->getLoopLatch();
-  if (!BBLatch)
-    return nullptr;
-
-  // There is a loop latch, return the incoming value if it comes from
-  // that. This reduction pattern occasionally turns up.
-  if (P->getIncomingBlock(0) == BBLatch) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
-  } else if (P->getIncomingBlock(1) == BBLatch) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
-  }
-
-  if (Rdx && DominatedReduxValue(Rdx))
-    return Rdx;
-
-  return nullptr;
 }
 
 /// We could have an initial reduction that is not an add.
@@ -36377,6 +36231,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
   SmallPtrSet<Value *, 16> VisitedInstrs;
+  // Only the original compares are the seeds. With revec the vectorized
+  // alternate compares are the pairs of compares of the same operands, which
+  // otherwise are vectorized again and again.
+  SmallPtrSet<const CmpInst *, 16> OrigCmps;
+  for (const CmpInst &CI : make_isa_range<CmpInst>(*BB))
+    OrigCmps.insert(&CI);
   // Maps phi nodes to the non-phi nodes found in the use tree for each phi
   // node. Allows better to identify the chains that can be vectorized in the
   // better way.
@@ -36759,13 +36619,14 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 
     if (isa<InsertElementInst, InsertValueInst>(It))
       PostProcessInserts.insert(&*It);
-    else if (auto *CI = dyn_cast<CmpInst>(It))
-      PostProcessCmps.insert(CI);
-    else if (auto *SI = dyn_cast<StoreInst>(It);
-             SI &&
-             (Opts->slp_revec ||
-              !SI->getValueOperand()->getType()->isVectorTy()) &&
-             isa<Instruction>(SI->getValueOperand()))
+    else if (auto *CI = dyn_cast<CmpInst>(It)) {
+      if (OrigCmps.contains(CI))
+        PostProcessCmps.insert(CI);
+    } else if (auto *SI = dyn_cast<StoreInst>(It);
+               SI &&
+               (Opts->slp_revec ||
+                !SI->getValueOperand()->getType()->isVectorTy()) &&
+               isa<Instruction>(SI->getValueOperand()))
       PostProcessStores.insert(SI);
     else if (isNonVectorizableInst(*Opts, &*It, TLI))
       PostProcessInsts.insert(&*It);
