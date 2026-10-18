@@ -1005,6 +1005,17 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     writeBytesUnaligned(0x0300018c, Addr + 12, 4);
     writeBytesUnaligned(0x4c000180, Addr + 16, 4);
     return Addr;
+  } else if (Arch == Triple::riscv64) {
+    // auipc t0, 0        ; t0 = address of this instruction
+    // ld    t0, 16(t0)   ; t0 = 8-byte literal at offset 16
+    // jalr  x0, 0(t0)    ; jr t0 -- rd=x0, does not clobber ra
+    // nop                ; padding, keeps the literal 8-byte-aligned
+    // <8 bytes: absolute target, filled in separately via R_RISCV_64>
+    writeBytesUnaligned(0x00000297, Addr, 4);
+    writeBytesUnaligned(0x0102b283, Addr + 4, 4);
+    writeBytesUnaligned(0x00028067, Addr + 8, 4);
+    writeBytesUnaligned(0x00000013, Addr + 12, 4);
+    return Addr;
   } else if (IsMipsO32ABI || IsMipsN32ABI) {
     // 0:   3c190000        lui     t9,%hi(addr).
     // 4:   27390000        addiu   t9,t9,%lo(addr).
