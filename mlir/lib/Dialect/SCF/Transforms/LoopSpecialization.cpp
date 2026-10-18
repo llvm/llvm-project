@@ -233,51 +233,66 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
 /// original lower bound plus the step (i.e. skips the first iteration).
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
-  // TODO: Add support for unsigned loops. The current logic
-  // uses `affine.min` and `arith.index_cast`, which is incorrect for
-  // unsigned comparisons.
-  if (forOp.getUnsignedCmp())
-    return failure();
-
   RewriterBase::InsertionGuard guard(b);
-  auto lbInt = getConstantIntValue(forOp.getLowerBound());
-  auto ubInt = getConstantIntValue(forOp.getUpperBound());
-  auto stepInt = getConstantIntValue(forOp.getStep());
+  Value splitBound;
+  // Check whether we have a unsigned loop
+  if (forOp.getUnsignedCmp()) {
+    IntegerAttr lbAttr, ubAttr, stepAttr;
+    if (matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) &&
+        matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)) &&
+        matchPattern(forOp.getStep(), m_Constant(&stepAttr))) {
 
-  // Peeling is not needed if there is at most one iteration.
-  // Per the scf.for semantics, the trip count is
-  // max(0, ceil((UB - LB) / Step)), so for a positive step there is more than
-  // one iteration exactly when UB - LB > Step.
-  if (lbInt && ubInt && stepInt && *ubInt - *lbInt <= *stepInt)
-    return failure();
+      // Get the constants as APInt at the loop’s own bit width
+      APInt lb = lbAttr.getValue();
+      APInt ub = ubAttr.getValue();
+      APInt step = stepAttr.getValue();
 
-  // The peeling bound (%lb + %step) is computed with affine.apply, which
-  // accepts only index operands. %ub does not feed into this bound, so only
-  // %lb and %step need to be constant to guarantee the affine.apply (see below)
-  // folds away before its (non-index) operand types matter.
-  if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
-    return failure();
+      // bail out if ub <= lb or ub - lb <= step (unsigned)
+      if (ub.ule(lb) || (ub - lb).ule(step))
+        return failure();
+    }
+    b.setInsertionPoint(forOp);
+    auto loc = forOp.getLoc();
+    Value lbPlusStep = b.createOrFold<arith::AddIOp>(loc, forOp.getLowerBound(),
+                                                     forOp.getStep());
+    splitBound =
+        b.createOrFold<arith::MinUIOp>(loc, lbPlusStep, forOp.getUpperBound());
+  } else {
+    auto lbInt = getConstantIntValue(forOp.getLowerBound());
+    auto ubInt = getConstantIntValue(forOp.getUpperBound());
+    auto stepInt = getConstantIntValue(forOp.getStep());
 
-  AffineExpr lbSymbol, stepSymbol;
-  bindSymbols(b.getContext(), lbSymbol, stepSymbol);
+    // Peeling is not needed if there is at most one iteration.
+    // Per the scf.for semantics, the trip count is
+    // max(0, ceil((UB - LB) / Step)), so for a positive step there is more than
+    // one iteration exactly when UB - LB > Step.
+    if (lbInt && ubInt && stepInt && *ubInt - *lbInt <= *stepInt)
+      return failure();
 
-  // New lower bound for main loop: min(%lb + %step, %ub). Without the minimum
-  // the peeled first iteration spans [%lb, %lb + %step) and executes even when
-  // the source loop is empty (%lb >= %ub).
-  AffineExpr ubSymbol;
-  bindSymbols(b.getContext(), lbSymbol, stepSymbol, ubSymbol);
-  auto ubMap =
-      AffineMap::get(0, 3, {lbSymbol + stepSymbol, ubSymbol}, b.getContext());
-  b.setInsertionPoint(forOp);
-  auto loc = forOp.getLoc();
-  Value splitBound = b.createOrFold<AffineMinOp>(
-      loc, ubMap,
-      ValueRange{forOp.getLowerBound(), forOp.getStep(),
-                 forOp.getUpperBound()});
-  if (splitBound.getType() != forOp.getUpperBound().getType())
-    splitBound = b.createOrFold<arith::IndexCastOp>(
-        loc, forOp.getUpperBound().getType(), splitBound);
+    // The peeling bound (%lb + %step) is computed with affine.apply, which
+    // accepts only index operands. %ub does not feed into this bound, so only
+    // %lb and %step need to be constant to guarantee the affine.apply (see
+    // below) folds away before its (non-index) operand types matter.
+    if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
+      return failure();
 
+    // New lower bound for main loop: min(%lb + %step, %ub). Without the minimum
+    // the peeled first iteration spans [%lb, %lb + %step) and executes even
+    // when the source loop is empty (%lb >= %ub).
+    AffineExpr ubSymbol, lbSymbol, stepSymbol;
+    bindSymbols(b.getContext(), lbSymbol, stepSymbol, ubSymbol);
+    auto ubMap =
+        AffineMap::get(0, 3, {lbSymbol + stepSymbol, ubSymbol}, b.getContext());
+    b.setInsertionPoint(forOp);
+    auto loc = forOp.getLoc();
+    splitBound = b.createOrFold<AffineMinOp>(loc, ubMap,
+                                             ValueRange{forOp.getLowerBound(),
+                                                        forOp.getStep(),
+                                                        forOp.getUpperBound()});
+    if (splitBound.getType() != forOp.getUpperBound().getType())
+      splitBound = b.createOrFold<arith::IndexCastOp>(
+          loc, forOp.getUpperBound().getType(), splitBound);
+  }
   // Peel the first iteration.
   firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
   b.modifyOpInPlace(firstIteration, [&]() {
