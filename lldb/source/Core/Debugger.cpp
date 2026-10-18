@@ -1319,20 +1319,16 @@ void Debugger::RedrawStatusline(
     std::optional<ExecutionContextRef> exe_ctx_ref) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
 
+  const bool flush = m_flush_statusline.exchange(false);
   if (!m_statusline)
     return;
 
+  if (flush)
+    m_statusline->ClearExecutionContext();
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-void Debugger::FlushStatusLine() {
-  std::lock_guard<std::mutex> guard(m_statusline_mutex);
-
-  if (!m_statusline)
-    return;
-
-  m_statusline->ClearExecutionContext();
-}
+void Debugger::FlushStatusLine() { m_flush_statusline = true; }
 
 ExecutionContext
 Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {

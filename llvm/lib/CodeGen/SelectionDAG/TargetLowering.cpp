@@ -1355,6 +1355,54 @@ bool TargetLowering::SimplifyDemandedBits(
     return false;
   }
 
+  // Before folding to the LHS, recheck bits excluded from its earlier demand
+  // using the full result demand. Mask identifies these excluded bits.
+  // KnownMask selects the Zero/One member of the recomputed LHS known bits
+  // that must cover Mask & DemandedBits.
+  auto TryFoldToLHS = [&](const APInt &Mask,
+                          const APInt KnownBits::*KnownMask) {
+    SDValue LHS = Op.getOperand(0);
+    APInt MaskedBits = Mask & DemandedBits;
+    if (MaskedBits.isZero())
+      return TLO.CombineTo(Op, LHS);
+
+    KnownBits LHSKnown;
+    if (SimplifyDemandedBits(LHS, DemandedBits, DemandedElts, LHSKnown, TLO,
+                             Depth + 1))
+      return true;
+
+    return MaskedBits.isSubsetOf(LHSKnown.*KnownMask) && TLO.CombineTo(Op, LHS);
+  };
+
+  // Try reducing the RHS demand using LHS known bits.
+  // KnownMask selects the LHS Zero/One bits that make RHS bits irrelevant.
+  auto TryReduceRHSDemand = [&](const KnownBits &LHSKnown,
+                                const APInt KnownBits::*KnownMask) {
+    SDValue RHS = Op.getOperand(1);
+    if (!RHS.hasOneUse() || isConstOrConstSplat(RHS, DemandedElts))
+      return false;
+
+    // Reuse LHS facts if the RHS did not reduce its earlier demand. Otherwise,
+    // query independent facts to avoid using bits outside that demand.
+    SDValue LHS = Op.getOperand(0);
+    // Keep only the selected mask, then compute DemandedBits & ~Mask in place.
+    // This avoids copying the unused KnownBits mask and extra APInt
+    // temporaries, which can allocate memory for masks wider than one word.
+    APInt RHSDemandedBits =
+        DemandedBits.intersects(Known.*KnownMask)
+            ? TLO.DAG.computeKnownBits(LHS, DemandedElts, Depth + 1).*KnownMask
+            : LHSKnown.*KnownMask;
+    RHSDemandedBits.flipAllBits();
+    RHSDemandedBits &= DemandedBits;
+    if (RHSDemandedBits == DemandedBits)
+      return false;
+
+    // A failed retry must not replace Known with reduced-demand facts.
+    KnownBits RetryKnown;
+    return SimplifyDemandedBits(RHS, RHSDemandedBits, DemandedElts, RetryKnown,
+                                TLO, Depth + 1);
+  };
+
   KnownBits Known2;
   switch (Op.getOpcode()) {
   case ISD::SCALAR_TO_VECTOR: {
@@ -1662,8 +1710,10 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
-    if (DemandedBits.isSubsetOf(Known2.Zero | Known.One))
-      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known2.Zero | Known.One)) {
+      if (TryFoldToLHS(Known.Zero, &KnownBits::Zero))
+        return true;
+    }
     if (DemandedBits.isSubsetOf(Known.Zero | Known2.One))
       return TLO.CombineTo(Op, Op1);
     // If all of the demanded bits in the inputs are known zeros, return zero.
@@ -1691,6 +1741,9 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    if (TryReduceRHSDemand(Known2, &KnownBits::Zero))
+      return true;
+
     Known &= Known2;
     break;
   }
@@ -1711,8 +1764,12 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
-    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero))
-      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero)) {
+      if (TryFoldToLHS(Known.One, &KnownBits::One)) {
+        Op->dropFlags(SDNodeFlags::Disjoint);
+        return true;
+      }
+    }
     if (DemandedBits.isSubsetOf(Known.One | Known2.Zero))
       return TLO.CombineTo(Op, Op1);
     // If the RHS is a constant, see if we can simplify it.
@@ -1749,6 +1806,11 @@ bool TargetLowering::SimplifyDemandedBits(
         return TLO.CombineTo(Op,
                              TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
       }
+    }
+
+    if (TryReduceRHSDemand(Known2, &KnownBits::One)) {
+      Op->dropFlags(SDNodeFlags::Disjoint);
+      return true;
     }
 
     Known |= Known2;
@@ -3953,6 +4015,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::OR:
   case ISD::XOR:
   case ISD::SUB:
@@ -5190,7 +5254,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         SDValue NewLoad =
             DAG.getLoad(newVT, dl, Lod->getChain(), Ptr,
                         Lod->getPointerInfo().getWithOffset(bestOffset),
-                        Lod->getBaseAlign());
+                        Lod->getBaseAlign(), MachineMemOperand::MONone,
+                        Lod->getMMOMetadataForSubAccess());
         SDValue And =
             DAG.getNode(ISD::AND, dl, newVT, NewLoad,
                         DAG.getConstant(bestMask.trunc(bestWidth), dl, newVT));
@@ -11438,6 +11503,36 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   return DAG.getZExtOrTrunc(HighestIdx, DL, N->getValueType(0));
 }
 
+SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(N);
+
+  SDValue Start = N->getOperand(0);
+  SDValue End = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = Start.getValueType();
+
+  auto [Mask, StepVector] = getLegalMaskAndStepVector(
+      DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
+
+  // TODO: Handle the step vector needing to be split + widened.
+  assert(StepVector && "Step vector needs splitting");
+  assert(Mask.getValueType() == VT && "Step vector was widened");
+
+  // Rebase and saturate the termination value.
+  SDValue Max = DAG.getConstant(maxUIntN(StepVector.getScalarValueSizeInBits()),
+                                DL, OpVT);
+  End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
+  End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
+
+  // cmp <0, 1, 2, 3...>, End
+  SDValue EndV = DAG.getSplat(StepVector.getValueType(), DL, End);
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                StepVector.getValueType());
+  SDValue Cmp = DAG.getSetCC(DL, CCVT, StepVector, EndV, ISD::SETULT);
+  return DAG.getBoolExtOrTrunc(Cmp, DL, VT, StepVector.getValueType());
+}
+
 SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(N);
@@ -13725,6 +13820,127 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+void TargetLowering::expandVectorInterleave(SDNode *Node,
+                                            SmallVectorImpl<SDValue> &Results,
+                                            SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::VECTOR_INTERLEAVE && "Unexpected opcode");
+  EVT VT = Node->getValueType(0);
+  unsigned Factor = Node->getNumOperands();
+  SDLoc DL(Node);
+
+  if (Factor > 2 && Factor % 2 == 0) {
+    SmallVector<EVT> HalfVTs(Factor / 2, VT);
+    SmallVector<SDValue, 8> LOps, ROps;
+    // Interleave so we have 2 factors per result:
+    // a0a1 b0b1 c0c1 d0d1 -> [a0c0 b0d0] [a1c1 b1d1]
+    for (unsigned I = 0; I < Factor / 2; I++) {
+      SDValue Interleave =
+          DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, {VT, VT},
+                      {Node->getOperand(I), Node->getOperand(I + Factor / 2)});
+      LOps.push_back(Interleave.getValue(0));
+      ROps.push_back(Interleave.getValue(1));
+    }
+    // Interleave at Factor/2:
+    // [a0c0 b0d0] [a1c1 b1d1] -> a0b0 c0d0 a1b1 c1d1
+    SDValue L = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, HalfVTs, LOps);
+    SDValue R = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, HalfVTs, ROps);
+    for (unsigned I = 0; I < Factor / 2; I++)
+      Results.push_back(L.getValue(I));
+    for (unsigned I = 0; I < Factor / 2; I++)
+      Results.push_back(R.getValue(I));
+    return;
+  }
+
+  if (!VT.isFixedLengthVector())
+    return;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  // A factor of two needs only same-width, two-input shuffles.
+  if (Factor == 2) {
+    SmallVector<int, 8> Mask = createInterleaveMask(NumElts, Factor);
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(DAG.getVectorShuffle(
+          VT, DL, Node->getOperand(0), Node->getOperand(1),
+          ArrayRef<int>(Mask).slice(I * NumElts, NumElts)));
+    return;
+  }
+
+  SmallVector<SDValue> InterleavedElts;
+  InterleavedElts.reserve(Factor * NumElts);
+  for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
+    for (unsigned OperandIdx = 0; OperandIdx != Factor; ++OperandIdx)
+      InterleavedElts.push_back(DAG.getExtractVectorElt(
+          DL, EltVT, Node->getOperand(OperandIdx), EltIdx));
+
+  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx)
+    Results.push_back(DAG.getBuildVector(
+        VT, DL, ArrayRef(InterleavedElts).slice(ResultIdx * NumElts, NumElts)));
+}
+
+void TargetLowering::expandVectorDeinterleave(SDNode *Node,
+                                              SmallVectorImpl<SDValue> &Results,
+                                              SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::VECTOR_DEINTERLEAVE && "Unexpected opcode");
+  EVT VT = Node->getValueType(0);
+  unsigned Factor = Node->getNumOperands();
+  SDLoc DL(Node);
+
+  if (Factor > 2 && Factor % 2 == 0) {
+    SmallVector<SDValue, 8> Ops(Node->ops());
+    SmallVector<EVT> HalfVTs(Factor / 2, VT);
+    // Deinterleave at Factor/2 so each result contains two factors interleaved:
+    // a0b0 c0d0 a1b1 c1d1 -> [a0c0 b0d0] [a1c1 b1d1]
+    SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, HalfVTs,
+                            ArrayRef(Ops).take_front(Factor / 2));
+    SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, HalfVTs,
+                            ArrayRef(Ops).take_back(Factor / 2));
+    Results.resize(Factor);
+    // Deinterleave the 2 factors out:
+    // [a0c0 a1c1] [b0d0 b1d1] -> a0a1 b0b1 c0c1 d0d1
+    for (unsigned I = 0; I < Factor / 2; ++I) {
+      SDValue Deinterleave = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, {VT, VT},
+                                         {L.getValue(I), R.getValue(I)});
+      Results[I] = Deinterleave.getValue(0);
+      Results[I + Factor / 2] = Deinterleave.getValue(1);
+    }
+    return;
+  }
+
+  if (!VT.isFixedLengthVector())
+    return;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  // A factor of two needs only same-width, two-input shuffles.
+  if (Factor == 2) {
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(0), Node->getOperand(1),
+                               createStrideMask(I, Factor, NumElts)));
+    return;
+  }
+
+  SmallVector<SDValue> ConcatElts;
+  ConcatElts.reserve(Factor * NumElts);
+  for (unsigned OperandIdx = 0; OperandIdx != Factor; ++OperandIdx)
+    for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
+      ConcatElts.push_back(DAG.getExtractVectorElt(
+          DL, EltVT, Node->getOperand(OperandIdx), EltIdx));
+
+  SmallVector<SDValue> DeinterleavedElts;
+  DeinterleavedElts.reserve(Factor * NumElts);
+  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+    for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
+      DeinterleavedElts.push_back(ConcatElts[ResultIdx + EltIdx * Factor]);
+    Results.push_back(DAG.getBuildVector(
+        VT, DL,
+        ArrayRef(DeinterleavedElts).slice(ResultIdx * NumElts, NumElts)));
+  }
+}
+
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                                            SelectionDAG &DAG) const {
   assert((Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT ||
@@ -14068,9 +14284,11 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     MulRHS = DAG.getNode(ExtOpcRHS, DL, ExtMulOpVT, MulRHS);
   }
   SDValue Input = MulLHS;
+  // Maintain the FP flags (if any).
+  SDNodeFlags Flags = N->getFlags();
   if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA) {
     if (!llvm::isOneOrOneSplatFP(MulRHS))
-      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+      Input = DAG.getNode(ISD::FMUL, DL, ExtMulOpVT, MulLHS, MulRHS, Flags);
   } else if (!llvm::isOneOrOneSplat(MulRHS)) {
     Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
   }
@@ -14088,8 +14306,8 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
 
   // Flatten the subvector tree
   while (Subvectors.size() > 1) {
-    Subvectors.push_back(
-        DAG.getNode(FlatNode, DL, AccVT, {Subvectors[0], Subvectors[1]}));
+    Subvectors.push_back(DAG.getNode(FlatNode, DL, AccVT,
+                                     {Subvectors[0], Subvectors[1]}, Flags));
     Subvectors.pop_front();
     Subvectors.pop_front();
   }
@@ -14152,7 +14370,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   if (LC == RTLIB::UNKNOWN_LIBCALL)
     return false;
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl =
+      getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
   if (LibcallImpl == RTLIB::Unsupported)
     return false;
 

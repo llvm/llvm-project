@@ -104,16 +104,19 @@ public:
       if (!func)
         return op->emitOpError(Twine(attribute.getName()) +
                                " is only supported on `llvm.func` operations");
-      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      if (!value)
-        return op->emitOpError(Twine(attribute.getName()) +
-                               " must be an integer");
 
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
       llvm::SmallString<8> llvmAttrValue;
-      llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
-      attrValueStream << value.getInt();
+      if (auto strValue = dyn_cast<StringAttr>(attribute.getValue())) {
+        llvmAttrValue.append(strValue.getValue());
+      } else if (auto intValue = dyn_cast<IntegerAttr>(attribute.getValue())) {
+        llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
+        attrValueStream << intValue.getInt();
+      } else {
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a string or an integer");
+      }
       llvmFunc->addFnAttr("amdgpu-waves-per-eu", llvmAttrValue);
     }
     if (dialect->getFlatWorkGroupSizeAttrHelper().getName() ==

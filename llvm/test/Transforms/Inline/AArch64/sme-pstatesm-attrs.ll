@@ -676,7 +676,7 @@ define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_st
 define void @invoke_opaque_fptr(ptr %fptr) alwaysinline personality ptr null {
 ; CHECK-LABEL: define void @invoke_opaque_fptr
 ; CHECK-SAME: (ptr [[FPTR:%.*]]) #[[ATTR6]] personality ptr null {
-; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR13:[0-9]+]]
+; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:            to label [[NORMAL_RETURN:%.*]] unwind label [[UNWIND_CLEANUP:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    ret void
@@ -1076,6 +1076,26 @@ define void @scatter_scalable_length_caller(<vscale x 2 x ptr> %ptrs, <vscale x 
 ;
   call void @scatter_scalable_length(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i64> %vals)
   ret void
+}
+
+define <vscale x 2 x i64> @gather_scalable_length(<vscale x 2 x ptr> %ptrs) alwaysinline {
+; CHECK-LABEL: define <vscale x 2 x i64> @gather_scalable_length
+; CHECK-SAME: (<vscale x 2 x ptr> [[PTRS:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[LD:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> [[PTRS]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> poison)
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[LD]]
+;
+  %ld = call <vscale x 2 x i64> @llvm.masked.gather(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), <vscale x 2 x i64> poison)
+  ret <vscale x 2 x i64> %ld
+}
+
+define <vscale x 2 x i64> @gather_scalable_length_caller(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i64> %vals) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define <vscale x 2 x i64> @gather_scalable_length_caller
+; CHECK-SAME: (<vscale x 2 x ptr> [[PTRS:%.*]], <vscale x 2 x i64> [[VALS:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @gather_scalable_length(<vscale x 2 x ptr> [[PTRS]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
+;
+  %res = call <vscale x 2 x i64> @gather_scalable_length(<vscale x 2 x ptr> %ptrs)
+  ret <vscale x 2 x i64> %res
 }
 
 ;

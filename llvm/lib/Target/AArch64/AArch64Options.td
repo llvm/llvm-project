@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def AArch64Options : OptionsStruct<prefix = "aarch64-">;
+def AArch64Options : OptionsStruct<prefix = "aarch64-", perContext = false>;
 
 // AArch64A57FPLoadBalancing.cpp
 // Enforce the algorithm to use the scavenged register even when the original
@@ -221,11 +221,10 @@ defm : BoolField<"aarch64-macho-enable-nonlazybind", "false",
   "Call nonlazybind functions via direct GOT load for Mach-O">;
 defm : ValueField<"aarch64-min-jump-table-entries", "std::optional<unsigned>", "std::nullopt",
   "Set minimum number of entries to use a jump table on AArch64">;
-defm streaming_hazard_size : ValueField<"aarch64-streaming-hazard-size",
+defm : ValueField<"aarch64-streaming-hazard-size",
   "std::optional<unsigned>", "std::nullopt",
   "Hazard size for streaming mode memory accesses. 0 = disabled">;
-def : SeparateOrEq<["-", "--"], "aarch64-stack-hazard-size">,
-  Alias<streaming_hazard_size>;
+def : AliasOf<"aarch64-stack-hazard-size", "aarch64-streaming-hazard-size">;
 defm : BoolField<"aarch64-use-aa", "true",
   "Enable the use of AA during codegen">;
 // If OS supports TBI, use this flag to enable it.

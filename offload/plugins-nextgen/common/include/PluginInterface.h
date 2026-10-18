@@ -369,9 +369,6 @@ public:
 /// so it is never aliased onto compiler-emitted memory and may be extended
 /// freely.
 struct KernelLaunchArgsTy {
-  /// Version of KernelArgsTy this launch was built from, for ABI
-  /// compatibility checks.
-  uint32_t OmpABIVersion = 0;
   /// Number of kernel arguments in \p Args.
   uint32_t NumArgs = 0;
   /// Array of \p NumArgs pointers, each pointing at one argument's value,
@@ -1630,34 +1627,8 @@ public:
                         __tgt_async_info *AsyncInfoPtr,
                         GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Synchronize an asyncrhonous queue with the plugin runtime.
-  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Query the current state of an asynchronous queue.
-  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Creates an event in the given plugin if supported.
-  int32_t create_event(int32_t DeviceId, void **EventPtr);
-
-  /// Records an event that has occurred.
-  int32_t record_event(int32_t DeviceId, void *EventPtr,
-                       __tgt_async_info *AsyncInfoPtr);
-
-  /// Wait until an event has occurred.
-  int32_t wait_event(int32_t DeviceId, void *EventPtr,
-                     __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize execution until an event is done.
-  int32_t sync_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
-
-  /// Returns if the associated storage is accessible for a given device.
-  int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
 
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,

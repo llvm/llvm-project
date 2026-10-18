@@ -147,8 +147,7 @@ template <> struct llvm::DenseMapInfo<SimpleValue> {
 
 /// Match a 'select' including an optional 'not's of the condition.
 static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
-                                           Value *&B,
-                                           SelectPatternFlavor &Flavor) {
+                                           Value *&B) {
   // Return false if V is not even a select.
   if (!match(V, m_Select(m_Value(Cond), m_Value(A), m_Value(B))))
     return false;
@@ -158,36 +157,6 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   if (match(Cond, m_Not(m_Value(CondNot)))) {
     Cond = CondNot;
     std::swap(A, B);
-  }
-
-  // Match canonical forms of min/max. We are not using ValueTracking's
-  // more powerful matchSelectPattern() because it may rely on instruction flags
-  // such as "nsw". That would be incompatible with the current hashing
-  // mechanism that may remove flags to increase the likelihood of CSE.
-
-  Flavor = SPF_UNKNOWN;
-  CmpPredicate Pred;
-
-  if (!match(Cond, m_ICmp(Pred, m_Specific(A), m_Specific(B)))) {
-    // Check for commuted variants of min/max by swapping predicate.
-    // If we do not match the standard or commuted patterns, this is not a
-    // recognized form of min/max, but it is still a select, so return true.
-    if (!match(Cond, m_ICmp(Pred, m_Specific(B), m_Specific(A))))
-      return true;
-    Pred = ICmpInst::getSwappedPredicate(Pred);
-  }
-
-  switch (Pred) {
-  case CmpInst::ICMP_UGT: Flavor = SPF_UMAX; break;
-  case CmpInst::ICMP_ULT: Flavor = SPF_UMIN; break;
-  case CmpInst::ICMP_SGT: Flavor = SPF_SMAX; break;
-  case CmpInst::ICMP_SLT: Flavor = SPF_SMIN; break;
-  // Non-strict inequalities.
-  case CmpInst::ICMP_ULE: Flavor = SPF_UMIN; break;
-  case CmpInst::ICMP_UGE: Flavor = SPF_UMAX; break;
-  case CmpInst::ICMP_SLE: Flavor = SPF_SMIN; break;
-  case CmpInst::ICMP_SGE: Flavor = SPF_SMAX; break;
-  default: break;
   }
 
   return true;
@@ -233,21 +202,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
   }
 
   // Hash general selects to allow matching commuted true/false operands.
-  SelectPatternFlavor SPF;
   Value *Cond, *A, *B;
-  if (matchSelectWithOptionalNotCond(Inst, Cond, A, B, SPF)) {
-    // Hash min/max (cmp + select) to allow for commuted operands.
-    // Min/max may also have non-canonical compare predicate (eg, the compare for
-    // smin may use 'sgt' rather than 'slt'), and non-canonical operands in the
-    // compare.
-    // TODO: We should also detect FP min/max.
-    if (SPF == SPF_SMIN || SPF == SPF_SMAX ||
-        SPF == SPF_UMIN || SPF == SPF_UMAX) {
-      if (A > B)
-        std::swap(A, B);
-      return hash_combine(Inst->getOpcode(), SPF, A, B);
-    }
-
+  if (matchSelectWithOptionalNotCond(Inst, Cond, A, B)) {
     // Hash general selects to allow matching commuted true/false operands.
 
     // If we do not have a compare as the condition, just hash in the condition.
@@ -383,24 +339,13 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
              GCR1->getBasePtr() == GCR2->getBasePtr() &&
              GCR1->getDerivedPtr() == GCR2->getDerivedPtr();
 
-  // Min/max can occur with commuted operands, non-canonical predicates,
-  // and/or non-canonical operands.
   // Selects can be non-trivially equivalent via inverted conditions and swaps.
-  SelectPatternFlavor LSPF, RSPF;
   Value *CondL, *CondR, *LHSA, *RHSA, *LHSB, *RHSB;
-  if (matchSelectWithOptionalNotCond(LHSI, CondL, LHSA, LHSB, LSPF) &&
-      matchSelectWithOptionalNotCond(RHSI, CondR, RHSA, RHSB, RSPF)) {
-    if (LSPF == RSPF) {
-      // TODO: We should also detect FP min/max.
-      if (LSPF == SPF_SMIN || LSPF == SPF_SMAX ||
-          LSPF == SPF_UMIN || LSPF == SPF_UMAX)
-        return ((LHSA == RHSA && LHSB == RHSB) ||
-                (LHSA == RHSB && LHSB == RHSA));
-
-      // select Cond, A, B <--> select not(Cond), B, A
-      if (CondL == CondR && LHSA == RHSA && LHSB == RHSB)
-        return true;
-    }
+  if (matchSelectWithOptionalNotCond(LHSI, CondL, LHSA, LHSB) &&
+      matchSelectWithOptionalNotCond(RHSI, CondR, RHSA, RHSB)) {
+    // select Cond, A, B <--> select not(Cond), B, A
+    if (CondL == CondR && LHSA == RHSA && LHSB == RHSB)
+      return true;
 
     // If the true/false operands are swapped and the conditions are compares
     // with inverted predicates, the selects are equal:
@@ -410,16 +355,6 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     // inverse, because we looked through a 'not' in the matching function and
     // swapped A/B:
     // select (cmp Pred, X, Y), A, B <--> select (not (cmp InvPred, X, Y)), B, A
-    //
-    // This intentionally does NOT handle patterns with a double-negation in
-    // the sense of not + not, because doing so could result in values
-    // comparing
-    // as equal that hash differently in the min/max cases like:
-    // select (cmp slt, X, Y), X, Y <--> select (not (not (cmp slt, X, Y))), X, Y
-    //   ^ hashes as min                  ^ would not hash as min
-    // In the context of the EarlyCSE pass, however, such cases never reach
-    // this code, as we simplify the double-negation before hashing the second
-    // select (and so still succeed at CSEing them).
     if (LHSA == RHSB && LHSB == RHSA) {
       CmpPredicate PredL, PredR;
       Value *X, *Y;

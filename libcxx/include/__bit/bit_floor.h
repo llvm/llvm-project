@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <__unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp bit_floor(_Tp __t) noexcept {
+[[nodiscard]] constexpr _Tp bit_floor(_Tp __t) noexcept {
   return __t == 0 ? 0 : _Tp{1} << std::__bit_log2(__t);
 }
 

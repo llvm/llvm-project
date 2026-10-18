@@ -1052,7 +1052,7 @@ class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPa
 
 class DSWritePat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (inst $ptr, (REG_SEQUENCE VGPR_32, $value, lo16, (i16 (IMPLICIT_DEF)), hi16),
+  (inst $ptr, (lo16_to_vgpr32 $value),
         Offset:$offset, (i1 gds))
 >;
 

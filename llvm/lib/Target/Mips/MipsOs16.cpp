@@ -102,7 +102,9 @@ static bool needsFP(Function &F) {
 
 
 bool MipsOs16::runOnModule(Module &M) {
-  StringRef Mips32FunctionMask = MipsOptions::Global.mips32_function_mask;
+  const MipsOptions &Opts =
+      M.getContext().getLibraryOptions().get<MipsOptions>();
+  StringRef Mips32FunctionMask = Opts.mips32_function_mask;
   bool usingMask = !Mips32FunctionMask.empty();
   bool doneUsingMask = false; // this will make it stop repeating
 
