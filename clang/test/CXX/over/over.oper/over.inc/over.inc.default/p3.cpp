@@ -341,4 +341,233 @@ struct NoexceptNonMember {
 NoexceptNonMember operator++(NoexceptNonMember &, int) = default;
 extern NoexceptNonMember noexcept_non_member;
 static_assert(noexcept(noexcept_non_member++));
+
+// Prefix operators with an explicit object parameter.
+struct ExplicitObjectPrefix {
+  int v;
+  constexpr ExplicitObjectPrefix &operator++(this ExplicitObjectPrefix &self) { ++self.v; return self; }
+  constexpr ExplicitObjectPrefix &operator--(this ExplicitObjectPrefix &self) { --self.v; return self; }
+  ExplicitObjectPrefix operator++(int) = default;
+  friend ExplicitObjectPrefix operator--(ExplicitObjectPrefix &, int) = default;
+};
+constexpr int explicit_object_prefix() {
+  ExplicitObjectPrefix e{1};
+  ExplicitObjectPrefix a = e++;
+  ExplicitObjectPrefix b = e--;
+  return a.v * 100 + b.v * 10 + e.v;
+}
+static_assert(explicit_object_prefix() == 121);
+
+// A deduced explicit object parameter deduces an lvalue of type C.
+struct DeducedObjectPrefix {
+  int v;
+  constexpr auto &operator++(this auto &&self) {
+    static_assert(__is_same(decltype(self), DeducedObjectPrefix &));
+    ++self.v;
+    return self;
+  }
+  DeducedObjectPrefix operator++(int) = default;
+};
+constexpr int deduced_object_prefix() {
+  DeducedObjectPrefix d{1};
+  DeducedObjectPrefix a = d++;
+  return a.v * 10 + d.v;
+}
+static_assert(deduced_object_prefix() == 12);
+
+// The explicit object parameter need not be a non-const lvalue reference; the
+// prefix operator is called like any other.
+struct ByValueObjectPrefix {
+  int v;
+  constexpr ByValueObjectPrefix operator++(this ByValueObjectPrefix self) { return {self.v + 1}; }
+  ByValueObjectPrefix operator++(int) = default;
+};
+constexpr int by_value_object_prefix() {
+  ByValueObjectPrefix b{1};
+  ByValueObjectPrefix a = b++;
+  return a.v * 10 + b.v;
+}
+static_assert(by_value_object_prefix() == 11);
+struct ConstObjectPrefix {
+  mutable int v;
+  constexpr const ConstObjectPrefix &operator--(this const ConstObjectPrefix &self) { --self.v; return self; }
+  ConstObjectPrefix operator--(int) = default;
+};
+constexpr int const_object_prefix() {
+  ConstObjectPrefix c{1};
+  ConstObjectPrefix a = c--;
+  return a.v * 10 + c.v;
+}
+static_assert(const_object_prefix() == 10);
+
+// Postfix operators with an explicit object parameter.
+struct ExplicitObjectRvalue {
+  int v;
+  constexpr ExplicitObjectRvalue &operator++() { ++v; return *this; }
+  ExplicitObjectRvalue operator++(this ExplicitObjectRvalue &&, int) = default;
+};
+constexpr int explicit_object_rvalue() {
+  ExplicitObjectRvalue e{1};
+  ExplicitObjectRvalue a = static_cast<ExplicitObjectRvalue &&>(e)++;
+  return a.v * 10 + e.v;
+}
+static_assert(explicit_object_rvalue() == 12);
+struct ExplicitObjectVolatile {
+  ExplicitObjectVolatile();
+  ExplicitObjectVolatile(const volatile ExplicitObjectVolatile &);
+  ExplicitObjectVolatile(ExplicitObjectVolatile &&);
+  ExplicitObjectVolatile &operator++(this volatile ExplicitObjectVolatile &);
+  ExplicitObjectVolatile operator++(this volatile ExplicitObjectVolatile &, int) = default;
+};
+void explicit_object_volatile() {
+  volatile ExplicitObjectVolatile v;
+  v++;
+}
+// Both operators have an explicit object parameter.
+template <typename T> struct ExplicitObjectBoth {
+  T v;
+  constexpr ExplicitObjectBoth &operator++(this ExplicitObjectBoth &self) { ++self.v; return self; }
+  constexpr ExplicitObjectBoth &operator--(this auto &self) { --self.v; return self; }
+  ExplicitObjectBoth operator++(this ExplicitObjectBoth &self, int) = default;
+  ExplicitObjectBoth operator--(this ExplicitObjectBoth &self, int) = default;
+};
+constexpr int explicit_object_both() {
+  ExplicitObjectBoth<int> e{1};
+  ExplicitObjectBoth<int> a = e++;
+  ExplicitObjectBoth<int> b = e--;
+  return a.v * 100 + b.v * 10 + e.v;
+}
+static_assert(explicit_object_both() == 121);
+// An explicit object postfix operator with an implicit object prefix operator
+// is called the same way.
+struct ExplicitObjectPostfixOnly {
+  int v;
+  constexpr ExplicitObjectPostfixOnly &operator--() { --v; return *this; }
+  ExplicitObjectPostfixOnly operator--(this ExplicitObjectPostfixOnly &self, int) = default;
+};
+constexpr int explicit_object_postfix_only() {
+  ExplicitObjectPostfixOnly e{1};
+  ExplicitObjectPostfixOnly a = e--;
+  return a.v * 10 + e.v;
+}
+static_assert(explicit_object_postfix_only() == 10);
+
+// Constrained prefix operators.
+template <typename T> concept Small = sizeof(T) <= 4;
+template <typename T> concept Int = __is_same(T, int);
+template <typename T> struct ConstrainedPrefix {
+  T v;
+  constexpr ConstrainedPrefix &operator++() requires Small<T> { ++v; return *this; }
+  constexpr ConstrainedPrefix &operator--(this ConstrainedPrefix &self) requires Small<T> { --self.v; return self; }
+  ConstrainedPrefix operator++(int) = default;
+  ConstrainedPrefix operator--(int) = default;
+};
+constexpr int constrained_prefix() {
+  ConstrainedPrefix<int> c{1};
+  ConstrainedPrefix<int> a = c++;
+  ConstrainedPrefix<int> b = c--;
+  return a.v * 100 + b.v * 10 + c.v;
+}
+static_assert(constrained_prefix() == 121);
+// The more constrained prefix operator is selected.
+template <typename T> struct MoreConstrainedPrefix {
+  T v;
+  constexpr MoreConstrainedPrefix &operator++() requires Small<T> { v += 1; return *this; }
+  constexpr MoreConstrainedPrefix &operator++() requires Small<T> && Int<T> { v += 10; return *this; }
+  MoreConstrainedPrefix operator++(int) = default;
+};
+constexpr int more_constrained_prefix() {
+  MoreConstrainedPrefix<int> i{1};
+  MoreConstrainedPrefix<int> a = i++;
+  MoreConstrainedPrefix<short> s{1};
+  MoreConstrainedPrefix<short> b = s++;
+  return a.v * 1000 + i.v * 100 + b.v * 10 + s.v;
+}
+static_assert(more_constrained_prefix() == 1 * 1000 + 11 * 100 + 1 * 10 + 2);
+// A constrained non-member prefix operator template.
+struct ConstrainedNonMemberPrefix { int v; };
+template <typename T> requires __is_same(T, ConstrainedNonMemberPrefix)
+constexpr T &operator++(T &t) { ++t.v; return t; }
+constexpr ConstrainedNonMemberPrefix operator++(ConstrainedNonMemberPrefix &, int) = default;
+constexpr int constrained_non_member_prefix() {
+  ConstrainedNonMemberPrefix c{1};
+  ConstrainedNonMemberPrefix a = c++;
+  return a.v * 10 + c.v;
+}
+static_assert(constrained_non_member_prefix() == 12);
+// The exception specification depends on the selected prefix operator.
+template <typename T> struct ConstrainedPrefixNoexcept {
+  T v;
+  ConstrainedPrefixNoexcept &operator++() noexcept requires Small<T>;
+  ConstrainedPrefixNoexcept &operator++();
+  ConstrainedPrefixNoexcept operator++(int) = default;
+};
+static_assert(noexcept(ConstrainedPrefixNoexcept<int>{}++));
+static_assert(!noexcept(ConstrainedPrefixNoexcept<long long>{}++));
+
+// Constrained postfix operators.
+template <typename T> struct ConstrainedPostfix {
+  T v;
+  constexpr ConstrainedPostfix &operator++() { ++v; return *this; }
+  constexpr ConstrainedPostfix &operator--() { --v; return *this; }
+  ConstrainedPostfix operator++(int) requires Small<T> = default;
+  friend ConstrainedPostfix operator--(ConstrainedPostfix &, int) requires Small<T> = default;
+};
+constexpr int constrained_postfix() {
+  ConstrainedPostfix<int> c{1};
+  ConstrainedPostfix<int> a = c++;
+  ConstrainedPostfix<int> b = c--;
+  return a.v * 100 + b.v * 10 + c.v;
+}
+static_assert(constrained_postfix() == 121);
+void constrained_postfix_unsatisfied(ConstrainedPostfix<long long> c) {
+  c++; // expected-error {{cannot increment value of type 'ConstrainedPostfix<long long>'}}
+  c--; // expected-error {{cannot decrement value of type 'ConstrainedPostfix<long long>'}}
+}
+// A defaulted postfix operator can be more constrained than a user-provided
+// one, and vice versa.
+template <typename T> struct MoreConstrainedPostfix {
+  T v;
+  constexpr MoreConstrainedPostfix &operator++() { v += 1; return *this; }
+  constexpr MoreConstrainedPostfix operator++(int) requires Small<T> { MoreConstrainedPostfix t = *this; v += 10; return t; }
+  MoreConstrainedPostfix operator++(int) requires Small<T> && Int<T> = default;
+  constexpr MoreConstrainedPostfix &operator--() { v -= 1; return *this; }
+  MoreConstrainedPostfix operator--(int) requires Small<T> = default;
+  constexpr MoreConstrainedPostfix operator--(int) requires Small<T> && Int<T> { MoreConstrainedPostfix t = *this; v -= 10; return t; }
+};
+constexpr int more_constrained_postfix() {
+  MoreConstrainedPostfix<int> i{1};
+  MoreConstrainedPostfix<int> a = i++;
+  MoreConstrainedPostfix<int> b = i--;
+  MoreConstrainedPostfix<short> s{1};
+  MoreConstrainedPostfix<short> c = s++;
+  MoreConstrainedPostfix<short> d = s--;
+  return a.v * 100000 + b.v * 10000 + i.v * 1000 + c.v * 100 + d.v * 10 + s.v;
+}
+static_assert(more_constrained_postfix() == 1 * 100000 + 2 * 10000 + (-8) * 1000 + 1 * 100 + 11 * 10 + 10);
+// A constrained explicit object postfix operator.
+template <typename T> struct ConstrainedExplicitObjectPostfix {
+  T v;
+  constexpr ConstrainedExplicitObjectPostfix &operator++(this ConstrainedExplicitObjectPostfix &self) requires Small<T> { ++self.v; return self; }
+  ConstrainedExplicitObjectPostfix operator++(this ConstrainedExplicitObjectPostfix &self, int) requires Small<T> = default;
+};
+constexpr int constrained_explicit_object_postfix() {
+  ConstrainedExplicitObjectPostfix<int> c{1};
+  ConstrainedExplicitObjectPostfix<int> a = c++;
+  return a.v * 10 + c.v;
+}
+static_assert(constrained_explicit_object_postfix() == 12);
+void constrained_explicit_object_postfix_unsatisfied(ConstrainedExplicitObjectPostfix<long long> c) {
+  c++; // expected-error {{cannot increment value of type 'ConstrainedExplicitObjectPostfix<long long>'}}
+}
+// The exception specification of an explicit object postfix operator.
+struct ExplicitObjectNoexcept {
+  ExplicitObjectNoexcept &operator++(this ExplicitObjectNoexcept &) noexcept;
+  ExplicitObjectNoexcept operator++(this ExplicitObjectNoexcept &, int) = default;
+  ExplicitObjectNoexcept &operator--(this ExplicitObjectNoexcept &);
+  ExplicitObjectNoexcept operator--(this ExplicitObjectNoexcept &, int) = default;
+};
+extern ExplicitObjectNoexcept explicit_object_noexcept;
+static_assert(noexcept(explicit_object_noexcept++));
+static_assert(!noexcept(explicit_object_noexcept--));
 #endif

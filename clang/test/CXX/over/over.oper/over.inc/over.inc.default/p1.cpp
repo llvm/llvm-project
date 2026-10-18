@@ -374,3 +374,40 @@ template <typename T> struct DependentRestrict {
   DependentRestrict operator--(int) const __restrict__ = default; // expected-error {{defaulted member postfix decrement operator cannot be const-qualified}}
 };
 DependentRestrict<int> dres1; // expected-note {{in instantiation of template class 'DependentRestrict<int>' requested here}}
+
+// The same checks apply to the postfix decrement operator.
+struct IncompleteDecrement; // expected-note {{forward declaration of 'IncompleteDecrement'}}
+struct BefrienderDecrement {
+  friend IncompleteDecrement operator--(IncompleteDecrement &, int) = default; // expected-error {{cannot default postfix decrement operator for incomplete type 'IncompleteDecrement'}}
+};
+struct NConstDecrement { NConstDecrement &operator--(); };
+NConstDecrement operator--(const NConstDecrement &, int) = default; // expected-error {{invalid first parameter type for defaulted postfix decrement operator; found 'const NConstDecrement &', expected 'NConstDecrement &'}}
+
+// A defaulted postfix operator may be constrained. The requires-clause does
+// not make it a template.
+template <typename T> concept Small = sizeof(T) <= 4;
+template <typename T> struct Constrained {
+  Constrained &operator++();
+  Constrained &operator--();
+  Constrained operator++(int) requires Small<T> = default;                   // OK
+  Constrained operator--(this Constrained &, int) requires Small<T> = default; // OK
+  friend Constrained operator++(Constrained &&, int) requires Small<T> = default; // OK
+};
+Constrained<int> c1;
+Constrained<long long> c2;
+
+// A constrained defaulted postfix operator is checked when its class is
+// instantiated, even if its constraints are not satisfied.
+template <typename T> struct ConstrainedBad {
+  ConstrainedBad &operator++();
+  ConstrainedBad &operator--();
+  int operator++(int) requires Small<T> = default; // expected-error {{return type for defaulted postfix increment operator must be 'ConstrainedBad<long long>', not 'int'}}
+  ConstrainedBad operator--(this const ConstrainedBad &, int) requires Small<T> = default; // expected-error {{invalid explicit object parameter type for defaulted postfix decrement operator; found 'const ConstrainedBad<long long> &', expected 'ConstrainedBad<long long> &'}}
+};
+ConstrainedBad<long long> cb1; // expected-note {{in instantiation of template class 'ConstrainedBad<long long>' requested here}}
+
+// A requires-clause on a postfix operator that is not a templated entity.
+struct NotTemplated {
+  NotTemplated &operator++();
+  NotTemplated operator++(int) requires true = default; // expected-error {{non-templated function cannot have a requires clause}}
+};
