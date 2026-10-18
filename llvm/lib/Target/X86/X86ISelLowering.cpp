@@ -2377,7 +2377,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     SetFPMinMaxAction(MVT::f16);
-    setOperationAction(ISD::FREM,                 MVT::f16, Promote);
+    setOperationAction(ISD::FREM,                 MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
     setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
@@ -2408,7 +2408,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_EXTEND,              MVT::v8f64,  Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,       MVT::v8f64,  Legal);
       setOperationAction(ISD::INSERT_VECTOR_ELT,      MVT::v32f16, Custom);
-
+      setOperationAction(ISD::FREM,                   MVT::v32f16, Custom);
       setOperationAction(ISD::FP_TO_SINT,             MVT::v32i16, Custom);
       setOperationAction(ISD::STRICT_FP_TO_SINT,      MVT::v32i16, Custom);
       setOperationAction(ISD::FP_TO_UINT,             MVT::v32i16, Custom);
@@ -2468,6 +2468,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v8f32, Legal);
       setOperationAction(ISD::FP_EXTEND,          MVT::v4f64, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v4f64, Legal);
+      setOperationAction(ISD::FREM, MVT::v8f16, Custom);
+      setOperationAction(ISD::FREM, MVT::v16f16, Custom);
 
       // INSERT_VECTOR_ELT v8f16 extended to VECTOR_SHUFFLE
       setOperationAction(ISD::INSERT_VECTOR_ELT,    MVT::v8f16,  Custom);
@@ -23319,6 +23321,47 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
+static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
+  SDLoc Dl(Op);
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.getScalarType() == MVT::f16 && "Unexpected type for FREM");
+
+  bool IsVec = VT.isVector();
+  MVT WideVT = IsVec ? VT.changeVectorElementType(MVT::f64) : MVT::f64;
+  MVT MaskVT = IsVec ? VT.changeVectorElementType(MVT::i1) : MVT::v1i1;
+
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+
+  SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, A);
+  SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, B);
+  SDValue Q = DAG.getNode(ISD::FTRUNC, Dl, WideVT,
+                          DAG.getNode(ISD::FDIV, Dl, WideVT, X, Y));
+  SDValue Res = DAG.getNode(ISD::FMA, Dl, WideVT,
+                            DAG.getNode(ISD::FNEG, Dl, WideVT, Q), Y, X);
+  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, WideVT, Res, X);
+  Res = DAG.getNode(ISD::FP_ROUND, Dl, VT, Res,
+                    DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
+
+  SDValue AC = A, BC = B;
+  unsigned ClassOpc = X86ISD::VFPCLASS;
+  if (!IsVec) {
+    AC = DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, A);
+    BC = DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, B);
+    ClassOpc = X86ISD::VFPCLASSS;
+  }
+  SDValue XNotFinite = DAG.getNode(ClassOpc, Dl, MaskVT, AC,
+                                   DAG.getTargetConstant(0x99, Dl, MVT::i32));
+  SDValue YIsInf = DAG.getNode(ClassOpc, Dl, MaskVT, BC,
+                               DAG.getTargetConstant(0x18, Dl, MVT::i32));
+  SDValue UseX = DAG.getNode(ISD::AND, Dl, MaskVT,
+                             DAG.getNOT(Dl, XNotFinite, MaskVT), YIsInf);
+
+  if (!IsVec)
+    return DAG.getNode(X86ISD::SELECTS, Dl, VT, UseX, A, Res);
+  return DAG.getSelect(Dl, VT, UseX, A, Res);
+}
+
 /// Helper for attempting to create a X86ISD::BT node.
 static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &DAG) {
   // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
@@ -34905,6 +34948,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
+  case ISD::FREM:               return LowerFREM(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
   case ISD::SETCC:
