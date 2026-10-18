@@ -75,6 +75,7 @@ subroutine test_declare_simd_ref_array_valid(arr)
   implicit none
   integer, intent(in) :: arr(:)
   
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !$omp declare simd linear(ref(arr))
   ! No error expected - REF modifier allows assumed-shape arrays
 end subroutine

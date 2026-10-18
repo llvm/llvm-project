@@ -3,11 +3,13 @@
 subroutine f00(x)
   integer :: x
   !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !$omp declare simd linear(uval(x))
 end
 
 subroutine f01(x)
   integer :: x
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: An exclusive 'step-simple-modifier' modifier cannot be specified together with a modifier of a different type
   !$omp declare simd linear(uval(x) : 2)
 end

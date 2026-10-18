@@ -19,16 +19,19 @@ end subroutine linear_clause_01
 subroutine linear_clause_02(arg_01, arg_02)
     !ERROR: The list item 'arg_01' specified without the REF 'linear-modifier' must be of INTEGER type
     !ERROR: List item 'arg_01' in LINEAR clause must be a scalar variable
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !$omp declare simd linear(val(arg_01))
     real, intent(in) :: arg_01(:)
 
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'arg_02' must be a dummy argument without the VALUE attribute
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !$omp declare simd linear(uval(arg_02))
     integer, value, intent(in) :: arg_02
 
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'var' must be a dummy argument without the VALUE attribute
     !ERROR: The list item `var` must be a dummy argument
     !ERROR: The list item `var` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !$omp declare simd linear(uval(var))
     integer, pointer :: var
 end subroutine linear_clause_02
@@ -39,13 +42,16 @@ subroutine linear_clause_03(arg)
     !ERROR: The list item `arg` specified with the REF 'linear-modifier' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !ERROR: List item 'arg' present at multiple LINEAR clauses
     !ERROR: 'arg' appears in more than one data-sharing clause on the same OpenMP directive
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !$omp declare simd linear(ref(arg)) linear(arg)
 
     integer :: i
     common /cc/ i
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !ERROR: The list item `i` must be a dummy argument
     !$omp declare simd linear(i)
 
+    !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
     !ERROR: 'cc' is a common block name and must not appear in a LINEAR clause
     !ERROR: The list item `i` must be a dummy argument
     !$omp declare simd linear(/cc/)
