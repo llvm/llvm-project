@@ -1715,9 +1715,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .add(RHS)
           .addReg(RegZ)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -1736,9 +1733,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .addReg(RegZ)
           .add(LHS)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
