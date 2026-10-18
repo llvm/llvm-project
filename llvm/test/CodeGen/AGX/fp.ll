@@ -151,15 +151,13 @@ define agx_kernel void @rounding(ptr addrspace(1) %out, float %a, float %b) {
 define agx_kernel void @compare(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-LABEL: compare:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 3 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    fcmpsel lt, r1, u2, u3, 1, 0
-; CHECK-NEXT:    mov_imm r2, 1077936128
-; CHECK-NEXT:    icmpsel ueq, r1, r1, 0, r2, u2
-; CHECK-NEXT:    fcmpsel lt, r2, r1, u3, 0, 1
-; CHECK-NEXT:    icmpsel ueq, r1, r2, 0, u3, r1
+; CHECK-NEXT:    mov_imm r1, 1077936128
+; CHECK-NEXT:    fcmpsel lt, r1, u2, u3, u2, r1
+; CHECK-NEXT:    fcmpsel lt, r1, r1, u3, u3, r1
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap

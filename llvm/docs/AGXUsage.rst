@@ -97,8 +97,10 @@ another.
    ``simd-reduce``                SIMD-group and quad reductions and prefixes.
    ``simd-ballot``                Ballots.
    ``simd-matrix``                8x8 SIMD-group matrix multiply-accumulate.
-   ``quad-shuffle-index-merge``   ``simd_shuffle`` merges the low index bits of
-                                  each quad (informational).
+   ``quad-shuffle-index-merge``   Shuffles merge the low index bits of each
+                                  quad. Divergent shuffle indices are expanded
+                                  into four shuffles (see `SIMD-group
+                                  shuffles`_).
    ``multi-die-coherency``        Device atomics set the coherency bit (multi-die
                                   G13 parts).
    ``threadgroup-atomics``        Threadgroup memory atomics.
@@ -239,10 +241,14 @@ Supported:
 
 There is no floating point environment: constrained floating point
 intrinsics are compiled as the ordinary operations, with round to nearest
-even.
+even. 32-bit operations always flush denormals. 16-bit operations keep them;
+in functions whose ``denormal_fpenv`` flushes ``half`` denormals, the
+operands and results of ``half`` arithmetic, comparisons and conversions are
+flushed explicitly.
 
-Not supported: ``double``, vector memory operations (vectors are
-scalarized), textures and graphics shaders, calls and recursion.
+Not supported: ``double`` (diagnosed as unsupported), vector memory
+operations (vectors are scalarized), textures and graphics shaders, calls
+and recursion.
 
 .. _agx-apple9:
 
@@ -279,6 +285,29 @@ number, and ``llvm.agx.simd.reduce``/``prefix`` and
    5     fmin
    7     fmax
    ===== ========= ===== =========
+
+SIMD-group shuffles
+-------------------
+
+``llvm.agx.simd.shuffle(v, i)`` returns ``v`` of thread ``i`` of the
+SIMD-group and ``llvm.agx.quad.shuffle(v, i)`` of thread ``i`` of the quad.
+The ``xor``, ``up`` and ``down`` variants read the thread at the current
+thread index xor, minus or plus ``i``; with ``up`` and ``down``, threads whose
+source is outside the SIMD-group (or quad) keep their own value.
+
+On G13 to G15 (``quad-shuffle-index-merge``) the shuffle instructions read
+the index of all four threads of a quad, including inactive threads, and use
+the OR of their low two bits for the whole quad. The backend therefore:
+
+* expands shuffles whose index is divergent (according to the uniformity
+  analysis) into four shuffles, one per quad position, whose low index bits
+  are the same in every thread, and selects the result of the thread's
+  position; relative shuffles with divergent offsets become shuffles of the
+  computed thread;
+* passes register indices in ``r0h``, which is zeroed at kernel entry and
+  after each shuffle, so that inactive threads contribute zero bits.
+
+Immediate and uniform register indices are used directly.
 
 MLIR
 ====

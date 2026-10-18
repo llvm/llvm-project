@@ -71,8 +71,8 @@ def FeatureSIMDMatrix : SubtargetFeature<"simd-matrix",
 
 def FeatureQuadShuffleIndexMerge : SubtargetFeature<"quad-shuffle-index-merge",
   "HasQuadShuffleIndexMerge", "true",
-  "simd_shuffle ORs the low two index bits across each quad, so divergent "
-  "shuffle indices must be lowered with a loop"
+  "Shuffles OR the low two index bits of the threads of each quad; "
+  "divergent indices are expanded into four shuffles"
 >;
 
 def FeatureMultiDieCoherency : SubtargetFeature<"multi-die-coherency",

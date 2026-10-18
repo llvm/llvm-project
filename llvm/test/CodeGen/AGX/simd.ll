@@ -4,17 +4,14 @@
 define agx_kernel void @shuffles(ptr addrspace(1) %out, float %x, i32 %i) {
 ; CHECK-LABEL: shuffles:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 3 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    simd_shuffle r1, u2, u3l
-; CHECK-NEXT:    mov_imm r2, 1
-; CHECK-NEXT:    simd_shuffle_xor r1, r1, r2l
-; CHECK-NEXT:    mov_imm r2, 2
-; CHECK-NEXT:    simd_shuffle_down r1, r1, r2l
-; CHECK-NEXT:    mov_imm r2, 3
-; CHECK-NEXT:    quad_shuffle r1, r1, r2l
+; CHECK-NEXT:    simd_shuffle_xor r1, r1, 1
+; CHECK-NEXT:    simd_shuffle_down r1, r1, 2
+; CHECK-NEXT:    quad_shuffle r1, r1, 3
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap

@@ -120,7 +120,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FMINNUM,
                         ISD::FMAXNUM, ISD::FEXP2, ISD::FLOG2},
                        VT, Legal);
-    setOperationAction({ISD::FSUB, ISD::SELECT_CC, ISD::FCOPYSIGN,
+    setOperationAction(ISD::FCOPYSIGN, VT, Custom);
+    setOperationAction({ISD::FSUB, ISD::SELECT_CC,
                         ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM_IEEE,
                         ISD::FMAXNUM_IEEE, ISD::FSINCOS, ISD::FROUND},
                        VT, Expand);
@@ -376,6 +377,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerFDIV(Op, DAG);
   case ISD::FREM:
     return lowerFREM(Op, DAG);
+  case ISD::FCOPYSIGN:
+    return lowerFCOPYSIGN(Op, DAG);
   case ISD::FSIN:
   case ISD::FCOS:
     return lowerTrig(Op, DAG);
@@ -738,6 +741,28 @@ SDValue AGXTargetLowering::lowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   SDValue E = DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, B),
                           Q, A);
   return DAG.getNode(ISD::FMA, DL, VT, E, R, Q);
+}
+
+/// copysign(m, s) = (m & ~sign) | (s & sign), on the bits.
+SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
+                                          SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  EVT IntVT = VT == MVT::f16 ? MVT::i16 : MVT::i32;
+  SDValue Mag = Op.getOperand(0);
+  SDValue Sign = Op.getOperand(1);
+  if (Sign.getValueType() != VT)
+    Sign = Sign.getValueType().bitsLT(VT)
+               ? DAG.getNode(ISD::FP_EXTEND, DL, VT, Sign)
+               : DAG.getNode(ISD::FP_ROUND, DL, VT, Sign,
+                             DAG.getTargetConstant(0, DL, MVT::i32));
+  APInt SignMask = APInt::getSignMask(IntVT.getSizeInBits());
+  SDValue M = DAG.getNode(ISD::AND, DL, IntVT,
+                          DAG.getBitcast(IntVT, Mag),
+                          DAG.getConstant(~SignMask, DL, IntVT));
+  SDValue S = DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, Sign),
+                          DAG.getConstant(SignMask, DL, IntVT));
+  return DAG.getBitcast(VT, DAG.getNode(ISD::OR, DL, IntVT, M, S));
 }
 
 SDValue AGXTargetLowering::lowerFREM(SDValue Op, SelectionDAG &DAG) const {

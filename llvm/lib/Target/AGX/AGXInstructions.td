@@ -495,6 +495,35 @@ defm : SetCCPats<FCMPSEL_F32, f32, i32, AGXFPSrc32, AGXIntSrc32,
 defm : SetCCPats<FCMPSEL_F16_I32, f16, i32, AGXFPSrc16, AGXIntSrc32,
                  AGXFPConds, 1>;
 
+// Selects of other value types on a comparison.
+multiclass SelectCCPats<Instruction inst, ValueType cvt, ValueType rvt,
+                        ComplexPattern cpat, list<AGXCond> conds, bit fp> {
+  foreach C = conds in {
+    if fp then
+      def : Pat<(rvt (select (i32 (setcc (cpat cvt:$a, i32:$am),
+                                         (cpat cvt:$b, i32:$bm), C.CC)),
+                             rvt:$x, rvt:$y)),
+                !if(C.Swap, (inst C.HW, $am, $a, $bm, $b, 0, $y, 0, $x),
+                            (inst C.HW, $am, $a, $bm, $b, 0, $x, 0, $y))>;
+    else
+      def : Pat<(rvt (select (i32 (setcc cpat:$a, cpat:$b, C.CC)),
+                             rvt:$x, rvt:$y)),
+                !if(C.Swap, (inst C.HW, 0, $a, 0, $b, 0, $y, 0, $x),
+                            (inst C.HW, 0, $a, 0, $b, 0, $x, 0, $y))>;
+  }
+}
+
+defm : SelectCCPats<ICMPSEL_I32, i32, f32, AGXIntSrc32, AGXIntConds, 0>;
+defm : SelectCCPats<ICMPSEL_I16_I32, i16, f32, AGXIntSrc16, AGXIntConds, 0>;
+defm : SelectCCPats<FCMPSEL_F32, f32, f32, AGXFPSrc32, AGXFPConds, 1>;
+defm : SelectCCPats<FCMPSEL_F16_I32, f16, f32, AGXFPSrc16, AGXFPConds, 1>;
+foreach VT = [i16, f16, bf16] in {
+defm : SelectCCPats<ICMPSEL_I32_I16, i32, VT, AGXIntSrc32, AGXIntConds, 0>;
+defm : SelectCCPats<ICMPSEL_I16, i16, VT, AGXIntSrc16, AGXIntConds, 0>;
+defm : SelectCCPats<FCMPSEL_F32_I16, f32, VT, AGXFPSrc32, AGXFPConds, 1>;
+defm : SelectCCPats<FCMPSEL_F16, f16, VT, AGXFPSrc16, AGXFPConds, 1>;
+}
+
 // Select on a boolean (0/1 in a 32-bit register).
 def : Pat<(i32 (select i32:$c, AGXIntSrc32:$x, AGXIntSrc32:$y)),
           (ICMPSEL_I32 IC_UEQ, 0, $c, 0, (i32 0), 0, $y, 0, $x)>;
@@ -1082,6 +1111,12 @@ def WAIT : AGXPseudo<(outs), (ins i32imm:$slot), [(int_agx_wait timm:$slot)]> {
 // SIMD-group operations
 //===----------------------------------------------------------------------===//
 
+def shuffle_imm_xform : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i16);
+}]>;
+def shuffle_imm : ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }],
+                          shuffle_imm_xform>;
+
 multiclass ShufflePseudo<Instruction real, SDPatternOperator intr> {
   let isConvergent = 1 in {
   def _32 : AGXALUPseudo<real, (outs GPR32:$dst),
@@ -1101,6 +1136,15 @@ multiclass ShufflePseudo<Instruction real, SDPatternOperator intr> {
   def : Pat<(VT (intr VT:$v, i32:$idx)),
             (!cast<Instruction>(NAME#"_16") 0, $v, 0,
                                             (EXTRACT_SUBREG $idx, lo16))>;
+  // Immediate indices are the same in every thread.
+  let AddedComplexity = 10 in {
+  foreach VT = [i32, f32] in
+  def : Pat<(VT (intr VT:$v, shuffle_imm:$idx)),
+            (!cast<Instruction>(NAME#"_32") 0, $v, 0, (i16 (shuffle_imm_xform $idx)))>;
+  foreach VT = [i16, f16] in
+  def : Pat<(VT (intr VT:$v, shuffle_imm:$idx)),
+            (!cast<Instruction>(NAME#"_16") 0, $v, 0, (i16 (shuffle_imm_xform $idx)))>;
+  }
 }
 
 defm SIMD_SHUFFLE : ShufflePseudo<SIMD_SHUFFLE_g13, int_agx_simd_shuffle>;

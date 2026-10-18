@@ -17,20 +17,36 @@
 //    floating point environment, so constrained floating point intrinsics
 //    become their ordinary operations. It also unifies the function exits,
 //    which the control flow structurizer expects.
+//  * On subtargets where simd_shuffle merges the low index bits of each quad
+//    (quad-shuffle-index-merge), shuffles with divergent indices are
+//    expanded into four shuffles whose low index bits are uniform, like
+//    Mesa's agx_nir_lower_subgroups.
+//  * The hardware flushes 32-bit denormals but keeps 16-bit ones. Functions
+//    whose denormal mode for half asks for flushing get explicit flushes of
+//    the operands and results of their half operations.
+//  * There is no double precision hardware: double precision arithmetic is
+//    diagnosed as unsupported.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXSubtarget.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 
@@ -113,6 +129,9 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool expandMemIntrinsics(Function &F, const TargetTransformInfo &TTI);
   bool unifyExits(Function &F);
   bool lowerConstrainedFP(Function &F);
+  bool lowerDivergentShuffles(Function &F, const UniformityInfo &UI);
+  bool flushHalfDenormals(Function &F);
+  bool diagnoseDoubles(Function &F);
 
 public:
   static char ID;
@@ -122,6 +141,8 @@ public:
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<UniformityInfoWrapperPass>();
   }
 };
 
@@ -132,6 +153,8 @@ char AGXCodeGenPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(AGXCodeGenPrepare, DEBUG_TYPE, "AGX CodeGen Prepare",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AGXCodeGenPrepare, DEBUG_TYPE, "AGX CodeGen Prepare",
                     false, false)
 
@@ -290,12 +313,276 @@ bool AGXCodeGenPrepare::unifyExits(Function &F) {
   return true;
 }
 
+/// simd_shuffle reads from each quad the thread at the OR of the low two
+/// index bits of the quad's threads (applegpu documents this, Mesa works
+/// around it). A shuffle whose index is the same in a quad (an immediate, or
+/// low bits that are uniform) reads the thread it names. Divergent indices
+/// are split into the four quad positions:
+///
+///   r = shuffle(v, idx & ~3); r = idx & 3 == k ? shuffle(v, idx & ~3 | k) : r
+///
+/// Quad shuffles take the four immediate positions instead. Relative
+/// shuffles with divergent deltas become shuffles of the computed thread;
+/// threads whose source is outside the SIMD-group (or quad) keep their own
+/// value, as Metal documents for simd_shuffle_up and simd_shuffle_down.
+bool AGXCodeGenPrepare::lowerDivergentShuffles(Function &F,
+                                               const UniformityInfo &UI) {
+  SmallVector<IntrinsicInst *, 8> Worklist;
+  for (Instruction &I : instructions(F)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::agx_simd_shuffle:
+    case Intrinsic::agx_simd_shuffle_xor:
+    case Intrinsic::agx_simd_shuffle_up:
+    case Intrinsic::agx_simd_shuffle_down:
+    case Intrinsic::agx_quad_shuffle:
+    case Intrinsic::agx_quad_shuffle_xor:
+    case Intrinsic::agx_quad_shuffle_up:
+    case Intrinsic::agx_quad_shuffle_down:
+      if (!isa<Constant>(II->getArgOperand(1)) &&
+          UI.isDivergentAtUse(II->getArgOperandUse(1)))
+        Worklist.push_back(II);
+      break;
+    default:
+      break;
+    }
+  }
+
+  for (IntrinsicInst *II : Worklist) {
+    IRBuilder<> B(II);
+    Value *V = II->getArgOperand(0);
+    Value *Idx = II->getArgOperand(1);
+    Type *Ty = V->getType();
+    Intrinsic::ID ID = II->getIntrinsicID();
+    bool Quad = ID == Intrinsic::agx_quad_shuffle ||
+                ID == Intrinsic::agx_quad_shuffle_xor ||
+                ID == Intrinsic::agx_quad_shuffle_up ||
+                ID == Intrinsic::agx_quad_shuffle_down;
+    unsigned Size = Quad ? 4 : 32;
+
+    // The thread to read, relative to the start of the quad for quad
+    // shuffles.
+    Value *Lane = nullptr;
+    if (ID != Intrinsic::agx_simd_shuffle && ID != Intrinsic::agx_quad_shuffle) {
+      Lane = B.CreateIntrinsic(Intrinsic::agx_thread_index_in_simdgroup, {});
+      if (Quad)
+        Lane = B.CreateAnd(Lane, 3);
+    }
+    switch (ID) {
+    case Intrinsic::agx_simd_shuffle_xor:
+    case Intrinsic::agx_quad_shuffle_xor:
+      Idx = B.CreateAnd(B.CreateXor(Lane, Idx), Size - 1);
+      break;
+    case Intrinsic::agx_simd_shuffle_up:
+    case Intrinsic::agx_quad_shuffle_up:
+      Idx = B.CreateSelect(B.CreateICmpUGE(Lane, Idx), B.CreateSub(Lane, Idx),
+                           Lane);
+      break;
+    case Intrinsic::agx_simd_shuffle_down:
+    case Intrinsic::agx_quad_shuffle_down:
+      Idx = B.CreateSelect(
+          B.CreateICmpULT(Idx, B.CreateSub(B.getInt32(Size), Lane)),
+          B.CreateAdd(Lane, Idx), Lane);
+      break;
+    default:
+      break;
+    }
+
+    Intrinsic::ID Shuffle =
+        Quad ? Intrinsic::agx_quad_shuffle : Intrinsic::agx_simd_shuffle;
+    Value *Low = B.CreateAnd(Idx, 3);
+    Value *Base = Quad ? nullptr : B.CreateAnd(Idx, 0x1c);
+    auto Position = [&](unsigned K) -> Value * {
+      if (Quad)
+        return B.getInt32(K);
+      return K ? B.CreateOr(Base, K) : Base;
+    };
+    Value *Result = B.CreateIntrinsic(Shuffle, {Ty}, {V, Position(0)});
+    for (unsigned K = 1; K < 4; ++K) {
+      Value *R = B.CreateIntrinsic(Shuffle, {Ty}, {V, Position(K)});
+      Result = B.CreateSelect(B.CreateICmpEQ(Low, B.getInt32(K)), R, Result);
+    }
+    Result->takeName(II);
+    II->replaceAllUsesWith(Result);
+    II->eraseFromParent();
+  }
+  return !Worklist.empty();
+}
+
+/// Whether I computes a floating point value from its operands (and so
+/// reads and produces denormals according to the denormal mode).
+static bool isFPArithmetic(const Instruction &I) {
+  switch (I.getOpcode()) {
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+    return true;
+  default:
+    break;
+  }
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::sqrt:
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::exp2:
+  case Intrinsic::log2:
+  case Intrinsic::sin:
+  case Intrinsic::cos:
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::roundeven:
+  case Intrinsic::canonicalize:
+  case Intrinsic::agx_rcp:
+  case Intrinsic::agx_rsqrt:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isHalf(const Type *Ty) { return Ty->getScalarType()->isHalfTy(); }
+
+bool AGXCodeGenPrepare::flushHalfDenormals(Function &F) {
+  DenormalMode Mode = F.getDenormalMode(APFloat::IEEEhalf());
+  bool FlushInputs = Mode.Input != DenormalMode::IEEE &&
+                     Mode.Input != DenormalMode::Dynamic;
+  bool FlushOutputs = Mode.Output != DenormalMode::IEEE &&
+                      Mode.Output != DenormalMode::Dynamic;
+  if (!FlushInputs && !FlushOutputs)
+    return false;
+  bool PositiveZero = Mode.Output == DenormalMode::PositiveZero;
+
+  // flush(x) = |x| < 2^-14 ? +-0 : x. NaNs compare false and pass through.
+  SmallPtrSet<Value *, 16> Flushed;
+  auto Flush = [&](IRBuilder<> &B, Value *X, bool Positive) -> Value * {
+    if (Flushed.contains(X))
+      return X;
+    if (auto *C = dyn_cast<ConstantFP>(X))
+      if (!C->getValueAPF().isDenormal())
+        return X;
+    Type *Ty = X->getType();
+    Value *Abs = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *Small = B.CreateFCmpOLT(
+        Abs, ConstantFP::get(Ty, APFloat::getSmallestNormalized(
+                                     APFloat::IEEEhalf())));
+    Value *Zero = Positive ? ConstantFP::get(Ty, 0.0)
+                           : B.CreateBinaryIntrinsic(Intrinsic::copysign,
+                                                     ConstantFP::get(Ty, 0.0),
+                                                     X);
+    Value *R = B.CreateSelect(Small, Zero, X);
+    Flushed.insert(R);
+    return R;
+  };
+
+  SmallVector<Instruction *, 32> Worklist;
+  for (Instruction &I : instructions(F)) {
+    bool Arith = isFPArithmetic(I) && isHalf(I.getType());
+    bool Reads = Arith || (isa<FCmpInst>(I) &&
+                           isHalf(I.getOperand(0)->getType())) ||
+                 (isa<FPExtInst>(I) && isHalf(I.getOperand(0)->getType())) ||
+                 ((isa<FPToSIInst>(I) || isa<FPToUIInst>(I)) &&
+                  isHalf(I.getOperand(0)->getType()));
+    bool Writes = Arith || (isa<FPTruncInst>(I) && isHalf(I.getType()));
+    if (Reads || Writes)
+      Worklist.push_back(&I);
+  }
+
+  for (Instruction *I : Worklist) {
+    IRBuilder<> B(I);
+    bool Arith = isFPArithmetic(*I) && isHalf(I->getType());
+    bool Reads = !isa<FPTruncInst>(I);
+    if (FlushInputs && Reads) {
+      unsigned NumOps = isa<CallBase>(I) ? cast<CallBase>(I)->arg_size()
+                                         : I->getNumOperands();
+      for (unsigned Op = 0; Op < NumOps; ++Op)
+        if (I->getOperand(Op)->getType()->isFPOrFPVectorTy() &&
+            isHalf(I->getOperand(Op)->getType()))
+          I->setOperand(Op, Flush(B, I->getOperand(Op), false));
+    }
+    if (auto *II = dyn_cast<IntrinsicInst>(I);
+        II && II->getIntrinsicID() == Intrinsic::canonicalize) {
+      // The operand is flushed already; nothing else to canonicalize.
+      Value *Op = II->getArgOperand(0);
+      if (FlushOutputs && !Flushed.contains(Op))
+        Op = Flush(B, Op, PositiveZero);
+      II->replaceAllUsesWith(Op);
+      II->eraseFromParent();
+      continue;
+    }
+    if (FlushOutputs && (Arith || isa<FPTruncInst>(I))) {
+      B.SetInsertPoint(I->getNextNode());
+      SmallVector<User *, 4> OldUsers(I->users());
+      Value *R = Flush(B, I, PositiveZero);
+      I->replaceUsesWithIf(R, [&](Use &U) {
+        return is_contained(OldUsers, U.getUser());
+      });
+    }
+  }
+  // The flushes are explicit now. Later combines would otherwise assume that
+  // the hardware flushes and fold them away.
+  AttrBuilder AB(F.getContext());
+  AB.addDenormalFPEnvAttr(DenormalFPEnv(
+      DenormalMode::getIEEE(), F.getDenormalMode(APFloat::IEEEsingle())));
+  F.addFnAttrs(AB);
+  return true;
+}
+
+bool AGXCodeGenPrepare::diagnoseDoubles(Function &F) {
+  SmallVector<Instruction *, 8> Unsupported;
+  for (Instruction &I : instructions(F)) {
+    bool Double = (isFPArithmetic(I) || isa<FCmpInst>(I) ||
+                   isa<FPToSIInst>(I) || isa<FPToUIInst>(I) ||
+                   isa<FPTruncInst>(I)) &&
+                  I.getOperand(0)->getType()->getScalarType()->isDoubleTy();
+    Double |= (isa<SIToFPInst>(I) || isa<UIToFPInst>(I) ||
+               isa<FPExtInst>(I) || isFPArithmetic(I)) &&
+              I.getType()->getScalarType()->isDoubleTy();
+    if (Double)
+      Unsupported.push_back(&I);
+  }
+  if (Unsupported.empty())
+    return false;
+  F.getContext().diagnose(DiagnosticInfoUnsupported(
+      F, "double precision floating point arithmetic (AGX has no double "
+         "precision hardware)",
+      Unsupported.front()->getDebugLoc()));
+  for (Instruction *I : Unsupported) {
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+    I->eraseFromParent();
+  }
+  return true;
+}
+
 bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  bool Changed = lowerConstrainedFP(F);
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  const auto &ST = TM.getSubtarget<AGXSubtarget>(F);
+  bool Changed = diagnoseDoubles(F);
+  if (ST.hasQuadShuffleIndexMerge())
+    Changed |= lowerDivergentShuffles(
+        F, getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo());
+  Changed |= lowerConstrainedFP(F);
+  Changed |= flushHalfDenormals(F);
   Changed |= expandDivisions(F);
   Changed |= expandMemIntrinsics(F, TTI);
   Changed |= unifyExits(F);

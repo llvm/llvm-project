@@ -20,6 +20,12 @@
 // instructions alone implement the semantics. The nesting counter is zeroed
 // at kernel entry.
 //
+// Shuffles read the index of every thread of a quad, including inactive
+// ones, whose register may hold anything. Register indices are therefore
+// passed in r0h (like Mesa's agx_lower_divergent_shuffle), which is zero at
+// entry and set back to zero after each shuffle, so the threads that are
+// inactive at a shuffle read zero.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
@@ -73,9 +79,52 @@ static MachineInstrBuilder buildExecOp(MachineBasicBlock &MBB,
   return BuildMI(MBB, I, DL, TII.get(Opc)).addImm(0).addImm(CC);
 }
 
+static bool isShuffle(unsigned Opc) {
+  switch (Opc) {
+  case AGX::SIMD_SHUFFLE_32:
+  case AGX::SIMD_SHUFFLE_16:
+  case AGX::SIMD_SHUFFLE_XOR_32:
+  case AGX::SIMD_SHUFFLE_XOR_16:
+  case AGX::SIMD_SHUFFLE_UP_32:
+  case AGX::SIMD_SHUFFLE_UP_16:
+  case AGX::SIMD_SHUFFLE_DOWN_32:
+  case AGX::SIMD_SHUFFLE_DOWN_16:
+  case AGX::QUAD_SHUFFLE_32:
+  case AGX::QUAD_SHUFFLE_16:
+  case AGX::QUAD_SHUFFLE_XOR_32:
+  case AGX::QUAD_SHUFFLE_XOR_16:
+  case AGX::QUAD_SHUFFLE_UP_32:
+  case AGX::QUAD_SHUFFLE_UP_16:
+  case AGX::QUAD_SHUFFLE_DOWN_32:
+  case AGX::QUAD_SHUFFLE_DOWN_16:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Pass the register index of a shuffle in r0h. Returns true if MI was
+/// changed.
+static bool lowerShuffleIndex(MachineInstr &MI, const AGXInstrInfo &TII) {
+  // (dst, src0_mods, src0, src1_mods, src1)
+  MachineOperand &Index = MI.getOperand(4);
+  if (!Index.isReg() || !AGX::GPR16RegClass.contains(Index.getReg()))
+    return false;
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  TII.copyPhysReg(MBB, MI, DL, AGX::R0H, Index.getReg(), Index.isKill());
+  Index.setReg(AGX::R0H);
+  Index.setIsKill();
+  BuildMI(MBB, std::next(MI.getIterator()), DL, TII.get(AGX::MOV_IMM16),
+          AGX::R0H)
+      .addImm(0);
+  return true;
+}
+
 bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const AGXInstrInfo &TII = *MF.getSubtarget<AGXSubtarget>().getInstrInfo();
   bool HasControlFlow = false;
+  bool HasShuffleIndex = false;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -143,6 +192,8 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
       default:
+        if (isShuffle(MI.getOpcode()))
+          HasShuffleIndex |= lowerShuffleIndex(MI, TII);
         continue;
       }
       HasControlFlow = true;
@@ -150,8 +201,12 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  MachineBasicBlock &Entry = MF.front();
+  if (HasShuffleIndex)
+    BuildMI(Entry, Entry.begin(), DebugLoc(), TII.get(AGX::MOV_IMM16),
+            AGX::R0H)
+        .addImm(0);
   if (HasControlFlow) {
-    MachineBasicBlock &Entry = MF.front();
     BuildMI(Entry, Entry.begin(), DebugLoc(), TII.get(AGX::SET_NEST))
         .addImm(0);
   }
