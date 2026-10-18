@@ -123,7 +123,7 @@ bool RISCVCodeGenPrepareImpl::visitAnd(BinaryOperator &BO) {
 // basic block as the mul. We put the zext with the mul and the new
 // splat and trunc in the basic block with the original splat.
 // We only need to this when sinkSplatOperands() is false, otherwise
-// CodeGenPrepare will just since the splat and SelectionDAG can sort it out.
+// CodeGenPrepare will just sink the splat and SelectionDAG can sort it out.
 // TODO: Extend to sign extend or mismatched extends.
 bool RISCVCodeGenPrepareImpl::visitMul(BinaryOperator &BO) {
   using namespace PatternMatch;
