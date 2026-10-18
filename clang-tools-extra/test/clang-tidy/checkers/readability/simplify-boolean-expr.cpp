@@ -1113,4 +1113,3 @@ bool conj_comp_neg2(bool a, bool b, bool c) {
 bool conj_comp_neg3(int a, int b) {
   return a && a != b;
 }
-
