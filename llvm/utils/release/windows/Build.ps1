@@ -18,7 +18,7 @@ function New-PGOProfile {
     param(
         [string[]]$CMakeFlags,
         [string]$Stage1BinDir,
-        [string]$LlvmSrc,
+        [string]$LLVMSrc,
         [Parameter(Mandatory)][string]$InstrumentDir,
         [Parameter(Mandatory)][string]$TrainDir,
         [Parameter(Mandatory)][string]$ProfilePath
@@ -41,7 +41,7 @@ function New-PGOProfile {
         )
         $cache = Write-CMakeCacheFile -Flags $instrumentFlags -FileName 'instrument_cache.cmake'
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs clang
         $instrumentedClang = ConvertTo-UnixPath (Join-Path $PWD 'bin' 'clang-cl.exe')
     } finally {
@@ -62,7 +62,7 @@ function New-PGOProfile {
         )
         $cache = Write-CMakeCacheFile -Flags $trainFlags -FileName 'train_cache.cmake'
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
 
         # Drop profiles generated from running cmake; those are not representative.
         Remove-Item -Path "$InstrumentDir/profiles/*.profraw" -Force -ErrorAction SilentlyContinue
@@ -124,7 +124,7 @@ function Build-Stage {
         [Parameter(Mandatory)]
         [string[]]$CMakeFlags,
         [Parameter(Mandatory)]
-        [string]$LlvmSrc,
+        [string]$LLVMSrc,
         [string[]]$ExtraCMakeFlags = @(),
         [string[]]$InitialBuildTargets = @(),
         [switch]$SkipFullBuild,
@@ -139,7 +139,7 @@ function Build-Stage {
         $allFlags = $CMakeFlags + $ExtraCMakeFlags
         $cache = Write-CMakeCacheFile -Flags $allFlags
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
         if ($InitialBuildTargets.Count -gt 0) {
             Invoke-Build -Targets $InitialBuildTargets
         }
@@ -167,7 +167,7 @@ function Build-Architecture {
         [Parameter(Mandatory)]
         [string]$VsDevCmd,
         [Parameter(Mandatory)]
-        [string]$LlvmSrc,
+        [string]$LLVMSrc,
         [Parameter(Mandatory)]
         [string]$BuildDir,
         [Parameter(Mandatory)]
@@ -324,7 +324,7 @@ function Build-Architecture {
 
         Build-Stage -Name $stage1Name -Description 'stage 1 bootstrap compiler' `
             -CMakeFlags $cmakeFlags `
-            -LlvmSrc $LlvmSrc `
+            -LLVMSrc $LLVMSrc `
             -ExtraCMakeFlags $stage1Extra `
             -InitialBuildTargets $stage1InitialTargets `
             -SkipFullBuild:$skipStage1FullBuild `
@@ -372,7 +372,7 @@ function Build-Architecture {
             Remove-StepDirectory $trainDir
             Remove-StepDirectory $profileFile
             New-PGOProfile -CMakeFlags $stage2Flags `
-                -Stage1BinDir $stage1BinDir -LlvmSrc $LlvmSrc `
+                -Stage1BinDir $stage1BinDir -LLVMSrc $LLVMSrc `
                 -InstrumentDir $instrumentDir `
                 -TrainDir $trainDir `
                 -ProfilePath $profileFile
@@ -414,7 +414,7 @@ function Build-Architecture {
 
         Build-Stage -Name $stage2Name -Description 'stage 2 self-hosted compiler' `
             -CMakeFlags $stage2Flags `
-            -LlvmSrc $LlvmSrc `
+            -LLVMSrc $LLVMSrc `
             -ExtraCMakeFlags $stage2Extra `
             -TestTargets $stage2Tests `
             -Arch $Arch
@@ -441,7 +441,7 @@ function Build-Architecture {
                 $packageFlags = $stage2Flags + $stage2Extra
                 $cache = Write-CMakeCacheFile -Flags $packageFlags -FileName 'package_cache.cmake'
                 $otherFlags = $cache.OtherFlags
-                Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+                Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
                 Remove-Item -LiteralPath $tarballConfigMarker -Force -ErrorAction SilentlyContinue
             } else {
                 Write-SubStep 'Stage2 is already configured for packaging; skipping CMake reconfigure.'
@@ -454,7 +454,7 @@ function Build-Architecture {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs package
             # Downloaded release tags can predate these MSI settings. Check
             # each invariant only when the source being packaged defines it.
-            $llvmCMakeLists = Join-Path $LlvmSrc 'llvm/CMakeLists.txt'
+            $llvmCMakeLists = Join-Path $LLVMSrc 'llvm/CMakeLists.txt'
             if (Select-String -LiteralPath $llvmCMakeLists -Pattern 'set\(CPACK_WIX_UPGRADE_GUID' -Quiet) {
                 Assert-MsiUpgradeCode -BuildDirectory $PWD.Path
             }
@@ -486,7 +486,7 @@ function Build-Architecture {
             # restores the stage2 settings before invoking CPack.
             Set-Content -LiteralPath '.llvm_release_tarball_configured' `
                 -Value 'LLVM_INSTALL_TOOLCHAIN_ONLY=OFF' -Encoding ASCII
-            Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+            Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
 
             # Verify llvm-config works

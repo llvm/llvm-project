@@ -474,7 +474,7 @@ try {
     # Build each requested architecture
     $buildParams = @{
         VsDevCmd            = $vsDevCmd
-        LlvmSrc             = $llvmSrc
+        LLVMSrc             = $llvmSrc
         BuildDir            = $buildDir
         ThirdPartyDir       = $thirdPartyDir
         PackageVersion      = $packageVersion
