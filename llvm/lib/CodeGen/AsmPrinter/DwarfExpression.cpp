@@ -1101,6 +1101,30 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     return NewOpResult{Arg.getResultType(), ValueKind::Value};
   }
 
+  // A location list cannot carry a relocated DW_OP_addr, so use the address
+  // pool and drop the location when that spelling is unavailable.
+  if (Entry.isGlobalAddress()) {
+    const GlobalValue *GV = Entry.getGlobalAddress();
+
+    // FIXME: This is a workaround to avoid generating symbols for non-global
+    // address spaces, e.g. LDS. Generate a 'DW_OP_constu' with a dummy
+    // constant value (0) for now.
+    unsigned AMDGPUGlobalAddrSpace = 1;
+    unsigned AMDGPUConstantAddrSpace = 4;
+    if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
+      if (AP.TM.getTargetTriple().isAMDGCN() &&
+          GVar->getAddressSpace() != AMDGPUGlobalAddrSpace &&
+          GVar->getAddressSpace() != AMDGPUConstantAddrSpace) {
+        emitConstu(0);
+        return NewOpResult{Arg.getResultType(), ValueKind::Value};
+      }
+    }
+
+    if (!addGlobalAddress(GV, Entry.getGlobalOffset()))
+      return std::nullopt;
+    return NewOpResult{Arg.getResultType(), ValueKind::Value};
+  }
+
   if (Entry.isLocation()) {
     assert(DwarfRegs.empty() && "unconsumed registers?");
     if (!TRI || !addMachineReg(*TRI, Entry.getLoc().getReg())) {
