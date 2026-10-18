@@ -2065,15 +2065,24 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC, bool ForceTyped) {
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (BaseType->isFunctionTy() &&
-      !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
-           .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      !ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
     const Function &F = MIRBuilder.getMF().getFunction();
     F.getContext().diagnose(
         DiagnosticInfoUnsupported(F,
                                   "Function used as a data pointer requires "
                                   "SPV_INTEL_function_pointers extension",
                                   DebugLoc(), DS_Error));
+  }
+  if (auto *VTy = dyn_cast<FixedVectorType>(BaseType);
+      VTy && !ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)) {
+    unsigned NumElements = VTy->getNumElements();
+    unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
+    if ((NumElements > 4 && !isPowerOf2_32(NumElements)) ||
+        NumElements > MaxVectorSize)
+      BaseType = ArrayType::get(VTy->getElementType(), NumElements);
   }
   // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
