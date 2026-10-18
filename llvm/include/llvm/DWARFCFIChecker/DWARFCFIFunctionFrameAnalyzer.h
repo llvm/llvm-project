@@ -30,8 +30,11 @@ namespace llvm {
 /// this classes is destructed, the program fails through an assertion.
 class LLVM_ABI CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 public:
-  CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
-      : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
+  /// \p MCIA provides the instruction semantics. It can be null if the target
+  /// does not have an `MCInstrAnalysis`.
+  CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII,
+                           const MCInstrAnalysis *MCIA)
+      : CFIFunctionFrameReceiver(Context), MCII(MCII), MCIA(MCIA) {}
   ~CFIFunctionFrameAnalyzer() override;
 
   void startFunctionFrame(bool IsEH,
@@ -43,6 +46,7 @@ public:
 
 private:
   MCInstrInfo const &MCII;
+  const MCInstrAnalysis *MCIA;
   SmallVector<DWARFCFIAnalysis> UIAs;
 };
 
