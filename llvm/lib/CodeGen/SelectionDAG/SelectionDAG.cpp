@@ -10367,17 +10367,9 @@ SDValue SelectionDAG::getMemcpy(
 static TargetLoweringBase::ArgListEntry
 getAtomicMemOpSizeArg(SelectionDAG *DAG, const SDLoc &dl, SDValue Size) {
   const Module &M = *DAG->getMachineFunction().getFunction().getParent();
-  unsigned SizeTBits = DAG->getLibInfo().getSizeTSize(M);
-  MVT SizeT_VT = MVT::getIntegerVT(SizeTBits);
-
-  Attribute::AttrKind ExtAttr =
-      SizeTBits <= 32
-          ? DAG->getLibInfo().getExtAttrForI32Param(/*Signed=*/false)
-          : Attribute::None;
-
+  Type *SizeTTy = DAG->getLibInfo().getSizeTType(M);
   return TargetLoweringBase::ArgListEntry(
-      DAG->getZExtOrTrunc(Size, dl, SizeT_VT),
-      Type::getIntNTy(*DAG->getContext(), SizeTBits), ExtAttr);
+      DAG->getZExtOrTrunc(Size, dl, MVT::getVT(SizeTTy)), SizeTTy);
 }
 
 SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
