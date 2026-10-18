@@ -6331,7 +6331,7 @@
 #    error "__cpp_lib_sstream_from_string_view should not be defined before c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 #    ifndef __cpp_lib_stacktrace
 #      error "__cpp_lib_stacktrace should be defined in c++23"
 #    endif
@@ -6340,7 +6340,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_stacktrace
-#      error "__cpp_lib_stacktrace should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_stacktrace should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE' is not met!"
 #    endif
 #  endif
 
@@ -8384,7 +8384,7 @@
 #    error "__cpp_lib_sstream_from_string_view should have the value 202306L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 #    ifndef __cpp_lib_stacktrace
 #      error "__cpp_lib_stacktrace should be defined in c++26"
 #    endif
@@ -8393,7 +8393,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_stacktrace
-#      error "__cpp_lib_stacktrace should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_stacktrace should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE' is not met!"
 #    endif
 #  endif
 
@@ -10515,7 +10515,7 @@
 #    error "__cpp_lib_sstream_from_string_view should have the value 202306L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 #    ifndef __cpp_lib_stacktrace
 #      error "__cpp_lib_stacktrace should be defined in c++29"
 #    endif
@@ -10524,7 +10524,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_stacktrace
-#      error "__cpp_lib_stacktrace should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_stacktrace should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE' is not met!"
 #    endif
 #  endif
 

@@ -211,6 +211,31 @@ features += [
             cfg.available_features,
         ),
     ),
+    # Tests that require std::stacktrace in the built library
+    Feature(
+        name="availability-stacktrace-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "(!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23))"
+            # 32-bit x86 Android's own (non-LLVM) unwinder is unreliable before API 24;
+            # treat stacktrace as unavailable on this narrow legacy combination.
+            "|| (target={{i686-linux-android.*}} && android-device-api={{2[123]}})"
+            # 32-bit x86 Windows: capture crashes outright (RtlCaptureContext's frame-pointer
+            # capture is unreliable on i686) rather than just producing a bad trace. Not treated
+            # as worth chasing further; declared unsupported here rather than fixed.
+            "|| target={{i686-.*windows.*}}",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require std::stacktrace_entry::source_file()/description() to resolve to something
+    # non-empty for a real capture. E.g. on bare-metal targets (no dynamic loader, no filesystem),
+    # there's no dl_iterate_phdr/proc-self-exe equivalent (although capturing a stacktrace itself works).
+    Feature(
+        name="availability-stacktrace-no-image-info",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "target={{.*-none-eabi.*}}",
+            cfg.available_features,
+        ),
+    ),
     # Tests that require std::is_debugger_present()
     Feature(
         name="availability-debugging-missing",
