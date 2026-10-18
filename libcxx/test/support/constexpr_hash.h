@@ -86,10 +86,10 @@ struct constexpr_hash<Key> {
       // https://github.com/llvm/llvm-project/issues/214358
 
       if (__builtin_isnan(key)) {
-        return 0xc3a5c85c97cb3127ULL;
+        return (std::size_t)0xc3a5c85c97cb3127ULL;
       }
       if (__builtin_isinf(key)) {
-        return __builtin_signbit(key) ? 0xb492b66fbe98f273ULL : 0x9ae16a3b2f90404fULL;
+        return __builtin_signbit(key) ? (std::size_t)0xb492b66fbe98f273ULL : (std::size_t)0x9ae16a3b2f90404fULL;
       }
 
 #  else
