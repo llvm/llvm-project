@@ -11,23 +11,31 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define NEST(PRAGMA, NAME)                                                     \
-  static void NAME(int n, int m) {                                             \
-    int i = 77, j = 111;                                                       \
-    _Pragma(PRAGMA)                                                            \
-    for (i = 0; i < n; i++)                                                    \
-      for (j = 0; j < m; j++)                                                  \
-        ;                                                                      \
-    printf(#NAME " n=%d m=%d: i=%d j=%d\n", n, m, i, j);                       \
-  }
+static void tile(int n, int m) {
+  int i = 77, j = 111;
+#pragma omp tile sizes(2, 3)
+  for (i = 0; i < n; i++)
+    for (j = 0; j < m; j++)
+      ;
+  printf("tile n=%d m=%d: i=%d j=%d\n", n, m, i, j);
+}
 
-NEST("omp tile sizes(2, 3)", tile)
-NEST("omp stripe sizes(2, 3)", stripe)
+static void stripe(int n, int m) {
+  int i = 77, j = 111;
+#pragma omp stripe sizes(2, 3)
+  for (i = 0; i < n; i++)
+    for (j = 0; j < m; j++)
+      ;
+  printf("stripe n=%d m=%d: i=%d j=%d\n", n, m, i, j);
+}
 
 int main() {
-  tile(0, 5);   // outer loop never runs: j untouched
-  tile(6, 0);   // inner loop never runs: j gets its init value
-  tile(6, 5);   // all loops run: exit values
+  // Outer loop never runs: j untouched.
+  tile(0, 5);
+  // Inner loop never runs: j gets its init value.
+  tile(6, 0);
+  // All loops run: exit values.
+  tile(6, 5);
   stripe(0, 5);
   stripe(6, 0);
   stripe(6, 5);
