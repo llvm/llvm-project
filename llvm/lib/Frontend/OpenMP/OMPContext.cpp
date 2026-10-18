@@ -170,6 +170,13 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   for (unsigned Bit : VMI0.RequiredTraits.set_bits())
     if (!VMI1.RequiredTraits.test(Bit))
       return false;
+  // Different runtime conditions share a trait, so compare them as well.
+  for (TraitProperty Property :
+       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
+        TraitProperty::user_condition_unknown})
+    if (VMI0.RequiredTraits.test(unsigned(Property)) &&
+        VMI0.UserCondition != VMI1.UserCondition)
+      return false;
   // Different ISA names share a trait, so compare them as well.
   if (!llvm::all_of(VMI0.ISATraits,
                     [&](const VariantMatchInfo::ISATrait &Trait) {

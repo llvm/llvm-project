@@ -22,6 +22,8 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Compiler.h"
 
+#include <string>
+
 namespace llvm {
 class Triple;
 namespace omp {
@@ -164,6 +166,8 @@ struct VariantMatchInfo {
   SmallVector<ISATrait, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
+  /// Identifies a runtime user condition; empty for a constant condition.
+  std::string UserCondition;
 };
 
 /// The context for a source location is made up of active property traits,
