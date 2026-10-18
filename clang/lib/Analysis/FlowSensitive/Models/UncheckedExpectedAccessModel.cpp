@@ -179,9 +179,6 @@ StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
   return ExpectedLoc.getSyntheticField("has_value");
 }
 
-/// Returns the symbolic value that represents the "has_value" property of the
-/// expected at `ExpectedLoc`. Returns null if `ExpectedLoc` is null or is not
-/// the location of a `std::expected` object (e.g. of a derived class object).
 BoolValue *getHasValue(Environment &Env, RecordStorageLocation *ExpectedLoc) {
   if (ExpectedLoc == nullptr || !isExpectedType(ExpectedLoc->getType()))
     return nullptr;
@@ -194,10 +191,6 @@ BoolValue *getHasValue(Environment &Env, RecordStorageLocation *ExpectedLoc) {
   return HasValueVal;
 }
 
-/// Sets `HasValueVal` as the symbolic value that represents the "has_value"
-/// property of the expected at `ExpectedLoc`. Does nothing if `ExpectedLoc` is
-/// null or is not the location of a `std::expected` object (e.g. of a derived
-/// class object).
 void setHasValue(RecordStorageLocation *ExpectedLoc, BoolValue &HasValueVal,
                  Environment &Env) {
   if (ExpectedLoc == nullptr || !isExpectedType(ExpectedLoc->getType()))
