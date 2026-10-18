@@ -29417,6 +29417,47 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
         IsTruncRoot, IsSignedCmp);
+    // The extension of a demoted scalar, which does not fit into the demoted
+    // type, restores only its demanded bits. Keep the original bitwidth if the
+    // scalar users may depend on the other bits via poison-generating
+    // annotations or there are too many users to check.
+    auto HasUnsafeScalarUsers = [&](Value *V) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I)
+        return false;
+      unsigned NumBits =
+          isKnownNonNegative(I, SimplifyQuery(*DL))
+              ? computeKnownBits(I, *DL, AC, nullptr, DT).countMaxActiveBits()
+              : ComputeMaxSignificantBits(I, *DL, AC, nullptr, DT);
+      if (NumBits <= MaxBitWidth)
+        return false;
+      SmallVector<Instruction *> Worklist(1, I);
+      SmallPtrSet<Instruction *, 8> Visited;
+      int NumUsers = 0;
+      while (!Worklist.empty()) {
+        for (User *U : Worklist.pop_back_val()->users()) {
+          if (++NumUsers > UsesLimit)
+            return true;
+          auto *UI = cast<Instruction>(U);
+          if (isVectorized(UI) ||
+              (UserIgnoreList && UserIgnoreList->contains(UI)) ||
+              !UI->getType()->isIntOrIntVectorTy() ||
+              !Visited.insert(UI).second)
+            continue;
+          if (UI->hasPoisonGeneratingAnnotations())
+            return true;
+          if (!DB->getDemandedBits(UI).isAllOnes())
+            Worklist.push_back(UI);
+        }
+      }
+      return false;
+    };
+    if (MaxBitWidth != 0 && any_of(ToDemote, [&](unsigned Idx) {
+          const TreeEntry &TE = *VectorizableTree[Idx];
+          return !TE.isGather() && !MinBWs.contains(&TE) &&
+                 any_of(TE.Scalars, HasUnsafeScalarUsers);
+        }))
+      MaxBitWidth = 0;
     if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
         ReductionBitWidth = bit_ceil(MaxBitWidth);
