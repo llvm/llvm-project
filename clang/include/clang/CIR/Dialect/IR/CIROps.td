@@ -5308,6 +5308,10 @@ def CIR_CoroSaveOp : CIR_CoroIntrinsicOp<"save",
   let llvmOp = "CoroSaveOp";
 }
 
+//===----------------------------------------------------------------------===//
+// Coroutine CoroExitOP
+//===----------------------------------------------------------------------===//
+
 def CIR_CoroExitOp : CIR_Op<"coro.exit", [
   Terminator
 ]> {
@@ -5316,6 +5320,26 @@ def CIR_CoroExitOp : CIR_Op<"coro.exit", [
     Placeholder emitted while flattening `cir.await`. `cir.coroutine`flattening
     rewrites it into a `cir.br` to the `exit` block.
     It must not survive flattening.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine CoroCleanupOP
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroCleanupOp : CIR_Op<"coro.cleanup", [
+  Terminator
+]> {
+  let summary = "Branches through the enclosing cleanups to the coroutine cleanup";
+  let description = [{
+    Placeholder emitted for the destroy case of a flattened `cir.await`.
+    Like `cir.co_return`, it leaves every enclosing `cir.cleanup.scope`
+    through its cleanup, so the destructors of locals in scope run first.
+    `cir.coroutine` flattening then rewrites it so that it reaches the
+    coroutine cleanup (the `destroy` region, which frees the frame) and then
+    the `exit` region. It must not survive flattening.
   }];
   let assemblyFormat = "attr-dict";
   let hasLLVMLowering = false;
