@@ -26,7 +26,7 @@ end
 
 subroutine f05(x, y)
   integer :: x(10), y(10)
-!WARNING: 'iterator' modifier is not supported on FROM clause in OpenMP v4.5, try -fopenmp-version=51 [-Wopenmp-future]
+!WARNING: 'iterator' modifier is not allowed on FROM clause in OpenMP v4.5, try -fopenmp-version=51 [-Wopenmp-future]
 !ERROR: 'iterator' modifier cannot occur multiple times
   !$omp target update from(iterator(i = 1:5), iterator(j = 1:5): x(i), y(i))
 end
