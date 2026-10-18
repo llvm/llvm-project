@@ -233,33 +233,21 @@ function Build-Architecture {
     $profileFile   = Join-Path $BuildDir "profile_${Arch}_stage2.profdata"
 
     #-------------------------------------------------------------------
-    # Step: libxml2
+    # Step: dependencies (libxml2, zlib, and zstd)
+    # Each dependency returns immediately when this step is skipped.
     #-------------------------------------------------------------------
-    if (Test-ShouldRun 'libxml2') {
-        # Every step that runs starts from a clean directory, so artifacts of
-        # a previous run cannot leak into this one.
-        Remove-StepDirectory (Join-Path $BuildDir $stage1Name 'libxmlbuild')
-        Remove-StepDirectory (Join-Path $BuildDir $stage1Name 'zlibbuild')
-        Remove-StepDirectory (Join-Path $BuildDir $stage1Name 'zstdbuild')
-        New-Item -ItemType Directory -Path $stage1Name -Force | Out-Null
-        Push-Location $stage1Name
-        try {
-            Build-ThirdPartyLibraries -Directory $ThirdPartyDir -ToolchainFlags $hostToolchainFlags
-        } finally {
-            Pop-Location
-        }
-    } else {
-        Write-Step "Skipping libxml2 (-StartAt $($script:StartAtStep))"
-        $libxmlInstallPath = Join-Path $BuildDir $stage1Name 'libxmlbuild' 'install'
-        $zlibInstallPath = Join-Path $BuildDir $stage1Name 'zlibbuild' 'install'
-        $zstdInstallPath = Join-Path $BuildDir $stage1Name 'zstdbuild' 'install'
-        Assert-PathExists -Path $libxmlInstallPath -Description 'libxml2 install directory'
-        Assert-PathExists -Path $zlibInstallPath -Description 'zlib install directory'
-        Assert-PathExists -Path $zstdInstallPath -Description 'zstd install directory'
-        $script:LibXmlInstallDir = ConvertTo-UnixPath $libxmlInstallPath
-        $script:ZlibInstallDir = ConvertTo-UnixPath $zlibInstallPath
-        $script:ZstdInstallDir = ConvertTo-UnixPath $zstdInstallPath
-    }
+    $libXml2 = Get-ThirdPartyLibrary -Name 'libxml2'
+    $zlib = Get-ThirdPartyLibrary -Name 'zlib'
+    $zstd = Get-ThirdPartyLibrary -Name 'zstd'
+    Build-LibXml2 -SourceDir (Join-Path $ThirdPartyDir $libXml2.SourceDirectory) `
+        -BuildDirectory (Join-Path $BuildDir $stage1Name $libXml2.BuildDirectory) `
+        -ToolchainFlags $hostToolchainFlags
+    Build-Zlib -SourceDir (Join-Path $ThirdPartyDir $zlib.SourceDirectory) `
+        -BuildDirectory (Join-Path $BuildDir $stage1Name $zlib.BuildDirectory) `
+        -ToolchainFlags $hostToolchainFlags
+    Build-Zstd -SourceDir (Join-Path $ThirdPartyDir $zstd.SourceDirectory) `
+        -BuildDirectory (Join-Path $BuildDir $stage1Name $zstd.BuildDirectory) `
+        -ToolchainFlags $hostToolchainFlags
     $libxmlDir = $script:LibXmlInstallDir
     $zlibDir = $script:ZlibInstallDir
     $zstdDir = $script:ZstdInstallDir
@@ -293,7 +281,12 @@ function Build-Architecture {
         $stage1Dir = Join-Path $BuildDir $stage1Name
         if (Test-Path $stage1Dir) {
             Write-SubStep "Cleaning stage 1 bootstrap build artifacts (preserving dependency installs)..."
-            Get-ChildItem -Path $stage1Dir -Exclude 'libxmlbuild', 'zlibbuild', 'zstdbuild' |
+            $preservedBuilds = @(
+                $libXml2.BuildDirectory
+                $zlib.BuildDirectory
+                $zstd.BuildDirectory
+            )
+            Get-ChildItem -Path $stage1Dir -Exclude $preservedBuilds |
                 ForEach-Object {
                     Remove-ItemWithoutProgress -LiteralPath $_.FullName -Recurse -Force
                 }

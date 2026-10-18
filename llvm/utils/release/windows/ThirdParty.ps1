@@ -8,7 +8,7 @@ $script:ThirdPartyLibraries = @(
         DownloadArguments = @('--remote-name', 'https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.15.3/libxml2-v2.15.3.tar.gz')
         Sha256 = '0DA50C1415F4EC0364569D2119B1436BA837B31DF44AF28569D234272C23CF1F'
         ExtractArguments = @('zxf', 'libxml2-v2.15.3.tar.gz', '--exclude', 'test/*')
-        BuildFunction = 'Build-LibXml2'
+        BuildDirectory = 'libxmlbuild'
     }
     @{
         Name = 'zlib'
@@ -17,7 +17,7 @@ $script:ThirdPartyLibraries = @(
         DownloadArguments = @('-LO', 'https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz')
         Sha256 = 'BB329A0A2CD0274D05519D61C667C062E06990D72E125EE2DFA8DE64F0119D16'
         ExtractArguments = @('zxf', 'zlib-1.3.2.tar.gz')
-        BuildFunction = 'Build-Zlib'
+        BuildDirectory = 'zlibbuild'
     }
     @{
         Name = 'zstd'
@@ -26,9 +26,20 @@ $script:ThirdPartyLibraries = @(
         DownloadArguments = @('-LO', 'https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz')
         Sha256 = 'EB33E51F49A15E023950CD7825CA74A4A2B43DB8354825AC24FC1B7EE09E6FA3'
         ExtractArguments = @('zxf', 'zstd-1.5.7.tar.gz', '--exclude', 'tests/*')
-        BuildFunction = 'Build-Zstd'
+        BuildDirectory = 'zstdbuild'
     }
 )
+
+function Get-ThirdPartyLibrary {
+    param([Parameter(Mandatory)][string]$Name)
+    foreach ($library in $script:ThirdPartyLibraries) {
+        if ($library.Name -eq $Name) {
+            # The comma keeps the hashtable from being enumerated into entries.
+            return ,$library
+        }
+    }
+    throw "Unknown third-party library '$Name'."
+}
 
 function Install-ThirdPartySources {
     param(
@@ -57,19 +68,6 @@ function Install-ThirdPartySources {
     }
 }
 
-function Build-ThirdPartyLibraries {
-    param(
-        [Parameter(Mandatory)][string]$Directory,
-        [Parameter(Mandatory)][string[]]$ToolchainFlags
-    )
-
-    foreach ($library in $script:ThirdPartyLibraries) {
-        $sourceDirectory = Join-Path $Directory $library.SourceDirectory
-        $buildFunction = $library.BuildFunction
-        & $buildFunction -SourceDir $sourceDirectory -ToolchainFlags $ToolchainFlags
-    }
-}
-
 function Build-LibXml2 {
     <#
     .SYNOPSIS
@@ -83,12 +81,23 @@ function Build-LibXml2 {
         [Parameter(Mandatory)]
         [string]$SourceDir,
         [Parameter(Mandatory)]
+        [string]$BuildDirectory,
+        [Parameter(Mandatory)]
         [string[]]$ToolchainFlags
     )
+    # Skipped steps leave the previous install in place. Callers can invoke
+    # this unconditionally.
+    if (-not (Test-ShouldRun 'dependencies')) {
+        $installDirectory = Join-Path $BuildDirectory 'install'
+        Write-SubStep "Skipping libxml2 (-StartAt $($script:StartAtStep))"
+        Assert-PathExists -Path $installDirectory -Description 'libxml2 install directory'
+        $script:LibXmlInstallDir = ConvertTo-UnixPath $installDirectory
+        return
+    }
     Write-SubStep "Building libxml2..."
-    $libxmlBuild = 'libxmlbuild'
-    New-Item -ItemType Directory -Path $libxmlBuild -Force | Out-Null
-    Push-Location $libxmlBuild
+    Remove-StepDirectory $BuildDirectory
+    New-Item -ItemType Directory -Path $BuildDirectory -Force | Out-Null
+    Push-Location $BuildDirectory
     try {
         $libxmlFlags = $ToolchainFlags + @(
             "CMAKE_BUILD_TYPE=Release"
@@ -155,12 +164,21 @@ function Build-Zlib {
         [Parameter(Mandatory)]
         [string]$SourceDir,
         [Parameter(Mandatory)]
+        [string]$BuildDirectory,
+        [Parameter(Mandatory)]
         [string[]]$ToolchainFlags
     )
+    if (-not (Test-ShouldRun 'dependencies')) {
+        $installDirectory = Join-Path $BuildDirectory 'install'
+        Write-SubStep "Skipping zlib (-StartAt $($script:StartAtStep))"
+        Assert-PathExists -Path $installDirectory -Description 'zlib install directory'
+        $script:ZlibInstallDir = ConvertTo-UnixPath $installDirectory
+        return
+    }
     Write-SubStep "Building zlib..."
-    $zlibBuild = 'zlibbuild'
-    New-Item -ItemType Directory -Path $zlibBuild -Force | Out-Null
-    Push-Location $zlibBuild
+    Remove-StepDirectory $BuildDirectory
+    New-Item -ItemType Directory -Path $BuildDirectory -Force | Out-Null
+    Push-Location $BuildDirectory
     try {
         $zlibFlags = $ToolchainFlags + @(
             "CMAKE_BUILD_TYPE=Release"
@@ -193,12 +211,21 @@ function Build-Zstd {
         [Parameter(Mandatory)]
         [string]$SourceDir,
         [Parameter(Mandatory)]
+        [string]$BuildDirectory,
+        [Parameter(Mandatory)]
         [string[]]$ToolchainFlags
     )
+    if (-not (Test-ShouldRun 'dependencies')) {
+        $installDirectory = Join-Path $BuildDirectory 'install'
+        Write-SubStep "Skipping zstd (-StartAt $($script:StartAtStep))"
+        Assert-PathExists -Path $installDirectory -Description 'zstd install directory'
+        $script:ZstdInstallDir = ConvertTo-UnixPath $installDirectory
+        return
+    }
     Write-SubStep "Building zstd..."
-    $zstdBuild = 'zstdbuild'
-    New-Item -ItemType Directory -Path $zstdBuild -Force | Out-Null
-    Push-Location $zstdBuild
+    Remove-StepDirectory $BuildDirectory
+    New-Item -ItemType Directory -Path $BuildDirectory -Force | Out-Null
+    Push-Location $BuildDirectory
     try {
         $zstdFlags = $ToolchainFlags + @(
             "CMAKE_BUILD_TYPE=Release"
