@@ -375,7 +375,7 @@ const char *trackThroughMultiplePointer() {
 struct X {
   X(std::unique_ptr<int> up) :
     pointee(*up),             // cfg-warning {{may have been moved.}} \
-                              // cfg-note {{expression aliases the storage of parameter 'up'}}
+                              // cfg-note {{result of call to 'operator*' aliases the storage of parameter 'up' because the implicit object parameter is inferred as lifetimebound}}
     pointee2(up.get()),       // cfg-warning {{may have been moved.}} \
                               // cfg-note {{result of call to 'get' aliases the storage of parameter 'up'}}
     pointer(std::move(up)) {} // cfg-note 2 {{potentially moved here}}
@@ -613,12 +613,10 @@ FooView test3(int i, std::optional<Foo> a) {
     return *a; // expected-warning {{address of stack memory}} \
                // cfg-note {{result of call to 'operator*' aliases the storage of parameter 'a' because the implicit object parameter is inferred as lifetimebound}} \
                // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
-               // cfg-note {{expression aliases the storage of parameter 'a'}} \
                // cfg-note {{returned here}}
   return a.value(); // expected-warning {{address of stack memory}} \
                     // cfg-note {{result of call to 'value' aliases the storage of parameter 'a' because the implicit object parameter is inferred as lifetimebound}} \
                     // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
-                    // cfg-note {{result of call to 'value' aliases the storage of parameter 'a'}} \
                     // cfg-note {{returned here}}
 }
 } // namespace GH93386
