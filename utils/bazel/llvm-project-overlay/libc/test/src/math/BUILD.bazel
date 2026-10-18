@@ -154,8 +154,6 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add dfmal, dmull test.  Missing stdlib/rand dependency.
-
 math_mpfr_test(
     name = "dfmal",
     hdrs = ["FmaTest.h"],
@@ -324,8 +322,6 @@ math_mpfr_test(
     ],
 )
 
-# TODO: Add ffmal test.  Missing stdlib/rand dependency.
-
 math_mpfr_test(
     name = "ffmal",
     hdrs = ["FmaTest.h"],
@@ -361,7 +357,7 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_bfloat16"],
 )
 
-# TODO: Add fmaf, fmal, fmull tests.  Missing stdlib/rand dependency.
+# TODO: Add fmal test.  Missing stdlib/rand dependency.
 
 math_mpfr_test(
     name = "fma",
@@ -723,7 +719,7 @@ math_mpfr_test(
     hdrs = ["RoundToIntegerTest.h"],
 )
 
-# TODO: add nan tests.
+# TODO: Add nan tests.
 
 math_mpfr_test(
     name = "nearbyint",
