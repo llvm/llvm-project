@@ -331,30 +331,19 @@ entry:
 }
 
 define void @reuse_shuffle_indidces_1(ptr %col, float %0, float %1) {
-; NON-POW2-LABEL: define void @reuse_shuffle_indidces_1(
-; NON-POW2-SAME: ptr [[COL:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP1]], i64 0
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> [[TMP2]], float [[TMP0]], i64 1
-; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 1>
-; NON-POW2-NEXT:    [[TMP5:%.*]] = fmul <3 x float> [[TMP4]], zeroinitializer
-; NON-POW2-NEXT:    [[TMP6:%.*]] = fadd <3 x float> [[TMP5]], zeroinitializer
-; NON-POW2-NEXT:    store <3 x float> [[TMP6]], ptr [[COL]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: define void @reuse_shuffle_indidces_1(
-; POW2-ONLY-SAME: ptr [[COL:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i64 0
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP0]], i64 1
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP4]], zeroinitializer
-; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[COL]], align 4
-; POW2-ONLY-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr float, ptr [[COL]], i64 2
-; POW2-ONLY-NEXT:    [[MUL38:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = fadd float [[MUL38]], 0.000000e+00
-; POW2-ONLY-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX33]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: define void @reuse_shuffle_indidces_1(
+; CHECK-SAME: ptr [[COL:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[COL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr float, ptr [[COL]], i64 2
+; CHECK-NEXT:    [[MUL38:%.*]] = fmul float [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd float [[MUL38]], 0.000000e+00
+; CHECK-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX33]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %mul24 = fmul float %1, 0.000000e+00
@@ -402,31 +391,19 @@ entry:
 }
 
 define void @reuse_shuffle_indices_cost_crash_2(ptr %bezt, float %0) {
-; NON-POW2-LABEL: define void @reuse_shuffle_indices_cost_crash_2(
-; NON-POW2-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[FNEG]], i64 0
-; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> zeroinitializer
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> <float poison, float poison, float 0.000000e+00>, float [[TMP0]], i64 0
-; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 0, i32 0, i32 2>
-; NON-POW2-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP2]], <3 x float> [[TMP4]], <3 x float> zeroinitializer)
-; NON-POW2-NEXT:    store <3 x float> [[TMP5]], ptr [[BEZT]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: define void @reuse_shuffle_indices_cost_crash_2(
-; POW2-ONLY-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
-; POW2-ONLY-NEXT:    store float [[TMP1]], ptr [[BEZT]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
-; POW2-ONLY-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr float, ptr [[BEZT]], i64 1
-; POW2-ONLY-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX5_I]], align 4
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = tail call float @llvm.fmuladd.f32(float [[FNEG]], float 0.000000e+00, float 0.000000e+00)
-; POW2-ONLY-NEXT:    [[ARRAYIDX8_I831:%.*]] = getelementptr float, ptr [[BEZT]], i64 2
-; POW2-ONLY-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX8_I831]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: define void @reuse_shuffle_indices_cost_crash_2(
+; CHECK-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
+; CHECK-NEXT:    store float [[TMP1]], ptr [[BEZT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float [[FNEG]], float 0.000000e+00)
+; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr float, ptr [[BEZT]], i64 1
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX5_I]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call float @llvm.fmuladd.f32(float [[FNEG]], float 0.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[ARRAYIDX8_I831:%.*]] = getelementptr float, ptr [[BEZT]], i64 2
+; CHECK-NEXT:    store float [[TMP3]], ptr [[ARRAYIDX8_I831]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %fneg = fmul float %0, 0.000000e+00

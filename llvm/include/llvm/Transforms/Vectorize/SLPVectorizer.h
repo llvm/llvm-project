@@ -58,9 +58,9 @@ class BoUpSLP;
 
 struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using StoreList = SmallVector<StoreInst *, 8>;
-  using StoreListMap = MapVector<Value *, StoreList>;
+  using StoreListMap = SmallMapVector<Value *, StoreList, 8>;
   using GEPList = SmallVector<GetElementPtrInst *, 8>;
-  using GEPListMap = MapVector<Value *, GEPList>;
+  using GEPListMap = SmallMapVector<Value *, GEPList, 8>;
   using InstSetVector = SmallSetVector<Instruction *, 8>;
 
   const VectorizeOptions *Opts = nullptr;
@@ -200,7 +200,7 @@ private:
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
                                           unsigned Idx, unsigned MinVF,
-                                          unsigned &Size);
+                                          unsigned &Size, unsigned &NumVec);
 
   /// Single vectorization attempt for a store chain. \p vectorizeStoreChain
   /// wraps this to retry once with runtime alias checks enabled when the
@@ -209,7 +209,7 @@ private:
   std::optional<bool> vectorizeStoreChainImpl(ArrayRef<Value *> Chain,
                                               slpvectorizer::BoUpSLP &R,
                                               unsigned Idx, unsigned MinVF,
-                                              unsigned &Size);
+                                              unsigned &Size, unsigned &NumVec);
 
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,

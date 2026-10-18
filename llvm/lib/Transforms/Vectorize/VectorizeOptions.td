@@ -285,6 +285,8 @@ defm : ValueField<"slp-runtime-alias-checks-max-scalar-cost-percent", "unsigned"
 // range. This limit is way higher than needed by real-world functions.
 defm : ValueField<"slp-schedule-budget", "int", "100000",
   "Limit the size of the SLP scheduling region per block">;
+defm : BoolField<"slp-skip-trivial-seeds", "true",
+  "Do not seed vectorization with a repeated operand or with load/extractvalue operands">;
 defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;
 defm : OptionalValueField<"slp-threshold", "int",
@@ -300,7 +302,7 @@ defm : BoolField<"slp-vectorize-hor-store", "false",
   "Attempt to vectorize horizontal reductions feeding into a store">;
 defm : BoolField<"slp-vectorize-loop-acc-rdx", "true",
   "Emit loop-carried horizontal reductions as a vector accumulator in the loop plus a single reduction after it">;
-defm : BoolField<"slp-vectorize-non-power-of-2", "false",
+defm : BoolField<"slp-vectorize-non-power-of-2", "true",
   "Try to vectorize with non-power-of-2 number of elements">;
 defm : BoolField<"slp-vectorize-once-used", "true",
   "Use instructions with the single user as standalone vectorization seeds">;

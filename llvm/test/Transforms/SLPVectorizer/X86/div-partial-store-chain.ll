@@ -16,8 +16,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i1 %k) {
 ; AVX512-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX6_1]], align 8
 ; AVX512-NEXT:    [[ARRAYIDX6_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; AVX512-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; AVX512-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 32
-; AVX512-NEXT:    [[ARRAYIDX9_6:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 48
 ; AVX512-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[ARRAYIDX6_2]], align 8
 ; AVX512-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[ARRAYIDX6_4]], align 8
 ; AVX512-NEXT:    [[TMP4:%.*]] = insertelement <8 x i64> poison, i64 [[TMP0]], i64 0
@@ -27,12 +25,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i1 %k) {
 ; AVX512-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX512-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
 ; AVX512-NEXT:    [[TMP10:%.*]] = udiv <8 x i64> [[TMP9]], splat (i64 7)
-; AVX512-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX512-NEXT:    store <4 x i64> [[TMP11]], ptr [[C]], align 8
-; AVX512-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> poison, <2 x i32> <i32 4, i32 5>
-; AVX512-NEXT:    store <2 x i64> [[TMP12]], ptr [[ARRAYIDX9_4]], align 8
-; AVX512-NEXT:    [[TMP13:%.*]] = extractelement <8 x i64> [[TMP10]], i64 6
-; AVX512-NEXT:    store i64 [[TMP13]], ptr [[ARRAYIDX9_6]], align 8
+; AVX512-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; AVX512-NEXT:    store <7 x i64> [[TMP11]], ptr [[C]], align 8
 ; AVX512-NEXT:    [[TMP14:%.*]] = extractelement <8 x i64> [[TMP10]], i64 7
 ; AVX512-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; AVX512:       [[FOR_BODY_US_PREHEADER]]:
@@ -40,8 +34,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i1 %k) {
 ; AVX512-NEXT:    [[TMP15:%.*]] = load i64, ptr [[ARRAYIDX_US_1]], align 8
 ; AVX512-NEXT:    [[ARRAYIDX_US_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; AVX512-NEXT:    [[ARRAYIDX_US_4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; AVX512-NEXT:    [[ARRAYIDX4_US_4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 32
-; AVX512-NEXT:    [[ARRAYIDX4_US_6:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 48
 ; AVX512-NEXT:    [[TMP16:%.*]] = load <2 x i64>, ptr [[ARRAYIDX_US_2]], align 8
 ; AVX512-NEXT:    [[TMP17:%.*]] = load <4 x i64>, ptr [[ARRAYIDX_US_4]], align 8
 ; AVX512-NEXT:    [[TMP18:%.*]] = load <8 x i64>, ptr [[B]], align 8
@@ -52,12 +44,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i1 %k) {
 ; AVX512-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i64> [[TMP16]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX512-NEXT:    [[TMP24:%.*]] = shufflevector <8 x i64> [[TMP22]], <8 x i64> [[TMP23]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
 ; AVX512-NEXT:    [[TMP25:%.*]] = udiv <8 x i64> [[TMP24]], [[TMP18]]
-; AVX512-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i64> [[TMP25]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX512-NEXT:    store <4 x i64> [[TMP26]], ptr [[C]], align 8
-; AVX512-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i64> [[TMP25]], <8 x i64> poison, <2 x i32> <i32 4, i32 5>
-; AVX512-NEXT:    store <2 x i64> [[TMP27]], ptr [[ARRAYIDX4_US_4]], align 8
-; AVX512-NEXT:    [[TMP28:%.*]] = extractelement <8 x i64> [[TMP25]], i64 6
-; AVX512-NEXT:    store i64 [[TMP28]], ptr [[ARRAYIDX4_US_6]], align 8
+; AVX512-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i64> [[TMP25]], <8 x i64> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; AVX512-NEXT:    store <7 x i64> [[TMP26]], ptr [[C]], align 8
 ; AVX512-NEXT:    [[TMP29:%.*]] = extractelement <8 x i64> [[TMP25]], i64 7
 ; AVX512-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; AVX512:       [[FOR_COND_CLEANUP]]:
