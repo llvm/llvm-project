@@ -2656,6 +2656,48 @@ public:
       // It should likely be re-evaluated after migration to this intrinsic
       // is complete.
       return TTI::TCC_Basic * 4;
+    case Intrinsic::sdiv_poison:
+    case Intrinsic::udiv_poison:
+    case Intrinsic::srem_poison:
+    case Intrinsic::urem_poison: {
+      bool IsSigned =
+          IID == Intrinsic::sdiv_poison || IID == Intrinsic::srem_poison;
+      unsigned Opcode = IID == Intrinsic::sdiv_poison   ? Instruction::SDiv
+                        : IID == Intrinsic::udiv_poison ? Instruction::UDiv
+                        : IID == Intrinsic::srem_poison ? Instruction::SRem
+                                                        : Instruction::URem;
+
+      // PreISelIntrinsicLowering expands every call into the plain operation
+      // on a guarded divisor, so cost both. Keep this in sync with the IR it
+      // emits (the freezes are free):
+      //
+      //   %divisor.fr = freeze %divisor
+      //   %is.poison = icmp eq %divisor.fr, 0
+      //   ; signed forms only:
+      //   %dividend.fr = freeze %dividend
+      //   %is.overflow = and (icmp eq %dividend.fr, INT_MIN),
+      //                      (icmp eq %divisor.fr, -1)
+      //   %is.poison = or %is.poison, %is.overflow
+      //   %safe.divisor = select %is.poison, 1, %divisor.fr
+      //   %result = <op> %dividend(.fr), %safe.divisor
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost =
+          thisT()->getArithmeticInstrCost(Opcode, RetTy, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      if (IsSigned) {
+        Cost +=
+            2 * thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                            CmpInst::ICMP_EQ, CostKind);
+        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, CondTy,
+                                                CostKind);
+        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Or, CondTy,
+                                                CostKind);
+      }
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      return Cost;
+    }
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;
