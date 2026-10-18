@@ -890,6 +890,8 @@ define void @bitcasts() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %vec16 = bitcast <4 x i16> poison to <2 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %vec32 = bitcast <4 x i32> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %vec64 = bitcast <4 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: %v3i1 = bitcast <3 x i1> poison to i3
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i1 = bitcast <4 x i1> poison to i4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %a = bitcast i32 poison to i32
@@ -929,6 +931,9 @@ define void @bitcasts() {
   %vec16 = bitcast <4 x i16> poison to <2 x i32>
   %vec32 = bitcast <4 x i32> poison to <2 x i64>
   %vec64 = bitcast <4 x i64> poison to <2 x i128>
+
+  %v3i1 = bitcast <3 x i1> poison to i3
+  %v4i1 = bitcast <4 x i1> poison to i4
   ret void
 }
 

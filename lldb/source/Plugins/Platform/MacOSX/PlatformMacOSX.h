@@ -60,8 +60,6 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  ConstString GetSDKDirectory(Target &target) override;
-
   void
   AddClangModuleCompilationOptions(Target *target,
                                    std::vector<std::string> &options) override {
@@ -70,7 +68,7 @@ public:
   }
 
 protected:
-  llvm::StringRef GetDeviceSupportDirectoryName() override;
+  llvm::SmallVector<llvm::StringRef> GetDeviceSupportDirectoryNames() override;
   llvm::StringRef GetPlatformName() override;
 };
 

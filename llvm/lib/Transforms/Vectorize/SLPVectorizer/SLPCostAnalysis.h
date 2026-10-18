@@ -29,6 +29,7 @@
 
 namespace llvm {
 class APInt;
+class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
 class Instruction;
@@ -69,6 +70,14 @@ InstructionCost
 getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the cast between the widened strided access type and
+/// the entry vector type.
+InstructionCost
+getWidenedStridedCastCost(const TargetTransformInfo &TTI, Type *SrcTy,
+                          Type *DstTy, const DataLayout &DL,
+                          TargetTransformInfo::CastContextHint CCH,
+                          TargetTransformInfo::TargetCostKind CostKind);
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is

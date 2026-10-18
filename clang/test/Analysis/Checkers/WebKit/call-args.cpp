@@ -543,3 +543,36 @@ namespace call_arg_outside_decl {
   // expected-warning@-1{{Function argument 'provide()' (to 'call_arg_outside_decl::consume') is a raw pointer to RefPtr-capable type 'RefCountable'}}
 
 }
+
+namespace call_returning_reference_to_smart_pointer {
+
+  template <typename T> struct Vector {
+    T& operator[](unsigned);
+    T* m_buffer;
+  };
+
+  class Owner {
+  public:
+    const RefPtr<RefCountable>& referenceGetter() const { return m_obj; }
+    RefPtr<RefCountable> valueGetter() const { return m_obj; }
+
+    void callThroughReferenceGetter() {
+      referenceGetter()->method();
+      // expected-warning@-1{{Function argument 'this->referenceGetter()' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
+    }
+
+    void callThroughValueGetter() {
+      valueGetter()->method();
+    }
+
+    void callThroughVectorElement() {
+      m_items[0]->method();
+      // expected-warning@-1{{Function argument 'this->m_items[0]' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
+    }
+
+  private:
+    RefPtr<RefCountable> m_obj;
+    Vector<Ref<RefCountable>> m_items;
+  };
+
+} // namespace call_returning_reference_to_smart_pointer

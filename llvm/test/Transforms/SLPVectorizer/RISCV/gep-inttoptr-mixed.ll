@@ -12,11 +12,8 @@ define void @test() {
 ; CHECK-NEXT:    [[P16:%.*]] = getelementptr i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    store i64 [[V0]], ptr [[P16]], align 8
 ; CHECK-NEXT:    [[P8:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P8]], align 8
-; CHECK-NEXT:    [[P24:%.*]] = getelementptr i8, ptr [[P]], i64 24
-; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[P24]], align 8
-; CHECK-NEXT:    store i64 [[V2]], ptr [[P8]], align 8
-; CHECK-NEXT:    store i64 [[V1]], ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 8 [[P8]], i64 16, <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

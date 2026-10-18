@@ -350,12 +350,6 @@ The {doc}`CodeOfConduct` applies to all office hours.
       [gcal](https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com)
     - [GoogleMeet](https://meet.google.com/xok-iqne-gmi)
     - English, Norwegian (not fluently)
-  * - Johannes Doerfert (he/him)
-    - OpenMP, LLVM-IR, interprocedural optimizations, Attributor, workshops, research, ...
-    - Every week, Wednesdays 9:30am (Pacific Time), for 1 hour.
-      [ics](https://drive.google.com/file/d/1E_QkRvirmdJzlXf2EKBUX-v8Xj7-eW3v/view?usp=sharing)
-    - [MS Teams](https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTMxNzU4MWYtYzViNS00OTM2LWJmNWQtMjg5ZWFhNGVjNzgw%40thread.v2/0?context=%7b%22Tid%22%3a%22a722dec9-ae4e-4ae3-9d75-fd66e2680a63%22%2c%22Oid%22%3a%22885bda30-ce8e-46db-aa7e-15de0474831a%22%7d)
-    - English, German
   * - Tobias Grosser
     - General questions on how to contribute to LLVM/MLIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.

@@ -1466,6 +1466,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{}, {SgprB32_ReadFirstLane}, LowerSetRounding})
       .Div(S32, {{}, {SgprB32_ReadFirstLane}, LowerSetRounding});
 
+  addRulesForGOpcs({G_WRITE_REGISTER})
+      .Any({{_, B32}, {{}, {None, SgprB32_ReadFirstLane}}})
+      .Any({{_, B64}, {{}, {None, SgprB64_ReadFirstLane}}});
+
   addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
 
   addRulesForGOpcs({G_GLOBAL_VALUE})
@@ -2093,6 +2097,31 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_prng_b32})
       .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32}}})
       .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32}}});
+
+  addRulesForIOpcs(
+      {amdgcn_exclusive_scan_sum_i32, amdgcn_exclusive_scan_sum_u32}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Imm}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Imm}});
+
+  addRulesForIOpcs(
+      {amdgcn_exclusive_scan_xor_b32, amdgcn_exclusive_scan_or_b32,
+       amdgcn_exclusive_scan_and_b32, amdgcn_exclusive_scan_min_i32,
+       amdgcn_exclusive_scan_min_u32, amdgcn_exclusive_scan_max_i32,
+       amdgcn_exclusive_scan_max_u32},
+      Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs(
+      {amdgcn_exclusive_scan_min_i16, amdgcn_exclusive_scan_min_u16,
+       amdgcn_exclusive_scan_max_i16, amdgcn_exclusive_scan_max_u16},
+      Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr32}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_wave_match_b32})
+      .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}}})
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}}});
 
   addRulesForIOpcs({amdgcn_sffbh}, Standard)
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}})

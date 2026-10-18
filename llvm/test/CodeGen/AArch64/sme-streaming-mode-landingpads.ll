@@ -53,18 +53,18 @@ define void @streaming_with_cleanup() "aarch64_pstate_sm_enabled" personality pt
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64all = COPY killed $x1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64all = COPY killed $x0
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[ADDXri1:%[0-9]+]]:gpr64sp = ADDXri %stack.0.cleanup, 0, 0
   ; CHECK-NEXT:   $x0 = COPY [[ADDXri1]]
   ; CHECK-NEXT:   BL @"StreamingCleanup::~StreamingCleanup", csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def $sp, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def $sp, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   %cleanup = alloca i8, align 1
   invoke void @may_throw()
           to label %normal_return unwind label %unwind_cleanup
@@ -145,7 +145,7 @@ define void @locally_streaming_with_cleanup() "aarch64_pstate_sm_body" personali
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   BL @may_throw, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
@@ -159,7 +159,7 @@ define void @locally_streaming_with_cleanup() "aarch64_pstate_sm_body" personali
   ; CHECK-NEXT:   $x0 = COPY [[ADDXri]]
   ; CHECK-NEXT:   BL @"StreamingCleanup::~StreamingCleanup", csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-NEXT:   RET_ReallyLR
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.unwind_cleanup (landing-pad):
@@ -168,18 +168,18 @@ define void @locally_streaming_with_cleanup() "aarch64_pstate_sm_body" personali
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64all = COPY killed $x1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64all = COPY killed $x0
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[ADDXri1:%[0-9]+]]:gpr64sp = ADDXri %stack.0.cleanup, 0, 0
   ; CHECK-NEXT:   $x0 = COPY [[ADDXri1]]
   ; CHECK-NEXT:   BL @"StreamingCleanup::~StreamingCleanup", csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def $sp, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def $sp, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
+  ; CHECK-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   %cleanup = alloca i8, align 1
   invoke void @may_throw()
           to label %normal_return unwind label %unwind_cleanup

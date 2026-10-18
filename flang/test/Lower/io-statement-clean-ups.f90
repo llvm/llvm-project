@@ -17,7 +17,7 @@ subroutine test_temp_io_options(status)
 ! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
 ! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = ".result"}>
 ! CHECK:           fir.call @_FortranAioBeginOpenUnit
-! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_2]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_2]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[CALL_1:.*]] = fir.call @_QPgen_temp_character() {{.*}}: () -> !fir.box<!fir.heap<!fir.char<1,?>>>
 ! CHECK:           fir.save_result %[[CALL_1]] to %[[DECLARE_1]] : !fir.box<!fir.heap<!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -28,7 +28,7 @@ subroutine test_temp_io_options(status)
 ! CHECK:           %[[CONVERT_3:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.ref<!fir.char<1,?>>) -> !fir.heap<!fir.char<1,?>>
 ! CHECK:           fir.freemem %[[CONVERT_3]] : !fir.heap<!fir.char<1,?>>
 ! CHECK:           fir.if %[[CALL_2]] {
-! CHECK:             %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! CHECK:             %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_1]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:             %[[CALL_3:.*]] = fir.call @_QPgen_temp_character() {{.*}}: () -> !fir.box<!fir.heap<!fir.char<1,?>>>
 ! CHECK:             fir.save_result %[[CALL_3]] to %[[DECLARE_2]] : !fir.box<!fir.heap<!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:             %[[LOAD_1:.*]] = fir.load %[[DECLARE_2]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -39,7 +39,7 @@ subroutine test_temp_io_options(status)
 ! CHECK:             %[[CONVERT_6:.*]] = fir.convert %[[BOX_ADDR_3]] : (!fir.ref<!fir.char<1,?>>) -> !fir.heap<!fir.char<1,?>>
 ! CHECK:             fir.freemem %[[CONVERT_6]] : !fir.heap<!fir.char<1,?>>
 ! CHECK:             fir.if %[[CALL_4]] {
-! CHECK:               %[[DECLARE_3:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! CHECK:               %[[DECLARE_3:.*]] = fir.declare %[[ALLOCA_0]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:               %[[CALL_5:.*]] = fir.call @_QPgen_temp_character() {{.*}}: () -> !fir.box<!fir.heap<!fir.char<1,?>>>
 ! CHECK:               fir.save_result %[[CALL_5]] to %[[DECLARE_3]] : !fir.box<!fir.heap<!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:               %[[LOAD_2:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>

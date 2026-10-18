@@ -284,7 +284,7 @@ define float @alt_fmul_fsub_preserved(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 1.000000e+00>, float [[B2]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub reassoc nsz float [[TMP6]], [[B3]]
 ; CHECK-NEXT:    ret float [[TMP5]]
@@ -1247,7 +1247,7 @@ define double @inner_chain_behind_fsub(ptr %p, double %a, double %b, double %c) 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double 1.000000e+00, double poison, double 1.000000e+00, double 1.000000e+00>, double [[A]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <4 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc contract <4 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc nsz contract double [[TMP3]], 1.000000e+00
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc nsz contract double [[B]], [[OP_RDX]]

@@ -280,11 +280,15 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
     if (cases.empty())
       return mlir::failure();
 
+    auto resetMergeState = [&]() {
+      cascadingCases.clear();
+      cascadingCaseValues.clear();
+    };
+
     auto flushMergedOps = [&]() {
       for (CaseOp &c : cascadingCases)
         rewriter.eraseOp(c);
-      cascadingCases.clear();
-      cascadingCaseValues.clear();
+      resetMergeState();
     };
 
     auto mergeCascadingInto = [&](CaseOp &target) {
@@ -295,7 +299,34 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       changed = mlir::success();
     };
 
+    // Merge all pending cascading cases into the last one collected, which
+    // survives as a distinct `cir.case`; the rest are erased since their
+    // values have been folded into it.
+    auto mergeLastCascadingAndFlush = [&]() {
+      assert(!cir::MissingFeatures::foldRangeCase());
+      CaseOp lastCascadingCase = cascadingCases.back();
+      mergeCascadingInto(lastCascadingCase);
+      cascadingCases.pop_back();
+      flushMergedOps();
+    };
+
     for (CaseOp c : cases) {
+      // Cascading cases must be textually adjacent to the previously
+      // collected cascading case. This is false when something is in the
+      // way (e.g. a goto) or when the previous cascading case was found
+      // nested inside a sibling case's body (e.g. a case label that falls
+      // through into a compound statement) rather than next to `c`.
+      bool isAdjacentToLastCascadingCase =
+          !cascadingCases.empty() &&
+          c->getPrevNode() == cascadingCases.back().getOperation();
+
+      if (!cascadingCases.empty() && !isAdjacentToLastCascadingCase) {
+        if (cascadingCases.size() > 1)
+          mergeLastCascadingAndFlush();
+        else
+          resetMergeState();
+      }
+
       cir::CaseOpKind kind = c.getKind();
       if (kind == cir::CaseOpKind::Equal &&
           isa<YieldOp>(c.getCaseRegion().front().front())) {
@@ -312,24 +343,15 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
         // cascading cases, merge all of them into the last cascading case.
         // We don't currently fold case range statements with other case
         // statements.
-        assert(!cir::MissingFeatures::foldRangeCase());
-        CaseOp lastCascadingCase = cascadingCases.back();
-        mergeCascadingInto(lastCascadingCase);
-        cascadingCases.pop_back();
-        flushMergedOps();
+        mergeLastCascadingAndFlush();
       } else {
-        cascadingCases.clear();
-        cascadingCaseValues.clear();
+        resetMergeState();
       }
     }
 
     // Edge case: all cases are simple cascading cases
-    if (cascadingCases.size() == cases.size()) {
-      CaseOp lastCascadingCase = cascadingCases.back();
-      mergeCascadingInto(lastCascadingCase);
-      cascadingCases.pop_back();
-      flushMergedOps();
-    }
+    if (cascadingCases.size() == cases.size())
+      mergeLastCascadingAndFlush();
 
     return changed;
   }
@@ -349,7 +371,12 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
         !mlir::isa_and_nonnull<cir::FPAttr>(value))
       return mlir::failure();
 
-    cir::VectorType resultType = op.getResult().getType();
+    // FIXME(CIR): We should consider making a matrix constant attribute so that
+    // we can simplify it here too.
+    assert(!MissingFeatures::matrixType());
+    auto resultType = mlir::dyn_cast<cir::VectorType>(op.getResult().getType());
+    if (!resultType)
+      return mlir::failure();
     SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
     auto constVecAttr = cir::ConstVectorAttr::get(
         resultType, mlir::ArrayAttr::get(getContext(), elements));

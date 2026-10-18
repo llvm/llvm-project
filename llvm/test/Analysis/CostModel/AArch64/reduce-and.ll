@@ -7,6 +7,7 @@ define void @reduce() {
 ; CHECK-LABEL: 'reduce'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2 = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:6 SizeLat:6 for: %V3 = call i1 @llvm.vector.reduce.and.v3i1(<3 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4 = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8 = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16 = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> undef)
@@ -33,6 +34,7 @@ define void @reduce() {
 
   %V1   = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
   %V2   = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> undef)
+  %V3   = call i1 @llvm.vector.reduce.and.v3i1(<3 x i1> undef)
   %V4   = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> undef)
   %V8   = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> undef)
   %V16  = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> undef)
@@ -60,6 +62,7 @@ define void @reduce() {
 
 declare i1 @llvm.vector.reduce.and.v1i1(<1 x i1>)
 declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
+declare i1 @llvm.vector.reduce.and.v3i1(<3 x i1>)
 declare i1 @llvm.vector.reduce.and.v4i1(<4 x i1>)
 declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 declare i1 @llvm.vector.reduce.and.v16i1(<16 x i1>)
