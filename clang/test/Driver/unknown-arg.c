@@ -65,7 +65,7 @@
 
 // IGNORED: warning: unknown warning option '-Wunknown-to-clang-option'
 
-// RUN %clang -fdiagnostics-format=sarif -Wunknown-to-clang-option
+// RUN: %clang -S %s -o %t.s -fdiagnostics-format=sarif -Wunknown-to-clang-option
 
 // FIXME: unlike TextDiagnosticPrinter, SARIFDiagnosticPrinter can't yet emit
 // diagnostics in this limited mode without SourceManager, etc.
