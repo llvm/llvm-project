@@ -4321,18 +4321,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return nullptr;
   case LibFunc_copysign:
     if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
-      return optimizeBinaryDoubleFP(CI, Builder, TLI);
-    return nullptr;
       if (Value *V = optimizeBinaryDoubleFP(CI, Builder, TLI))
         return V;
     [[fallthrough]];
   case LibFunc_copysignf:
   case LibFunc_copysignl:
     return replaceBinaryCall(CI, Builder, Intrinsic::copysign);
-  case LibFunc_fdim:
-  case LibFunc_fdimf:
-  case LibFunc_fdiml:
-    return optimizeFdim(CI, Builder);
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:
