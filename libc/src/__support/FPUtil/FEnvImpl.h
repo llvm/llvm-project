@@ -220,6 +220,7 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void raise_underflow_except_if_required() {
   raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 }
 
+#ifndef LIBC_MATH_HAS_NO_EXCEPT
 #if defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT)
 template <>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
@@ -267,6 +268,7 @@ raise_underflow_except_if_required<double>() {
   }
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+#endif // !LIBC_MATH_HAS_NO_EXCEPT
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

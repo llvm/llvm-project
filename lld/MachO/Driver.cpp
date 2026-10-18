@@ -1124,7 +1124,7 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
@@ -1562,7 +1562,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize();
+  globalMergeRecord.finalize(config->libraryOptions);
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
