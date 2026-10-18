@@ -350,6 +350,12 @@ implementation status.
 | New functionality      | Subgroup functions                                                | <span class="good">done</span> | [D105858][D105858], [D118999][D118999]                                               |
 | New functionality      | Atomic mem scopes: subgroup, all devices including functions      | <span class="good">done</span> | [D103241][D103241]                                                                   |
 
+As required by OpenCL C v3.0 s6.5.1, integer division and remainder by zero,
+and signed division overflow, yield an unspecified value: except on SPIR and
+SPIR-V targets, clang lowers integer `/` and `%` to frozen `llvm.<op>.poison`
+intrinsics by default, and {option}`-fdefined-int-divrem` and
+{option}`-fno-defined-int-divrem` control this explicitly.
+
 [D88300]: https://reviews.llvm.org/D88300
 [D95776]: https://reviews.llvm.org/D95776
 [D95778]: https://reviews.llvm.org/D95778

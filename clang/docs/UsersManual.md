@@ -2989,6 +2989,20 @@ such as kernels and boot loaders, that performs pointer arithmetic over
 externally defined memory layouts rather than ordinary C or C++ objects.
 :::
 
+:::{option} -fdefined-int-divrem
+
+Integer division and remainder by zero, and signed division whose result
+does not fit (`INT_MIN / -1`), are undefined behavior in C and C++, but
+OpenCL C v3.0 s6.5.1 gives them an unspecified value instead. With
+`-fdefined-int-divrem`, Clang lowers integer `/` and `%` that may hit one of
+these cases to a frozen `llvm.sdiv.poison`, `llvm.udiv.poison`,
+`llvm.srem.poison` or `llvm.urem.poison` intrinsic, whose result is an
+arbitrary but fixed value for those operands.
+
+This is the default for OpenCL C and C++ for OpenCL, except on SPIR and
+SPIR-V targets. `-fno-defined-int-divrem` restores the plain instructions.
+:::
+
 :::{option} -ftrivial-auto-var-init=[uninitialized, zero, pattern]
 
 Initialize automatic variables that would otherwise be left uninitialized.
