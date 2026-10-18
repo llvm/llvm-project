@@ -946,3 +946,68 @@ body: |
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %70(s32)
     S_ENDPGM 0
 ...
+
+---
+name: unmerge_i32_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+
+    ; CHECK-LABEL: name: unmerge_i32_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[AMT:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHIFT:%[0-9]+]]:sgpr(i32) = G_LSHR [[SRC]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T0:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SRC]](i32)
+    ; CHECK-NEXT: [[T1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[T0]](i16), implicit [[T1]](i16)
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i16), %2:sgpr(i16) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2
+...
+
+---
+name: unmerge_i64_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: unmerge_i64_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[LO:%[0-9]+]]:sgpr(i32), [[HI:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[SRC]](i64)
+    ; CHECK-NEXT: [[AMT:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHIFT:%[0-9]+]]:sgpr(i32) = G_LSHR [[LO]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T0:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LO]](i32)
+    ; CHECK-NEXT: [[T1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT]](i32)
+    ; CHECK-NEXT: [[SHIFT1:%[0-9]+]]:sgpr(i32) = G_LSHR [[HI]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T2:%[0-9]+]]:sgpr(i16) = G_TRUNC [[HI]](i32)
+    ; CHECK-NEXT: [[T3:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[T0]](i16), implicit [[T1]](i16), implicit [[T2]](i16), implicit [[T3]](i16)
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i16), %2:sgpr(i16), %3:sgpr(i16), %4:sgpr(i16) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3, implicit %4
+...
+
+---
+name: unmerge_v4i16_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: unmerge_v4i16_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(<4 x i16>) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[LO:%[0-9]+]]:sgpr(i32), [[HI:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[SRC]](<4 x i16>)
+    ; CHECK-NEXT: [[AMT:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHIFT:%[0-9]+]]:sgpr(i32) = G_LSHR [[LO]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T0:%[0-9]+]]:sgpr(i16) = G_TRUNC [[LO]](i32)
+    ; CHECK-NEXT: [[T1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT]](i32)
+    ; CHECK-NEXT: [[SHIFT1:%[0-9]+]]:sgpr(i32) = G_LSHR [[HI]], [[AMT]](i32)
+    ; CHECK-NEXT: [[T2:%[0-9]+]]:sgpr(i16) = G_TRUNC [[HI]](i32)
+    ; CHECK-NEXT: [[T3:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHIFT1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[T0]](i16), implicit [[T1]](i16), implicit [[T2]](i16), implicit [[T3]](i16)
+    %0:sgpr(<4 x i16>) = COPY $sgpr0_sgpr1
+    %1:sgpr(i16), %2:sgpr(i16), %3:sgpr(i16), %4:sgpr(i16) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3, implicit %4
+...
