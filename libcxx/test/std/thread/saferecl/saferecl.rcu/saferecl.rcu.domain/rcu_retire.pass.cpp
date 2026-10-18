@@ -13,7 +13,7 @@
 // REQUIRES: std-at-least-c++26
 
 // https://github.com/mstorsjo/llvm-mingw/issues/538
-// UNSUPPORTED: buildhost=mingw
+// XFAIL: target=x86_64-w64-windows-gnu
 
 // https://github.com/llvm/llvm-project/issues/52942
 // UNSUPPORTED: tsan
