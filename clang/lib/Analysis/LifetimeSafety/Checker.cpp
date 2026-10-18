@@ -372,7 +372,8 @@ public:
           if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc, ExprChain, IsMain);
+                                           MovedExpr, ExpiryLoc, ExprChain,
+                                           IsMain);
         } else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
