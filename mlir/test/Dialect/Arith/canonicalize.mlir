@@ -1668,6 +1668,58 @@ func.func @truncTrunc(%arg0: i64) -> i8 {
   return %tr2 : i8
 }
 
+// The first truncation may discard nonzero bits. For example, 65537 truncates
+// to 1 without poison, but a direct flagged truncation would produce poison.
+// CHECK-LABEL: @truncTruncDropFlags(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncDropFlags(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncNsw(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] overflow<nsw> : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncNsw(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nsw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncNuw(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] overflow<nuw> : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncNuw(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nuw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncBothFlags(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] overflow<nsw, nuw> : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncBothFlags(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nsw, nuw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncDisjointFlags(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncDisjointFlags(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nsw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nuw> : i16 to i8
+  return %tr2 : i8
+}
+
 // CHECK-LABEL: @truncFPConstant
 //       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
 //       CHECK:   return %[[cres]]
