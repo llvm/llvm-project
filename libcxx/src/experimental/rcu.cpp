@@ -130,11 +130,11 @@ class rcu_domain_impl {
 
     // Wait for all threads to quiesce in the old phase
     grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
-    std::atomic_signal_fence(std::memory_order_seq_cst);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     while (any_reader_in_ongoing_grace_period(old_phase)) {
       grace_period_waiting_flag_.wait(true, std::memory_order_relaxed);
     }
-    std::atomic_signal_fence(std::memory_order_seq_cst);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
 
     retired_queue_stage2_.splice_back(retired_queue_stage1_);
