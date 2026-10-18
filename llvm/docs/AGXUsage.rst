@@ -154,7 +154,7 @@ Before each kernel, the assembly printer emits comments with the resources
 the driver must provide::
 
   // uniform registers: 18 x 16-bit (threadgroups_per_grid at u6)
-  // general purpose registers: 7 x 32-bit
+  // general purpose registers: 4 x 32-bit
   // threadgroup memory: 0 bytes
   // stack size: 0 bytes
 
@@ -164,6 +164,16 @@ the instruction prefetcher reads past the end of the program.
 Threadgroup variables are globals in address space 3 without an initializer.
 They are allocated per kernel in threadgroup memory, at offsets in order of
 first use.
+
+Device and constant variables (globals in address spaces 0, 1 and 4) live in
+the *global data buffer*. When a module defines any, each kernel receives
+the 64-bit address of that buffer in the uniform registers following
+``threadgroups_per_grid`` (reported in the resource comments as ``global
+data buffer at uN_uN+1``). The variables are laid out in module order, each
+aligned to its alignment, and the initial contents of the buffer, with that
+layout, are the ``.agx.globals`` section of the object. Initializers that
+refer to the addresses of other globals would need relocations and are not
+supported.
 
 Execution model
 ===============
@@ -226,6 +236,10 @@ Supported:
   compare-and-swap loops; atomic loads and stores become atomic operations.
 * SIMD-group and quad shuffles, ballots, reductions and prefixes, derivatives,
   barriers and special registers through the ``llvm.agx.*`` intrinsics.
+
+There is no floating point environment: constrained floating point
+intrinsics are compiled as the ordinary operations, with round to nearest
+even.
 
 Not supported: ``double``, vector memory operations (vectors are
 scalarized), textures and graphics shaders, calls and recursion.
