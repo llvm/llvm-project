@@ -2543,8 +2543,16 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
                   (UNW == ToolChain::UNW_CompilerRT || !D.CCCIsCXX()) &&
                   !TC.getTriple().isAndroid() &&
                   !TC.getTriple().isOSCygMing() && !TC.getTriple().isOSAIX();
-  if (AsNeeded)
-    addAsNeededOption(TC, Args, CmdArgs, true);
+  bool UsePushPop =
+      !(TC.getTriple().isOSSolaris() && !solaris::isLinkerGnuLd(TC, Args));
+  if (AsNeeded) {
+    if (UsePushPop) {
+      CmdArgs.push_back("--push-state");
+      CmdArgs.push_back("--as-needed");
+    } else {
+      addAsNeededOption(TC, Args, CmdArgs, true);
+    }
+  }
 
   switch (UNW) {
   case ToolChain::UNW_None:
@@ -2577,8 +2585,13 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
     break;
   }
 
-  if (AsNeeded)
-    addAsNeededOption(TC, Args, CmdArgs, false);
+  if (AsNeeded) {
+    if (UsePushPop) {
+      CmdArgs.push_back("--pop-state");
+    } else {
+      addAsNeededOption(TC, Args, CmdArgs, false);
+    }
+  }
 }
 
 static void AddLibgcc(const ToolChain &TC, const Driver &D,
