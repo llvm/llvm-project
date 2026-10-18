@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_GLOBAL_OBJECTS
-#define _LIBSYCL_GLOBAL_OBJECTS
+#ifndef _LIBSYCL_SRC_DETAIL_GLOBAL_OBJECTS_HPP
+#define _LIBSYCL_SRC_DETAIL_GLOBAL_OBJECTS_HPP
 
 #include <detail/offload/offload_topology.hpp>
 #include <detail/spinlock.hpp>
@@ -20,6 +20,7 @@
 #include <sycl/__impl/exception.hpp>
 
 #include <array>
+#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -39,7 +40,7 @@ template <typename T> using InstanceWithLock = std::pair<T, SpinLock>;
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \returns std::array of all offload topologies.
+/// \return std::array of all offload topologies.
 std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
 getOffloadTopologies();
 
@@ -48,7 +49,7 @@ getOffloadTopologies();
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \returns std::vector of implementation objects for all platforms.
+/// \return std::vector of implementation objects for all platforms.
 std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 
 // This initializes a function-local variable whose destructor is invoked as
@@ -89,4 +90,4 @@ void flushAsyncExceptions();
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_GLOBAL_OBJECTS
+#endif // _LIBSYCL_SRC_DETAIL_GLOBAL_OBJECTS_HPP

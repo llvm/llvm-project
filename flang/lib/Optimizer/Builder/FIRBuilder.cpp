@@ -167,6 +167,24 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
   return createConvert(loc, ty, cstValue);
 }
 
+mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
+                                                     mlir::Type ty,
+                                                     const llvm::APInt &cst) {
+  auto intType = mlir::cast<mlir::IntegerType>(ty);
+  assert(intType.getWidth() == cst.getBitWidth() && "bit width mismatch");
+  // Signed and unsigned constants must be encoded as signless
+  // arith.constant followed by fir.convert cast.
+  mlir::Type cstType = ty;
+  if (intType.isUnsigned())
+    cstType = mlir::IntegerType::get(getContext(), intType.getWidth());
+  else if (intType.isSigned())
+    TODO(loc, "signed integer constant");
+
+  mlir::Value cstValue = mlir::arith::ConstantOp::create(
+      *this, loc, cstType, getIntegerAttr(cstType, cst));
+  return createConvert(loc, ty, cstValue);
+}
+
 mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
                                                     mlir::Type ty) {
   if (mlir::isa<mlir::IndexType>(ty))

@@ -5,8 +5,11 @@ define i64 @wide_load_reduction(ptr %ptr) {
 ; CHECK-LABEL: define i64 @wide_load_reduction(
 ; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <128 x i64>, ptr [[PTR]], align 8
-; CHECK-NEXT:    [[RED:%.*]] = call i64 @llvm.vector.reduce.add.v128i64(<128 x i64> [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <64 x i64>, ptr [[PTR]], align 8
+; CHECK-NEXT:    [[P64:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 64
+; CHECK-NEXT:    [[TMP1:%.*]] = load <64 x i64>, ptr [[P64]], align 8
+; CHECK-NEXT:    [[RDX_OP:%.*]] = add <64 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[RED:%.*]] = call i64 @llvm.vector.reduce.add.v64i64(<64 x i64> [[RDX_OP]])
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i64 [[RED]], 0
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;

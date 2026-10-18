@@ -59,7 +59,7 @@ entry:
 }
 
 ; CHECK-LABEL: @MaybeUninitialized
-; CHECK: store i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), ptr @__msan_retval_tls, align 8
+; CHECK: store i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 poison> to <4 x i32>), i64 0), ptr @__msan_retval_tls, align 8
 ; CHECK: store i32 0, ptr @__msan_retval_origin_tls
 
 ; This function stores known initialized value, but msan can't prove this.
@@ -73,7 +73,7 @@ entry:
 }
 
 ; CHECK-LABEL: @MaybeUninitializedRetNoUndef
-; CONST: [[CMP:%.*]] = icmp ne i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), 0
+; CONST: [[CMP:%.*]] = icmp ne i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 poison> to <4 x i32>), i64 0), 0
 ; CONST: br i1 [[CMP]]
 ; CONST: call void @__msan_warning_with_origin_noreturn
 

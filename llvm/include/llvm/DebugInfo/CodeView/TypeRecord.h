@@ -417,7 +417,7 @@ class TagRecord : public TypeRecord {
 protected:
   TagRecord() = default;
   explicit TagRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
-  TagRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
+  TagRecord(TypeRecordKind Kind, uint64_t MemberCount, ClassOptions Options,
             TypeIndex FieldList, StringRef Name, StringRef UniqueName)
       : TypeRecord(Kind), MemberCount(MemberCount), Options(Options),
         FieldList(FieldList), Name(Name), UniqueName(UniqueName) {}
@@ -448,25 +448,29 @@ public:
     return (Options & ClassOptions::Scoped) != ClassOptions::None;
   }
 
-  uint16_t getMemberCount() const { return MemberCount; }
+  uint64_t getMemberCount() const { return MemberCount; }
   ClassOptions getOptions() const { return Options; }
   TypeIndex getFieldList() const { return FieldList; }
   StringRef getName() const { return Name; }
   StringRef getUniqueName() const { return UniqueName; }
 
-  uint16_t MemberCount = 0;
+  /// Number of members in the associated field list.
+  ///
+  /// Note that the full 64 bit range can only be used by the *2 records.
+  /// The others use a 16 bit value for this.
+  uint64_t MemberCount = 0;
   ClassOptions Options = ClassOptions::None;
   TypeIndex FieldList;
   StringRef Name;
   StringRef UniqueName;
 };
 
-// LF_CLASS, LF_STRUCTURE, LF_INTERFACE
+// LF_CLASS, LF_STRUCTURE, LF_INTERFACE, LF_CLASS2, LF_STRUCTURE2, LF_INTERFACE2
 class ClassRecord : public TagRecord {
 public:
   ClassRecord() = default;
   explicit ClassRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
-  ClassRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
+  ClassRecord(TypeRecordKind Kind, uint64_t MemberCount, ClassOptions Options,
               TypeIndex FieldList, TypeIndex DerivationList,
               TypeIndex VTableShape, uint64_t Size, StringRef Name,
               StringRef UniqueName)
@@ -494,14 +498,18 @@ public:
   uint64_t Size = 0;
 };
 
-// LF_UNION
+// LF_UNION, LF_UNION2
 struct UnionRecord : public TagRecord {
   UnionRecord() = default;
   explicit UnionRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
-  UnionRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
+  UnionRecord(uint64_t MemberCount, ClassOptions Options, TypeIndex FieldList,
               uint64_t Size, StringRef Name, StringRef UniqueName)
-      : TagRecord(TypeRecordKind::Union, MemberCount, Options, FieldList, Name,
-                  UniqueName),
+      : UnionRecord(TypeRecordKind::Union, MemberCount, Options, FieldList,
+                    Size, Name, UniqueName) {}
+  UnionRecord(TypeRecordKind Kind, uint64_t MemberCount, ClassOptions Options,
+              TypeIndex FieldList, uint64_t Size, StringRef Name,
+              StringRef UniqueName)
+      : TagRecord(Kind, MemberCount, Options, FieldList, Name, UniqueName),
         Size(Size) {}
 
   HfaKind getHfa() const {

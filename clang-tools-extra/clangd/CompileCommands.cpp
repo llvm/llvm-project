@@ -416,7 +416,10 @@ std::pair<unsigned, unsigned> getArgCount(const llvm::opt::Option &Opt) {
   case Option::MultiArgClass:
     return {1 + Opt.getNumArgs(), 0};
   case Option::JoinedOrSeparateClass:
+  case Option::SeparateOrEqClass:
     return {2, 1};
+  case Option::FlagOrEqClass:
+    return {1, 1};
   case Option::RemainingArgsClass:
     return {Rest, 0};
   case Option::RemainingArgsJoinedClass:

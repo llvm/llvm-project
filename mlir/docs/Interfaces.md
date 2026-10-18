@@ -532,10 +532,14 @@ comprised of the following components:
 
 ##### Interface Methods
 
-There are two types of methods that can be used with an attr/op/type interface,
-`InterfaceMethod` and `StaticInterfaceMethod`. They are both comprised of the
-same core components, with the distinction that `StaticInterfaceMethod` models a
-static method on the derived IR object.
+`InterfaceMethod` and `StaticInterfaceMethod` both define methods on an
+attr/op/type interface. `InterfaceMethod` models an instance method, while
+`StaticInterfaceMethod` models a static method in the derived IR object class.
+For an operation interface method whose body only needs the raw `Operation *`,
+use `$_raw_op` in the `InterfaceMethod` body. The model callback is then
+generated once per interface rather than once per concrete operation type.
+Prefer this form when possible: it avoids generating a copy of the callback
+for every operation that implements the interface, reducing binary size.
 
 Interface methods are comprised of the following components:
 
@@ -551,15 +555,20 @@ Interface methods are comprised of the following components:
         respectively.
 *   MethodBody (Optional)
     -   An optional explicit implementation of the interface method.
-    -   This implementation is placed within the method defined on the `Model`
-        traits class, and is not defined by the `Trait` class that is attached
-        to the IR entity. More concretely, this body is only visible by the
-        interface class and does not affect the derived IR entity.
+    -   Normally, this implementation is placed within the method defined on
+        the `Model` traits class, and is not defined by the `Trait` class that
+        is attached to the IR entity. More concretely, this body is only
+        visible by the interface class and does not affect the derived IR
+        entity.
+    -   For a non-static operation interface method, a body that uses
+        `$_raw_op` without `ConcreteOp`, `$_op`, or `$_self` is instead placed in
+        a shared model callback. `$_raw_op` refers to the `Operation *` in both
+        shared and per-operation model callbacks. Fallback and external models
+        still use their own implementations.
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
-        entity currently being operated on.
-    -   In non-static methods, `$_op` and `$_self` may be used to refer to an
-        instance of the derived IR entity.
+        entity currently being operated on. In non-static methods, `$_op` and
+        `$_self` may be used to refer to an instance of the derived IR entity.
 *   DefaultImplementation (Optional)
     -   An optional explicit default implementation of the interface method.
     -   This implementation is placed within the `Trait` class that is attached
@@ -575,6 +584,17 @@ Interface methods are comprised of the following components:
 ODS also allows for generating declarations for the `InterfaceMethod`s of an
 operation if the operation specifies the interface with
 `DeclareOpInterfaceMethods` (see an example below).
+
+For example, an operation interface can share a callback across its concrete
+operation models while keeping a default implementation for the operation trait:
+
+```tablegen
+InterfaceMethod<
+  "Return the number of operands", "unsigned", "getNumOperands", (ins),
+  /*methodBody=*/[{ return $_raw_op->getNumOperands(); }],
+  /*defaultImplementation=*/[{ return this->getOperation()->getNumOperands(); }]
+>
+```
 
 Examples:
 

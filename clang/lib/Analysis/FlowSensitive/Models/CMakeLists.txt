@@ -3,6 +3,7 @@ add_clang_library(clangAnalysisFlowSensitiveModels
   UncheckedExpectedAccessModel.cpp
   UncheckedOptionalAccessModel.cpp
   UncheckedStatusOrAccessModel.cpp
+  GtestModelHelpers.cpp
 
   LINK_LIBS
   clangAnalysis

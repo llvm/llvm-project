@@ -69,6 +69,14 @@ namespace detail {
 void appendAttributeProperty(llvm::SmallVectorImpl<NamedAttribute> &attrs,
                              StringRef name, Attribute attr);
 
+/// Route legacy builder attributes to either the operation's properties or
+/// its discardable attribute dictionary. The callback handles conversion and
+/// diagnostics for the operation-specific properties.
+void splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties);
+
 /// Assign a generated attribute-backed property after checking its type.
 /// Keep the conversion out of each operation's generated property setter.
 template <typename AttrT>
@@ -1287,6 +1295,13 @@ public:
   /// Print SSA IDs using their NameLoc, if provided, as prefix.
   OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
+  /// Always use aliases even for non top-level ops. When set, printing any
+  /// op initializes aliases and prints via the top-level path, so dumps of
+  /// nested ops (e.g. per-function pass instrumentation) use type and
+  /// attribute aliases instead of expanding them. Takes precedence over
+  /// local scope.
+  OpPrintingFlags &alwaysUseAliases(bool enable = true);
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -1316,6 +1331,9 @@ public:
 
   /// Return if operation verification should be skipped.
   bool shouldAssumeVerified() const;
+
+  /// Return if aliases should always be used.
+  bool shouldAlwaysUseAliases() const;
 
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
@@ -1354,6 +1372,9 @@ private:
 
   /// Skip operation verification.
   bool assumeVerifiedFlag : 1;
+
+  /// Always use aliases even for non top-level ops.
+  bool alwaysUseAliasesFlag : 1;
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;

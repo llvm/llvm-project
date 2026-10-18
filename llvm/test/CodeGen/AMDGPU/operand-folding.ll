@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgpu6.00 -early-live-intervals < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s

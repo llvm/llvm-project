@@ -7,6 +7,7 @@ add_mlir_library(MLIRRemarkStreamer
 
   LINK_LIBS PUBLIC
     MLIRIR
+    MLIRSupport
 
   LINK_COMPONENTS
     Remarks

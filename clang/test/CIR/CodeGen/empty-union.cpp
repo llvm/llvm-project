@@ -34,7 +34,7 @@ struct WrapEmpty {
 WrapEmpty w;
 // CIR-DAG: !rec_OuterWithEmpty = !cir.union<"OuterWithEmpty" {data !rec_Empty, data !s32i}>
 // CIR-DAG: !rec_WrapEmpty = !cir.struct<"WrapEmpty" {data !rec_OuterWithEmpty, data !s32i}>
-// CIR-DAG: cir.global external @w = #cir.zero : !rec_WrapEmpty {alignment = 4 : i64}
+// CIR-DAG: cir.global external @w = #cir.zero : !rec_WrapEmpty align(4)
 // LLVM-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
 // LLVM-DAG: %union.OuterWithEmpty = type { i32 }
 // LLVM-DAG: @w = global %struct.WrapEmpty zeroinitializer, align 4

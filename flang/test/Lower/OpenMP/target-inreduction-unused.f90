@@ -9,7 +9,7 @@
 ! flows into the omp.target's map_entries.
 
 !CHECK-LABEL: func.func @_QPomp_target_in_reduction_unused()
-!CHECK:       %[[IDECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFomp_target_in_reduction_unusedEi"}
+!CHECK:       %[[IDECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFomp_target_in_reduction_unusedEi")
 !CHECK:       %[[IMAP:.*]] = omp.map.info var_ptr(%[[IDECL]]#1 : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) name("i") -> !fir.ref<i32>
 !CHECK:       omp.target kernel_type(generic) in_reduction(@{{[^ ]+}} %[[IDECL]]#0 : !fir.ref<i32>)
 !CHECK-SAME:    map_entries(%[[IMAP]] -> %{{[^ ]+}} : !fir.ref<i32>)

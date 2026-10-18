@@ -477,6 +477,13 @@ public:
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
 
+  /// Print a comma separated range of operation operands out of line to avoid
+  /// instantiating the range iteration in every generated operation printer.
+  void printOperands(OperandRange operands);
+
+  /// Print the types of a comma separated range of operation operands.
+  void printOperandTypes(ValueTypeRange<OperandRange> types);
+
   /// Print a comma separated list of operands.
   template <typename ContainerType>
   void printOperands(const ContainerType &container) {
@@ -561,6 +568,17 @@ public:
 // Make the implementations convenient to use.
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Value value) {
   p.printOperand(value);
+  return p;
+}
+
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, OperandRange values) {
+  p.printOperands(values);
+  return p;
+}
+
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
+                                ValueTypeRange<OperandRange> types) {
+  p.printOperandTypes(types);
   return p;
 }
 

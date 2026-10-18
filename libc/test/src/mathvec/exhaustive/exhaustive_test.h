@@ -13,7 +13,7 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/simd.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/SIMDMatcher.h"
 
 #include <atomic>
 #include <iostream>
@@ -43,7 +43,7 @@ using VectorUnaryOp =
 
 template <typename OutType, typename InType,
           ScalarUnaryOp<OutType, InType> ScalarFunc,
-          VectorUnaryOp<OutType, InType> VectorFunc>
+          VectorUnaryOp<OutType, InType> VectorFunc, uint64_t TOL = 0>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
@@ -66,10 +66,16 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       LIBC_NAMESPACE::cpp::simd<OutType> vec_result = VectorFunc(vec_x);
       OutType vec_res = vec_result[0];
       OutType scalar_result = ScalarFunc(x);
-      bool correct = TEST_FP_EQ(scalar_result, vec_res);
+      bool correct = TOL == 0 ? TEST_FP_EQ(scalar_result, vec_res)
+                              : LIBC_NAMESPACE::testing::within_ulp_tolerance(
+                                    scalar_result, vec_res, TOL);
 
       if (!correct) {
-        EXPECT_FP_EQ(scalar_result, vec_res);
+        if constexpr (TOL == 0)
+          EXPECT_FP_EQ(scalar_result, vec_res);
+        else
+          EXPECT_TRUE(LIBC_NAMESPACE::testing::within_ulp_tolerance(
+              scalar_result, vec_res, TOL));
         failed++;
       }
     } while (bits++ < stop);
@@ -222,6 +228,6 @@ struct LlvmLibcExhaustiveMathvecTest
 };
 
 template <typename FloatType, ScalarUnaryOp<FloatType> ScalarFunc,
-          VectorUnaryOp<FloatType> VectorFunc>
+          VectorUnaryOp<FloatType> VectorFunc, uint64_t TOL = 0>
 using LlvmLibcUnaryOpExhaustiveMathvecTest = LlvmLibcExhaustiveMathvecTest<
-    UnaryOpChecker<FloatType, FloatType, ScalarFunc, VectorFunc>>;
+    UnaryOpChecker<FloatType, FloatType, ScalarFunc, VectorFunc, TOL>>;

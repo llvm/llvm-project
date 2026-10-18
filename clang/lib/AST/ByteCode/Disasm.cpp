@@ -314,6 +314,8 @@ static const char *primTypeToString(PrimType T) {
     return "MemberPtr";
   case PT_FixedPoint:
     return "FixedPoint";
+  case PT_Reflect:
+    return "Reflect";
   }
   llvm_unreachable("Unhandled PrimType");
 }
@@ -643,9 +645,6 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
     OS << "Invalid\n";
   } else {
     OS << "Value: ";
-#ifndef NDEBUG
-    assert(Ctx);
-    Value.dump(OS, Ctx->getASTContext());
-#endif
+    Value.dump(OS, Ctx.getASTContext());
   }
 }
