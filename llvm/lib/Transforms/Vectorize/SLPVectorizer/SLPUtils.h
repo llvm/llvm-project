@@ -41,7 +41,9 @@ class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
 class LoadInst;
+class Loop;
 class PHINode;
+class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -533,6 +535,15 @@ DebugLoc getDebugLocFromPHI(const PHINode &PN);
 /// \p InsertInst (insertelement or insertvalue), or std::nullopt if it is not
 /// a homogeneous aggregate.
 std::optional<unsigned> getAggregateSize(Instruction *InsertInst);
+
+/// \returns the innermost loop starting from \p L for which at least one value
+/// in \p VL is not loop-invariant.
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
+
+/// \returns an estimated trip count for \p L, bounded by the loop-aware budget
+/// \p LoopAwareTripCount. Returns 1 when the budget is 0.
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount);
 
 } // namespace llvm::slpvectorizer
 
