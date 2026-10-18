@@ -1560,8 +1560,6 @@ bool SIFoldOperandsImpl::foldOperand(
       OpToFold.OpToFold->setIsKill(false);
       Changed = true;
 
-      // Remove kill flags as kills may now be out of order with uses.
-      MRI->clearKillFlags(UseReg);
       if (foldCopyToAGPRRegSequence(UseMI))
         return true;
     }
@@ -2104,14 +2102,6 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
         continue;
     }
     if (updateOperand(Fold)) {
-      // Clear kill flags.
-      if (Fold.isReg()) {
-        assert(Fold.Def.OpToFold && Fold.isReg());
-        // FIXME: Probably shouldn't bother trying to fold if not an
-        // SGPR. PeepholeOptimizer can eliminate redundant VGPR->VGPR
-        // copies.
-        MRI->clearKillFlags(Fold.getReg());
-      }
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
@@ -2740,9 +2730,6 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
 
   DefOMod->setImm(OMod);
   MRI->replaceRegWith(MI.getOperand(0).getReg(), OModSrcReg);
-  // Kill flags can be wrong if we replaced a def inside a loop with a def
-  // outside the loop.
-  MRI->clearKillFlags(OModSrcReg);
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
