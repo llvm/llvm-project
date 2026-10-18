@@ -940,15 +940,61 @@ func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf3
 
 #map = affine_map<(d0) -> (d0)>
 #map0 = affine_map<(d0) -> ()>
-
-func.func @vector_contract_to_scalar(%a: vector<4xf32>, %b: vector<4xf32>, %acc: f32) -> f32 {
-  %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4xf32>, vector<4xf32> into f32
-  return %r : f32
+module {
+  func.func @vector_contract_to_scalar_f32_from_1d(%a: vector<4xf32>, %b: vector<4xf32>, %acc: f32) -> f32 {
+    %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4xf32>, vector<4xf32> into f32
+    return %r : f32
+  }
 }
 
-// CHECK-LABEL: func @vector_contract_to_scalar(
+// CHECK-LABEL: func @vector_contract_to_scalar_f32_from_1d(
 // CHECK-SAME:    %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[ACC:.*]]: f32) -> f32 {
-// CHECK-NOT:     vector.extract_strided_slice
-// CHECK:         %[[R:.*]] = vector.contract
-// CHECK-SAME:      %[[A]], %[[B]], %[[ACC]] : vector<4xf32>, vector<4xf32> into f32
-// CHECK:         return %[[R]] : f32
+// CHECK:         %[[A0:.*]] = vector.extract_strided_slice %[[A]] offsets = [0], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
+// CHECK:         %[[B0:.*]] = vector.extract_strided_slice %[[B]] offsets = [0], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
+// CHECK:         %[[R0:.*]] = vector.contract {{.*}} %[[A0]], %[[B0]], %[[ACC]] : vector<2xf32>, vector<2xf32> into f32
+// CHECK:         %[[A1:.*]] = vector.extract_strided_slice %[[A]] offsets = [2], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
+// CHECK:         %[[B1:.*]] = vector.extract_strided_slice %[[B]] offsets = [2], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
+// CHECK:         %[[R1:.*]] = vector.contract {{.*}} %[[A1]], %[[B1]], %[[R0]] : vector<2xf32>, vector<2xf32> into f32
+// CHECK:         return %[[R1]] : f32
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+#map0 = affine_map<(d0) -> ()>
+module {
+  func.func @vector_contract_to_scalar_f16(%a: vector<8xf16>, %b: vector<8xf16>, %acc: f16) -> f16 {
+    %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<8xf16>, vector<8xf16> into f16
+    return %r : f16
+  }
+}
+
+// CHECK-LABEL: func @vector_contract_to_scalar_f16(
+// CHECK-SAME:    %[[A:.*]]: vector<8xf16>, %[[B:.*]]: vector<8xf16>, %[[ACC:.*]]: f16) -> f16 {
+// CHECK:         %[[A0:.*]] = vector.extract_strided_slice %[[A]] offsets = [0], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[B0:.*]] = vector.extract_strided_slice %[[B]] offsets = [0], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[R0:.*]] = vector.contract {{.*}} %[[A0]], %[[B0]], %[[ACC]] : vector<4xf16>, vector<4xf16> into f16
+// CHECK:         %[[A1:.*]] = vector.extract_strided_slice %[[A]] offsets = [4], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[B1:.*]] = vector.extract_strided_slice %[[B]] offsets = [4], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[R1:.*]] = vector.contract {{.*}} %[[A1]], %[[B1]], %[[R0]] : vector<4xf16>, vector<4xf16> into f16
+// CHECK:         return %[[R1]] : f16
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map0 = affine_map<(d0,d1) -> ()>
+module {
+  func.func @vector_contract_to_scalar_f32_from_2d(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %acc: f32) -> f32 {
+    %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction", "reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4x4xf32>, vector<4x4xf32> into f32
+    return %r : f32
+  }
+}
+
+// CHECK-LABEL: func @vector_contract_to_scalar_f32_from_2d(
+// CHECK-SAME:    %[[A:.*]]: vector<4x4xf32>, %[[B:.*]]: vector<4x4xf32>, %[[ACC:.*]]: f32) -> f32 {
+// CHECK:         %[[A0:.*]] = vector.extract_strided_slice %[[A]] offsets = [0, 0], sizes = [4, 2], strides = [1, 1] : vector<4x4xf32> to vector<4x2xf32>
+// CHECK:         %[[B0:.*]] = vector.extract_strided_slice %[[B]] offsets = [0, 0], sizes = [4, 2], strides = [1, 1] : vector<4x4xf32> to vector<4x2xf32>
+// CHECK:         %[[R0:.*]] = vector.contract {{.*}} %[[A0]], %[[B0]], %[[ACC]] : vector<4x2xf32>, vector<4x2xf32> into f32
+// CHECK:         %[[A1:.*]] = vector.extract_strided_slice %[[A]] offsets = [0, 2], sizes = [4, 2], strides = [1, 1] : vector<4x4xf32> to vector<4x2xf32>
+// CHECK:         %[[B1:.*]] = vector.extract_strided_slice %[[B]] offsets = [0, 2], sizes = [4, 2], strides = [1, 1] : vector<4x4xf32> to vector<4x2xf32>
+// CHECK:         %[[R1:.*]] = vector.contract {{.*}} %[[A1]], %[[B1]], %[[R0]] : vector<4x2xf32>, vector<4x2xf32> into f32
+// CHECK:         return %[[R1]] : f32
