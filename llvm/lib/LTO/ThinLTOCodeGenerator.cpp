@@ -598,8 +598,7 @@ void ThinLTOCodeGenerator::crossReferenceSymbol(StringRef Name) {
 }
 
 // TargetMachine factory
-std::unique_ptr<TargetMachine> TargetMachineBuilder::create(
-    const cl::LibraryOptionsContext &LibraryOptions) const {
+std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   std::string ErrMsg;
   const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, ErrMsg);
   if (!TheTarget) {
@@ -611,10 +610,8 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create(
   Features.getDefaultSubtargetFeatures(TheTriple);
   std::string FeatureStr = Features.getString();
 
-  TargetOptions TMOptions = Options;
-  TMOptions.MCOptions.LibraryOptions = &LibraryOptions;
   std::unique_ptr<TargetMachine> TM(
-      TheTarget->createTargetMachine(TheTriple, MCpu, FeatureStr, TMOptions,
+      TheTarget->createTargetMachine(TheTriple, MCpu, FeatureStr, Options,
                                      RelocModel, std::nullopt, CGOptLevel));
   assert(TM && "Cannot create target machine");
 
@@ -937,9 +934,8 @@ void ThinLTOCodeGenerator::optimize(Module &TheModule) {
   initTMBuilder(TMBuilder, TheModule.getTargetTriple());
 
   // Optimize now
-  optimizeModule(TheModule,
-                 *TMBuilder.create(TheModule.getContext().getLibraryOptions()),
-                 OptLevel, Freestanding, DebugPassManager, nullptr);
+  optimizeModule(TheModule, *TMBuilder.create(), OptLevel, Freestanding,
+                 DebugPassManager, nullptr);
 }
 
 /// Write out the generated object file, either from CacheEntryPath or from
@@ -1016,9 +1012,7 @@ void ThinLTOCodeGenerator::run() {
                                              /*IsImporting*/ false);
 
         // CodeGen
-        auto OutputBuffer = codegenModule(
-            *TheModule,
-            *TMBuilder.create(TheModule->getContext().getLibraryOptions()));
+        auto OutputBuffer = codegenModule(*TheModule, *TMBuilder.create());
         if (SavedObjectsDirectoryPath.empty())
           ProducedBinaries[count] = std::move(OutputBuffer);
         else
@@ -1205,9 +1199,8 @@ void ThinLTOCodeGenerator::run() {
         auto &ImportList = ImportLists[ModuleIdentifier];
         // Run the main process now, and generates a binary
         auto OutputBuffer = ProcessThinLTOModule(
-            *TheModule, *Index, ModuleMap,
-            *TMBuilder.create(TheModule->getContext().getLibraryOptions()),
-            ImportList, ExportList, GUIDPreservedSymbols,
+            *TheModule, *Index, ModuleMap, *TMBuilder.create(), ImportList,
+            ExportList, GUIDPreservedSymbols,
             ModuleToDefinedGVSummaries[ModuleIdentifier], CacheOptions,
             DisableCodeGen, SaveTempsDir, Freestanding, OptLevel, count,
             DebugPassManager);

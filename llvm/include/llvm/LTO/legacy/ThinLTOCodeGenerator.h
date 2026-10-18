@@ -48,8 +48,7 @@ struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
   std::optional<Reloc::Model> RelocModel;
   CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Aggressive;
 
-  LLVM_ABI std::unique_ptr<TargetMachine>
-  create(const cl::LibraryOptionsContext &LibraryOptions) const;
+  LLVM_ABI std::unique_ptr<TargetMachine> create() const;
 };
 
 /// This class define an interface similar to the LTOCodeGenerator, but adapted
@@ -60,10 +59,12 @@ struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
 /// codegenerator.
 class ThinLTOCodeGenerator {
 public:
-  /// run() assigns \p LibraryOptions, which must outlive the generator, to the
-  /// LLVMContexts it creates.
+  /// The target machines and the LLVMContexts that run() creates read
+  /// \p LibraryOptions, which must outlive the generator.
   explicit ThinLTOCodeGenerator(const cl::LibraryOptionsContext &LibraryOptions)
-      : LibraryOptions(LibraryOptions) {}
+      : LibraryOptions(LibraryOptions) {
+    TMBuilder.Options.MCOptions.LibraryOptions = &LibraryOptions;
+  }
 
   /// Add given module to the code generator.
   LLVM_ABI void addModule(StringRef Identifier, StringRef Data);
@@ -218,6 +219,7 @@ public:
   /// TargetMachine options
   void setTargetOptions(TargetOptions Options) {
     TMBuilder.Options = std::move(Options);
+    TMBuilder.Options.MCOptions.LibraryOptions = &LibraryOptions;
   }
 
   /// Enable the Freestanding mode: indicate that the optimizer should not

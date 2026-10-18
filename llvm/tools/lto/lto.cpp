@@ -94,9 +94,8 @@ static enum class OptParsingState {
   Done       // After maybeParseOptions is called.
 } optionParsingState = OptParsingState::NotParsed;
 
-// The library options of lto_set_debug_options and thinlto_debug_options.
-static cl::LibraryOptionsContext LibraryOptions;
-
+// lto_set_debug_options and thinlto_debug_options parse library options into
+// LTOContext; code generators in a local context copy them from it.
 static LLVMContext *LTOContext = nullptr;
 
 // Records -mllvm arguments parsed through the legacy debug-option APIs.
@@ -401,10 +400,9 @@ static lto_code_gen_t createCodeGen(bool InLocalContext) {
   LibLTOCodeGenerator *CodeGen =
       InLocalContext ? new LibLTOCodeGenerator(std::make_unique<LLVMContext>())
                      : new LibLTOCodeGenerator();
-  // An empty assign would drop the options that lto_codegen_debug_options
-  // parsed into the shared LTOContext.
-  if (!LibraryOptions.args().empty())
-    CodeGen->getContext().getLibraryOptions().assign(LibraryOptions);
+  if (InLocalContext)
+    CodeGen->getContext().getLibraryOptions().assign(
+        LTOContext->getLibraryOptions());
   CodeGen->setTargetOptions(Options);
   return wrap(CodeGen);
 }
@@ -516,9 +514,10 @@ bool lto_codegen_compile_to_file(lto_code_gen_t cg, const char **name) {
 void lto_set_debug_options(const char *const *options, int number) {
   assert(optionParsingState == OptParsingState::NotParsed &&
          "option processing already happened");
+  lto_initialize();
   std::vector<const char *> CodegenArgv(1, "libLTO");
   append_range(CodegenArgv, ArrayRef(options, number));
-  cl::parseCommandLineOptions(LibraryOptions, CodegenArgv);
+  cl::parseCommandLineOptions(LTOContext->getLibraryOptions(), CodegenArgv);
   optionParsingState = OptParsingState::Early;
 }
 
@@ -561,7 +560,8 @@ lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
 
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
-  ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator(LibraryOptions);
+  ThinLTOCodeGenerator *CodeGen =
+      new ThinLTOCodeGenerator(LTOContext->getLibraryOptions());
   CodeGen->setMllvmArgs(ThinLTOMllvmArgs);
   CodeGen->setTargetOptions(
       codegen::InitTargetOptionsFromCodeGenFlags(Triple()));
@@ -641,9 +641,10 @@ void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
 void thinlto_debug_options(const char *const *options, int number) {
   // If options were requested, parse and retain them.
   if (number && options) {
+    lto_initialize();
     std::vector<const char *> CodegenArgv(1, "libLTO");
     append_range(CodegenArgv, ArrayRef<const char *>(options, number));
-    cl::parseCommandLineOptions(LibraryOptions, CodegenArgv);
+    cl::parseCommandLineOptions(LTOContext->getLibraryOptions(), CodegenArgv);
     ThinLTOMllvmArgs.assign(options, options + number);
   }
 }
