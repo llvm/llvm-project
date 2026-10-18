@@ -1484,3 +1484,17 @@ void foo() {
 }
 
 }
+
+namespace GH175713 {
+
+struct A {
+  void f(this A&) {
+    auto l = [](auto g, decltype(g(this))){}; // expected-error {{invalid use of 'this' in a function with an explicit object parameter}}
+  }
+};
+
+inline void g() {
+  auto l = [](this decltype(1()) self) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+}
+
+}

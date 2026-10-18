@@ -121,3 +121,10 @@ struct Bar {
 // This used to crash when trying to get the layout of B.
 Bar x;
 }
+
+namespace GH150733 {
+auto L = [](auto a) { // expected-error {{'auto' not allowed in lambda parameter before C++14}}
+  auto M = [](decltype(a)) -> { // expected-error {{expected a type}}
+  };
+};
+}

@@ -222,3 +222,49 @@ B x;
 static_assert(x.a == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
                            ref-note {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
 } // namespace test18
+
+namespace GH175713 {
+struct A {
+  void f() {
+    auto l = [](int g, decltype(g(this))){}; // expected-error {{called object type 'int' is not a function or function pointer}}
+  }
+};
+
+inline void inline_function() {
+  auto l = [](decltype(1()) x) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+}
+
+template <typename T> struct S {
+  void f() {
+    auto l = [](decltype(1()) x) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+  }
+};
+void instantiate() { S<int>().f(); }
+
+void nested() {
+  auto outer = [](auto x) {
+    auto inner = [](decltype(1()) y) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+  };
+}
+
+struct DefaultArgument {
+  void f(int = ((void)[](decltype(1()) x) {}, 0)); // expected-error {{called object type 'int' is not a function or function pointer}}
+};
+
+inline auto inline_variable = [](decltype(1()) x) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+auto variable = [](decltype(1()) x) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+
+inline void trailing_return_type() {
+  auto l = [](int) -> decltype(1()) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+}
+
+inline void default_argument() {
+  auto l = [](int x = 1()) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+}
+
+template <typename T> void dependent(T t) {
+  auto l = [](decltype(t) x, decltype(t + 1) y) {};
+  l(t, t);
+}
+void instantiate_dependent() { dependent(0); }
+} // namespace GH175713
