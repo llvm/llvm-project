@@ -64,16 +64,20 @@
 // UNUSED-NEXT: warning: argument unused during compilation: '-ftime-trace-compress=none'
 // UNUSED-NOT:  warning:
 
+// RUN: %clang -### -c -ftime-trace -ftime-trace-compress=zstd -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-ZSTD
+// COMPRESS-ZSTD: -cc1{{.*}} "-ftime-trace=e/a.json.zst" "-ftime-trace-compress=zstd"
+
 // RUN: %clang -### -c -ftime-trace -ftime-trace-compress=zstd -ftime-trace-compress=none -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-OVERRIDE-NONE
-// RUN: %clang -### -c -ftime-trace -ftime-trace-compress=zstd -ftime-trace-compress=infer -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-OVERRIDE-NONE
-// COMPRESS-OVERRIDE-NONE: -cc1{{.*}} "-ftime-trace=e/a.json"
-// COMPRESS-OVERRIDE-NONE-NOT: "-ftime-trace-compress
+// COMPRESS-OVERRIDE-NONE: -cc1{{.*}} "-ftime-trace=e/a.json" "-ftime-trace-compress=none"
+
+// RUN: %clang -### -c -ftime-trace -ftime-trace-compress=zstd -ftime-trace-compress=infer -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-OVERRIDE-INFER
+// COMPRESS-OVERRIDE-INFER: -cc1{{.*}} "-ftime-trace=e/a.json" "-ftime-trace-compress=infer"
 
 // RUN: %clang -### -c -ftime-trace=foo.json.zst -ftime-trace-compress=none -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-NONE
 // COMPRESS-NONE: -cc1{{.*}} "-ftime-trace=foo.json.zst" "-ftime-trace-compress=none"
 
-// RUN: not %clang -### -c -ftime-trace -ftime-trace-compress=invalid d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-INVALID
-// COMPRESS-INVALID: error: unsupported argument 'invalid' to option '-ftime-trace-compress='
+// RUN: not %clangxx -S -no-canonical-prefixes -ftime-trace -ftime-trace-compress=invalid -o out %s 2>&1 | FileCheck %s --check-prefix=COMPRESS-INVALID
+// COMPRESS-INVALID: error: invalid value 'invalid' in '-ftime-trace-compress=invalid'
 
 template <typename T>
 struct Struct {

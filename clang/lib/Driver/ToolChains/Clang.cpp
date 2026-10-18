@@ -46,13 +46,11 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -7346,32 +7344,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
-    llvm::TimeTraceCompression Compress = llvm::TimeTraceCompression::Infer;
-    if (const Arg *CompressArg =
-            Args.getLastArg(options::OPT_ftime_trace_compress_EQ)) {
-      StringRef Value = CompressArg->getValue();
-      if (Value == "none")
-        Compress = llvm::TimeTraceCompression::None;
-      else if (Value == "zstd")
-        Compress = llvm::TimeTraceCompression::Zstd;
-      else if (Value == "infer")
-        Compress = llvm::TimeTraceCompression::Infer;
-      else
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << CompressArg->getSpelling() << Value;
-    }
-    if (Compress == llvm::TimeTraceCompression::Infer)
-      Compress = llvm::inferTimeTraceCompressionFromPath(Name);
-    if (Compress == llvm::TimeTraceCompression::Zstd) {
-      if (llvm::compression::zstd::isAvailable())
-        CmdArgs.push_back("-ftime-trace-compress=zstd");
-      else
-        D.Diag(diag::err_drv_time_trace_compression_unavailable) << "zstd";
-    } else if (Compress == llvm::TimeTraceCompression::None &&
-               llvm::inferTimeTraceCompressionFromPath(Name) !=
-                   llvm::TimeTraceCompression::None) {
-      CmdArgs.push_back("-ftime-trace-compress=none");
-    }
+    Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_compress_EQ);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
