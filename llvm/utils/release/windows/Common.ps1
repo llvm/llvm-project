@@ -153,10 +153,11 @@ function Test-ExecutableVersion {
     }
 }
 
-function ConvertTo-ForwardSlashPath {
+function ConvertTo-UnixPath {
     <#
     .SYNOPSIS
-        Convert backslashes to forward slashes (CMake expects this for compiler paths).
+        Convert a Windows path to a Unix-style path. CMake expects forward
+        slashes in compiler and install paths.
     #>
     param([string]$Path)
     return $Path.Replace('\', '/')

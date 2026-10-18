@@ -138,7 +138,7 @@ function Build-LibXml2 {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
-        $script:LibXmlInstallDir = ConvertTo-ForwardSlashPath (Join-Path $PWD 'install')
+        $script:LibXmlInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
         Pop-Location
     }
@@ -176,7 +176,7 @@ function Build-Zlib {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
-        $script:ZlibInstallDir = ConvertTo-ForwardSlashPath (Join-Path $PWD 'install')
+        $script:ZlibInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
         Pop-Location
     }
@@ -217,7 +217,7 @@ function Build-Zstd {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$SourceDir/build/cmake"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
-        $script:ZstdInstallDir = ConvertTo-ForwardSlashPath (Join-Path $PWD 'install')
+        $script:ZstdInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
         Pop-Location
     }
