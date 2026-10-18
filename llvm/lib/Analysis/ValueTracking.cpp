@@ -6116,14 +6116,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     // Handling the -X * X and X * -X cases
     Value *Src = nullptr;
+    Instruction *Neg = nullptr;
+    if (match(Op, m_c_FMul(m_Value(Src),
+                           m_Instruction(Neg, m_FNeg(m_Deferred(Src))))) &&
+        Neg->getOpcode() == Instruction::FNeg) {
 
-    if (match(LHS, m_FNeg(m_Specific(RHS)))) {
-      Src = RHS;
-    } else if (match(RHS, m_FNeg(m_Specific(LHS)))) {
-      Src = LHS;
-    }
-
-    if (Src) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(Src, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);

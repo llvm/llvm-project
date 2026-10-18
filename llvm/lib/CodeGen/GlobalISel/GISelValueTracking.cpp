@@ -1491,7 +1491,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     // Match (-x) * x or x * (-x).
     Register NegSrc;
-
     if (mi_match(A, MRI, m_GFNeg(m_SpecificReg(B))))
       NegSrc = B;
     else if (mi_match(B, MRI, m_GFNeg(m_SpecificReg(A))))
