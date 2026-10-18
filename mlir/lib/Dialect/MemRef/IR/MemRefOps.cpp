@@ -2736,6 +2736,10 @@ public:
         continue;
       }
 
+      // Bail on invalid IR.
+      if (sizeOpt.value() < 0)
+        return rewriter.notifyMatchFailure(op, "negative output shape size");
+
       newOutputShapeSizes.push_back(sizeOpt.value());
       newOutputShape[dimIdx] = rewriter.getIndexAttr(sizeOpt.value());
     }

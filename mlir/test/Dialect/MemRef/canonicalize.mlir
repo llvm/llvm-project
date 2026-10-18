@@ -568,6 +568,20 @@ func.func @fold_memref_expand_with_static_to_dynamic_cast(%arg0: memref<8x4xf32>
 
 // -----
 
+// Negative output shape sizes must not be folded into the static type.
+// CHECK-LABEL:   func.func @no_fold_memref_expand_cast_negative_size(
+// CHECK:           %[[CAST:.*]] = memref.cast
+// CHECK:           memref.expand_shape %[[CAST]] {{.*}} : memref<?x4xf32> into memref<?x1x4x4xf32>
+func.func @no_fold_memref_expand_cast_negative_size(%arg0: memref<8x4xf32>) -> memref<?x1x4x4xf32> {
+  %c-1 = arith.constant -1 : index
+  %cast = memref.cast %arg0 : memref<8x4xf32> to memref<?x4xf32>
+  %expand_shape = memref.expand_shape %cast [[0, 1, 2], [3]] output_shape [%c-1, 1, 4, 4]
+      : memref<?x4xf32> into memref<?x1x4x4xf32>
+  return %expand_shape : memref<?x1x4x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @fold_memref_expand_static_to_dynamic_partial(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<8x?xf32>) -> memref<1x8x1x?xf32> {
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
