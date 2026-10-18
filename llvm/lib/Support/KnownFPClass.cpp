@@ -986,6 +986,7 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal))
     Known.knownNot(fcPosSubnormal | fcPosNormal);
+
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
   return Known;
