@@ -417,6 +417,26 @@ features cannot lower the translation-unit ABI level;
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
 
+- A thread safety attribute on a member of a nested struct or union, named or
+  anonymous, may name a member of the enclosing struct.
+
+  ```c
+  struct Scratch {
+    struct Mutex lock;
+    union {
+      void *src GUARDED_BY(lock);
+    };
+    struct Dst {
+      unsigned len GUARDED_BY(lock);
+    } dst;
+  };
+  ```
+
+  When the enclosing object cannot be reached, as from a pointer to the
+  nested struct alone, the requirement is reported with the field's record,
+  such as `inner->Scratch::lock`, instead of as a field the nested struct
+  does not have and cannot name.
+
 ### Improvements to Clang's diagnostics
 
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized

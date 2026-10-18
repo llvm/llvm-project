@@ -479,22 +479,107 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   if (const auto *VarD = dyn_cast<VarDecl>(VD))
     return translateVariable(VarD, Ctx);
 
+  // A member named through anonymous structs/unions is an IndirectFieldDecl;
+  // name it by its field.
+  const auto *IFD = dyn_cast<IndirectFieldDecl>(VD);
+  if (IFD)
+    VD = IFD->getAnonField();
+
   // FIXME: A FieldDecl reached via a DeclRefExpr should ideally be modelled as
   // a MemberExpr with an artificial self in the AST (e.g. ImplicitThisExpr as a
   // C equivalent of CXXThisExpr). Until such AST support is available, project
   // the field on the current SelfArg, so implicit member references in C and in
-  // parameter attributes are not lost.
-  if (const auto *FD = dyn_cast<FieldDecl>(VD); FD && Ctx && Ctx->SelfArg) {
-    til::SExpr *BE = translateCXXThisExpr(nullptr, Ctx);
-    til::SExpr *E = new (Arena) til::SApply(BE);
-    til::Project *P = new (Arena) til::Project(E, FD);
-    if (hasAnyPointerType(BE))
-      P->setArrow(true);
-    return P;
+  // parameter attributes are not lost. (A chain rooted in a VarDecl, from a
+  // namespace-scope anonymous union, is a named object instead.)
+  if (const auto *FD = dyn_cast<FieldDecl>(VD);
+      FD && Ctx && Ctx->SelfArg && !(IFD && IFD->getVarDecl())) {
+    // Project each anonymous member of the chain in turn.
+    SmallVector<const FieldDecl *> Chain;
+    if (IFD)
+      for (const NamedDecl *ND : IFD->chain())
+        Chain.push_back(cast<FieldDecl>(ND));
+    else
+      Chain.push_back(FD);
+    bool Found;
+    til::SExpr *E = translateFieldOwner(Chain.front()->getParent(), Ctx, Found);
+    til::Project *P = nullptr;
+    for (const FieldDecl *Member : Chain)
+      E = P = translateProject(E, Member);
+    assert(P && "a field or a non-empty chain");
+    // Say whose field this is when self does not have it.
+    P->setQualified(!Found);
+    return E;
   }
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
+}
+
+/// Translate the object owning \p Owner's field that an attribute names without
+/// a base expression. Normally that is the self argument, the object whose
+/// member carries the attribute. But a field of an enclosing record may be
+/// named from a nested one, anonymous or named, so walk out of the subobject
+/// accesses reaching self (members, array elements, `*`, and `&` back from a
+/// pointer to the object it points to) to the nearest object of type \p Owner,
+/// or derived from it. A pointer member's pointee is not part of the object, so
+/// the walk stops at one. Keep self if there is none, and clear \p Found.
+til::SExpr *SExprBuilder::translateFieldOwner(const RecordDecl *Owner,
+                                              CallingContext *Ctx,
+                                              bool &Found) {
+  // An already translated self has no type to check; take it as the owner.
+  Found = true;
+  const auto *SelfArg = dyn_cast_if_present<const Expr *>(Ctx->SelfArg);
+  if (!SelfArg)
+    return translateCXXThisExpr(nullptr, Ctx);
+  Found = false;
+  for (const Expr *E = SelfArg;;) {
+    // Up to casts, E is either the object or a pointer to it.
+    const Expr *Inner = E->IgnoreParenImpCasts();
+    QualType T = Inner->getType();
+    bool Pointer = T->isAnyPointerType();
+    if (Pointer)
+      T = T->getPointeeType();
+    if (const auto *RD = T->getAsRecordDecl()) {
+      if (declaresSameEntity(RD, Owner)) {
+        SelfArg = E;
+        Found = true;
+        break;
+      }
+      const auto *CRD = dyn_cast<CXXRecordDecl>(RD);
+      const auto *COwner = dyn_cast<CXXRecordDecl>(Owner);
+      if (CRD && COwner && CRD->hasDefinition() && !CRD->isDependentType() &&
+          CRD->isDerivedFrom(COwner)) {
+        SelfArg = E;
+        Found = true;
+        break;
+      }
+    }
+    const auto *UO = dyn_cast<UnaryOperator>(Inner);
+    if (Pointer) {
+      // Only the address of an object leads back to it.
+      if (!UO || UO->getOpcode() != UO_AddrOf)
+        break;
+      E = UO->getSubExpr();
+    } else if (const auto *ME = dyn_cast<MemberExpr>(Inner)) {
+      E = ME->getBase();
+    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Inner)) {
+      E = ASE->getBase();
+    } else if (UO && UO->getOpcode() == UO_Deref) {
+      E = UO->getSubExpr();
+    } else {
+      break;
+    }
+  }
+  return translate(SelfArg, Ctx->Prev);
+}
+
+til::Project *SExprBuilder::translateProject(til::SExpr *BE,
+                                             const ValueDecl *D) {
+  til::SExpr *E = new (Arena) til::SApply(BE);
+  til::Project *P = new (Arena) til::Project(E, D);
+  if (hasAnyPointerType(BE))
+    P->setArrow(true);
+  return P;
 }
 
 til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
@@ -526,16 +611,12 @@ static const CXXMethodDecl *getFirstVirtualDecl(const CXXMethodDecl *D) {
 til::SExpr *SExprBuilder::translateMemberExpr(const MemberExpr *ME,
                                               CallingContext *Ctx) {
   til::SExpr *BE = translate(ME->getBase(), Ctx);
-  til::SExpr *E  = new (Arena) til::SApply(BE);
 
   const auto *D = cast<ValueDecl>(ME->getMemberDecl()->getCanonicalDecl());
   if (const auto *VD = dyn_cast<CXXMethodDecl>(D))
     D = getFirstVirtualDecl(VD);
 
-  til::Project *P = new (Arena) til::Project(E, D);
-  if (hasAnyPointerType(BE))
-    P->setArrow(true);
-  return P;
+  return translateProject(BE, D);
 }
 
 til::SExpr *SExprBuilder::translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
@@ -633,8 +714,13 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
         if (DRE->getDecl()->isCXXInstanceMember()) {
           // This is a pointer-to-member expression, e.g. &MyClass::mu_.
           // We interpret this syntax specially, as a wildcard.
+          // Name a member of an anonymous struct/union by its field, as a
+          // projection of it does.
+          const ValueDecl *D = DRE->getDecl();
+          if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D))
+            D = IFD->getAnonField();
           auto *W = new (Arena) til::Wildcard();
-          return new (Arena) til::Project(W, DRE->getDecl());
+          return new (Arena) til::Project(W, D);
         }
       }
     }

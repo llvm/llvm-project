@@ -172,6 +172,38 @@ void test() {
 }
 ```
 
+A member of a nested struct or union, whether named or anonymous, may be
+guarded by a member of the enclosing struct. The guard is the member of the
+enclosing object through which the guarded member is reached, so each `Scratch`
+below has its own `lock`. A name resolves to the innermost struct declaring
+it. Members of an anonymous struct or union may likewise be named by attributes on
+the enclosing struct.
+
+```c++
+struct Scratch {
+  Mutex lock;
+  union {
+    void *src GUARDED_BY(lock);
+  };
+  struct Dst {
+    unsigned len GUARDED_BY(lock);
+  } dst;
+};
+
+void test(Scratch *s, Scratch *t) {
+  s->lock.Lock();
+  s->src = 0;         // OK.
+  s->dst.len = 0;     // OK.
+  t->dst.len = 0;     // Warning!  Requires t->lock.
+  s->lock.Unlock();
+}
+```
+
+All accesses must name the full path, so that the analysis can see which
+enclosing object's lock is required. For example, after `auto *dst = &s->dst;`,
+writing `dst->len` warns that it requires `dst->Scratch::lock`: the `lock` is
+`Scratch`'s, but no `Scratch` is reachable from `dst`.
+
 When multiple capabilities are listed:
 
 - **Write** access requires all listed capabilities to be held exclusively.
