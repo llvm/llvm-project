@@ -62404,16 +62404,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       [[fallthrough]];
     case X86ISD::BLENDV:
-      // TODO: BLENDV should use CombineSubOperand.
       if (!IsSplat && VT.is256BitVector() && NumOps == 2 &&
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(Ctx);
-        if (TLI.isTypeLegal(SelVT))
-          return DAG.getNode(
-              Opcode, DL, VT, ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
-              ConcatSubOperand(VT, Ops, 1), ConcatSubOperand(VT, Ops, 2));
+        if (TLI.isTypeLegal(SelVT)) {
+          SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+          SDValue Concat2 = CombineSubOperand(VT, Ops, 2);
+          if (Concat1 || Concat2) {
+            Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
+            Concat2 = Concat2 ? Concat2 : ConcatSubOperand(VT, Ops, 2);
+            return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(SelVT, Ops, 0),
+                               Concat1, Concat2);
+          }
+        }
       }
       break;
     }
