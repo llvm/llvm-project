@@ -521,6 +521,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
+    libc.src.unistd.setegid
+    libc.src.unistd.seteuid
     libc.src.unistd.setgid
     libc.src.unistd.setpgid
     libc.src.unistd.setregid
