@@ -4271,6 +4271,11 @@ def : Pat<(f16 (X86selects VK1WM:$mask, (f16 FR16X:$src1), (f16 FR16X:$src2))),
 def : Pat<(f16 (X86selects VK1WM:$mask, (f16 FR16X:$src1), fp16imm0)),
           (COPY_TO_REGCLASS (v8f16 (VMOVSHZrrkz VK1WM:$mask, (v8f16 (IMPLICIT_DEF)),
            (v8f16 (COPY_TO_REGCLASS FR16X:$src1, VR128X)))), FR16X)>;
+
+def : Pat<(v8f16 (X86selects VK1WM:$mask, (v8f16 VR128X:$src1), (v8f16 VR128X:$src2))),
+          (VMOVSHZrrk VR128X:$src2, VK1WM:$mask, VR128X:$src1, VR128X:$src1)>;
+def : Pat<(v8f16 (X86selects VK1WM:$mask, (v8f16 VR128X:$src1), (v8f16 immAllZerosV))),
+          (VMOVSHZrrkz VK1WM:$mask, VR128X:$src1, VR128X:$src1)>;
 }
 
 defm : avx512_store_scalar_lowering_subreg2<"VMOVSSZ", avx512vl_f32_info,
