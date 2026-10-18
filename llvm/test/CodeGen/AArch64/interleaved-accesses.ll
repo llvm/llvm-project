@@ -28,6 +28,8 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for store_ptrvec_factor4_intrinsic
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for store_undef_mask_factor3_intrinsic
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for store_undef_mask_factor4_intrinsic
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for deinterleave3_poison
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for interleave3_poison
 
 define void @load_factor2(ptr %ptr) {
 ; NEON-IAENABLED-LABEL: load_factor2:
@@ -3011,23 +3013,12 @@ define <4 x i1> @load_large_vector_intrinsic(ptr %p) {
 }
 
 define void @store_factor2_intrinsic(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
-; NEON-IAENABLED-LABEL: store_factor2_intrinsic:
-; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
-; NEON-IAENABLED-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
-; NEON-IAENABLED-NEXT:    st2 { v0.8b, v1.8b }, [x0]
-; NEON-IAENABLED-NEXT:    ret
-;
-; NEON-IADISABLED-LABEL: store_factor2_intrinsic:
-; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NEON-IADISABLED-NEXT:    // kill: def $d1 killed $d1 def $q1
-; NEON-IADISABLED-NEXT:    adrp x8, .LCPI43_0
-; NEON-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
-; NEON-IADISABLED-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
-; NEON-IADISABLED-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; NEON-IADISABLED-NEXT:    str q0, [x0]
-; NEON-IADISABLED-NEXT:    ret
+; NEON-LABEL: store_factor2_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; NEON-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; NEON-NEXT:    st2 { v0.8b, v1.8b }, [x0]
+; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor2_intrinsic:
 ; NO_NEON:       // %bb.0:
@@ -3071,25 +3062,15 @@ define void @store_factor2_intrinsic(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
 }
 
 define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
-; NEON-IAENABLED-LABEL: store_factor2_wide_intrinsic:
-; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    mov v5.16b, v2.16b
-; NEON-IAENABLED-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
-; NEON-IAENABLED-NEXT:    mov v4.16b, v0.16b
-; NEON-IAENABLED-NEXT:    mov v2.16b, v1.16b
-; NEON-IAENABLED-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
-; NEON-IAENABLED-NEXT:    st2 { v2.4s, v3.4s }, [x0]
-; NEON-IAENABLED-NEXT:    ret
-;
-; NEON-IADISABLED-LABEL: store_factor2_wide_intrinsic:
-; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    zip2 v4.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    zip2 v3.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    stp q1, q4, [x0, #32]
-; NEON-IADISABLED-NEXT:    stp q0, q3, [x0]
-; NEON-IADISABLED-NEXT:    ret
+; NEON-LABEL: store_factor2_wide_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov v5.16b, v2.16b
+; NEON-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
+; NEON-NEXT:    mov v4.16b, v0.16b
+; NEON-NEXT:    mov v2.16b, v1.16b
+; NEON-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
+; NEON-NEXT:    st2 { v2.4s, v3.4s }, [x0]
+; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor2_wide_intrinsic:
 ; NO_NEON:       // %bb.0:
@@ -3772,19 +3753,12 @@ define void @store_general_mask_factor4_undefmulti_intrinsic(ptr %ptr, <32 x i32
 }
 
 define void @store_ptrvec_factor2_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1) {
-; NEON-IAENABLED-LABEL: store_ptrvec_factor2_intrinsic:
-; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; NEON-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
-; NEON-IAENABLED-NEXT:    ret
-;
-; NEON-IADISABLED-LABEL: store_ptrvec_factor2_intrinsic:
-; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
-; NEON-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
-; NEON-IADISABLED-NEXT:    ret
+; NEON-LABEL: store_ptrvec_factor2_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_ptrvec_factor2_intrinsic:
 ; NO_NEON:       // %bb.0:
@@ -3865,19 +3839,12 @@ define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %
 }
 
 define void @store_undef_mask_factor2_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
-; NEON-IAENABLED-LABEL: store_undef_mask_factor2_intrinsic:
-; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; NEON-IAENABLED-NEXT:    st2 { v0.4s, v1.4s }, [x0]
-; NEON-IAENABLED-NEXT:    ret
-;
-; NEON-IADISABLED-LABEL: store_undef_mask_factor2_intrinsic:
-; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    zip2 v2.4s, v0.4s, v1.4s
-; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v1.4s
-; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
-; NEON-IADISABLED-NEXT:    ret
+; NEON-LABEL: store_undef_mask_factor2_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_undef_mask_factor2_intrinsic:
 ; NO_NEON:       // %bb.0:
@@ -3991,6 +3958,49 @@ define void @store_undef_mask_factor4_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i3
   store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
   ret void
 }
+
+define <4 x float> @deinterleave3_poison() {
+; NEON-LABEL: deinterleave3_poison:
+; NEON:       // %bb.0: // %entry
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: deinterleave3_poison:
+; NO_NEON:       // %bb.0: // %entry
+; NO_NEON-NEXT:    ret
+;
+; CHECK-GI-LABEL: deinterleave3_poison:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ret
+entry:
+  %ldN = call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> poison)
+  %0 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 2
+  %1 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 1
+  %2 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 0
+  %l29 = fmul fast <4 x float> %0, %1
+  %l46 = fmul fast <4 x float> %l29, %2
+  ret <4 x float> %l46
+}
+
+define <12 x i32> @interleave3_poison() {
+; NEON-LABEL: interleave3_poison:
+; NEON:       // %bb.0: // %entry
+; NEON-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x8]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: interleave3_poison:
+; NO_NEON:       // %bb.0: // %entry
+; NO_NEON-NEXT:    ret
+;
+; CHECK-GI-LABEL: interleave3_poison:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x8]
+; CHECK-GI-NEXT:    ret
+entry:
+  %int = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> poison, <4 x i32> poison, <4 x i32> poison)
+  ret <12 x i32> %int
+}
+
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; NO_NEON-IADISABLED: {{.*}}
 ; NO_NEON-IAENABLED: {{.*}}

@@ -1993,7 +1993,7 @@ public:
                      ClassTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return PartialSpec->PartialSpecialization;
 
     return cast<ClassTemplateDecl *>(SpecializedTemplate);
@@ -2012,7 +2012,7 @@ public:
   /// itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
@@ -2766,7 +2766,7 @@ public:
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return PartialSpec->PartialSpecialization;
 
     return cast<VarTemplateDecl *>(SpecializedTemplate);
@@ -2785,7 +2785,7 @@ public:
   /// specialization itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();

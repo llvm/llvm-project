@@ -267,3 +267,54 @@ define i32 @same_source_shifted_signbit_use2(i32 %x) {
   %c = sext i8 %b to i32
   ret i32 %c
 }
+
+define i32 @lshr_signbits(i32 %x) {
+; CHECK-LABEL: @lshr_signbits(
+; CHECK-NEXT:    [[S:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[S]], 32
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[Y]], 17
+; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = sext i32 %x to i64
+  %y = add nsw i64 %s, 32
+  %a = lshr i64 %y, 17
+  %b = trunc i64 %a to i16
+  %c = sext i16 %b to i32
+  ret i32 %c
+}
+
+; negative test - sdiv by 2^41 has 42 sign bits: 42 + 6 is not > 48
+
+define i32 @lshr_signbits_not_enough(i64 %x) {
+; CHECK-LABEL: @lshr_signbits_not_enough(
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i64 [[X:%.*]], 2199023255552
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[Y]], 6
+; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i16
+; CHECK-NEXT:    [[C:%.*]] = sext i16 [[B]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %y = sdiv i64 %x, 2199023255552
+  %a = lshr i64 %y, 6
+  %b = trunc i64 %a to i16
+  %c = sext i16 %b to i32
+  ret i32 %c
+}
+
+; negative test - shift amount is greater than the number of bits truncated
+
+define i32 @lshr_signbits_shift_too_big(i32 %x) {
+; CHECK-LABEL: @lshr_signbits_shift_too_big(
+; CHECK-NEXT:    [[S:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[S]], 32
+; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[Y]], 49
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[A]] to i32
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %s = sext i32 %x to i64
+  %y = add nsw i64 %s, 32
+  %a = lshr i64 %y, 49
+  %b = trunc i64 %a to i16
+  %c = sext i16 %b to i32
+  ret i32 %c
+}

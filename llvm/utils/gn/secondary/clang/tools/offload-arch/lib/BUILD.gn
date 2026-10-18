@@ -10,5 +10,6 @@ static_library("lib") {
     "AMDGPUArchByKFD.cpp",
     "LevelZeroArch.cpp",
     "NVPTXArch.cpp",
+    "OffloadArchOptions.cpp",
   ]
 }

@@ -53,14 +53,14 @@ class Runs(NamedTuple):
 # The repository and the workflow driven by this tool, and the ref to use for the
 # definition of the workflow.
 REPOSITORY = 'llvm/llvm-project'
-WORKFLOW = 'libcxx-benchmark-commit.yml'
+WORKFLOW = 'libcxx-lnt-pipeline.yml'
 WORKFLOW_REF = 'main'
 
 # The name the benchmark workflow gives its runs. What a run is benchmarking can
 # only be recovered from its name (the inputs a workflow was dispatched with are
 # not available from the API) so this format is a contract with the
-# libcxx-benchmark-commit.yml workflow.
-RUN_NAME_PREFIX = '[libc++] Run benchmark suite against '
+# libcxx-lnt-pipeline.yml workflow.
+RUN_NAME_PREFIX = '[libc++] LNT pipeline: '
 RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)( \(dry run\))?$')
 
 

@@ -2246,8 +2246,8 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   TestAndClearIgnoreResultAssign();
 
-  // Handle the vector case.  The base must be a vector, the index must be an
-  // integer value.
+  // HLSL matrix loads are normalized to column-major register values, but
+  // non-HLSL matrix values retain the selected memory layout.
   Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
@@ -2256,8 +2256,11 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
 
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                              /*IsRowMajor=*/false);
+  bool IsMatrixRowMajor =
+      !CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+  Value *Idx =
+      MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());

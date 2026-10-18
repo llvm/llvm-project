@@ -23,8 +23,8 @@
 #include "lldb/Utility/Status.h"
 
 #include "NativeProcessFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_x86_64.h"
 #include <optional>
 
 using namespace lldb_private;
@@ -246,14 +246,14 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
-    // 32-bit hosts run with a RegisterContextFreeBSD_i386 context.
-    return new RegisterContextFreeBSD_i386(target_arch);
+    // 32-bit hosts run with a RegisterInfoFreeBSD_i386 context.
+    return new RegisterInfoFreeBSD_i386(target_arch);
   } else {
     assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
            "Register setting path assumes this is a 64-bit host");
     // X86_64 hosts know how to work with 64-bit and 32-bit EXEs using the
     // x86_64 register context.
-    return new RegisterContextFreeBSD_x86_64(target_arch);
+    return new RegisterInfoFreeBSD_x86_64(target_arch);
   }
 }
 

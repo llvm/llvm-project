@@ -1,0 +1,73 @@
+# This file defines a workflow that runs the libc++ benchmarks against the specified version
+# of libstdc++ and (optionally) submits the results to a LNT instance.
+
+name: "[libc++] LNT pipeline (libstdc++)"
+
+run-name: "[libc++] LNT pipeline: libstdc++ ${{ inputs.libstdcxx-version }} on ${{ inputs.lnt-machine }}${{ !inputs.submit-lnt && ' (dry run)' || '' }}"
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      libstdcxx-version:
+        description: 'The version of libstdc++ to benchmark. This is the major version of GCC being installed to get libstdc++ (e.g. 16).'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The LNT machine configuration to use when benchmarking and to report results as'
+        required: true
+        type: string
+      benchmark-suite-override:
+        description: |
+          Override the version of the benchmark suite to use (a LLVM monorepo SHA). By default, the version pinned
+          for this machine in machines.json is used. This override can be used to dry-run benchmarks with arbitrary
+          commits of the benchmark suite, but only the version pinned in machines.json can be used when actually
+          submitting to LNT.
+        required: false
+        type: string
+      filter:
+        description: 'An optional filter to determine which benchmarks to run'
+        required: false
+        type: string
+      submit-lnt:
+        description: 'Whether to submit the results to LNT -- dry-run unless opted in'
+        required: false
+        type: boolean
+        default: false
+      lnt-url:
+        description: 'The URL of the LNT instance to submit to'
+        required: false
+        type: string
+        default: https://lnt.llvm.org
+
+jobs:
+  # Validate the inputs and select the configuration of the machine to benchmark on.
+  validate:
+    uses: $/.github/workflows/libcxx-lnt-validate.yml
+    with:
+      lnt-machine: ${{ inputs.lnt-machine }}
+      benchmark-suite-override: ${{ inputs.benchmark-suite-override }}
+      submit-lnt: ${{ inputs.submit-lnt }}
+
+  benchmark:
+    needs:
+      - validate
+    uses: $/.github/workflows/libcxx-run-libstdcxx-benchmarks.yml
+    with:
+      libstdcxx-version: ${{ inputs.libstdcxx-version }}
+      lnt-machine: ${{ inputs.lnt-machine }}
+      setup: ${{ needs.validate.outputs.setup }}
+      filter: ${{ inputs.filter }}
+      artifact-name: lnt-report
+
+  submit:
+    needs:
+      - benchmark
+    if: ${{ inputs.submit-lnt }}
+    uses: $/.github/workflows/libcxx-lnt-submit.yml
+    with:
+      artifact-name: lnt-report
+      test-suite: libstdcxx
+      lnt-url: ${{ inputs.lnt-url }}

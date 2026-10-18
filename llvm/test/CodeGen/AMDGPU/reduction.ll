@@ -300,13 +300,10 @@ define i16 @reduction_umin_v8i16_woslp(<8 x i16> %vec8) {
 ; GFX9-LABEL: reduction_umin_v8i16_woslp:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX9-NEXT:    v_min_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX9-NEXT:    v_min3_u16 v0, v4, v1, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
-; GFX9-NEXT:    v_min3_u16 v0, v5, v2, v0
-; GFX9-NEXT:    v_min3_u16 v0, v6, v3, v0
+; GFX9-NEXT:    v_min3_u16 v0, v1, v1, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_u16 v0, v2, v2, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_u16 v0, v3, v3, v0 op_sel:[1,0,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: reduction_umin_v8i16_woslp:
@@ -405,21 +402,14 @@ define i16 @reduction_smin_v16i16_woslp(<16 x i16> %vec16) {
 ; GFX9-LABEL: reduction_smin_v16i16_woslp:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX9-NEXT:    v_min_i16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
-; GFX9-NEXT:    v_min3_i16 v0, v8, v1, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v3
-; GFX9-NEXT:    v_min3_i16 v0, v9, v2, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v11, 16, v4
-; GFX9-NEXT:    v_min3_i16 v0, v10, v3, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 16, v5
-; GFX9-NEXT:    v_min3_i16 v0, v11, v4, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v13, 16, v6
-; GFX9-NEXT:    v_min3_i16 v0, v12, v5, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v14, 16, v7
-; GFX9-NEXT:    v_min3_i16 v0, v13, v6, v0
-; GFX9-NEXT:    v_min3_i16 v0, v14, v7, v0
+; GFX9-NEXT:    v_min3_i16 v0, v1, v1, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_i16 v0, v2, v2, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_i16 v0, v3, v3, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_i16 v0, v4, v4, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_i16 v0, v5, v5, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_i16 v0, v6, v6, v0 op_sel:[1,0,0,0]
+; GFX9-NEXT:    v_min3_i16 v0, v7, v7, v0 op_sel:[1,0,0,0]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: reduction_smin_v16i16_woslp:

@@ -200,21 +200,21 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 
   AutoHandle snapshot(CreateProcessSnapshot());
   if (!snapshot.IsValid())
-    return false;
+    return true;
 
   PROCESSENTRY32W pe;
   pe.dwSize = sizeof(PROCESSENTRY32W);
   if (!Process32FirstW(snapshot.get(), &pe))
-    return false;
+    return true;
 
   do {
     if (pe.th32ProcessID == pid) {
       process_info.SetParentProcessID(pe.th32ParentProcessID);
-      return true;
+      break;
     }
   } while (Process32NextW(snapshot.get(), &pe));
 
-  return false;
+  return true;
 }
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(

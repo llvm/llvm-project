@@ -55,11 +55,6 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
     cl::desc("Force all waitcnt load counters to wait until 0"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> ExpertSchedulingModeFlag(
-    "amdgpu-expert-scheduling-mode",
-    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 template <typename EmitWaitcntFn>
@@ -2553,7 +2548,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                                                 MI);
         }
 
-        if (ST.hasWaitXcnt() && Op.isDef())
+        if (ST.hasWaitXcnt() && ST.isXNACKEnabled() && Op.isDef())
           ScoreBrackets.determineWaitForPhysReg(AMDGPU::X_CNT, Reg, Wait, MI);
       }
     }
@@ -2723,7 +2718,7 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
 
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-  auto SuccessorIt = std::next(Inst.getIterator());
+  auto SuccessorIt = next_nodbg(Inst.getIterator(), Block.instr_end());
   bool Result = generateWaitcnt(Wait, SuccessorIt, Block, ScoreBrackets,
                                 /*OldWaitcntInstr=*/nullptr);
 
@@ -2770,7 +2765,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
   // Set XCNT to zero in the bracket for instructions that implicitly drain
   // XCNT.
-  if (ST.hasWaitXcnt() && SIInstrInfo::isXcntDrain(Inst))
+  if (ST.hasWaitXcnt() && ST.isXNACKEnabled() && SIInstrInfo::isXcntDrain(Inst))
     ScoreBrackets->applyWaitcnt(AMDGPU::X_CNT, 0);
 }
 
@@ -3484,12 +3479,7 @@ bool SIInsertWaitcnts::run() {
   Limits = AMDGPU::HardwareLimits(IV);
 
   if (ST.hasExtendedWaitCounts()) {
-    IsExpertMode = ST.hasExpertSchedulingMode() &&
-                   (ExpertSchedulingModeFlag.getNumOccurrences()
-                        ? ExpertSchedulingModeFlag
-                        : MF.getFunction()
-                              .getFnAttribute("amdgpu-expert-scheduling-mode")
-                              .getValueAsBool());
+    IsExpertMode = AMDGPU::isExpertSchedulingMode(ST, MF.getFunction());
     MaxCounter = IsExpertMode ? AMDGPU::NUM_EXPERT_INST_CNTS
                               : AMDGPU::NUM_EXTENDED_INST_CNTS;
     // Initialize WCG per MF. It contains state that depends on MF attributes.
@@ -3589,7 +3579,7 @@ bool SIInsertWaitcnts::run() {
         }
       }
 
-      if (ST.hasWaitXcnt())
+      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
         Modified |= removeRedundantSoftXcnts(*MBB);
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
@@ -3739,7 +3729,7 @@ bool SIInsertWaitcnts::run() {
   if (MFI->isEntryFunction()) {
     MachineBasicBlock::iterator InsertPt = EntryBB.begin();
 
-    if (ST.hasWaitXcnt()) {
+    if (ST.hasWaitXcnt() && ST.isXNACKEnabled()) {
       // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
       // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
       // insertion logic, which assumes multi-group mode by default.
