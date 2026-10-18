@@ -1468,14 +1468,14 @@ def : Pat<(vselect_mask VK8WM:$mask,
           (VBROADCASTI32X4Z256rmk VR256X:$src0, VK8WM:$mask, addr:$src)>;
 }
 
-let Predicates = [HasBF16] in {
+let Predicates = [HasBWI] in {
   def : Pat<(v32bf16 (X86SubVBroadcastld256 addr:$src)),
             (VBROADCASTF64X4Zrm addr:$src)>;
   def : Pat<(v32bf16 (X86SubVBroadcastld128 addr:$src)),
             (VBROADCASTF32X4Zrm addr:$src)>;
 }
 
-let Predicates = [HasBF16, HasVLX] in
+let Predicates = [HasBWI, HasVLX] in
   def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
             (VBROADCASTF32X4Z256rm addr:$src)>;
 
@@ -13019,6 +13019,15 @@ let Predicates = [HasBF16, HasVLX] in {
   def : Pat<(v8bf16 (int_x86_vcvtneps2bf16256 (loadv8f32 addr:$src))),
             (VCVTNEPS2BF16Z256rm addr:$src)>;
 
+  def : Pat<(v8bf16 (X86vfpround (v8f32 VR256X:$src))),
+            (VCVTNEPS2BF16Z256rr VR256X:$src)>;
+  def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),
+            (VCVTNEPS2BF16Z256rm addr:$src)>;
+
+  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
+}
+
+let Predicates = [HasBWI, HasVLX] in {
   def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
             (VPBROADCASTWZ128rm addr:$src)>;
   def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
@@ -13028,22 +13037,17 @@ let Predicates = [HasBF16, HasVLX] in {
             (VPBROADCASTWZ128rr VR128X:$src)>;
   def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
             (VPBROADCASTWZ256rr VR128X:$src)>;
-
-  def : Pat<(v8bf16 (X86vfpround (v8f32 VR256X:$src))),
-            (VCVTNEPS2BF16Z256rr VR256X:$src)>;
-  def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),
-            (VCVTNEPS2BF16Z256rm addr:$src)>;
-
-  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
 }
 
-let Predicates = [HasBF16] in {
+let Predicates = [HasBWI] in {
   def : Pat<(v32bf16 (X86VBroadcastld16 addr:$src)),
             (VPBROADCASTWZrm addr:$src)>;
 
   def : Pat<(v32bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
             (VPBROADCASTWZrr VR128X:$src)>;
+}
 
+let Predicates = [HasBF16] in {
   def : Pat<(v16bf16 (X86vfpround (v16f32 VR512:$src))),
             (VCVTNEPS2BF16Zrr VR512:$src)>;
   def : Pat<(v16bf16 (X86vfpround (loadv16f32 addr:$src))),
