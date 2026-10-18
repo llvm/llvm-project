@@ -1,3 +1,4 @@
+add_subdirectory(AGXIR)
 add_subdirectory(ArmNeon)
 add_subdirectory(ArmSME)
 add_subdirectory(ArmSVE)

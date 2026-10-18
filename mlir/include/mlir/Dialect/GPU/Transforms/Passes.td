@@ -169,6 +169,40 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
   ];
 }
 
+def GpuAGXIRAttachTarget: Pass<"agxir-attach-target", ""> {
+  let summary = "Attaches an AGXIR target attribute to a GPU Module.";
+  let description = [{
+    This pass searches for all GPU Modules in the immediate regions and
+    attaches an AGXIR target (Apple GPUs) if the module matches the name
+    specified by the `module` argument.
+
+    Example:
+    ```
+    // mlir-opt --agxir-attach-target="module=agx.* chip=agx-g14c" in.mlir
+    gpu.module @agx_module [#agxir.target<chip = "agx-g14c">] {...}
+    ```
+  }];
+  let options = [
+    Option<"moduleMatcher", "module", "std::string",
+           /*default=*/ [{""}],
+           "Regex used to identify the modules to attach the target to.">,
+    Option<"triple", "triple", "std::string",
+           /*default=*/ "\"agx-apple-macosx\"",
+           "Target triple.">,
+    Option<"chip", "chip", "std::string",
+           /*default=*/"\"agx-g14g\"",
+           "Target chip.">,
+    Option<"features", "features", "std::string",
+           /*default=*/"\"\"",
+           "Target features.">,
+    Option<"optLevel", "O", "unsigned",
+           /*default=*/"2",
+           "Optimization level.">,
+    ListOption<"linkLibs", "l", "std::string",
+           "Extra bitcode libraries paths to link to.">,
+  ];
+}
+
 def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
   let summary = "Attaches a ROCDL target attribute to a GPU Module.";
   let description = [{

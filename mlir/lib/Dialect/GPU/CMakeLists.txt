@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   )
 
 add_mlir_dialect_library(MLIRGPUTransforms
+  Transforms/AGXIRAttachTarget.cpp
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
   Transforms/BufferDeallocationOpInterfaceImpl.cpp
@@ -77,6 +78,8 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRMemRefDialect
   MLIRNVVMTarget
   MLIRPass
+  MLIRAGXIRDialect
+  MLIRAGXIRTarget
   MLIRROCDLDialect
   MLIRROCDLTarget
   MLIRSCFDialect

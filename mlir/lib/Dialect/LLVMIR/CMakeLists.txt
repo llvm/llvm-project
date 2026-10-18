@@ -139,6 +139,27 @@ add_mlir_dialect_library(MLIRROCDLDialect
   MLIRSideEffectInterfaces
   )
 
+add_mlir_dialect_library(MLIRAGXIRDialect
+  IR/AGXIRDialect.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRAGXIROpsIncGen
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRLLVMDialect
+  MLIRSideEffectInterfaces
+  )
+
 add_mlir_dialect_library(MLIRVCIXDialect
   IR/VCIXDialect.cpp
 
