@@ -9544,6 +9544,63 @@ static QualType getPostfixOperatorFirstParamType(const FunctionDecl *FD) {
   return FD->getParamDecl(0)->getType();
 }
 
+/// Determine whether the implicit definition of the defaulted postfix
+/// increment or decrement operator function \p FD can direct-initialize a
+/// variable of class type \p C from the lvalue \p Obj of type \p C, and then
+/// destroy it, using functions that are usable from the current context.
+///
+/// \p CheckConstexpr is called on each constructor the initialization invokes.
+/// If \p Diagnose is true, explain why the copy or destruction is not possible.
+static bool canCopyAndDestroyForDefaultedPostfixOperator(
+    Sema &S, FunctionDecl *FD, CXXRecordDecl *RD, QualType C, Expr *Obj,
+    bool Diagnose,
+    llvm::function_ref<void(const FunctionDecl *, unsigned)> CheckConstexpr) {
+  SourceLocation Loc = FD->getLocation();
+  auto InaccessibleDiag = [&](unsigned Step) {
+    return Diagnose
+               ? S.PDiag(diag::note_defaulted_postfix_operator_inaccessible)
+                     << FD << Step
+               : S.PDiag();
+  };
+
+  InitializedEntity Entity = InitializedEntity::InitializeTemporary(C);
+  InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
+  InitializationSequence Seq(S, Entity, InitKind, Obj);
+  if (Seq.Failed()) {
+    // FIXME: This emits errors rather than notes explaining why the function
+    // is deleted.
+    if (Diagnose)
+      Seq.Diagnose(S, Entity, InitKind, Obj);
+    return false;
+  }
+  for (const InitializationSequence::Step &Step : Seq.steps()) {
+    if (Step.Kind != InitializationSequence::SK_ConstructorInitialization)
+      continue;
+    if (!S.isMemberAccessibleForDeletion(
+            RD, Step.Function.FoundDecl, C, Loc,
+            InaccessibleDiag(diag::DefaultedPostfixOperatorStep::Constructor)))
+      return false;
+    CheckConstexpr(Step.Function.Function,
+                   diag::DefaultedPostfixOperatorStep::Constructor);
+  }
+
+  CXXDestructorDecl *Dtor = S.LookupDestructor(RD);
+  if (!Dtor)
+    return true;
+  if (Dtor->isDeleted()) {
+    if (Diagnose) {
+      S.Diag(Loc, diag::note_defaulted_function_calls_deleted)
+          << FD << diag::DefaultedPostfixOperatorStep::Destructor
+          << /*complete object*/ 0;
+      S.NoteDeletedFunction(Dtor);
+    }
+    return false;
+  }
+  return S.isMemberAccessibleForDeletion(
+      RD, DeclAccessPair::make(Dtor, Dtor->getAccess()), C, Loc,
+      InaccessibleDiag(diag::DefaultedPostfixOperatorStep::Destructor));
+}
+
 /// Determine whether a defaulted postfix increment or decrement operator
 /// function for type \p C should be defined as deleted, as specified in C++2d
 /// [over.inc.default]p2, and whether every function it would invoke is
@@ -9601,47 +9658,15 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
   // C++2d [over.inc.default]p2:
   //   A defaulted postfix increment or decrement operator function for a type
   //   C is defined as deleted if
+  //  -- C is a class type for which overload resolution, as applied to
+  //     direct-initialization of a variable of type C from an lvalue of
+  //     type C, does not result in a usable candidate,
+  //  -- C has a destructor that is deleted or inaccessible from the context
+  //     of the function-body, or
   CXXRecordDecl *RD = C->getAsCXXRecordDecl();
-  if (RD) {
-    //  -- C is a class type for which overload resolution, as applied to
-    //     direct-initialization of a variable of type C from an lvalue of
-    //     type C, does not result in a usable candidate,
-    InitializedEntity Entity = InitializedEntity::InitializeTemporary(C);
-    InitializationKind InitKind =
-        InitializationKind::CreateDirect(Loc, Loc, Loc);
-    InitializationSequence Seq(S, Entity, InitKind, Args);
-    if (Seq.Failed()) {
-      // FIXME: This emits errors rather than notes explaining why the
-      // function is deleted.
-      if (Diagnose)
-        Seq.Diagnose(S, Entity, InitKind, Args);
-      return Deleted();
-    }
-    for (const InitializationSequence::Step &Step : Seq.steps()) {
-      if (Step.Kind != InitializationSequence::SK_ConstructorInitialization)
-        continue;
-      if (!S.isMemberAccessibleForDeletion(
-              RD, Step.Function.FoundDecl, C, Loc,
-              InaccessibleDiag(
-                  diag::DefaultedPostfixOperatorStep::Constructor)))
-        return Deleted();
-      CheckConstexpr(Step.Function.Function,
-                     diag::DefaultedPostfixOperatorStep::Constructor);
-    }
-
-    //  -- C has a destructor that is deleted or inaccessible from the context
-    //     of the function-body, or
-    if (CXXDestructorDecl *Dtor = S.LookupDestructor(RD)) {
-      if (Dtor->isDeleted()) {
-        NoteCallsDeleted(diag::DefaultedPostfixOperatorStep::Destructor, Dtor);
-        return Deleted();
-      }
-      if (!S.isMemberAccessibleForDeletion(
-              RD, DeclAccessPair::make(Dtor, Dtor->getAccess()), C, Loc,
-              InaccessibleDiag(diag::DefaultedPostfixOperatorStep::Destructor)))
-        return Deleted();
-    }
-  }
+  if (RD && !canCopyAndDestroyForDefaultedPostfixOperator(
+                S, FD, RD, C, &Obj, Diagnose, CheckConstexpr))
+    return Deleted();
 
   //  -- for an lvalue c of type C, overload resolution as applied to ++c for a
   //     postfix increment operator function or --c for a postfix decrement
