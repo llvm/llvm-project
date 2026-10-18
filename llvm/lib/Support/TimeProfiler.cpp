@@ -73,12 +73,18 @@ using NameAndCountAndDurationType =
 
 /// Represents an open or completed time section entry to be captured.
 struct llvm::TimeTraceProfilerEntry {
-  const TimePointType Start;
+  TimePointType Start;
   TimePointType End;
-  const std::string Name;
+  std::string Name;
   TimeTraceMetadata Metadata;
 
-  const TimeTraceEventType EventType = TimeTraceEventType::CompleteEvent;
+  TimeTraceEventType EventType = TimeTraceEventType::CompleteEvent;
+  ClockType::rep StartUs = 0;
+  ClockType::rep DurUs = 0;
+  int32_t LastChildIdx = -1;
+  int32_t PrevSiblingIdx = -1;
+  uint32_t InstantEventCount = 0;
+
   TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
                          std::string &&Dt, TimeTraceEventType Et)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)), Metadata(),
@@ -91,29 +97,25 @@ struct llvm::TimeTraceProfilerEntry {
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
         Metadata(std::move(Mt)), EventType(Et) {}
 
-  // Calculate timings for FlameGraph. Cast time points to microsecond precision
-  // rather than casting duration. This avoids truncation issues causing inner
-  // scopes overruning outer scopes.
+  // Calculate timings for FlameGraph. Strictly round down durations and
+  // relative start times so sub-microsecond remainder time is attributed to
+  // the parent's self-time without rounding bias.
   ClockType::rep getFlameGraphStartUs(TimePointType StartTime) const {
-    return (time_point_cast<microseconds>(Start) -
-            time_point_cast<microseconds>(StartTime))
-        .count();
+    return duration_cast<microseconds>(Start - StartTime).count();
   }
 
   ClockType::rep getFlameGraphDurUs() const {
-    return (time_point_cast<microseconds>(End) -
-            time_point_cast<microseconds>(Start))
-        .count();
+    return duration_cast<microseconds>(End - Start).count();
   }
 };
 
 // Represents a currently open (in-progress) time trace entry. InstantEvents
-// that happen during an open event are associated with the duration of this
-// parent event and they are dropped if parent duration is shorter than
-// the granularity.
+// that happen during an open event are associated with this parent event and
+// are dropped if this event's duration is shorter than the granularity.
 struct InProgressEntry {
   TimeTraceProfilerEntry Event;
   std::vector<TimeTraceProfilerEntry> InstantEvents;
+  int32_t LastChildIdx = -1;
 
   InProgressEntry(TimePointType S, TimePointType E, std::string N,
                   std::string Dt, TimeTraceEventType Et)
@@ -185,8 +187,16 @@ struct llvm::TimeTraceProfiler {
         });
     assert(Iter != Stack.end() && "Event not in the Stack");
 
-    // Only include sections longer or equal to TimeTraceGranularity msec.
+    // Only include sections longer or equal to TimeTraceGranularity usec.
     if (duration_cast<microseconds>(Duration).count() >= TimeTraceGranularity) {
+      int32_t Idx = Entries.size();
+      E.LastChildIdx = Iter->get()->LastChildIdx;
+      if (Iter != Stack.begin()) {
+        auto &Parent = **std::prev(Iter);
+        E.PrevSiblingIdx = Parent.LastChildIdx;
+        Parent.LastChildIdx = Idx;
+      }
+      E.InstantEventCount = Iter->get()->InstantEvents.size();
       Entries.emplace_back(E);
       for (auto &IE : Iter->get()->InstantEvents) {
         Entries.emplace_back(IE);
@@ -222,6 +232,45 @@ struct llvm::TimeTraceProfiler {
                         [](const auto &TTP) { return TTP->Stack.empty(); }) &&
            "All profiler sections should be ended when calling write");
 
+    // Compute floor-rounded microsecond timestamps and clamp child start
+    // times top-down so sub-microsecond start offsets never cause a child
+    // event to overrun its parent's floor-rounded end time.
+    auto clampEntries = [](TimeTraceProfiler &TTP) {
+      auto &Entries = TTP.Entries;
+      for (TimeTraceProfilerEntry &E : Entries) {
+        E.StartUs = E.getFlameGraphStartUs(TTP.StartTime);
+        E.DurUs = E.getFlameGraphDurUs();
+      }
+      for (size_t Idx = Entries.size(); Idx-- > 0;) {
+        const auto &E = Entries[Idx];
+        if (E.EventType == TimeTraceEventType::InstantEvent)
+          continue;
+        ClockType::rep PStart = E.StartUs;
+        ClockType::rep PEnd = PStart + E.DurUs;
+        ClockType::rep MaxEnd = PEnd;
+        for (uint32_t I = 0; I < E.InstantEventCount; ++I) {
+          auto &IE = Entries[Idx + 1 + I];
+          IE.StartUs = std::clamp(IE.StartUs, PStart, PEnd);
+        }
+        TimePointType NextRawStart = E.End;
+        for (int32_t C = E.LastChildIdx; C != -1;
+             C = Entries[C].PrevSiblingIdx) {
+          auto &Child = Entries[C];
+          if (Child.EventType == TimeTraceEventType::CompleteEvent ||
+              Child.End <= NextRawStart) {
+            Child.StartUs = std::min(Child.StartUs, MaxEnd - Child.DurUs);
+            MaxEnd = Child.StartUs;
+            NextRawStart = Child.Start;
+          } else {
+            Child.StartUs = std::min(Child.StartUs, PEnd - Child.DurUs);
+          }
+        }
+      }
+    };
+    clampEntries(*this);
+    for (TimeTraceProfiler *TTP : Instances.List)
+      clampEntries(*TTP);
+
     json::OStream J(OS);
     J.objectBegin();
     J.attributeBegin("traceEvents");
@@ -229,8 +278,8 @@ struct llvm::TimeTraceProfiler {
 
     // Emit all events for the main flame graph.
     auto writeEvent = [&](const auto &E, uint64_t Tid) {
-      auto StartUs = E.getFlameGraphStartUs(StartTime);
-      auto DurUs = E.getFlameGraphDurUs();
+      auto StartUs = E.StartUs;
+      auto DurUs = E.DurUs;
 
       J.object([&] {
         J.attribute("pid", Pid);

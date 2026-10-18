@@ -170,6 +170,9 @@ std::string buildTraceGraph(StringRef Json) {
   struct EventRecord {
     int64_t TimestampBegin;
     int64_t TimestampEnd;
+    size_t StreamIdx;
+    size_t OwnerStreamIdx;
+    bool IsInstant;
     std::string Name;
     std::string Metadata;
   };
@@ -179,6 +182,7 @@ std::string buildTraceGraph(StringRef Json) {
   Expected<json::Value> Root = json::parse(Json);
   if (!Root)
     return "";
+  size_t LastCompleteStreamIdx = 0;
   for (json::Value &TraceEventValue :
        *Root->getAsObject()->getArray("traceEvents")) {
     json::Object *TraceEventObj = TraceEventValue.getAsObject();
@@ -186,6 +190,7 @@ std::string buildTraceGraph(StringRef Json) {
     int64_t TimestampBegin = TraceEventObj->getInteger("ts").value_or(0);
     int64_t TimestampEnd =
         TimestampBegin + TraceEventObj->getInteger("dur").value_or(0);
+    StringRef Ph = TraceEventObj->getString("ph").value_or("");
     std::string Name = TraceEventObj->getString("name").value_or("").str();
     std::string Metadata = GetMetadata(TraceEventObj);
 
@@ -199,21 +204,67 @@ std::string buildTraceGraph(StringRef Json) {
     if (TimestampBegin == 0)
       continue;
 
-    Events.emplace_back(
-        EventRecord{TimestampBegin, TimestampEnd, Name, Metadata});
+    bool IsInstant = (Ph == "i");
+    size_t StreamIdx = Events.size();
+    size_t OwnerStreamIdx = IsInstant ? LastCompleteStreamIdx : StreamIdx;
+    if (!IsInstant)
+      LastCompleteStreamIdx = StreamIdx;
+
+    Events.emplace_back(EventRecord{TimestampBegin, TimestampEnd, StreamIdx,
+                                    OwnerStreamIdx, IsInstant, Name, Metadata});
   }
 
-  // There can be nested events that are very fast, for example:
-  // {"name":"EvaluateAsBooleanCondition",... ,"ts":2380,"dur":1}
-  // {"name":"EvaluateAsRValue",... ,"ts":2380,"dur":1}
-  // Therefore we should reverse the events list, so that events that have
-  // started earlier are first in the list.
-  // Then do a stable sort, we need it for the trace graph.
-  std::reverse(Events.begin(), Events.end());
-  llvm::stable_sort(Events, [](const auto &lhs, const auto &rhs) {
-    return std::make_pair(lhs.TimestampBegin, -lhs.TimestampEnd) <
-           std::make_pair(rhs.TimestampBegin, -rhs.TimestampEnd);
-  });
+  auto canContainSameInterval = [](const EventRecord &Parent,
+                                   const EventRecord &Child) {
+    if (Parent.IsInstant || Parent.StreamIdx <= Child.OwnerStreamIdx)
+      return false;
+    if (Child.IsInstant && Parent.StreamIdx == Child.OwnerStreamIdx)
+      return true;
+    StringRef PName = Parent.Name;
+    if (PName == "ExecuteCompiler" || PName == "Frontend" ||
+        PName == "PerformPendingInstantiations" || PName.starts_with("Parse") ||
+        PName.starts_with("Instantiate"))
+      return PName != Child.Name || PName == "InstantiateFunction";
+    if (PName == "EvaluateAsBooleanCondition" &&
+        Child.Name == "EvaluateAsRValue")
+      return true;
+    return false;
+  };
+
+  auto isInside = [&](const EventRecord &Child, const EventRecord &Parent) {
+    if (Parent.IsInstant || Parent.StreamIdx < Child.OwnerStreamIdx)
+      return false;
+    if (Child.Name == "PerformPendingInstantiations" &&
+        Parent.Name == "Frontend")
+      return false;
+    if (Child.IsInstant && Parent.StreamIdx == Child.OwnerStreamIdx)
+      return true;
+    if (Parent.StreamIdx == Child.StreamIdx)
+      return false;
+    if (Child.TimestampBegin < Parent.TimestampBegin ||
+        Child.TimestampEnd > Parent.TimestampEnd)
+      return false;
+    if (Child.TimestampBegin == Parent.TimestampBegin &&
+        Child.TimestampEnd == Parent.TimestampEnd)
+      return canContainSameInterval(Parent, Child);
+    return true;
+  };
+
+  // Sort events into pre-order. Events are emitted by TimeProfiler in
+  // post-order (children before parents, earlier siblings before later
+  // siblings), with instant events immediately following their owning scope.
+  llvm::stable_sort(Events,
+                    [&](const EventRecord &Lhs, const EventRecord &Rhs) {
+                      if (Lhs.TimestampBegin != Rhs.TimestampBegin)
+                        return Lhs.TimestampBegin < Rhs.TimestampBegin;
+                      if (Lhs.TimestampEnd != Rhs.TimestampEnd)
+                        return Lhs.TimestampEnd > Rhs.TimestampEnd;
+                      if (isInside(Rhs, Lhs))
+                        return true;
+                      if (isInside(Lhs, Rhs))
+                        return false;
+                      return Lhs.StreamIdx < Rhs.StreamIdx;
+                    });
 
   std::stringstream Stream;
   // Write a newline for better testing with multiline string literal.
@@ -224,20 +275,7 @@ std::string buildTraceGraph(StringRef Json) {
   for (const auto &Event : Events) {
     // Pop every event in the stack until meeting the parent event.
     while (!EventStack.empty()) {
-      bool InsideCurrentEvent =
-          Event.TimestampBegin >= EventStack.top()->TimestampBegin &&
-          Event.TimestampEnd <= EventStack.top()->TimestampEnd;
-
-      // Presumably due to timer rounding, PerformPendingInstantiations often
-      // appear to be within the timer interval of the immediately previous
-      // event group. We always know these events occur at level 1 in our
-      // tests, so keep popping until the stack is back at the root.
-      if (InsideCurrentEvent && Event.Name == "PerformPendingInstantiations" &&
-          EventStack.size() >= 2) {
-        InsideCurrentEvent = false;
-      }
-
-      if (!InsideCurrentEvent)
+      if (!isInside(Event, *EventStack.top()))
         EventStack.pop();
       else
         break;
