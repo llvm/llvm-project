@@ -3140,6 +3140,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.math.check.exp_exceptions
 )
 
 add_header_library(
@@ -3172,6 +3173,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math.check.exp_exceptions
 )
 
 add_header_library(
