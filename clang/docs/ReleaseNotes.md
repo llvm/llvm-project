@@ -290,6 +290,12 @@ features cannot lower the translation-unit ABI level;
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- New option `-f[no-]defined-int-divrem` gives integer division and remainder
+  by zero, and signed division overflow (`INT_MIN / -1`), an unspecified result
+  instead of undefined behavior by lowering integer `/` and `%` to frozen
+  `llvm.<op>.poison` intrinsics. On by default for OpenCL (OpenCL C and C++ for
+  OpenCL) except on SPIR and SPIR-V targets, off for every other language.
+
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.
@@ -1015,6 +1021,11 @@ features cannot lower the translation-unit ABI level;
   integer division by zero and ``INT_MIN / -1`` an unspecified value instead
   of an exception. A trap cannot continue, so these checks are no longer
   emitted under ``-fsanitize-trap``.
+- Integer ``/`` and ``%`` now lower to the ``llvm.<op>.poison`` intrinsics,
+  frozen to a fixed value (an unspecified result instead of undefined
+  behavior), by default except on SPIR and SPIR-V targets, as required by
+  OpenCL C v3.0 s6.5.1. The new ``-f[no-]defined-int-divrem`` flag controls
+  this explicitly.
 - Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
   ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
   ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are

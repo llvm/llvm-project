@@ -3220,6 +3220,14 @@ attribute as undefined behavior. (And, thus the optimizer may assume that any
 pointer used in such a way must not have been null and optimize away the
 branches accordingly.) On by default.}]>;
 
+defm defined_int_divrem : BoolFOption<"defined-int-divrem",
+  CodeGenOpts<"DefinedIntDivRem">,
+  Default<"LangOpts->OpenCL && !T.isSPIROrSPIRV()">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Give integer division and remainder by zero, and signed division overflow, an unspecified result instead of undefined behavior (default for OpenCL, except on SPIR and SPIR-V targets)">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Give integer division and remainder by zero, and signed division overflow, undefined behavior">>;
+
 defm lifetime_dse
     : BoolFOption<"lifetime-dse", CodeGenOpts<"StrictLifetimes">, DefaultTrue,
                   NegFlag<SetFalse, [], [ClangOption, CC1Option],

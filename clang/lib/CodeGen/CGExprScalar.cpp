@@ -110,11 +110,21 @@ struct BinOpInfo {
 
   /// Check if the binop can result in integer overflow.
   bool mayHaveIntegerOverflow() const {
-    // Without constant input, we can't rule out overflow.
     auto *LHSCI = dyn_cast<llvm::ConstantInt>(LHS);
     auto *RHSCI = dyn_cast<llvm::ConstantInt>(RHS);
-    if (!LHSCI || !RHSCI)
+    if (!LHSCI || !RHSCI) {
+      // Without constant input, we can't rule out overflow in general. A
+      // signed division or remainder only overflows for a divisor of -1 and
+      // a dividend of the minimum value, though, so one constant operand
+      // ruling that combination out is enough.
+      if (isDivremOp() && Ty->hasSignedIntegerRepresentation()) {
+        if (RHSCI && !RHSCI->isAllOnesValue())
+          return false;
+        if (LHSCI && !LHSCI->getValue().isMinSignedValue())
+          return false;
+      }
       return true;
+    }
 
     llvm::APInt Result;
     return ::mayHaveIntegerOverflow(
@@ -901,6 +911,14 @@ public:
   // non powers of two.
   Value *ConstrainShiftValue(Value *LHS, Value *RHS, const Twine &Name);
 
+  /// Emit an integer (scalar or vector) division or remainder that may be
+  /// undefined (zero divisor, or signed INT_MIN / -1) as a call to the
+  /// llvm.<op>.poison intrinsic named by \p ID, frozen to an arbitrary but
+  /// fixed value: an unspecified result instead of undefined behavior, as
+  /// OpenCL C v3.0 s6.5.1 requires. Returns nullptr when the plain
+  /// instruction should be emitted instead.
+  Value *tryEmitDefinedIntDivRem(const BinOpInfo &Ops, llvm::Intrinsic::ID ID,
+                                 const char *Name);
   Value *EmitDiv(const BinOpInfo &Ops);
   Value *EmitRem(const BinOpInfo &Ops);
   Value *EmitAdd(const BinOpInfo &Ops);
@@ -4313,6 +4331,42 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     EmitBinOpCheck(Checks, Ops);
 }
 
+Value *ScalarExprEmitter::tryEmitDefinedIntDivRem(const BinOpInfo &Ops,
+                                                  llvm::Intrinsic::ID ID,
+                                                  const char *Name) {
+  if (!CGF.CGM.getCodeGenOpts().DefinedIntDivRem)
+    return nullptr;
+
+  // Only operations that could be undefined need the intrinsic: a zero
+  // divisor, or signed overflow (INT_MIN / -1). A constant divisor that
+  // rules both out keeps the plain instruction. For vectors, look through a
+  // splat constant such as the 4 in int4 / 4.
+  BinOpInfo ScalarOps = Ops;
+  auto LookThroughSplat = [](Value *&V) {
+    if (auto *C = dyn_cast<llvm::Constant>(V); C && C->getType()->isVectorTy())
+      if (llvm::Constant *Splat = C->getSplatValue())
+        V = Splat;
+  };
+  LookThroughSplat(ScalarOps.LHS);
+  LookThroughSplat(ScalarOps.RHS);
+  if (!ScalarOps.mayHaveIntegerDivisionByZero() &&
+      (!Ops.Ty->hasSignedIntegerRepresentation() ||
+       !ScalarOps.mayHaveIntegerOverflow()))
+    return nullptr;
+
+  // A matrix is divided by a scalar.
+  Value *RHS = Ops.RHS;
+  if (Ops.Ty->isConstantMatrixType())
+    RHS = Builder.CreateVectorSplat(
+        cast<llvm::FixedVectorType>(Ops.LHS->getType())->getNumElements(), RHS,
+        "scalar.splat");
+
+  // Freezing the poison the intrinsic may return makes it an arbitrary but
+  // fixed value: an unspecified result.
+  return Builder.CreateFreeze(
+      Builder.CreateBinaryIntrinsic(ID, Ops.LHS, RHS, nullptr, Name));
+}
+
 Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   {
     SanitizerDebugLocation SanScope(&CGF,
@@ -4348,8 +4402,14 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     assert(BO->getRHS()->getType().getCanonicalType()->isArithmeticType() &&
            "second operand must be an arithmetic type");
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
-    return MB.CreateScalarDiv(Ops.LHS, Ops.RHS,
-                              Ops.Ty->hasUnsignedIntegerRepresentation());
+    bool IsUnsigned = Ops.Ty->hasUnsignedIntegerRepresentation();
+    if (!Ops.LHS->getType()->isFPOrFPVectorTy()) {
+      llvm::Intrinsic::ID ID = IsUnsigned ? llvm::Intrinsic::udiv_poison
+                                          : llvm::Intrinsic::sdiv_poison;
+      if (Value *V = tryEmitDefinedIntDivRem(Ops, ID, "div"))
+        return V;
+    }
+    return MB.CreateScalarDiv(Ops.LHS, Ops.RHS, IsUnsigned);
   }
 
   if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
@@ -4361,10 +4421,17 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   }
   else if (Ops.isFixedPointOp())
     return EmitFixedPointBinOp(Ops);
-  else if (Ops.Ty->hasUnsignedIntegerRepresentation())
+  else if (Ops.Ty->hasUnsignedIntegerRepresentation()) {
+    if (Value *V =
+            tryEmitDefinedIntDivRem(Ops, llvm::Intrinsic::udiv_poison, "div"))
+      return V;
     return Builder.CreateUDiv(Ops.LHS, Ops.RHS, "div");
-  else
+  } else {
+    if (Value *V =
+            tryEmitDefinedIntDivRem(Ops, llvm::Intrinsic::sdiv_poison, "div"))
+      return V;
     return Builder.CreateSDiv(Ops.LHS, Ops.RHS, "div");
+  }
 }
 
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
@@ -4381,12 +4448,19 @@ Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
     EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);
   }
 
-  if (Ops.Ty->hasUnsignedIntegerRepresentation())
+  if (Ops.Ty->hasUnsignedIntegerRepresentation()) {
+    if (Value *V =
+            tryEmitDefinedIntDivRem(Ops, llvm::Intrinsic::urem_poison, "rem"))
+      return V;
     return Builder.CreateURem(Ops.LHS, Ops.RHS, "rem");
+  }
 
   if (CGF.getLangOpts().HLSL && Ops.Ty->hasFloatingRepresentation())
     return Builder.CreateFRem(Ops.LHS, Ops.RHS, "rem");
 
+  if (Value *V =
+          tryEmitDefinedIntDivRem(Ops, llvm::Intrinsic::srem_poison, "rem"))
+    return V;
   return Builder.CreateSRem(Ops.LHS, Ops.RHS, "rem");
 }
 
