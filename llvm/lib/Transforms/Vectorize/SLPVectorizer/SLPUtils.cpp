@@ -25,6 +25,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1591,7 +1592,7 @@ bool isFirstInsertElement(const InsertElementInst *IE1,
   llvm_unreachable("Two different buildvectors not expected.");
 }
 
-DebugLoc getDebugLocFromPHI(PHINode &PN) {
+DebugLoc getDebugLocFromPHI(const PHINode &PN) {
   if (DebugLoc DL = PN.getDebugLoc())
     return DL;
   return DebugLoc::getUnknown();

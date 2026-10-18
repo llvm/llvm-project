@@ -37,8 +37,8 @@ class AssumptionCache;
 class Constant;
 class DataLayout;
 class DebugLoc;
-class Instruction;
 class InsertElementInst;
+class Instruction;
 class IRBuilderBase;
 class LoadInst;
 class PHINode;
@@ -520,14 +520,14 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
 /// \p To. The clone is skipped if it would pass a record of the same variable,
 /// otherwise the variable would show a stale value.
 void redirectDbgValues(Instruction &From, Value &To);
-/// \returns true if \p IE1 appears before \p IE2 in the same insertelement
-/// build-vector chain.
+/// \returns true if \p IE1 is inserted before \p IE2 in their build-vector
+/// chain. Both must have constant insert indices and belong to one chain.
 bool isFirstInsertElement(const InsertElementInst *IE1,
                           const InsertElementInst *IE2);
 
 /// \returns the debug location of \p PN, or an unknown location if it has
 /// none.
-DebugLoc getDebugLocFromPHI(PHINode &PN);
+DebugLoc getDebugLocFromPHI(const PHINode &PN);
 
 } // namespace llvm::slpvectorizer
 
