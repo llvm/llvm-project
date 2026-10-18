@@ -5718,11 +5718,6 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   assert(VK == VK_PRValue || LangOpts.CPlusPlus ||
          !ResultType.isCForbiddenLValueType());
 
-  QualType BaseType = LHSExp->IgnoreParenImpCasts()->getType();
-  if (BaseType->getAs<TypedefType>() &&
-      !CheckVariablyModifiedTypeUse(BaseType, LLoc))
-    return ExprError();
-
   return new (Context)
       ArraySubscriptExpr(LHSExp, RHSExp, ResultType, VK, OK, RLoc);
 }

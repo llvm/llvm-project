@@ -30,9 +30,26 @@ void pointer_to_vla() {
   struct S { unsigned long f(P p) { return sizeof(*p); } }; // expected-error {{cannot be used in a local class}}
 }
 
+void casts() {
+  using P = int (*)[foo()]; // expected-note 3 {{size expression is evaluated here}}
+  struct S {
+    void f() {
+      (void)(P)0; // expected-error {{cannot be used in a local class}}
+      (void)static_cast<P>(nullptr); // expected-error {{cannot be used in a local class}}
+      (void)P(nullptr); // expected-error {{cannot be used in a local class}}
+    }
+  };
+}
+
 void typedef_in_member_function() {
   using X = int[foo()]; // expected-note {{size expression is evaluated here}}
   struct S { void f() { typedef X Y; } }; // expected-error {{cannot be used in a local class}}
+}
+
+// FIXME: Bounds in a function prototype are not recorded, so this is not
+// diagnosed.
+void param_bound(int n, int (*p)[n]) {
+  struct S { void f() { decltype(p) q; } };
 }
 
 template <typename T> void in_template() {
@@ -68,6 +85,10 @@ void own_vla_in_local_class() {
 
 void param_vla_in_local_class() {
   struct S { unsigned long f(int n, int (*p)[n]) { return sizeof(*p); } };
+}
+
+unsigned long lambda_own_vla_param() {
+  return [](int m, int (*p)[m]) { decltype(p) q = p; return sizeof(*q); }(1, nullptr);
 }
 
 int lambda_sizeof() {
