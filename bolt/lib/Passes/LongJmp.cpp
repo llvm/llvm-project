@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 
@@ -1383,17 +1384,39 @@ void ClusteredRelaxation::printStats() const {
 }
 
 void ClusteredRelaxation::collectOutOfRangeReferences() {
+
+  // These counters exist only in debug builds:
+  // Count references that are not relaxed. In case
+  // these references cannot reach their target use here the metrics
+  // for diagnostics. Without these metrics the failures
+  // appear much later as assembler or JITLink out-of-range
+  // which cannot say which of the filters passed through silently.
+  [[maybe_unused]] uint64_t NumSkippedFunctions = 0;
+  [[maybe_unused]] uint64_t NumUnmappedBlocks = 0;
+  [[maybe_unused]] uint64_t NumNullTargetCalls = 0;
+  [[maybe_unused]] uint64_t NumNullTargetBranches = 0;
+  [[maybe_unused]] uint64_t NumIntraClusterCalls = 0;
+  [[maybe_unused]] uint64_t NumIntraClusterBranches = 0;
+  [[maybe_unused]] uint64_t MaxIntraClusterDistance = 0;
   CallsByDistance.resize(Clusters.size());
 
   // Walk all instructions once and collect both branches and calls.
   for (BinaryFunction *BF : OutputFunctions) {
-    if (!BC.shouldEmit(*BF) || BF->isPatch())
+    if (!BC.shouldEmit(*BF) || BF->isPatch()) {
+      LLVM_DEBUG(++NumSkippedFunctions);
       continue;
+    }
 
     for (BinaryBasicBlock &BB : *BF) {
       auto SourceIt = BBLayout.find(&BB);
-      if (SourceIt == BBLayout.end())
+      if (SourceIt == BBLayout.end()) {
+        LLVM_DEBUG(++NumUnmappedBlocks;
+                   dbgs() << "LongJmp: collect: block " << BB.getName()
+                          << " of " << BF->getPrintName()
+                          << " has no layout position; its references "
+                          << "cannot be relaxed\n");
         continue;
+      }
       const Position Source = SourceIt->second;
       uint64_t InstOffset = Source.Offset;
 
@@ -1408,8 +1431,20 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
           continue;
 
         const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
-        if (!TargetSymbol)
+        if (!TargetSymbol) {
+          LLVM_DEBUG({
+            if (IsCall)
+              ++NumNullTargetCalls;
+            else
+              ++NumNullTargetBranches;
+            dbgs() << "LongJmp: collect: no target symbol for "
+                   << (IsCall ? "call" : "branch") << " in "
+                   << BF->getPrintName() << " at layout offset 0x"
+                   << Twine::utohexstr(SourceOffset) << '\n';
+            BC.printInstruction(dbgs(), Inst);
+          });
           continue;
+        }
 
         auto TargetIt = SymLayout.find(TargetSymbol);
         const bool Found = TargetIt != SymLayout.end();
@@ -1417,8 +1452,22 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
 
         // References within the same cluster do not need relaxation.
-        if (Source.Cluster == Target.Cluster)
+        if (Source.Cluster == Target.Cluster) {
+          LLVM_DEBUG({
+            if (IsCall) {
+              ++NumIntraClusterCalls;
+            } else {
+              ++NumIntraClusterBranches;
+            }
+            const uint64_t IntraClusterDistance =
+                SourceOffset > Target.Offset ? SourceOffset - Target.Offset
+                                             : Target.Offset - SourceOffset;
+            if (IntraClusterDistance > MaxIntraClusterDistance) {
+              MaxIntraClusterDistance = IntraClusterDistance;
+            }
+          });
           continue;
+        }
 
         const OutOfRangeRef Reference{&Inst,          TargetSymbol,
                                       SourceOffset,   Target.Offset,
@@ -1448,6 +1497,28 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
       }
     }
   }
+  LLVM_DEBUG({
+    uint64_t NumCollectedCalls = OutOfLayoutCalls.size();
+    for (const SmallVectorImpl<OutOfRangeRef> &Calls : CallsByDistance)
+      NumCollectedCalls += Calls.size();
+    dbgs() << "LongJmp: collect: collected " << NumCollectedCalls
+           << " call(s) and " << Branches.size() << " branch(es)\n"
+           << "LongJmp: collect: not considered for relaxation:\n"
+           << "LongJmp: collect:   " << NumSkippedFunctions
+           << " function(s) not emitted or patched\n"
+           << "LongJmp: collect:   " << NumUnmappedBlocks
+           << " block(s) with no layout position\n"
+           << "LongJmp: collect:   " << NumNullTargetCalls
+           << " call(s) with no target symbol\n"
+           << "LongJmp: collect:   " << NumNullTargetBranches
+           << " branch(es) with no target symbol\n"
+           << "LongJmp: collect:   " << NumIntraClusterCalls << " call(s) and "
+           << NumIntraClusterBranches
+           << " branch(es) inside one cluster, assumed in range\n"
+           << "LongJmp: collect:   widest intra-cluster reference: "
+           << MaxIntraClusterDistance
+           << " bytes; compare against the target's branch reach\n";
+  });
 }
 
 const MCSymbol *
