@@ -1765,6 +1765,67 @@ func.func @truncFPConstantE8M0Zero() -> f8E8M0FNU {
   return %0 : f8E8M0FNU
 }
 
+// The negation of an f8E8M0FNU value is not representable, so it is NOT
+// folded. Folding used to create a negative f8E8M0FNU attribute, and printing
+// it asserted in APFloat.
+// CHECK-LABEL: @negfConstantE8M0
+//       CHECK:   %[[CST:.+]] = arith.constant 2.000000e+00 : f8E8M0FNU
+//       CHECK:   %[[RES:.+]] = arith.negf %[[CST]] : f8E8M0FNU
+//       CHECK:   return %[[RES]]
+func.func @negfConstantE8M0() -> f8E8M0FNU {
+  %cst = arith.constant 2.000000e+00 : f8E8M0FNU
+  %0 = arith.negf %cst : f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// A negative difference of f8E8M0FNU values is not representable, so it is
+// NOT folded. Folding used to assert in APFloat::subtract.
+// CHECK-LABEL: @subfConstantE8M0Negative
+//   CHECK-DAG:   %[[LHS:.+]] = arith.constant 2.000000e+00 : f8E8M0FNU
+//   CHECK-DAG:   %[[RHS:.+]] = arith.constant 4.000000e+00 : f8E8M0FNU
+//       CHECK:   %[[RES:.+]] = arith.subf %[[LHS]], %[[RHS]] : f8E8M0FNU
+//       CHECK:   return %[[RES]]
+func.func @subfConstantE8M0Negative() -> f8E8M0FNU {
+  %lhs = arith.constant 2.000000e+00 : f8E8M0FNU
+  %rhs = arith.constant 4.000000e+00 : f8E8M0FNU
+  %0 = arith.subf %lhs, %rhs : f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// A non-negative difference is still folded.
+// CHECK-LABEL: @subfConstantE8M0
+//       CHECK:   %[[CST:.+]] = arith.constant 2.000000e+00 : f8E8M0FNU
+//       CHECK:   return %[[CST]]
+func.func @subfConstantE8M0() -> f8E8M0FNU {
+  %lhs = arith.constant 4.000000e+00 : f8E8M0FNU
+  %rhs = arith.constant 2.000000e+00 : f8E8M0FNU
+  %0 = arith.subf %lhs, %rhs : f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// A negative integer is not representable in f8E8M0FNU, so it is NOT folded.
+// Folding used to create a negative f8E8M0FNU attribute, and printing it
+// asserted in APFloat.
+// CHECK-LABEL: @sitofpConstantE8M0Negative
+//       CHECK:   %[[CST:.+]] = arith.constant -4 : i32
+//       CHECK:   %[[RES:.+]] = arith.sitofp %[[CST]] : i32 to f8E8M0FNU
+//       CHECK:   return %[[RES]]
+func.func @sitofpConstantE8M0Negative() -> f8E8M0FNU {
+  %cst = arith.constant -4 : i32
+  %0 = arith.sitofp %cst : i32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// A positive integer is still folded.
+// CHECK-LABEL: @sitofpConstantE8M0
+//       CHECK:   %[[CST:.+]] = arith.constant 4.000000e+00 : f8E8M0FNU
+//       CHECK:   return %[[CST]]
+func.func @sitofpConstantE8M0() -> f8E8M0FNU {
+  %cst = arith.constant 4 : i32
+  %0 = arith.sitofp %cst : i32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
 // Unlike arith.scaling_extf, this divides by 2^scale: 6.0 / 2^1.
 // CHECK-LABEL: @scalingTruncFConstant
 //       CHECK:   %[[cres:.+]] = arith.constant 3.000000e+00 : f4E2M1FN

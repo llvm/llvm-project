@@ -724,6 +724,44 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float, [AlwaysS
 
 // -----
 
+def SPIRV_CLIlogbOp : SPIRV_CLOp<"ilogb", 33, [Pure, SameOperandsAndResultShape]> {
+  let summary = "Return the exponent as an integer value.";
+
+  let description = [{
+    Result is the unbiased binary exponent of x, as a signed integer value.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type must be a scalar or vector whose component type is a 32-bit
+    integer. The number of components in x and Result Type must be the same.
+    Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.ilogb %0 : f32 -> i32
+    %3 = spirv.CL.ilogb %1 : vector<3xf32> -> vector<3xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<AnyI32>:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `:` type($x) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_CLLdexpOp : SPIRV_CLOp<"ldexp", 34, [Pure, AllTypesMatch<["x", "y"]>]> {
   let summary = "Builds y such that y = significand * 2^exponent.";
 
@@ -1138,6 +1176,31 @@ def SPIRV_CLClzOp : SPIRV_CLUnaryArithmeticOp<"clz", 151, SPIRV_Integer> {
 
 // -----
 
+def SPIRV_CLCtzOp : SPIRV_CLUnaryArithmeticOp<"ctz", 152, SPIRV_Integer> {
+  let summary = "Count trailing zeros in operand";
+
+  let description = [{
+    Returns the number of least-significant 0-bits in x. If x is 0, the
+    result is the bit width of x, or of the component type of x if x is a
+    vector.
+
+    Result Type and x must be integer or vector(2,3,4,8,16) of
+    integer values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.ctz %0 : i32
+    %3 = spirv.CL.ctz %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 
@@ -1197,6 +1260,54 @@ def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
     %3 = spirv.CL.sin %1 : vector<3xf16>
     ```
   }];
+}
+
+// -----
+
+def SPIRV_CLSincosOp : SPIRV_CLOp<"sincos", 58, [
+    AllTypesMatch<["x", "result"]>,
+    TypesMatchWith<"`x` type matches pointee type of `cosval`",
+                   "cosval", "x",
+                   "::llvm::cast<::mlir::spirv::PointerType>($_self)"
+                     ".getPointeeType()">]> {
+  let summary = "Compute sine and cosine of x radians.";
+
+  let description = [{
+    The computed sine is the return value and the computed cosine is written
+    to the memory that cosval points to.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    The cosval operand must be a pointer to a value of the same type as x,
+    in the CrossWorkgroup, Workgroup, Function, or Generic storage class.
+
+    Result Type must be the same type as the type of x. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %sin = spirv.CL.sincos %x, %cosval : f32, !spirv.ptr<f32, Function> -> f32
+    %sin = spirv.CL.sincos %x, %cosval : vector<3xf32>,
+             !spirv.ptr<vector<3xf32>, Function> -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
+    SPIRV_AnyPtr:$cosval
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `,` $cosval `:` type($x) `,` type($cosval) `->` type($result)
+  }];
+
+  let hasVerifier = 1;
 }
 
 // -----

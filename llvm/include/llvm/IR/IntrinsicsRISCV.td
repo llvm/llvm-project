@@ -2108,6 +2108,12 @@ class RVPBinaryIntrinsic
   def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
   def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
 
+  // Packed Narrowing Clip.
+  def int_riscv_pnclipu  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipru : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclip   : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipr  : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2140,6 +2146,10 @@ class RVPBinaryIntrinsic
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
 
+  // Reverse the order of the 16-bit halfwords of a 64-bit value (RV64 only).
+  def int_riscv_rev16_64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                                              [IntrNoMem, IntrSpeculatable]>;
+
   // Packed Sign and Zero Extend.
   class RVPExtIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2156,6 +2166,16 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
 
+  // Scalar Averaging Addition and Subtraction. On RV64 these map to the
+  // packed paadd.w family on the low words.
+  class RVPScalarBinaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_aadd_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_aaddu_u32 : RVPScalarBinaryIntrinsic;
+  def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
+
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
   class RVPScalarMulHighIntrinsic
@@ -2165,6 +2185,23 @@ class RVPBinaryIntrinsic
   def int_riscv_mulhru_u32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;
+
+  // Scalar Multiply High Accumulate.
+  class RVPScalarTernaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mhacc_i32    : RVPScalarTernaryIntrinsic;
+  def int_riscv_mhracc_i32   : RVPScalarTernaryIntrinsic;
+  def int_riscv_mhaccu_u32   : RVPScalarTernaryIntrinsic;
+  def int_riscv_mhraccu_u32  : RVPScalarTernaryIntrinsic;
+  def int_riscv_mhaccsu_i32  : RVPScalarTernaryIntrinsic;
+  def int_riscv_mhraccsu_i32 : RVPScalarTernaryIntrinsic;
+
+  // Scalar "Q-format" Multiplication. On RV64 these map to the packed
+  // pmulq.w family on the low words.
+  def int_riscv_mulq_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_mulqr_i32 : RVPScalarBinaryIntrinsic;
 
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;

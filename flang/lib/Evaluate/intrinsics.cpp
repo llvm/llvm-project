@@ -1750,7 +1750,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"signal",
         {{"number", AnyInt, Rank::scalar, Optionality::required,
              common::Intent::In},
-            // note: any pointer also accepts AnyInt
+            // ApplySpecificChecks() narrows this to a procedure or scalar
+            // INTEGER.
             {"handler", AnyPointer, Rank::scalar, Optionality::required,
                 common::Intent::In},
             {"status", AnyInt, Rank::scalar, Optionality::optional,
@@ -2877,9 +2878,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   }
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */) {
-      // TODO: set Attr::Simple for MOVE_ALLOC when FROM is not a coarray
-      // (F2023)
-      attrs.set(characteristics::Procedure::Attr::Pure);
+      // F2023 16.9.147 p2: MOVE_ALLOC is simple if and only if FROM is not a
+      // coarray
+      // F2023 16.1 p5: No other standard intrinsic subroutine is pure or simple
+      if (!IsCoarray(*rearranged[0])) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+        attrs.set(characteristics::Procedure::Attr::Pure);
+      }
     } else if (intrinsicClass == IntrinsicClass::simpleSubroutine ||
         intrinsicClass == IntrinsicClass::simpleElementalSubroutine) {
       attrs.set(characteristics::Procedure::Attr::Simple);
@@ -4031,6 +4036,23 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
       context.messages().Say(
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
+    }
+  } else if (name == "signal") {
+    const auto &arg{call.arguments[1]};
+    bool handlerOk{false};
+    if (arg) {
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (IsProcedure(*expr)) {
+          handlerOk = true;
+        } else if (auto type{expr->GetType()}) {
+          handlerOk = type->category() == TypeCategory::Integer;
+        }
+      }
+      if (!handlerOk) {
+        ok = false;
+        context.messages().Say(arg->sourceLocation(),
+            "'handler=' argument to SIGNAL() must be a procedure or a scalar INTEGER"_err_en_US);
+      }
     }
   } else if (name == "tokenize") {
     // Both forms of TOKENIZE have at least 4 dummy arguments, and the last two

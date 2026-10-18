@@ -1005,8 +1005,14 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
 }
 
 bool Instruction::isIdenticalTo(const Instruction *I) const {
-  return isIdenticalToWhenDefined(I) &&
-         SubclassOptionalData == I->SubclassOptionalData;
+  if (!isIdenticalToWhenDefined(I) ||
+      SubclassOptionalData != I->SubclassOptionalData)
+    return false;
+
+  if (isa<FPMathOperator>(this))
+    return getFastMathFlags() == I->getFastMathFlags();
+
+  return true;
 }
 
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
@@ -1385,10 +1391,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
-}
-
-bool Instruction::isDebugOrPseudoInst() const {
-  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
 const DebugLoc &Instruction::getStableDebugLoc() const {

@@ -110,8 +110,9 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions(AsCat);
-  cl::ParseCommandLineOptions(argc, argv, "llvm .ll -> .bc assembler\n");
   LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm .ll -> .bc assembler\n");
 
   // Parse the file now...
   SMDiagnostic Err;

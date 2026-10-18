@@ -188,7 +188,9 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit,
   Asm->emitInt16(DwarfVersion);
 
   if (DwarfVersion >= 5) {
-    Asm->emitInt8(dwarf::DW_UT_compile);
+    dwarf::Tag RootTag = Unit.getOutputUnitDIE()->getTag();
+    Asm->emitInt8(RootTag == dwarf::DW_TAG_partial_unit ? dwarf::DW_UT_partial
+                                                        : dwarf::DW_UT_compile);
     Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
     // We share one abbreviations table across all units so it's always at the
     // start of the section.
