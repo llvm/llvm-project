@@ -131,10 +131,9 @@ function Invoke-NativeCommand {
         common parameters collide with native flags like -C, -O, -E, etc.
     #>
     $Command = $args[0]
-    $Arguments = @()
-    if ($args.Count -gt 1) {
-        $Arguments = @($args[1..($args.Count - 1)])
-    }
+    # Keep a real array: a single bare argument would otherwise be splatted
+    # character by character.
+    $Arguments = @($args | Select-Object -Skip 1)
     Write-Host "+ $Command $($Arguments -join ' ')" -ForegroundColor DarkGray
     & $Command @Arguments
     if ($LASTEXITCODE -ne 0) {
