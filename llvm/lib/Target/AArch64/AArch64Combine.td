@@ -184,6 +184,13 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${mi}, MRI, ${matchinfo}); }])
 >;
 
+def vashr_vlshr_to_sshl : GICombineRule<
+  (defs root:$root),
+  (match (vashr_vlshr_imm_frags $root):$mi,
+          [{ return matchVAshrLshrToSShl(*${mi}, MRI); }]),
+  (apply [{ applyVAshrLshrToSShl(*${mi}, MRI, B); }])
+>;
+
 def form_duplane_matchdata :
   GIDefMatchData<"std::pair<unsigned, int>">;
 def form_duplane : GICombineRule <
@@ -442,5 +449,6 @@ def AArch64PostLegalizerCombiner
                         combine_mul_cmlt, combine_use_vector_truncate,
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
-                        funnel_shift_from_or_shift_constants_are_legal]> {
+                        funnel_shift_from_or_shift_constants_are_legal,
+                        vashr_vlshr_to_sshl]> {
 }
