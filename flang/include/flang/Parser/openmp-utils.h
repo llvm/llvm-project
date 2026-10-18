@@ -22,6 +22,7 @@
 
 #include <cassert>
 #include <iterator>
+#include <limits>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -78,7 +79,8 @@ auto GetAllowedElements(const DescriptorTy &desc, llvm::omp::Version version) {
 template <typename ElemTy, typename OwnerTy>
 llvm::directive::VersionRange GetVersionRangeForElement(
     ElemTy elemId, OwnerTy ownerId) {
-  llvm::omp::Version minVer{~0u}, maxVer{0u};
+  llvm::omp::Version minVer{std::numeric_limits<int>::max()};
+  llvm::omp::Version maxVer{0u};
   const auto &desc{llvm::omp::getDescriptor(ownerId)};
   for (llvm::omp::Version v : desc.getVersions()) {
     if (GetAllowedElements(desc, v).test(elemId)) {
