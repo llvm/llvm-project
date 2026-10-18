@@ -2831,7 +2831,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       }
     }
   }
+
+  Check(!(Attrs.hasFnAttr(Attribute::Hot) && Attrs.hasFnAttr(Attribute::Cold)),
+        "Attributes 'hot' and 'cold' are incompatible");
 }
+
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
   Check(MD->getNumOperands() == 2,
         "'unknown' !prof should have a single additional operand", MD);
