@@ -36546,6 +36546,15 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     return I->use_empty() &&
            (I->getType()->isVoidTy() || isa<CallInst, InvokeInst>(I));
   };
+  // The number of the stores to each underlying object, which may start the
+  // reduction. Vectorized stores and stores of loads or non-instruction values
+  // never start it.
+  SmallDenseMap<Value *, unsigned> NumRdxRootStores;
+  for (const auto &[Obj, SIs] : Stores)
+    NumRdxRootStores[Obj] = count_if(SIs, [&](StoreInst *SI) {
+      return !R.isDeleted(SI) && isa<Instruction>(SI->getValueOperand()) &&
+             !isa<LoadInst>(SI->getValueOperand());
+    });
   for (BasicBlock::iterator It = BB->begin(), E = BB->end(); It != E; ++It) {
     // Skip instructions with scalable type. The num of elements is unknown at
     // compile-time for scalable type.
@@ -36614,14 +36623,14 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
       auto *SI = dyn_cast<StoreInst>(It);
       bool TryToVectorizeRoot = Opts->slp_vectorize_hor_store || !SI;
       if (SI) {
-        auto *I = Stores.find(getUnderlyingObject(SI->getPointerOperand()));
-        // Try to vectorize chain in store, if this is the only store to the
-        // address in the block.
+        // Try to vectorize chain in store, if at most one store to the address
+        // in the block may start the reduction.
         // TODO: This is just a temporarily solution to save compile time. Need
         // to investigate if we can safely turn on slp-vectorize-hor-store
         // instead to allow lookup for reduction chains in all non-vectorized
         // stores (need to check side effects and compile time).
-        TryToVectorizeRoot |= (I == Stores.end() || I->second.size() == 1) &&
+        TryToVectorizeRoot |= NumRdxRootStores.lookup(getUnderlyingObject(
+                                  SI->getPointerOperand())) <= 1 &&
                               SI->getValueOperand()->hasOneUse();
       }
       if (TryToVectorizeRoot) {
