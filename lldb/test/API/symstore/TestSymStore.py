@@ -27,7 +27,7 @@ class MockedSymStore:
     Context Manager to populate a file structure equivalent to SymStore.exe
     """
 
-    def __init__(self, test, exe, pdb):
+    def __init__(self, test: TestBase, exe, pdb):
         self._test = test
         self._exe = exe
         self._pdb = pdb
@@ -492,7 +492,8 @@ class SymStoreTests(TestBase):
         """
 
         exe, sym = self.build_inferior()
-        with MockedSymStore(self, exe, sym) as dir:
+        store = MockedSymStore(self, exe, sym)
+        with store as dir:
             PartialResponseHTTPHandler.can_finish.clear()
             self.runCmd("settings set plugin.symbol-locator.symstore.timeout 1")
 
@@ -508,6 +509,7 @@ class SymStoreTests(TestBase):
                         err_file.seek(0)
                         warnings = err_file.read().decode()
                     self.assertIn("failed to download", warnings)
+                    self.assertFiles(store.cache_dir, 0)
                 finally:
                     PartialResponseHTTPHandler.can_finish.set()
 
