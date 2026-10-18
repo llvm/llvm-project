@@ -549,28 +549,18 @@ define <2 x half> @fptrunc_fma_to_f16_hi_clamp(float %a, float %b, float %c) #0 
 ; GFX803-NEXT:    v_cvt_f16_f32_sdwa v0, v0 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX900-LABEL: fptrunc_fma_to_f16_hi_clamp:
-; SDAG-GFX900:       ; %bb.0: ; %.entry
-; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
-; SDAG-GFX900-NEXT:    v_cvt_f16_f32_sdwa v0, v0 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: fptrunc_fma_to_f16_hi_clamp:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX900-NEXT:    v_cvt_f16_f32_sdwa v0, v0 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FMAMIX-LABEL: fptrunc_fma_to_f16_hi_clamp:
 ; FMAMIX:       ; %bb.0: ; %.entry
 ; FMAMIX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FMAMIX-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 clamp
 ; FMAMIX-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX900-LABEL: fptrunc_fma_to_f16_hi_clamp:
-; GISEL-GFX900:       ; %bb.0: ; %.entry
-; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
-; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e64 v0, v0 clamp
-; GISEL-GFX900-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GISEL-GFX900-NEXT:    v_and_b32_e32 v1, s4, v1
-; GISEL-GFX900-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %fma = call float @llvm.fma.f32(float %a, float %b, float %c)
   %cvt = fptrunc float %fma to half
@@ -588,28 +578,18 @@ define <2 x half> @fptrunc_fma_to_f16_hi_clamp_contract(float %a, float %b, floa
 ; GFX803-NEXT:    v_cvt_f16_f32_sdwa v0, v0 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX900-LABEL: fptrunc_fma_to_f16_hi_clamp_contract:
-; SDAG-GFX900:       ; %bb.0: ; %.entry
-; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
-; SDAG-GFX900-NEXT:    v_cvt_f16_f32_sdwa v0, v0 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: fptrunc_fma_to_f16_hi_clamp_contract:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX900-NEXT:    v_cvt_f16_f32_sdwa v0, v0 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FMAMIX-LABEL: fptrunc_fma_to_f16_hi_clamp_contract:
 ; FMAMIX:       ; %bb.0: ; %.entry
 ; FMAMIX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FMAMIX-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 clamp
 ; FMAMIX-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX900-LABEL: fptrunc_fma_to_f16_hi_clamp_contract:
-; GISEL-GFX900:       ; %bb.0: ; %.entry
-; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_fma_f32 v0, v0, v1, v2
-; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e64 v0, v0 clamp
-; GISEL-GFX900-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GISEL-GFX900-NEXT:    v_and_b32_e32 v1, s4, v1
-; GISEL-GFX900-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %fma = call contract float @llvm.fma.f32(float %a, float %b, float %c)
   %cvt = fptrunc contract float %fma to half

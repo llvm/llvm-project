@@ -222,12 +222,11 @@ define i64 @intrinsic_lrint_i64_f64(double %arg) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x3df00000
+; GFX9-GISEL-NEXT:    s_movk_i32 s4, 0xffe0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX9-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
-; GFX9-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
+; GFX9-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX9-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX9-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], v[4:5], v[0:1]
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
@@ -250,7 +249,7 @@ define i64 @intrinsic_lrint_i64_f64(double %arg) {
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX10-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
-; GFX10-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0x3df00000
+; GFX10-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
 ; GFX10-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX10-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
 ; GFX10-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
@@ -276,7 +275,7 @@ define i64 @intrinsic_lrint_i64_f64(double %arg) {
 ; GFX11-GISEL-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
-; GFX11-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0x3df00000
+; GFX11-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX11-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
@@ -425,12 +424,11 @@ define i64 @intrinsic_llrint_i64_f64(double %arg) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x3df00000
+; GFX9-GISEL-NEXT:    s_movk_i32 s4, 0xffe0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX9-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
-; GFX9-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
+; GFX9-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX9-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX9-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], v[4:5], v[0:1]
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
@@ -453,7 +451,7 @@ define i64 @intrinsic_llrint_i64_f64(double %arg) {
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX10-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
-; GFX10-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0x3df00000
+; GFX10-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
 ; GFX10-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX10-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]
 ; GFX10-GISEL-NEXT:    v_cvt_u32_f64_e32 v0, v[0:1]
@@ -479,7 +477,7 @@ define i64 @intrinsic_llrint_i64_f64(double %arg) {
 ; GFX11-GISEL-NEXT:    v_rndne_f64_e32 v[0:1], v[0:1]
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
-; GFX11-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0x3df00000
+; GFX11-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], 0xffffffe0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX11-GISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], 0xc1f00000, v[0:1]

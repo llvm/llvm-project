@@ -244,9 +244,8 @@ define amdgpu_kernel void @load_v3i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addr
 ; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[12:13]
 ; GFX9-GISEL-NEXT:    global_store_short v0, v2, s[12:13] offset:4
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX9-GISEL-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[12:13] offset:2
+; GFX9-GISEL-NEXT:    global_store_short_d16_hi v0, v1, s[12:13] offset:2
 ; GFX9-GISEL-NEXT:    global_store_dword v0, v3, s[14:15]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %r = call {<3 x i16>, i32} @llvm.amdgcn.struct.ptr.buffer.load.format.sl_v3i16i32s(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
