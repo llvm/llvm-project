@@ -235,6 +235,9 @@ class MipsAsmParser : public MCTargetAsmParser {
                                              MCStreamer &Out,
                                              const MCSubtargetInfo *STI);
 
+  // Emits a branch together with the delay slot the expansion fills itself.
+  void emitWithFilledDelaySlot(function_ref<void()> EmitBranchAndSlot);
+
   bool expandJalWithRegs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                          const MCSubtargetInfo *STI);
 
@@ -2639,6 +2642,22 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 }
 
+void MipsAsmParser::emitWithFilledDelaySlot(
+    function_ref<void()> EmitBranchAndSlot) {
+  // In reorder mode, the emitted assembly would get another delay slot when
+  // assembled again (e.g. inline asm). Mark the already filled slot as
+  // noreorder without changing the mode of the surrounding code.
+  if (!AssemblerOptions.back()->isReorder()) {
+    EmitBranchAndSlot();
+    return;
+  }
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  TOut.emitDirectiveSetPush();
+  TOut.emitDirectiveSetNoReorder();
+  EmitBranchAndSlot();
+  TOut.emitDirectiveSetPop();
+}
+
 bool MipsAsmParser::expandJalWithRegs(MCInst &Inst, SMLoc IDLoc,
                                       MCStreamer &Out,
                                       const MCSubtargetInfo *STI) {
@@ -2673,14 +2692,18 @@ bool MipsAsmParser::expandJalWithRegs(MCInst &Inst, SMLoc IDLoc,
     const MCOperand SecondRegOp = Inst.getOperand(1);
     JalrInst.addOperand(SecondRegOp);
   }
-  Out.emitInstruction(JalrInst, *STI);
 
   // If .set reorder is active and branch instruction has a delay slot,
   // emit a NOP after it.
   const MCInstrDesc &MCID = MII.get(JalrInst.getOpcode());
-  if (MCID.hasDelaySlot() && AssemblerOptions.back()->isReorder())
-    TOut.emitEmptyDelaySlot(hasShortDelaySlot(JalrInst), IDLoc,
-                            STI);
+  if (!MCID.hasDelaySlot() || !AssemblerOptions.back()->isReorder()) {
+    Out.emitInstruction(JalrInst, *STI);
+    return false;
+  }
+  emitWithFilledDelaySlot([&] {
+    Out.emitInstruction(JalrInst, *STI);
+    TOut.emitEmptyDelaySlot(hasShortDelaySlot(JalrInst), IDLoc, STI);
+  });
 
   return false;
 }
@@ -3637,13 +3660,18 @@ bool MipsAsmParser::expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc,
       Inst.addOperand(MCOperand::createImm(Offset.getImm()));
     }
   }
-  Out.emitInstruction(Inst, *STI);
 
   // If .set reorder is active and branch instruction has a delay slot,
   // emit a NOP after it.
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
-  if (MCID.hasDelaySlot() && AssemblerOptions.back()->isReorder())
+  if (!MCID.hasDelaySlot() || !AssemblerOptions.back()->isReorder()) {
+    Out.emitInstruction(Inst, *STI);
+    return false;
+  }
+  emitWithFilledDelaySlot([&] {
+    Out.emitInstruction(Inst, *STI);
     TOut.emitEmptyDelaySlot(true, IDLoc, STI);
+  });
 
   return false;
 }
@@ -4326,8 +4354,10 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       BrTarget = Context.createTempSymbol();
       LabelOp =
           MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
-      TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
-      TOut.emitNop(IDLoc, STI);
+      emitWithFilledDelaySlot([&] {
+        TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
+        TOut.emitNop(IDLoc, STI);
+      });
     }
 
     if (!UseTraps)
@@ -5150,11 +5180,13 @@ bool MipsAsmParser::expandAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCRegister FirstRegOp = Inst.getOperand(0).getReg();
   MCRegister SecondRegOp = Inst.getOperand(1).getReg();
 
-  TOut.emitRI(Mips::BGEZ, SecondRegOp, 8, IDLoc, STI);
-  if (FirstRegOp != SecondRegOp)
-    TOut.emitRRR(Mips::ADDu, FirstRegOp, SecondRegOp, Mips::R0, IDLoc, STI);
-  else
-    TOut.emitEmptyDelaySlot(false, IDLoc, STI);
+  emitWithFilledDelaySlot([&] {
+    TOut.emitRI(Mips::BGEZ, SecondRegOp, 8, IDLoc, STI);
+    if (FirstRegOp != SecondRegOp)
+      TOut.emitRRR(Mips::ADDu, FirstRegOp, SecondRegOp, Mips::R0, IDLoc, STI);
+    else
+      TOut.emitEmptyDelaySlot(false, IDLoc, STI);
+  });
   TOut.emitRRR(Mips::SUB, FirstRegOp, Mips::R0, SecondRegOp, IDLoc, STI);
 
   return false;
@@ -5212,9 +5244,10 @@ bool MipsAsmParser::expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
 
-    TOut.emitRRX(Mips::BEQ, DstReg, ATReg, LabelOp, IDLoc, STI);
-    if (AssemblerOptions.back()->isReorder())
+    emitWithFilledDelaySlot([&] {
+      TOut.emitRRX(Mips::BEQ, DstReg, ATReg, LabelOp, IDLoc, STI);
       TOut.emitNop(IDLoc, STI);
+    });
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
 
     TOut.getStreamer().emitLabel(BrTarget);
@@ -5249,9 +5282,10 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
 
-    TOut.emitRRX(Mips::BEQ, ATReg, Mips::R0, LabelOp, IDLoc, STI);
-    if (AssemblerOptions.back()->isReorder())
+    emitWithFilledDelaySlot([&] {
+      TOut.emitRRX(Mips::BEQ, ATReg, Mips::R0, LabelOp, IDLoc, STI);
       TOut.emitNop(IDLoc, STI);
+    });
     TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
 
     TOut.getStreamer().emitLabel(BrTarget);
