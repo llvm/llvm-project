@@ -61,6 +61,7 @@ AArch64SME
 CompileCudaWithLLVM
 NVPTXUsage
 AMDGPUUsage
+AGXUsage
 AMDGPUAsyncOperations
 AMDGPUDMAOperations
 AMDGPUExecutionSynchronization
@@ -345,6 +346,11 @@ yaml2obj
 - {doc}`AMDGPUUsage`
 
   This document describes using the AMDGPU backend to compile GPU kernels.
+
+- {doc}`AGXUsage`
+
+  This document describes using the experimental AGX backend to compile
+  kernels for Apple GPUs.
 
 - {doc}`AMDGPUAsyncOperations`
 

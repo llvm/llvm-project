@@ -76,6 +76,15 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (Idx++ == 0 && InsertCache)
       OutMI.addOperand(MCOperand::createImm(0));
   }
+  // Device atomics on parts with several dies must bypass the per-die
+  // caches.
+  if ((MI->getOpcode() == AGX::DEVICE_ATOMIC ||
+       MI->getOpcode() == AGX::DEVICE_ATOMIC_CMPXCHG) &&
+      ST.hasMultiDieCoherency()) {
+    int Idx = AGX::getNamedOperandIdx(Opcode, AGX::OpName::coherent);
+    OutMI.getOperand(Idx).setImm(1);
+  }
+
   assert(OutMI.getNumOperands() == RealDesc.getNumOperands() &&
          "pseudo and real instruction operands do not match");
   return true;
