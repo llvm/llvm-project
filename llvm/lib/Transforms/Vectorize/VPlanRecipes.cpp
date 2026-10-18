@@ -16,6 +16,7 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,7 +36,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -47,10 +47,6 @@ using namespace llvm::VPlanPatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
-
-namespace llvm {
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-} // namespace llvm
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
@@ -94,6 +90,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -139,6 +136,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
+  case VPActiveLaneMaskPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPCurrentIterationPHISC:
@@ -154,6 +152,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -325,12 +324,11 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
-    if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-        RecipeCost.isValid()) {
+    if (Ctx.Opts.force_target_instruction_cost && RecipeCost.isValid()) {
       // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
       // instructions.
       if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
-        RecipeCost = InstructionCost(ForceTargetInstructionCost);
+        RecipeCost = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       else
         RecipeCost = InstructionCost(0);
     }
@@ -460,6 +458,12 @@ static Function *getCalledFunction(ArrayRef<VPValue *> Operands) {
   return cast<Function>(cast<VPIRValue>(Operands[Idx])->getValue());
 }
 
+static SmallVector<unsigned> getExtractValueIndices(ArrayRef<VPValue *> Ops) {
+  return map_to_vector(drop_begin(Ops), [](VPValue *Op) {
+    return unsigned(cast<VPConstantInt>(Op)->getZExtValue());
+  });
+}
+
 Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
                                             ArrayRef<VPValue *> Operands) {
   assert(!Operands.empty() &&
@@ -565,12 +569,9 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     assert(Operands[1]->getScalarType()->isIntegerTy() &&
            "expected integer operand");
     return Op0Ty;
-  case Instruction::ExtractValue: {
-    assert(Operands.size() == 2 && "expected single level extractvalue");
-    auto *StructTy = cast<StructType>(Op0Ty);
-    return StructTy->getTypeAtIndex(
-        cast<VPConstantInt>(Operands[1])->getZExtValue());
-  }
+  case Instruction::ExtractValue:
+    return ExtractValueInst::getIndexedType(Op0Ty,
+                                            getExtractValueIndices(Operands));
   case VPInstruction::WideVectorLoad:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
@@ -581,6 +582,10 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     llvm_unreachable("type must be passed explicitly");
   case Instruction::Call:
     return getCalledFunction(Operands)->getReturnType();
+  case VPInstruction::BuildVector:
+    assert(VectorType::isValidElementType(Op0Ty) &&
+           "BuildVector operands must be valid vector elements");
+    break;
   default:
     if (Instruction::isCast(Opcode))
       llvm_unreachable("type must be passed explicitly");
@@ -593,7 +598,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       Instruction::isBinaryOp(Opcode) ||
       is_contained({VPInstruction::FirstOrderRecurrenceSplice,
                     VPInstruction::BuildVector,
-                    VPInstruction::BuildStructVector,
                     VPInstruction::ConcatVectors},
                    Opcode);
   if (AllOperandsSameType)
@@ -607,8 +611,7 @@ Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
                                            ArrayRef<VPValue *> Operands) {
   unsigned Opcode = I->getOpcode();
   if (Instruction::isCast(Opcode) ||
-      is_contained(ArrayRef<unsigned>({Instruction::ExtractValue,
-                                       Instruction::Load, Instruction::Alloca}),
+      is_contained(ArrayRef<unsigned>({Instruction::Load, Instruction::Alloca}),
                    Opcode))
     return I->getType();
   return computeScalarTypeForInstruction(Opcode, Operands);
@@ -645,7 +648,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::IncomingAliasMask:
     return 0;
   case Instruction::Alloca:
-  case Instruction::ExtractValue:
   case Instruction::Freeze:
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
@@ -692,9 +694,9 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Switch:
   case Instruction::AtomicRMW:
   case Instruction::AtomicCmpXchg:
+  case Instruction::ExtractValue:
   case Instruction::Fence:
   case VPInstruction::AnyOf:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::Intrinsic:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -933,32 +935,11 @@ Value *VPInstruction::generate(VPTransformState &State,
         State.VF, State.get(getOperand(0), /*NeedsSingleScalar=*/true),
         "broadcast");
   }
-  case VPInstruction::BuildStructVector: {
-    assert(!GenerateSingleScalar &&
-           "Cannot generate scalar value for BuildStructVector");
-    // For struct types, we need to build a new 'wide' struct type, where each
-    // element is widened, i.e., we create a struct of vectors.
-    auto *StructTy = cast<StructType>(getOperand(0)->getScalarType());
-    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
-    for (const auto &[LaneIndex, Op] : enumerate(operands())) {
-      for (unsigned FieldIndex = 0; FieldIndex != StructTy->getNumElements();
-           FieldIndex++) {
-        Value *ScalarValue =
-            Builder.CreateExtractValue(State.get(Op, true), FieldIndex);
-        Value *VectorValue = Builder.CreateExtractValue(Res, FieldIndex);
-        VectorValue =
-            Builder.CreateInsertElement(VectorValue, ScalarValue, LaneIndex);
-        Res = Builder.CreateInsertValue(Res, VectorValue, FieldIndex);
-      }
-    }
-    return Res;
-  }
   case VPInstruction::BuildVector: {
     assert(!GenerateSingleScalar &&
            "Cannot generate scalar value for BuildVector");
-    auto *ScalarTy = getOperand(0)->getScalarType();
-    auto NumOfElements = ElementCount::getFixed(getNumOperands());
-    Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
+    Value *Res = PoisonValue::get(
+        FixedVectorType::get(getScalarType(), getNumOperands()));
     for (const auto &[Idx, Op] : enumerate(operands()))
       Res = Builder.CreateInsertElement(Res, State.get(Op, true),
                                         Builder.getInt64(Idx));
@@ -1688,7 +1669,6 @@ void VPInstruction::addOperand(VPValue *Op) {
     break;
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::BuildVector:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::ConcatVectors:
     assert(Ty == getOperand(0)->getScalarType() &&
            "appended operand must match operand 0's scalar type");
@@ -1731,8 +1711,7 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(((GeneratedValue->getType()->isVectorTy() ||
-           GeneratedValue->getType()->isStructTy()) == !GenerateSingleScalar) &&
+  assert(GeneratedValue->getType()->isVectorTy() == !GenerateSingleScalar &&
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue, GenerateSingleScalar);
   if (getOpcode() == VPInstruction::ResumeForEpilogue ||
@@ -1751,7 +1730,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
     return false;
   switch (getOpcode()) {
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
   case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::InsertElement:
@@ -1765,7 +1743,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::ConcatVectors:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -1825,6 +1802,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(0);
   case Instruction::PHI:
     return true;
+  case Instruction::ExtractValue:
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
@@ -1846,13 +1824,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::WideVectorLoad:
-    return true;
-  case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
-    // Before replicating by VF, Build(Struct)Vector uses all lanes of the
-    // operand, after replicating its operands only the first lane is used.
-    // Before replicating, it will have only a single operand.
-    return getNumOperands() > 1;
+    return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:
@@ -1945,9 +1918,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Broadcast:
     O << "broadcast";
-    break;
-  case VPInstruction::BuildStructVector:
-    O << "buildstructvector";
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
@@ -2236,16 +2206,8 @@ void VPIRMetadata::clearExecutionFrequency() {
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
-  SmallVector<std::pair<unsigned, MDNode *>> MetadataIntersection;
-  for (const auto &[KindA, MDA] : Metadata) {
-    for (const auto &[KindB, MDB] : Other.Metadata) {
-      if (KindA == KindB && MDA == MDB) {
-        MetadataIntersection.emplace_back(KindA, MDA);
-        break;
-      }
-    }
-  }
-  Metadata = std::move(MetadataIntersection);
+  erase_if(Metadata,
+           [&](const auto &MD) { return !is_contained(Other.Metadata, MD); });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2526,12 +2488,32 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *MemI = createVectorCall(State);
-  auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(getVectorIntrinsicID());
-  assert(PtrPos && "Expected a memory intrinsic with a valid pointer position");
-  MemI->addParamAttr(
-      *PtrPos, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  MemI->addParamAttr(getAddrOpIdx(), Attribute::getWithAlignment(
+                                         MemI->getContext(), Alignment));
   if (!MemI->getType()->isVoidTy())
     State.set(this, MemI);
+}
+
+VPValue *VPWidenMemIntrinsicRecipe::getMask() const {
+  auto MaskPos = getVectorIntrinsicMaskArgIdx(getVectorIntrinsicID());
+  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
+  return getOperand(*MaskPos);
+}
+
+unsigned VPWidenMemIntrinsicRecipe::getAddrOpIdx() const {
+  auto PtrPos = getVectorMemoryIntrinsicPointerArgIdx(getVectorIntrinsicID());
+  assert(PtrPos && "Expected a memory intrinsic with a valid pointer position");
+  return *PtrPos;
+}
+
+Type *VPWidenMemIntrinsicRecipe::getAccessType(ElementCount VF) const {
+  Type *DataTy;
+  if (auto DataPos = getVectorStoreIntrinsicDataArgIdx(getVectorIntrinsicID()))
+    DataTy = getOperand(*DataPos)->getScalarType();
+  else
+    DataTy = getScalarType();
+  assert(!DataTy->isVoidTy() && "Expected a non-void data type");
+  return toVectorTy(DataTy, VF);
 }
 
 InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
@@ -2545,18 +2527,8 @@ InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
-  Type *DataTy;
-  if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(getVectorIntrinsicID()))
-    DataTy = getOperand(*DataPos)->getScalarType();
-  else
-    DataTy = getScalarType();
-  assert(!DataTy->isVoidTy() && "Expected a non-void data type");
-  Type *Ty = toVectorTy(DataTy, VF);
-  auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
-  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
-  return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
-                                 !match(getOperand(*MaskPos), m_True()),
-                                 Alignment, Ctx);
+  return computeMemIntrinsicCost(getVectorIntrinsicID(), getAccessType(VF),
+                                 !match(getMask(), m_True()), Alignment, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
@@ -2576,17 +2548,30 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
     Mask =
         Builder.CreateVectorSplat(VTy->getElementCount(), Builder.getInt1(1));
 
-  // If this is a subtract, we want to invert the increment amount. We may
-  // add a separate intrinsic in future, but for now we'll try this.
-  if (Opcode == Instruction::Sub)
+  // If this is a subtract, we want to invert the increment amount and use
+  // the histogram_add intrinsic.
+  if (mustNegateIncrement())
     IncAmt = Builder.CreateNeg(IncAmt);
-  else
-    assert(Opcode == Instruction::Add && "only add or sub supported for now");
 
   Instruction *HistogramInst = State.Builder.CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_vector_histogram_add, {VTy, IncAmt->getType()},
+      getHistogramIntrinsicID(), {VTy, IncAmt->getType()},
       {Address, IncAmt, Mask});
   applyMetadata(*HistogramInst);
+}
+
+Intrinsic::ID VPHistogramRecipe::getHistogramIntrinsicID() const {
+  switch (UpdateKind) {
+  case HistogramUpdateKind::Add:
+  case HistogramUpdateKind::Sub:
+    return Intrinsic::experimental_vector_histogram_add;
+  case HistogramUpdateKind::UAddSat:
+    return Intrinsic::experimental_vector_histogram_uadd_sat;
+  case HistogramUpdateKind::UMax:
+    return Intrinsic::experimental_vector_histogram_umax;
+  case HistogramUpdateKind::UMin:
+    return Intrinsic::experimental_vector_histogram_umin;
+  }
+  llvm_unreachable("Unknown HistogramUpdateKind");
 }
 
 InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
@@ -2602,23 +2587,25 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   Type *IncTy = IncAmt->getScalarType();
   VectorType *VTy = VectorType::get(IncTy, VF);
 
-  // Assume that a non-constant update value (or a constant != 1) requires
-  // a multiply, and add that into the cost.
-  InstructionCost MulCost =
-      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (match(IncAmt, m_One()))
-    MulCost = TTI::TCC_Free;
+  // For umin/umax, there's no multiplication — the increment value is compared
+  // directly. For add/sub/uadd.sat, assume that a non-constant update value
+  // (or a constant != 1) requires a multiply.
+  InstructionCost MulCost = TTI::TCC_Free;
+  if (!match(IncAmt, m_One()) && UpdateKind != HistogramUpdateKind::UMax &&
+      UpdateKind != HistogramUpdateKind::UMin)
+    MulCost =
+        Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
 
   // Find the cost of the histogram operation itself.
   Type *PtrTy = VectorType::get(AddressTy, VF);
   Type *MaskTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
+  IntrinsicCostAttributes ICA(getHistogramIntrinsicID(),
                               Type::getVoidTy(Ctx.LLVMCtx),
                               {PtrTy, IncTy, MaskTy});
 
-  // Add the costs together with the add/sub operation.
-  return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost +
-         Ctx.TTI.getArithmeticInstrCost(Opcode, VTy, Ctx.CostKind);
+  // The histogram intrinsic's TTI cost already includes the update operation
+  // (load + update + store), so no separate UpdateCost is needed.
+  return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2627,11 +2614,22 @@ void VPHistogramRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
   getOperand(0)->printAsOperand(O, SlotTracker);
 
-  if (Opcode == Instruction::Sub)
-    O << ", dec: ";
-  else {
-    assert(Opcode == Instruction::Add);
+  switch (UpdateKind) {
+  case HistogramUpdateKind::Add:
     O << ", inc: ";
+    break;
+  case HistogramUpdateKind::Sub:
+    O << ", dec: ";
+    break;
+  case HistogramUpdateKind::UAddSat:
+    O << ", saturated inc: ";
+    break;
+  case HistogramUpdateKind::UMax:
+    O << ", max: ";
+    break;
+  case HistogramUpdateKind::UMin:
+    O << ", min: ";
+    break;
   }
   getOperand(1)->printAsOperand(O, SlotTracker);
 
@@ -2958,10 +2956,9 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     break;
   }
   case Instruction::ExtractValue: {
-    assert(getNumOperands() == 2 && "expected single level extractvalue");
     Value *Op = State.get(getOperand(0));
-    Value *Extract = Builder.CreateExtractValue(
-        Op, cast<VPConstantInt>(getOperand(1))->getZExtValue());
+    Value *Extract =
+        Builder.CreateExtractValue(Op, getExtractValueIndices(operands()));
     State.set(this, Extract);
     break;
   }
@@ -3114,8 +3111,8 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printFlags(O);
   printOperands(O, SlotTracker);
 
-  if (auto *TI = getTruncInst())
-    O << " (truncated to " << *TI->getType() << ")";
+  if (isTruncated())
+    O << " (truncated to " << *getScalarType() << ")";
 }
 #endif
 
@@ -3691,7 +3688,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   // TODO: Support any-of reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
-       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+       Ctx.Opts.force_target_instruction_cost) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
   // Note that TTI should model the cost of moving result to the scalar register
@@ -3738,8 +3735,8 @@ VPExpressionRecipe::VPExpressionRecipe(
       // clone those external users.
       VPSingleDefRecipe *CopyForExtUsers = R->clone();
       R->replaceUsesWithIf(CopyForExtUsers,
-                           [&ExpressionRecipesAsSetOfUsers](VPUser &U) {
-                             return !ExpressionRecipesAsSetOfUsers.contains(&U);
+                           [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
+                             return !ExpressionRecipesAsSetOfUsers.contains(U);
                            });
       CopyForExtUsers->insertBefore(R);
     }
@@ -4056,8 +4053,8 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  for (const auto &[Idx, V] : enumerate(operands()))
-    Cloned->setOperand(Idx, State.get(V, true));
+  for (unsigned Idx : seq(Cloned->getNumOperands()))
+    Cloned->setOperand(Idx, State.get(getOperand(Idx), true));
 
   // Place the cloned scalar in the new loop.
   State.Builder.Insert(Cloned);
@@ -4266,7 +4263,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
   }
 

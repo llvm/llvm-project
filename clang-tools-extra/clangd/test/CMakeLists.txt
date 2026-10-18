@@ -1,4 +1,5 @@
 set(CLANGD_TEST_DEPS
+  clang
   clangd
   ClangdTests
   clangd-indexer

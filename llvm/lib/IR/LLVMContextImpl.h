@@ -40,6 +40,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <cassert>
@@ -1950,6 +1951,8 @@ public:
 
   std::string DefaultTargetCPU;
   std::string DefaultTargetFeatures;
+
+  cl::LibraryOptionsContext LibraryOptions;
 
   /// The next available source atom group number. The front end is responsible
   /// for assigning source atom numbers, but certain optimisations need to

@@ -26,6 +26,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 
@@ -321,9 +322,13 @@ public:
   /// Return true if we can take the specified value and return it as type Ty
   /// without inserting any new casts and without changing the value of the
   /// common low bits.
-  [[nodiscard]] static bool canEvaluateSExtd(Value *V, Type *Ty);
+  [[nodiscard]] static bool canEvaluateSExtd(Value *V, Type *Ty,
+                                             unsigned MaxTypeEvalDepth);
 
 private:
+  explicit TypeEvaluationHelper(unsigned MaxTypeEvalDepth)
+      : MaxTypeEvalDepth(MaxTypeEvalDepth) {}
+
   /// Constants and extensions/truncates from the destination type are always
   /// free to be evaluated in that type.
   [[nodiscard]] static bool canAlwaysEvaluateInType(Value *V, Type *Ty);
@@ -339,6 +344,9 @@ private:
   [[nodiscard]] bool
   canEvaluate(Value *V, Type *Ty,
               llvm::function_ref<bool(Value *, Type *Type)> Pred) {
+    if (Depth >= MaxTypeEvalDepth)
+      return false;
+
     if (canAlwaysEvaluateInType(V, Ty))
       return true;
 
@@ -439,6 +447,7 @@ private:
       }
     }
 
+    SaveAndRestore RestoreDepth(Depth, Depth + 1);
     const bool Result = Pred(V, Ty);
     // We have to set result this way and not via It because Pred is recursive
     // and it is very likely that we grew Visited and invalidated It.
@@ -462,6 +471,11 @@ private:
                                           Instruction *CtxI);
   [[nodiscard]] bool canEvaluateSExtdImpl(Value *V, Type *Ty);
   [[nodiscard]] bool canEvaluateSExtdPred(Value *V, Type *Ty);
+
+  /// The recursion depth of this traversal.
+  unsigned Depth = 0;
+
+  const unsigned MaxTypeEvalDepth;
 
   /// A bookkeeping map to memorize an already made decision for a traversed
   /// value.
@@ -514,7 +528,7 @@ bool TypeEvaluationHelper::canNotEvaluateInType(Value *V, Type *Ty) {
 bool TypeEvaluationHelper::canEvaluateTruncated(Value *V, Type *Ty,
                                                 InstCombinerImpl &IC,
                                                 Instruction *CtxI) {
-  TypeEvaluationHelper TYH;
+  TypeEvaluationHelper TYH(IC.CLOpts.max_type_eval_depth);
   return TYH.canEvaluateTruncatedImpl(V, Ty, IC, CtxI) &&
          // We need to check whether we visited all users of multi-user values,
          // and we have to do it at the very end, outside of the recursion.
@@ -1482,7 +1496,7 @@ bool TypeEvaluationHelper::canEvaluateZExtd(Value *V, Type *Ty,
                                             unsigned &BitsToClear,
                                             InstCombinerImpl &IC,
                                             Instruction *CtxI) {
-  TypeEvaluationHelper TYH;
+  TypeEvaluationHelper TYH(IC.CLOpts.max_type_eval_depth);
   return TYH.canEvaluateZExtdImpl(V, Ty, BitsToClear, IC, CtxI);
 }
 bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
@@ -1490,6 +1504,9 @@ bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
                                                 InstCombinerImpl &IC,
                                                 Instruction *CtxI) {
   BitsToClear = 0;
+  if (Depth >= MaxTypeEvalDepth)
+    return false;
+
   if (canAlwaysEvaluateInType(V, Ty))
     return true;
   // We stick to the one-user limit for the ZExt transform due to the fact
@@ -1497,6 +1514,9 @@ bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
   if (canNotEvaluateInType(V, Ty))
     return false;
 
+  // canEvaluateZExtd does not go through canEvaluate (it also returns
+  // BitsToClear), so it has to track the depth itself.
+  SaveAndRestore RestoreDepth(Depth, Depth + 1);
   auto *I = cast<Instruction>(V);
   unsigned Tmp;
   switch (I->getOpcode()) {
@@ -1630,7 +1650,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // the final result should be enough that we avoid having to clear the high
   // bits.
   bool EvaluateAsSigned =
-      Zext.hasNonNeg() && TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy);
+      Zext.hasNonNeg() && TypeEvaluationHelper::canEvaluateSExtd(
+                              Src, DestTy, CLOpts.max_type_eval_depth);
 
   // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear = 0;
@@ -1868,8 +1889,9 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
 ///
 /// This function works on both vectors and scalars.
 ///
-bool TypeEvaluationHelper::canEvaluateSExtd(Value *V, Type *Ty) {
-  TypeEvaluationHelper TYH;
+bool TypeEvaluationHelper::canEvaluateSExtd(Value *V, Type *Ty,
+                                            unsigned MaxTypeEvalDepth) {
+  TypeEvaluationHelper TYH(MaxTypeEvalDepth);
   return TYH.canEvaluateSExtdImpl(V, Ty) && TYH.allPendingVisited();
 }
 
@@ -1992,7 +2014,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
       ShouldExtendExpression = false;
   if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
-      TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy)) {
+      TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy,
+                                             CLOpts.max_type_eval_depth)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
@@ -2571,6 +2594,11 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
       FI.getOperand(0), Mask, IC.getSimplifyQuery().getWithInstruction(&FI));
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
+
+  // fpto{u/s}i (trunc X) --> fpto{u/s}i X
+  Value *Src;
+  if (match(FI.getOperand(0), m_Intrinsic<Intrinsic::trunc>(m_Value(Src))))
+    return IC.replaceOperand(FI, 0, Src);
 
   // fpto{u/s}i (fdiv ({u/s}itofp X to F), C_fp) --> {u/s}div X, C
   //

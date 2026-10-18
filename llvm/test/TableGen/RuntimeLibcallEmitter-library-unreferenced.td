@@ -31,6 +31,6 @@ def X86System : SystemRuntimeLibrary<isX86, (add Libc)>;
 // Only the referenced library is dispatched.
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
-// CHECK: if (isLibraryAvailable("libc"))
+// CHECK: if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT: setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-NOT: setAvailableLibFuncs_ext(
