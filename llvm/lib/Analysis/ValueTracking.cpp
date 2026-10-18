@@ -5438,9 +5438,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::fmuladd: {
       Value *A0 = II->getArgOperand(0), *A1 = II->getArgOperand(1);
       Value *NegSrc = nullptr;
-      if (match(A0, m_FNeg(m_Specific(A1))))
+      Instruction *Neg = nullptr;
+
+      // FIXME: m_FNeg currently also matches `fsub -0.0, x` which requires this
+      // workaround. It needs to be fixed in order to match a literal fneg,
+      // after which this can be reverted to a simpler match.
+      if (match(A0, m_Instruction(Neg, m_FNeg(m_Specific(A1)))) &&
+          Neg->getOpcode() == Instruction::FNeg)
         NegSrc = A1;
-      else if (match(A1, m_FNeg(m_Specific(A0))))
+      else if (match(A1, m_Instruction(Neg, m_FNeg(m_Specific(A0)))) &&
+               Neg->getOpcode() == Instruction::FNeg)
         NegSrc = A0;
 
       // Result is non-positive or NaN for -x * x and x * -x.
@@ -6117,6 +6124,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Handling the -X * X and X * -X cases
     Value *Src = nullptr;
     Instruction *Neg = nullptr;
+
+    // FIXME: m_FNeg currently also matches `fsub -0.0, x` which requires this
+    // workaround. It needs to be fixed in order to match a literal fneg,
+    // after which this can be reverted to a simpler match.
     if (match(Op, m_c_FMul(m_Value(Src),
                            m_Instruction(Neg, m_FNeg(m_Deferred(Src))))) &&
         Neg->getOpcode() == Instruction::FNeg) {
