@@ -15,25 +15,29 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %3 = arith.divsi %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg3 : vector<4xi64>
   %4 = arith.divui %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %[[MINUS_ONE:.*]] = llvm.mlir.constant(dense<-1> : vector<4xi64>) : vector<4xi64>
+// CHECK-NEXT:  %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi64>) : vector<4xi64>
+// CHECK-NEXT:  %[[IS_MINUS_ONE:.*]] = llvm.icmp "eq" %arg3, %[[MINUS_ONE]] : vector<4xi64>
+// CHECK-NEXT:  %[[SAFE_LHS:.*]] = llvm.select %[[IS_MINUS_ONE]], %[[ZERO]], %arg2 : vector<4xi1>, vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.srem %[[SAFE_LHS]], %arg3 : vector<4xi64>
   %5 = arith.remsi %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.urem %arg2, %arg3 : vector<4xi64>
   %6 = arith.remui %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : vector<4xf32>
+// CHECK-NEXT:  %{{.*}} = llvm.fdiv %arg0, %0 : vector<4xf32>
   %7 = arith.divf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : vector<4xf32>
+// CHECK-NEXT:  %{{.*}} = llvm.frem %arg0, %0 : vector<4xf32>
   %8 = arith.remf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %8 = llvm.and %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.and %arg2, %arg3 : vector<4xi64>
   %9 = arith.andi %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %9 = llvm.or %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.or %arg2, %arg3 : vector<4xi64>
   %10 = arith.ori %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %10 = llvm.xor %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.xor %arg2, %arg3 : vector<4xi64>
   %11 = arith.xori %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.shl %arg2, %arg2 : vector<4xi64>
   %12 = arith.shli %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.ashr %arg2, %arg3 : vector<4xi64>
   %13 = arith.shrsi %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %{{.*}} = llvm.lshr %arg2, %arg3 : vector<4xi64>
   %14 = arith.shrui %arg2, %arg3 : vector<4xi64>
   return %1 : vector<4xf32>
 }
@@ -65,7 +69,11 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
   %9 = arith.divsi %arg2, %arg3 : i32
 // CHECK: = llvm.udiv %arg2, %arg3 : i32
   %10 = arith.divui %arg2, %arg3 : i32
-// CHECK: = llvm.srem %arg2, %arg3 : i32
+// CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i32) : i32
+// CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK: %[[IS_MINUS_ONE:.*]] = llvm.icmp "eq" %arg3, %[[MINUS_ONE]] : i32
+// CHECK: %[[SAFE_LHS:.*]] = llvm.select %[[IS_MINUS_ONE]], %[[ZERO]], %arg2 : i1, i32
+// CHECK: = llvm.srem %[[SAFE_LHS]], %arg3 : i32
   %11 = arith.remsi %arg2, %arg3 : i32
 // CHECK: = llvm.urem %arg2, %arg3 : i32
   %12 = arith.remui %arg2, %arg3 : i32
@@ -91,6 +99,72 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
   // There is no type conversion rule for tf32.
   %22 = arith.constant 2.0 : tf32
   return %0, %10 : f32, i32
+}
+
+// -----
+
+// INT_MIN % -1 must evaluate to zero. Keep the divisor dynamic so that the
+// arith.remsi is lowered instead of being constant-folded.
+// CHECK-LABEL: @remsi_int_min(
+// CHECK-SAME: %[[RHS:.*]]: i32)
+func.func @remsi_int_min(%rhs: i32) -> i32 {
+  // CHECK-DAG: %[[MIN:.*]] = llvm.mlir.constant(-2147483648 : i32) : i32
+  // CHECK-DAG: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-DAG: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[IS_MINUS_ONE:.*]] = llvm.icmp "eq" %[[RHS]], %[[MINUS_ONE]] : i32
+  // CHECK-NEXT: %[[SAFE_LHS:.*]] = llvm.select %[[IS_MINUS_ONE]], %[[ZERO]], %[[MIN]] : i1, i32
+  // CHECK-NEXT: %[[RESULT:.*]] = llvm.srem %[[SAFE_LHS]], %[[RHS]] : i32
+  // CHECK-NEXT: return %[[RESULT]] : i32
+  %min = arith.constant -2147483648 : i32
+  %result = arith.remsi %min, %rhs : i32
+  return %result : i32
+}
+
+// -----
+
+// Replacing the divisor with 1 would not work for i1, where 1 is also -1.
+// CHECK-LABEL: @remsi_i1(
+// CHECK-SAME: %[[LHS:.*]]: i1, %[[RHS:.*]]: i1)
+func.func @remsi_i1(%lhs: i1, %rhs: i1) -> i1 {
+  // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(true) : i1
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(false) : i1
+  // CHECK: %[[IS_MINUS_ONE:.*]] = llvm.icmp "eq" %[[RHS]], %[[MINUS_ONE]] : i1
+  // CHECK-NEXT: %[[SAFE_LHS:.*]] = llvm.select %[[IS_MINUS_ONE]], %[[ZERO]], %[[LHS]] : i1, i1
+  // CHECK-NEXT: %[[RESULT:.*]] = llvm.srem %[[SAFE_LHS]], %[[RHS]] : i1
+  // CHECK-NEXT: return %[[RESULT]] : i1
+  %result = arith.remsi %lhs, %rhs : i1
+  return %result : i1
+}
+
+// -----
+
+// Guard each subvector when lowering multidimensional vectors, including
+// scalable vectors.
+// CHECK-LABEL: @remsi_2dvector(
+// CHECK-SAME: %[[LHS:.*]]: vector<2x[4]xi32>, %[[RHS:.*]]: vector<2x[4]xi32>)
+func.func @remsi_2dvector(%lhs: vector<2x[4]xi32>, %rhs: vector<2x[4]xi32>) -> vector<2x[4]xi32> {
+  // CHECK-DAG: %[[LHS_ARRAY:.*]] = builtin.unrealized_conversion_cast %[[LHS]] : vector<2x[4]xi32> to !llvm.array<2 x vector<[4]xi32>>
+  // CHECK-DAG: %[[RHS_ARRAY:.*]] = builtin.unrealized_conversion_cast %[[RHS]] : vector<2x[4]xi32> to !llvm.array<2 x vector<[4]xi32>>
+  // CHECK: %[[LHS0:.*]] = llvm.extractvalue %[[LHS_ARRAY]][0]
+  // CHECK: %[[RHS0:.*]] = llvm.extractvalue %[[RHS_ARRAY]][0]
+  // CHECK: %[[MINUS_ONE0:.*]] = llvm.mlir.constant(dense<-1> : vector<[4]xi32>) : vector<[4]xi32>
+  // CHECK: %[[ZERO0:.*]] = llvm.mlir.constant(dense<0> : vector<[4]xi32>) : vector<[4]xi32>
+  // CHECK: %[[IS_MINUS_ONE0:.*]] = llvm.icmp "eq" %[[RHS0]], %[[MINUS_ONE0]] : vector<[4]xi32>
+  // CHECK-NEXT: %[[SAFE_LHS0:.*]] = llvm.select %[[IS_MINUS_ONE0]], %[[ZERO0]], %[[LHS0]] : vector<[4]xi1>, vector<[4]xi32>
+  // CHECK-NEXT: %[[RESULT0:.*]] = llvm.srem %[[SAFE_LHS0]], %[[RHS0]] : vector<[4]xi32>
+  // CHECK: %[[ARRAY0:.*]] = llvm.insertvalue %[[RESULT0]], %{{.*}}[0]
+  // CHECK: %[[LHS1:.*]] = llvm.extractvalue %[[LHS_ARRAY]][1]
+  // CHECK: %[[RHS1:.*]] = llvm.extractvalue %[[RHS_ARRAY]][1]
+  // CHECK: %[[MINUS_ONE1:.*]] = llvm.mlir.constant(dense<-1> : vector<[4]xi32>) : vector<[4]xi32>
+  // CHECK: %[[ZERO1:.*]] = llvm.mlir.constant(dense<0> : vector<[4]xi32>) : vector<[4]xi32>
+  // CHECK: %[[IS_MINUS_ONE1:.*]] = llvm.icmp "eq" %[[RHS1]], %[[MINUS_ONE1]] : vector<[4]xi32>
+  // CHECK-NEXT: %[[SAFE_LHS1:.*]] = llvm.select %[[IS_MINUS_ONE1]], %[[ZERO1]], %[[LHS1]] : vector<[4]xi1>, vector<[4]xi32>
+  // CHECK-NEXT: %[[RESULT1:.*]] = llvm.srem %[[SAFE_LHS1]], %[[RHS1]] : vector<[4]xi32>
+  // CHECK: %[[ARRAY1:.*]] = llvm.insertvalue %[[RESULT1]], %[[ARRAY0]][1]
+  // CHECK: %[[RESULT:.*]] = builtin.unrealized_conversion_cast %[[ARRAY1]] : !llvm.array<2 x vector<[4]xi32>> to vector<2x[4]xi32>
+  // CHECK: return %[[RESULT]] : vector<2x[4]xi32>
+  %result = arith.remsi %lhs, %rhs : vector<2x[4]xi32>
+  return %result : vector<2x[4]xi32>
 }
 
 // -----
