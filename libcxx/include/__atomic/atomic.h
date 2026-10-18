@@ -59,26 +59,26 @@ struct __atomic_base // false
   }
   void store(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) {
-    std::__cxx_atomic_store(std::addressof(__a_), __d, __m);
+    __a_.__atomic_store(__d, __m);
   }
   void store(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) {
-    std::__cxx_atomic_store(std::addressof(__a_), __d, __m);
+    __a_.__atomic_store(__d, __m);
   }
   [[__nodiscard__]] _Tp load(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
-    return std::__cxx_atomic_load(std::addressof(__a_), __m);
+    return __a_.__atomic_load(__m);
   }
   [[__nodiscard__]] _Tp load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) {
-    return std::__cxx_atomic_load(std::addressof(__a_), __m);
+    return __a_.__atomic_load(__m);
   }
   operator _Tp() const volatile _NOEXCEPT { return load(); }
   operator _Tp() const _NOEXCEPT { return load(); }
   _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_exchange(std::addressof(__a_), __d, __m);
+    return __a_.__atomic_exchange(__d, __m);
   }
   _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_exchange(std::addressof(__a_), __d, __m);
+    return __a_.__atomic_exchange(__d, __m);
   }
   bool compare_exchange_weak(_Tp& __e, _Tp __d, memory_order __s, memory_order __f) volatile _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f) {
@@ -90,11 +90,11 @@ struct __atomic_base // false
   }
   bool compare_exchange_strong(_Tp& __e, _Tp __d, memory_order __s, memory_order __f) volatile _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f) {
-    return std::__cxx_atomic_compare_exchange_strong(std::addressof(__a_), std::addressof(__e), __d, __s, __f);
+    return __a_.__atomic_compare_exchange_strong(std::addressof(__e), __d, __s, __f);
   }
   bool compare_exchange_strong(_Tp& __e, _Tp __d, memory_order __s, memory_order __f) _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f) {
-    return std::__cxx_atomic_compare_exchange_strong(std::addressof(__a_), std::addressof(__e), __d, __s, __f);
+    return __a_.__atomic_compare_exchange_strong(std::addressof(__e), __d, __s, __f);
   }
   bool compare_exchange_weak(_Tp& __e, _Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     return std::__cxx_atomic_compare_exchange_weak(std::addressof(__a_), std::addressof(__e), __d, __m, __m);
@@ -103,10 +103,10 @@ struct __atomic_base // false
     return std::__cxx_atomic_compare_exchange_weak(std::addressof(__a_), std::addressof(__e), __d, __m, __m);
   }
   bool compare_exchange_strong(_Tp& __e, _Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_compare_exchange_strong(std::addressof(__a_), std::addressof(__e), __d, __m, __m);
+    return __a_.__atomic_compare_exchange_strong(std::addressof(__e), __d, __m, __m);
   }
   bool compare_exchange_strong(_Tp& __e, _Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_compare_exchange_strong(std::addressof(__a_), std::addressof(__e), __d, __m, __m);
+    return __a_.__atomic_compare_exchange_strong(std::addressof(__e), __d, __m, __m);
   }
 
 #if _LIBCPP_STD_VER >= 20
@@ -373,14 +373,6 @@ private:
       _Tp __old = __self.load(memory_order_relaxed);
       _Tp __new = __operation(__old, __operand);
       while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-#  ifdef _LIBCPP_COMPILER_CLANG_BASED
-        if constexpr (std::__is_fp80_long_double<_Tp>()) {
-          // https://llvm.org/PR47978
-          // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
-          // Note __old = __self.load(memory_order_relaxed) will not work
-          std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), std::addressof(__old), memory_order_relaxed);
-        }
-#  endif
         __new = __operation(__old, __operand);
       }
       return __old;
@@ -480,12 +472,12 @@ template <class _Tp>
 template <class _Tp>
 _LIBCPP_DEPRECATED_IN_CXX20 void
 atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
-  std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
+  __o->__a_.__atomic_init(__d);
 }
 
 template <class _Tp>
 _LIBCPP_DEPRECATED_IN_CXX20 void atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
-  std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
+  __o->__a_.__atomic_init(__d);
 }
 
 // atomic_store

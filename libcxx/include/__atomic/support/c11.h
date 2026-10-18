@@ -28,6 +28,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+inline _LIBCPP_CONSTEXPR memory_order __to_failure_order(memory_order __order) {
+  // Avoid switch statement to make this a constexpr.
+  return __order == memory_order_release
+           ? memory_order_relaxed
+           : (__order == memory_order_acq_rel ? memory_order_acquire : __order);
+}
+
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
 #ifndef _LIBCPP_CXX03_LANG
@@ -38,6 +45,79 @@ struct __cxx_atomic_base_impl {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
       : __a_value(std::__clear_padding_if_needed(__value)) {}
+
+  void __atomic_init(_Tp __val) volatile _NOEXCEPT {
+    std::__clear_padding_if_needed(__val);
+    __c11_atomic_init(std::addressof(__a_value), __val);
+  }
+
+  void __atomic_init(_Tp __val) _NOEXCEPT {
+    std::__clear_padding_if_needed(__val);
+    __c11_atomic_init(std::addressof(__a_value), __val);
+  }
+
+  void __atomic_store(_Tp __val, memory_order __order) volatile _NOEXCEPT {
+    std::__clear_padding_if_needed(__val);
+    __c11_atomic_store(std::addressof(__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  void __atomic_store(_Tp __val, memory_order __order) _NOEXCEPT {
+    std::__clear_padding_if_needed(__val);
+    __c11_atomic_store(std::addressof(__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  _Tp __atomic_load(memory_order __order) const volatile _NOEXCEPT {
+    using __ptr_type = __remove_const_t<decltype(__a_value)>*;
+    return __c11_atomic_load(
+        const_cast<__ptr_type>(std::addressof(__a_value)), static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  _Tp __atomic_load(memory_order __order) const _NOEXCEPT {
+    using __ptr_type = __remove_const_t<decltype(__a_value)>*;
+    return __c11_atomic_load(
+        const_cast<__ptr_type>(std::addressof(__a_value)), static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  _Tp __atomic_exchange(_Tp __value, memory_order __order) volatile _NOEXCEPT {
+    std::__clear_padding_if_needed(__value);
+    return __c11_atomic_exchange(std::addressof(__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  _Tp __atomic_exchange(_Tp __value, memory_order __order) _NOEXCEPT {
+    std::__clear_padding_if_needed(__value);
+    return __c11_atomic_exchange(std::addressof(__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  bool __atomic_compare_exchange_strong(
+      _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) volatile _NOEXCEPT {
+    return std::__atomic_cas_with_clear_padding(
+        __expected,
+        __value,
+        // Use always_inline since Clang fails to inline the lambda, even when the memory order is a constant
+        [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
+          return __c11_atomic_compare_exchange_strong(
+              std::addressof(this->__a_value),
+              __expected_or_copy,
+              __value_maybe_padding_cleared,
+              static_cast<__memory_order_underlying_t>(__success),
+              static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
+        });
+  }
+
+  bool __atomic_compare_exchange_strong(
+      _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) _NOEXCEPT {
+    return std::__atomic_cas_with_clear_padding(
+        __expected,
+        __value,
+        [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
+          return __c11_atomic_compare_exchange_strong(
+              std::addressof(this->__a_value),
+              __expected_or_copy,
+              __value_maybe_padding_cleared,
+              static_cast<__memory_order_underlying_t>(__success),
+              static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
+        });
+  }
 
   _Atomic(_Tp) __a_value;
 };
@@ -50,112 +130,6 @@ inline void __cxx_atomic_thread_fence(memory_order __order) _NOEXCEPT {
 
 inline void __cxx_atomic_signal_fence(memory_order __order) _NOEXCEPT {
   __c11_atomic_signal_fence(static_cast<__memory_order_underlying_t>(__order));
-}
-
-template <class _Tp>
-void __cxx_atomic_init(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val) _NOEXCEPT {
-  std::__clear_padding_if_needed(__val);
-  __c11_atomic_init(std::addressof(__a->__a_value), __val);
-}
-template <class _Tp>
-void __cxx_atomic_init(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val) _NOEXCEPT {
-  std::__clear_padding_if_needed(__val);
-  __c11_atomic_init(std::addressof(__a->__a_value), __val);
-}
-
-template <class _Tp>
-void __cxx_atomic_store(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  std::__clear_padding_if_needed(__val);
-  __c11_atomic_store(std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
-}
-template <class _Tp>
-void __cxx_atomic_store(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  std::__clear_padding_if_needed(__val);
-  __c11_atomic_store(std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
-}
-
-template <class _Tp>
-_Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const volatile* __a, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  return __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-template <class _Tp>
-_Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const* __a, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  return __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-
-template <class _Tp>
-void __cxx_atomic_load_inplace(
-    __cxx_atomic_base_impl<_Tp> const volatile* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  *__dst           = __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-template <class _Tp>
-void __cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  *__dst           = __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-
-template <class _Tp>
-_Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __value, memory_order __order) _NOEXCEPT {
-  std::__clear_padding_if_needed(__value);
-  return __c11_atomic_exchange(
-      std::addressof(__a->__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
-}
-template <class _Tp>
-_Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_order __order) _NOEXCEPT {
-  std::__clear_padding_if_needed(__value);
-  return __c11_atomic_exchange(
-      std::addressof(__a->__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
-}
-
-inline _LIBCPP_CONSTEXPR memory_order __to_failure_order(memory_order __order) {
-  // Avoid switch statement to make this a constexpr.
-  return __order == memory_order_release
-           ? memory_order_relaxed
-           : (__order == memory_order_acq_rel ? memory_order_acquire : __order);
-}
-
-template <class _Tp>
-bool __cxx_atomic_compare_exchange_strong(
-    __cxx_atomic_base_impl<_Tp> volatile* __a,
-    _Tp* __expected,
-    _Tp __value,
-    memory_order __success,
-    memory_order __failure) _NOEXCEPT {
-  return std::__atomic_cas_with_clear_padding(
-      __expected,
-      __value,
-      // Use always_inline since Clang fails to inline the lambda, even when the memory order is a constant
-      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
-        return __c11_atomic_compare_exchange_strong(
-            std::addressof(__a->__a_value),
-            __expected_or_copy,
-            __value_maybe_padding_cleared,
-            static_cast<__memory_order_underlying_t>(__success),
-            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
-      });
-}
-template <class _Tp>
-bool __cxx_atomic_compare_exchange_strong(
-    __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
-    _NOEXCEPT {
-  return std::__atomic_cas_with_clear_padding(
-      __expected,
-      __value,
-      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
-        return __c11_atomic_compare_exchange_strong(
-            std::addressof(__a->__a_value),
-            __expected_or_copy,
-            __value_maybe_padding_cleared,
-            static_cast<__memory_order_underlying_t>(__success),
-            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
-      });
 }
 
 template <class _Tp>
@@ -285,7 +259,7 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __val ? __ret : __val;
@@ -303,7 +277,7 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __val ? __ret : __val;
@@ -321,7 +295,7 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __val ? __ret : __val;
@@ -339,7 +313,7 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __val ? __ret : __val;

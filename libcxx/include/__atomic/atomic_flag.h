@@ -25,17 +25,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 struct atomic_flag {
   __cxx_atomic_impl<bool> __a_;
 
-  bool test(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT { return __cxx_atomic_load(&__a_, __m); }
-  bool test(memory_order __m = memory_order_seq_cst) const _NOEXCEPT { return __cxx_atomic_load(&__a_, __m); }
+  bool test(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT { return __a_.__atomic_load(__m); }
+  bool test(memory_order __m = memory_order_seq_cst) const _NOEXCEPT { return __a_.__atomic_load(__m); }
 
   bool test_and_set(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return __cxx_atomic_exchange(&__a_, true, __m);
+    return __a_.__atomic_exchange(true, __m);
   }
   bool test_and_set(memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return __cxx_atomic_exchange(&__a_, true, __m);
+    return __a_.__atomic_exchange(true, __m);
   }
-  void clear(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT { __cxx_atomic_store(&__a_, false, __m); }
-  void clear(memory_order __m = memory_order_seq_cst) _NOEXCEPT { __cxx_atomic_store(&__a_, false, __m); }
+  void clear(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT { __a_.__atomic_store(false, __m); }
+  void clear(memory_order __m = memory_order_seq_cst) _NOEXCEPT { __a_.__atomic_store(false, __m); }
 
 #if _LIBCPP_STD_VER >= 20
   void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile noexcept {
@@ -67,11 +67,11 @@ struct __atomic_waitable_traits<atomic_flag> {
   using __value_type _LIBCPP_NODEBUG = bool;
 
   static bool __atomic_load(const atomic_flag& __a, memory_order __order) {
-    return std::__cxx_atomic_load(&__a.__a_, __order);
+    return __a.__a_.__atomic_load(__order);
   }
 
   static bool __atomic_load(const volatile atomic_flag& __a, memory_order __order) {
-    return std::__cxx_atomic_load(&__a.__a_, __order);
+    return __a.__a_.__atomic_load(__order);
   }
 
   static const __cxx_atomic_impl<bool>* __atomic_contention_address(const atomic_flag& __a) {

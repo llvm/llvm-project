@@ -55,112 +55,88 @@ struct __cxx_atomic_base_impl {
   _LIBCPP_CONSTEXPR __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(std::__clear_padding_if_needed(__value)) {
   }
 
+  void __atomic_init(_Tp __val) volatile {
+    std::__clear_padding_if_needed(__val);
+    __cxx_atomic_assign_volatile(__a_value, __val);
+  }
+
+  void __atomic_init(_Tp __val) {
+    std::__clear_padding_if_needed(__val);
+    __a_value = __val;
+  }
+
+  void __atomic_store(_Tp __val, memory_order __order) volatile {
+    std::__clear_padding_if_needed(__val);
+    ::__atomic_store(std::addressof(__a_value), std::addressof(__val), std::__to_gcc_order(__order));
+  }
+
+  void __atomic_store(_Tp __val, memory_order __order) {
+    std::__clear_padding_if_needed(__val);
+    ::__atomic_store(std::addressof(__a_value), std::addressof(__val), std::__to_gcc_order(__order));
+  }
+
+  _Tp __atomic_load(memory_order __order) const volatile {
+    _Tp __ret;
+    ::__atomic_load(std::addressof(__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
+    return __ret;
+  }
+
+  _Tp __atomic_load(memory_order __order) const {
+    _Tp __ret;
+    ::__atomic_load(std::addressof(__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
+    return __ret;
+  }
+
+  _Tp __atomic_exchange(_Tp __value, memory_order __order) volatile {
+    _Tp __ret;
+    std::__clear_padding_if_needed(__value);
+    ::__atomic_exchange(
+        std::addressof(__a_value), std::addressof(__value), std::addressof(__ret), std::__to_gcc_order(__order));
+    return __ret;
+  }
+
+  _Tp __atomic_exchange(_Tp __value, memory_order __order) {
+    _Tp __ret;
+    std::__clear_padding_if_needed(__value);
+    ::__atomic_exchange(
+        std::addressof(__a_value), std::addressof(__value), std::addressof(__ret), std::__to_gcc_order(__order));
+    return __ret;
+  }
+
+  bool __atomic_compare_exchange_strong(
+      _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) volatile {
+    return std::__atomic_cas_with_clear_padding(
+        __expected, __value, [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+          return ::__atomic_compare_exchange(
+              std::addressof(this->__a_value),
+              __expected_or_copy,
+              std::addressof(__value_maybe_padding_cleared),
+              false,
+              std::__to_gcc_order(__success),
+              std::__to_gcc_failure_order(__failure));
+        });
+  }
+
+  bool
+  __atomic_compare_exchange_strong(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) {
+    return std::__atomic_cas_with_clear_padding(
+        __expected, __value, [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+          return __atomic_compare_exchange(
+              std::addressof(this->__a_value),
+              __expected_or_copy,
+              std::addressof(__value_maybe_padding_cleared),
+              false,
+              std::__to_gcc_order(__success),
+              std::__to_gcc_failure_order(__failure));
+        });
+  }
+
   _Tp __a_value;
 };
-
-template <typename _Tp>
-void __cxx_atomic_init(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val) {
-  std::__clear_padding_if_needed(__val);
-  __cxx_atomic_assign_volatile(__a->__a_value, __val);
-}
-
-template <typename _Tp>
-void __cxx_atomic_init(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val) {
-  std::__clear_padding_if_needed(__val);
-  __a->__a_value = __val;
-}
 
 inline void __cxx_atomic_thread_fence(memory_order __order) { __atomic_thread_fence(std::__to_gcc_order(__order)); }
 
 inline void __cxx_atomic_signal_fence(memory_order __order) { __atomic_signal_fence(std::__to_gcc_order(__order)); }
-
-template <typename _Tp>
-void __cxx_atomic_store(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-  std::__clear_padding_if_needed(__val);
-  __atomic_store(std::addressof(__a->__a_value), std::addressof(__val), std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-void __cxx_atomic_store(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-  std::__clear_padding_if_needed(__val);
-  __atomic_store(std::addressof(__a->__a_value), std::addressof(__val), std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_load(const volatile __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
-  _Tp __ret;
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
-  return __ret;
-}
-
-template <typename _Tp>
-void __cxx_atomic_load_inplace(const volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-void __cxx_atomic_load_inplace(const __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_load(const __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
-  _Tp __ret;
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
-  return __ret;
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_exchange(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_order __order) {
-  _Tp __ret;
-  std::__clear_padding_if_needed(__value);
-  __atomic_exchange(
-      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), std::__to_gcc_order(__order));
-  return __ret;
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_order __order) {
-  _Tp __ret;
-  std::__clear_padding_if_needed(__value);
-  __atomic_exchange(
-      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), std::__to_gcc_order(__order));
-  return __ret;
-}
-
-template <typename _Tp>
-bool __cxx_atomic_compare_exchange_strong(
-    volatile __cxx_atomic_base_impl<_Tp>* __a,
-    _Tp* __expected,
-    _Tp __value,
-    memory_order __success,
-    memory_order __failure) {
-  return std::__atomic_cas_with_clear_padding(
-      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
-        return __atomic_compare_exchange(
-            std::addressof(__a->__a_value),
-            __expected_or_copy,
-            std::addressof(__value_maybe_padding_cleared),
-            false,
-            std::__to_gcc_order(__success),
-            std::__to_gcc_failure_order(__failure));
-      });
-}
-
-template <typename _Tp>
-bool __cxx_atomic_compare_exchange_strong(
-    __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) {
-  return std::__atomic_cas_with_clear_padding(
-      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
-        return __atomic_compare_exchange(
-            std::addressof(__a->__a_value),
-            __expected_or_copy,
-            std::addressof(__value_maybe_padding_cleared),
-            false,
-            std::__to_gcc_order(__success),
-            std::__to_gcc_failure_order(__failure));
-      });
-}
 
 template <typename _Tp>
 bool __cxx_atomic_compare_exchange_weak(
@@ -272,7 +248,7 @@ _Tp __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val,
 #if __has_builtin(__atomic_fetch_max)
   return __atomic_fetch_max(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __val ? __ret : __val;
@@ -286,7 +262,7 @@ _Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_o
 #if __has_builtin(__atomic_fetch_max)
   return __atomic_fetch_max(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __val ? __ret : __val;
@@ -300,7 +276,7 @@ _Tp __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val,
 #if __has_builtin(__atomic_fetch_min)
   return __atomic_fetch_min(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __val ? __ret : __val;
@@ -314,7 +290,7 @@ _Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_o
 #if __has_builtin(__atomic_fetch_min)
   return __atomic_fetch_min(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __val ? __ret : __val;
