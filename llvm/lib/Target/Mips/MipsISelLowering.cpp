@@ -781,13 +781,12 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(SMSize, DL, MVT::i32));
 }
 
-static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
-                                TargetLowering::DAGCombinerInfo &DCI,
-                                const MipsSubtarget &Subtarget) {
-  if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
-    return SDValue();
-
-  SDValue FirstOperand = N->getOperand(0), SecondOperand = N->getOperand(1);
+// Match OR with a particular operand order. The masked insert patterns below
+// expect the preserved bits in FirstOperand.
+static SDValue performORCombineWithOperands(SDNode *N, SDValue FirstOperand,
+                                            SDValue SecondOperand,
+                                            SelectionDAG &DAG,
+                                            const MipsSubtarget &Subtarget) {
   unsigned SMPos0, SMSize0, SMPos1, SMSize1;
   ConstantSDNode *CN, *CN1;
 
@@ -891,7 +890,7 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
         if (!(CN1 = dyn_cast<ConstantSDNode>(SecondOperand->getOperand(1))))
           return SDValue();
       } else {
-        if (!(CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1))))
+        if (!(CN1 = dyn_cast<ConstantSDNode>(SecondOperand)))
           return SDValue();
       }
       // Don't generate INS if constant OR operand doesn't fit into bits
@@ -900,7 +899,7 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
         return SDValue();
 
       SDLoc DL(N);
-      EVT ValTy = N->getOperand(0)->getValueType(0);
+      EVT ValTy = N->getValueType(0);
       SDValue Const1;
       SDValue SrlX;
       if (!isConstCase) {
@@ -921,6 +920,29 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
     }
     return SDValue();
   }
+}
+
+static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const MipsSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
+    return SDValue();
+
+  SDValue FirstOperand = N->getOperand(0), SecondOperand = N->getOperand(1);
+  if (SDValue V = performORCombineWithOperands(N, FirstOperand, SecondOperand,
+                                               DAG, Subtarget))
+    return V;
+  // For an already positioned field that fits ANDi, commuting can replace
+  // cheap logical operations with a shift, an insert and a tied-operand copy.
+  // Keep the existing sequence rather than introducing that extra work.
+  if (FirstOperand.getOpcode() == ISD::AND &&
+      FirstOperand.getOperand(0).getOpcode() != ISD::SHL)
+    if (auto *Mask = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1)))
+      if (isUInt<16>(Mask->getZExtValue()))
+        return SDValue();
+  // OR is commutative. Do not depend on the order chosen by IR or DAG combines.
+  return performORCombineWithOperands(N, SecondOperand, FirstOperand, DAG,
+                                      Subtarget);
 }
 
 static SDValue performMADD_MSUBCombine(SDNode *ROOTNode, SelectionDAG &CurDAG,
