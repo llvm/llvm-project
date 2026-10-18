@@ -187,9 +187,6 @@ void LTOCodeGenerator::setDebugInfo(lto_debug_model Debug) {
 
 void LTOCodeGenerator::setOptLevel(unsigned Level) {
   Config.OptLevel = Level;
-  Config.PTO = PipelineTuningOptions(Config.LibraryOptions);
-  Config.PTO.LoopVectorization = Config.OptLevel > 1;
-  Config.PTO.SLPVectorization = Config.OptLevel > 1;
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(Config.OptLevel);
   assert(CGOptLevelOrNone && "Unknown optimization level!");
@@ -567,6 +564,9 @@ bool LTOCodeGenerator::optimize() {
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
   Config.SampleProfile = SampleProfileFile;
+  Config.PTO = PipelineTuningOptions(Config.LibraryOptions);
+  Config.PTO.LoopVectorization = Config.OptLevel > 1;
+  Config.PTO.SLPVectorization = Config.OptLevel > 1;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
