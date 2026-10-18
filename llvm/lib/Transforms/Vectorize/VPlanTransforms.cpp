@@ -306,9 +306,9 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Get the value type of the replicate load or store. \p IsLoad indicates
-/// whether it is a load.
-static Type *getLoadStoreValueType(VPReplicateRecipe *R, bool IsLoad) {
+/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
+static Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
+  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
   return (IsLoad ? R : R->getOperand(0))->getScalarType();
 }
 
@@ -334,7 +334,7 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR.getOperand(IsLoad ? 0 : 1);
-      const Type *LoadStoreTy = getLoadStoreValueType(&RepR, IsLoad);
+      const Type *LoadStoreTy = getLoadStoreValueType(&RepR);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
         RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(&RepR);
@@ -4091,7 +4091,6 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
                                      const Loop *L) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
-  [[maybe_unused]] constexpr bool IsLoad = (Opcode == Instruction::Load);
 
   // For each address, collect operations with the same or complementary masks.
   SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
@@ -4102,8 +4101,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
-    assert(all_equal(
-               map_range(Recipes, bind_back<getLoadStoreValueType>(IsLoad))) &&
+    assert(all_equal(map_range(Recipes, getLoadStoreValueType)) &&
            "Expected all recipes in group to have the same load-store type");
 
     // Collect groups with the same or complementary masks.
