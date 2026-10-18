@@ -28,6 +28,17 @@ unsigned long cast_in_lambda() {
   return [] { return sizeof(((P)0)[1]); }();
 }
 
+// So does sizeof of such a type.
+// CHECK-LABEL: define {{.*}} @_Z13sizeof_lambdav(
+// CHECK: store i64 {{%.*}}, ptr {{%.*}}
+// CHECK-LABEL: define internal {{.*}} @"_ZZ13sizeof_lambdavENK3$_0clEv"(
+// CHECK: [[BOUND:%[0-9]+]] = load i64, ptr {{%[0-9]+}}
+// CHECK: mul nuw i64 4, [[BOUND]]
+unsigned long sizeof_lambda() {
+  using X = int[foo()];
+  return [] { return sizeof(X); }();
+}
+
 // The bound of the lambda's own parameter is not captured.
 // CHECK-LABEL: define {{.*}} @_Z15own_param_boundv(
 // CHECK-LABEL: define internal {{.*}} @"_ZZ15own_param_boundvENK3$_0clEiPA_i"(ptr noundef nonnull align 1 dereferenceable(1) %this,

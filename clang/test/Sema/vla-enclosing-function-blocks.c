@@ -22,6 +22,13 @@ void cast_in_block(void) {
   ^{ (void)(P)0; }(); // expected-error {{cannot be used in a block}}
 }
 
+// FIXME: The operand of sizeof is checked in an unevaluated context, so this
+// is not diagnosed.
+void sizeof_in_block(void) {
+  typedef int X[size_tab()];
+  ^{ (void)sizeof(X); }();
+}
+
 // Valid: VLA parameter of the block itself.
 int own_vla_param_in_block(void) {
   return (^ int(int m, int (*p)[m]) { __typeof(p) q = p; return sizeof(*q); })(1, 0);
