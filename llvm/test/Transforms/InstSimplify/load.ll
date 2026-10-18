@@ -258,3 +258,19 @@ define b32 @load_b32_from_vb32_splat() {
   %load = load b32, ptr %gep
   ret b32 %load
 }
+
+define ptr @load_ptr_from_b64() {
+; CHECK-LABEL: @load_ptr_from_b64(
+; CHECK-NEXT:    ret ptr bitcast (b64 1234605616436508552 to ptr)
+;
+  %load = load ptr, ptr @b64
+  ret ptr %load
+}
+
+define ptr @load_ptr_from_struct_b32() {
+; CHECK-LABEL: @load_ptr_from_struct_b32(
+; CHECK-NEXT:    ret ptr inttoptr (i64 6153737367135073092 to ptr)
+;
+  %load = load ptr, ptr @struct_b32, align 4
+  ret ptr %load
+}
