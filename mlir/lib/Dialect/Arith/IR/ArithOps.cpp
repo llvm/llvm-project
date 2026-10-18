@@ -2827,11 +2827,13 @@ public:
     // Convert to equivalent cmpi predicate
     CmpIPredicate pred;
     switch (op.getPredicate()) {
+    case CmpFPredicate::AlwaysTrue:
     case CmpFPredicate::ORD:
       // Int to fp conversion doesn't create a nan (ord checks neither is a nan)
       rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/true,
                                                  /*width=*/1);
       return success();
+    case CmpFPredicate::AlwaysFalse:
     case CmpFPredicate::UNO:
       // Int to fp conversion doesn't create a nan (uno checks either is a nan)
       rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/false,
