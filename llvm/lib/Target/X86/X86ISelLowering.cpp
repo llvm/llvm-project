@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86ISelLowering.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "X86.h"
 #include "X86FrameLowering.h"
@@ -2061,7 +2062,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
 
-      // AVX512DQ has VFPCLASSPS/PD instructions for vector fpclass tests.
       for (auto VT : {MVT::v16f32, MVT::v8f64})
         setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
@@ -2227,7 +2227,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // targets handle VPMULLQ by implicit widening.
       setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
 
-      // AVX512DQ+VLX has VFPCLASSPS/PD for 128/256-bit vectors.
       for (auto VT : {MVT::v4f32, MVT::v2f64, MVT::v8f32, MVT::v4f64})
         setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
@@ -2446,7 +2445,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LRINT, MVT::v32f16, Legal);
       setOperationAction(ISD::LLRINT, MVT::v8f16, Legal);
 
-      // AVX512FP16 has VFPCLASSPH for f16 vector fpclass tests.
       setOperationAction(ISD::IS_FPCLASS, MVT::v32f16, Custom);
     }
 
@@ -2504,7 +2502,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LRINT, MVT::v8f16, Legal);
       setOperationAction(ISD::LRINT, MVT::v16f16, Legal);
 
-      // AVX512FP16+VLX has VFPCLASSPH for 128/256-bit f16 vectors.
       for (auto VT : {MVT::v8f16, MVT::v16f16})
         setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
@@ -2615,7 +2612,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETUNE, VT, Custom);
     }
 
-    // AVX10.2 has VFPCLASSPBF16 for bf16 vector fpclass tests.
     if (Subtarget.useAVX512Regs())
       setOperationAction(ISD::IS_FPCLASS, MVT::v32bf16, Custom);
     for (auto VT : {MVT::v8bf16, MVT::v16bf16})
@@ -23186,16 +23182,7 @@ static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::FTRUNC, dl, VT, N0);
 }
 
-// Convert ISD::IS_FPCLASS to X86ISD::VFPCLASS for AVX512DQ/FP16/AVX10.2.
-// The VFPCLASS instruction immediate encoding is:
-//   Bit 0: QNaN
-//   Bit 1: Positive Zero
-//   Bit 2: Negative Zero
-//   Bit 3: Positive Infinity
-//   Bit 4: Negative Infinity
-//   Bit 5: Denormal
-//   Bit 6: Negative (finite)
-//   Bit 7: SNaN
+// Convert ISD::IS_FPCLASS to X86ISD::VFPCLASS.
 static SDValue LowerIS_FPCLASS(SDValue Op, const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
   SDLoc DL(Op);
@@ -23203,28 +23190,35 @@ static SDValue LowerIS_FPCLASS(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Src = Op.getOperand(0);
   unsigned Check = Op.getConstantOperandVal(1);
 
+  // Check for fcFinite - can be handled by inverting ~(nan | inf).
+  bool Invert = false;
+  if (Check == fcFinite) {
+    Check = fcNan | fcInf;
+    Invert = true;
+  }
+
   // Convert LLVM FPClassTest flags to VFPCLASS immediate encoding.
   unsigned VFPClassImm = 0;
   if (Check & fcQNan)
-    VFPClassImm |= 0x01;
+    VFPClassImm |= X86::VFPClassQNaN;
   if (Check & fcPosZero)
-    VFPClassImm |= 0x02;
+    VFPClassImm |= X86::VFPClassPosZero;
   if (Check & fcNegZero)
-    VFPClassImm |= 0x04;
+    VFPClassImm |= X86::VFPClassNegZero;
   if (Check & fcPosInf)
-    VFPClassImm |= 0x08;
+    VFPClassImm |= X86::VFPClassPosInf;
   if (Check & fcNegInf)
-    VFPClassImm |= 0x10;
+    VFPClassImm |= X86::VFPClassNegInf;
   if (Check & (fcPosSubnormal | fcNegSubnormal))
-    VFPClassImm |= 0x20;
+    VFPClassImm |= X86::VFPClassDenormal;
   if (Check & fcSNan)
-    VFPClassImm |= 0x80;
+    VFPClassImm |= X86::VFPClassSNaN;
 
-  // VFPCLASS's "Negative" bit (bit 6) tests for negative finite values,
+  // VFPCLASS's "Negative Finite" bit tests for negative finite values,
   // which includes negative normal and negative subnormal.
   // We only use it if both fcNegNormal and fcNegSubnormal are requested.
   if ((Check & fcNegNormal) && (Check & fcNegSubnormal))
-    VFPClassImm |= 0x40;
+    VFPClassImm |= X86::VFPClassNegFinite;
 
   // Check if we can handle this test with VFPCLASS.
   unsigned Handled = fcSNan | fcQNan | fcPosInf | fcNegInf | fcPosZero |
@@ -23237,12 +23231,17 @@ static SDValue LowerIS_FPCLASS(SDValue Op, const X86Subtarget &Subtarget,
   if (Check & ~Handled)
     return SDValue();
 
-  // If no flags remain, return a zero mask.
+  // If no flags remain, return a zero or all-ones mask.
   if (VFPClassImm == 0)
-    return DAG.getConstant(0, DL, ResultVT);
+    return DAG.getConstant(Invert ? -1 : 0, DL, ResultVT);
 
   SDValue Imm = DAG.getTargetConstant(VFPClassImm, DL, MVT::i32);
-  return DAG.getNode(X86ISD::VFPCLASS, DL, ResultVT, Src, Imm);
+  SDValue Result = DAG.getNode(X86ISD::VFPCLASS, DL, ResultVT, Src, Imm);
+
+  if (Invert)
+    Result = DAG.getNOT(DL, Result, ResultVT);
+
+  return Result;
 }
 
 /// The only differences between FABS and FNEG are the mask and the logic op.

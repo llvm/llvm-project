@@ -223,5 +223,44 @@ define <16 x i1> @issubnormal_v16f32(<16 x float> %x) {
   ret <16 x i1> %r
 }
 
+define <16 x i1> @isfinite_v16f32(<16 x float> %x) {
+; AVX512DQ-LABEL: isfinite_v16f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vfpclassps $153, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0) | isSignalingNaN(zmm0)
+; AVX512DQ-NEXT:    knotw %k0, %k0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VL-LABEL: isfinite_v16f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclassps $153, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0) | isSignalingNaN(zmm0)
+; AVX512VL-NEXT:    knotw %k0, %k0
+; AVX512VL-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: isfinite_v16f32:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512FP16-NEXT:    vcmpneq_oqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
+; AVX512FP16-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512FP16-NEXT:    vzeroupper
+; AVX512FP16-NEXT:    retq
+;
+; AVX10_2-LABEL: isfinite_v16f32:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassps $153, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0) | isSignalingNaN(zmm0)
+; AVX10_2-NEXT:    knotw %k0, %k0
+; AVX10_2-NEXT:    vpmovm2b %k0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
+; AVX10_2-NEXT:    retq
+  %r = call <16 x i1> @llvm.is.fpclass.v16f32(<16 x float> %x, i32 504) ; 0x1F8 = finite
+  ret <16 x i1> %r
+}
+
 declare <16 x i1> @llvm.is.fpclass.v16f32(<16 x float>, i32)
 declare <8 x i1> @llvm.is.fpclass.v8f64(<8 x double>, i32)
