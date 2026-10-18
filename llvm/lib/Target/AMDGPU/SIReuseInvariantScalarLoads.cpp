@@ -16,7 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/CommandLine.h"
 #include <tuple>
@@ -50,11 +50,13 @@ using CandidateGroup = SmallVector<Candidate>;
 class SIReuseInvariantScalarLoads {
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
-  MCRegister Cache;
-  SmallVector<MCRegister, 2> CacheWords;
+  MCRegister ExecCopyReg;
+  SmallVector<MCRegister, 2> ExecCopyWords;
 
-  bool doesCacheFitSGPRUsage(const MachineFunction &MF) const;
+  bool fitsExistingSGPRUsage(const MachineFunction &MF) const;
   bool hasLocalExecCopyUses(const MachineFunction &MF) const;
+  bool isCandidateLoad(const MachineInstr &MI, unsigned NumWords,
+                       const SmallSet<MCRegister, 16> &ModifiedWords) const;
   bool isSupportedUse(const MachineInstr &MI, unsigned OpNo) const;
   bool runOnBlock(MachineBasicBlock &MBB) const;
 
@@ -62,12 +64,12 @@ public:
   explicit SIReuseInvariantScalarLoads(MachineFunction &MF)
       : TRI(MF.getSubtarget<GCNSubtarget>().getRegisterInfo()),
         TII(MF.getSubtarget<GCNSubtarget>().getInstrInfo()),
-        Cache(MF.getInfo<SIMachineFunctionInfo>()->getSGPRForEXECCopy()) {
-    if (AMDGPU::SGPR_64RegClass.contains(Cache)) {
-      CacheWords.push_back(TRI->getSubReg(Cache, AMDGPU::sub0));
-      CacheWords.push_back(TRI->getSubReg(Cache, AMDGPU::sub1));
-    } else if (AMDGPU::SGPR_32RegClass.contains(Cache)) {
-      CacheWords.push_back(Cache);
+        ExecCopyReg(MF.getInfo<SIMachineFunctionInfo>()->getSGPRForEXECCopy()) {
+    if (AMDGPU::SGPR_64RegClass.contains(ExecCopyReg)) {
+      ExecCopyWords.push_back(TRI->getSubReg(ExecCopyReg, AMDGPU::sub0));
+      ExecCopyWords.push_back(TRI->getSubReg(ExecCopyReg, AMDGPU::sub1));
+    } else if (AMDGPU::SGPR_32RegClass.contains(ExecCopyReg)) {
+      ExecCopyWords.push_back(ExecCopyReg);
     }
   }
 
@@ -106,20 +108,19 @@ char &llvm::SIReuseInvariantScalarLoadsLegacyID =
 
 // Reserving the EXEC-save register does not itself include it in the kernel's
 // SGPR allocation. Reusing it must not increase the highest emitted SGPR.
-bool SIReuseInvariantScalarLoads::doesCacheFitSGPRUsage(
+bool SIReuseInvariantScalarLoads::fitsExistingSGPRUsage(
     const MachineFunction &MF) const {
-  unsigned CacheEnd = TRI->getHWRegIndex(Cache) + CacheWords.size();
+  unsigned ExecCopyEnd = TRI->getHWRegIndex(ExecCopyReg) + ExecCopyWords.size();
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
-      unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(MI.getOpcode());
-      if (MI.isMetaInstruction() || TII->pseudoToMCOpcode(Opcode) < 0)
+      if (MI.isMetaInstruction())
         continue;
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isReg() || !MO.getReg() || MO.isImplicit())
           continue;
         for (MCSubRegIterator R(MO.getReg(), TRI, true); R.isValid(); ++R) {
           if (AMDGPU::SGPR_32RegClass.contains(*R) &&
-              TRI->getHWRegIndex(*R) + 1 >= CacheEnd)
+              TRI->getHWRegIndex(*R) + 1 >= ExecCopyEnd)
             return true;
         }
       }
@@ -135,12 +136,12 @@ bool SIReuseInvariantScalarLoads::hasLocalExecCopyUses(
   for (const MachineBasicBlock &MBB : MF) {
     bool Defined[2] = {false, false};
     for (const MachineInstr &MI : MBB.instrs()) {
-      for (unsigned Word = 0; Word != CacheWords.size(); ++Word) {
-        if (!Defined[Word] && MI.readsRegister(CacheWords[Word], TRI))
+      for (unsigned Word = 0; Word != ExecCopyWords.size(); ++Word) {
+        if (!Defined[Word] && MI.readsRegister(ExecCopyWords[Word], TRI))
           return false;
         for (const MachineOperand &MO : MI.operands()) {
           if (MO.isReg() && MO.isDef() && MO.getReg() &&
-              TRI->regsOverlap(MO.getReg(), CacheWords[Word]))
+              TRI->regsOverlap(MO.getReg(), ExecCopyWords[Word]))
             Defined[Word] = true;
         }
       }
@@ -149,37 +150,53 @@ bool SIReuseInvariantScalarLoads::hasLocalExecCopyUses(
   return true;
 }
 
+bool SIReuseInvariantScalarLoads::isCandidateLoad(
+    const MachineInstr &MI, unsigned NumWords,
+    const SmallSet<MCRegister, 16> &ModifiedWords) const {
+  if (!NumWords || NumWords > ExecCopyWords.size() || MI.isBundled() ||
+      !MI.hasOneMemOperand() || MI.getNumOperands() != 4)
+    return false;
+
+  const MachineOperand &Dst = MI.getOperand(0);
+  const MachineOperand &Base = MI.getOperand(1);
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  if (!Dst.isReg() || !Dst.isDef() || !Dst.isRenamable() || Dst.getSubReg() ||
+      (NumWords == 1 ? !AMDGPU::SGPR_32RegClass.contains(Dst.getReg())
+                     : !AMDGPU::SGPR_64RegClass.contains(Dst.getReg())) ||
+      !Base.isReg() || Base.isUndef() || Base.getSubReg() ||
+      !AMDGPU::SGPR_64RegClass.contains(Base.getReg()) ||
+      !MI.getOperand(2).isImm() || !MI.getOperand(3).isImm() ||
+      !MMO->isLoad() || !MMO->isInvariant() || MMO->isVolatile() ||
+      MMO->isAtomic() || MMO->getSize() != LocationSize::precise(4 * NumWords))
+    return false;
+
+  return !ModifiedWords.contains(TRI->getSubReg(Base.getReg(), AMDGPU::sub0)) &&
+         !ModifiedWords.contains(TRI->getSubReg(Base.getReg(), AMDGPU::sub1));
+}
+
 bool SIReuseInvariantScalarLoads::isSupportedUse(const MachineInstr &MI,
                                                  unsigned OpNo) const {
-  if (MI.getOpcode() != AMDGPU::V_MUL_LO_U32_e64 || MI.isBundled())
+  if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) || MI.isBundled())
     return false;
   const MachineOperand &MO = MI.getOperand(OpNo);
-  int Src0 = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-  int Src1 = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
-  if (MO.isImplicit() || MO.isTied() || MO.isUndef() || MO.getSubReg() ||
-      (int(OpNo) != Src0 && int(OpNo) != Src1))
+  if (MO.isImplicit() || MO.isTied() || MO.isUndef() || MO.getSubReg())
     return false;
-  // VALU sources are not renamable because of constant-bus constraints.
-  // This pattern keeps the other operand in a VGPR and checks target legality.
-  const MachineOperand &Other = MI.getOperand(int(OpNo) == Src0 ? Src1 : Src0);
-  MachineOperand Replacement = MachineOperand::CreateReg(CacheWords[0], false);
-  return Other.isReg() && !Other.getSubReg() &&
-         AMDGPU::VGPR_32RegClass.contains(Other.getReg()) &&
-         TII->isOperandLegal(MI, OpNo, &Replacement);
+  MachineOperand Replacement =
+      MachineOperand::CreateReg(ExecCopyWords[0], false);
+  return TII->isOperandLegal(MI, OpNo, &Replacement);
 }
 
 bool SIReuseInvariantScalarLoads::runOnBlock(MachineBasicBlock &MBB) const {
-  LivePhysRegs Live(*TRI);
+  LiveRegUnits Live(*TRI);
   Live.addLiveOuts(MBB);
-  for (MCRegAliasIterator R(Cache, TRI, true); R.isValid(); ++R) {
-    if (Live.contains(*R))
-      return false;
-  }
+  if (!Live.available(ExecCopyReg))
+    return false;
 
   SmallSet<MCRegister, 16> ModifiedWords;
   for (const MachineInstr &MI : MBB.instrs()) {
-    if (MI.readsRegister(Cache, TRI) || MI.modifiesRegister(Cache, TRI) ||
-        MI.isCall() || MI.isInlineAsm())
+    if (MI.readsRegister(ExecCopyReg, TRI) ||
+        MI.modifiesRegister(ExecCopyReg, TRI) || MI.isCall() ||
+        MI.isInlineAsm())
       return false;
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isRegMask())
@@ -215,55 +232,39 @@ bool SIReuseInvariantScalarLoads::runOnBlock(MachineBasicBlock &MBB) const {
       NumWords = 2;
       break;
     }
-    if (NumWords && NumWords <= CacheWords.size() && !MI.isBundled() &&
-        MI.hasOneMemOperand() && MI.getNumOperands() == 4) {
+    if (isCandidateLoad(MI, NumWords, ModifiedWords)) {
       MachineOperand &Dst = MI.getOperand(0);
       const MachineOperand &Base = MI.getOperand(1);
-      const MachineMemOperand *MMO = *MI.memoperands_begin();
-      if (Dst.isReg() && Dst.isDef() && Dst.isRenamable() && !Dst.getSubReg() &&
-          (NumWords == 1 ? AMDGPU::SGPR_32RegClass.contains(Dst.getReg())
-                         : AMDGPU::SGPR_64RegClass.contains(Dst.getReg())) &&
-          Base.isReg() && !Base.isUndef() && !Base.getSubReg() &&
-          AMDGPU::SGPR_64RegClass.contains(Base.getReg()) &&
-          MI.getOperand(2).isImm() && MI.getOperand(3).isImm() &&
-          MMO->isLoad() && MMO->isInvariant() && !MMO->isVolatile() &&
-          !MMO->isAtomic() &&
-          MMO->getSize() == LocationSize::precise(4 * NumWords) &&
-          !ModifiedWords.contains(
-              TRI->getSubReg(Base.getReg(), AMDGPU::sub0)) &&
-          !ModifiedWords.contains(
-              TRI->getSubReg(Base.getReg(), AMDGPU::sub1))) {
-        MachineOperand *Use = nullptr;
-        MCRegister Replacement;
-        bool Valid = true;
-        for (unsigned Word = 0; Word != NumWords; ++Word) {
-          MCRegister Reg =
-              NumWords == 1
-                  ? MCRegister(Dst.getReg())
-                  : TRI->getSubReg(Dst.getReg(),
-                                   Word == 0 ? AMDGPU::sub0 : AMDGPU::sub1);
-          WordState State = Words.lookup(Reg);
-          if (!State.Overwritten || !State.Valid || (Use && State.Use)) {
-            Valid = false;
-            break;
-          }
-          if (State.Use) {
-            Use = State.Use;
-            Replacement = CacheWords[Word];
-          }
+      MachineOperand *Use = nullptr;
+      MCRegister Replacement;
+      bool Valid = true;
+      for (unsigned Word = 0; Word != NumWords; ++Word) {
+        MCRegister Reg =
+            NumWords == 1
+                ? MCRegister(Dst.getReg())
+                : TRI->getSubReg(Dst.getReg(),
+                                 Word == 0 ? AMDGPU::sub0 : AMDGPU::sub1);
+        WordState State = Words.lookup(Reg);
+        if (!State.Overwritten || !State.Valid || (Use && State.Use)) {
+          Valid = false;
+          break;
         }
-        MachineOperand NewDst = MachineOperand::CreateReg(
-            NumWords == 1 ? CacheWords[0] : Cache, true);
-        if (Valid && Use && TII->isOperandLegal(MI, 0, &NewDst)) {
-          LoadKey Key(NumWords, Base.getReg().id(), MI.getOperand(2).getImm(),
-                      MI.getOperand(2).getTargetFlags(),
-                      MI.getOperand(3).getImm(),
-                      MI.getOperand(3).getTargetFlags());
-          auto [It, Inserted] = GroupIndices.try_emplace(Key, Groups.size());
-          if (Inserted)
-            Groups.emplace_back();
-          Groups[It->second].push_back({&MI, Use, Replacement});
+        if (State.Use) {
+          Use = State.Use;
+          Replacement = ExecCopyWords[Word];
         }
+      }
+      MachineOperand NewDst = MachineOperand::CreateReg(
+          NumWords == 1 ? ExecCopyWords[0] : ExecCopyReg, true);
+      if (Valid && Use && TII->isOperandLegal(MI, 0, &NewDst)) {
+        LoadKey Key(NumWords, Base.getReg().id(), MI.getOperand(2).getImm(),
+                    MI.getOperand(2).getTargetFlags(),
+                    MI.getOperand(3).getImm(),
+                    MI.getOperand(3).getTargetFlags());
+        auto [It, Inserted] = GroupIndices.try_emplace(Key, Groups.size());
+        if (Inserted)
+          Groups.emplace_back();
+        Groups[It->second].push_back({&MI, Use, Replacement});
       }
     }
 
@@ -304,8 +305,8 @@ bool SIReuseInvariantScalarLoads::runOnBlock(MachineBasicBlock &MBB) const {
   MachineInstr &First = *Best->back().Load;
   First.getOperand(0).setReg(
       AMDGPU::SGPR_32RegClass.contains(First.getOperand(0).getReg())
-          ? CacheWords[0]
-          : Cache);
+          ? ExecCopyWords[0]
+          : ExecCopyReg);
   First.getOperand(0).setIsDead(false);
   for (Candidate &C : *Best) {
     C.Use->setReg(C.Replacement);
@@ -326,11 +327,12 @@ bool SIReuseInvariantScalarLoads::run(MachineFunction &MF) const {
           MachineFunctionProperties::Property::TracksLiveness) ||
       !MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::NoVRegs) ||
-      CacheWords.empty() ||
-      TRI->getHWRegIndex(Cache) + CacheWords.size() > ST.getMaxNumSGPRs(MF) ||
+      ExecCopyWords.empty() ||
+      TRI->getHWRegIndex(ExecCopyReg) + ExecCopyWords.size() >
+          ST.getMaxNumSGPRs(MF) ||
       (MFI->getLongBranchReservedReg() &&
-       TRI->regsOverlap(MFI->getLongBranchReservedReg(), Cache)) ||
-      !doesCacheFitSGPRUsage(MF) || !hasLocalExecCopyUses(MF))
+       TRI->regsOverlap(MFI->getLongBranchReservedReg(), ExecCopyReg)) ||
+      !fitsExistingSGPRUsage(MF) || !hasLocalExecCopyUses(MF))
     return false;
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)

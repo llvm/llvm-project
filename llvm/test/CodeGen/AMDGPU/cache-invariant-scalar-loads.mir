@@ -921,7 +921,7 @@ body: |
 ...
 
 ---
-name: unsupported_use
+name: other_valu_use
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
@@ -929,20 +929,18 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0
-    ; ON-LABEL: name: unsupported_use
+    ; ON-LABEL: name: other_valu_use
     ; ON: liveins: $sgpr0_sgpr1, $vgpr0
     ; ON-NEXT: {{  $}}
-    ; ON-NEXT: early-clobber renamable $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
+    ; ON-NEXT: early-clobber $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
     ; ON-NEXT: S_WAITCNT .Lgkmcnt_0
-    ; ON-NEXT: renamable $vgpr1 = V_MUL_HI_U32_e64 $vgpr0, $sgpr9, implicit $exec
+    ; ON-NEXT: renamable $vgpr1 = V_MUL_HI_U32_e64 $vgpr0, $sgpr5, implicit $exec
     ; ON-NEXT: $sgpr8_sgpr9 = S_MOV_B64 0
-    ; ON-NEXT: early-clobber renamable $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
-    ; ON-NEXT: S_WAITCNT .Lgkmcnt_0
-    ; ON-NEXT: renamable $vgpr2 = V_MUL_HI_U32_e64 $sgpr12, $vgpr0, implicit $exec
+    ; ON-NEXT: renamable $vgpr2 = V_MUL_HI_U32_e64 $sgpr4, $vgpr0, implicit $exec
     ; ON-NEXT: $sgpr12_sgpr13 = S_MOV_B64 0
     ; ON-NEXT: S_ENDPGM 0
     ;
-    ; OFF-LABEL: name: unsupported_use
+    ; OFF-LABEL: name: other_valu_use
     ; OFF: liveins: $sgpr0_sgpr1, $vgpr0
     ; OFF-NEXT: {{  $}}
     ; OFF-NEXT: early-clobber renamable $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
@@ -959,6 +957,50 @@ body: |
     $sgpr8_sgpr9 = S_MOV_B64 0
     renamable $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), align 8, addrspace 4)
     renamable $vgpr2 = V_MUL_HI_U32_e64 $sgpr12, $vgpr0, implicit $exec
+    $sgpr12_sgpr13 = S_MOV_B64 0
+    S_ENDPGM 0
+...
+
+# A scalar use outside VALU remains outside this optimization.
+---
+name: non_valu_use
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  sgprForEXECCopy: '$sgpr4_sgpr5'
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+    ; ON-LABEL: name: non_valu_use
+    ; ON: liveins: $sgpr0_sgpr1, $vgpr0
+    ; ON-NEXT: {{  $}}
+    ; ON-NEXT: early-clobber renamable $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
+    ; ON-NEXT: S_WAITCNT .Lgkmcnt_0
+    ; ON-NEXT: $sgpr16 = S_MOV_B32 $sgpr9
+    ; ON-NEXT: $sgpr8_sgpr9 = S_MOV_B64 0
+    ; ON-NEXT: early-clobber renamable $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
+    ; ON-NEXT: S_WAITCNT .Lgkmcnt_0
+    ; ON-NEXT: renamable $vgpr2 = V_MUL_LO_U32_e64 $sgpr12, $vgpr0, implicit $exec
+    ; ON-NEXT: $sgpr12_sgpr13 = S_MOV_B64 0
+    ; ON-NEXT: S_ENDPGM 0
+    ;
+    ; OFF-LABEL: name: non_valu_use
+    ; OFF: liveins: $sgpr0_sgpr1, $vgpr0
+    ; OFF-NEXT: {{  $}}
+    ; OFF-NEXT: early-clobber renamable $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
+    ; OFF-NEXT: S_WAITCNT .Lgkmcnt_0
+    ; OFF-NEXT: $sgpr16 = S_MOV_B32 $sgpr9
+    ; OFF-NEXT: $sgpr8_sgpr9 = S_MOV_B64 0
+    ; OFF-NEXT: early-clobber renamable $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), addrspace 4)
+    ; OFF-NEXT: S_WAITCNT .Lgkmcnt_0
+    ; OFF-NEXT: renamable $vgpr2 = V_MUL_LO_U32_e64 $sgpr12, $vgpr0, implicit $exec
+    ; OFF-NEXT: $sgpr12_sgpr13 = S_MOV_B64 0
+    ; OFF-NEXT: S_ENDPGM 0
+    renamable $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), align 8, addrspace 4)
+    $sgpr16 = S_MOV_B32 $sgpr9
+    $sgpr8_sgpr9 = S_MOV_B64 0
+    renamable $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0 :: (invariant load (s64), align 8, addrspace 4)
+    renamable $vgpr2 = V_MUL_LO_U32_e64 $sgpr12, $vgpr0, implicit $exec
     $sgpr12_sgpr13 = S_MOV_B64 0
     S_ENDPGM 0
 ...
