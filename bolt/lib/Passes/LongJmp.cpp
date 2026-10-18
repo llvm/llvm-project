@@ -764,7 +764,9 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       // creation order. Place the new trampoline after the existing ones, which
       // only move by the size delta of BB.
       uint64_t OldTrampolinesEnd = OldBBEnd;
-      if (BB) {
+      // Pre-population creates the first trampoline for each block with no net
+      // size growth, so there are no existing trampolines to scan in that case.
+      if (BB && Offset + TrampolineSize != 0) {
         for (auto &[AnchorBB, IBB] : FunctionTrampolines) {
           if (AnchorBB != BB || IBB.get() == TrampolineBB)
             continue;
