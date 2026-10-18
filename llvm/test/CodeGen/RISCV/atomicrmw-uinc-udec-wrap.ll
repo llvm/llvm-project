@@ -444,8 +444,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    sext.w s1, s1
 ; RV64I-NEXT:  .LBB2_1: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
-; RV64I-NEXT:    sltu a0, a0, s1
+; RV64I-NEXT:    sltu a0, a1, s1
 ; RV64I-NEXT:    addiw a2, a1, 1
 ; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    and a2, a0, a2
@@ -1238,10 +1237,9 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    bnez a0, .LBB6_4
 ; RV64I-NEXT:  .LBB6_2: # %atomicrmw.start
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sext.w a0, a1
-; RV64I-NEXT:    seqz a2, a0
-; RV64I-NEXT:    sltu a0, s2, a0
-; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    seqz a0, a1
+; RV64I-NEXT:    sltu a2, s2, a1
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    mv a2, s0
 ; RV64I-NEXT:    bnez a0, .LBB6_1
 ; RV64I-NEXT:  # %bb.3: # %atomicrmw.start

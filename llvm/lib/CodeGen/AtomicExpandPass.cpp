@@ -2411,9 +2411,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     ResultTy = Type::getInt1Ty(Ctx);
     if (auto AK = TargetLibraryInfo::getExtAttrForBoolReturn(TT))
       Attr = Attr.addRetAttribute(Ctx, AK);
-  } else if (HasResult && UseSizedLibcall)
+  } else if (HasResult && UseSizedLibcall) {
     ResultTy = SizedIntTy;
-  else
+    Attribute::AttrKind RetExt = Attribute::None;
+    if (Size < 4)
+      RetExt = TargetLibraryInfo::getExtAttrForI8Return(/*Signed=*/false);
+    else if (Size == 4)
+      RetExt = TargetLibraryInfo::getExtAttrForI32Return(TT, /*Signed=*/false);
+    if (RetExt)
+      Attr = Attr.addRetAttribute(Ctx, RetExt);
+  } else
     ResultTy = Type::getVoidTy(Ctx);
 
   // Done with setting up arguments and return types, create the call:
