@@ -11165,6 +11165,23 @@ void ASTReader::finishPendingActions() {
 }
 
 void ASTReader::diagnoseOdrViolations() {
+  // A declaration loaded while checking or diagnosing ODR merges can finish a
+  // nested deserialization, whose FinishedDeserializing() calls this function
+  // again. Leave that work to the running call, which repeats until nothing is
+  // pending, so that the stack does not grow with the number of pending checks.
+  if (DiagnosingOdrViolations)
+    return;
+  SaveAndRestore Guard(DiagnosingOdrViolations, true);
+  while (!PendingOdrMergeFailures.empty() || !PendingOdrMergeChecks.empty() ||
+         !PendingRecordOdrMergeFailures.empty() ||
+         !PendingFunctionOdrMergeFailures.empty() ||
+         !PendingEnumOdrMergeFailures.empty() ||
+         !PendingObjCInterfaceOdrMergeFailures.empty() ||
+         !PendingObjCProtocolOdrMergeFailures.empty())
+    diagnoseOdrViolationsOnce();
+}
+
+void ASTReader::diagnoseOdrViolationsOnce() {
   if (PendingOdrMergeFailures.empty() && PendingOdrMergeChecks.empty() &&
       PendingRecordOdrMergeFailures.empty() &&
       PendingFunctionOdrMergeFailures.empty() &&

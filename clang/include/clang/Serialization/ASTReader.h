@@ -1199,6 +1199,12 @@ private:
   /// passing decls to consumer.
   bool CanPassDeclsToConsumer = true;
 
+  /// Set while diagnoseOdrViolations() runs. A deserialization that finishes
+  /// inside it calls diagnoseOdrViolations() again; that call returns at once
+  /// and leaves the pending work to the running call, which repeats until
+  /// nothing is pending.
+  bool DiagnosingOdrViolations = false;
+
   /// The set of identifiers that were read while the AST reader was
   /// (recursively) loading declarations.
   ///
@@ -1708,6 +1714,7 @@ private:
 
   void finishPendingActions();
   void diagnoseOdrViolations();
+  void diagnoseOdrViolationsOnce();
 
   void pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name);
 
