@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -293,6 +294,16 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
+/// Move debug instructions preceding \p Position to immediately after it.
+static void moveDebugInstructionsAfter(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator Position) {
+  MachineBasicBlock::iterator InsertPt = std::next(Position);
+  for (MachineInstr &MI :
+       make_early_inc_range(make_range(MBB.begin(), Position)))
+    if (MI.isDebugInstr())
+      MBB.splice(InsertPt, &MBB, MI.getIterator());
+}
+
 /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions in
 /// predecessor basic blocks.
 bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
@@ -300,9 +311,14 @@ bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
   if (MBB.empty() || !MBB.front().isPHI())
     return false; // Quick exit for basic blocks without PHIs.
 
-  // Get an iterator to the last PHI node.
+  // Ignore debug instructions when choosing the destination-copy position.
+  // Move any skipped debug instructions after that position so they remain
+  // after the destination copies. Do not change pseudo-probe placement.
   MachineBasicBlock::iterator LastPHIIt =
-      std::prev(MBB.SkipPHIsAndLabels(MBB.begin()));
+      prev_nodbg(MBB.SkipPHIsLabelsAndDebug(MBB.begin(), /*Reg=*/Register(),
+                                            /*SkipPseudoOp=*/false),
+                 MBB.begin(), /*SkipPseudoOp=*/false);
+  moveDebugInstructionsAfter(MBB, LastPHIIt);
 
   // If all incoming edges are critical, we try to deduplicate identical PHIs so
   // that we generate fewer copies. If at any edge is non-critical, we either
