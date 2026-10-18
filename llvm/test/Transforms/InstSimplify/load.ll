@@ -269,8 +269,27 @@ define ptr @load_ptr_from_b64() {
 
 define ptr @load_ptr_from_struct_b32() {
 ; CHECK-LABEL: @load_ptr_from_struct_b32(
-; CHECK-NEXT:    ret ptr inttoptr (i64 6153737367135073092 to ptr)
+; CHECK-NEXT:    ret ptr bitcast (b64 6153737367135073092 to ptr)
 ;
   %load = load ptr, ptr @struct_b32, align 4
   ret ptr %load
+}
+
+@ab64 = constant [2 x b64] [b64 1, b64 2]
+@struct_b64_inttoptr = constant { b64, ptr } { b64 1, ptr inttoptr (i64 2 to ptr) }
+
+define <2 x ptr> @load_v2ptr_from_ab64() {
+; CHECK-LABEL: @load_v2ptr_from_ab64(
+; CHECK-NEXT:    ret <2 x ptr> <ptr bitcast (b64 1 to ptr), ptr bitcast (b64 2 to ptr)>
+;
+  %load = load <2 x ptr>, ptr @ab64, align 8
+  ret <2 x ptr> %load
+}
+
+define <2 x ptr> @load_v2ptr_from_struct_b64_inttoptr() {
+; CHECK-LABEL: @load_v2ptr_from_struct_b64_inttoptr(
+; CHECK-NEXT:    ret <2 x ptr> <ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 2 to ptr)>
+;
+  %load = load <2 x ptr>, ptr @struct_b64_inttoptr, align 8
+  ret <2 x ptr> %load
 }

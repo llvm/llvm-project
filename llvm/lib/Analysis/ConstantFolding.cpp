@@ -529,6 +529,15 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
   return nullptr;
 }
 
+/// Return true if \p Ty is or contains a byte type.
+static bool containsByteType(Type *Ty) {
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return containsByteType(ATy->getElementType());
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return any_of(STy->elements(), containsByteType);
+  return Ty->isByteOrByteVectorTy();
+}
+
 namespace {
 
 /// Recursive helper to read bits out of global. C is the constant being copied
@@ -707,6 +716,17 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     if (!LoadTy->isFloatingPointTy() && !LoadTy->isPointerTy() &&
         !LoadTy->isByteTy() && !LoadTy->isVectorTy())
       return nullptr;
+
+    // Reinterpret pointers read from `ConstantByte` as a bitcast, rather than
+    // an inttoptr.
+    if (LoadTy->isPtrOrPtrVectorTy() &&
+        !DL.isNonIntegralPointerType(LoadTy->getScalarType()) &&
+        containsByteType(C->getType())) {
+      Type *ByteTy = DL.getBytePtrType(LoadTy);
+      if (Constant *Res =
+              FoldReinterpretLoadFromConst(C, ByteTy, ByteTy, Offset, DL))
+        return ConstantFoldCastOperand(Instruction::BitCast, Res, LoadTy, DL);
+    }
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
