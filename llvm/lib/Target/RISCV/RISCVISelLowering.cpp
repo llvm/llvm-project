@@ -4775,6 +4775,10 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   if (!Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
+    // Splats are legal; don't build them with PPAIRE/PACK.
+    if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue())
+      return DAG.getSplatVector(VT, DL, Splat);
+
     if (VT == MVT::v2i16) {
       SDValue Lo = DAG.getBitcast(
           MVT::v2i16,
@@ -6742,7 +6746,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG, Subtarget.is64Bit()))
       return V;
-    return SDValue();
+
+    // As a last resort, widen the elements so the shuffle can be matched on a
+    // wider type, e.g. v4i16 <0,1,6,7> -> v2i32 <0,3>.
+    return tryWidenMaskForShuffle(Op, DAG);
   }
 
   if (VT.getVectorElementType() == MVT::i1) {
@@ -14505,7 +14512,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       return SDValue();
 
     if (!Subtarget.is64Bit()) {
-      SDValue Zero = DAG.getBitcast(SubVecVT, DAG.getConstant(0, DL, MVT::i32));
+      SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
     }
     return widenPackedVectorWithZeros(DAG, DL, SubVec, VecVT);
