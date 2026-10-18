@@ -136,7 +136,7 @@ function Build-LibXml2 {
         )
         $cache = Write-CMakeCacheFile -Flags $libxmlFlags -FileName 'libxml2_cache.cmake'
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags $SourceDir
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
         $script:LibXmlInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
@@ -174,7 +174,7 @@ function Build-Zlib {
         )
         $cache = Write-CMakeCacheFile -Flags $zlibFlags -FileName 'zlib_cache.cmake'
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags $SourceDir
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
         $script:ZlibInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
@@ -215,7 +215,7 @@ function Build-Zstd {
         )
         $cache = Write-CMakeCacheFile -Flags $zstdFlags -FileName 'zstd_cache.cmake'
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$SourceDir/build/cmake"
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$SourceDir/build/cmake"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
         $script:ZstdInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
