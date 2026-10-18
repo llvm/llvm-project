@@ -115,7 +115,7 @@ private:
       _OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>, optional<std::locale>&&);
 
   // Note: the Standard doesn't specify the required constructors.
-  _LIBCPP_HIDE_FROM_ABI explicit _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit
   basic_format_context(_OutIt __out_it, basic_format_args<basic_format_context> __args, optional<std::locale>&& __loc)
       : __out_it_(std::move(__out_it)), __args_(__args), __loc_(std::move(__loc)) {}
 #  else
@@ -123,7 +123,7 @@ private:
   friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OtherOutIt, _OtherCharT>
       __format_context_create(_OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>);
 
-  _LIBCPP_HIDE_FROM_ABI explicit _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit
   basic_format_context(_OutIt __out_it, basic_format_args<basic_format_context> __args)
       : __out_it_(std::move(__out_it)), __args_(__args) {}
 #  endif

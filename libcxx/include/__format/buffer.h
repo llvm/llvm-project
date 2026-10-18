@@ -188,7 +188,7 @@ public:
   using __prepare_write_type _LIBCPP_NODEBUG = void (*)(__output_buffer<_CharT>&, size_t);
 
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __output_buffer(
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __output_buffer(
       _CharT* __ptr, size_t __capacity, __prepare_write_type __function)
       : __output_buffer{__ptr, __capacity, __function, nullptr} {}
 
@@ -425,11 +425,11 @@ private:
 template <class _OutIt, __fmt_char_type _CharT>
 class __direct_iterator_buffer : public __output_buffer<_CharT> {
 public:
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit constexpr __direct_iterator_buffer(_OutIt __out_it)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit __direct_iterator_buffer(_OutIt __out_it)
       : __direct_iterator_buffer{__out_it, nullptr} {}
 
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __direct_iterator_buffer(
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __direct_iterator_buffer(
       _OutIt __out_it, __max_output_size* __max_output_size)
       : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write, __max_output_size},
         __out_it_(__out_it) {}
@@ -455,11 +455,11 @@ private:
 template <class _OutIt, __fmt_char_type _CharT>
 class __container_inserter_buffer : public __output_buffer<_CharT> {
 public:
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit constexpr __container_inserter_buffer(_OutIt __out_it)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit __container_inserter_buffer(_OutIt __out_it)
       : __container_inserter_buffer{__out_it, nullptr} {}
 
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __container_inserter_buffer(
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __container_inserter_buffer(
       _OutIt __out_it, __max_output_size* __max_output_size)
       : __output_buffer<_CharT>{__small_buffer_, __buffer_size, __prepare_write, __max_output_size},
         __container_{__out_it.__get_container()} {}
