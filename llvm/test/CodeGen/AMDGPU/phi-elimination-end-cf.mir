@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=amdgpu6.00 -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu6.00 --passes='require<live-vars>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -mir-strip-debugify-only=false -run-pass mir-strip-debug -run-pass livevars -run-pass phi-node-elimination -o - %s | FileCheck %s --check-prefix=NODBG
 
 # CHECK-LABEL:  phi-cf-test
 # CHECK: bb.0:
@@ -16,6 +17,13 @@
 # CHECK: bb.2:
 # CHECK:     [[IF_SOURCE1:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 # CHECK:     [[IF_INPUT_REG]]:sreg_64 = S_MOV_B64_term [[IF_SOURCE1]], implicit $exec
+
+# NODBG-LABEL: phi-cf-test
+# NODBG: bb.1:
+# NODBG: [[NODBG_END_CF_ARG:%[0-9]+]]:sreg_64 = COPY
+# NODBG-NEXT: SI_END_CF [[NODBG_END_CF_ARG]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# NODBG-NEXT: [[NODBG_PHI_DEST:%[0-9]+]]:vgpr_32 = COPY [[NODBG_PHI_INPUT:%[0-9]+]]
+# NODBG-NEXT: {{.*}} V_ADD_CO_U32_e64 1, [[NODBG_PHI_DEST]], 0, implicit $exec
 --- |
   define void @"phi-cf-test"() !dbg !3 {
     ret void
