@@ -35,6 +35,22 @@ class raw_ostream;
 /// matched at least once.
 class LLVM_ABI SourceMgrDiagnosticVerifier {
 public:
+  /// The result of matching a single actual diagnostic against the expected
+  /// diagnostics recorded for its location.
+  enum class MatchResult {
+    /// The diagnostic matched an expected diagnostic (kind and text).
+    Matched,
+    /// The diagnostic's text matched an expected diagnostic, but its kind
+    /// didn't; a message about this has already been printed.
+    NearMiss,
+    /// The diagnostic did not match any expected diagnostic. The caller is
+    /// responsible for reporting it, if desired.
+    Unexpected,
+    /// The diagnostic did not match, but \p reportUnexpected was false, so
+    /// nothing was printed and nothing needs to be done.
+    Ignored,
+  };
+
   /// A single diagnostic expected via an 'expected-<kind>' comment.
   struct ExpectedDiag {
     ExpectedDiag(SourceMgr::DiagKind kind, unsigned lineNo, SMLoc fileLoc,
@@ -67,22 +83,6 @@ public:
     /// An optional regex matcher, if the expected diagnostic substring was a
     /// regex string.
     std::optional<Regex> substringRegex;
-  };
-
-  /// The result of matching a single actual diagnostic against the expected
-  /// diagnostics recorded for its location.
-  enum class MatchResult {
-    /// The diagnostic matched an expected diagnostic (kind and text).
-    Matched,
-    /// The diagnostic's text matched an expected diagnostic, but its kind
-    /// didn't; a message about this has already been printed.
-    NearMiss,
-    /// The diagnostic did not match any expected diagnostic. The caller is
-    /// responsible for reporting it, if desired.
-    Unexpected,
-    /// The diagnostic did not match, but \p reportUnexpected was false, so
-    /// nothing was printed and nothing needs to be done.
-    Ignored,
   };
 
   SourceMgrDiagnosticVerifier() = default;
