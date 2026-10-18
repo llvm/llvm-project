@@ -9,11 +9,14 @@
 // IR transformations that AGX code generation relies on:
 //
 //  * AGXAlwaysInline marks every non-kernel function always_inline (and
-//    internal, so it disappears once inlined), since there are no calls.
+//    internal, so it disappears once inlined), since there are no calls,
+//    and removes the unused ones.
 //  * AGXCodeGenPrepare expands what the hardware has no instruction or
 //    library for: integer division, and memory intrinsics that are not
-//    small enough to be expanded by instruction selection. It also unifies
-//    the function exits, which the control flow structurizer expects.
+//    small enough to be expanded by instruction selection. There is no
+//    floating point environment, so constrained floating point intrinsics
+//    become their ordinary operations. It also unifies the function exits,
+//    which the control flow structurizer expects.
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,20 +73,32 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
   });
 
   bool Changed = false;
+  SmallVector<Function *, 8> Dead;
   for (Function &F : M) {
     if (F.isDeclaration() || F.getCallingConv() == CallingConv::AGX_KERNEL)
       continue;
     if (!HasKernels && !F.hasLocalLinkage())
       continue;
+    // With kernels in the module, other functions are only reachable from
+    // them: internalize them so that they disappear once inlined, and drop
+    // the unused ones (for example from linked device libraries).
+    if (HasKernels && !F.hasLocalLinkage()) {
+      F.setLinkage(GlobalValue::InternalLinkage);
+      F.setVisibility(GlobalValue::DefaultVisibility);
+      Changed = true;
+    }
+    if (F.use_empty()) {
+      Dead.push_back(&F);
+      continue;
+    }
     if (F.hasFnAttribute(Attribute::NoInline))
       continue;
     F.addFnAttr(Attribute::AlwaysInline);
-    if (HasKernels && !F.hasLocalLinkage() && !F.use_empty()) {
-      F.setLinkage(GlobalValue::InternalLinkage);
-      F.setVisibility(GlobalValue::DefaultVisibility);
-    }
     Changed = true;
   }
+  for (Function *F : Dead)
+    F->eraseFromParent();
+  Changed |= !Dead.empty();
   return Changed;
 }
 
@@ -97,6 +112,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool expandDivisions(Function &F);
   bool expandMemIntrinsics(Function &F, const TargetTransformInfo &TTI);
   bool unifyExits(Function &F);
+  bool lowerConstrainedFP(Function &F);
 
 public:
   static char ID;
@@ -198,6 +214,59 @@ bool AGXCodeGenPrepare::expandMemIntrinsics(Function &F,
   return !Worklist.empty();
 }
 
+bool AGXCodeGenPrepare::lowerConstrainedFP(Function &F) {
+  SmallVector<ConstrainedFPIntrinsic *, 8> Worklist;
+  for (Instruction &I : instructions(F))
+    if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&I))
+      Worklist.push_back(CI);
+
+  for (ConstrainedFPIntrinsic *CI : Worklist) {
+    IRBuilder<> B(CI);
+    SmallVector<Value *, 4> Args(CI->args().begin(),
+                                 CI->args().begin() +
+                                     CI->getNonMetadataArgCount());
+    Value *Res = nullptr;
+    switch (CI->getIntrinsicID()) {
+#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
+  case Intrinsic::INTRINSIC:                                                   \
+    if (Instruction::isBinaryOp(Instruction::NAME))                            \
+      Res = B.CreateBinOp(Instruction::BinaryOps(Instruction::NAME), Args[0],  \
+                          Args[1]);                                            \
+    else                                                                       \
+      Res = B.CreateCast(Instruction::CastOps(Instruction::NAME), Args[0],     \
+                         CI->getType());                                       \
+    break;
+#define CMP_INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC, DAGN)              \
+  case Intrinsic::INTRINSIC:                                                   \
+    Res = B.CreateFCmp(cast<ConstrainedFPCmpIntrinsic>(CI)->getPredicate(),    \
+                       Args[0], Args[1]);                                      \
+    break;
+#define FUNCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                           \
+  case Intrinsic::INTRINSIC: {                                                 \
+    SmallVector<Type *, 4> ArgTys;                                             \
+    for (Value *A : Args)                                                      \
+      ArgTys.push_back(A->getType());                                          \
+    SmallVector<Type *, 2> OverloadTys;                                        \
+    FunctionType *FT = FunctionType::get(CI->getType(), ArgTys, false);        \
+    if (Intrinsic::isSignatureValid(Intrinsic::NAME, FT, OverloadTys))         \
+      Res = B.CreateCall(Intrinsic::getOrInsertDeclaration(                    \
+                             F.getParent(), Intrinsic::NAME, OverloadTys),     \
+                         Args);                                                \
+    break;                                                                     \
+  }
+#include "llvm/IR/ConstrainedOps.def"
+    default:
+      break;
+    }
+    if (!Res)
+      continue;
+    Res->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+  }
+  return !Worklist.empty();
+}
+
 /// Replace the returns, and unreachable terminators, by branches to a single
 /// return block.
 bool AGXCodeGenPrepare::unifyExits(Function &F) {
@@ -226,7 +295,8 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
     return false;
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  bool Changed = expandDivisions(F);
+  bool Changed = lowerConstrainedFP(F);
+  Changed |= expandDivisions(F);
   Changed |= expandMemIntrinsics(F, TTI);
   Changed |= unifyExits(F);
   return Changed;

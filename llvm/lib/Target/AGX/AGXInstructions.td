@@ -1252,3 +1252,5 @@ let isTrap = 1, isTerminator = 1, isBarrier = 1, hasSideEffects = 1 in
 def AGX_TRAP : AGXPseudo<(outs), (ins), [(trap)]> {
   let G13Real = TRAP_g13;
 }
+
+def : Pat<(debugtrap), (AGX_TRAP)>;

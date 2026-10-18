@@ -10,11 +10,38 @@
 #define LLVM_LIB_TARGET_AGX_AGXMACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Alignment.h"
+#include <optional>
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
 class GlobalVariable;
+class Module;
+
+namespace AGX {
+
+/// Device and constant global variables live in one buffer, the global data
+/// buffer, whose address kernels receive as an implicit argument. The
+/// variables are laid out in module order, each aligned to its alignment;
+/// the assembly printer emits the initial contents in the .agx.globals
+/// section with the same layout.
+struct GlobalDataLayout {
+  SmallVector<std::pair<const GlobalVariable *, uint64_t>, 8> Offsets;
+  uint64_t Size = 0;
+  Align MaxAlign;
+
+  bool empty() const { return Offsets.empty(); }
+  std::optional<uint64_t> getOffset(const GlobalVariable *GV) const;
+};
+
+/// Whether \p GV is stored in the global data buffer.
+bool isGlobalDataVariable(const GlobalVariable &GV);
+
+GlobalDataLayout computeGlobalDataLayout(const Module &M);
+
+} // namespace AGX
 
 /// Per kernel state: the uniform register layout of the arguments and the
 /// threadgroup memory allocation.
@@ -26,6 +53,10 @@ class AGXMachineFunctionInfo : public MachineFunctionInfo {
   unsigned UniformHalfCount = 0;
   /// Virtual registers holding threadgroups_per_grid.xyz.
   Register ImplicitArgVRegs[3];
+  /// Virtual register holding the global data buffer address, and its first
+  /// uniform half register.
+  Register GlobalDataVReg;
+  unsigned GlobalDataHalfIndex = 0;
 
   /// Threadgroup memory: offset of each __shared__ style variable.
   DenseMap<const GlobalVariable *, unsigned> ThreadgroupOffsets;
@@ -51,6 +82,12 @@ public:
   Register getImplicitArgVReg(unsigned Dim) const {
     return ImplicitArgVRegs[Dim];
   }
+  void setGlobalData(Register VReg, unsigned HalfIndex) {
+    GlobalDataVReg = VReg;
+    GlobalDataHalfIndex = HalfIndex;
+  }
+  Register getGlobalDataVReg() const { return GlobalDataVReg; }
+  unsigned getGlobalDataHalfIndex() const { return GlobalDataHalfIndex; }
 
   /// Offset of \p GV in threadgroup memory, allocating it on first use.
   unsigned allocateThreadgroupVariable(const DataLayout &DL,

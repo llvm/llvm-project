@@ -72,6 +72,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                       ISD::DYNAMIC_STACKALLOC},
                      {MVT::i32, MVT::Other}, Expand);
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
+  // trap is an instruction; there is no debugger to stop in.
+  setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
   setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_VOID},
                      MVT::Other, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
@@ -134,6 +136,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                       ISD::FLOG, ISD::FLOG10, ISD::FPOW},
                      MVT::f16, Promote);
   setOperationAction({ISD::FP16_TO_FP, ISD::FP_TO_FP16}, MVT::f32, Expand);
+  // bfloat16 is not a legal type: conversions are integer operations.
+  setOperationAction({ISD::BF16_TO_FP, ISD::FP_TO_BF16},
+                     {MVT::i16, MVT::f16, MVT::f32}, Expand);
 
   // 64-bit conversions are expanded with 32-bit conversions.
   setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
@@ -285,6 +290,13 @@ SDValue AGXTargetLowering::LowerFormalArguments(
       MFI->setImplicitArgVReg(Dim,
                               MF.addLiveIn(PReg, &AGX::GPR32RegClass));
   }
+  // The global data buffer address, if the module has device globals.
+  if (!AGX::computeGlobalDataLayout(*MF.getFunction().getParent()).empty()) {
+    unsigned GlobalHalf = alignTo(Half, 2);
+    MCRegister PReg = Allocate(MVT::i64);
+    if (PReg)
+      MFI->setGlobalData(MF.addLiveIn(PReg, &AGX::GPR64RegClass), GlobalHalf);
+  }
   MFI->setUniformHalfCount(Half);
 
   if (Overflow)
@@ -395,10 +407,30 @@ SDValue AGXTargetLowering::lowerGlobalAddress(SDValue Op,
   SDLoc DL(Op);
   auto *GA = cast<GlobalAddressSDNode>(Op);
   const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+  MachineFunction &MF = DAG.getMachineFunction();
+  auto *MFI = MF.getInfo<AGXMachineFunctionInfo>();
+
+  // Device and constant variables: an offset into the global data buffer.
+  if (GV && AGX::isGlobalDataVariable(*GV)) {
+    std::optional<uint64_t> Offset =
+        AGX::computeGlobalDataLayout(*MF.getFunction().getParent())
+            .getOffset(GV);
+    if (!Offset || !MFI->getGlobalDataVReg()) {
+      diagnose(DAG, DL,
+               "unsupported external global '" + GV->getName() + "'");
+      return DAG.getUNDEF(Op.getValueType());
+    }
+    SDValue Base = DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                                      MFI->getGlobalDataVReg(), MVT::i64);
+    SDValue Addr =
+        DAG.getNode(ISD::ADD, DL, MVT::i64, Base,
+                    DAG.getConstant(*Offset + GA->getOffset(), DL, MVT::i64));
+    return DAG.getZExtOrTrunc(Addr, DL, Op.getValueType());
+  }
+
   if (!GV || GA->getAddressSpace() != AGX::THREADGROUP_ADDRESS) {
     diagnose(DAG, DL,
-             "unsupported global '" + GA->getGlobal()->getName() +
-                 "' (only threadgroup variables are supported)");
+             "unsupported global '" + GA->getGlobal()->getName() + "'");
     return DAG.getUNDEF(Op.getValueType());
   }
   if (GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer()))
@@ -406,8 +438,6 @@ SDValue AGXTargetLowering::lowerGlobalAddress(SDValue Op,
 
   // Threadgroup variables are allocated statically per kernel; their
   // address is a constant offset into threadgroup memory.
-  MachineFunction &MF = DAG.getMachineFunction();
-  auto *MFI = MF.getInfo<AGXMachineFunctionInfo>();
   unsigned Offset =
       MFI->allocateThreadgroupVariable(DAG.getDataLayout(), *GV);
   return DAG.getConstant(Offset + GA->getOffset(), DL, Op.getValueType());

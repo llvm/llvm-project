@@ -308,3 +308,46 @@ join:
 }
 
 declare i32 @llvm.agx.thread.position.in.grid.x()
+
+define agx_kernel void @trap(ptr addrspace(1) %out, i32 %n) {
+; CHECK-LABEL: trap:
+; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
+; CHECK-NEXT:    // general purpose registers: 3 x 32-bit
+; CHECK-NEXT:    // threadgroup memory: 0 bytes
+; CHECK-NEXT:    // stack size: 0 bytes
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov_imm r0l, 0
+; CHECK-NEXT:    get_sr r1, sr80 (thread_position_in_grid.x)
+; CHECK-NEXT:    icmpsel ult, r2, r1, u2, 0, 1
+; CHECK-NEXT:    if_icmp r0l, nueq, r2, 0, 1
+; CHECK-NEXT:    jmp_exec_none .LBB5_2
+; CHECK-NEXT:  // %bb.1: // %bad
+; CHECK-NEXT:    trap
+; CHECK-NEXT:  .LBB5_2: // %Flow
+; CHECK-NEXT:    else_fcmp r0l, eq, 0.0, 0.0, 1
+; CHECK-NEXT:    jmp_exec_none .LBB5_4
+; CHECK-NEXT:  // %bb.3: // %ok
+; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed
+; CHECK-NEXT:  .LBB5_4: // %unified.return
+; CHECK-NEXT:    pop_exec r0l, 1
+; CHECK-NEXT:    stop
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+; CHECK-NEXT:    trap
+  %id = call i32 @llvm.agx.thread.position.in.grid.x()
+  %c = icmp ult i32 %id, %n
+  br i1 %c, label %ok, label %bad
+bad:
+  call void @llvm.trap()
+  unreachable
+ok:
+  store i32 %id, ptr addrspace(1) %out
+  ret void
+}
+
+declare void @llvm.trap()

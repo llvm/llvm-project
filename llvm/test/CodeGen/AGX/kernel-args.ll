@@ -42,27 +42,4 @@ define agx_kernel void @args(ptr addrspace(1) %out, i16 %a, i32 %b, i64 %c, half
   ret void
 }
 
-; Without kernels in the module, every external function is an entry point.
-define void @not_a_kernel(ptr addrspace(1) %out, i32 %v) {
-; CHECK-LABEL: not_a_kernel:
-; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
-; CHECK-NEXT:    // threadgroup memory: 0 bytes
-; CHECK-NEXT:    // stack size: 0 bytes
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    bitop 0101, r1, u2, 0
-; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed
-; CHECK-NEXT:    stop
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-; CHECK-NEXT:    trap
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
 declare i32 @llvm.agx.threadgroups.per.grid.y()
