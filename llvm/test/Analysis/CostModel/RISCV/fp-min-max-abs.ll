@@ -274,7 +274,7 @@ define void @maxnum_f16() {
 
 define void @minimum() {
 ; CHECK-LABEL: 'minimum'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call float @llvm.minimum.f32(float undef, float undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %1 = call float @llvm.minimum.f32(float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = call <2 x float> @llvm.minimum.v2f32(<2 x float> undef, <2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = call <4 x float> @llvm.minimum.v4f32(<4 x float> undef, <4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = call <8 x float> @llvm.minimum.v8f32(<8 x float> undef, <8 x float> undef)
@@ -284,7 +284,7 @@ define void @minimum() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = call <vscale x 4 x float> @llvm.minimum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = call <vscale x 8 x float> @llvm.minimum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = call <vscale x 16 x float> @llvm.minimum.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = call double @llvm.minimum.f64(double undef, double undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %11 = call double @llvm.minimum.f64(double undef, double undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = call <2 x double> @llvm.minimum.v2f64(<2 x double> undef, <2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = call <4 x double> @llvm.minimum.v4f64(<4 x double> undef, <4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = call <8 x double> @llvm.minimum.v8f64(<8 x double> undef, <8 x double> undef)
@@ -359,7 +359,7 @@ define void @minimum_f16() {
 
 define void @maximum() {
 ; CHECK-LABEL: 'maximum'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call float @llvm.maximum.f32(float undef, float undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %1 = call float @llvm.maximum.f32(float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = call <2 x float> @llvm.maximum.v2f32(<2 x float> undef, <2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = call <4 x float> @llvm.maximum.v4f32(<4 x float> undef, <4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = call <8 x float> @llvm.maximum.v8f32(<8 x float> undef, <8 x float> undef)
@@ -369,7 +369,7 @@ define void @maximum() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = call <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = call <vscale x 16 x float> @llvm.maximum.nxv16f32(<vscale x 16 x float> undef, <vscale x 16 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = call double @llvm.maximum.f64(double undef, double undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %11 = call double @llvm.maximum.f64(double undef, double undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = call <2 x double> @llvm.maximum.v2f64(<2 x double> undef, <2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = call <4 x double> @llvm.maximum.v4f64(<4 x double> undef, <4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = call <8 x double> @llvm.maximum.v8f64(<8 x double> undef, <8 x double> undef)
