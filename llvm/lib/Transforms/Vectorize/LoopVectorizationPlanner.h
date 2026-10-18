@@ -894,6 +894,8 @@ class LoopVectorizationPlanner {
   LoopVectorizationLegality *Legal;
 
   /// The profitability analysis. Cleared after making cost based decisions.
+  /// This instance should never be used in any function that takes an explicit
+  /// PlanCM reference, since that instance overrides this one.
   std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
