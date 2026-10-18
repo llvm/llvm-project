@@ -83,20 +83,14 @@ function New-PGOProfile {
 function Invoke-Tests {
     <#
     .SYNOPSIS
-        Runs a list of test targets once each, skipping as appropriate.
+        Runs a list of test targets once each.
         Honors $script:NinjaCommand and $script:NinjaExtraArgs (set via
         LLVM_NINJA_OVERRIDE).
     #>
     param(
-        [string[]]$Targets,
-        [string]$Arch = ''
+        [string[]]$Targets
     )
     foreach ($target in $Targets) {
-        # Skip runtime checks on non-amd64
-        if ($target -eq 'check-runtimes' -and $Arch -ne 'amd64') {
-            Write-SubStep "Skipping $target on $Arch"
-            continue
-        }
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs $target
     }
 }
@@ -123,8 +117,7 @@ function Build-Stage {
         [string[]]$ExtraCMakeFlags = @(),
         [string[]]$InitialBuildTargets = @(),
         [switch]$SkipFullBuild,
-        [string[]]$TestTargets = @(),
-        [string]$Arch = ''
+        [string[]]$TestTargets = @()
     )
 
     Write-Step "Building $Description ($Name)"
@@ -141,7 +134,7 @@ function Build-Stage {
         if (-not $SkipFullBuild) {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs
             if ($TestTargets.Count -gt 0) {
-                Invoke-Tests -Targets $TestTargets -Arch $Arch
+                Invoke-Tests -Targets $TestTargets
             }
         }
     } finally {
@@ -323,8 +316,7 @@ function Build-Architecture {
             -ExtraCMakeFlags $stage1Extra `
             -InitialBuildTargets $stage1InitialTargets `
             -SkipFullBuild:$skipStage1FullBuild `
-            -TestTargets $stage1Tests `
-            -Arch $Arch
+            -TestTargets $stage1Tests
     } else {
         Write-Step "Skipping stage 1 bootstrap compiler (-StartAt $($script:StartAtStep))"
         Assert-PathExists -Path "$stage1BinDir/clang-cl.exe" -Description 'stage 1 bootstrap clang-cl.exe'
@@ -411,8 +403,7 @@ function Build-Architecture {
             -CMakeFlags $stage2Flags `
             -LLVMSrc $LLVMSrc `
             -ExtraCMakeFlags $stage2Extra `
-            -TestTargets $stage2Tests `
-            -Arch $Arch
+            -TestTargets $stage2Tests
     } else {
         Write-Step "Skipping stage 2 self-hosted compiler (-StartAt $($script:StartAtStep))"
         Assert-PathExists -Path (Join-Path $BuildDir $stage2Name) -Description 'stage 2 build directory'
