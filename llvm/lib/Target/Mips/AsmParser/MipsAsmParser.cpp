@@ -4346,8 +4346,14 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       BrTarget = Context.createTempSymbol();
       LabelOp =
           MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
+      // The macro supplies its own delay slot. Protect the expanded output
+      // from acquiring another slot when it is assembled again, without
+      // changing the parser's reorder mode for subsequent input instructions.
+      TOut.emitDirectiveSetPush();
+      TOut.emitDirectiveSetNoReorder();
       TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
       TOut.emitNop(IDLoc, STI);
+      TOut.emitDirectiveSetPop();
     }
 
     if (!UseTraps)
