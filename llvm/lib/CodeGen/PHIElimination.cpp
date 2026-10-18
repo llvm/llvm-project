@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -298,10 +297,17 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
 static void moveDebugInstructionsAfter(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator Position) {
   MachineBasicBlock::iterator InsertPt = std::next(Position);
-  for (MachineInstr &MI :
-       make_early_inc_range(make_range(MBB.begin(), Position)))
-    if (MI.isDebugInstr())
-      MBB.splice(InsertPt, &MBB, MI.getIterator());
+  for (auto I = MBB.begin(); I != Position;) {
+    if (!I->isDebugInstr()) {
+      ++I;
+      continue;
+    }
+
+    auto DebugBegin = I;
+    I = skipDebugInstructionsForward(I, Position,
+                                     /*SkipPseudoOp=*/false);
+    MBB.splice(InsertPt, &MBB, DebugBegin, I);
+  }
 }
 
 /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions in
