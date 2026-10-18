@@ -26,7 +26,7 @@ Members:
 # RUN: not llvm-objdump --macho --archive-headers %t.libbogus2.a 2>&1 | \
 # RUN:   FileCheck -check-prefix=BOGUS2 -DFILE=%t.libbogus2.a %s
 
-# BOGUS2: '[[FILE]]': truncated or malformed archive (offset to next archive member past the end of the archive after member foo.c)
+# BOGUS2: '[[FILE]]': truncated or malformed archive (offset to next archive member (0x46) past the end of the archive (size 0x44) after member foo.c)
 
 --- !Arch
 Members:
