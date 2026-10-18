@@ -29,6 +29,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -124,8 +125,15 @@ void AGXAsmPrinter::emitEndOfAsmFile(Module &M) {
   uint64_t End = 0;
   for (const auto &[GV, Offset] : Layout.Offsets) {
     OutStreamer->emitZeros(Offset - End);
-    OutStreamer->emitLabel(getSymbol(GV));
+    // Typed, sized symbols with the variable's linkage, so that a runtime
+    // can find a variable's offset in the buffer by name.
+    MCSymbol *Sym = getSymbol(GV);
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    emitLinkage(GV, Sym);
+    emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+    OutStreamer->emitELFSize(Sym, MCConstantExpr::create(Size, OutContext));
+    OutStreamer->emitLabel(Sym);
     const Constant *Init = GV->hasInitializer() ? GV->getInitializer() : nullptr;
     if (Init && !isa<UndefValue>(Init))
       emitGlobalConstant(DL, Init);

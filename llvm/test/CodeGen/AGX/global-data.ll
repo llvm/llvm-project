@@ -50,9 +50,15 @@ define agx_kernel void @kernel(ptr addrspace(1) %out, i32 %i) {
 
 ; CHECK-LABEL: .section .agx.globals,"aw",@progbits
 ; CHECK-NEXT:  .p2align 4, 0x0
+; CHECK-NEXT:  .globl counter
+; CHECK-NEXT:  .type counter,@object
+; CHECK-NEXT:  .size counter, 4
 ; CHECK-NEXT:  counter:
 ; CHECK-NEXT:  .long 7
 ; CHECK-NEXT:  .zero 12
+; CHECK-NEXT:  .globl table
+; CHECK-NEXT:  .type table,@object
+; CHECK-NEXT:  .size table, 16
 ; CHECK-NEXT:  table:
 ; CHECK-NEXT:  .long 0x3f800000
 ; CHECK-NOT:   tg
