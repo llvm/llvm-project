@@ -1,4 +1,4 @@
-//===-- RegisterInfoFreeBSDTests.cpp --------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,8 @@
 #include "Plugins/Process/Utility/RegisterInfoFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterInfoFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfo_arm.h"
+#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
@@ -253,7 +253,7 @@ TEST(RegisterInfoFreeBSDTest, i386) {
 
 TEST(RegisterInfoFreeBSDTest, arm) {
   ArchSpec arch{"arm-unknown-freebsd"};
-  RegisterInfoPOSIX_arm reg_ctx{arch};
+  RegisterInfo_arm reg_ctx{arch};
 
   EXPECT_GPR_ARM(r0, r[0]);
   EXPECT_GPR_ARM(r1, r[1]);
@@ -323,9 +323,9 @@ TEST(RegisterInfoFreeBSDTest, arm) {
                               sizeof(fpreg::fbsd_reg)))
 
 TEST(RegisterInfoFreeBSDTest, arm64) {
-  Flags opt_regsets = RegisterInfoPOSIX_arm64::eRegsetMaskDefault;
+  Flags opt_regsets = RegisterInfo_arm64::eRegsetMaskDefault;
   ArchSpec arch{"aarch64-unknown-freebsd"};
-  RegisterInfoPOSIX_arm64 reg_ctx{arch, opt_regsets};
+  RegisterInfo_arm64 reg_ctx{arch, opt_regsets};
 
   EXPECT_GPR_ARM64(x0, x[0]);
   EXPECT_GPR_ARM64(x1, x[1]);
