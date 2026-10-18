@@ -2,15 +2,29 @@
 
 set(COPYPROF_SOURCES
   copyprof.cpp
+  copyprof_allocator.cpp
+  copyprof_interceptors.cpp
+  copyprof_interceptors_memintrinsics.cpp
+  copyprof_malloc_linux.cpp
+  copyprof_preinit.cpp
+  copyprof_per_object_state.cpp
   copyprof_reporting.cpp
   copyprof_shadow.cpp
   copyprof_stack.cpp
   copyprof_state.cpp
 )
 
+set(COPYPROF_CXX_SOURCES
+  copyprof_new_delete.cpp
+)
+
 set(COPYPROF_HEADERS
+  copyprof_allocator.h
+  copyprof_interceptors.h
+  copyprof_interceptors_memintrinsics.h
   copyprof_interface_internal.h
   copyprof_internal.h
+  copyprof_per_object_state.h
   copyprof_reporting.h
   copyprof_shadow.h
   copyprof_state.h
@@ -26,6 +40,12 @@ append_rtti_flag(OFF COPYPROF_CFLAGS)
 add_compiler_rt_object_libraries(RTCopyProf
   ARCHS ${COPYPROF_SUPPORTED_ARCH}
   SOURCES ${COPYPROF_SOURCES}
+  ADDITIONAL_HEADERS ${COPYPROF_HEADERS}
+  CFLAGS ${COPYPROF_CFLAGS}
+  DEFS ${COPYPROF_COMMON_DEFINITIONS})
+add_compiler_rt_object_libraries(RTCopyProf_cxx
+  ARCHS ${COPYPROF_SUPPORTED_ARCH}
+  SOURCES ${COPYPROF_CXX_SOURCES}
   ADDITIONAL_HEADERS ${COPYPROF_HEADERS}
   CFLAGS ${COPYPROF_CFLAGS}
   DEFS ${COPYPROF_COMMON_DEFINITIONS})
@@ -50,12 +70,23 @@ add_compiler_rt_runtime(clang_rt.copyprof
   DEFS ${COPYPROF_COMMON_DEFINITIONS}
   PARENT_TARGET copyprof)
 
+add_compiler_rt_runtime(clang_rt.copyprof_cxx
+  STATIC
+  ARCHS ${COPYPROF_SUPPORTED_ARCH}
+  OBJECT_LIBS RTCopyProf_cxx
+  CFLAGS ${COPYPROF_CFLAGS}
+  DEFS ${COPYPROF_COMMON_DEFINITIONS}
+  PARENT_TARGET copyprof)
+
 if(SANITIZER_USE_SYMBOLS)
   foreach(arch ${COPYPROF_SUPPORTED_ARCH})
     add_sanitizer_rt_symbols(clang_rt.copyprof
       ARCHS ${arch}
       PARENT_TARGET copyprof
       EXTRA copyprof.syms.extra)
+    add_sanitizer_rt_symbols(clang_rt.copyprof_cxx
+      ARCHS ${arch}
+      PARENT_TARGET copyprof)
   endforeach()
 endif()
 
