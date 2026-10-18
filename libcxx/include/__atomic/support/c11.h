@@ -88,20 +88,6 @@ _Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const* __a, memory_order __ord
 }
 
 template <class _Tp>
-void __cxx_atomic_load_inplace(
-    __cxx_atomic_base_impl<_Tp> const volatile* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  *__dst           = __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-template <class _Tp>
-void __cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  *__dst           = __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-
-template <class _Tp>
 _Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __value, memory_order __order) _NOEXCEPT {
   std::__clear_padding_if_needed(__value);
   return __c11_atomic_exchange(

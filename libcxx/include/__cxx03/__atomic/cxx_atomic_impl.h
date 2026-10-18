@@ -85,18 +85,6 @@ _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(const volatile __cxx_atomic_base_imp
 }
 
 template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_load_inplace(const volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
-}
-
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_load_inplace(const __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
-}
-
-template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(const __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
   _Tp __ret;
   __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), __to_gcc_order(__order));
@@ -302,21 +290,6 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const* __a, memory_order __order) _NOEXCEPT {
   using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
   return __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const volatile* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  *__dst           = __c11_atomic_load(
-      const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
-}
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const* __a, _Tp* __dst, memory_order __order) _NOEXCEPT {
-  using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
-  *__dst           = __c11_atomic_load(
       const_cast<__ptr_type>(std::addressof(__a->__a_value)), static_cast<__memory_order_underlying_t>(__order));
 }
 
