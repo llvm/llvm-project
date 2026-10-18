@@ -176,14 +176,14 @@ class LoopIdiomRecognize {
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
-  explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              TargetLibraryInfo *TLI,
+  explicit LoopIdiomRecognize(const ScalarOptions &Opts, AliasAnalysis *AA,
+                              DominatorTree *DT, LoopInfo *LI,
+                              ScalarEvolution *SE, TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : Opts(ScalarOptions::Global), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI),
-        TTI(TTI), DL(DL), ORE(ORE) {
+      : Opts(Opts), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL),
+        ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -297,7 +297,9 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
+  const ScalarOptions &Opts =
+      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
@@ -2096,9 +2098,13 @@ public:
       // Don't call `wcslen` if the base pointer isn't known to be aligned.
       const DataLayout &DL = LoopLoad->getDataLayout();
       Align OperandAlign = DL.getABITypeAlign(OperandType);
-      if (LoopLoad->getAlign() < OperandAlign &&
-          Align::fromLog2(SE->getMinTrailingZeros(LoadBaseEv)) < OperandAlign)
-        return false;
+      if (LoopLoad->getAlign() < OperandAlign) {
+        // For null pointers the load base number of trailing zeros may be
+        // larger than what `Align` allows. So take log2 of operand alignment
+        // instead and compare trailing zeros instead of alignments.
+        if (SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
+          return false;
+      }
     }
 
     // Scan every instruction in the loop to ensure there are no side effects.
@@ -3448,7 +3454,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
       InsertPt = BitPosI->getInsertionPointAfterDef();
     else
-      InsertPt = DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+      InsertPt = DT->getRoot()->getFirstNonPHIOrAlloca();
     if (!InsertPt)
       return false;
     FreezeInst *BitPosFrozen =

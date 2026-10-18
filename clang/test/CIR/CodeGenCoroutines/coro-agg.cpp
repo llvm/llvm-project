@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -Wno-coroutine-missing-unhandled-exception -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: FileCheck --input-file=%t.cir %s -check-prefixes=CIR,CIR-COMMON,CIR-NOEH
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -Wno-coroutine-missing-unhandled-exception -emit-cir %s -o %t.eh.cir
-// RUN: FileCheck --input-file=%t.eh.cir %s -check-prefix=CIR-EH
+// RUN: FileCheck --input-file=%t.eh.cir %s -check-prefixes=CIR-EH,CIR-COMMON
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.eh.ll
+// RUN: FileCheck --input-file=%t.eh.ll %s -check-prefix=OGCG-EH
 
 #include "Inputs/coroutine.h"
 
@@ -423,18 +425,25 @@ struct coro_init_final_nt_t {
 // CIR-NEXT: } cleanup normal {
 // CIR-NEXT:   cir.call @_ZN2NTD1Ev(%[[FINAL]])
 
-// With exceptions, the initial await_resume() is emitted in a try/catch that
-// owns and destroys the result; nothing is pushed after the cir.await.
+// With exceptions, destroy the initial resume result in the try block before
+// setting the flag that allows the body to run.
 // CIR-EH-LABEL: cir.func coroutine {{.*}} @_Z21init_final_nontrivialv
+// CIR-EH: %[[RESUME_EH:.*]] = cir.alloca "resume.eh"
 // CIR-EH: cir.coroutine initialSuspend : {
 // CIR-EH:   cir.await(init, ready : {
 // CIR-EH:   }, resume : {
 // CIR-EH:     cir.try {
 // CIR-EH-NEXT:  cir.call @_ZN11InitAwaitNT12await_resumeEv(%[[INIT:.*]], %{{.*}})
 // CIR-EH-NEXT:  cir.cleanup.scope {
-// CIR-EH:       } cleanup all {
+// CIR-EH-NEXT:    cir.yield
+// CIR-EH-NEXT:  } cleanup all {
 // CIR-EH-NEXT:    cir.call @_ZN2NTD1Ev(%[[INIT]])
-// CIR-EH:     } catch all
+// CIR-EH-NEXT:    cir.yield
+// CIR-EH-NEXT:  }
+// CIR-EH-NEXT:  %[[TRUE:.*]] = cir.const #true
+// CIR-EH-NEXT:  cir.store %[[TRUE]], %[[RESUME_EH]]
+// CIR-EH-NEXT:  cir.yield
+// CIR-EH-NEXT: } catch all
 // CIR-EH:   },)
 // CIR-EH-NEXT: cir.yield
 // CIR-EH-NEXT: }, body : {
@@ -456,4 +465,127 @@ struct coro_init_final_nt_t {
 // OGCG: final.ready:
 // OGCG-NEXT: call void @_ZN12FinalAwaitNT12await_resumeEv(ptr {{.*}} %[[FINAL:.*]], ptr
 // OGCG-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[FINAL]])
+
+// OGCG-EH-LABEL: define {{.*}} void @_Z21init_final_nontrivialv(
+// OGCG-EH:       init.ready:
+// OGCG-EH-NEXT:    store i1 true, ptr %[[RESUME_EH:.*]], align 1
+// OGCG-EH-NEXT:    invoke void @_ZN11InitAwaitNT12await_resumeEv(ptr {{.*}} %[[INIT:.*]], ptr
+// OGCG-EH-NEXT:      to label %[[CONT:.*]] unwind label
+// OGCG-EH:       [[CONT]]:
+// OGCG-EH-NEXT:    call void @_ZN2NTD1Ev(ptr {{.*}} %[[INIT]])
+// OGCG-EH-NEXT:    store i1 false, ptr %[[RESUME_EH]], align 1
 coro_init_final_nt_t init_final_nontrivial() { co_return; }
+
+void next();
+
+// The try/catch is only needed if the resume expression can throw: here
+// neither await_resume() nor the result's destructor can.
+
+struct NoexceptInitAw {
+  bool await_ready() noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
+  NT await_resume() noexcept;
+};
+
+struct NoexceptInitTask {
+  struct promise_type {
+    NoexceptInitTask get_return_object() noexcept;
+    NoexceptInitAw initial_suspend() noexcept;
+    std::suspend_never final_suspend() noexcept;
+    void return_void() noexcept;
+    void unhandled_exception() noexcept;
+  };
+};
+
+NoexceptInitTask noexcept_initial_resume() {
+  next();
+  co_return;
+}
+
+// CIR-COMMON-LABEL: cir.func coroutine {{.*}} @_Z23noexcept_initial_resumev(
+// CIR-COMMON-NOT:       resume.eh
+// CIR-COMMON:           %[[INIT:.*]] = cir.alloca "agg.tmp.ensured" align(4) : !cir.ptr<!rec_NT>
+// CIR-COMMON-NOT:       resume.eh
+// CIR-COMMON:           cir.await(init, ready : {
+// CIR-COMMON:           }, resume : {
+// CIR-COMMON-NEXT:        cir.call @_ZN14NoexceptInitAw12await_resumeEv(%[[INIT]], %{{.*}})
+// CIR-COMMON-NEXT:        cir.yield
+// CIR-COMMON-NEXT:      },)
+// CIR-COMMON-NEXT:      cir.cleanup.scope {
+// CIR-COMMON-NEXT:        cir.yield
+// CIR-NOEH-NEXT: } cleanup normal {
+// CIR-EH-NEXT:   } cleanup all {
+// CIR-COMMON-NEXT:        cir.call @_ZN2NTD1Ev(%[[INIT]])
+// CIR-COMMON-NEXT:        cir.yield
+// CIR-COMMON-NEXT:      }
+// CIR-COMMON-NEXT:      cir.yield
+// CIR-COMMON-NEXT:    }, body : {
+// CIR-COMMON-NOT:       resume.eh
+// CIR-COMMON:         }, finalSuspend : {
+
+// OGCG-EH-LABEL: define {{.*}} void @_Z23noexcept_initial_resumev(
+// OGCG-EH-NOT:     initresume.eh
+// OGCG-EH:       init.ready:
+// OGCG-EH-NEXT:    call void @_ZN14NoexceptInitAw12await_resumeEv(ptr {{.*}} %[[INIT:.*]], ptr
+// OGCG-EH-NEXT:    call void @_ZN2NTD1Ev(ptr {{.*}} %[[INIT]])
+// OGCG-EH-NOT:     initresume.eh
+// OGCG-EH:       define
+
+// With a destructor that may throw, a noexcept await_resume() call is still in
+// the try/catch, and the result is destroyed before the flag is set.
+
+struct TD {
+  int x;
+  ~TD() noexcept(false);
+};
+
+struct ThrowingDtorInitAw {
+  bool await_ready() noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
+  TD await_resume() noexcept;
+};
+
+struct ThrowingDtorInitTask {
+  struct promise_type {
+    ThrowingDtorInitTask get_return_object() noexcept;
+    ThrowingDtorInitAw initial_suspend() noexcept;
+    std::suspend_never final_suspend() noexcept;
+    void return_void() noexcept;
+    void unhandled_exception() noexcept;
+  };
+};
+
+ThrowingDtorInitTask throwing_dtor_initial_resume() {
+  next();
+  co_return;
+}
+
+// CIR-COMMON-LABEL: cir.func coroutine {{.*}} @_Z28throwing_dtor_initial_resumev(
+// CIR-EH:      %[[RESUME_EH:.*]] = cir.alloca "resume.eh"
+// CIR-COMMON:         cir.await(init, ready : {
+// CIR-COMMON:         }, resume : {
+// CIR-EH:          cir.try {
+// CIR-EH-NEXT:       cir.call @_ZN18ThrowingDtorInitAw12await_resumeEv(%[[INIT:.*]], %{{.*}})
+// CIR-EH-NEXT:       cir.cleanup.scope {
+// CIR-EH-NEXT:         cir.yield
+// CIR-EH-NEXT:       } cleanup all {
+// CIR-EH-NEXT:         cir.call @_ZN2TDD1Ev(%[[INIT]])
+// CIR-EH-NEXT:         cir.yield
+// CIR-EH-NEXT:       }
+// CIR-EH-NEXT:       %[[TRUE:.*]] = cir.const #true
+// CIR-EH-NEXT:       cir.store %[[TRUE]], %[[RESUME_EH]]
+// CIR-EH-NEXT:       cir.yield
+// CIR-EH-NEXT:     } catch all
+// CIR-COMMON:         }, body : {
+// CIR-EH-NEXT:   %[[RESUMED:.*]] = cir.load {{.*}} %[[RESUME_EH]]
+// CIR-EH-NEXT:   cir.if %[[RESUMED]] {
+// CIR-EH:          cir.call @_Z4nextv()
+
+// OGCG-EH-LABEL: define {{.*}} void @_Z28throwing_dtor_initial_resumev(
+// OGCG-EH:       init.ready:
+// OGCG-EH-NEXT:    store i1 true, ptr %[[RESUME_EH:.*]], align 1
+// OGCG-EH-NEXT:    call void @_ZN18ThrowingDtorInitAw12await_resumeEv(ptr {{.*}} %[[INIT:.*]], ptr
+// OGCG-EH-NEXT:    invoke void @_ZN2TDD1Ev(ptr {{.*}} %[[INIT]])
+// OGCG-EH-NEXT:      to label %[[CONT:.*]] unwind label
+// OGCG-EH:       [[CONT]]:
+// OGCG-EH-NEXT:    store i1 false, ptr %[[RESUME_EH]], align 1

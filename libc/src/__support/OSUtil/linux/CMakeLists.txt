@@ -67,6 +67,21 @@ add_header_library(
 )
 
 add_header_library(
+  sigmask
+  HDRS
+    sigmask.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+)
+
+add_header_library(
   sysinfo
   HDRS
     sysinfo.h
