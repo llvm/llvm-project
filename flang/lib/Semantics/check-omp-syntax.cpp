@@ -33,32 +33,6 @@
 namespace Fortran::semantics {
 using namespace Fortran::parser::omp;
 
-static llvm::omp::Modifiers GetElements(
-    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
-  return desc.getModifiers(version);
-}
-
-static llvm::omp::Modifiers GetElements(
-    const llvm::omp::descriptor::ModifierSet &desc,
-    llvm::omp::Version version) {
-  return desc.getModifiers(version);
-}
-
-static llvm::omp::ModifierSets GetSets(
-    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
-  return desc.getModifierSets(version);
-}
-
-template <typename DescriptorTy>
-static auto GetAllowedElements(
-    const DescriptorTy &desc, llvm::omp::Version version) {
-  auto allowed{GetElements(desc, version)};
-  for (auto s : GetSets(desc, version)) {
-    allowed |= GetElements(llvm::omp::getDescriptor(s), version);
-  }
-  return allowed;
-}
-
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy = llvm::DenseMap<ElemTy,
@@ -71,26 +45,14 @@ static ResultTy VerifyVersions(
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  ElemSetTy allowed{GetAllowedElements(odesc, version)};
+  ElemSetTy allowed{descriptor::GetAllowedElements(odesc, version)};
 
   for (const AppliedElementTy &elem : info.elements) {
-    if (allowed.test(elem.id.value)) {
-      continue;
+    if (!allowed.test(elem.id.value)) {
+      result.insert({elem.id.value,
+          {elem.id.source,
+              descriptor::GetVersionRangeForElement(elem.id.value, ownerId)}});
     }
-    llvm::omp::Version since{~0u}, until{0u};
-    for (llvm::omp::Version v : odesc.getVersions()) {
-      if (GetElements(odesc, v).test(elem.id.value)) {
-        if (v < version) {
-          until = std::max(until, v);
-        } else if (v > version) {
-          since = std::min(since, v);
-        }
-      }
-    }
-    int minVer = static_cast<unsigned>(since);
-    int maxVer = static_cast<unsigned>(until);
-    result.insert({elem.id.value,
-        {elem.id.source, llvm::directive::VersionRange{minVer, maxVer}}});
   }
   return result;
 }
@@ -106,13 +68,13 @@ static ResultTy VerifyRequired(
   ResultTy required;
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
 
-  for (auto e : GetElements(odesc, version)) {
+  for (auto e : descriptor::GetElements(odesc, version)) {
     auto &edesc{llvm::omp::getDescriptor(e)};
     if (edesc.getProperties(version).test(llvm::omp::Property::Required)) {
       required.first.set(e);
     }
   }
-  for (auto s : GetSets(odesc, version)) {
+  for (auto s : descriptor::GetSets(odesc, version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
     if (sdesc.getProperties(version).test(llvm::omp::Property::Required)) {
       required.second.set(s);
@@ -138,19 +100,19 @@ static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy, SetsSetTy> &info,
   ElemSetTy unique;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  ElemSetTy allowed{GetAllowedElements(odesc, version)};
+  ElemSetTy allowed{descriptor::GetAllowedElements(odesc, version)};
 
-  for (auto e : GetElements(odesc, version)) {
+  for (auto e : descriptor::GetElements(odesc, version)) {
     auto &edesc{llvm::omp::getDescriptor(e)};
     // Ultimate modifiers should have the "unique" property present as well.
     if (edesc.getProperties(version).test(llvm::omp::Property::Unique)) {
       unique.set(e);
     }
   }
-  for (auto s : GetSets(odesc, version)) {
+  for (auto s : descriptor::GetSets(odesc, version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
     if (sdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
-      unique |= GetElements(sdesc, version);
+      unique |= descriptor::GetElements(sdesc, version);
     }
   }
 
@@ -183,7 +145,7 @@ static ResultTy VerifyExclusive(
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto allowed{GetAllowedElements(odesc, version)};
+  auto allowed{descriptor::GetAllowedElements(odesc, version)};
 
   llvm::DenseMap<ElemTy, parser::CharBlock> present;
   for (const AppliedElementTy &elem : info.elements) {
@@ -224,7 +186,7 @@ static ResultTy VerifyMutuallyExclusive(
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto allowed{GetAllowedElements(odesc, version)};
+  auto allowed{descriptor::GetAllowedElements(odesc, version)};
 
   llvm::DenseMap<SetTy, const AppliedElementTy *> exclusive;
   for (const AppliedElementTy &elem : info.elements) {
@@ -266,18 +228,18 @@ static ResultTy VerifyUltimate(
   llvm::omp::EnumSet<ElemTy> ultimate;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto allowed{GetAllowedElements(odesc, version)};
+  auto allowed{descriptor::GetAllowedElements(odesc, version)};
 
-  for (auto e : GetElements(odesc, version)) {
+  for (auto e : descriptor::GetElements(odesc, version)) {
     auto &edesc{llvm::omp::getDescriptor(e)};
     if (edesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
       ultimate.set(e);
     }
   }
-  for (auto s : GetSets(odesc, version)) {
+  for (auto s : descriptor::GetSets(odesc, version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
     if (sdesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
-      ultimate |= GetElements(sdesc, version);
+      ultimate |= descriptor::GetElements(sdesc, version);
     }
   }
 

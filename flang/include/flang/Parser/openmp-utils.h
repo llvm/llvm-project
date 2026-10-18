@@ -18,6 +18,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <cassert>
 #include <iterator>
@@ -35,6 +36,61 @@ template <typename T> constexpr auto addr_if(std::optional<T> &x) {
 template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
   return x ? &*x : nullptr;
 }
+
+namespace descriptor {
+// Generic interfaces for entities that are "containers":
+// * Clause:
+//   ├─ Elements: Modifiers
+//   ╰─ Sets:     ModifierSets
+// * Directive
+//   ├─ Elements: Clauses
+//   ╰─ Sets:     ClauseSets
+// * ClauseSet:
+//   ╰─ Elements: Clauses
+// * ModifierSet:
+//   ╰─ Elements: Modifiers
+llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version);
+llvm::omp::ModifierSets GetSets(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version);
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version);
+llvm::omp::ClauseSets GetSets(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version);
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::ClauseSet &desc, llvm::omp::Version version);
+llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::ModifierSet &desc, llvm::omp::Version version);
+
+// The set of "elements" allowed on a given "container" is the union of all
+// elements listed explicitly, and elements of all sets. E.g. the set of all
+// clauses allowed on a given directive is the set of clauses listed in the
+// descriptor, plus the union of all clause sets.
+template <typename DescriptorTy>
+auto GetAllowedElements(const DescriptorTy &desc, llvm::omp::Version version) {
+  auto allowed{GetElements(desc, version)};
+  for (auto s : GetSets(desc, version)) {
+    allowed |= GetElements(llvm::omp::getDescriptor(s), version);
+  }
+  return allowed;
+}
+
+template <typename ElemTy, typename OwnerTy>
+llvm::directive::VersionRange GetVersionRangeForElement(
+    ElemTy elemId, OwnerTy ownerId) {
+  llvm::omp::Version minVer{~0u}, maxVer{0u};
+  const auto &desc{llvm::omp::getDescriptor(ownerId)};
+  for (llvm::omp::Version v : desc.getVersions()) {
+    if (GetAllowedElements(desc, v).test(elemId)) {
+      minVer = std::min(minVer, v);
+      maxVer = std::max(maxVer, v);
+    }
+  }
+  return llvm::directive::VersionRange{
+      static_cast<int>(static_cast<unsigned>(minVer)),
+      static_cast<int>(static_cast<unsigned>(maxVer))};
+}
+} // namespace descriptor
 
 const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
 const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
