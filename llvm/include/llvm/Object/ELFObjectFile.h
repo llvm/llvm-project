@@ -1346,6 +1346,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf64-mips";
     case ELF::EM_AMDGPU:
       return "elf64-amdgpu";
+    case ELF::EM_AGX:
+      return "elf64-agx";
     case ELF::EM_BPF:
       return "elf64-bpf";
     case ELF::EM_VE:
@@ -1434,6 +1436,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
       return Triple::nvptx;
     return Triple::nvptx64;
   }
+
+  case ELF::EM_AGX:
+    return IsLittleEndian ? Triple::agx : Triple::UnknownArch;
 
   case ELF::EM_BPF:
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;

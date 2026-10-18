@@ -184,6 +184,7 @@ enum Kind {
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
   kw_amdgpu_gfx_whole_wave,
+  kw_agx_kernel,
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,

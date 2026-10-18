@@ -414,6 +414,7 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
     Out << "amdgpu_cs_chain_preserve";
     break;
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
+  case CallingConv::AGX_KERNEL:    Out << "agx_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
   case CallingConv::AMDGPU_Gfx_WholeWave:
     Out << "amdgpu_gfx_whole_wave";

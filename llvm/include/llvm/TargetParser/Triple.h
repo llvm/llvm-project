@@ -115,7 +115,8 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
-    LastArchType = ve
+    agx,            // AGX: Apple GPUs (G13 and later)
+    LastArchType = agx
   };
   enum SubArchType {
     NoSubArch,
@@ -997,6 +998,9 @@ public:
 
   bool isAMDGPU() const { return isAMDGCN() || getArch() == Triple::r600; }
 
+  /// Tests whether the target is an Apple AGX GPU.
+  bool isAGX() const { return getArch() == Triple::agx; }
+
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
     return getArch() == Triple::thumb || getArch() == Triple::thumbeb;
@@ -1411,7 +1415,9 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
+  bool isGPU() const {
+    return isSPIROrSPIRV() || isNVPTX() || isAMDGPU() || isAGX();
+  }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;

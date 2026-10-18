@@ -1195,6 +1195,7 @@ bool llvm::CallingConv::supportsNonVoidReturnType(CallingConv::ID CC) {
   case CallingConv::SPIR_KERNEL:
   case CallingConv::AMDGPU_CS_Chain:
   case CallingConv::AMDGPU_CS_ChainPreserve:
+  case CallingConv::AGX_KERNEL:
     return false;
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_HS:
