@@ -11263,11 +11263,20 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
 MachineInstr *SIInstrInfo::createPHIDestinationCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator LastPHIIt,
     const DebugLoc &DL, Register Src, Register Dst) const {
+  SmallVector<MachineInstr *, 4> DebugUsers;
   auto Cur = MBB.begin();
   if (Cur != MBB.end())
     do {
-      if (!Cur->isPHI() && Cur->readsRegister(Dst, /*TRI=*/nullptr))
+      if (Cur->isDebugInstr()) {
+        // Do not let debug uses change the destination copy placement. Save
+        // them so they can refer to Src if the copy is delayed past them.
+        if (Cur->readsRegister(Dst, /*TRI=*/nullptr))
+          DebugUsers.push_back(&*Cur);
+      } else if (!Cur->isPHI() && Cur->readsRegister(Dst, /*TRI=*/nullptr)) {
+        for (MachineInstr *DebugUser : DebugUsers)
+          DebugUser->substituteRegister(Dst, Src, /*SubIdx=*/0, RI);
         return BuildMI(MBB, Cur, DL, get(TargetOpcode::COPY), Dst).addReg(Src);
+      }
       ++Cur;
     } while (Cur != MBB.end() && Cur != LastPHIIt);
 
