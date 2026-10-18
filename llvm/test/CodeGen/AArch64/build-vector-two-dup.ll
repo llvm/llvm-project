@@ -302,12 +302,14 @@ define <8 x i8> @test11(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ;
 ; CHECK-GI-LABEL: test11:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ld1r { v0.8b }, [x0]
-; CHECK-GI-NEXT:    ld1r { v1.8b }, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[2], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[3], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[4], [x1]
+; CHECK-GI-NEXT:    ld1 { v0.b }[5], [x1]
+; CHECK-GI-NEXT:    ld1 { v0.b }[6], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[7], [x0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
