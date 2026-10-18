@@ -29,13 +29,10 @@ define void @loop_three_exits(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC) {
 ; SWITCH-NEXT:    ret void
 ; SWITCH:       [[LOOP_EXIT_GUARD]]:
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[A]] ], [ 1, %[[B]] ], [ 2, %[[C]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[LOOP_EXIT_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[EXIT3]] [
 ; SWITCH-NEXT:      i32 0, label %[[EXIT1]]
 ; SWITCH-NEXT:      i32 1, label %[[EXIT2]]
-; SWITCH-NEXT:      i32 2, label %[[EXIT3]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[LOOP_EXIT_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define void @loop_three_exits(
 ; BOOLEAN-SAME: i1 [[PREDENTRY:%.*]], i1 [[PREDA:%.*]], i1 [[PREDB:%.*]], i1 [[PREDC:%.*]]) {
@@ -124,13 +121,10 @@ define void @loop_switch_terminator(i32 %Val, i1 %PredLoop) {
 ; SWITCH-NEXT:    br label %[[LOOP_EXIT_GUARD]]
 ; SWITCH:       [[LOOP_EXIT_GUARD]]:
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[A_TARGET_EXIT1]] ], [ 1, %[[A_TARGET_EXIT2]] ], [ 2, %[[A_TARGET_EXIT3]] ], [ 0, %[[LOOPBACK]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[LOOP_EXIT_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[EXIT3]] [
 ; SWITCH-NEXT:      i32 0, label %[[EXIT1]]
 ; SWITCH-NEXT:      i32 1, label %[[EXIT2]]
-; SWITCH-NEXT:      i32 2, label %[[EXIT3]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[LOOP_EXIT_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define void @loop_switch_terminator(
 ; BOOLEAN-SAME: i32 [[VAL:%.*]], i1 [[PREDLOOP:%.*]]) {
@@ -224,13 +218,10 @@ define void @loop_external_predecessor_to_exit(i1 %EarlyExit, i1 %PredA, i1 %Pre
 ; SWITCH-NEXT:    [[VALA_MOVED]] = phi i32 [ [[VALA]], %[[A]] ], [ [[VALA]], %[[B]] ], [ [[VALA]], %[[C]] ]
 ; SWITCH-NEXT:    [[PHI_EXIT1_MOVED]] = phi i32 [ [[VALA]], %[[A]] ], [ poison, %[[B]] ], [ poison, %[[C]] ]
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[A]] ], [ 1, %[[B]] ], [ 2, %[[C]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[LOOP_EXIT_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[EXIT3]] [
 ; SWITCH-NEXT:      i32 0, label %[[EXIT1]]
 ; SWITCH-NEXT:      i32 1, label %[[EXIT2]]
-; SWITCH-NEXT:      i32 2, label %[[EXIT3]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[LOOP_EXIT_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define void @loop_external_predecessor_to_exit(
 ; BOOLEAN-SAME: i1 [[EARLYEXIT:%.*]], i1 [[PREDA:%.*]], i1 [[PREDB:%.*]], i1 [[PREDC:%.*]]) {
@@ -318,13 +309,10 @@ define i32 @loop_restore_ssa(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC, i32
 ; SWITCH-NEXT:    [[PHI2_MOVED]] = phi i32 [ poison, %[[A]] ], [ [[DEF2]], %[[B]] ], [ poison, %[[C]] ]
 ; SWITCH-NEXT:    [[PHI1_MOVED]] = phi i32 [ [[DEF1]], %[[A]] ], [ poison, %[[B]] ], [ poison, %[[C]] ]
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[A]] ], [ 1, %[[B]] ], [ 2, %[[C]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[LOOP_EXIT_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[EXIT3]] [
 ; SWITCH-NEXT:      i32 0, label %[[EXIT1]]
 ; SWITCH-NEXT:      i32 1, label %[[EXIT2]]
-; SWITCH-NEXT:      i32 2, label %[[EXIT3]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[LOOP_EXIT_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define i32 @loop_restore_ssa(
 ; BOOLEAN-SAME: i1 [[PREDENTRY:%.*]], i1 [[PREDA:%.*]], i1 [[PREDB:%.*]], i1 [[PREDC:%.*]], i32 [[X:%.*]]) {

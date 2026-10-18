@@ -407,11 +407,9 @@ BasicBlock *ControlFlowHub::finalizeAsSwitch(
     Phi->addIncoming(IncomingId, BB);
   }
 
-  BasicBlock *DefaultDest =
-      BasicBlock::Create(F->getContext(), Prefix + ".guard.default", F);
-  IRBuilder<>(DefaultDest).CreateUnreachable();
-  SwitchInst *SI = Builder.CreateSwitch(Phi, DefaultDest, Outgoing.size());
-  for (unsigned I = 0, E = Outgoing.size(); I != E; ++I)
+  SwitchInst *SI =
+      Builder.CreateSwitch(Phi, Outgoing.back(), Outgoing.size() - 1);
+  for (unsigned I = 0, E = Outgoing.size() - 1; I != E; ++I)
     SI->addCase(Builder.getInt32(I), Outgoing[I]);
 
   for (BasicBlock *Out : Outgoing)
@@ -423,7 +421,6 @@ BasicBlock *ControlFlowHub::finalizeAsSwitch(
 
     for (BasicBlock *Out : Outgoing)
       Updates.push_back({DominatorTree::Insert, Guard, Out});
-    Updates.push_back({DominatorTree::Insert, Guard, DefaultDest});
     DTU->applyUpdates(Updates);
   }
   return Guard;

@@ -32,13 +32,10 @@ define i32 @irreducible_three_entries(i1 %PredEntry, i1 %PredEntry2, i1 %PredA, 
 ; SWITCH-NEXT:    [[VALB_MOVED]] = phi i32 [ poison, %[[B]] ], [ [[Y]], %[[ENTRY2]] ], [ poison, %[[ENTRY]] ]
 ; SWITCH-NEXT:    [[VALC_MOVED]] = phi i32 [ [[INCB]], %[[B]] ], [ [[Z]], %[[ENTRY2]] ], [ poison, %[[ENTRY]] ]
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[B]] ], [ [[TARGET_BB_IDX]], %[[ENTRY2]] ], [ 2, %[[ENTRY]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[IRR_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[A]] [
 ; SWITCH-NEXT:      i32 0, label %[[C]]
 ; SWITCH-NEXT:      i32 1, label %[[B]]
-; SWITCH-NEXT:      i32 2, label %[[A]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[IRR_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define i32 @irreducible_three_entries(
 ; BOOLEAN-SAME: i1 [[PREDENTRY:%.*]], i1 [[PREDENTRY2:%.*]], i1 [[PREDA:%.*]], i1 [[PREDB:%.*]], i1 [[PREDC:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
@@ -129,13 +126,10 @@ define i32 @irreducible_partial_condition_entry(i1 %PredEntry, i1 %PredEntry1, i
 ; SWITCH-NEXT:    [[VALB_MOVED]] = phi i32 [ poison, %[[B]] ], [ [[Y]], %[[ENTRY2]] ], [ poison, %[[ENTRY1]] ]
 ; SWITCH-NEXT:    [[VALC_MOVED]] = phi i32 [ [[INCB]], %[[B]] ], [ [[Z]], %[[ENTRY2]] ], [ poison, %[[ENTRY1]] ]
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[B]] ], [ [[TARGET_BB_IDX]], %[[ENTRY2]] ], [ 2, %[[ENTRY1]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[IRR_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[A]] [
 ; SWITCH-NEXT:      i32 0, label %[[C]]
 ; SWITCH-NEXT:      i32 1, label %[[B]]
-; SWITCH-NEXT:      i32 2, label %[[A]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[IRR_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define i32 @irreducible_partial_condition_entry(
 ; BOOLEAN-SAME: i1 [[PREDENTRY:%.*]], i1 [[PREDENTRY1:%.*]], i1 [[PREDENTRY2:%.*]], i1 [[PREDA:%.*]], i1 [[PREDB:%.*]], i1 [[PREDC:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
@@ -234,13 +228,10 @@ define i32 @irreducible_multiple_preds_same_entry(i1 %PredEntry1, i1 %PredEntry2
 ; SWITCH-NEXT:    [[VALA_MOVED]] = phi i32 [ poison, %[[B]] ], [ [[X2]], %[[ENTRY3]] ], [ [[X1]], %[[ENTRY2]] ]
 ; SWITCH-NEXT:    [[VALC_MOVED]] = phi i32 [ [[INCB]], %[[B]] ], [ [[Z]], %[[ENTRY3]] ], [ poison, %[[ENTRY2]] ]
 ; SWITCH-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, %[[B]] ], [ [[TARGET_BB_IDX]], %[[ENTRY3]] ], [ [[TARGET_BB_IDX1]], %[[ENTRY2]] ]
-; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[IRR_GUARD_DEFAULT:.*]] [
+; SWITCH-NEXT:    switch i32 [[MERGED_BB_IDX]], label %[[B]] [
 ; SWITCH-NEXT:      i32 0, label %[[C]]
 ; SWITCH-NEXT:      i32 1, label %[[A]]
-; SWITCH-NEXT:      i32 2, label %[[B]]
 ; SWITCH-NEXT:    ]
-; SWITCH:       [[IRR_GUARD_DEFAULT]]:
-; SWITCH-NEXT:    unreachable
 ;
 ; BOOLEAN-LABEL: define i32 @irreducible_multiple_preds_same_entry(
 ; BOOLEAN-SAME: i1 [[PREDENTRY1:%.*]], i1 [[PREDENTRY2:%.*]], i1 [[PREDENTRY3:%.*]], i1 [[PREDA:%.*]], i1 [[PREDB:%.*]], i1 [[PREDC:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {

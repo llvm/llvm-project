@@ -28,7 +28,8 @@ class DomTreeUpdater;
 /// that the control flow from each BB to a successor is now split into two
 /// edges, one from BB to the hub and another from the hub to the successor.
 /// There are two ways to configure the hub: either as a branch sled or as a
-/// single switch.
+/// single switch. For two or fewer hub successors, the hub defaults to a branch
+/// sled.
 ///
 /// For the branch sled case, the hub consists of a series of guard blocks, one
 /// for each outgoing block. Each guard block conditionally branches to the
@@ -36,9 +37,9 @@ class DomTreeUpdater;
 /// guard blocks are returned in the argument vector `GuardBlocks`.
 ///
 /// In the case of a switch guard, the hub consists only of a single guard block
-/// containing a switch instruction that branches to all outgoing blocks (with
-/// an unreachable default destination). `GuardBlocks` will contain this single
-/// guard block.
+/// containing a switch instruction that branches to all outgoing blocks, with
+/// the last successor acting as default target. `GuardBlocks` will contain this
+/// single guard block.
 ///
 /// This also updates any PHINodes in the successor. For each such PHINode, the
 /// operands corresponding to incoming blocks are moved to a new PHINode in the
