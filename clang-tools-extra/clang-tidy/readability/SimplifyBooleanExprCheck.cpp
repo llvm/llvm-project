@@ -694,10 +694,9 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 
 static std::pair<const Expr *, bool> parseCondition(const Expr *E) {
   E = E->IgnoreParenImpCasts();
-  if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
-    if (UnOp->getOpcode() == UO_LNot)
-      return {UnOp->getSubExpr()->IgnoreParenImpCasts(), true};
-  }
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(E);
+      UnOp && UnOp->getOpcode() == UO_LNot)
+    return {UnOp->getSubExpr()->IgnoreParenImpCasts(), true};
   return {E, false};
 }
 
