@@ -332,7 +332,7 @@ struct vol_mem {
 };
 
 // expected-error@+2 {{constexpr variable 'run_vol_mem' must be initialized by a constant expression}}
-// expected-note-re@+1 {{non-literal type '{{(const )?}}vol_mem' cannot be used in a constant expression}}
+// expected-note@+1 {{non-literal type 'vol_mem' cannot be used in a constant expression}}
 constexpr int run_vol_mem = __builtin_bit_cast(int, vol_mem{43});
 
 struct mem_ptr {

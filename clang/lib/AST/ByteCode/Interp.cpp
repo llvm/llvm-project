@@ -1654,7 +1654,8 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
 
   const Expr *E = S.Current->getExpr(OpPC);
   if (S.getLangOpts().CPlusPlus11)
-    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
+    S.FFDiag(E, diag::note_constexpr_nonliteral)
+        << E->getType().getUnqualifiedType();
   else
     S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
   return false;
