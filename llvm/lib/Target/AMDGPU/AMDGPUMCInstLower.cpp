@@ -248,6 +248,12 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
              Opcode == AMDGPU::V_FMA_MIX_BF16_t16) {
     lowerT16FmaMixFP16(MI, OutMI);
     return;
+  } else if (Opcode == AMDGPU::V_MOVRELS_B32_as_mem) {
+    // These have their own opcodes because they index the register file rather
+    // than a tuple, but encode as the movrel they are named after.
+    Opcode = AMDGPU::V_MOVRELS_B32_e32;
+  } else if (Opcode == AMDGPU::V_MOVRELD_B32_as_mem) {
+    Opcode = AMDGPU::V_MOVRELD_B32_e32;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);

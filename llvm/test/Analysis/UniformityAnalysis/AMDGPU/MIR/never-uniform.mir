@@ -164,3 +164,23 @@ body:             |
     %0:vgpr_32 = V_MBCNT_HI_U32_B32_e64 -1, 0, implicit $exec
     S_ENDPGM 0
 ...
+# VGPR "as memory" loads read each lane's own registers, so they are not
+# uniform even with a uniform index
+---
+name:            vgpr_as_memory_loads
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @vgpr_as_memory_loads
+    ; CHECK: DIVERGENT: %1
+    ; CHECK: DIVERGENT: %2
+    ; CHECK-NOT: DIVERGENT: %3
+    %0:sreg_32 = S_MOV_B32 0
+    $m0 = COPY %0
+    %1:vgpr_32 = V_LOAD_IDX_B32 0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    %2:vgpr_32 = V_LOAD_IDX_GPR_IDX_B32 %0, 0, implicit-def dead $m0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    %3:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
+    S_ENDPGM 0
+...

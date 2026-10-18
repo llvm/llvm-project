@@ -14,6 +14,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"
@@ -958,6 +959,20 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
   const Instruction *Term = BB->getTerminator();
   return Term->getMetadata("amdgpu.uniform") ||
          Term->getMetadata("structurizecfg.uniform");
+}
+
+bool AMDGPUDAGToDAGISel::isVRegIdxFoldableAdd(const SDNode *N,
+                                              unsigned NumDwords) const {
+  auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C)
+    return false;
+  int64_t Offset = C->getSExtValue();
+  unsigned NumIndexable =
+      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*MF);
+  if (Offset < 0 || Offset + NumDwords > NumIndexable)
+    return false;
+  return N->getFlags().hasNoUnsignedWrap() ||
+         CurDAG->SignBitIsZero(N->getOperand(0));
 }
 
 bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,

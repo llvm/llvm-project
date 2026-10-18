@@ -92,6 +92,7 @@ private:
 
   bool isVGPRImm(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
+  bool isVRegIdxFoldableAdd(const SDNode *N, unsigned NumDwords) const;
 
   MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
                                     const SDLoc &DL) const;

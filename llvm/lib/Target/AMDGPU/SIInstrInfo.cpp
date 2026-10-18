@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -658,6 +659,24 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     if (DataOpIdx == -1) // LDS DMA
       return false;
     Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
+    return true;
+  }
+
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    // The movrel form's index is whatever M0 holds, which can change between
+    // accesses, so it has no base operand to report.
+    if (!LdStIdx->isGPRIdx())
+      return false;
+    BaseOp = &LdStIdx->getIdxOp();
+    OffsetOp = &LdStIdx->getOffsetOp();
+    if (!BaseOp->getReg().isVirtual())
+      return false;
+
+    BaseOps.push_back(BaseOp);
+    Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
+
+    // Get appropriate operand, and compute width accordingly.
+    Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
 
@@ -4313,6 +4332,15 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.isBundle() || MIb.isBundle())
     return false;
 
+  // These only alias each other, and only on overlapping dword ranges.
+  const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
+  const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
+  if (IsLdStIdxA || IsLdStIdxB) {
+    if (IsLdStIdxA && IsLdStIdxB)
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    return true;
+  }
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,
@@ -7931,6 +7959,18 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
+  // The GPR_IDX form needs its index in an SGPR. For the movrel form, a
+  // divergent M0 write is waterfalled where the copy into M0 is lowered.
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    if (!LdStIdx->isGPRIdx())
+      return CreatedBB;
+    MachineOperand *Idx = &LdStIdx->getIdxOp();
+    // A physical VGPR index is waterfalled too; isSGPRReg covers both.
+    if (!RI.isSGPRReg(MRI, Idx->getReg()))
+      CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
+    return CreatedBB;
+  }
+
   // Legalize PHI
   // The register class of the operands must be the same type as the register
   // class of the output.
@@ -8410,11 +8450,49 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
 
 void SIInstrInfo::handleCopyToPhysHelper(
     SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
-    MachineRegisterInfo &MRI,
+    MachineRegisterInfo &MRI, MachineDominatorTree *MDT,
     DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
     DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const {
   if (DstReg == AMDGPU::M0) {
-    createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
+    // A movrel access adds M0 to its base register, so a divergent index is
+    // waterfalled into M0 for it. Every other reader takes the first lane.
+    MachineBasicBlock &MBB = *Inst.getParent();
+    SmallVector<MachineInstr *, 2> Accesses, OtherReaders;
+    for (MachineInstr &MI :
+         make_range(std::next(MachineBasicBlock::iterator(Inst)), MBB.end())) {
+      auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI);
+      if (LdStIdx && !LdStIdx->isGPRIdx())
+        Accesses.push_back(&MI);
+      else if (!MI.isDebugInstr() && MI.readsRegister(AMDGPU::M0, &RI))
+        OtherReaders.push_back(&MI);
+      if (MI.modifiesRegister(AMDGPU::M0, &RI))
+        break;
+    }
+
+    if (Accesses.empty()) {
+      createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
+    } else {
+      assert(!Inst.getOperand(1).getSubReg() &&
+             "selection copies a whole register into M0");
+      Register Idx = Inst.getOperand(1).getReg();
+      if (!OtherReaders.empty()) {
+        Register FirstLane =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+        BuildMI(MBB, Inst, Inst.getDebugLoc(), get(AMDGPU::V_READFIRSTLANE_B32),
+                FirstLane)
+            .addReg(Idx);
+        for (MachineInstr *Reader : OtherReaders)
+          BuildMI(*Reader->getParent(), Reader, Reader->getDebugLoc(),
+                  get(AMDGPU::COPY), AMDGPU::M0)
+              .addReg(FirstLane);
+      }
+      Register M0 = AMDGPU::M0;
+      for (MachineInstr *Access : Accesses) {
+        MachineOperand *M0Use = Access->findRegisterUseOperand(AMDGPU::M0, &RI);
+        M0Use->setReg(Idx);
+        generateWaterFallLoop(*this, *Access, M0Use, MDT, nullptr, nullptr, M0);
+      }
+    }
     V2SPhyCopiesToErase.try_emplace(&Inst, true);
     return;
   }
@@ -8955,7 +9033,7 @@ void SIInstrInfo::moveToVALUImpl(
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
         Inst.getOperand(1).getReg().isVirtual()) {
-      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI, WaterFalls,
+      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI, MDT, WaterFalls,
                              V2SPhyCopiesToErase);
       return;
     }
@@ -11431,9 +11509,14 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
     return ValueUniformity::Default;
   }
 
+  // Each lane reads its own registers, however uniform the index.
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+    return ValueUniformity::NeverUniform;
+
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. So are VGPR address space loads, before they become
+  // G_AMDGPU_REG_LOAD.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
@@ -11444,7 +11527,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
 
     if (llvm::any_of(MI.memoperands(), [](const MachineMemOperand *mmo) {
           return mmo->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+                 mmo->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS ||
+                 mmo->getAddrSpace() == AMDGPUAS::VGPR;
         })) {
       // At least one MMO in a non-global address space.
       return ValueUniformity::NeverUniform;
@@ -11539,6 +11623,10 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
 
     return ValueUniformity::Default;
   }
+
+  // As above, after instruction selection.
+  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
+    return ValueUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
