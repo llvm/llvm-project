@@ -2301,7 +2301,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
 
     for (auto VT : {MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16,
-                    MVT::v16f16, MVT::v8f16}) {
+                    MVT::v16f16, MVT::v8f16, MVT::v16bf16, MVT::v8bf16}) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
     }
@@ -2495,7 +2495,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI())) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
                                                         : &X86::VR128RegClass);
     addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512() ? &X86::VR256XRegClass
@@ -2514,32 +2514,47 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
-                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
-      setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
-      setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
-    }
-    setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
-    setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
+
+    if (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()) {
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                           ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                           ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
+        setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
+        setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
+      }
+      setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
+      setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
+    } else {
+      // No native conversions to promote with, expand like vXf16 without F16C.
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+        setOperationAction(Opc, MVT::v8bf16, Expand);
+        setOperationAction(Opc, MVT::v16bf16, Expand);
+      }
+    }
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16() &&
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
-                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
-      setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
     setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
+
+    if (Subtarget.hasBF16()) {
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                           ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                           ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
+        setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+    } else {
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+        setOperationAction(Opc, MVT::v32bf16, Expand);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
@@ -9481,7 +9496,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
 
   if (VT.getVectorElementType() == MVT::bf16 &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()))
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI()))
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
@@ -22906,6 +22921,11 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
         ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
          Subtarget.hasAVXNECONVERT()))
       return Op;
+    // Without native conversions, round in vector registers instead of
+    // unrolling to libcalls.
+    if (VT.isVector() && SVT.getScalarType() == MVT::f32 && !IsStrict &&
+        !Subtarget.hasBF16() && !Subtarget.hasAVXNECONVERT())
+      return expandFP_ROUND(Op.getNode(), DAG);
     return SDValue();
   }
 
@@ -34437,8 +34457,9 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked load op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
-                                  ScalarVT == MVT::f16))) &&
+          (Subtarget.hasBWI() &&
+           (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+            ScalarVT == MVT::f16 || ScalarVT == MVT::bf16))) &&
          "Unsupported masked load op.");
 
   // This operation is legal for targets with VLX, but without
@@ -34485,8 +34506,9 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked store op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
-                                  ScalarVT == MVT::f16))) &&
+          (Subtarget.hasBWI() &&
+           (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+            ScalarVT == MVT::f16 || ScalarVT == MVT::bf16))) &&
          "Unsupported masked store op.");
 
   // This operation is legal for targets with VLX, but without
