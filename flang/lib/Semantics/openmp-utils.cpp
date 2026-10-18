@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <array>
 #include <cinttypes>
@@ -77,7 +78,9 @@ bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
       return true;
     }
   }
-  return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+
+  const auto &desc{llvm::omp::getDescriptor(dirId)};
+  return descriptor::GetAllowedElements(desc, version).test(clauseId);
 }
 
 bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
