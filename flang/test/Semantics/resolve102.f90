@@ -6,6 +6,20 @@ subroutine sub(p2)
   PROCEDURE(sub) :: p2
 end subroutine
 
+module recursiveAbstractInterface
+  implicit none
+  abstract interface
+    !ERROR: Procedure 'cb' is recursively defined.  Procedures in the cycle: 'cb', 'next'
+    subroutine cb(next)
+      procedure(cb) :: next
+    end subroutine
+  end interface
+end module
+
+use recursiveAbstractInterface, only: cb
+procedure(cb), pointer :: callback => null()
+end
+
 subroutine circular
   procedure(sub) :: p
   contains
