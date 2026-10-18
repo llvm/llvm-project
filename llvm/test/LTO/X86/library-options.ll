@@ -5,17 +5,15 @@
 
 ; RUN: llvm-lto -exported-symbol=f -save-merged-module -o %t/vec.o %t/a.bc
 ; RUN: llvm-dis %t/vec.o.merged.bc -o - | FileCheck %s --check-prefix=VEC
-; RUN: llvm-lto -vectorize-loops=false -exported-symbol=f -save-merged-module \
-; RUN:   -o %t/novec.o %t/a.bc
+; RUN: llvm-lto -vectorize-loops=0 -exported-symbol=f -save-merged-module -o %t/novec.o %t/a.bc
 ; RUN: llvm-dis %t/novec.o.merged.bc -o - | FileCheck %s --check-prefix=NOVEC
 
 ;; ThinLTO with the LLVMContexts that ThinLTOCodeGenerator creates.
-; RUN: llvm-lto -thinlto-action=run -vectorize-loops=false \
-; RUN:   -thinlto-save-temps=%t/ %t/a.bc
+; RUN: llvm-lto -thinlto-action=run -vectorize-loops=0 -thinlto-save-temps=%t/ %t/a.bc
 ; RUN: llvm-dis %t/0.4.opt.bc -o - | FileCheck %s --check-prefix=NOVEC
 
-; VEC:       <4 x i32>
-; NOVEC-NOT: <4 x i32>
+; VEC:       !"llvm.loop.isvectorized"
+; NOVEC-NOT: isvectorized
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

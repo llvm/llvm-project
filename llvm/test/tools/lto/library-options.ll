@@ -11,8 +11,9 @@
 ; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macos_version_min 10.10.0 -o %t/thin.dylib %t/thin.o -save-temps -lSystem -mllvm -vectorize-loops=false
 ; RUN: llvm-dis %t/thin.dylib.thinlto.bcs/0.4.opt.bc -o - | FileCheck %s --check-prefix=NOVEC
 
-; VEC:       <4 x i32>
-; NOVEC-NOT: <4 x i32>
+;; SLP may vectorize the unrolled loop, so check LoopVectorize's metadata.
+; VEC:       !"llvm.loop.isvectorized"
+; NOVEC-NOT: isvectorized
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
