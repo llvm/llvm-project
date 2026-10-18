@@ -11,22 +11,25 @@
 ## pass naive out of bounds checks.
 # RUN: cp archive.a wrapped.a
 # RUN: %python set-next-offset.py wrapped.a 18446744073709551615
-# RUN: not llvm-ar t wrapped.a 2>&1 | FileCheck %s
+# RUN: not llvm-ar t wrapped.a 2>&1 | FileCheck %s --check-prefix=WRAP
 
 ## The same check rejects an offset one byte past the end of the file.
 # RUN: cp archive.a past-end.a
 # RUN: %python set-next-offset.py past-end.a +1
-# RUN: not llvm-ar t past-end.a 2>&1 | FileCheck %s
+# RUN: not llvm-ar t past-end.a 2>&1 | FileCheck %s --check-prefix=PAST-END
 
-# CHECK: error: truncated or malformed archive (offset to next archive member past the end of the archive after member 1.o)
+## The archive is 0x3ca bytes. The wrapped offset is reported verbatim, and the
+## one-past-the-end offset is 0x3cb.
+# WRAP: error: truncated or malformed archive (offset to next archive member (0xffffffffffffffff) past the end of the archive (size 0x3ca) after member 1.o)
+# PAST-END: error: truncated or malformed archive (offset to next archive member (0x3cb) past the end of the archive (size 0x3ca) after member 1.o)
 
 #--- set-next-offset.py
 import sys
 
-# Overwrite the first member's NextOffset field in a big archive. A value of
-# the form "+N" means N bytes past the end of the file. The offset of the first
-# member is itself read from the fixed-length header, and the NextOffset field
-# sits 20 bytes into the member header.
+## Overwrite the first member's NextOffset field in a big archive. A value of
+## the form "+N" means N bytes past the end of the file. The offset of the first
+## member is itself read from the fixed-length header, and the NextOffset field
+## sits 20 bytes into the member header.
 path, value = sys.argv[1], sys.argv[2]
 with open(path, "r+b") as f:
     data = f.read()
