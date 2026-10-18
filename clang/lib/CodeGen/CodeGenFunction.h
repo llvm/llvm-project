@@ -5647,6 +5647,8 @@ private:
                                         unsigned Type,
                                         llvm::IntegerType *ResType);
 
+  void emitZeroOrPatternInitForRecordFields(QualType type, const VarDecl &D,
+                                            Address Loc);
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
   LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
