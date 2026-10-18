@@ -340,4 +340,41 @@ TEST_F(OpenMPContextTest, StrictSubsetOfLaterTiedVariant) {
   EXPECT_EQ(Best({Subset, Superset, Other}), 1);
 }
 
+TEST_F(OpenMPContextTest, UserConditionInStrictSubset) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4), Five(64, 5);
+  VariantMatchInfo A, B;
+  A.addTrait(TraitProperty::user_condition_true, "");
+  A.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  B.addTrait(TraitProperty::user_condition_true, "");
+  B.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  B.addTrait(TraitProperty::device_kind_host, "");
+  auto Best = [&](const VariantMatchInfo &First,
+                  const VariantMatchInfo &Second) {
+    return getBestVariantMatchForContext(
+        SmallVector<VariantMatchInfo, 2>{First, Second}, Context);
+  };
+
+  // Both score 5. Constant conditions are compared by their trait alone.
+  EXPECT_EQ(Best(A, B), 1);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // Different runtime conditions keep clause order.
+  A.UserCondition = "a";
+  B.UserCondition = "b";
+  EXPECT_EQ(Best(A, B), 0);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // The same runtime condition still makes A a strict subset of B.
+  B.UserCondition = "a";
+  EXPECT_EQ(Best(A, B), 1);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // A higher score wins regardless of the conditions.
+  B.UserCondition = "b";
+  A.ScoreMap[TraitProperty::implementation_vendor_llvm] = Five;
+  EXPECT_EQ(Best(A, B), 0);
+  EXPECT_EQ(Best(B, A), 1);
+}
+
 } // namespace

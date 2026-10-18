@@ -559,3 +559,227 @@ subroutine test_multi_dynamic_multi_static(a, b)
   !$omp & default(nothing)
 #endif
 end subroutine
+
+! Both candidates score 5. The conditions differ, so neither selector is a
+! subset of the other and `a` is tested first.
+! CHECK-LABEL: func.func @_QPtest_distinct_conditions(
+! CHECK-SAME:    %[[ARG0:[^,]*]]: !fir.ref<!fir.logical<4>>
+! CHECK-SAME:    %[[ARG1:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECLA:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[DECLB:.*]]:2 = hlfir.declare %[[ARG1]]
+! CHECK:         %[[LOADA:.*]] = fir.load %[[DECLA]]#0
+! CHECK:         %[[CONDA:.*]] = fir.convert %[[LOADA]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[CONDA]] {
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           %[[LOADB:.*]] = fir.load %[[DECLB]]#0
+! CHECK:           %[[CONDB:.*]] = fir.convert %[[LOADB]] : (!fir.logical<4>) -> i1
+! CHECK:           fir.if %[[CONDB]] {
+! CHECK-NEXT:        omp.taskwait
+! CHECK:         return
+subroutine test_distinct_conditions(a, b)
+  logical, intent(in) :: a, b
+  !$omp metadirective &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(b)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! With the same condition, the first selector is a strict subset of the second.
+! CHECK-LABEL: func.func @_QPtest_same_condition(
+! CHECK:         fir.if
+! CHECK-NEXT:      omp.taskwait
+! CHECK-NOT:     omp.taskyield
+! CHECK:         return
+subroutine test_same_condition(a)
+  logical, intent(in) :: a
+  !$omp metadirective &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(a)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! Outer parentheses don't change the condition.
+! CHECK-LABEL: func.func @_QPtest_parenthesized_condition(
+! CHECK:         fir.if
+! CHECK-NEXT:      omp.taskwait
+! CHECK-NOT:     omp.taskyield
+! CHECK:         return
+subroutine test_parenthesized_condition(a)
+  logical, intent(in) :: a
+  !$omp metadirective &
+  !$omp & when(user={condition((a))}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(a)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! Under match_none, both candidates score 3 and `a` is tested first.
+! CHECK-LABEL: func.func @_QPtest_distinct_conditions_match_none(
+! CHECK-SAME:    %[[ARG0:[^,]*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECLA:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[LOADA:.*]] = fir.load %[[DECLA]]#0
+! CHECK:         %[[CONDA:.*]] = fir.convert %[[LOADA]] : (!fir.logical<4>) -> i1
+! CHECK:         %[[NOTA:.*]] = arith.xori %[[CONDA]]
+! CHECK:         fir.if %[[NOTA]] {
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           omp.taskwait
+! CHECK:         return
+subroutine test_distinct_conditions_match_none(a, b)
+  logical, intent(in) :: a, b
+  !$omp metadirective &
+  !$omp & when(user={condition(score(2): a)}, &
+  !$omp &      implementation={extension(match_none)}: taskyield) &
+  !$omp & when(user={condition(b)}, device={arch(nvptx)}, &
+  !$omp &      implementation={extension(match_none)}: taskwait)
+end subroutine
+
+! Constant conditions are compared by truth value, whatever their kind.
+! CHECK-LABEL: func.func @_QPtest_constant_condition_kinds(
+! CHECK-NOT:     omp.taskyield
+! CHECK:         omp.taskwait
+! CHECK-NOT:     omp.taskyield
+! CHECK:         return
+subroutine test_constant_condition_kinds()
+  !$omp metadirective &
+  !$omp & when(user={condition(.true._8)}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(.true._4)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! Calls to intrinsics without arguments are evaluated at runtime.
+! CHECK-LABEL: func.func @_QPtest_intrinsic_call_conditions(
+! CHECK:         arith.cmpi sgt, %{{.*}}, %c0
+! CHECK:         fir.if
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           arith.cmpi sgt, %{{.*}}, %c1
+! CHECK:           fir.if
+! CHECK-NEXT:        omp.taskwait
+! CHECK:         return
+subroutine test_intrinsic_call_conditions()
+  !$omp metadirective &
+  !$omp & when(user={condition(command_argument_count() > 0)}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(command_argument_count() > 1)}, &
+  !$omp &      device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+module metadirective_user_a
+contains
+  logical function predicate()
+    predicate = .true.
+  end function
+  logical function invoke(p)
+    interface
+      logical function p()
+      end function
+    end interface
+    invoke = p()
+  end function
+end module
+
+module metadirective_user_b
+contains
+  logical function predicate()
+    predicate = .false.
+  end function
+end module
+
+! The conditions pass different procedures with the same name, so `a` is
+! tested first.
+! CHECK-LABEL: func.func @_QPtest_same_name_conditions(
+! CHECK:         fir.address_of(@_QMmetadirective_user_aPpredicate)
+! CHECK:         fir.if
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           fir.address_of(@_QMmetadirective_user_bPpredicate)
+! CHECK:           fir.if
+! CHECK-NEXT:        omp.taskwait
+! CHECK:         return
+subroutine test_same_name_conditions()
+  use metadirective_user_a, only: a => predicate, invoke
+  use metadirective_user_b, only: b => predicate
+  !$omp metadirective &
+  !$omp & when(user={condition(invoke(a))}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(invoke(b))}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! `a` and `b` are the first dummy arguments of different procedures, but they
+! are different variables, so `a` is tested first.
+! CHECK-LABEL: func.func private @_QFtest_host_dummy_conditionsPinner(
+! CHECK-SAME:    %[[ARG0:[^,]*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[A:.*]]:2 = hlfir.declare {{.*}}"_QFtest_host_dummy_conditionsEa"
+! CHECK:         %[[B:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}"_QFtest_host_dummy_conditionsFinnerEb"
+! CHECK:         %[[LOADA:.*]] = fir.load %[[A]]#0
+! CHECK:         %[[CONDA:.*]] = fir.convert %[[LOADA]]
+! CHECK:         fir.if %[[CONDA]] {
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           fir.load %[[B]]#0
+! CHECK:           omp.taskwait
+! CHECK:         return
+subroutine test_host_dummy_conditions(a)
+  logical, intent(in) :: a
+  call inner(a)
+contains
+  subroutine inner(b)
+    logical, intent(in) :: b
+    !$omp metadirective &
+    !$omp & when(user={condition(a)}, &
+    !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+    !$omp & when(user={condition(b)}, device={kind(host)}, &
+    !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+  end subroutine
+end subroutine
+
+! `a .and. b` is not the same condition as `a`, so it is tested first.
+! CHECK-LABEL: func.func private @_QFtest_host_dummy_and_conditionPinner(
+! CHECK:         fir.logical_and
+! CHECK:         fir.if
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           omp.taskwait
+! CHECK:         return
+subroutine test_host_dummy_and_condition(a)
+  logical, intent(in) :: a
+  call inner(a)
+contains
+  subroutine inner(b)
+    logical, intent(in) :: b
+    !$omp metadirective &
+    !$omp & when(user={condition(a .and. b)}, &
+    !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+    !$omp & when(user={condition(a)}, device={kind(host)}, &
+    !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+  end subroutine
+end subroutine
+
+! The array constructors have lengths from different dummy arguments.
+! CHECK-LABEL: func.func private @_QFtest_host_dummy_lengthsPinner(
+! CHECK:         fir.if
+! CHECK-NEXT:      omp.taskyield
+! CHECK-NEXT:    } else {
+! CHECK:           omp.taskwait
+! CHECK:         return
+subroutine test_host_dummy_lengths(n)
+  integer, intent(in) :: n
+  call inner(n)
+contains
+  subroutine inner(m)
+    integer, intent(in) :: m
+    !$omp metadirective &
+    !$omp & when(user={condition(maxval([character(len=n)::]) == '')}, &
+    !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+    !$omp & when(user={condition(maxval([character(len=m)::]) == '')}, &
+    !$omp &      device={kind(host)}, &
+    !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+  end subroutine
+end subroutine
