@@ -70,7 +70,7 @@ function Test-TarballConfigurationApplied {
         return $false
     }
 
-    $installPrefix = ConvertTo-ForwardSlashPath $TarballInstallDirectory
+    $installPrefix = ConvertTo-UnixPath $TarballInstallDirectory
     $prefixPattern = '^CMAKE_INSTALL_PREFIX:[^=]+=' + [regex]::Escape($installPrefix) + '$'
     $hasTarballInstallPrefix = Select-String -LiteralPath $cache -Pattern $prefixPattern -Quiet
     $hasToolchainOnlyDisabled = Select-String -LiteralPath $cache `

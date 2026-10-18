@@ -43,7 +43,7 @@ function New-PGOProfile {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs clang
-        $instrumentedClang = ConvertTo-ForwardSlashPath (Join-Path $PWD 'bin' 'clang-cl.exe')
+        $instrumentedClang = ConvertTo-UnixPath (Join-Path $PWD 'bin' 'clang-cl.exe')
     } finally {
         Pop-Location
     }
@@ -72,7 +72,7 @@ function New-PGOProfile {
     }
 
     # Merge profiles
-    $resolvedProfilePath = ConvertTo-ForwardSlashPath $ProfilePath
+    $resolvedProfilePath = ConvertTo-UnixPath $ProfilePath
     Invoke-NativeCommand "$Stage1BinDir/llvm-profdata" merge `
         -output="$resolvedProfilePath" "$InstrumentDir/profiles/*.profraw"
 
@@ -268,16 +268,16 @@ function Build-Architecture {
         Assert-PathExists -Path $libxmlInstallPath -Description 'libxml2 install directory'
         Assert-PathExists -Path $zlibInstallPath -Description 'zlib install directory'
         Assert-PathExists -Path $zstdInstallPath -Description 'zstd install directory'
-        $script:LibXmlInstallDir = ConvertTo-ForwardSlashPath $libxmlInstallPath
-        $script:ZlibInstallDir = ConvertTo-ForwardSlashPath $zlibInstallPath
-        $script:ZstdInstallDir = ConvertTo-ForwardSlashPath $zstdInstallPath
+        $script:LibXmlInstallDir = ConvertTo-UnixPath $libxmlInstallPath
+        $script:ZlibInstallDir = ConvertTo-UnixPath $zlibInstallPath
+        $script:ZstdInstallDir = ConvertTo-UnixPath $zstdInstallPath
     }
     $libxmlDir = $script:LibXmlInstallDir
     $zlibDir = $script:ZlibInstallDir
     $zstdDir = $script:ZstdInstallDir
 
     # The stage 1 bootstrap tools are needed by PGO and stage 2.
-    $stage1BinDir = ConvertTo-ForwardSlashPath (Join-Path $BuildDir $stage1Name 'bin')
+    $stage1BinDir = ConvertTo-UnixPath (Join-Path $BuildDir $stage1Name 'bin')
 
     # Compute cmakeFlags (always needed, cheap -- derived from parameters)
     $cmakeFlags = $CommonCMakeFlags + @(
@@ -379,7 +379,7 @@ function Build-Architecture {
         } else {
             Write-Step "Skipping PGO (-StartAt $($script:StartAtStep))"
             Assert-PathExists -Path $profileFile -Description 'PGO profile data'
-            $script:PGOProfilePath = ConvertTo-ForwardSlashPath $profileFile
+            $script:PGOProfilePath = ConvertTo-UnixPath $profileFile
         }
         $profilePath = $script:PGOProfilePath
 
