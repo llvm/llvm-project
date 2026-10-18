@@ -14,6 +14,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
@@ -74,13 +75,24 @@ llvm::Expected<lldb::LanguageType> Interpreter::GetSourceLanguageFromCU() {
 }
 
 llvm::Expected<lldb::TypeSystemSP> Interpreter::GetTypeSystemFromCU() {
-  llvm::Expected<SymbolContext> symbol_context =
-      GetSymbolContexFromFrame(m_exe_ctx);
-  if (!symbol_context)
-    return symbol_context.takeError();
+  lldb::LanguageType language = lldb::eLanguageTypeUnknown;
+  if (auto frame_sp = m_exe_ctx.GetFrameSP()) {
+    SymbolContext symbol_context =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
+    if (symbol_context.comp_unit) {
+      language = symbol_context.comp_unit->GetLanguage();
+      symbol_context = frame_sp->GetSymbolContext(lldb::eSymbolContextModule);
+      if (symbol_context.module_sp)
+        return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+    }
+  }
 
-  lldb::LanguageType language = symbol_context->comp_unit->GetLanguage();
-  return symbol_context->module_sp->GetTypeSystemForLanguage(language);
+  lldb::TargetSP target_sp = m_exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return llvm::createStringError("no target for frame");
+  if (language == lldb::eLanguageTypeUnknown)
+    language = target_sp->GetLanguage().AsLanguageType();
+  return target_sp->GetScratchTypeSystemForLanguage(language);
 }
 
 // DIL normally treats '.' as member access, but register names may contain
@@ -565,10 +577,12 @@ Interpreter::Visit(const IdentifierNode &node) {
 
   if (!identifier && node.GetName()[0] == '$') {
     auto language = GetSourceLanguageFromCU();
-    if (!language)
-      return language.takeError();
-    identifier =
-        LookupPersistentIdentifier(node.GetName(), m_exe_ctx, language.get());
+    if (language)
+      identifier =
+          LookupPersistentIdentifier(node.GetName(), m_exe_ctx, language.get());
+    else
+      // Fall through to the unknown identifier diagnostic without a CU.
+      llvm::consumeError(language.takeError());
   }
 
   if (!identifier && node.GetName() == "nullptr") {
