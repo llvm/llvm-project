@@ -47,8 +47,7 @@ struct Config {
     ELF,
   };
   // The library options of every LLVMContext that LTO creates.
-  // TODO: Make it non-null once every client sets it. Null means the global
-  // values.
+  // TODO: Make it non-null once every client sets it. Null means the defaults.
   const cl::LibraryOptionsContext *LibraryOptions = nullptr;
   // Note: when adding fields here, consider whether they need to be added to
   // computeLTOCacheKey in LTO.cpp.
