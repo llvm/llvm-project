@@ -80,11 +80,6 @@ function New-PGOProfile {
     $script:PGOProfilePath = $resolvedProfilePath
 }
 
-function Invoke-Build {
-    param([string[]]$Targets = @())
-    Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs @Targets
-}
-
 function Invoke-Tests {
     <#
     .SYNOPSIS
@@ -141,10 +136,10 @@ function Build-Stage {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
         if ($InitialBuildTargets.Count -gt 0) {
-            Invoke-Build -Targets $InitialBuildTargets
+            Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs @InitialBuildTargets
         }
         if (-not $SkipFullBuild) {
-            Invoke-Build
+            Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs
             if ($TestTargets.Count -gt 0) {
                 Invoke-Tests -Targets $TestTargets -Arch $Arch
             }
