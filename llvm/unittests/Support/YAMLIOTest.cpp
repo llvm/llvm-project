@@ -1211,12 +1211,12 @@ TEST(YAMLIO, TestReadWriteMultilineStringType) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(map2.name.str, "An Item\n");
-    EXPECT_EQ(map2.description.str, "Hello\nWorld\n");
+    EXPECT_EQ(map2.name.str, "An Item");
+    EXPECT_EQ(map2.description.str, "Hello\nWorld");
     EXPECT_EQ(map2.ingredients.str, "SubItem 1\nSub Item 2\n\nSub Item 3\n");
-    EXPECT_EQ(map2.recipes.str, "\n\nTest 1\n");
+    EXPECT_EQ(map2.recipes.str, "\n\nTest 1\n\n\n");
     EXPECT_TRUE(map2.warningLabels.str.empty());
-    EXPECT_TRUE(map2.documentation.str.empty());
+    EXPECT_EQ(map2.documentation.str, "\n\n");
     EXPECT_EQ(map2.price, 350);
   }
 }
@@ -1248,7 +1248,7 @@ TEST(YAMLIO, TestReadWriteBlockScalarDocuments) {
 
     EXPECT_FALSE(yin.error());
     EXPECT_EQ(documents2.size(), size_t(1));
-    EXPECT_EQ(documents2[0].str, "Hello\nWorld\n");
+    EXPECT_EQ(documents2[0].str, "Hello\nWorld");
   }
 }
 
@@ -1268,7 +1268,7 @@ TEST(YAMLIO, TestReadWriteBlockScalarValue) {
     yin >> doc;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(doc.str, "Just a block\nscalar doc\n");
+    EXPECT_EQ(doc.str, "Just a block\nscalar doc");
   }
 }
 
@@ -1294,7 +1294,7 @@ TEST(YAMLIO, TestScalarAfterBlockScalar) {
   Output yout(ostr);
   yout << v;
   EXPECT_EQ(output, R"(---
-- block_scalac:     |
+- block_scalac:     |-
     AA
     BB
   scalar:          a

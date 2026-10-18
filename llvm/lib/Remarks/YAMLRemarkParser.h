@@ -59,8 +59,8 @@ struct YAMLRemarkParser : public RemarkParser {
   /// If we parse remark metadata in separate mode, we need to open a new file
   /// and parse that.
   std::unique_ptr<MemoryBuffer> SeparateBuf;
-  /// Storage for block scalar values, which live in the YAML document that
-  /// next() frees.
+  /// Storage for values that do not point into the input buffer: unescaped
+  /// scalars and block scalars. Remarks point into it.
   BumpPtrAllocator Alloc;
 
   YAMLRemarkParser(StringRef Buf);
