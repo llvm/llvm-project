@@ -19144,35 +19144,6 @@ InstructionCost BoUpSLP::getSpillCost() {
   return Cost;
 }
 
-/// Checks if the \p IE1 instructions is followed by \p IE2 instruction in the
-/// buildvector sequence.
-static bool isFirstInsertElement(const InsertElementInst *IE1,
-                                 const InsertElementInst *IE2) {
-  if (IE1 == IE2)
-    return false;
-  const auto *I1 = IE1;
-  const auto *I2 = IE2;
-  const InsertElementInst *PrevI1;
-  const InsertElementInst *PrevI2;
-  unsigned Idx1 = *getElementIndex(IE1);
-  unsigned Idx2 = *getElementIndex(IE2);
-  do {
-    if (I2 == IE1)
-      return true;
-    if (I1 == IE2)
-      return false;
-    PrevI1 = I1;
-    PrevI2 = I2;
-    if (I1 && (I1 == IE1 || I1->hasOneUse()) &&
-        getElementIndex(I1).value_or(Idx2) != Idx2)
-      I1 = dyn_cast<InsertElementInst>(I1->getOperand(0));
-    if (I2 && ((I2 == IE2 || I2->hasOneUse())) &&
-        getElementIndex(I2).value_or(Idx1) != Idx1)
-      I2 = dyn_cast<InsertElementInst>(I2->getOperand(0));
-  } while ((I1 && PrevI1 != I1) || (I2 && PrevI2 != I2));
-  llvm_unreachable("Two different buildvectors not expected.");
-}
-
 namespace {
 /// Returns incoming Value *, if the requested type is Value * too, or a default
 /// value, otherwise.
@@ -23879,12 +23850,6 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
 static Instruction *propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   SmallVector<Value *> Insts(make_isa_range<Instruction>(VL));
   return llvm::propagateMetadata(Inst, Insts);
-}
-
-static DebugLoc getDebugLocFromPHI(PHINode &PN) {
-  if (DebugLoc DL = PN.getDebugLoc())
-    return DL;
-  return DebugLoc::getUnknown();
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
@@ -35154,34 +35119,6 @@ private:
 static RecurKind getRdxKind(Value *V) {
   return HorizontalReduction::getRdxKind(V);
 }
-static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
-  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
-    return cast<FixedVectorType>(IE->getType())->getNumElements();
-
-  unsigned AggregateSize = 1;
-  auto *IV = cast<InsertValueInst>(InsertInst);
-  Type *CurrentType = IV->getType();
-  do {
-    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
-      for (auto *Elt : ST->elements())
-        if (Elt != ST->getElementType(0)) // check homogeneity
-          return std::nullopt;
-      AggregateSize *= ST->getNumElements();
-      CurrentType = ST->getElementType(0);
-    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
-      AggregateSize *= AT->getNumElements();
-      CurrentType = AT->getElementType();
-    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
-      AggregateSize *= VT->getNumElements();
-      return AggregateSize;
-    } else if (CurrentType->isSingleValueType()) {
-      return AggregateSize;
-    } else {
-      return std::nullopt;
-    }
-  } while (true);
-}
-
 static void findBuildAggregateRec(Instruction *LastInsertInst,
                                   TargetTransformInfo *TTI,
                                   SmallVectorImpl<Value *> &BuildVectorOpds,
@@ -35247,57 +35184,6 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
     return true;
 
   return false;
-}
-
-/// Try and get a reduction instruction from a phi node.
-///
-/// Given a phi node \p P in a block \p ParentBB, consider possible reductions
-/// if they come from either \p ParentBB or a containing loop latch.
-///
-/// \returns A candidate reduction value if possible, or \code nullptr \endcode
-/// if not possible.
-static Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
-                                      BasicBlock *ParentBB, LoopInfo *LI) {
-  // There are situations where the reduction value is not dominated by the
-  // reduction phi. Vectorizing such cases has been reported to cause
-  // miscompiles. See PR25787.
-  auto DominatedReduxValue = [&](Value *R) {
-    return isa<Instruction>(R) &&
-           DT->dominates(P->getParent(), cast<Instruction>(R)->getParent());
-  };
-
-  Instruction *Rdx = nullptr;
-
-  // Return the incoming value if it comes from the same BB as the phi node.
-  if (P->getIncomingBlock(0) == ParentBB) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
-  } else if (P->getIncomingBlock(1) == ParentBB) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
-  }
-
-  if (Rdx && DominatedReduxValue(Rdx))
-    return Rdx;
-
-  // Otherwise, check whether we have a loop latch to look at.
-  Loop *BBL = LI->getLoopFor(ParentBB);
-  if (!BBL)
-    return nullptr;
-  BasicBlock *BBLatch = BBL->getLoopLatch();
-  if (!BBLatch)
-    return nullptr;
-
-  // There is a loop latch, return the incoming value if it comes from
-  // that. This reduction pattern occasionally turns up.
-  if (P->getIncomingBlock(0) == BBLatch) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
-  } else if (P->getIncomingBlock(1) == BBLatch) {
-    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
-  }
-
-  if (Rdx && DominatedReduxValue(Rdx))
-    return Rdx;
-
-  return nullptr;
 }
 
 /// We could have an initial reduction that is not an add.

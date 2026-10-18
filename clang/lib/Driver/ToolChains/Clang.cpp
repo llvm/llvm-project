@@ -7510,6 +7510,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
+    Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_compress_EQ);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
@@ -9938,6 +9939,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_ftime_trace_EQ,
       OPT_ftime_trace_granularity_EQ,
       OPT_ftime_trace_verbose,
+      OPT_ftime_trace_compress_EQ,
       OPT_opt_record_file,
       OPT_opt_record_format,
       OPT_opt_record_passes,
