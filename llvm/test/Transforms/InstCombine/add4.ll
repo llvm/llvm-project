@@ -42,6 +42,24 @@ define i64 @match_andAsRem_lshrAsDiv_shlAsMul(i64 %x) {
   %t4 = add i64 %t, %t3
   ret i64 %t4
 }
+define { i32, i32 } @match_unsigned_shared_remainder(i32 noundef %x) {
+; CHECK-LABEL: @match_unsigned_shared_remainder(
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[RB:%.*]] = shl nuw nsw i32 [[R]], 1
+; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } poison, i32 [[RB]], 0
+; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[A]], i32 [[SUM]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[B]]
+;
+  %q = udiv i32 %x, 6
+  %r = urem i32 %x, 6
+  %qb = mul i32 %q, 12
+  %rb = shl i32 %r, 1
+  %sum = add i32 %qb, %rb
+  %a = insertvalue { i32, i32 } poison, i32 %rb, 0
+  %b = insertvalue { i32, i32 } %a, i32 %sum, 1
+  ret { i32, i32 } %b
+}
 
 define i64 @match_signed(i64 %x) {
 ; CHECK-LABEL: @match_signed(
@@ -245,8 +263,8 @@ define i32 @fold_add_udiv_urem_multiuse_mul(i32 noundef %val) {
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[DIV]], 4
 ; CHECK-NEXT:    call void @use(i32 [[SHL]])
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[SHL]], [[REM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[DIV]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:

@@ -1211,9 +1211,9 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   auto FoldDivRem = [&](Value *DivSide, Value *RemSide) -> Value * {
     Value *Div, *Rem;
     APInt C1, C2;
-    if (!DivSide->hasOneUse() || !MatchMul(DivSide, Div, C1))
+    if (!MatchMul(DivSide, Div, C1))
       Div = DivSide, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
-    if (!RemSide->hasOneUse() || !MatchMul(RemSide, Rem, C2))
+    if (!MatchMul(RemSide, Rem, C2))
       Rem = RemSide, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
     Value *DivOpV;
     APInt DivOpC;
