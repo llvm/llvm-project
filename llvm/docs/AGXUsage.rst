@@ -279,3 +279,24 @@ number, and ``llvm.agx.simd.reduce``/``prefix`` and
    5     fmin
    7     fmax
    ===== ========= ===== =========
+
+MLIR
+====
+
+MLIR targets AGX the way it targets AMDGPU:
+
+* The ``agxir`` dialect wraps the ``llvm.agx.*`` intrinsics one to one, like
+  ``rocdl``. Kernels carry the ``agxir.kernel`` attribute and use the
+  ``agx_kernelcc`` calling convention.
+* The ``agx`` dialect provides higher level operations, like ``amdgpu``:
+  ``agx.shuffle`` (any type, SIMD-group or quad scope), ``agx.reduce``,
+  ``agx.ballot`` and ``agx.threadgroup_barrier``. ``-convert-agx-to-agxir``
+  lowers them.
+* ``-convert-gpu-to-agxir`` lowers the ``gpu`` dialect, and
+  ``-agxir-attach-target`` attaches ``#agxir.target`` attributes.
+  ``-gpu-module-to-binary`` then produces AGX assembly, ELF objects or
+  bitcode.
+
+.. code-block:: console
+
+  $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(agxir-attach-target{chip=agx-g14g},gpu.module(convert-gpu-to-agxir),gpu-module-to-binary{format=isa})'
