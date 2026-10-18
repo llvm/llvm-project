@@ -485,7 +485,7 @@ class RegisterCommandsTestCase(TestBase):
             else:
                 self.expect(
                     "register read ymm0",
-                    substrs=["use of undeclared identifier '$ymm0'"],
+                    substrs=["Invalid register name or identifier 'ymm0'"],
                     error=True,
                 )
 
@@ -506,7 +506,7 @@ class RegisterCommandsTestCase(TestBase):
             else:
                 self.expect(
                     "register read bnd0",
-                    substrs=["use of undeclared identifier '$bnd0'"],
+                    substrs=["Invalid register name or identifier 'bnd0'"],
                     error=True,
                 )
 

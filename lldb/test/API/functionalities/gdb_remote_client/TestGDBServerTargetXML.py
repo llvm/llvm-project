@@ -882,7 +882,7 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         # edx should not be added
         self.match(
             "register read edx",
-            [r"use of undeclared identifier '\$edx'"],
+            ["Invalid register name or identifier 'edx'"],
             error=True,
         )
 
@@ -956,7 +956,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read ecx", ["ecx = 0x14131211"])
         # dx should not be added
         self.match(
-            "register read cx", [r"use of undeclared identifier '\$cx'"], error=True
+            "register read cx",
+            ["Invalid register name or identifier 'cx'"],
+            error=True,
         )
 
     @skipIfXmlSupportMissing
@@ -1051,5 +1053,7 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read x1", ["x1 = 0x1817161514131211"])
         # w1 should not be added
         self.match(
-            "register read w1", [r"use of undeclared identifier '\$w1'"], error=True
+            "register read w1",
+            ["Invalid register name or identifier 'w1'"],
+            error=True,
         )

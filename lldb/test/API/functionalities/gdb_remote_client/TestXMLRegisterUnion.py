@@ -686,7 +686,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.expect(
             "register read does_not_exist",
             error=True,
-            substrs=["use of undeclared identifier '$does_not_exist'"],
+            substrs=["Invalid register name or identifier 'does_not_exist'"],
         )
 
         self.runCmd("settings set target.experimental.use-DIL false")
@@ -694,7 +694,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             self.expect(
                 "register read does_not_exist",
                 error=True,
-                substrs=["no register named 'does_not_exist' found in this frame"],
+                substrs=["Invalid register name or identifier 'does_not_exist'"],
             )
         finally:
             self.runCmd("settings set target.experimental.use-DIL true")

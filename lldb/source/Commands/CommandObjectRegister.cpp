@@ -306,6 +306,13 @@ protected:
               variable_path, eNoDynamicValues,
               StackFrame::eExpressionPathOptionCheckPtrVsMember, variable_sp,
               argument.error, eDILModeLegacy);
+          if (argument.error.Fail() &&
+              expression.find_first_of(".[") == llvm::StringRef::npos &&
+              !expression.contains("->")) {
+            argument.error = Status::FromErrorStringWithFormat(
+                "Invalid register name or identifier '%s'",
+                argument.expression.c_str());
+          }
           if (argument.error.Success()) {
             ValueObject *root = argument.value_sp->GetRoot();
             if (root && root->GetValueType() == eValueTypeRegister)

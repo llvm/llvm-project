@@ -50,7 +50,7 @@ private:
                                lldb::TypeSystemClangSP type_system);
 
   CompilerType BuildUnionType(const RegisterTypeUnion *union_type,
-                              uint32_t expected_byte_size,
+                              uint32_t available_byte_size,
                               lldb::TypeSystemClangSP type_system);
 
   CompilerType BuildType(const RegisterType *register_type,

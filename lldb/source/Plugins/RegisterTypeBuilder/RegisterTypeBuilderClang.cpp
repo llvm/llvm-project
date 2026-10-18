@@ -200,8 +200,13 @@ RegisterTypeBuilderClang::BuildVectorType(const RegisterTypeVector *vector_type,
 
 CompilerType
 RegisterTypeBuilderClang::BuildUnionType(const RegisterTypeUnion *union_type,
-                                         uint32_t expected_byte_size,
+                                         uint32_t available_byte_size,
                                          lldb::TypeSystemClangSP type_system) {
+  std::optional<uint32_t> byte_size =
+      GetExpectedByteSize(union_type, type_system);
+  if (!byte_size || *byte_size > available_byte_size)
+    return {};
+  uint32_t expected_byte_size = *byte_size;
   if (!expected_byte_size)
     return {};
   if (auto type = GetExistingCompilerType(union_type, expected_byte_size))
@@ -349,13 +354,8 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
         reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindVector:
     return BuildType(reg_info.register_type, reg_info.byte_size, type_system);
-  case RegisterType::eRegisterTypeKindUnion: {
-    std::optional<uint32_t> byte_size =
-        GetExpectedByteSize(reg_info.register_type, type_system);
-    if (!byte_size || *byte_size > reg_info.byte_size)
-      return {};
-    return BuildType(reg_info.register_type, *byte_size, type_system);
-  }
+  case RegisterType::eRegisterTypeKindUnion:
+    return BuildType(reg_info.register_type, reg_info.byte_size, type_system);
   }
   llvm_unreachable("Unhandled RegisterType kind");
 }
