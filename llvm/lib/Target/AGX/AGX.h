@@ -25,6 +25,7 @@ class PassRegistry;
 // IR passes.
 ModulePass *createAGXAlwaysInlinePass();
 FunctionPass *createAGXCodeGenPreparePass();
+FunctionPass *createAGXStrictFPPass();
 FunctionPass *createAGXAnnotateControlFlowPass();
 
 // Instruction selection.
@@ -37,6 +38,7 @@ FunctionPass *createAGXInsertWaitsPass();
 
 void initializeAGXAlwaysInlinePass(PassRegistry &);
 void initializeAGXCodeGenPreparePass(PassRegistry &);
+void initializeAGXStrictFPPass(PassRegistry &);
 void initializeAGXAnnotateControlFlowPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAGXFoldOperandsPass(PassRegistry &);

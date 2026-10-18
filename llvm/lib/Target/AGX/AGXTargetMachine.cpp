@@ -36,6 +36,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
   initializeAGXCodeGenPreparePass(PR);
+  initializeAGXStrictFPPass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
@@ -149,6 +150,8 @@ void AGXPassConfig::addIRPasses() {
     addPass(createSROAPass());
   }
   addPass(createAGXCodeGenPreparePass());
+  // Software IEEE binary32 arithmetic and canonical NaNs, when enabled.
+  addPass(createAGXStrictFPPass());
 
   TargetPassConfig::addIRPasses();
 }

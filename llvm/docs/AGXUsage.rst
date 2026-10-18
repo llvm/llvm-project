@@ -115,6 +115,11 @@ another.
    ``source-lifetime``            ALU sources carry register release flags
                                   (Apple9).
    ``max-gprs-128``, ``-64``      Limit the general purpose registers used.
+   ``ieee-fp32``                  IEEE 754 ``float`` arithmetic in software
+                                  where the hardware differs (off by default,
+                                  see `Strict floating point`_).
+   ``canonical-nan``              NaN results are the canonical NaN of PTX
+                                  (off by default).
    ============================== ==============================================
 
 Address spaces
@@ -285,6 +290,43 @@ number, and ``llvm.agx.simd.reduce``/``prefix`` and
    5     fmin
    7     fmax
    ===== ========= ===== =========
+
+Strict floating point
+---------------------
+
+The 32-bit floating point unit flushes denormal operands and results to zero,
+division and square root are not correctly rounded, and NaN results have the
+hardware's bit patterns. Two features, off by default, implement IEEE 754 and
+PTX behavior in software (``AGXStrictFP.cpp``):
+
+``ieee-fp32``
+  In functions whose ``denormal_fpenv`` for ``float`` is IEEE (the default):
+
+  * ``fadd``, ``fsub``, ``fmul`` and ``llvm.fma``/``llvm.fmuladd`` keep the
+    hardware instruction, and recompute the result exactly with integer
+    arithmetic in a conditional block where it can be wrong: an addition
+    whose operands are both below 2\ :sup:`-101`, a multiplication or fused
+    multiply-add with a denormal operand or a result of at most
+    2\ :sup:`-125`.
+  * ``fdiv`` (without ``arcp`` or ``afn``) and ``llvm.sqrt`` (without ``afn``)
+    are correctly rounded: the mantissas are divided (or the root taken) with
+    refined hardware estimates, and corrected until the exact FMA remainder
+    shows that the result is correctly rounded. Operands or results outside
+    the normal range use integer arithmetic.
+  * Comparisons, ``minnum``/``maxnum``/``minimum``/``maximum`` (and the
+    ``num`` variants) compare zeros and denormals as integers, and rounding
+    functions, ``llvm.agx.rcp``, ``llvm.agx.rsqrt``, ``llvm.log2`` and
+    ``llvm.exp2`` handle denormal operands or results explicitly.
+
+``canonical-nan``
+  NaN results of floating point arithmetic and conversions are ``0x7fffffff``
+  (``0x7fff`` for ``half`` and ``bfloat``); minimum and maximum keep the bits
+  of a non-NaN operand. This costs one instruction per operation.
+
+Measured on the functional simulator, per SIMD-group and operation with
+normal operands, ``ieee-fp32`` adds about 8 instructions to an addition, 12
+to a multiplication, 22 to a fused multiply-add, 13 to a comparison, 65 to a
+division and 39 to a square root.
 
 SIMD-group shuffles
 -------------------

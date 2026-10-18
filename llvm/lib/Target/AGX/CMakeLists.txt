@@ -31,6 +31,7 @@ add_llvm_target(AGXCodeGen
   AGXMCInstLower.cpp
   AGXRegisterInfo.cpp
   AGXSelectionDAGInfo.cpp
+  AGXStrictFP.cpp
   AGXSubtarget.cpp
   AGXTargetMachine.cpp
   AGXTargetTransformInfo.cpp

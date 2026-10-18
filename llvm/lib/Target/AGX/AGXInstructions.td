@@ -278,6 +278,15 @@ def : Pat<(i32 (sext i16:$a)), (IADD_I32_FROM16 MOD_SX, $a, 0, (i16 0), 0)>;
 def : Pat<(i64 (sext i32:$a)), (IADD_I64_FROM32 MOD_SX, $a, 0, (i32 0), 0)>;
 def : Pat<(i64 (zext i32:$a)), (IADD_I64_FROM32 0, $a, 0, (i32 0), 0)>;
 def : Pat<(i64 (anyext i32:$a)), (IADD_I64_FROM32 0, $a, 0, (i32 0), 0)>;
+def : Pat<(i64 (zext i16:$a)),
+          (IADD_I64_FROM32 0, (BITOP_I32_FROM16 TT_MOV, 0, $a, 0, (i16 0)), 0,
+                           (i32 0), 0)>;
+def : Pat<(i64 (anyext i16:$a)),
+          (IADD_I64_FROM32 0, (BITOP_I32_FROM16 TT_MOV, 0, $a, 0, (i16 0)), 0,
+                           (i32 0), 0)>;
+def : Pat<(i64 (sext i16:$a)),
+          (IADD_I64_FROM32 MOD_SX, (IADD_I32_FROM16 MOD_SX, $a, 0, (i16 0), 0),
+                           0, (i32 0), 0)>;
 def : Pat<(i32 (sext_inreg i32:$a, i16)),
           (IADD_I32_FROM16 MOD_SX, (EXTRACT_SUBREG $a, lo16), 0, (i16 0), 0)>;
 def : Pat<(i64 (sext_inreg i64:$a, i32)),
@@ -285,7 +294,8 @@ def : Pat<(i64 (sext_inreg i64:$a, i32)),
 
 def : Pat<(i16 (trunc i32:$a)), (EXTRACT_SUBREG $a, lo16)>;
 def : Pat<(i32 (trunc i64:$a)), (EXTRACT_SUBREG $a, sub0)>;
-def : Pat<(i16 (trunc i64:$a)), (EXTRACT_SUBREG (EXTRACT_SUBREG $a, sub0), lo16)>;
+def : Pat<(i16 (trunc i64:$a)),
+          (i16 (EXTRACT_SUBREG (i32 (EXTRACT_SUBREG $a, sub0)), lo16))>;
 
 // imadd: D = A * B + C.
 multiclass IMAddPseudos<RegisterClass rc, RegisterOperand src,

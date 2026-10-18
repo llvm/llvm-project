@@ -75,6 +75,18 @@ def FeatureQuadShuffleIndexMerge : SubtargetFeature<"quad-shuffle-index-merge",
   "divergent indices are expanded into four shuffles"
 >;
 
+def FeatureIEEEFP32 : SubtargetFeature<"ieee-fp32", "HasIEEEFP32", "true",
+  "Implement IEEE 754 binary32 arithmetic in software where the hardware "
+  "differs: denormals (in functions whose denormal mode for float is IEEE), "
+  "and correctly rounded division and square root"
+>;
+
+def FeatureCanonicalNaN : SubtargetFeature<"canonical-nan", "HasCanonicalNaN",
+  "true",
+  "NaN results of floating point arithmetic are the canonical NaN of PTX "
+  "(0x7fffffff, 0x7fff for half and bfloat)"
+>;
+
 def FeatureMultiDieCoherency : SubtargetFeature<"multi-die-coherency",
   "HasMultiDieCoherency", "true",
   "Device atomics must set the coherency bit (multi-die G13 parts)"
