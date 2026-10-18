@@ -23321,6 +23321,7 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
                           DAG.getNode(ISD::FDIV, Dl, WideVT, X, Y));
   SDValue Res = DAG.getNode(ISD::FMA, Dl, WideVT,
                             DAG.getNode(ISD::FNEG, Dl, WideVT, Q), Y, X);
+  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, WideVT, Res, X);
   Res = DAG.getNode(ISD::FP_ROUND, Dl, VT, Res,
                     DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
 
