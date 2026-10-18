@@ -704,8 +704,7 @@ private:
   /// else to its callers. Also updates OrigNode's edges to remove any context
   /// ids moved to the newly created edge.
   void connectNewNode(ContextNode *NewNode, ContextNode *OrigNode,
-                      bool TowardsCallee,
-                      const DenseSet<uint32_t> &ContextIds);
+                      bool TowardsCallee, const DenseSet<uint32_t> &ContextIds);
 
   /// Get the stack id corresponding to the given Id or Index (for IR this will
   /// return itself, for a summary index this will return the id recorded in the
