@@ -17,6 +17,16 @@ void typedef_in_block(void) {
   ^{ typedef X Y; }(); // expected-error {{cannot be used in a block}}
 }
 
+void cast_in_block(void) {
+  typedef int (*P)[size_tab()]; // expected-note {{size expression is evaluated here}}
+  ^{ (void)(P)0; }(); // expected-error {{cannot be used in a block}}
+}
+
+// Valid: VLA parameter of the block itself.
+int own_vla_param_in_block(void) {
+  return (^ int(int m, int (*p)[m]) { __typeof(p) q = p; return sizeof(*q); })(1, 0);
+}
+
 // Valid: VLA declared inside the block itself.
 int own_vla_in_block(void) {
   return (^ int(void) { int a[size_tab()]; return sizeof(a); })();
