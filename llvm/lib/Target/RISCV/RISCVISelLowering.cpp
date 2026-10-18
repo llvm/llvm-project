@@ -12868,6 +12868,9 @@ getRVPWordMulPartsAccOpcodeAndLanes(unsigned IntNo) {
   }
 }
 
+static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
+                                          SDValue V, MVT WideVT);
+
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -13632,13 +13635,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     auto WidenAny = [&](SDValue V) {
-      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64,
-                                DAG.getBitcast(MVT::i32, V));
-      return DAG.getBitcast(MVT::v4i16, Ext);
-    };
-    auto WidenZero = [&](SDValue V32) {
-      SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, V32);
-      return DAG.getBitcast(MVT::v4i16, Ext);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, V,
+                         DAG.getUNDEF(MVT::v2i16));
     };
 
     SDValue A = WidenAny(Rs1);
@@ -13647,11 +13645,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Rs2Dup = WidenAny(Rs2);
       SDValue Swapped =
           DAG.getNode(RISCVISD::PPAIROE, DL, MVT::v4i16, Rs2Dup, Rs2Dup);
-      SDValue SwappedLo32 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32,
-                                        DAG.getBitcast(MVT::i64, Swapped));
-      B = WidenZero(SwappedLo32);
+      SDValue SwappedLo = DAG.getExtractSubvector(DL, MVT::v2i16, Swapped, 0);
+      B = widenPackedVectorWithZeros(DAG, DL, SwappedLo, MVT::v4i16);
     } else {
-      B = WidenZero(DAG.getBitcast(MVT::i32, Rs2));
+      B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
     }
 
     unsigned MulOpc = IntNo == Intrinsic::riscv_pm2waddu    ? RISCVISD::PM4ADDU
@@ -14511,9 +14508,6 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
       DL, ResVT, NoNaNs, Res,
       DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
-
-static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
-                                          SDValue V, MVT WideVT);
 
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
