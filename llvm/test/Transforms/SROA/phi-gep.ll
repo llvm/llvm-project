@@ -540,7 +540,6 @@ define i64 @test_phi_idx_mem2reg_const(i1 %arg) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i64 [ 2, [[BB1]] ], [ 3, [[BB2]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
 ; CHECK-NEXT:    ret i64 [[PHI_SROA_PHI_SROA_SPECULATED]]
 ;
 bb:
@@ -653,7 +652,6 @@ define i1 @test_phi_mem2reg_entry_block_alloca_not_at_beginning(i1 %arg) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[BB:%.*]] ], [ [[PHI_SROA_GEP1]], [[BB2]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 1, [[BB]] ], [ 2, [[BB2]] ]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr [[PHI_SROA_PHI]], null
 ; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
@@ -742,6 +740,254 @@ bb5:                                              ; preds = %bb3, %bb3, %bb
   %load = load i64, ptr %getelementptr
   ret i64 %load
 }
+
+; GEP-PHI unfolding through an addrspace cast is suppressed for volatile loads
+define i32 @volatile_phi_gep_addrspace(i1 %cond) {
+; CHECK-LABEL: @volatile_phi_gep_addrspace(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [[PAIR:%.*]], align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = alloca [[PAIR]], align 4, addrspace(5)
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr addrspace(5) [ [[A]], [[LEFT]] ], [ [[B]], [[RIGHT]] ]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[PHI]] to ptr
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[CAST]], i32 0, i32 1
+; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[VALUE]]
+;
+entry:
+  %a = alloca %pair, align 4, addrspace(5)
+  %b = alloca %pair, align 4, addrspace(5)
+  br i1 %cond, label %left, label %right
+
+left:
+  br label %merge
+
+right:
+  br label %merge
+
+merge:
+  %phi = phi ptr addrspace(5) [ %a, %left ], [ %b, %right ]
+  %cast = addrspacecast ptr addrspace(5) %phi to ptr
+  %gep = getelementptr inbounds %pair, ptr %cast, i32 0, i32 1
+  %value = load volatile i32, ptr %gep, align 4
+  ret i32 %value
+}
+
+define i32 @test_phi_fold_split_addrspace(i1 %cond) {
+; CHECK-LABEL: @test_phi_fold_split_addrspace(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ 3, [[IF_ELSE]] ]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %alloc0 = alloca %pair, align 16
+  %alloc1 = alloca %pair, align 16
+  store %pair { i32 0, i32 1 }, ptr %alloc0
+  store %pair { i32 2, i32 3 }, ptr %alloc1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  br label %if.end
+if.else:
+  br label %if.end
+if.end:
+  %addr = phi ptr [ %alloc0, %if.then ], [ %alloc1, %if.else ]
+  %cast = addrspacecast ptr %addr to ptr addrspace(5)
+  %gep = getelementptr inbounds %pair, ptr addrspace(5) %cast, i32 0, i32 1
+  %val = load i32, ptr addrspace(5) %gep
+  ret i32 %val
+}
+
+define i32 @test_phi_fold_split_cast_multiple(i1 %cond) {
+; CHECK-LABEL: @test_phi_fold_split_cast_multiple(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ 3, [[IF_ELSE]] ]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %alloc0 = alloca %pair, align 8
+  %alloc1 = alloca %pair, align 8
+  store %pair { i32 0, i32 1 }, ptr %alloc0
+  store %pair { i32 2, i32 3 }, ptr %alloc1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  br label %if.end
+if.else:
+  br label %if.end
+if.end:
+  %addr = phi ptr [ %alloc0, %if.then ], [ %alloc1, %if.else ]
+  %cast0 = bitcast i8* %addr to i32*
+  %cast1 = addrspacecast ptr %cast0 to ptr addrspace(5)
+  %gep = getelementptr inbounds %pair, ptr addrspace(5) %cast1, i32 0, i32 1
+  %val = load i32, ptr addrspace(5) %gep
+  ret i32 %val
+}
+
+define i32 @test_phi_fold_split_implicit_gep(i1 %cond) {
+; CHECK-LABEL: @test_phi_fold_split_implicit_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR:%.*]], align 8
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[ADDR_SROA_GEP3:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    [[ADDR_SROA_GEP3_CAST:%.*]] = addrspacecast ptr [[ADDR_SROA_GEP3]] to ptr addrspace(5)
+; CHECK-NEXT:    [[ADDR_SROA_GEP6:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    [[ADDR_SROA_GEP6_CAST:%.*]] = addrspacecast ptr [[ADDR_SROA_GEP6]] to ptr addrspace(5)
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[ADDR_SROA_PHI4_SROA_SPECULATE_LOAD_IF_ELSE:%.*]] = load i32, ptr addrspace(5) [[ADDR_SROA_GEP6_CAST]], align 4
+; CHECK-NEXT:    [[ADDR_SROA_PHI_SROA_SPECULATE_LOAD_IF_ELSE:%.*]] = load i32, ptr addrspace(5) [[ADDR_SROA_GEP3_CAST]], align 4
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VAL_FCA_0_LOAD:%.*]] = phi i32 [ 0, [[IF_THEN]] ], [ [[ADDR_SROA_PHI_SROA_SPECULATE_LOAD_IF_ELSE]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[VAL_FCA_1_LOAD:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[ADDR_SROA_PHI4_SROA_SPECULATE_LOAD_IF_ELSE]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[VAL_FCA_0_INSERT:%.*]] = insertvalue [[PAIR]] poison, i32 [[VAL_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[VAL_FCA_1_INSERT:%.*]] = insertvalue [[PAIR]] [[VAL_FCA_0_INSERT]], i32 [[VAL_FCA_1_LOAD]], 1
+; CHECK-NEXT:    [[ELEM:%.*]] = extractvalue [[PAIR]] [[VAL_FCA_1_INSERT]], 1
+; CHECK-NEXT:    ret i32 [[ELEM]]
+;
+entry:
+  %alloc0 = alloca %pair, align 8
+  %alloc1 = alloca %pair, align 8
+  store %pair { i32 0, i32 1 }, ptr %alloc0
+  store %pair { i32 2, i32 3 }, ptr %alloc1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  br label %if.end
+if.else:
+  br label %if.end
+if.end:
+  %addr = phi ptr [ %alloc0, %if.then ], [ %alloc1, %if.else ]
+  %cast = addrspacecast ptr %addr to ptr addrspace(5)
+  %val = load %pair, ptr addrspace(5) %cast
+  %elem = extractvalue %pair %val, 1
+  ret i32 %elem
+}
+
+define i32 @test_phi_fold_split_gep_chain_split(i1 %cond) {
+; CHECK-LABEL: @test_phi_fold_split_gep_chain_split(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [3 x i32], align 8
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [3 x i32], align 8
+; CHECK-NEXT:    [[DOTFCA_0_GEP2:%.*]] = getelementptr inbounds [3 x i32], ptr [[ALLOC0]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP2]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP3:%.*]] = getelementptr inbounds [3 x i32], ptr [[ALLOC0]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP3]], align 4
+; CHECK-NEXT:    [[DOTFCA_2_GEP4:%.*]] = getelementptr inbounds [3 x i32], ptr [[ALLOC0]], i32 0, i32 2
+; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_2_GEP4]], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    store i32 4, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_2_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr [[ALLOC1]], i32 0, i32 2
+; CHECK-NEXT:    store i32 5, ptr [[DOTFCA_2_GEP]], align 4
+; CHECK-NEXT:    [[ADDR_SROA_GEP:%.*]] = getelementptr inbounds i32, ptr [[ALLOC0]], i32 0
+; CHECK-NEXT:    [[ADDR_SROA_GEP1:%.*]] = getelementptr inbounds i32, ptr [[ALLOC1]], i32 0
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    call void @test()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADDR_SROA_PHI:%.*]] = phi ptr [ [[ADDR_SROA_GEP]], [[IF_THEN]] ], [ [[ADDR_SROA_GEP1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[ADDR_SROA_PHI]], i32 1
+; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[GEP1]] to ptr addrspace(5)
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[CAST1]], i32 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[GEP2]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %alloc0 = alloca [3 x i32], align 8
+  %alloc1 = alloca [3 x i32], align 8
+  store [3 x i32] [i32 0, i32 1, i32 2], ptr %alloc0
+  store [3 x i32] [i32 3, i32 4, i32 5], ptr %alloc1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  br label %if.end
+if.else:
+  call void @test() ; Prevents SimplifyCFG
+  br label %if.end
+if.end:
+  %addr = phi ptr [ %alloc0, %if.then ], [ %alloc1, %if.else ]
+  %gep0 = getelementptr inbounds i32, ptr %addr, i32 0
+  %gep1 = getelementptr inbounds i32, ptr %gep0, i32 1
+  %cast1 = addrspacecast ptr %gep1 to ptr addrspace(5)
+  %gep2 = getelementptr inbounds i32, ptr addrspace(5) %cast1, i32 1
+  %val = load i32, ptr addrspace(5) %gep2
+  ret i32 %val
+}
+
+define i32 @test_phi_fold_split_volatile(i1 %cond) {
+; CHECK-LABEL: @test_phi_fold_split_volatile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 8
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 8
+; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[ALLOC0]], [[IF_THEN]] ], [ [[ALLOC1]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 1
+; CHECK-NEXT:    [[VAL1:%.*]] = load volatile i32, ptr addrspace(5) [[GEP0]], align 4
+; CHECK-NEXT:    [[VAL2:%.*]] = load volatile i32, ptr addrspace(5) [[GEP1]], align 4
+; CHECK-NEXT:    [[VAL3:%.*]] = add i32 [[VAL1]], [[VAL2]]
+; CHECK-NEXT:    ret i32 [[VAL3]]
+;
+entry:
+  %alloc0 = alloca %pair, align 8
+  %alloc1 = alloca %pair, align 8
+  store %pair { i32 0, i32 1 }, ptr %alloc0
+  store %pair { i32 2, i32 3 }, ptr %alloc1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  br label %if.end
+if.else:
+  br label %if.end
+if.end:
+  %addr = phi ptr [ %alloc0, %if.then ], [ %alloc1, %if.else ]
+  %cast = addrspacecast ptr %addr to ptr addrspace(5)
+  %gep0 = getelementptr inbounds %pair, ptr addrspace(5) %cast, i32 0, i32 0
+  %gep1 = getelementptr inbounds %pair, ptr addrspace(5) %cast, i32 0, i32 1
+  %val1 = load volatile i32, ptr addrspace(5) %gep0
+  %val2 = load volatile i32, ptr addrspace(5) %gep1
+  %val3 = add i32 %val1, %val2
+  ret i32 %val3
+}
+
+declare void @test()
 
 declare void @f()
 
