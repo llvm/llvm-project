@@ -214,7 +214,7 @@ public:
   /// Contains the implementation for basic_format_arg::handle.
   struct __handle {
     template <class _Tp>
-    _LIBCPP_HIDE_FROM_ABI explicit __handle(_Tp& __v) noexcept
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __handle(_Tp& __v) noexcept
         : __ptr_(std::addressof(__v)),
           __format_([](basic_format_parse_context<_CharT>& __parse_ctx, _Context& __ctx, const void* __ptr) {
             using _Dp = remove_const_t<_Tp>;
