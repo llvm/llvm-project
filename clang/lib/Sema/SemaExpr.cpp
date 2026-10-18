@@ -4948,8 +4948,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
                                        ExprKind))
     return true;
 
-  if (ExprType->getAs<TypedefType>() &&
-      !CheckVariablyModifiedTypeUse(ExprType, OpLoc))
+  if (!CheckVariablyModifiedTypeUse(ExprType, OpLoc))
     return true;
 
   return false;

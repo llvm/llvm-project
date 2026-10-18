@@ -52,6 +52,17 @@ void param_bound(int n, int (*p)[n]) {
   struct S { void f() { decltype(p) q; } };
 }
 
+// FIXME: The operand of sizeof is checked in an unevaluated context, so this
+// is not diagnosed.
+void sizeof_type() {
+  using X = int[foo()];
+  int a[foo()];
+  struct S {
+    unsigned long f() { return sizeof(X); }
+    unsigned long g() { return sizeof(decltype(a)); }
+  };
+}
+
 template <typename T> void in_template() {
   using X = int[foo()]; // expected-note {{size expression is evaluated here}}
   struct S { S() { X x; } }; // expected-error {{cannot be used in a local class}}
