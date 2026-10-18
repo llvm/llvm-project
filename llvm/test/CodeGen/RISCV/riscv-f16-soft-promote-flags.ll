@@ -44,18 +44,17 @@ define half @f(float %fx, half %y, half %z, ptr %p) {
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    fmv.s fa0, fs0
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    feq.s a0, fa0, fa0
-; CHECK-NEXT:    fmv.s fa5, fs1
-; CHECK-NEXT:    bnez a0, .LBB0_5
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    fmv.s fa5, fa0
-; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    feq.s a0, fs1, fs1
-; CHECK-NEXT:    bnez a0, .LBB0_7
-; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    fmv.s fa0, fs1
-; CHECK-NEXT:  .LBB0_7:
-; CHECK-NEXT:    fmax.s fa0, fa5, fa0
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB0_5
+; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    fmax.s fa0, fs1, fa0
+; CHECK-NEXT:    j .LBB0_6
+; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    lui a1, 1048560
