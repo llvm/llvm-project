@@ -458,6 +458,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitMUL(SDNode *N);
     SDValue visitMULFIX(SDNode *N);
     SDValue useDivRem(SDNode *N);
+    SDValue foldDivRemOfSelect(SDNode *N);
     SDValue visitSDIV(SDNode *N);
     SDValue visitSDIVLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitUDIV(SDNode *N);
@@ -5322,6 +5323,87 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+/// If dividing by \p C can be done as a multiply by its reciprocal, return
+/// that reciprocal.
+static std::optional<APFloat>
+getReciprocalForMul(SDValue C, EVT VT, SDNodeFlags Flags, bool LegalOperations,
+                    bool ForCodeSize, const TargetLowering &TLI) {
+  auto *CFP = isConstOrConstSplatFP(C, true);
+  if (!CFP)
+    return std::nullopt;
+  // Compute the reciprocal 1.0 / c2.
+  const APFloat &APF = CFP->getValueAPF();
+  APFloat Recip = APFloat::getOne(APF.getSemantics());
+  APFloat::opStatus st = Recip.divide(APF, APFloat::rmNearestTiesToEven);
+  // Only do the transform if the reciprocal is a legal fp immediate that
+  // isn't too nasty (eg NaN, denormal, ...).
+  if (((st == APFloat::opOK && !Recip.isDenormal()) ||
+       (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
+      (!LegalOperations ||
+       // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
+       // backend)... we should handle this gracefully after Legalize.
+       // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
+       TLI.isOperationLegal(ISD::ConstantFP, VT) ||
+       TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
+    return Recip;
+  return std::nullopt;
+}
+
+/// Split a div/rem by a select of constants, so each arm divides by a constant:
+///   X div/rem (select C, C1, C2) --> select C, (X div/rem C1), (X div/rem C2)
+/// A constant divisor lowers to a shift or magic multiply, not the divider.
+SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
+
+  // Each arm is more instructions than the divide it replaces, so skip this
+  // when the target has a cheap divide or when optimizing for size.
+  const Function &F = DAG.getMachineFunction().getFunction();
+  if (F.hasMinSize())
+    return SDValue();
+  if (Opcode != ISD::FDIV && TLI.isIntDivCheap(VT, F.getAttributes()))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
+  if (N1.getOpcode() != ISD::SELECT && N1.getOpcode() != ISD::VSELECT)
+    return SDValue();
+
+  SDValue Cond = N1.getOperand(0);
+  SDValue True = N1.getOperand(1), False = N1.getOperand(2);
+
+  if (Opcode == ISD::FDIV) {
+    // Each arm has to turn into a reciprocal multiply, which needs an exact
+    // inverse or a normal constant under arcp.
+    auto Reciprocal = [&](SDValue C) {
+      return getReciprocalForMul(C, VT, N->getFlags(), LegalOperations,
+                                 ForCodeSize, TLI);
+    };
+    if (!Reciprocal(True) || !Reciprocal(False))
+      return SDValue();
+  } else {
+    // Both arms are evaluated after the split, so no element of either may
+    // divide by zero, and a signed arm may not divide by -1. Undef elements
+    // are rejected with them.
+    bool IsSigned = Opcode == ISD::SDIV || Opcode == ISD::SREM;
+    auto IsSafeDivisor = [IsSigned](ConstantSDNode *C) {
+      if (C->isZero())
+        return false;
+      if (IsSigned && C->isAllOnes())
+        return false;
+      return true;
+    };
+    if (!ISD::matchUnaryPredicate(True, IsSafeDivisor) ||
+        !ISD::matchUnaryPredicate(False, IsSafeDivisor))
+      return SDValue();
+  }
+
+  SDLoc DL(N);
+  SDNodeFlags Flags = N->getFlags();
+  SDValue Arm1 = DAG.getNode(Opcode, DL, VT, N0, True, Flags);
+  SDValue Arm2 = DAG.getNode(Opcode, DL, VT, N0, False, Flags);
+  return DAG.getSelect(DL, VT, Cond, Arm1, Arm2);
+}
+
 SDValue DAGCombiner::visitSDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5377,6 +5459,11 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     }
     return V;
   }
+
+  // fold (div/rem X, (select C, C1, C2))
+  //   --> select C, (div/rem X, C1), (div/rem X, C2)
+  if (SDValue Split = foldDivRemOfSelect(N))
+    return Split;
 
   // sdiv, srem -> sdivrem
   // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
@@ -5527,6 +5614,11 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     }
     return V;
   }
+
+  // fold (div/rem X, (select C, C1, C2))
+  //   --> select C, (div/rem X, C1), (div/rem X, C2)
+  if (SDValue Split = foldDivRemOfSelect(N))
+    return Split;
 
   // sdiv, srem -> sdivrem
   // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
@@ -5693,6 +5785,11 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
     }
   }
+
+  // fold (div/rem X, (select C, C1, C2))
+  //   --> select C, (div/rem X, C1), (div/rem X, C2)
+  if (SDValue Split = foldDivRemOfSelect(N))
+    return Split;
 
   // sdiv, srem -> sdivrem
   if (SDValue DivRem = useDivRem(N))
@@ -20326,26 +20423,17 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (SDValue V = combineRepeatedFPDivisors(N))
     return V;
 
+  // fold (fdiv X, (select C, C1, C2))
+  //   --> select C, (fdiv X, C1), (fdiv X, C2)
+  if (SDValue Split = foldDivRemOfSelect(N))
+    return Split;
+
   // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
   // the loss is acceptable with AllowReciprocal.
-  if (auto *N1CFP = isConstOrConstSplatFP(N1, true)) {
-    // Compute the reciprocal 1.0 / c2.
-    const APFloat &N1APF = N1CFP->getValueAPF();
-    APFloat Recip = APFloat::getOne(N1APF.getSemantics());
-    APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
-    // Only do the transform if the reciprocal is a legal fp immediate that
-    // isn't too nasty (eg NaN, denormal, ...).
-    if (((st == APFloat::opOK && !Recip.isDenormal()) ||
-         (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
-        (!LegalOperations ||
-         // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
-         // backend)... we should handle this gracefully after Legalize.
-         // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
-         TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-         TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
-      return DAG.getNode(ISD::FMUL, DL, VT, N0,
-                         DAG.getConstantFP(Recip, DL, VT));
-  }
+  if (std::optional<APFloat> Recip =
+          getReciprocalForMul(N1, VT, Flags, LegalOperations, ForCodeSize, TLI))
+    return DAG.getNode(ISD::FMUL, DL, VT, N0,
+                       DAG.getConstantFP(*Recip, DL, VT));
 
   if (Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
@@ -31492,6 +31580,15 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   if (N1.getOperand(0) == N2.getOperand(0)) {
     SDValue N11 = N1.getOperand(1);
     SDValue N21 = N2.getOperand(1);
+    // Leave a div/rem by two constants split, both because each arm becomes a
+    // shift or a multiply and because foldDivRemOfSelect would undo this.
+    bool IsIntDivRem = BinOpc == ISD::SDIV || BinOpc == ISD::UDIV ||
+                       BinOpc == ISD::SREM || BinOpc == ISD::UREM;
+    if ((IsIntDivRem && isConstantOrConstantVector(N11) &&
+         isConstantOrConstantVector(N21)) ||
+        (BinOpc == ISD::FDIV && isConstOrConstSplatFP(N11, true) &&
+         isConstOrConstSplatFP(N21, true)))
+      return SDValue();
     // Second op VT might be different (e.g. shift amount type)
     if (N11.getValueType() == N21.getValueType()) {
       SDValue NewSel = DAG.getSelect(DL, N11.getValueType(), N0, N11, N21);
