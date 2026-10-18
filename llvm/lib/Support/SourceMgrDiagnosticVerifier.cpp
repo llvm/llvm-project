@@ -27,13 +27,11 @@ static StringRef getDiagKindStr(SourceMgr::DiagKind kind) {
   llvm_unreachable("Unknown SourceMgr::DiagKind");
 }
 
-bool SourceMgrDiagnosticVerifier::ExpectedDiag::emitError(raw_ostream &os,
-                                                           SourceMgr &mgr,
-                                                           const Twine &msg
-                                                           ) const {
+bool SourceMgrDiagnosticVerifier::ExpectedDiag::emitError(
+    raw_ostream &os, SourceMgr &mgr, const Twine &msg) const {
   if (fileLoc.isValid()) {
     SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
-                                                  substring.size()));
+                                                 substring.size()));
     mgr.PrintMessage(os, fileLoc, SourceMgr::DK_Error, msg, range);
   } else {
     mgr.PrintMessage(os, fileLoc, SourceMgr::DK_Error, msg);
@@ -50,7 +48,7 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::match(StringRef str) const {
 }
 
 bool SourceMgrDiagnosticVerifier::ExpectedDiag::computeRegex(raw_ostream &os,
-                                                              SourceMgr &mgr) {
+                                                             SourceMgr &mgr) {
   std::string regexStr;
   raw_string_ostream regexOS(regexStr);
   StringRef strToProcess = substring;
@@ -84,8 +82,8 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::computeRegex(raw_ostream &os,
 
 MutableArrayRef<SourceMgrDiagnosticVerifier::ExpectedDiag>
 SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
-                                                   SourceMgr &mgr,
-                                                   const MemoryBuffer *buf) {
+                                                  SourceMgr &mgr,
+                                                  const MemoryBuffer *buf) {
   // If the buffer is invalid, return an empty list.
   if (!buf)
     return {};
@@ -181,10 +179,11 @@ SourceMgrDiagnosticVerifier::getExpectedDiags(StringRef bufName) {
   return std::nullopt;
 }
 
-SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
-    raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind, bool hasLoc,
-    const MemoryBuffer *buf, unsigned lineNo, StringRef message,
-    bool reportUnexpected) {
+SourceMgrDiagnosticVerifier::MatchResult
+SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
+                                     SourceMgr::DiagKind kind, bool hasLoc,
+                                     const MemoryBuffer *buf, unsigned lineNo,
+                                     StringRef message, bool reportUnexpected) {
   MutableArrayRef<ExpectedDiag> diags;
   if (hasLoc) {
     // If the buffer couldn't be resolved, `diags` stays empty: a diagnostic
@@ -228,9 +227,9 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
   // Otherwise, emit an error for the near miss.
   if (nearMiss) {
     mgr.PrintMessage(os, nearMiss->fileLoc, SourceMgr::DK_Error,
-                      "'" + getDiagKindStr(kind) +
-                          "' diagnostic emitted when expecting a '" +
-                          getDiagKindStr(nearMiss->kind) + "'");
+                     "'" + getDiagKindStr(kind) +
+                         "' diagnostic emitted when expecting a '" +
+                         getDiagKindStr(nearMiss->kind) + "'");
     return MatchResult::NearMiss;
   }
   return MatchResult::Unexpected;
@@ -241,8 +240,8 @@ bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
   auto checkExpectedDiags = [&](ExpectedDiag &diag) {
     if (!diag.matched) {
       diag.emitError(os, mgr,
-                      "expected " + getDiagKindStr(diag.kind) + " \"" +
-                          diag.substring + "\" was not produced");
+                     "expected " + getDiagKindStr(diag.kind) + " \"" +
+                         diag.substring + "\" was not produced");
       ok = false;
     }
   };

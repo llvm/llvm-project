@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_SOURCEMGRDIAGNOSTICVERIFIER_H
 #define LLVM_SUPPORT_SOURCEMGRDIAGNOSTICVERIFIER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
@@ -30,27 +31,28 @@ class raw_ostream;
 
 /// Scans SourceMgr source buffers for 'expected-<kind>' comments (e.g.
 /// 'expected-error {{message}}') and verifies that the diagnostics reported
-/// to it via \c process match them, exactly once each.
+/// to it via \c process match them, and that every expected diagnostic is
+/// matched at least once.
 class LLVM_ABI SourceMgrDiagnosticVerifier {
 public:
   /// A single diagnostic expected via an 'expected-<kind>' comment.
   struct ExpectedDiag {
     ExpectedDiag(SourceMgr::DiagKind kind, unsigned lineNo, SMLoc fileLoc,
                  StringRef substring)
-        : kind(kind), lineNo(lineNo), fileLoc(fileLoc), substring(substring) {
-    }
+        : kind(kind), lineNo(lineNo), fileLoc(fileLoc), substring(substring) {}
 
     /// Returns true if this diagnostic matches the given message.
-    bool match(StringRef str) const;
+    LLVM_ABI bool match(StringRef str) const;
 
     /// Computes the regex matcher for a '-re' diagnostic's substring.
     /// Returns false and prints a message through \p mgr on error.
-    bool computeRegex(raw_ostream &os, SourceMgr &mgr);
+    LLVM_ABI bool computeRegex(raw_ostream &os, SourceMgr &mgr);
 
     /// Prints \p msg at this diagnostic's location and returns false, for
     /// use as `return emitError(...);` in functions that report failure via
     /// a bool return.
-    bool emitError(raw_ostream &os, SourceMgr &mgr, const Twine &msg) const;
+    LLVM_ABI bool emitError(raw_ostream &os, SourceMgr &mgr,
+                            const Twine &msg) const;
 
     /// The severity of the diagnostic expected.
     SourceMgr::DiagKind kind;
@@ -88,8 +90,8 @@ public:
   /// Computes and caches the list of expected diagnostics for \p buf, if not
   /// already cached. Returns the (mutable) cached list.
   MutableArrayRef<ExpectedDiag> computeExpectedDiags(raw_ostream &os,
-                                                      SourceMgr &mgr,
-                                                      const MemoryBuffer *buf);
+                                                     SourceMgr &mgr,
+                                                     const MemoryBuffer *buf);
 
   /// Returns the cached expected diagnostics for the buffer named \p bufName,
   /// or std::nullopt if \p computeExpectedDiags hasn't been called for it.
@@ -112,8 +114,8 @@ public:
   /// through \p mgr. \p reportUnexpected controls whether near misses /
   /// unexpected diagnostics are reported at all.
   MatchResult process(raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind,
-                       bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
-                       StringRef message, bool reportUnexpected = true);
+                      bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
+                      StringRef message, bool reportUnexpected = true);
 
   /// Reports (through \p mgr) any expected diagnostic that was never matched
   /// by a call to \p process. Returns whether verification succeeded overall,
