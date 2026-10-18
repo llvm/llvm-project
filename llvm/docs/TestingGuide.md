@@ -566,7 +566,7 @@ plain `FileCheck`, e.g. `RUN: not llvm-mc ... | FileCheck %s` with unanchored
 `CHECK: error:` lines. `FileCheck` only asserts that the listed diagnostics
 appear somewhere, in order; it does not notice an unrelated *extra*
 diagnostic that a later change starts emitting next to the one under test.
-For `llvm-mc` tests, prefer `--verify` (see the
+For diagnostic-only `llvm-mc` tests, consider using `--verify` (see the
 {doc}`llvm-mc <CommandGuide/llvm-mc>` documentation), which checks that every
 diagnostic produced matches an `expected-error`/`expected-warning`/
 `expected-note`/`expected-remark` comment in the input and vice versa,

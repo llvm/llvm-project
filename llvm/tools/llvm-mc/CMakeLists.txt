@@ -13,6 +13,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-mc
   llvm-mc.cpp
   Disassembler.cpp
-  Verifier.cpp
   )
 

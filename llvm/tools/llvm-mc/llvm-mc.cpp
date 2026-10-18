@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
-#include "Verifier.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
@@ -40,6 +39,7 @@
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SourceMgrDiagnosticVerifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -123,11 +123,7 @@ static cl::opt<unsigned> CommentColumn("comment-column",
                                        cl::desc("Asm comments indentation"),
                                        cl::init(40));
 
-enum OutputFileType {
-  OFT_Null,
-  OFT_AssemblyFile,
-  OFT_ObjectFile
-};
+enum OutputFileType { OFT_Null, OFT_AssemblyFile, OFT_ObjectFile };
 static cl::opt<OutputFileType>
     FileType("filetype", cl::init(OFT_AssemblyFile),
              cl::desc("Choose an output file type:"),
@@ -227,11 +223,8 @@ static cl::opt<bool> ValidateCFI("validate-cfi",
 
 static cl::list<std::string> Verify(
     "verify", cl::CommaSeparated, cl::ValueOptional,
-    cl::desc(
-        "Check the diagnostics produced against '<prefix>-error'/"
-        "'-warning'/'-note'/'-remark' comments in the input instead of just "
-        "printing them, using a comma-separated list of <prefixes> "
-        "(default: 'expected') as the recognized directive prefixes"),
+    cl::desc("Verify emitted diagnostics against '<prefix>-<kind>' comments in "
+             "the input (default prefix: 'expected')"),
     cl::value_desc("prefixes"), cl::cat(MCCategory));
 
 enum ActionType {
@@ -280,8 +273,8 @@ static const Target *GetTarget(const char *ProgName) {
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(ArchName, TheTriple,
-                                                         Error);
+  const Target *TheTarget =
+      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget) {
     WithColor::error(errs(), ProgName) << Error;
     return nullptr;
@@ -292,8 +285,8 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path,
-    sys::fs::OpenFlags Flags) {
+static std::unique_ptr<ToolOutputFile>
+GetOutputStream(StringRef Path, sys::fs::OpenFlags Flags) {
   std::error_code EC;
   auto Out = std::make_unique<ToolOutputFile>(Path, EC, Flags);
   if (EC) {
@@ -317,13 +310,12 @@ static void setDwarfDebugFlags(int argc, char **argv) {
 
 static std::string DwarfDebugProducer;
 static void setDwarfDebugProducer() {
-  if(!getenv("DEBUG_PRODUCER"))
+  if (!getenv("DEBUG_PRODUCER"))
     return;
   DwarfDebugProducer += getenv("DEBUG_PRODUCER");
 }
 
-static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
-                      raw_ostream &OS) {
+static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
 
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
@@ -340,7 +332,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
 }
 
 static int fillCommandLineSymbols(MCAsmParser &Parser) {
-  for (auto &I: DefineSymbol) {
+  for (auto &I : DefineSymbol) {
     auto Pair = StringRef(I).split('=');
     auto Sym = Pair.first;
     auto Val = Pair.second;
@@ -364,8 +356,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
-  std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, Ctx, Str, MAI));
+  std::unique_ptr<MCAsmParser> Parser(createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
@@ -376,7 +367,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   }
 
   int SymbolResult = fillCommandLineSymbols(*Parser);
-  if(SymbolResult)
+  if (SymbolResult)
     return SymbolResult;
   Parser->setShowParsedOperands(ShowInstOperands);
   Parser->setTargetParser(*TAP);
@@ -486,37 +477,6 @@ int main(int argc, char **argv) {
   MAI->setPreserveAsmComments(PreserveComments);
   MAI->setCommentColumn(CommentColumn);
 
-  std::unique_ptr<MCVerifier> Verifier;
-  if (VerifyEnabled) {
-    std::vector<std::string> Prefixes;
-    for (StringRef Prefix : Verify)
-      if (!Prefix.empty())
-        Prefixes.push_back(Prefix.str());
-    // A bare '-verify' (no '=value'), an explicit empty prefix list, and a
-    // list that parses to only empty strings (e.g. a stray comma) all mean
-    // "use the default prefix".
-    if (Prefixes.empty())
-      Prefixes = {"expected"};
-
-    // Only text at or after a recognized comment marker is scanned for
-    // directives, since the comment character varies by target and .s
-    // source is more likely than e.g. MLIR IR to contain incidental text
-    // that happens to match a directive. Deliberately excludes '/*': the
-    // scan is line-based, so it cannot correctly recognize a directive on a
-    // continuation line of a multi-line block comment (nor correctly stop
-    // treating text as commented once a block comment closes with '*/' on
-    // the same line). Directives must use a single-line comment form.
-    std::vector<std::string> CommentPrefixes = {
-        std::string(MAI->getCommentString())};
-    if (MAI->shouldAllowAdditionalComments()) {
-      CommentPrefixes.push_back("//");
-      CommentPrefixes.push_back("#");
-    }
-
-    Verifier =
-        std::make_unique<MCVerifier>(SrcMgr, Prefixes, CommentPrefixes);
-  }
-
   // Package up features to be passed to target/subtarget
   SubtargetFeatures Features;
   std::string FeaturesStr;
@@ -549,8 +509,50 @@ int main(int argc, char **argv) {
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
 
-  if (Verifier)
-    Verifier->installHandlers(Ctx);
+  std::optional<SourceMgrDiagnosticVerifier> Verifier;
+  if (VerifyEnabled) {
+    std::vector<std::string> Prefixes;
+    for (StringRef Prefix : Verify)
+      if (!Prefix.empty())
+        Prefixes.push_back(Prefix.str());
+    // A bare '-verify' (no '=value'), an explicit empty prefix list, and a
+    // list that parses to only empty strings (e.g. a stray comma) all mean
+    // "use the default prefix".
+    if (Prefixes.empty())
+      Prefixes = {"expected"};
+
+    // Scope directive scanning to single-line comments recognized by the
+    // target (plus '//' and '#' when allowed) so directive-like text in
+    // operands or string literals is ignored.
+    std::vector<std::string> CommentPrefixes;
+    auto AddCommentPrefix = [&](StringRef Prefix) {
+      if (!Prefix.empty() && !llvm::is_contained(CommentPrefixes, Prefix))
+        CommentPrefixes.push_back(Prefix.str());
+    };
+    StringRef TargetComment = MAI->getCommentString();
+    // AsmLexer::isAtStartOfComment also accepts a single '#' when
+    // CommentString is "##" (X86 Darwin), which subsumes "##".
+    if (TargetComment == "##")
+      TargetComment = "#";
+    AddCommentPrefix(TargetComment);
+    if (MAI->shouldAllowAdditionalComments()) {
+      AddCommentPrefix("//");
+      AddCommentPrefix("#");
+    }
+
+    Verifier.emplace(SrcMgr, errs(), Prefixes, CommentPrefixes);
+    // Install on both Ctx and SrcMgr: most parser/disassembler diagnostics go
+    // through SrcMgr, while some (e.g. DWARF CFI checker diagnostics via
+    // MCContext::reportError/reportWarning) go directly through Ctx.
+    Ctx.setDiagnosticHandler(
+        [&](const SMDiagnostic &Diag, bool, const SourceMgr &,
+            std::vector<const MDNode *> &) { Verifier->process(Diag); });
+    SrcMgr.setDiagHandler(
+        [](const SMDiagnostic &Diag, void *Ctx) {
+          static_cast<MCContext *>(Ctx)->diagnose(Diag);
+        },
+        &Ctx);
+  }
 
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
