@@ -308,12 +308,15 @@ template <typename T> struct DependentFriend {
 };
 DependentFriend<S> df1; // expected-note {{in instantiation of template class 'DependentFriend<S>' requested here}}
 
-// A deduced return type is never valid, so it is diagnosed even if C is not
-// known yet.
+// In a dependent context, a deduced return type is diagnosed when the template
+// is instantiated.
 template <typename T> struct DependentAuto {
-  friend auto operator++(T &, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
-  auto operator--(this T &, int) = default;   // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
+  DependentAuto &operator++();
+  DependentAuto &operator--();
+  friend auto operator++(DependentAuto &, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+  auto operator--(this DependentAuto &, int) = default;   // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
 };
+DependentAuto<int> da1; // expected-note {{in instantiation of template class 'DependentAuto<int>' requested here}}
 
 template <typename T> struct DependentDeducedReturn {
   DependentDeducedReturn &operator++();
@@ -321,16 +324,19 @@ template <typename T> struct DependentDeducedReturn {
   auto operator++(int) = default;     // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
   Any auto operator--(int) = default; // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
 };
+DependentDeducedReturn<int> ddr1; // expected-note {{in instantiation of template class 'DependentDeducedReturn<int>' requested here}}
 template <typename T> struct DependentDeducedReturn2 {
   DependentDeducedReturn2 &operator++();
   DependentDeducedReturn2 &operator--();
-  decltype(auto) operator++(int) = default;                // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
-  friend T *operator--(DependentDeducedReturn2 &, int) = default; // OK, checked when instantiated
+  decltype(auto) operator++(int) = default;                       // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+  friend T *operator--(DependentDeducedReturn2 &, int) = default; // expected-error {{return type for defaulted postfix decrement operator must be 'DependentDeducedReturn2<int>', not 'int *'}}
 };
+DependentDeducedReturn2<int> ddr2; // expected-note {{in instantiation of template class 'DependentDeducedReturn2<int>' requested here}}
 template <typename T> struct DependentConstrainedFriend {
   DependentConstrainedFriend &operator++();
   friend Any auto operator++(DependentConstrainedFriend &, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
 };
+DependentConstrainedFriend<int> dcf1; // expected-note {{in instantiation of template class 'DependentConstrainedFriend<int>' requested here}}
 
 // A trailing return type that names C is not deduced.
 template <typename T> struct DependentTrailing {
