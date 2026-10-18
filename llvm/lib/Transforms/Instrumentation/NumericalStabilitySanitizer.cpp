@@ -606,6 +606,15 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(
 
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Context, Attribute::NoUnwind);
+
+  Triple TT(M.getTargetTriple());
+  Attribute::AttrKind I32RetExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Return(TT, /*Signed=*/true);
+  Attribute::AttrKind I32ArgExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Param(TT, /*Signed=*/true);
+  Attribute::AttrKind BoolExtAttr =
+      TargetLibraryInfo::getExtAttrForBoolParam(TT);
+
   // Initialize the runtime values (functions and global variables).
   for (int I = 0; I < kNumValueTypes; ++I) {
     const FTValueType VT = static_cast<FTValueType>(I);
@@ -623,14 +632,26 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(
     // Check.
     const auto &ShadowConfig = Config.byValueType(VT);
     Type *ShadowTy = ShadowConfig.getType(Context);
-    NsanCheckValue[VT] =
-        M.getOrInsertFunction(std::string("__nsan_internal_check_") + VTName +
-                                  "_" + ShadowConfig.getNsanTypeId(),
-                              Attr, Int32Ty, VTTy, ShadowTy, Int32Ty, IntptrTy);
-    NsanFCmpFail[VT] = M.getOrInsertFunction(
-        std::string("__nsan_fcmp_fail_") + VTName + "_" +
-            ShadowConfig.getNsanTypeId(),
-        Attr, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
+    {
+      AttributeList AL = Attr;
+      AL = AL.maybeAddRetAttribute(Context, I32RetExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 2, I32ArgExtAttr);
+      NsanCheckValue[VT] =
+          M.getOrInsertFunction(std::string("__nsan_internal_check_") + VTName +
+                                    "_" + ShadowConfig.getNsanTypeId(),
+                                AL, Int32Ty, VTTy, ShadowTy, Int32Ty, IntptrTy);
+    }
+
+    {
+      AttributeList AL = Attr;
+      AL = AL.maybeAddParamAttribute(Context, 4, I32ArgExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 5, BoolExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 6, BoolExtAttr);
+      NsanFCmpFail[VT] = M.getOrInsertFunction(
+          std::string("__nsan_fcmp_fail_") + VTName + "_" +
+              ShadowConfig.getNsanTypeId(),
+          AL, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
+    }
   }
 
   // TODO: Add attributes nofree, nosync, readnone, readonly,
