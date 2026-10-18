@@ -12,30 +12,41 @@
 // <execution>
 //
 // namespace std::execution {
+//   namespace __detail {
+//     template<class T>
+//     concept __non_const_rvalue = !is_same_v<T, const T>;
+//
+//     template<class Receiver, class... Args>
+//     concept __set_value_member = requires(Receiver&& rcvr, Args&&... args) {
+//       std::forward<Receiver>(rcvr).set_value(std::forward<Args>(args)...);
+//     };
+//
+//     template<class Receiver, class Error>
+//     concept __set_error_member = requires(Receiver&& rcvr, Error&& error) {
+//       std::forward<Receiver>(rcvr).set_error(std::forward<Error>(error));
+//     };
+//
+//     template<class Receiver>
+//     concept __set_stopped_member = requires(Receiver&& rcvr) {
+//       std::forward<Receiver>(rcvr).set_stopped();
+//     };
+//   } // namespace __detail
+//
 //   struct set_value_t {
 //     template<class Receiver, class... Args>
-//       requires (!is_lvalue_reference_v<Receiver> && !is_const_v<Receiver>) &&
-//                requires(Receiver&& rcvr, Args&&... args) {
-//                  std::forward<Receiver>(rcvr).set_value(std::forward<Args>(args)...);
-//                }
+//       requires __detail::__non_const_rvalue<Receiver> && __detail::__set_value_member<Receiver, Args...>
 //     constexpr void operator()(Receiver&& rcvr, Args&&... args) const noexcept;
 //   };
 //
 //   struct set_error_t {
 //     template<class Receiver, class Error>
-//       requires (!is_lvalue_reference_v<Receiver> && !is_const_v<Receiver>) &&
-//                requires(Receiver&& rcvr, Error&& error) {
-//                  std::forward<Receiver>(rcvr).set_error(std::forward<Error>(error));
-//                }
+//       requires __detail::__non_const_rvalue<Receiver> && __detail::__set_error_member<Receiver, Error>
 //     constexpr void operator()(Receiver&& rcvr, Error&& error) const noexcept;
 //   };
 //
 //   struct set_stopped_t {
 //     template<class Receiver>
-//       requires (!is_lvalue_reference_v<Receiver> && !is_const_v<Receiver>) &&
-//                requires(Receiver&& rcvr) {
-//                  std::forward<Receiver>(rcvr).set_stopped();
-//                }
+//       requires __detail::__non_const_rvalue<Receiver> && __detail::__set_stopped_member<Receiver>
 //     constexpr void operator()(Receiver&& rcvr) const noexcept;
 //   };
 //
@@ -70,6 +81,10 @@ struct CvrefTestReceiver {
 static_assert(std::is_nothrow_invocable_v<ex::set_value_t, CvrefTestReceiver, int>);
 static_assert(std::is_nothrow_invocable_v<ex::set_error_t, CvrefTestReceiver, int>);
 static_assert(std::is_nothrow_invocable_v<ex::set_stopped_t, CvrefTestReceiver>);
+
+static_assert(std::is_same_v<std::invoke_result_t<ex::set_value_t, CvrefTestReceiver, int>, void>);
+static_assert(std::is_same_v<std::invoke_result_t<ex::set_error_t, CvrefTestReceiver, int>, void>);
+static_assert(std::is_same_v<std::invoke_result_t<ex::set_stopped_t, CvrefTestReceiver>, void>);
 
 static_assert(!std::is_invocable_v<ex::set_value_t, CvrefTestReceiver&, int>);
 static_assert(!std::is_invocable_v<ex::set_error_t, CvrefTestReceiver&, int>);

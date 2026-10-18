@@ -10,8 +10,6 @@
 #define _LIBCPP___EXECUTION_COMPLETION_FUNCTIONS_H
 
 #include <__config>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__utility/forward.h>
 
@@ -24,14 +22,31 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace execution {
+namespace __detail {
+
+// For deduced forwarding-reference arguments, rejects lvalues and const rvalues.
+template <class _Tp>
+concept __non_const_rvalue = !is_same_v<_Tp, const _Tp>;
+
+template <class _Receiver, class... _Args>
+concept __set_value_member = requires(_Receiver&& __rcvr, _Args&&... __args) {
+  std::forward<_Receiver>(__rcvr).set_value(std::forward<_Args>(__args)...);
+};
+
+template <class _Receiver, class _Error>
+concept __set_error_member = requires(_Receiver&& __rcvr, _Error&& __error) {
+  std::forward<_Receiver>(__rcvr).set_error(std::forward<_Error>(__error));
+};
+
+template <class _Receiver>
+concept __set_stopped_member = requires(_Receiver&& __rcvr) { std::forward<_Receiver>(__rcvr).set_stopped(); };
+
+} // namespace __detail
 
 // [exec.set.value]
 struct set_value_t {
   template <class _Receiver, class... _Args>
-    requires(!is_lvalue_reference_v<_Receiver> && !is_const_v<_Receiver>) &&
-            requires(_Receiver&& __rcvr, _Args&&... __args) {
-              std::forward<_Receiver>(__rcvr).set_value(std::forward<_Args>(__args)...);
-            }
+    requires __detail::__non_const_rvalue<_Receiver> && __detail::__set_value_member<_Receiver, _Args...>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Receiver&& __rcvr, _Args&&... __args) const noexcept {
     static_assert(noexcept(std::forward<_Receiver>(__rcvr).set_value(std::forward<_Args>(__args)...)),
                   "set_value must be noexcept");
@@ -44,10 +59,7 @@ struct set_value_t {
 // [exec.set.error]
 struct set_error_t {
   template <class _Receiver, class _Error>
-    requires(!is_lvalue_reference_v<_Receiver> && !is_const_v<_Receiver>) &&
-            requires(_Receiver&& __rcvr, _Error&& __error) {
-              std::forward<_Receiver>(__rcvr).set_error(std::forward<_Error>(__error));
-            }
+    requires __detail::__non_const_rvalue<_Receiver> && __detail::__set_error_member<_Receiver, _Error>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Receiver&& __rcvr, _Error&& __error) const noexcept {
     static_assert(noexcept(std::forward<_Receiver>(__rcvr).set_error(std::forward<_Error>(__error))),
                   "set_error must be noexcept");
@@ -60,9 +72,7 @@ struct set_error_t {
 // [exec.set.stopped]
 struct set_stopped_t {
   template <class _Receiver>
-    requires(!is_lvalue_reference_v<_Receiver> && !is_const_v<_Receiver>) && requires(_Receiver&& __rcvr) {
-      std::forward<_Receiver>(__rcvr).set_stopped();
-    }
+    requires __detail::__non_const_rvalue<_Receiver> && __detail::__set_stopped_member<_Receiver>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Receiver&& __rcvr) const noexcept {
     static_assert(noexcept(std::forward<_Receiver>(__rcvr).set_stopped()), "set_stopped must be noexcept");
     static_assert(
