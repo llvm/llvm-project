@@ -1,5 +1,5 @@
 # NOTE: Do not autogenerate. The MIR updater cannot check debugValueSubstitutions in YAML metadata.
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=si-reuse-invariant-scalar-loads -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes=si-reuse-invariant-scalar-loads %s -o - | FileCheck %s
 
 # Equivalent deleted definitions must still resolve instruction references.
 # CHECK-LABEL: name: debug_substitution
