@@ -13,12 +13,12 @@
     a tagged release tarball instead.
 
     Build steps (in order):
-      1. libxml2   - Build libxml2, zlib, and zstd (inside stage 1 directory)
-      2. stage1    - Build the stage 1 bootstrap compiler with the host compiler
-      3. pgo       - PGO instrumented build + training + profile merge
-      4. stage2    - Build the stage 2 self-hosted compiler with stage 1 clang
-      5. package   - Create WiX MSI installer
-      6. tarball   - Generate full install tarball
+      1. dependencies - Build libxml2, zlib, and zstd (inside stage 1 directory)
+      2. stage1       - Build the stage 1 bootstrap compiler with the host compiler
+      3. pgo          - PGO instrumented build + training + profile merge
+      4. stage2       - Build the stage 2 self-hosted compiler with stage 1 clang
+      5. package      - Create WiX MSI installer
+      6. tarball      - Generate full install tarball
 
 .PARAMETER Version
     LLVM version string (e.g. "19.1.0"). If omitted, auto-detected from
@@ -54,7 +54,7 @@
     steps must already exist on disk. The step being restarted gets a
     clean directory; earlier steps are skipped entirely.
 
-    Valid steps: libxml2, stage1, pgo, stage2, package, tarball
+    Valid steps: dependencies, stage1, pgo, stage2, package, tarball
 
     Pass an empty string (-StartAt "") or "?" (-StartAt "?") to display
     the list of available steps and exit.
@@ -236,7 +236,7 @@ public static class ConsoleMode {
 # Step-resume support
 #===============================================================================
 
-$script:StepOrder   = @('libxml2','stage1','pgo','stage2','package','tarball')
+$script:StepOrder   = @('dependencies','stage1','pgo','stage2','package','tarball')
 
 if ($PSBoundParameters.ContainsKey('StartAt')) {
     if (-not $StartAt -or $StartAt -eq '?') {
