@@ -351,3 +351,77 @@ void test_for_lastprivate_tile(void) {
   // CHECK: omp.loop.exit:
   // CHECK: call void @__kmpc_for_static_fini
 }
+
+void test_tile_nest_zero_trip(int n) {
+  // CHECK-LABEL: define {{.*}} @test_tile_nest_zero_trip
+  int i, j;
+  #pragma omp tile sizes(2, 3)
+  for (i = 0; i < n; i++)
+    for (j = 0; j < 5; j++)
+      ;
+  // The outer init runs unconditionally; the inner init only if the outer
+  // loop has iterations, as without the directive.
+  // CHECK: store i32 0, ptr %i
+  // CHECK: [[INITPRE:%.*]] = icmp slt i32 0, %{{.*}}
+  // CHECK-NEXT: br i1 [[INITPRE]], label %[[INIT:.*]], label %{{.*}}
+  // CHECK: [[INIT]]:
+  // CHECK-NEXT: store i32 0, ptr %j
+  // Both finals are guarded by the outer loop's precondition: with n <= 0,
+  // j keeps its value from before the construct.
+  // CHECK: [[FINPRE:%.*]] = icmp slt i32 0, %{{.*}}
+  // CHECK-NEXT: br i1 [[FINPRE]], label %[[FIN:.*]], label %[[END:.*]]
+  // CHECK: [[FIN]]:
+  // CHECK: store i32 %{{.*}}, ptr %i
+  // CHECK-NEXT: store i32 5, ptr %j
+  // CHECK-NEXT: br label %[[END]]
+}
+
+void test_stripe_nest_zero_trip(int n) {
+  // CHECK-LABEL: define {{.*}} @test_stripe_nest_zero_trip
+  int i, j;
+  #pragma omp stripe sizes(2, 3)
+  for (i = 0; i < n; i++)
+    for (j = 0; j < 5; j++)
+      ;
+  // Same guards as test_tile_nest_zero_trip.
+  // CHECK: store i32 0, ptr %i
+  // CHECK: [[INITPRE:%.*]] = icmp slt i32 0, %{{.*}}
+  // CHECK-NEXT: br i1 [[INITPRE]], label %[[INIT:.*]], label %{{.*}}
+  // CHECK: [[INIT]]:
+  // CHECK-NEXT: store i32 0, ptr %j
+  // CHECK: [[FINPRE:%.*]] = icmp slt i32 0, %{{.*}}
+  // CHECK-NEXT: br i1 [[FINPRE]], label %[[FIN:.*]], label %[[END:.*]]
+  // CHECK: [[FIN]]:
+  // CHECK: store i32 %{{.*}}, ptr %i
+  // CHECK-NEXT: store i32 5, ptr %j
+  // CHECK-NEXT: br label %[[END]]
+}
+
+void test_fuse_nested_generated_index(void) {
+  // CHECK-LABEL: define {{.*}} @test_fuse_nested_generated_index
+  // Declared outside the construct: a loop sequence may only contain loops.
+  int l, m;
+  #pragma omp fuse looprange(2, 2)
+  {
+    #pragma omp fuse looprange(2, 2)
+    {
+      for (int i = 0; i < 8; ++i)
+        ;
+      for (int j = 0; j < 16; ++j)
+        ;
+      for (int k = 0; k < 32; ++k)
+        ;
+    }
+    for (l = 0; l < 4; ++l)
+      ;
+    for (m = 0; m < 6; ++m)
+      ;
+  }
+  // The outer fuse consumes the inner fused loop, whose counter is the
+  // compiler-generated fuse index. Only user variables are restored: j and k
+  // by the inner fuse, l by the outer one; the fuse index is never written.
+  // CHECK: store i32 16, ptr %j
+  // CHECK: store i32 32, ptr %k
+  // CHECK-NOT: store i32 {{.*}}, ptr %.omp.fuse.index
+  // CHECK: store i32 4, ptr %l
+}

@@ -15731,37 +15731,86 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
                           OrigCntVar->getExprLoc());
 }
 
-/// Build loop variable finalization statement from HelperExprs.Finals.
-/// Returns a CompoundStmt containing all finalization statements, or nullptr
-/// if there are no finalization statements.
-/// Note: Counters that are neither arithmetic nor pointers (class-type
-/// iterators) are skipped; see FIXME below.
-static Stmt *buildLoopFinalization(
-    ASTContext &Context,
-    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
-  SmallVector<Stmt *, 8> FinalizationStmts;
+/// Whether \p Counter is compiler generated (e.g. a fuse index).
+static bool isGeneratedLoopCounter(const Expr *Counter) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(Counter);
+  const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
+  return VD && VD->isImplicit() && !isa<OMPCapturedExprDecl>(VD) &&
+         !VD->isCXXForRangeImplicitVar();
+}
 
-  for (size_t I : llvm::seq<size_t>(LoopHelpers.size())) {
+/// Wrap \p S so it runs only if every loop in \p Loops has iterations.
+static Stmt *
+guardByLoopPreConds(ASTContext &Context,
+                    ArrayRef<OMPLoopBasedDirective::HelperExprs> Loops,
+                    Stmt *S) {
+  for (const auto &Loop : llvm::reverse(Loops))
+    S = IfStmt::Create(Context, SourceLocation(), IfStatementKind::Ordinary,
+                       nullptr, nullptr, Loop.PreCond, SourceLocation(),
+                       SourceLocation(), S, SourceLocation(), nullptr);
+  return S;
+}
+
+/// Run loop \p I's init only if all enclosing loops have iterations.
+/// Declaration inits are left as is.
+static void
+guardNestedLoopInit(ASTContext &Context,
+                    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
+                    unsigned I, SmallVectorImpl<Stmt *> &OriginalInit) {
+  Stmt *&Init = OriginalInit.back();
+  if (I > 0 && Init && !isa<DeclStmt>(Init))
+    Init = guardByLoopPreConds(Context, LoopHelpers.take_front(I), Init);
+}
+
+/// Build loop variable finalization statement from HelperExprs.Finals.
+/// Each Final runs only if its loop, and with \p IsLoopNest all enclosing
+/// loops, have iterations. Returns nullptr if there is nothing to finalize.
+/// Compiler-generated counters and class-type iterators are skipped.
+static Stmt *
+buildLoopFinalization(ASTContext &Context,
+                      ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
+                      bool IsLoopNest = false) {
+  auto GetFinals = [](const OMPLoopBasedDirective::HelperExprs &Helper) {
+    SmallVector<Stmt *, 2> Finals;
     for (auto [Counter, Final] :
-         llvm::zip_equal(LoopHelpers[I].Counters, LoopHelpers[I].Finals)) {
+         llvm::zip_equal(Helper.Counters, Helper.Finals)) {
+      if (isGeneratedLoopCounter(Counter))
+        continue;
       // FIXME: finalize class-type iterators too (random-access arithmetic
       // is available per the canonical loop form).
       QualType CounterTy = Counter->getType();
-      if (!Final ||
-          (!CounterTy->isArithmeticType() && !CounterTy->isPointerType()))
-        continue;
-      FinalizationStmts.push_back(IfStmt::Create(
-          Context, SourceLocation(), IfStatementKind::Ordinary, nullptr,
-          nullptr, LoopHelpers[I].PreCond, SourceLocation(), SourceLocation(),
-          Final, SourceLocation(), nullptr));
+      if (Final &&
+          (CounterTy->isArithmeticType() || CounterTy->isPointerType()))
+        Finals.push_back(Final);
     }
+    return Finals;
+  };
+  auto MakeCompound = [&Context](ArrayRef<Stmt *> Stmts) -> Stmt * {
+    return CompoundStmt::Create(Context, Stmts, FPOptionsOverride(),
+                                SourceLocation(), SourceLocation());
+  };
+
+  if (IsLoopNest) {
+    // if (P0) { F0; if (P1) { F1; ... } }, built from the innermost loop out.
+    Stmt *Nested = nullptr;
+    for (const auto &Helper : llvm::reverse(LoopHelpers)) {
+      SmallVector<Stmt *, 2> Body = GetFinals(Helper);
+      if (Nested)
+        Body.push_back(Nested);
+      if (Body.empty())
+        continue;
+      Nested = guardByLoopPreConds(Context, Helper,
+                                   Body.size() == 1 ? Body.front()
+                                                    : MakeCompound(Body));
+    }
+    return Nested;
   }
 
-  return FinalizationStmts.empty()
-             ? nullptr
-             : CompoundStmt::Create(Context, FinalizationStmts,
-                                    FPOptionsOverride(), SourceLocation(),
-                                    SourceLocation());
+  SmallVector<Stmt *, 8> FinalizationStmts;
+  for (const auto &Helper : LoopHelpers)
+    for (Stmt *Final : GetFinals(Helper))
+      FinalizationStmts.push_back(guardByLoopPreConds(Context, Helper, Final));
+  return FinalizationStmts.empty() ? nullptr : MakeCompound(FinalizationStmts);
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
@@ -15847,6 +15896,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       TileIndVars[I] = TileCntDecl;
     }
 
+    guardNestedLoopInit(Context, LoopHelpers, I, OriginalInits[I]);
     addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
                     PreInits);
   }
@@ -16114,10 +16164,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                  AStmt, Inner,
-                                  buildPreInits(Context, PreInits),
-                                  buildLoopFinalization(Context, LoopHelpers));
+  return OMPTileDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
@@ -16206,6 +16256,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
       StripeIndVars[I] = StripeCntDecl;
     }
 
+    guardNestedLoopInit(Context, LoopHelpers, I, OriginalInits[I]);
     addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
                     PreInits);
   }
@@ -16378,7 +16429,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   return OMPStripeDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
@@ -18079,7 +18130,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   auto AllFinalsStmts = llvm::to_vector<4>(SeqAnalysis.InnerFinals);
   for (unsigned I : llvm::seq<unsigned>(FirstVal - 1, LastVal)) {
     const LoopAnalysis &Loop = SeqAnalysis.Loops[I];
-    if (Loop.isRegularLoop() && isa<ForStmt>(Loop.TheForStmt))
+    if (Loop.isRegularLoop())
       FusedLoopHelpers.push_back(Loop.HelperExprs);
     if (Loop.TransformFinals)
       AllFinalsStmts.push_back(Loop.TransformFinals);

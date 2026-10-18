@@ -877,6 +877,46 @@ extern "C" void foo5() {
 // CHECK1:       [[FOR_END]]:
 // CHECK1-NEXT:    store i32 128, ptr [[I]], align 4
 // CHECK1-NEXT:    store i32 256, ptr [[J]], align 4
+// CHECK1-NEXT:    [[TMP76:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK1-NEXT:    [[TMP77:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK1-NEXT:    [[CMP89:%.*]] = icmp ult ptr [[TMP76]], [[TMP77]]
+// CHECK1-NEXT:    br i1 [[CMP89]], label %[[IF_THEN90:.*]], label %[[IF_END100:.*]]
+// CHECK1:       [[IF_THEN90]]:
+// CHECK1-NEXT:    [[TMP78:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK1-NEXT:    [[TMP79:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK1-NEXT:    [[TMP80:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST91:%.*]] = ptrtoaddr ptr [[TMP79]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST92:%.*]] = ptrtoaddr ptr [[TMP80]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_SUB93:%.*]] = sub i64 [[SUB_PTR_LHS_CAST91]], [[SUB_PTR_RHS_CAST92]]
+// CHECK1-NEXT:    [[SUB_PTR_DIV94:%.*]] = sdiv exact i64 [[SUB_PTR_SUB93]], 8
+// CHECK1-NEXT:    [[SUB95:%.*]] = sub nsw i64 [[SUB_PTR_DIV94]], 1
+// CHECK1-NEXT:    [[ADD96:%.*]] = add nsw i64 [[SUB95]], 1
+// CHECK1-NEXT:    [[DIV97:%.*]] = sdiv i64 [[ADD96]], 1
+// CHECK1-NEXT:    [[MUL98:%.*]] = mul nsw i64 [[DIV97]], 1
+// CHECK1-NEXT:    [[ADD_PTR99:%.*]] = getelementptr inbounds double, ptr [[TMP78]], i64 [[MUL98]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR99]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    br label %[[IF_END100]]
+// CHECK1:       [[IF_END100]]:
+// CHECK1-NEXT:    [[TMP81:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_27]], align 8
+// CHECK1-NEXT:    [[TMP82:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[CMP101:%.*]] = icmp ult ptr [[TMP81]], [[TMP82]]
+// CHECK1-NEXT:    br i1 [[CMP101]], label %[[IF_THEN102:.*]], label %[[IF_END112:.*]]
+// CHECK1:       [[IF_THEN102]]:
+// CHECK1-NEXT:    [[TMP83:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_27]], align 8
+// CHECK1-NEXT:    [[TMP84:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[TMP85:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_27]], align 8
+// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST103:%.*]] = ptrtoaddr ptr [[TMP84]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST104:%.*]] = ptrtoaddr ptr [[TMP85]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_SUB105:%.*]] = sub i64 [[SUB_PTR_LHS_CAST103]], [[SUB_PTR_RHS_CAST104]]
+// CHECK1-NEXT:    [[SUB_PTR_DIV106:%.*]] = sdiv exact i64 [[SUB_PTR_SUB105]], 8
+// CHECK1-NEXT:    [[SUB107:%.*]] = sub nsw i64 [[SUB_PTR_DIV106]], 1
+// CHECK1-NEXT:    [[ADD108:%.*]] = add nsw i64 [[SUB107]], 1
+// CHECK1-NEXT:    [[DIV109:%.*]] = sdiv i64 [[ADD108]], 1
+// CHECK1-NEXT:    [[MUL110:%.*]] = mul nsw i64 [[DIV109]], 1
+// CHECK1-NEXT:    [[ADD_PTR111:%.*]] = getelementptr inbounds double, ptr [[TMP83]], i64 [[MUL110]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR111]], ptr [[__BEGIN225]], align 8
+// CHECK1-NEXT:    br label %[[IF_END112]]
+// CHECK1:       [[IF_END112]]:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1069,9 +1109,9 @@ extern "C" void foo5() {
 // CHECK1-NEXT:    [[DOTOMP_FUSE_INDEX29:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[V:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[CC:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[__RANGE271:%.*]] = alloca ptr, align 8
-// CHECK1-NEXT:    [[__BEGIN272:%.*]] = alloca ptr, align 8
-// CHECK1-NEXT:    [[__END274:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[__RANGE276:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[__BEGIN277:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[__END279:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[VV:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_LB0]], align 4
@@ -1270,47 +1310,55 @@ extern "C" void foo5() {
 // CHECK1:       [[FOR_END63]]:
 // CHECK1-NEXT:    store i32 256, ptr [[J]], align 4
 // CHECK1-NEXT:    store i32 512, ptr [[K]], align 4
-// CHECK1-NEXT:    [[TMP57:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[CMP64:%.*]] = icmp slt i32 0, [[TMP57]]
-// CHECK1-NEXT:    br i1 [[CMP64]], label %[[IF_THEN65:.*]], label %[[IF_END70:.*]]
+// CHECK1-NEXT:    [[TMP57:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK1-NEXT:    [[TMP58:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK1-NEXT:    [[CMP64:%.*]] = icmp ult ptr [[TMP57]], [[TMP58]]
+// CHECK1-NEXT:    br i1 [[CMP64]], label %[[IF_THEN65:.*]], label %[[IF_END75:.*]]
 // CHECK1:       [[IF_THEN65]]:
-// CHECK1-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB66:%.*]] = sub nsw i32 [[TMP58]], 0
-// CHECK1-NEXT:    [[DIV67:%.*]] = sdiv i32 [[SUB66]], 1
-// CHECK1-NEXT:    [[MUL68:%.*]] = mul nsw i32 [[DIV67]], 1
-// CHECK1-NEXT:    [[ADD69:%.*]] = add nsw i32 0, [[MUL68]]
-// CHECK1-NEXT:    store i32 [[ADD69]], ptr [[DOTOMP_FUSE_INDEX]], align 4
-// CHECK1-NEXT:    br label %[[IF_END70]]
-// CHECK1:       [[IF_END70]]:
+// CHECK1-NEXT:    [[TMP59:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK1-NEXT:    [[TMP60:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK1-NEXT:    [[TMP61:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST66:%.*]] = ptrtoaddr ptr [[TMP60]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST67:%.*]] = ptrtoaddr ptr [[TMP61]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_SUB68:%.*]] = sub i64 [[SUB_PTR_LHS_CAST66]], [[SUB_PTR_RHS_CAST67]]
+// CHECK1-NEXT:    [[SUB_PTR_DIV69:%.*]] = sdiv exact i64 [[SUB_PTR_SUB68]], 8
+// CHECK1-NEXT:    [[SUB70:%.*]] = sub nsw i64 [[SUB_PTR_DIV69]], 1
+// CHECK1-NEXT:    [[ADD71:%.*]] = add nsw i64 [[SUB70]], 1
+// CHECK1-NEXT:    [[DIV72:%.*]] = sdiv i64 [[ADD71]], 1
+// CHECK1-NEXT:    [[MUL73:%.*]] = mul nsw i64 [[DIV72]], 1
+// CHECK1-NEXT:    [[ADD_PTR74:%.*]] = getelementptr inbounds double, ptr [[TMP59]], i64 [[MUL73]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR74]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    br label %[[IF_END75]]
+// CHECK1:       [[IF_END75]]:
 // CHECK1-NEXT:    store i32 37, ptr [[CC]], align 4
-// CHECK1-NEXT:    store ptr [[ARR]], ptr [[__RANGE271]], align 8
-// CHECK1-NEXT:    [[TMP59:%.*]] = load ptr, ptr [[__RANGE271]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK1-NEXT:    [[ARRAYDECAY73:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP59]], i64 0, i64 0
-// CHECK1-NEXT:    store ptr [[ARRAYDECAY73]], ptr [[__BEGIN272]], align 8
-// CHECK1-NEXT:    [[TMP60:%.*]] = load ptr, ptr [[__RANGE271]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK1-NEXT:    [[ARRAYDECAY75:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP60]], i64 0, i64 0
-// CHECK1-NEXT:    [[ADD_PTR76:%.*]] = getelementptr inbounds double, ptr [[ARRAYDECAY75]], i64 256
-// CHECK1-NEXT:    store ptr [[ADD_PTR76]], ptr [[__END274]], align 8
-// CHECK1-NEXT:    br label %[[FOR_COND77:.*]]
-// CHECK1:       [[FOR_COND77]]:
-// CHECK1-NEXT:    [[TMP61:%.*]] = load ptr, ptr [[__BEGIN272]], align 8
-// CHECK1-NEXT:    [[TMP62:%.*]] = load ptr, ptr [[__END274]], align 8
-// CHECK1-NEXT:    [[CMP78:%.*]] = icmp ne ptr [[TMP61]], [[TMP62]]
-// CHECK1-NEXT:    br i1 [[CMP78]], label %[[FOR_BODY79:.*]], label %[[FOR_END81:.*]]
-// CHECK1:       [[FOR_BODY79]]:
-// CHECK1-NEXT:    [[TMP63:%.*]] = load ptr, ptr [[__BEGIN272]], align 8
-// CHECK1-NEXT:    store ptr [[TMP63]], ptr [[VV]], align 8
-// CHECK1-NEXT:    [[TMP64:%.*]] = load i32, ptr [[CC]], align 4
-// CHECK1-NEXT:    [[TMP65:%.*]] = load ptr, ptr [[VV]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK1-NEXT:    [[TMP66:%.*]] = load double, ptr [[TMP65]], align 8
-// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP64]], double noundef [[TMP66]])
-// CHECK1-NEXT:    br label %[[FOR_INC80:.*]]
-// CHECK1:       [[FOR_INC80]]:
-// CHECK1-NEXT:    [[TMP67:%.*]] = load ptr, ptr [[__BEGIN272]], align 8
-// CHECK1-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP67]], i32 1
-// CHECK1-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN272]], align 8
-// CHECK1-NEXT:    br label %[[FOR_COND77]]
-// CHECK1:       [[FOR_END81]]:
+// CHECK1-NEXT:    store ptr [[ARR]], ptr [[__RANGE276]], align 8
+// CHECK1-NEXT:    [[TMP62:%.*]] = load ptr, ptr [[__RANGE276]], align 8, !nonnull [[META5]], !align [[META6]]
+// CHECK1-NEXT:    [[ARRAYDECAY78:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP62]], i64 0, i64 0
+// CHECK1-NEXT:    store ptr [[ARRAYDECAY78]], ptr [[__BEGIN277]], align 8
+// CHECK1-NEXT:    [[TMP63:%.*]] = load ptr, ptr [[__RANGE276]], align 8, !nonnull [[META5]], !align [[META6]]
+// CHECK1-NEXT:    [[ARRAYDECAY80:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP63]], i64 0, i64 0
+// CHECK1-NEXT:    [[ADD_PTR81:%.*]] = getelementptr inbounds double, ptr [[ARRAYDECAY80]], i64 256
+// CHECK1-NEXT:    store ptr [[ADD_PTR81]], ptr [[__END279]], align 8
+// CHECK1-NEXT:    br label %[[FOR_COND82:.*]]
+// CHECK1:       [[FOR_COND82]]:
+// CHECK1-NEXT:    [[TMP64:%.*]] = load ptr, ptr [[__BEGIN277]], align 8
+// CHECK1-NEXT:    [[TMP65:%.*]] = load ptr, ptr [[__END279]], align 8
+// CHECK1-NEXT:    [[CMP83:%.*]] = icmp ne ptr [[TMP64]], [[TMP65]]
+// CHECK1-NEXT:    br i1 [[CMP83]], label %[[FOR_BODY84:.*]], label %[[FOR_END86:.*]]
+// CHECK1:       [[FOR_BODY84]]:
+// CHECK1-NEXT:    [[TMP66:%.*]] = load ptr, ptr [[__BEGIN277]], align 8
+// CHECK1-NEXT:    store ptr [[TMP66]], ptr [[VV]], align 8
+// CHECK1-NEXT:    [[TMP67:%.*]] = load i32, ptr [[CC]], align 4
+// CHECK1-NEXT:    [[TMP68:%.*]] = load ptr, ptr [[VV]], align 8, !nonnull [[META5]], !align [[META6]]
+// CHECK1-NEXT:    [[TMP69:%.*]] = load double, ptr [[TMP68]], align 8
+// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP67]], double noundef [[TMP69]])
+// CHECK1-NEXT:    br label %[[FOR_INC85:.*]]
+// CHECK1:       [[FOR_INC85]]:
+// CHECK1-NEXT:    [[TMP70:%.*]] = load ptr, ptr [[__BEGIN277]], align 8
+// CHECK1-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP70]], i32 1
+// CHECK1-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN277]], align 8
+// CHECK1-NEXT:    br label %[[FOR_COND82]]
+// CHECK1:       [[FOR_END86]]:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1816,6 +1864,46 @@ extern "C" void foo5() {
 // CHECK2:       [[FOR_END]]:
 // CHECK2-NEXT:    store i32 128, ptr [[I]], align 4
 // CHECK2-NEXT:    store i32 256, ptr [[J]], align 4
+// CHECK2-NEXT:    [[TMP76:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK2-NEXT:    [[TMP77:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK2-NEXT:    [[CMP89:%.*]] = icmp ult ptr [[TMP76]], [[TMP77]]
+// CHECK2-NEXT:    br i1 [[CMP89]], label %[[IF_THEN90:.*]], label %[[IF_END100:.*]]
+// CHECK2:       [[IF_THEN90]]:
+// CHECK2-NEXT:    [[TMP78:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK2-NEXT:    [[TMP79:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK2-NEXT:    [[TMP80:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST91:%.*]] = ptrtoaddr ptr [[TMP79]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST92:%.*]] = ptrtoaddr ptr [[TMP80]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_SUB93:%.*]] = sub i64 [[SUB_PTR_LHS_CAST91]], [[SUB_PTR_RHS_CAST92]]
+// CHECK2-NEXT:    [[SUB_PTR_DIV94:%.*]] = sdiv exact i64 [[SUB_PTR_SUB93]], 8
+// CHECK2-NEXT:    [[SUB95:%.*]] = sub nsw i64 [[SUB_PTR_DIV94]], 1
+// CHECK2-NEXT:    [[ADD96:%.*]] = add nsw i64 [[SUB95]], 1
+// CHECK2-NEXT:    [[DIV97:%.*]] = sdiv i64 [[ADD96]], 1
+// CHECK2-NEXT:    [[MUL98:%.*]] = mul nsw i64 [[DIV97]], 1
+// CHECK2-NEXT:    [[ADD_PTR99:%.*]] = getelementptr inbounds double, ptr [[TMP78]], i64 [[MUL98]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR99]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    br label %[[IF_END100]]
+// CHECK2:       [[IF_END100]]:
+// CHECK2-NEXT:    [[TMP81:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_27]], align 8
+// CHECK2-NEXT:    [[TMP82:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[CMP101:%.*]] = icmp ult ptr [[TMP81]], [[TMP82]]
+// CHECK2-NEXT:    br i1 [[CMP101]], label %[[IF_THEN102:.*]], label %[[IF_END112:.*]]
+// CHECK2:       [[IF_THEN102]]:
+// CHECK2-NEXT:    [[TMP83:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_27]], align 8
+// CHECK2-NEXT:    [[TMP84:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[TMP85:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_27]], align 8
+// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST103:%.*]] = ptrtoaddr ptr [[TMP84]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST104:%.*]] = ptrtoaddr ptr [[TMP85]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_SUB105:%.*]] = sub i64 [[SUB_PTR_LHS_CAST103]], [[SUB_PTR_RHS_CAST104]]
+// CHECK2-NEXT:    [[SUB_PTR_DIV106:%.*]] = sdiv exact i64 [[SUB_PTR_SUB105]], 8
+// CHECK2-NEXT:    [[SUB107:%.*]] = sub nsw i64 [[SUB_PTR_DIV106]], 1
+// CHECK2-NEXT:    [[ADD108:%.*]] = add nsw i64 [[SUB107]], 1
+// CHECK2-NEXT:    [[DIV109:%.*]] = sdiv i64 [[ADD108]], 1
+// CHECK2-NEXT:    [[MUL110:%.*]] = mul nsw i64 [[DIV109]], 1
+// CHECK2-NEXT:    [[ADD_PTR111:%.*]] = getelementptr inbounds double, ptr [[TMP83]], i64 [[MUL110]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR111]], ptr [[__BEGIN225]], align 8
+// CHECK2-NEXT:    br label %[[IF_END112]]
+// CHECK2:       [[IF_END112]]:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2008,9 +2096,9 @@ extern "C" void foo5() {
 // CHECK2-NEXT:    [[DOTOMP_FUSE_INDEX29:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[V:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[CC:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[__RANGE271:%.*]] = alloca ptr, align 8
-// CHECK2-NEXT:    [[__BEGIN272:%.*]] = alloca ptr, align 8
-// CHECK2-NEXT:    [[__END274:%.*]] = alloca ptr, align 8
+// CHECK2-NEXT:    [[__RANGE276:%.*]] = alloca ptr, align 8
+// CHECK2-NEXT:    [[__BEGIN277:%.*]] = alloca ptr, align 8
+// CHECK2-NEXT:    [[__END279:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[VV:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK2-NEXT:    store i32 0, ptr [[DOTOMP_LB0]], align 4
@@ -2209,47 +2297,55 @@ extern "C" void foo5() {
 // CHECK2:       [[FOR_END63]]:
 // CHECK2-NEXT:    store i32 256, ptr [[J]], align 4
 // CHECK2-NEXT:    store i32 512, ptr [[K]], align 4
-// CHECK2-NEXT:    [[TMP57:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[CMP64:%.*]] = icmp slt i32 0, [[TMP57]]
-// CHECK2-NEXT:    br i1 [[CMP64]], label %[[IF_THEN65:.*]], label %[[IF_END70:.*]]
+// CHECK2-NEXT:    [[TMP57:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK2-NEXT:    [[TMP58:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK2-NEXT:    [[CMP64:%.*]] = icmp ult ptr [[TMP57]], [[TMP58]]
+// CHECK2-NEXT:    br i1 [[CMP64]], label %[[IF_THEN65:.*]], label %[[IF_END75:.*]]
 // CHECK2:       [[IF_THEN65]]:
-// CHECK2-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB66:%.*]] = sub nsw i32 [[TMP58]], 0
-// CHECK2-NEXT:    [[DIV67:%.*]] = sdiv i32 [[SUB66]], 1
-// CHECK2-NEXT:    [[MUL68:%.*]] = mul nsw i32 [[DIV67]], 1
-// CHECK2-NEXT:    [[ADD69:%.*]] = add nsw i32 0, [[MUL68]]
-// CHECK2-NEXT:    store i32 [[ADD69]], ptr [[DOTOMP_FUSE_INDEX]], align 4
-// CHECK2-NEXT:    br label %[[IF_END70]]
-// CHECK2:       [[IF_END70]]:
+// CHECK2-NEXT:    [[TMP59:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK2-NEXT:    [[TMP60:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_10]], align 8
+// CHECK2-NEXT:    [[TMP61:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_8]], align 8
+// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST66:%.*]] = ptrtoaddr ptr [[TMP60]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST67:%.*]] = ptrtoaddr ptr [[TMP61]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_SUB68:%.*]] = sub i64 [[SUB_PTR_LHS_CAST66]], [[SUB_PTR_RHS_CAST67]]
+// CHECK2-NEXT:    [[SUB_PTR_DIV69:%.*]] = sdiv exact i64 [[SUB_PTR_SUB68]], 8
+// CHECK2-NEXT:    [[SUB70:%.*]] = sub nsw i64 [[SUB_PTR_DIV69]], 1
+// CHECK2-NEXT:    [[ADD71:%.*]] = add nsw i64 [[SUB70]], 1
+// CHECK2-NEXT:    [[DIV72:%.*]] = sdiv i64 [[ADD71]], 1
+// CHECK2-NEXT:    [[MUL73:%.*]] = mul nsw i64 [[DIV72]], 1
+// CHECK2-NEXT:    [[ADD_PTR74:%.*]] = getelementptr inbounds double, ptr [[TMP59]], i64 [[MUL73]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR74]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    br label %[[IF_END75]]
+// CHECK2:       [[IF_END75]]:
 // CHECK2-NEXT:    store i32 37, ptr [[CC]], align 4
-// CHECK2-NEXT:    store ptr [[ARR]], ptr [[__RANGE271]], align 8
-// CHECK2-NEXT:    [[TMP59:%.*]] = load ptr, ptr [[__RANGE271]], align 8, !nonnull [[META4]], !align [[META5]]
-// CHECK2-NEXT:    [[ARRAYDECAY73:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP59]], i64 0, i64 0
-// CHECK2-NEXT:    store ptr [[ARRAYDECAY73]], ptr [[__BEGIN272]], align 8
-// CHECK2-NEXT:    [[TMP60:%.*]] = load ptr, ptr [[__RANGE271]], align 8, !nonnull [[META4]], !align [[META5]]
-// CHECK2-NEXT:    [[ARRAYDECAY75:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP60]], i64 0, i64 0
-// CHECK2-NEXT:    [[ADD_PTR76:%.*]] = getelementptr inbounds double, ptr [[ARRAYDECAY75]], i64 256
-// CHECK2-NEXT:    store ptr [[ADD_PTR76]], ptr [[__END274]], align 8
-// CHECK2-NEXT:    br label %[[FOR_COND77:.*]]
-// CHECK2:       [[FOR_COND77]]:
-// CHECK2-NEXT:    [[TMP61:%.*]] = load ptr, ptr [[__BEGIN272]], align 8
-// CHECK2-NEXT:    [[TMP62:%.*]] = load ptr, ptr [[__END274]], align 8
-// CHECK2-NEXT:    [[CMP78:%.*]] = icmp ne ptr [[TMP61]], [[TMP62]]
-// CHECK2-NEXT:    br i1 [[CMP78]], label %[[FOR_BODY79:.*]], label %[[FOR_END81:.*]]
-// CHECK2:       [[FOR_BODY79]]:
-// CHECK2-NEXT:    [[TMP63:%.*]] = load ptr, ptr [[__BEGIN272]], align 8
-// CHECK2-NEXT:    store ptr [[TMP63]], ptr [[VV]], align 8
-// CHECK2-NEXT:    [[TMP64:%.*]] = load i32, ptr [[CC]], align 4
-// CHECK2-NEXT:    [[TMP65:%.*]] = load ptr, ptr [[VV]], align 8, !nonnull [[META4]], !align [[META5]]
-// CHECK2-NEXT:    [[TMP66:%.*]] = load double, ptr [[TMP65]], align 8
-// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP64]], double noundef [[TMP66]])
-// CHECK2-NEXT:    br label %[[FOR_INC80:.*]]
-// CHECK2:       [[FOR_INC80]]:
-// CHECK2-NEXT:    [[TMP67:%.*]] = load ptr, ptr [[__BEGIN272]], align 8
-// CHECK2-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP67]], i32 1
-// CHECK2-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN272]], align 8
-// CHECK2-NEXT:    br label %[[FOR_COND77]]
-// CHECK2:       [[FOR_END81]]:
+// CHECK2-NEXT:    store ptr [[ARR]], ptr [[__RANGE276]], align 8
+// CHECK2-NEXT:    [[TMP62:%.*]] = load ptr, ptr [[__RANGE276]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK2-NEXT:    [[ARRAYDECAY78:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP62]], i64 0, i64 0
+// CHECK2-NEXT:    store ptr [[ARRAYDECAY78]], ptr [[__BEGIN277]], align 8
+// CHECK2-NEXT:    [[TMP63:%.*]] = load ptr, ptr [[__RANGE276]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK2-NEXT:    [[ARRAYDECAY80:%.*]] = getelementptr inbounds [256 x double], ptr [[TMP63]], i64 0, i64 0
+// CHECK2-NEXT:    [[ADD_PTR81:%.*]] = getelementptr inbounds double, ptr [[ARRAYDECAY80]], i64 256
+// CHECK2-NEXT:    store ptr [[ADD_PTR81]], ptr [[__END279]], align 8
+// CHECK2-NEXT:    br label %[[FOR_COND82:.*]]
+// CHECK2:       [[FOR_COND82]]:
+// CHECK2-NEXT:    [[TMP64:%.*]] = load ptr, ptr [[__BEGIN277]], align 8
+// CHECK2-NEXT:    [[TMP65:%.*]] = load ptr, ptr [[__END279]], align 8
+// CHECK2-NEXT:    [[CMP83:%.*]] = icmp ne ptr [[TMP64]], [[TMP65]]
+// CHECK2-NEXT:    br i1 [[CMP83]], label %[[FOR_BODY84:.*]], label %[[FOR_END86:.*]]
+// CHECK2:       [[FOR_BODY84]]:
+// CHECK2-NEXT:    [[TMP66:%.*]] = load ptr, ptr [[__BEGIN277]], align 8
+// CHECK2-NEXT:    store ptr [[TMP66]], ptr [[VV]], align 8
+// CHECK2-NEXT:    [[TMP67:%.*]] = load i32, ptr [[CC]], align 4
+// CHECK2-NEXT:    [[TMP68:%.*]] = load ptr, ptr [[VV]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK2-NEXT:    [[TMP69:%.*]] = load double, ptr [[TMP68]], align 8
+// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP67]], double noundef [[TMP69]])
+// CHECK2-NEXT:    br label %[[FOR_INC85:.*]]
+// CHECK2:       [[FOR_INC85]]:
+// CHECK2-NEXT:    [[TMP70:%.*]] = load ptr, ptr [[__BEGIN277]], align 8
+// CHECK2-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP70]], i32 1
+// CHECK2-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN277]], align 8
+// CHECK2-NEXT:    br label %[[FOR_COND82]]
+// CHECK2:       [[FOR_END86]]:
 // CHECK2-NEXT:    ret void
 //
 //
