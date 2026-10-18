@@ -221,12 +221,8 @@ bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
   // merged into top-level function.
   for (auto &Callees :
        const_cast<CallsiteSampleMap &>(FS.getCallsiteSamples())) {
-    auto &CalleesMap = Callees.second;
-    for (auto I = CalleesMap.begin(); I != CalleesMap.end();) {
-      auto FS = I++;
-      if (filterAmbiguousProfile(FS->second))
-        CalleesMap.erase(FS);
-    }
+    Callees.second.erase_if(
+        [this](auto &Entry) { return filterAmbiguousProfile(Entry.second); });
   }
   return false;
 }
@@ -654,7 +650,7 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
         getBaseDiscriminator(FrameVec[I - 1].Location.Discriminator));
     FunctionSamplesMap &SamplesMap =
         FunctionProfile->functionSamplesAt(Callsite);
-    auto Ret = SamplesMap.emplace(FrameVec[I].Func, FunctionSamples());
+    auto Ret = SamplesMap.try_emplace(FrameVec[I].Func, FunctionSamples());
     if (Ret.second) {
       SampleContext Context(FrameVec[I].Func);
       Ret.first->second.setContext(Context);
