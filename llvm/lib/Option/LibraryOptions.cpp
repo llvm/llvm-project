@@ -22,7 +22,8 @@ void LibraryOptionsParser::forEachOption(
   const OptTable &T = Table();
   for (unsigned ID = 1, E = T.getNumOptions(); ID <= E; ++ID) {
     unsigned Kind = T.getOptionKind(ID);
-    if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass)
+    if (Kind == Option::GroupClass || Kind == Option::InputClass ||
+        Kind == Option::UnknownClass)
       continue;
     StringRef V = T.getOptionMetaVar(ID);
     std::string MetaVar;
