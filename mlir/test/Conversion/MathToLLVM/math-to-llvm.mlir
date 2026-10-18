@@ -654,6 +654,39 @@ func.func @round(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @round_f64(
+// CHECK-SAME: %[[ARG:.*]]: f64
+func.func @round_f64(%arg: f64) -> f64 {
+  // CHECK: %[[RESULT:.*]] = llvm.intr.round(%[[ARG]]) : (f64) -> f64
+  // CHECK: return %[[RESULT]]
+  %result = math.round %arg : f64
+  return %result : f64
+}
+
+// -----
+
+// CHECK-LABEL: func @round_vector_f64(
+// CHECK-SAME: %[[ARG:.*]]: vector<2xf64>
+func.func @round_vector_f64(%arg: vector<2xf64>) -> vector<2xf64> {
+  // CHECK: %[[RESULT:.*]] = llvm.intr.round(%[[ARG]]) : (vector<2xf64>) -> vector<2xf64>
+  // CHECK: return %[[RESULT]]
+  %result = math.round %arg : vector<2xf64>
+  return %result : vector<2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func @round_scalable_f64(
+// CHECK-SAME: %[[ARG:.*]]: vector<[2]xf64>
+func.func @round_scalable_f64(%arg: vector<[2]xf64>) -> vector<[2]xf64> {
+  // CHECK: %[[RESULT:.*]] = llvm.intr.round(%[[ARG]]) : (vector<[2]xf64>) -> vector<[2]xf64>
+  // CHECK: return %[[RESULT]]
+  %result = math.round %arg : vector<[2]xf64>
+  return %result : vector<[2]xf64>
+}
+
+// -----
+
 // CHECK-LABEL: func @roundeven(
 // CHECK-SAME: f32
 func.func @roundeven(%arg0 : f32) {
