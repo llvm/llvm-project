@@ -5,13 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #ifndef LLVM_LIBC_SHARED_MATH_TOTALORDERF128_H
 #define LLVM_LIBC_SHARED_MATH_TOTALORDERF128_H
-
-#include "include/llvm-libc-types/float128.h"
-
-#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "shared/libc_common.h"
 #include "src/__support/math/totalorderf128.h"
@@ -23,7 +18,5 @@ using math::totalorderf128;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SHARED_MATH_TOTALORDERF128_H
