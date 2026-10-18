@@ -9,6 +9,7 @@ define half @frem(half %x, half %y) nounwind {
 ; CHECK-NEXT:    vdivsd %xmm2, %xmm3, %xmm4
 ; CHECK-NEXT:    vroundsd $11, %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm4 = -(xmm2 * xmm4) + xmm3
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm4 = xmm3 ^ (m64bcst & (xmm4 ^ xmm3))
 ; CHECK-NEXT:    vcvtsd2sh %xmm4, %xmm4, %xmm2
 ; CHECK-NEXT:    vfpclasssh $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
 ; CHECK-NEXT:    knotw %k0, %k1
@@ -31,6 +32,7 @@ define <2 x half> @frem_vec2(<2 x half> %x, <2 x half> %y) nounwind {
 ; CHECK-NEXT:    vdivpd %zmm1, %zmm2, %zmm3
 ; CHECK-NEXT:    vrndscalepd $11, %zmm3, %zmm3
 ; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm3 = -(zmm1 * zmm3) + zmm2
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm2 ^ (m64bcst & (zmm3 ^ zmm2))
 ; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm1
 ; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
@@ -51,6 +53,7 @@ define <4 x half> @frem_vec4(<4 x half> %x, <4 x half> %y) nounwind {
 ; CHECK-NEXT:    vdivpd %zmm1, %zmm2, %zmm3
 ; CHECK-NEXT:    vrndscalepd $11, %zmm3, %zmm3
 ; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm3 = -(zmm1 * zmm3) + zmm2
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm2 ^ (m64bcst & (zmm3 ^ zmm2))
 ; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm1
 ; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
@@ -71,6 +74,7 @@ define <8 x half> @frem_vec8(<8 x half> %x, <8 x half> %y) nounwind {
 ; CHECK-NEXT:    vdivpd %zmm1, %zmm2, %zmm3
 ; CHECK-NEXT:    vrndscalepd $11, %zmm3, %zmm3
 ; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm3 = -(zmm1 * zmm3) + zmm2
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm2 ^ (m64bcst & (zmm3 ^ zmm2))
 ; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm1
 ; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
@@ -83,20 +87,87 @@ define <8 x half> @frem_vec8(<8 x half> %x, <8 x half> %y) nounwind {
 define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm2
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm3
-; CHECK-NEXT:    vdivpd %zmm2, %zmm3, %zmm4
-; CHECK-NEXT:    vrndscalepd $11, %zmm4, %zmm4
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm4 = -(zmm2 * zmm4) + zmm3
-; CHECK-NEXT:    vcvtpd2ph %zmm4, %xmm2
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vdivpd %zmm3, %zmm4, %zmm5
-; CHECK-NEXT:    vrndscalepd $11, %zmm5, %zmm5
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm5 = -(zmm3 * zmm5) + zmm4
-; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm3
+; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm4
+; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm2
+; CHECK-NEXT:    vdivpd %zmm4, %zmm2, %zmm3
+; CHECK-NEXT:    vrndscalepd $11, %zmm3, %zmm3
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm3 = -(zmm4 * zmm3) + zmm2
+; CHECK-NEXT:    vextractf32x4 $3, %zmm3, %xmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm2, %xmm9
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} xmm5 = [NaN,NaN]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm6
+; CHECK-NEXT:    vextractf32x4 $2, %zmm2, %xmm7
+; CHECK-NEXT:    vmovdqa %xmm5, %xmm4
+; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm11
+; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm12
+; CHECK-NEXT:    vmovdqa %xmm5, %xmm10
+; CHECK-NEXT:    vmovdqa %xmm5, %xmm13
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm15 = xmm8[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm14 = xmm9[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm14 = xmm14 ^ (xmm5 & (xmm14 ^ xmm15))
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm6[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm15 = xmm7[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm15 = xmm15 ^ (xmm5 & (xmm15 ^ xmm16))
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm17 = xmm11[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm12[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm16 = xmm16 ^ (xmm5 & (xmm16 ^ xmm17))
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm18 = xmm3[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm17 = xmm2[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm17 = xmm17 ^ (xmm5 & (xmm17 ^ xmm18))
+; CHECK-NEXT:    vextractf32x4 $1, %ymm1, %xmm18
+; CHECK-NEXT:    vcvtph2pd %xmm18, %zmm19
+; CHECK-NEXT:    vextractf32x4 $1, %ymm0, %xmm18
+; CHECK-NEXT:    vcvtph2pd %xmm18, %zmm18
+; CHECK-NEXT:    vdivpd %zmm19, %zmm18, %zmm20
+; CHECK-NEXT:    vrndscalepd $11, %zmm20, %zmm20
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm20 = -(zmm19 * zmm20) + zmm18
+; CHECK-NEXT:    vextractf32x4 $3, %zmm20, %xmm19
+; CHECK-NEXT:    vextractf32x4 $3, %zmm18, %xmm21
+; CHECK-NEXT:    vmovdqa64 %xmm5, %xmm22
+; CHECK-NEXT:    vextractf32x4 $2, %zmm20, %xmm23
+; CHECK-NEXT:    vextractf32x4 $2, %zmm18, %xmm24
+; CHECK-NEXT:    vmovdqa64 %xmm5, %xmm25
+; CHECK-NEXT:    vextractf32x4 $1, %ymm20, %xmm26
+; CHECK-NEXT:    vextractf32x4 $1, %ymm18, %xmm27
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm28 = xmm19[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm29 = xmm21[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm29 = xmm29 ^ (xmm5 & (xmm29 ^ xmm28))
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm28 = xmm23[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm30 = xmm24[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm30 = xmm30 ^ (xmm5 & (xmm30 ^ xmm28))
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm28 = xmm26[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm31 = xmm27[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm31 = xmm31 ^ (xmm5 & (xmm31 ^ xmm28))
+; CHECK-NEXT:    vmovdqa64 %xmm5, %xmm28
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm28 = xmm9 ^ (xmm28 & (xmm8 ^ xmm9))
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm20[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm18[1,0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm9 = xmm9 ^ (xmm5 & (xmm9 ^ xmm8))
+; CHECK-NEXT:    vmovdqa %xmm5, %xmm8
+; CHECK-NEXT:    # kill: def $xmm5 killed $xmm5 def $ymm5
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm4 = xmm7 ^ (xmm4 & (xmm6 ^ xmm7))
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm10 = xmm12 ^ (xmm10 & (xmm11 ^ xmm12))
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm13 = xmm2 ^ (xmm13 & (xmm3 ^ xmm2))
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm22 = xmm21 ^ (xmm22 & (xmm19 ^ xmm21))
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm25 = xmm24 ^ (xmm25 & (xmm23 ^ xmm24))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm28, %ymm4, %ymm2
+; CHECK-NEXT:    vinserti128 $1, %xmm10, %ymm13, %ymm3
+; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm14, %ymm15, %ymm3
+; CHECK-NEXT:    vinserti32x4 $1, %xmm16, %ymm17, %ymm4
+; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm4, %zmm3
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm2 = zmm2[0],zmm3[0],zmm2[2],zmm3[2],zmm2[4],zmm3[4],zmm2[6],zmm3[6]
+; CHECK-NEXT:    vcvtpd2ph %zmm2, %xmm2
+; CHECK-NEXT:    vinserti32x4 $1, %xmm22, %ymm25, %ymm3
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm8 = xmm27 ^ (xmm8 & (xmm26 ^ xmm27))
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm5 = xmm18 ^ (xmm5 & (xmm20 ^ xmm18))
+; CHECK-NEXT:    vinserti128 $1, %xmm8, %ymm5, %ymm4
+; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm4, %zmm3
+; CHECK-NEXT:    vinserti32x4 $1, %xmm29, %ymm30, %ymm4
+; CHECK-NEXT:    vinserti32x4 $1, %xmm31, %ymm9, %ymm5
+; CHECK-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm3 = zmm3[0],zmm4[0],zmm3[2],zmm4[2],zmm3[4],zmm4[4],zmm3[6],zmm4[6]
+; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm3
 ; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
 ; CHECK-NEXT:    vfpclassph $153, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveInfinity(ymm0) | isNegativeInfinity(ymm0) | isSignalingNaN(ymm0)
 ; CHECK-NEXT:    knotw %k0, %k1
@@ -111,268 +182,301 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm5
-; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm4
 ; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm6
-; CHECK-NEXT:    vdivpd %zmm5, %zmm6, %zmm2
-; CHECK-NEXT:    vextractf32x4 $3, %zmm2, %xmm7
-; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm8
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm8[0],xmm7[0]
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm5
+; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm7
+; CHECK-NEXT:    vdivpd %zmm6, %zmm7, %zmm2
+; CHECK-NEXT:    vextractf32x4 $3, %zmm2, %xmm3
+; CHECK-NEXT:    vroundsd $11, %xmm3, %xmm3, %xmm8
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm3 = xmm3[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm8[0],xmm3[0]
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm2, %xmm8
 ; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
 ; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm8, %ymm3
 ; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm8
 ; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
 ; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vroundsd $11, %xmm2, %xmm2, %xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vroundsd $11, %xmm2, %xmm2, %xmm8
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
 ; CHECK-NEXT:    vroundsd $11, %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm9[0],xmm2[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm2, %zmm7
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vxorpd %zmm2, %zmm7, %zmm7
-; CHECK-NEXT:    vextractf32x4 $3, %zmm7, %xmm8
-; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm10
-; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm11
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm8[0],xmm2[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm9, %ymm2, %ymm2
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm3, %zmm2, %zmm2
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vxorpd %zmm3, %zmm2, %zmm9
+; CHECK-NEXT:    vextractf32x4 $3, %zmm9, %xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm10[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $3, %zmm7, %xmm11
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm7, %xmm10
-; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm11
-; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm12
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm13 = xmm12[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm12 = (xmm10 * xmm12) + xmm11
-; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm10[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm11 = (xmm13 * xmm10) + xmm11
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm12[0],xmm11[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm10, %ymm8
-; CHECK-NEXT:    vextractf128 $1, %ymm7, %xmm10
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm11
-; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm12
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm13 = xmm12[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm12 = (xmm10 * xmm12) + xmm11
-; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm10[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm11 = (xmm13 * xmm10) + xmm11
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm12[0],xmm11[0]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm6[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm5[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm12 = (xmm7 * xmm12) + xmm11
-; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm5 = -(xmm9 * xmm5) + xmm6
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm5 = xmm5[0],xmm12[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm10, %ymm5, %ymm5
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm8, %zmm5, %zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm5
-; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm3
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm13
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm14 = xmm13[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm14 = (xmm2 * xmm14) + xmm12
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [NaN,NaN]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm14 = xmm12 ^ (xmm2 & (xmm14 ^ xmm12))
+; CHECK-NEXT:    vextractf32x4 $2, %zmm9, %xmm12
+; CHECK-NEXT:    vshufps {{.*#+}} xmm15 = xmm12[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm7, %xmm16
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm17 = xmm16[1,0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm18
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm18[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm19 = (xmm15 * xmm19) + xmm17
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm19 = xmm17 ^ (xmm2 & (xmm19 ^ xmm17))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm14, %ymm19, %ymm14
+; CHECK-NEXT:    vextractf128 $1, %ymm9, %xmm15
+; CHECK-NEXT:    vshufps {{.*#+}} xmm17 = xmm15[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm7, %xmm19
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm20 = xmm19[1,0]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm6, %xmm21
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm22 = xmm21[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm22 = (xmm17 * xmm22) + xmm20
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm22 = xmm20 ^ (xmm2 & (xmm22 ^ xmm20))
+; CHECK-NEXT:    vshufps {{.*#+}} xmm9 = xmm9[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm17 = xmm7[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm20 = xmm6[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm20 = (xmm9 * xmm20) + xmm17
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm20 = xmm17 ^ (xmm2 & (xmm20 ^ xmm17))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm22, %ymm20, %ymm9
+; CHECK-NEXT:    vinserti64x4 $1, %ymm14, %zmm9, %zmm9
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm13 = (xmm10 * xmm13) + xmm11
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm13 = xmm11 ^ (xmm2 & (xmm13 ^ xmm11))
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm18 = (xmm12 * xmm18) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm18 = xmm16 ^ (xmm2 & (xmm18 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm13, %ymm18, %ymm10
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm21 = (xmm15 * xmm21) + xmm19
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm21 = xmm19 ^ (xmm2 & (xmm21 ^ xmm19))
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm6 = -(xmm8 * xmm6) + xmm7
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm6 = xmm7 ^ (xmm2 & (xmm6 ^ xmm7))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm21, %ymm6, %ymm6
+; CHECK-NEXT:    vinserti64x4 $1, %ymm10, %zmm6, %zmm6
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm6 = zmm6[0],zmm9[0],zmm6[2],zmm9[2],zmm6[4],zmm9[4],zmm6[6],zmm9[6]
+; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm6
 ; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm4
 ; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vdivpd %zmm3, %zmm4, %zmm6
-; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
-; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm8
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm8[0],xmm7[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm6[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm6
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm9[0],xmm6[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm6, %ymm6
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm6, %zmm6
-; CHECK-NEXT:    vxorpd %zmm2, %zmm6, %zmm6
-; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
-; CHECK-NEXT:    vextractf32x4 $3, %zmm4, %xmm8
-; CHECK-NEXT:    vextractf32x4 $3, %zmm3, %xmm10
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm10 = (xmm7 * xmm10) + xmm8
-; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm8 = (xmm11 * xmm7) + xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm10[0],xmm8[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
-; CHECK-NEXT:    vextractf32x4 $2, %zmm4, %xmm10
-; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm11
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
-; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm10
-; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm11
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm6 = xmm6[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm4[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm3[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm6 * xmm11) + xmm10
-; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm3 = -(xmm9 * xmm3) + xmm4
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm3[0],xmm11[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm3, %ymm3
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm3, %zmm3
-; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm3
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm5, %ymm3
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm6
-; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
-; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm8
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm8[0],xmm7[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm6[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm6
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm9[0],xmm6[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm6, %ymm6
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm6, %zmm6
-; CHECK-NEXT:    vxorpd %zmm2, %zmm6, %zmm6
-; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
-; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm8
-; CHECK-NEXT:    vextractf32x4 $3, %zmm4, %xmm10
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm10 = (xmm7 * xmm10) + xmm8
-; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm8 = (xmm11 * xmm7) + xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm10[0],xmm8[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
-; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm10
-; CHECK-NEXT:    vextractf32x4 $2, %zmm4, %xmm11
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
-; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm10
-; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm11
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm6 = xmm6[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm5[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm4[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm6 * xmm11) + xmm10
-; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm4 = -(xmm9 * xmm4) + xmm5
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm4 = xmm4[0],xmm11[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm4, %ymm4
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm4, %zmm4
-; CHECK-NEXT:    vcvtpd2ph %zmm4, %xmm4
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm5
 ; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vdivpd %zmm5, %zmm6, %zmm7
-; CHECK-NEXT:    vextractf32x4 $3, %zmm7, %xmm8
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm7, %xmm9
+; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm8, %xmm7
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm9[0],xmm7[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm8, %xmm9
 ; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm10
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
 ; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm9
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm10[0],xmm9[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm9, %ymm8
-; CHECK-NEXT:    vextractf128 $1, %ymm7, %xmm9
-; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm10
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
-; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm9
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm10[0],xmm9[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm9, %ymm9
+; CHECK-NEXT:    vextractf128 $1, %ymm8, %xmm7
 ; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm10
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
 ; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm10[0],xmm7[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm9, %ymm7, %ymm7
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm8, %zmm7, %zmm7
-; CHECK-NEXT:    vxorpd %zmm2, %zmm7, %zmm2
-; CHECK-NEXT:    vextractf32x4 $3, %zmm2, %xmm7
-; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm8
-; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm9
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm9[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm9 = (xmm7 * xmm9) + xmm8
-; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm10[0],xmm7[0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm7
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm8 = (xmm11 * xmm7) + xmm8
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm9[0],xmm8[0]
-; CHECK-NEXT:    vextractf32x4 $2, %zmm2, %xmm8
-; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm9
-; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm11
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm7[0],xmm8[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm10, %ymm8, %ymm8
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm9, %zmm8, %zmm8
+; CHECK-NEXT:    vxorpd %zmm3, %zmm8, %zmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm8, %xmm9
+; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm9[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm11
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm9
+; CHECK-NEXT:    vextractf32x4 $3, %zmm4, %xmm13
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm14 = xmm13[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm14 = (xmm10 * xmm14) + xmm12
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm14 = xmm12 ^ (xmm2 & (xmm14 ^ xmm12))
+; CHECK-NEXT:    vextractf32x4 $2, %zmm8, %xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm12 = xmm10[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm15
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm15[1,0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm4, %xmm17
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm18 = xmm17[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm18 = (xmm12 * xmm18) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm18 = xmm16 ^ (xmm2 & (xmm18 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm14, %ymm18, %ymm12
+; CHECK-NEXT:    vextractf128 $1, %ymm8, %xmm14
+; CHECK-NEXT:    vshufps {{.*#+}} xmm16 = xmm14[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm5, %xmm18
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm18[1,0]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm4, %xmm20
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm21 = xmm20[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm21 = (xmm16 * xmm21) + xmm19
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm21 = xmm19 ^ (xmm2 & (xmm21 ^ xmm19))
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm5[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm4[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm19 = (xmm8 * xmm19) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm19 = xmm16 ^ (xmm2 & (xmm19 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm21, %ymm19, %ymm8
+; CHECK-NEXT:    vinserti64x4 $1, %ymm12, %zmm8, %zmm8
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm13 = (xmm9 * xmm13) + xmm11
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm13 = xmm11 ^ (xmm2 & (xmm13 ^ xmm11))
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm17 = (xmm10 * xmm17) + xmm15
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm17 = xmm15 ^ (xmm2 & (xmm17 ^ xmm15))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm13, %ymm17, %ymm9
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm20 = (xmm14 * xmm20) + xmm18
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm20 = xmm18 ^ (xmm2 & (xmm20 ^ xmm18))
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm4 = -(xmm7 * xmm4) + xmm5
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm4 = xmm5 ^ (xmm2 & (xmm4 ^ xmm5))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm20, %ymm4, %ymm4
+; CHECK-NEXT:    vinserti64x4 $1, %ymm9, %zmm4, %zmm4
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm4 = zmm4[0],zmm8[0],zmm4[2],zmm8[2],zmm4[4],zmm8[4],zmm4[6],zmm8[6]
+; CHECK-NEXT:    vcvtpd2ph %zmm4, %xmm4
+; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm6, %ymm4
+; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm5
+; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm6
+; CHECK-NEXT:    vdivpd %zmm5, %zmm6, %zmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm8, %xmm7
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm9[0],xmm7[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm8, %xmm9
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm10
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm9 = (xmm12 * xmm8) + xmm9
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm9[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
-; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm8
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm9
-; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm11
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm10[0],xmm9[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm9, %ymm9
+; CHECK-NEXT:    vextractf128 $1, %ymm8, %xmm7
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm10[0],xmm7[0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm7
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm7[0],xmm8[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm10, %ymm8, %ymm8
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm9, %zmm8, %zmm8
+; CHECK-NEXT:    vxorpd %zmm3, %zmm8, %zmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm8, %xmm9
+; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm9[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm11
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm9
+; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm13
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm14 = xmm13[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm14 = (xmm10 * xmm14) + xmm12
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm14 = xmm12 ^ (xmm2 & (xmm14 ^ xmm12))
+; CHECK-NEXT:    vextractf32x4 $2, %zmm8, %xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm12 = xmm10[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm15
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm15[1,0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm17
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm18 = xmm17[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm18 = (xmm12 * xmm18) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm18 = xmm16 ^ (xmm2 & (xmm18 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm14, %ymm18, %ymm12
+; CHECK-NEXT:    vextractf128 $1, %ymm8, %xmm14
+; CHECK-NEXT:    vshufps {{.*#+}} xmm16 = xmm14[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm6, %xmm18
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm18[1,0]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm5, %xmm20
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm21 = xmm20[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm21 = (xmm16 * xmm21) + xmm19
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm21 = xmm19 ^ (xmm2 & (xmm21 ^ xmm19))
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm6[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm5[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm19 = (xmm8 * xmm19) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm19 = xmm16 ^ (xmm2 & (xmm19 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm21, %ymm19, %ymm8
+; CHECK-NEXT:    vinserti64x4 $1, %ymm12, %zmm8, %zmm8
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm13 = (xmm9 * xmm13) + xmm11
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm13 = xmm11 ^ (xmm2 & (xmm13 ^ xmm11))
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm17 = (xmm10 * xmm17) + xmm15
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm17 = xmm15 ^ (xmm2 & (xmm17 ^ xmm15))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm13, %ymm17, %ymm9
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm20 = (xmm14 * xmm20) + xmm18
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm20 = xmm18 ^ (xmm2 & (xmm20 ^ xmm18))
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm5 = -(xmm7 * xmm5) + xmm6
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm5 = xmm6 ^ (xmm2 & (xmm5 ^ xmm6))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm20, %ymm5, %ymm5
+; CHECK-NEXT:    vinserti64x4 $1, %ymm9, %zmm5, %zmm5
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm5 = zmm5[0],zmm8[0],zmm5[2],zmm8[2],zmm5[4],zmm8[4],zmm5[6],zmm8[6]
+; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm5
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm6
+; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm7
+; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
+; CHECK-NEXT:    vdivpd %zmm6, %zmm7, %zmm9
+; CHECK-NEXT:    vextractf32x4 $3, %zmm9, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm10[0],xmm8[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm9, %xmm10
+; CHECK-NEXT:    vroundsd $11, %xmm10, %xmm10, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm10, %xmm10, %xmm10
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm11[0],xmm10[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm10, %ymm10
+; CHECK-NEXT:    vextractf128 $1, %ymm9, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm11 = xmm11[0],xmm8[0]
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm8
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm9 = (xmm12 * xmm8) + xmm9
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm9[0]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm6[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm5[1,0]
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm2 * xmm11) + xmm9
-; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm5 = -(xmm10 * xmm5) + xmm6
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm5[0],xmm11[0]
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm2, %zmm2
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm8[0],xmm9[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm11, %ymm9, %ymm9
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm10, %zmm9, %zmm9
+; CHECK-NEXT:    vxorpd %zmm3, %zmm9, %zmm3
+; CHECK-NEXT:    vextractf32x4 $3, %zmm3, %xmm9
+; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm9[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $3, %zmm7, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm13
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm14 = xmm13[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm14 = (xmm10 * xmm14) + xmm12
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm14 = xmm12 ^ (xmm2 & (xmm14 ^ xmm12))
+; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm12 = xmm10[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm7, %xmm15
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm15[1,0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm17
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm18 = xmm17[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm18 = (xmm12 * xmm18) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm18 = xmm16 ^ (xmm2 & (xmm18 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm14, %ymm18, %ymm12
+; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm14
+; CHECK-NEXT:    vshufps {{.*#+}} xmm16 = xmm14[2,3,0,1]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm7, %xmm18
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm18[1,0]
+; CHECK-NEXT:    vextractf32x4 $1, %ymm6, %xmm20
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm21 = xmm20[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm21 = (xmm16 * xmm21) + xmm19
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm21 = xmm19 ^ (xmm2 & (xmm21 ^ xmm19))
+; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm16 = xmm7[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm19 = xmm6[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm19 = (xmm3 * xmm19) + xmm16
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm19 = xmm16 ^ (xmm2 & (xmm19 ^ xmm16))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm21, %ymm19, %ymm3
+; CHECK-NEXT:    vinserti64x4 $1, %ymm12, %zmm3, %zmm3
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm13 = (xmm9 * xmm13) + xmm11
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm13 = xmm11 ^ (xmm2 & (xmm13 ^ xmm11))
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm17 = (xmm10 * xmm17) + xmm15
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm17 = xmm15 ^ (xmm2 & (xmm17 ^ xmm15))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm13, %ymm17, %ymm9
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm20 = (xmm14 * xmm20) + xmm18
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm20 = xmm18 ^ (xmm2 & (xmm20 ^ xmm18))
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm6 = -(xmm8 * xmm6) + xmm7
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm6 = xmm7 ^ (xmm2 & (xmm6 ^ xmm7))
+; CHECK-NEXT:    vinserti32x4 $1, %xmm20, %ymm6, %ymm2
+; CHECK-NEXT:    vinserti64x4 $1, %ymm9, %zmm2, %zmm2
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm2 = zmm2[0],zmm3[0],zmm2[2],zmm3[2],zmm2[4],zmm3[4],zmm2[6],zmm3[6]
 ; CHECK-NEXT:    vcvtpd2ph %zmm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
-; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm5, %ymm2
+; CHECK-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
 ; CHECK-NEXT:    vfpclassph $153, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0) | isSignalingNaN(zmm0)
 ; CHECK-NEXT:    knotd %k0, %k1
 ; CHECK-NEXT:    vfpclassph $24, %zmm1, %k1 {%k1} # k1 {%k1} = isPositiveInfinity(zmm1) | isNegativeInfinity(zmm1)
