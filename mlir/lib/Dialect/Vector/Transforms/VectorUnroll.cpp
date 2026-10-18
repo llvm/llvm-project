@@ -290,6 +290,9 @@ struct UnrollContractionPattern
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
+    if (!isa<VectorType>(contractOp.getResultType()))
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "scalar result not supported");
     auto targetShape = getTargetShape(options, contractOp);
     if (!targetShape)
       return failure();

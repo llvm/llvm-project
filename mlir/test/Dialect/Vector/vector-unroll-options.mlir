@@ -935,3 +935,20 @@ func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf3
 // CHECK-LABEL: func @masked_vector_multi_reduction
 //  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.multi_reduction <add>, {{.*}} : vector<4x6xf32> to vector<4xf32> }
 //  CHECK-NEXT:   return %[[R]]
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+#map0 = affine_map<(d0) -> ()>
+
+func.func @vector_contract_to_scalar(%a: vector<4xf32>, %b: vector<4xf32>, %acc: f32) -> f32 {
+  %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4xf32>, vector<4xf32> into f32
+  return %r : f32
+}
+
+// CHECK-LABEL: func @vector_contract_to_scalar(
+// CHECK-SAME:    %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[ACC:.*]]: f32) -> f32 {
+// CHECK-NOT:     vector.extract_strided_slice
+// CHECK:         %[[R:.*]] = vector.contract
+// CHECK-SAME:      %[[A]], %[[B]], %[[ACC]] : vector<4xf32>, vector<4xf32> into f32
+// CHECK:         return %[[R]] : f32
