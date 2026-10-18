@@ -2969,11 +2969,6 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
 
-  // We need to clear kill flags since we may be extending the live range past
-  // a kill.
-  MRI.clearKillFlags(Mul1.getReg());
-  MRI.clearKillFlags(Mul2.getReg());
-
   MachineInstrBuilder MIB = BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
                                 .addReg(Mul1.getReg())
                                 .addReg(Mul2.getReg())
