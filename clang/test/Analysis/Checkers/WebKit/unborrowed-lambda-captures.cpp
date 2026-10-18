@@ -10,25 +10,48 @@ namespace loan_shapes {
 void init_capture_computing_a_loan() {
   Vector<char> vec;
   callEscaping([q = vec.data()] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
 
 void reference_to_an_element() {
   Vector<char> vec;
   callEscaping([&c = vec[0]] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
 
 void loan_on_a_parameter(Vector<char> &parameter) {
   callEscaping([q = parameter.data()] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
 
 void loan_on_a_nested_container() {
   Vector<Vector<char>> outer;
   callEscaping([&inner = outer[0]] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'inner' is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'inner' is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
+
+void loan_on_a_const_local() {
+  const Vector<char> vec;
+  callEscaping([q = vec.data()] { someFunction(); });
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+}
+
+void loan_through_a_const_local_wrapper() {
+  const std::optional<Vector<char>> opt;
+  callEscaping([q = opt->data()] { someFunction(); });
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+}
+
+class ConstMemberHolder {
+public:
+  void loan_on_a_const_member() {
+    callEscaping([q = m_vec.data()] { someFunction(); });
+    // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  }
+
+private:
+  const Vector<char> m_vec;
+};
 
 } // namespace loan_shapes
 
@@ -38,20 +61,20 @@ void loan_through_a_borrow() {
   Vector<char> vec;
   Borrow<Vector<char>> b(vec);
   callEscaping([q = b.get().data()] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
 
 void element_through_a_borrow() {
   Vector<char> vec;
   Borrow<Vector<char>> b(vec);
   callEscaping([&c = b.get()[0]] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
 
 void loan_through_a_borrow_temporary() {
   Vector<char> vec;
   callEscaping([q = borrow(vec).get().data()] { someFunction(); });
-  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLambdaCapturesChecker]}}
 }
 
 void capture_of_the_borrow_by_reference() {
@@ -165,7 +188,7 @@ void alongside_a_loan(unsigned n) {
   Vector<char> vec;
   typedef char VLA[n];
   callEscaping([q = vec.data()] { someFunction(); use(q); (void)sizeof(VLA); });
-  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Captured variable 'q' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void alone(unsigned n) {

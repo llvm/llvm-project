@@ -14,7 +14,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_DUP [[COPY]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_SPLAT_VECTOR [[COPY]](i32)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i32) = COPY $w0
@@ -39,7 +39,7 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_DUP [[COPY]](i64)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_SPLAT_VECTOR [[COPY]](i64)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i64) = COPY $x0
@@ -64,7 +64,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i32>) = G_DUP [[COPY]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i32>) = G_SPLAT_VECTOR [[COPY]](i32)
     ; CHECK-NEXT: $d0 = COPY [[DUP]](<2 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(i32) = COPY $w0
@@ -89,7 +89,7 @@ body:             |
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $s0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_DUP [[COPY]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_SPLAT_VECTOR [[COPY]](i32)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i32) = COPY $s0
@@ -114,7 +114,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $d0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_DUP [[COPY]](i64)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_SPLAT_VECTOR [[COPY]](i64)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i64) = COPY $d0
@@ -139,7 +139,7 @@ body:             |
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $s0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i32>) = G_DUP [[COPY]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i32>) = G_SPLAT_VECTOR [[COPY]](i32)
     ; CHECK-NEXT: $d0 = COPY [[DUP]](<2 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(i32) = COPY $s0
@@ -166,7 +166,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $d0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_DUP [[COPY]](i64)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_SPLAT_VECTOR [[COPY]](i64)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i64) = COPY $d0
@@ -218,12 +218,12 @@ body:             |
     liveins: $x0
     ; If all the elements are undefined, we consider it a splat. In this case,
     ; we can choose 0 as our index.
-    ; We should get a G_DUP here.
+    ; We should get a G_SPLAT_VECTOR here.
     ; CHECK-LABEL: name: all_undef
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_DUP [[COPY]](i64)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<2 x i64>) = G_SPLAT_VECTOR [[COPY]](i64)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i64) = COPY $x0
@@ -244,12 +244,12 @@ body:             |
   bb.1.entry:
     liveins: $s0
     ; Make sure we can skip past undef values.
-    ; We should get a G_DUP here.
+    ; We should get a G_SPLAT_VECTOR here.
     ; CHECK-LABEL: name: one_undef
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $s0
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_DUP [[COPY]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_SPLAT_VECTOR [[COPY]](i32)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(i32) = COPY $s0
@@ -300,7 +300,7 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(i16) = COPY $h0
-    ; CHECK-NEXT: %splat:_(<4 x i16>) = G_DUP %copy(i16)
+    ; CHECK-NEXT: %splat:_(<4 x i16>) = G_SPLAT_VECTOR %copy(i16)
     ; CHECK-NEXT: $d0 = COPY %splat(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:_(i16) = COPY $h0
@@ -324,7 +324,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(i32) = COPY $w0
-    ; CHECK-NEXT: %splat:_(<8 x i8>) = G_DUP %copy(i32)
+    ; CHECK-NEXT: %splat:_(<8 x i8>) = G_SPLAT_VECTOR %copy(i32)
     ; CHECK-NEXT: $d0 = COPY %splat(<8 x i8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:_(i32) = COPY $w0
@@ -345,7 +345,7 @@ body:             |
   bb.1.entry:
     liveins: $w0, $w1, $w2, $w3
     ; The G_SHUFFLE_VECTOR is fed by a G_BUILD_VECTOR, and the 0th input
-    ; operand is not a constant. We should get a G_DUP.
+    ; operand is not a constant. We should get a G_SPLAT_VECTOR.
     ; CHECK-LABEL: name: build_vector
     ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
@@ -387,7 +387,7 @@ body:             |
   bb.1.entry:
     liveins: $w0, $w1, $w2, $w3, $w4
     ; The G_SHUFFLE_VECTOR is fed by a G_BUILD_VECTOR, and the 0th input
-    ; operand is not a constant. We should get a G_DUP.
+    ; operand is not a constant. We should get a G_SPLAT_VECTOR.
     ; CHECK-LABEL: name: build_vector_rhs
     ; CHECK: liveins: $w0, $w1, $w2, $w3, $w4
     ; CHECK-NEXT: {{  $}}

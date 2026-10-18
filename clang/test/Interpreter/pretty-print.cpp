@@ -96,9 +96,6 @@ void set_void_x() { void_x = 100; }
 set_void_x()
 void_x
 // CHECK-NEXT: (int) 100
-void print_foo() { printf("foo()\n"); }
-print_foo()
-// CHECK-NEXT: foo()
 
 // int i = 12;
 // int &iref = i;

@@ -1474,3 +1474,81 @@ entry:
   %s = xor <4 x i128> %d, %e
   ret <4 x i128> %s
 }
+
+; Propagate demanded bits from the LHS to simplify the RHS.
+
+define i32 @and_hidden_bits_rhs(i32 %x, i32 %y) {
+; CHECK-SD-LABEL: and_hidden_bits_rhs:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    and w0, w0, w1, lsr #24
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_hidden_bits_rhs:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    orr w8, w0, #0xff00
+; CHECK-GI-NEXT:    and w0, w8, w1, lsr #24
+; CHECK-GI-NEXT:    ret
+  %bounded = lshr i32 %y, 24
+  %inner = or i32 %x, 65280
+  %result = and i32 %bounded, %inner
+  ret i32 %result
+}
+
+define i32 @or_hidden_bits_rhs(i32 %x, i32 %y) {
+; CHECK-SD-LABEL: or_hidden_bits_rhs:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    orn w0, w0, w1, lsr #24
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_hidden_bits_rhs:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and w8, w0, #0xff
+; CHECK-GI-NEXT:    orn w0, w8, w1, lsr #24
+; CHECK-GI-NEXT:    ret
+  %shift = lshr i32 %y, 24
+  %bounded = xor i32 %shift, -1
+  %inner = and i32 %x, 255
+  %result = or i32 %bounded, %inner
+  ret i32 %result
+}
+
+define <4 x i32> @and_hidden_bits_rhs_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-SD-LABEL: and_hidden_bits_rhs_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_hidden_bits_rhs_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0x00ff000000ff00
+; CHECK-GI-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
+  %bounded = lshr <4 x i32> %y, <i32 24, i32 24, i32 24, i32 24>
+  %inner = or <4 x i32> %x, <i32 65280, i32 65280, i32 65280, i32 65280>
+  %result = and <4 x i32> %bounded, %inner
+  ret <4 x i32> %result
+}
+
+define <4 x i32> @or_hidden_bits_rhs_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-SD-LABEL: or_hidden_bits_rhs_v4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_hidden_bits_rhs_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    ushr v1.4s, v1.4s, #24
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %shift = lshr <4 x i32> %y, <i32 24, i32 24, i32 24, i32 24>
+  %bounded = xor <4 x i32> %shift, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %inner = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
+  %result = or <4 x i32> %bounded, %inner
+  ret <4 x i32> %result
+}

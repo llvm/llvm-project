@@ -24,31 +24,31 @@ subroutine test()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMmPfsum()
-! CHECK: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "res", data_attr = #cuf.cuda<managed>
+! CHECK: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {{.*}}bindc_name("res") data_attr(managed)
 ! CHECK: hlfir.declare %[[RES]]
 ! CHECK: %[[LOAD:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]]
 ! CHECK: fir.store %[[REBOX]] to %[[TMP:.*]]
 ! CHECK: %[[RET:.*]] = fir.load %[[TMP]]
 ! CHECK: fir.if
-! CHECK: cuf.free %{{.*}} : {{.*}} {data_attr = #cuf.cuda<managed>}
+! CHECK: cuf.free %{{.*}} : {{.*}} data_attr(managed)
 ! CHECK: return %[[RET]]
 
 ! CHECK-LABEL: func.func @_QPtest()
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
-! CHECK: hlfir.declare %[[RES]] {uniq_name = ".tmp.func_result"}
+! CHECK: hlfir.declare %[[RES]] uniq_name(".tmp.func_result")
 ! CHECK: fir.call @_QMmPfsum()
 ! CHECK: fir.if
-! CHECK: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}}<managed>
-! CHECK: cuf.free %{{.*}} : !fir.ref<!fir.array<4xi32>> {data_attr = #cuf.cuda<managed>}
+! CHECK: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr(managed)
+! CHECK: cuf.free %{{.*}} : !fir.ref<!fir.array<4xi32>> data_attr(managed)
 
 ! After abstract-result, the hidden result argument is written from the spilled
 ! box and only then is the CUDA descriptor freed.
 ! AR-LABEL: func.func @_QMmPfsum(
 ! AR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! AR: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "res", data_attr = #cuf.cuda<managed>
+! AR: %[[RES:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {{.*}}bindc_name("res") data_attr(managed)
 ! AR: fir.store %{{.*}} to %[[ARG0]]
 ! AR-NOT:  cuf.free %[[ARG0]]
-! AR:      cuf.free %{{.*}} {data_attr = #cuf.cuda<managed>}
+! AR:      cuf.free %{{.*}} data_attr(managed)
 ! AR-NEXT: }
 ! AR-NEXT: return  

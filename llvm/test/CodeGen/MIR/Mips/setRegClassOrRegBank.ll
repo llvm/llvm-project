@@ -12,9 +12,9 @@ declare <4 x i32> @llvm.mips.addvi.w(<4 x i32>, i32 immarg)
 define void @add_v4i32_builtin_imm(ptr %a, ptr %c) {
   ; P5600-LABEL: name: add_v4i32_builtin_imm
   ; P5600: bb.1.entry:
-  ; P5600:   liveins: $a0, $a1
-  ; P5600:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-  ; P5600:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
+  ; P5600:   liveins: $r4, $r5
+  ; P5600:   [[COPY:%[0-9]+]]:_(p0) = COPY $r4
+  ; P5600:   [[COPY1:%[0-9]+]]:_(p0) = COPY $r5
   ; P5600:   [[LOAD:%[0-9]+]]:msa128w(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>) from %ir.a)
   ; P5600:   [[ADDVI_W:%[0-9]+]]:msa128w(<4 x s32>) = ADDVI_W [[LOAD]](<4 x s32>), 25
   ; P5600:   G_STORE [[ADDVI_W]](<4 x s32>), [[COPY1]](p0) :: (store (<4 x s32>) into %ir.c)

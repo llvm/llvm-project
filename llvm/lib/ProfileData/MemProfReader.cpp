@@ -625,7 +625,13 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
            I++) {
         const auto &DIFrame = DI.getFrame(I);
         const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
-        const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
+        // Compiler generated code, e.g. the forwarding call in a C++
+        // non-virtual thunk, has line 0. Record such frames with offset 0
+        // (matching the compiler side) instead of a wrapped around value.
+        const uint32_t LineOffset = DIFrame.Line >= DIFrame.StartLine
+                                        ? DIFrame.Line - DIFrame.StartLine
+                                        : 0;
+        const Frame F(Guid, LineOffset, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
         // Here we retain a mapping from the GUID to canonical symbol name

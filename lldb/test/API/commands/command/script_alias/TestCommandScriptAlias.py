@@ -4,12 +4,14 @@ Test lldb Python commands.
 
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
 class CommandScriptAliasTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(remote=True, bugnumber="github.com/llvm/llvm-project/issues/232431")
     def test_pycmd(self):
         self.runCmd("command script import tcsacmd.py")
         self.runCmd("command script add -f tcsacmd.some_command_here attach")

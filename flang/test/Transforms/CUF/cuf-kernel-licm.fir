@@ -8,15 +8,15 @@
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
-// CHECK:           %[[ALLOC_0:.*]] = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {data_attr = #cuf.cuda<device>} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK:           %[[ALLOC_0:.*]] = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> data_attr(device) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFtestEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
 // CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtestEi"}>
-// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ALLOCA_0]] uniq_name("_QFtestEi") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[ALLOCA_1:.*]] = fir.alloca i64 <{bindc_name = "pa", uniq_name = "_QFtestEpa"}>
-// CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_1]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFtestEpa"} : (!fir.ref<i64>) -> !fir.ref<i64>
-// CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ALLOC_0]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtestEra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[ALLOCA_1]] uniq_name("_QFtestEpa") fortran_attrs<cray_pointer> : (!fir.ref<i64>) -> !fir.ref<i64>
+// CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ALLOC_0]] uniq_name("_QFtestEra") fortran_attrs<pointer, cray_pointee> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
 // CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ZERO_BITS_0]](%[[SHAPE_0]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 // CHECK:           fir.store %[[EMBOX_0]] to %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -46,15 +46,15 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {cuf.data_attr = #cuf.cud
   %cst = arith.constant 1.000000e+00 : f32
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {data_attr = #cuf.cuda<device>} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> data_attr(device) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   %1 = fir.dummy_scope : !fir.dscope
   %2 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %3 = fir.declare %arg0(%2) dummy_scope %1 arg 1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
+  %3 = fir.declare %arg0(%2) dummy_scope %1 arg 1 uniq_name("_QFtestEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<10xf32>>
   %4 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtestEi"}
-  %5 = fir.declare %4 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.declare %4 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   %6 = fir.alloca i64 {bindc_name = "pa", uniq_name = "_QFtestEpa"}
-  %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFtestEpa"} : (!fir.ref<i64>) -> !fir.ref<i64>
-  %8 = fir.declare %0 {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtestEra"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  %7 = fir.declare %6 uniq_name("_QFtestEpa") fortran_attrs<cray_pointer> : (!fir.ref<i64>) -> !fir.ref<i64>
+  %8 = fir.declare %0 uniq_name("_QFtestEra") fortran_attrs<pointer, cray_pointee> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   %9 = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
   %10 = fir.embox %9(%2) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   fir.store %10 to %8 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -128,10 +128,10 @@ func.func @_QQmain() {
   %c6_i32 = arith.constant 6 : i32
   %c1 = arith.constant 1 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = cuf.alloc i32 {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<i32>
-  %2 = fir.declare %1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = cuf.alloc i32 uniq_name("_QFEa") bindc_name("a") data_attr(device) -> !fir.ref<i32>
+  %2 = fir.declare %1 uniq_name("_QFEa") data_attr(#cuf.cuda<device>) : (!fir.ref<i32>) -> !fir.ref<i32>
   %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-  %4 = fir.declare %3 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %3 uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   cuf.kernel<<<*, *>>> (%arg0 : index) = (%c1 : index) to (%c100 : index)  step (%c1 : index) {
     %5 = fir.convert %arg0 : (index) -> i32
     fir.store %5 to %4 : !fir.ref<i32>

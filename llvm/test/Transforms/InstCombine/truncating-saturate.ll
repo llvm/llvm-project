@@ -247,7 +247,7 @@ define i8 @testi32i8(i32 %add) {
   ret i8 %cond.i
 }
 
-define i16 @differentconsts(i32 %x, i16 %replacement_low, i16 %replacement_high) {
+define i16 @differentconsts(i32 %x, i16 %replacement_low, i16 %replacement_high) !prof !0 {
 ; CHECK-LABEL: @differentconsts(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], -16
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 127
@@ -257,11 +257,11 @@ define i16 @differentconsts(i32 %x, i16 %replacement_low, i16 %replacement_high)
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %t0 = icmp slt i32 %x, 128
-  %t1 = select i1 %t0, i16 256, i16 65535
+  %t1 = select i1 %t0, i16 256, i16 65535, !prof !1
   %t2 = add i32 %x, 16
   %t3 = icmp ult i32 %t2, 144
   %t4 = trunc i32 %x to i16
-  %r = select i1 %t3, i16 %t4, i16 %t1
+  %r = select i1 %t3, i16 %t4, i16 %t1, !prof !2
   ret i16 %r
 }
 
@@ -936,3 +936,7 @@ define i8 @trunc_zext_i1(i32 %x) {
   %r = select i1 %lt, i8 %t, i8 %z
   ret i8 %r
 }
+
+!0 = !{!"function_entry_count", i32 10 }
+!1 = !{!"branch_weights", i32 2, i32 3 }
+!2 = !{!"branch_weights", i32 5, i32 7 }

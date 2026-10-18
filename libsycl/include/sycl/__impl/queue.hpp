@@ -19,6 +19,7 @@
 #include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/handler.hpp>
 #include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/property_list.hpp>
@@ -29,7 +30,13 @@
 #include <sycl/__impl/detail/kernel_submission.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
-#include <sycl/__impl/exception.hpp>
+
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -60,7 +67,6 @@ private:
 public:
   static constexpr bool value = type::value;
 };
-} // namespace detail
 
 class TypelessCGF {
 public:
@@ -69,8 +75,8 @@ public:
       // NOTE: Even if `F` is a pointer to a function, `&F` is a pointer to a
       // pointer to a function and as such can be cast to `void *` (pointer to
       // a function cannot be cast).
-      : Object(static_cast<const void *>(&F)),
-        InvokerF(&Invoker<std::remove_reference_t<T>>::call) {}
+      : MObject(static_cast<const void *>(&F)),
+        MInvokerF(&Invoker<std::remove_reference_t<T>>::call) {}
   ~TypelessCGF() = default;
 
   TypelessCGF(const TypelessCGF &) = delete;
@@ -78,7 +84,7 @@ public:
   TypelessCGF &operator=(const TypelessCGF &) = delete;
   TypelessCGF &operator=(TypelessCGF &&) = delete;
 
-  void operator()(handler &CGH) const { InvokerF(Object, CGH); }
+  void operator()(handler &CGH) const { MInvokerF(MObject, CGH); }
 
 private:
   // SYCL 2020 command group function object is a type that is callable with
@@ -90,10 +96,12 @@ private:
       (*const_cast<T *>(static_cast<const T *>(Object)))(CGH);
     }
   };
-  const void *Object;
+  const void *MObject;
   using InvokerTy = void (*)(const void *, handler &);
-  const InvokerTy InvokerF;
+  const InvokerTy MInvokerF;
 };
+
+} // namespace detail
 
 // SYCL 2020 4.6.5. Queue class.
 class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue> {
@@ -629,7 +637,7 @@ public:
   /// \param ptr is a USM pointer to the memory to be prefetched to the device.
   /// \param numBytes is a number of bytes to be prefetched.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes) {
+  event prefetch(const void *ptr, std::size_t numBytes) {
     return prefetch(ptr, numBytes, std::vector<event>{});
   }
 
@@ -641,7 +649,7 @@ public:
   /// \param numBytes is a number of bytes to be prefetched.
   /// \param depEvent is an event that specifies the kernel dependencies.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes, event depEvent) {
+  event prefetch(const void *ptr, std::size_t numBytes, event depEvent) {
     return prefetch(ptr, numBytes, std::vector<event>{depEvent});
   }
 
@@ -654,7 +662,7 @@ public:
   /// \param depEvents is a vector of events that specify the kernel
   /// dependencies.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes,
+  event prefetch(const void *ptr, std::size_t numBytes,
                  const std::vector<event> &depEvents);
 
 private:
@@ -681,7 +689,7 @@ private:
   /// \param ArgData a pointer to the kernel argument.
   /// \param ArgSize the size of the kernel argument.
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
-                        size_t ArgSize);
+                        std::size_t ArgSize);
 
   /// \return an event representing last kernel invocation.
   event getLastEvent();
@@ -699,7 +707,7 @@ private:
   event fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
                  std::size_t Count, const std::vector<event> &DepEvents);
 
-  event submitWithHandler(const TypelessCGF &CGF);
+  event submitWithHandler(const detail::TypelessCGF &CGF);
 
   queue(const std::shared_ptr<detail::QueueImpl> &Impl) : impl(Impl) {}
   std::shared_ptr<detail::QueueImpl> impl;

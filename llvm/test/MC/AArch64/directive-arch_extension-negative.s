@@ -250,3 +250,15 @@ fmmla v2.8h, v1.16b, v0.16b
 fmmla v2.4s, v1.16b, v0.16b
 // CHECK: [[@LINE-1]]:1: error: instruction requires: f8f32mm
 // CHECK-NEXT: fmmla v2.4s, v1.16b, v0.16b
+
+.arch_extension cflt
+.arch_extension nocflt
+cfltz #1, w0
+// CHECK: [[@LINE-1]]:1: error: instruction requires: cflt
+// CHECK-NEXT: cfltz #1, w0
+
+.arch_extension lsc64b
+.arch_extension nolsc64b
+lda64b x0, [x13]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: ls64 lsc64b
+// CHECK-NEXT: lda64b x0, [x13]

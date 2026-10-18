@@ -44,6 +44,28 @@ def CIR_OpenCLKernelArgMetadataAttr
 }
 
 //===----------------------------------------------------------------------===//
+// MaxWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MaxWorkGroupSizeAttr
+    : CIR_Attr<"MaxWorkGroupSize", "max_work_group_size"> {
+  let summary = "Maximum kernel work-group size";
+  let description = [{
+    Stores the maximum work-group size of a kernel, emitted to LLVM IR as
+    `max_work_group_size` function metadata.
+  }];
+
+  let parameters = (ins
+    "uint32_t":$x,
+    "uint32_t":$y,
+    "uint32_t":$z
+  );
+
+  let assemblyFormat = "`<` $x `,` $y `,` $z `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenCLVersionAttr
 //===----------------------------------------------------------------------===//
 

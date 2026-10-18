@@ -204,6 +204,9 @@ public:
 
   std::string ModuleMapPath;
 
+  /// Directories this module file depends on the listing of.
+  std::vector<std::string> DirectoryDependencies;
+
   /// Whether this precompiled header is a relocatable PCH file.
   bool RelocatablePCH = false;
 
