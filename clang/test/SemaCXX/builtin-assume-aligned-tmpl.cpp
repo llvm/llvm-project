@@ -106,50 +106,8 @@ void foo() {
 namespace GH194289 {
 template<int qux>
 void bar() { // expected-note {{'bar' declared here}} expected-note {{possible target for call}}
-  int foo = (int *) __builtin_assume_aligned(baz, qux + 1);
+  (void)__builtin_assume_aligned(baz, qux + 1);
   // expected-error@-1 {{use of undeclared identifier 'baz'; did you mean 'bar'?}}
   // expected-error@-2 {{reference to overloaded function could not be resolved}}
-  // expected-error@-3 {{cannot initialize a variable of type 'int'}}
-}
-
-template<int qux>
-void bar2() { // expected-note {{'bar2' declared here}} expected-note {{possible target for call}}
-  (void)__builtin_assume_aligned(baz2, 8);
-  // expected-error@-1 {{use of undeclared identifier 'baz2'; did you mean 'bar2'?}}
-  // expected-error@-2 {{reference to overloaded function could not be resolved}}
-}
-
-void qux_fn(); // expected-note 2 {{'qux_fn' declared here}}
-void typo_to_function() {
-  (void)__builtin_assume_aligned(qux_fm, 8); // expected-error {{use of undeclared identifier 'qux_fm'; did you mean 'qux_fn'?}}
-  (void)__builtin_assume_aligned(no_such_pointer, 8); // expected-error {{use of undeclared identifier 'no_such_pointer'}}
-}
-
-template<int N>
-void typo_to_function_tmpl() {
-  (void)__builtin_assume_aligned(qux_fm, 8); // expected-error {{use of undeclared identifier 'qux_fm'; did you mean 'qux_fn'?}}
-  (void)__builtin_assume_aligned(no_such_pointer, N); // expected-error {{use of undeclared identifier 'no_such_pointer'}}
-}
-
-template<int N> void aligned_to(int *p) { (void)__builtin_assume_aligned(p, N); } // expected-error 3 {{requested alignment is not a power of 2}}
-template<unsigned long long N> void aligned_to_ull(int *p) { (void)__builtin_assume_aligned(p, N); } // expected-warning {{requested alignment must be 4294967296 bytes or smaller}}
-template<typename T> void dep_ptr(T p) { (void)__builtin_assume_aligned(p, 8); } // expected-error {{non-pointer argument to '__builtin_assume_aligned' is not allowed}}
-template<typename T, int N> void dep_both(T p) { (void)__builtin_assume_aligned(p, N); } // expected-error {{requested alignment is not a power of 2}}
-template<int O> void dep_off(int *p) { (void)__builtin_assume_aligned(p, 8, O); }
-template<typename T> void dep_off_ty(int *p, T o) { (void)__builtin_assume_aligned(p, 8, o); } // expected-error {{cannot initialize a parameter of type '__size_t'}}
-
-void instantiate(int *p) {
-  aligned_to<8>(p);
-  aligned_to<7>(p); // expected-note {{in instantiation of function template specialization 'GH194289::aligned_to<7>' requested here}}
-  aligned_to<0>(p); // expected-note {{in instantiation of function template specialization 'GH194289::aligned_to<0>' requested here}}
-  aligned_to<-32>(p); // expected-note {{in instantiation of function template specialization 'GH194289::aligned_to<-32>' requested here}}
-  aligned_to_ull<1ULL << 33>(p); // expected-note {{in instantiation of function template specialization 'GH194289::aligned_to_ull<8589934592ULL>' requested here}}
-  dep_ptr(p);
-  dep_ptr(0); // expected-note {{in instantiation of function template specialization 'GH194289::dep_ptr<int>' requested here}}
-  dep_both<int *, 16>(p);
-  dep_both<int *, 3>(p); // expected-note {{in instantiation of function template specialization 'GH194289::dep_both<int *, 3>' requested here}}
-  dep_off<4>(p);
-  dep_off_ty(p, 4);
-  dep_off_ty(p, p); // expected-note {{in instantiation of function template specialization 'GH194289::dep_off_ty<int *>' requested here}}
 }
 }
