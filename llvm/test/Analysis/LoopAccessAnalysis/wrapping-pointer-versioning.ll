@@ -175,13 +175,9 @@ define void @f3(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
 ; CHECK-NEXT:      {%a,+,4}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
-; CHECK-NEXT:        ((2 * (sext i32 {0,+,2}<%for.body> to i64))<nsw> + %a)
-; CHECK-NEXT:        --> {%a,+,4}<%for.body>
 ;
 entry:
   br label %for.body
