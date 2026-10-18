@@ -22,7 +22,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
-#include "tanpi_utils.h"
+#include "src/__support/math/tanpi_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {

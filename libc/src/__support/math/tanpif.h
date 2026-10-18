@@ -18,7 +18,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "tanpi_utils.h"
+#include "src/__support/math/tanpi_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
