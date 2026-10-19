@@ -1845,6 +1845,156 @@ VoidTask await_in_if_with_dtor(bool b) {
 // OGCG: coro.cleanup:
 // OGCG:   call ptr @llvm.coro.free(
 
+folly::coro::Task<int> co_return_in_loop(int n) {
+  HasDtor outer;
+  for (int i = 0; i < n; ++i) {
+    HasDtor inner;
+    if (i == 3)
+      co_return i;
+    co_await std::suspend_always();
+  }
+  co_return -1;
+}
+
+// CIR: cir.func coroutine {{.*}} @_Z17co_return_in_loopi
+// CIR: }, body : {
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.for : cond {
+// CIR:     } body {
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.if %{{.*}} {
+// CIR:           cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi
+// CIR-NEXT:      cir.co_return
+// CIR:         cir.await(user, ready : {
+// CIR:       } cleanup normal {
+// CIR-NEXT:    cir.call @_ZN7HasDtorD1Ev
+// CIR:     } step {
+// CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi
+// CIR-NEXT:  cir.co_return
+// CIR:   } cleanup normal {
+// CIR-NEXT:  cir.call @_ZN7HasDtorD1Ev
+// CIR: }, finalSuspend : {
+
+// CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z17co_return_in_loopi(
+// CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
+// CIR-FLAT:   %[[PROMISE:.*]] = cir.alloca "__promise"
+// CIR-FLAT:   %[[OUTER:.*]] = cir.alloca "outer"
+// CIR-FLAT:   %[[I:.*]] = cir.alloca "i"
+// CIR-FLAT:   %[[LT:.*]] = cir.cmp lt
+// CIR-FLAT-NEXT:   cir.brcond %[[LT]] ^{{.*}}, ^[[LOOP_EXIT:bb[0-9]+]]
+// CIR-FLAT:   %[[INNER:.*]] = cir.alloca "inner"
+// CIR-FLAT:   %[[EQ:.*]] = cir.cmp eq
+// CIR-FLAT-NEXT:   cir.brcond %[[EQ]] ^[[IF_THEN:bb[0-9]+]], ^{{.*}}
+
+// co_return i: slot 1 for the inner cleanup scope.
+// CIR-FLAT: ^[[IF_THEN]]:
+// CIR-FLAT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %{{.*}})
+// CIR-FLAT-NEXT:   %[[RET_IN:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[RET_IN]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[INNER_DTOR:bb[0-9]+]]
+
+// The user await: destroy uses slot 2, resume slot 0.
+// CIR-FLAT:   %[[RES:.*]] = cir.coro.intrinsic.suspend
+// CIR-FLAT:   cir.switch.flat %[[RES]] : !s8i, ^{{.*}} [
+// CIR-FLAT-NEXT:     0: ^[[USER_RESUME:bb[0-9]+]],
+// CIR-FLAT-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
+// CIR-FLAT-NEXT:   ]
+// CIR-FLAT: ^[[USER_DESTROY]]:
+// CIR-FLAT-NEXT:   %[[DESTROY_IN:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[DESTROY_IN]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[INNER_DTOR]]
+// CIR-FLAT: ^[[USER_RESUME]]:
+// CIR-FLAT-NEXT:   cir.call @_ZNSt14suspend_always12await_resumeEv
+// CIR-FLAT:   %[[NORMAL_IN:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[NORMAL_IN]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[INNER_DTOR]]
+
+// ~inner, then dispatch: 0 continues the loop, 1 (co_return) and
+// 2 (destroy) leave it through ~outer.
+// CIR-FLAT: ^[[INNER_DTOR]]:
+// CIR-FLAT-NEXT:   cir.call @_ZN7HasDtorD1Ev(%[[INNER]])
+// CIR-FLAT-NEXT:   cir.br ^[[INNER_EXIT:bb[0-9]+]]
+// CIR-FLAT: ^[[INNER_EXIT]]:
+// CIR-FLAT-NEXT:   %[[DEST_IN:.*]] = cir.load %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.switch.flat %[[DEST_IN]] : !s32i, ^{{.*}} [
+// CIR-FLAT-NEXT:     0: ^{{.*}},
+// CIR-FLAT-NEXT:     1: ^[[INNER_TO_RET:bb[0-9]+]],
+// CIR-FLAT-NEXT:     2: ^[[INNER_TO_DESTROY:bb[0-9]+]]
+// CIR-FLAT-NEXT:   ]
+// CIR-FLAT: ^[[INNER_TO_RET]]:
+// CIR-FLAT-NEXT:   %[[RET_OUT:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[RET_OUT]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[OUTER_DTOR:bb[0-9]+]]
+// CIR-FLAT: ^[[INNER_TO_DESTROY]]:
+// CIR-FLAT-NEXT:   %[[DESTROY_OUT:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[DESTROY_OUT]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[OUTER_DTOR]]
+
+// CIR-FLAT:   %[[I_VAL:.*]] = cir.load {{.*}}%[[I]]
+// CIR-FLAT-NEXT:   cir.inc nsw %[[I_VAL]]
+// CIR-FLAT: ^[[LOOP_EXIT]]:
+// CIR-FLAT:   %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[MINUS_ONE]])
+// CIR-FLAT-NEXT:   %[[RET2_OUT:.*]] = cir.const #cir.int<3> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[RET2_OUT]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[OUTER_DTOR]]
+
+// ~outer, then both co_returns go to the final suspend and the destroy to
+// the coroutine cleanup.
+// CIR-FLAT: ^[[OUTER_DTOR]]:
+// CIR-FLAT-NEXT:   cir.call @_ZN7HasDtorD1Ev(%[[OUTER]])
+// CIR-FLAT-NEXT:   cir.br ^[[OUTER_EXIT:bb[0-9]+]]
+// CIR-FLAT: ^[[OUTER_EXIT]]:
+// CIR-FLAT-NEXT:   %[[DEST_OUT:.*]] = cir.load %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.switch.flat %[[DEST_OUT]] : !s32i, ^{{.*}} [
+// CIR-FLAT-NEXT:     0: ^{{.*}},
+// CIR-FLAT-NEXT:     1: ^[[OUTER_TO_RET:bb[0-9]+]],
+// CIR-FLAT-NEXT:     2: ^[[OUTER_TO_DESTROY:bb[0-9]+]],
+// CIR-FLAT-NEXT:     3: ^[[OUTER_TO_RET2:bb[0-9]+]]
+// CIR-FLAT-NEXT:   ]
+// CIR-FLAT: ^[[OUTER_TO_RET]]:
+// CIR-FLAT-NEXT:   cir.br ^[[FINAL:bb[0-9]+]]
+// CIR-FLAT: ^[[OUTER_TO_DESTROY]]:
+// CIR-FLAT-NEXT:   %[[CORO_DEST:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:   cir.store %[[CORO_DEST]], %[[CLEANUP_DEST_SLOT]]
+// CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
+// CIR-FLAT: ^[[OUTER_TO_RET2]]:
+// CIR-FLAT-NEXT:   cir.br ^[[FINAL]]
+// CIR-FLAT: ^[[FINAL]]:
+// CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(%[[PROMISE]])
+// CIR-FLAT: ^[[CORO_CLEANUP]]:
+// CIR-FLAT-NEXT:   cir.coro.intrinsic.free
+// CIR-FLAT:   cir.coro.intrinsic.end
+// CIR-FLAT:   cir.return
+
+// Classic codegen: the co_return (slot 3) and the destroy (slot 2) both run
+// ~inner and ~outer, then go to %coro.final and %coro.cleanup.
+
+// OGCG: define {{.*}} void @_Z17co_return_in_loopi(
+// OGCG:   %[[OUTER:.*]] = alloca %struct.HasDtor
+// OGCG:   %[[INNER:.*]] = alloca %struct.HasDtor
+// OGCG: if.then:
+// OGCG:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(
+// OGCG-NEXT:   br label %[[INNER_DTOR:cleanup[0-9]+]]
+// OGCG: await.cleanup:
+// OGCG-NEXT:   br label %[[AWAIT_CLEANUP:cleanup[0-9]+]]
+// OGCG: [[AWAIT_CLEANUP]]:
+// OGCG-NEXT:   %[[SLOT1:.*]] = phi i32 [ 0, %await.ready ], [ 2, %await.cleanup ]
+// OGCG: [[INNER_DTOR]]:
+// OGCG-NEXT:   %[[SLOT2:.*]] = phi i32 [ 3, %if.then ], [ %[[SLOT1]], %[[AWAIT_CLEANUP]] ], [ 0, %{{.*}} ]
+// OGCG-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[INNER]])
+// OGCG:   switch i32 %[[SLOT2]], label %{{.*}} [
+// OGCG-NEXT:     i32 0, label %{{.*}}
+// OGCG-NEXT:   ]
+// OGCG: for.end:
+// OGCG-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef -1)
+// OGCG:   %[[SLOT4:.*]] = phi i32 [ %{{.*}}, %{{.*}} ], [ 3, %for.end ]
+// OGCG-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[OUTER]])
+// OGCG:   switch i32 %[[SLOT4]], label %unreachable [
+// OGCG-NEXT:     i32 3, label %coro.final
+// OGCG-NEXT:     i32 2, label %coro.cleanup
+// OGCG-NEXT:   ]
+
 folly::coro::Task<int __complex__> fetchData() noexcept {
   int __complex__ a;
   co_return a;

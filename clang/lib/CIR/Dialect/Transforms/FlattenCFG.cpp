@@ -1074,9 +1074,8 @@ public:
     auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
       loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
         if (isa<cir::CoroCleanupOp>(nestedOp) ||
-            isReturnThatExitsCleanup(nestedOp)) {
-          exits.emplace_back(nestedOp, nextId++);
-        } else if (isGotoThatExitsCleanup(nestedOp)) {
+            isReturnThatExitsCleanup(nestedOp) ||
+            isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         }
         return mlir::WalkResult::advance();
@@ -1103,9 +1102,8 @@ public:
           return mlir::WalkResult::skip();
         } else if (isa<cir::ContinueOp, cir::CoReturnOp, cir::CoroCleanupOp>(
                        nestedOp) ||
-                   isReturnThatExitsCleanup(nestedOp)) {
-          exits.emplace_back(nestedOp, nextId++);
-        } else if (isGotoThatExitsCleanup(nestedOp)) {
+                   isReturnThatExitsCleanup(nestedOp) ||
+                   isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         }
         return mlir::WalkResult::advance();
@@ -1127,9 +1125,7 @@ public:
           exits.emplace_back(op, nextId++);
         } else if (isa<cir::ContinueOp, cir::CoReturnOp, cir::CoroCleanupOp>(
                        op) ||
-                   isReturnThatExitsCleanup(op)) {
-          exits.emplace_back(op, nextId++);
-        } else if (isGotoThatExitsCleanup(op)) {
+                   isReturnThatExitsCleanup(op) || isGotoThatExitsCleanup(op)) {
           exits.emplace_back(op, nextId++);
         } else if (isa<cir::CleanupScopeOp>(op)) {
           // Recurse into nested cleanup's body region.
@@ -2151,7 +2147,7 @@ collectCoReturnsOps(mlir::Region &region,
       [&](cir::CoReturnOp coReturnOp) { coReturnOps.push_back(coReturnOp); });
 }
 
-// Flatten `cir.coroutine`. This runs once every nested op (awaits, cir.scope,
+// Flatten `cir.coroutine`. This runs after every nested op (awaits, cir.scope,
 // cleanup scopes, ...) has been flattened. The initialSuspend, body and
 // finalSuspend regions become the body of a cir.cleanup.scope whose cleanup is
 // the destroy region; the exit region follows the cleanup scope:
