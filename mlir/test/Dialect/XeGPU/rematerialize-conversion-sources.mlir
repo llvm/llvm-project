@@ -7,7 +7,7 @@
 // Rematerialization preserves the original value for its other consumer.
 // CHECK-LABEL: gpu.func @step_conversion
 // CHECK:         %[[STEP0:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
-// CHECK-NEXT:    %[[STEP1:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK-NEXT:    %[[STEP1:.*]] = vector.step : vector<32xindex>
 // CHECK:         arith.muli %[[STEP1]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
 // CHECK:         vector.broadcast %[[STEP0]]
 // CHECK-NOT:     xegpu.convert_layout
@@ -30,9 +30,9 @@ gpu.func @step_conversion() kernel {
 
 // The cloned elementwise chain shares no vector operands with the original.
 // CHECK-LABEL: gpu.func @elementwise_chain_conversion
-// CHECK-DAG:     %[[CST1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} dense<32> : vector<32xindex>
-// CHECK-DAG:     %[[STEP1:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
-// CHECK:         %[[MUL1:.*]] = arith.muli %[[STEP1]], %[[CST1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK-DAG:     %[[CST1:.*]] = arith.constant dense<32> : vector<32xindex>
+// CHECK-DAG:     %[[STEP1:.*]] = vector.step : vector<32xindex>
+// CHECK:         %[[MUL1:.*]] = arith.muli %[[STEP1]], %[[CST1]] : vector<32xindex>
 // CHECK:         vector.shape_cast %[[MUL1]]
 // CHECK-NOT:     xegpu.convert_layout
 gpu.module @test {
@@ -53,12 +53,11 @@ gpu.func @elementwise_chain_conversion() kernel {
 #row = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>
 #col = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>
 
-// The cloned cast and its step operand must have matching layouts.
 // CHECK-LABEL: gpu.func @cast_chain_conversion
 // CHECK:         %[[STEP0:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
-// CHECK-NEXT:    %[[STEP1:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK-NEXT:    %[[STEP1:.*]] = vector.step : vector<32xindex>
 // CHECK-NEXT:    arith.index_castui %[[STEP0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex> to vector<32xi32>
-// CHECK-NEXT:    arith.index_castui %[[STEP1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex> to vector<32xi32>
+// CHECK-NEXT:    arith.index_castui %[[STEP1]] : vector<32xindex> to vector<32xi32>
 // CHECK-NOT:     xegpu.convert_layout
 gpu.module @test {
 gpu.func @cast_chain_conversion() kernel {
@@ -102,7 +101,7 @@ gpu.func @shared_operand_cloned_once() kernel {
 // CHECK-LABEL: gpu.func @scalar_operand_shared
 // CHECK-SAME:    (%[[N:.*]]: index)
 // CHECK:         vector.create_mask %[[N]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xi1>
-// CHECK-NEXT:    %[[MASK1:.*]] = vector.create_mask %[[N]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xi1>
+// CHECK-NEXT:    %[[MASK1:.*]] = vector.create_mask %[[N]] : vector<32xi1>
 // CHECK:         "some_use"(%[[MASK1]])
 // CHECK-NOT:     xegpu.convert_layout
 gpu.module @test {
@@ -121,7 +120,7 @@ gpu.func @scalar_operand_shared(%n: index) kernel {
 
 // All conversion users share one rematerialized value.
 // CHECK-LABEL: gpu.func @conversion_with_multiple_uses
-// CHECK:         %[[STEP1:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK:         %[[STEP1:.*]] = vector.step : vector<32xindex>
 // CHECK:         "use_a"(%[[STEP1]])
 // CHECK:         "use_b"(%[[STEP1]])
 // CHECK-NOT:     xegpu.convert_layout

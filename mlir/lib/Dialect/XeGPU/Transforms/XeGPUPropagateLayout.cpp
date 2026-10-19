@@ -1838,8 +1838,7 @@ void xegpu::rematerializeConversionSources(OpBuilder &builder,
   parentOp->walk(
       [&](xegpu::ConvertLayoutOp convert) { conversions.push_back(convert); });
   for (xegpu::ConvertLayoutOp convert : conversions) {
-    Value clone = xegpu::rematerializeWithLayout(builder, convert.getSource(),
-                                                 convert.getTargetLayout());
+    Value clone = xegpu::rematerialize(builder, convert.getSource());
     if (!clone)
       continue;
     convert.getResult().replaceAllUsesWith(clone);
@@ -1931,9 +1930,7 @@ void xegpu::sinkElementwiseConversions(OpBuilder &builder,
         continue;
       if (rewiredOpIdxs.contains(operand.getOperandNumber()))
         continue;
-      // Rematerialize with uniform source layout.
-      Value clone = xegpu::rematerializeWithLayout(builder, operandValue,
-                                                   uniformConvSrcLayout);
+      Value clone = xegpu::rematerialize(builder, operandValue);
       assert(clone && "operand should have been rejected above");
       operand.set(clone);
     }

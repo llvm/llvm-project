@@ -196,8 +196,7 @@ bool xegpu::isTriviallyRematerializable(Operation *op) {
   return collectRematerializableChain(op, chain);
 }
 
-Value xegpu::rematerializeWithLayout(OpBuilder &builder, Value value,
-                                     DistributeLayoutAttr layout) {
+Value xegpu::rematerialize(OpBuilder &builder, Value value) {
   Operation *producer = value.getDefiningOp();
   SmallVector<Operation *> chain;
   if (!producer || !collectRematerializableChain(producer, chain))
@@ -209,9 +208,7 @@ Value xegpu::rematerializeWithLayout(OpBuilder &builder, Value value,
   for (Operation *op : chain) {
     builder.setInsertionPointAfter(op);
     Operation *clone = builder.clone(*op, mapping);
-    OpResult cloneResult = clone->getResult(0);
-    removeLayoutAttr(cloneResult);
-    setDistributeLayoutAttr(cloneResult, layout);
+    removeLayoutAttrs(clone);
   }
   return mapping.lookup(value);
 }

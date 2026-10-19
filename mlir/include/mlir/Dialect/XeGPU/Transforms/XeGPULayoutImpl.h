@@ -473,11 +473,10 @@ DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 bool isTriviallyRematerializable(Operation *op);
 
 /// Clone a bounded chain of pure vector generators and layout-preserving
-/// elementwise ops in `layout`. Each producer is cloned once, immediately after
-/// its original; scalar operands remain shared. Return null if the chain is
-/// ineligible, without modifying the IR.
-Value rematerializeWithLayout(OpBuilder &builder, Value value,
-                              DistributeLayoutAttr layout);
+/// elementwise ops without layout attributes. Each producer is cloned once,
+/// immediately after its original; scalar operands remain shared. Return null
+/// if the chain is ineligible, without modifying the IR.
+Value rematerialize(OpBuilder &builder, Value value);
 } // namespace xegpu
 } // namespace mlir
 
