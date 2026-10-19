@@ -870,7 +870,15 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (argValue == "none") {
       columns = 0;
     } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
-      columns = -1;
+      if (!argValue.empty() &&
+          std::all_of(argValue.begin(), argValue.end(),
+                      [](char c) { return c >= '0' && c <= '9'; })) {
+        // Route oversized positive decimals to the large-columns diagnostic.
+        columns =
+            static_cast<std::int64_t>(std::numeric_limits<int>::max()) + 1;
+      } else {
+        columns = -1;
+      }
     }
     if (columns < 0) {
       diags.Report(clang::diag::err_drv_negative_columns)
