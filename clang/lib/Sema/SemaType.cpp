@@ -9157,19 +9157,21 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
 
   unsigned chunkIndex = State.getCurrentChunkIndex();
 
+  bool IsParameter = D.getContext() == DeclaratorContext::Prototype ||
+                     D.getContext() == DeclaratorContext::ObjCParameter;
+
   Sema::BoundsAttrFlags Flags;
   if (!S.ValidateBoundsAttrTypeForTypePosition(
           CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
           getPointerNestLevel(D, chunkIndex),
-          isOnFunctionReturnType(D, chunkIndex), Flags)) {
+          isOnFunctionReturnType(D, chunkIndex), Flags, IsParameter)) {
     Attr.setInvalid();
     return;
   }
 
   // A parameter's count is checked before the type is built, and dropped if
   // invalid.
-  if ((D.getContext() == DeclaratorContext::Prototype ||
-       D.getContext() == DeclaratorContext::ObjCParameter) &&
+  if (IsParameter &&
       S.CheckCountedByAttrOnParam(CurType, CountExpr, Flags.CountInBytes,
                                   Flags.OrNull)) {
     Attr.setInvalid();
@@ -9200,10 +9202,11 @@ bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT,
   if (!LA.TypeToComplete) {
     BoundsAttrFlags Flags;
     // The position is checked per declarator below, so skip it here.
-    if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
-                                               SourceRange(LA.NameLoc),
-                                               /*PointerNestLevel=*/0,
-                                               /*OnReturnType=*/false, Flags)) {
+    // Parameters are not late-parsed.
+    if (!ValidateBoundsAttrTypeForTypePosition(
+            QT, LA.Kind, LA.NameLoc, SourceRange(LA.NameLoc),
+            /*PointerNestLevel=*/0, /*OnReturnType=*/false, Flags,
+            /*IsParameter=*/false)) {
       LA.Invalid = true;
       return false;
     }
@@ -10267,8 +10270,9 @@ QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  // Accept any array or pointer type here. For arrays, validation that it's
-  // a flexible array member is deferred until CheckCountedByAttrOnField.
+  // Accept any array or pointer type here. For a field's array, validation that
+  // it's a flexible array member is deferred until CheckCountedByAttrOnField;
+  // a parameter's array is checked by CheckCountedByAttrOnParam.
   assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
 
   // Reject non-DeclRefExpr early to avoid cast failure in

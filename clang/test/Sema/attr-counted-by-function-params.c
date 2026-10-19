@@ -65,11 +65,26 @@ void not_an_integer(float count, int *__counted_by(count) buf);
 void not_a_reference(int count, int *__counted_by(count + 1) buf);
 
 //==============================================================================
-// Not supported yet
+// Array parameters
 //==============================================================================
 
-// expected-error@+1{{'counted_by' on arrays only applies to C99 flexible array members}}
+// An array without a size decays to a pointer that carries the count, so each
+// kind is allowed, although a flexible array member takes only counted_by.
 void array(int count, int arr[] __counted_by(count));
+void array_sized_or_null(int count, int arr[] __sized_by_or_null(count));
+// expected-error@+1{{'counted_by' cannot be applied to an array parameter with an explicit size}}
+void array_with_size(int count, int arr[10] __counted_by(count));
+
+// A type attribute written after the count does not hide it, so the count
+// still moves to the pointer.
+void array_attr_after(int count,
+                      int arr[] [[clang::counted_by(count),
+                                  clang::annotate_type("x")]]);
+void array_attr_after(int count, int *__counted_by(count) arr);
+
+//==============================================================================
+// Not supported yet
+//==============================================================================
 
 // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
 void out(int count, int *__counted_by(count) *buf);

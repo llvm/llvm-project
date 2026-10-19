@@ -243,10 +243,16 @@ bool Sema::ValidateBoundsAttrPosition(BoundsAttributedType::BoundsAttrKind Kind,
 bool Sema::ValidateBoundsAttrTypeForTypePosition(
     QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
     SourceRange AttrRange, unsigned PointerNestLevel, bool OnReturnType,
-    BoundsAttrFlags &Flags) {
+    BoundsAttrFlags &Flags, bool IsParameter) {
   Flags = BoundsAttrFlags::get(AttrKind);
 
-  if (!ValidateBoundsAttrTypeShape(Ty, AttrLoc, AttrRange, Flags,
+  // An array parameter decays to a pointer, which is what the attribute
+  // describes. Whether the array may have a size is checked on the parameter.
+  QualType ShapeTy = Ty;
+  if (IsParameter && Ty->isArrayType())
+    ShapeTy = getASTContext().getArrayDecayedType(Ty);
+
+  if (!ValidateBoundsAttrTypeShape(ShapeTy, AttrLoc, AttrRange, Flags,
                                    /*AttrSpelling=*/{}, /*AllowRedecl=*/false,
                                    /*AttrArg=*/nullptr, /*UpdateFlags=*/false))
     return false;
@@ -364,15 +370,15 @@ bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
   if (E->containsErrors())
     return true;
 
-  // FIXME: Support array parameters. The count has to move to the pointer
-  // that the array decays to.
-  if (ParamTy->isArrayType()) {
-    Diag(E->getBeginLoc(),
-         diag::err_counted_by_attr_on_array_not_flexible_array_member);
+  // An array parameter decays to a pointer, which the count then describes.
+  // An array with an explicit size is not supported: in the -fbounds-safety
+  // programming model, its size becomes that pointer's count.
+  const unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+  if (ParamTy->isArrayType() && !ParamTy->isIncompleteArrayType()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_on_sized_array_param) << Kind;
     return true;
   }
 
-  const unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
   ValueDecl *CountDecl = checkCountRefersToDecl(*this, E, Kind);
   if (!CountDecl)
     return true;
@@ -384,6 +390,18 @@ bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
     return true;
   }
   return false;
+}
+
+void Sema::AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                       const CountAttributedType *CATy) {
+  if (!CATy->desugar()->isArrayType())
+    return;
+  // The parameter's type is already adjusted, with the qualifiers written
+  // outside the count moved to the element (C99 6.7.3p8), but the decayed
+  // pointer does not carry the count. Put it back on the pointer.
+  PVD->setType(Context.getCountAttributedType(
+      PVD->getType(), CATy->getCountExpr(), CATy->isCountInBytes(),
+      CATy->isOrNull(), CATy->getCoupledDecls()));
 }
 
 static void EmitIncompleteCountedByPointeeNotes(Sema &S,
