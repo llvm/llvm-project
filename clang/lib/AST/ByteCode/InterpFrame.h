@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
+#include "Block.h"
 #include "Frame.h"
-#include "InterpBlock.h"
 #include "Pointer.h"
 
 namespace clang {
