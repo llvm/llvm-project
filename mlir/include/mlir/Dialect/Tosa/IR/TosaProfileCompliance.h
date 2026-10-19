@@ -11,7 +11,7 @@
 
 #include <cstdint>
 #include <optional>
-#include <utility>
+#include <type_traits>
 
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
@@ -45,6 +45,11 @@ enum class ComplianceTypeKind : uint8_t {
 };
 
 struct TypeInfo {
+  constexpr TypeInfo()
+      : typeKind(ComplianceTypeKind::None), bitWidth(0),
+        valueTypeKind(ComplianceTypeKind::None),
+        scaleTypeKind(ComplianceTypeKind::None), blockShape(std::nullopt) {}
+
   constexpr TypeInfo(ComplianceTypeKind typeKind, uint32_t bitWidth)
       : typeKind(typeKind), bitWidth(bitWidth),
         valueTypeKind(ComplianceTypeKind::None),
@@ -72,22 +77,38 @@ enum CheckCondition {
   allOf
 };
 
-using VersionedTypeInfo =
-    std::pair<ArrayRef<TypeInfo>, SpecificationVersion>;
+template <typename T, size_t Capacity>
+struct ComplianceInlineArray {
+  T storage[Capacity]{};
+  uint8_t numElements = 0;
 
-template <typename T>
-struct OpComplianceInfo {
-  // Certain operations require multiple modes enabled.
-  // e.g. cast bf16 to fp8e4m3 requires EXT-BF16 and EXT-FP8E4M3.
-  ArrayRef<T> mode;
-  ArrayRef<VersionedTypeInfo> operandTypeInfoSet;
-  CheckCondition condition = CheckCondition::anyOf;
+  constexpr ComplianceInlineArray() = default;
+
+  template <typename... Ts,
+            typename = std::enable_if_t<(sizeof...(Ts) >= 1) &&
+                                        (sizeof...(Ts) <= Capacity) &&
+                                        (std::is_convertible_v<Ts, T> && ...)>>
+  constexpr ComplianceInlineArray(Ts... elems)
+      : storage{static_cast<T>(elems)...},
+        numElements(static_cast<uint8_t>(sizeof...(Ts))) {}
+
+  constexpr ArrayRef<T> asArrayRef() const {
+    return ArrayRef<T>(storage, numElements);
+  }
+  constexpr operator ArrayRef<T>() const { return asArrayRef(); }
+  constexpr bool empty() const { return numElements == 0; }
+  constexpr size_t size() const { return numElements; }
 };
 
 template <typename T>
-struct OpComplianceEntry {
+struct OpComplianceInfo {
   llvm::StringLiteral opName;
-  ArrayRef<OpComplianceInfo<T>> infos;
+  // Certain operations require multiple modes enabled.
+  // e.g. cast bf16 to fp8e4m3 requires EXT-BF16 and EXT-FP8E4M3.
+  ComplianceInlineArray<T, 4> mode;
+  ComplianceInlineArray<TypeInfo, 7> operandTypes;
+  SpecificationVersion specVersion = SpecificationVersion::V_1_0;
+  CheckCondition condition = CheckCondition::anyOf;
 };
 
 //===----------------------------------------------------------------------===//
@@ -228,7 +249,7 @@ private:
   getOperatorMatchedEntries(Operation *op);
 };
 
-}  // namespace tosa
-}  // namespace mlir
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H

@@ -66,14 +66,15 @@ constexpr TypeInfo bs32_fp8ue8m0_mxint8T = {
 
 template <typename T>
 ArrayRef<OpComplianceInfo<T>>
-lookupComplianceInfos(ArrayRef<OpComplianceEntry<T>> table, StringRef opName) {
-  const auto *it = llvm::lower_bound(
-      table, opName, [](const OpComplianceEntry<T> &entry, StringRef name) {
+lookupComplianceInfos(ArrayRef<OpComplianceInfo<T>> table, StringRef opName) {
+  const auto *begin = llvm::lower_bound(
+      table, opName, [](const OpComplianceInfo<T> &entry, StringRef name) {
         return entry.opName < name;
       });
-  if (it != table.end() && it->opName == opName)
-    return it->infos;
-  return {};
+  const auto *end = begin;
+  while (end != table.end() && end->opName == opName)
+    ++end;
+  return ArrayRef<OpComplianceInfo<T>>(begin, end);
 }
 
 } // namespace
@@ -509,10 +510,9 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   const auto isVersionCompatible =
       [&targetVersion](const OpComplianceInfo<T> &info) -> bool {
     // Assume compatible if there are no versioned type constraints
-    if (info.operandTypeInfoSet.empty())
+    if (info.operandTypes.empty())
       return true;
-    const TosaSpecificationVersion complianceVersion{
-        info.operandTypeInfoSet.front().second};
+    const TosaSpecificationVersion complianceVersion{info.specVersion};
     return targetVersion.isBackwardsCompatibleWith(complianceVersion);
   };
 
@@ -536,7 +536,7 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
     if (!isVersionCompatible(info)) {
       mismatchedVersion = true;
       os << "requires specification version compatible with "
-         << stringifyVersion(info.operandTypeInfoSet.front().second) << " (got "
+         << stringifyVersion(info.specVersion) << " (got "
          << stringifyVersion(targetVersion) << ") ";
     }
 
@@ -598,20 +598,17 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
     ArrayRef<TypeInfo> bestTypeInfo;
     const auto searchBestMatch = [&](auto complianceInfosList) {
       for (const auto &complianceInfos : complianceInfosList) {
-        for (const VersionedTypeInfo &versionedTypeInfos :
-             complianceInfos.operandTypeInfoSet) {
-          ArrayRef<TypeInfo> typeInfos = versionedTypeInfos.first;
-          if (current.size() != typeInfos.size())
-            continue;
-          const int matches = llvm::count_if(
-              llvm::zip_equal(current, typeInfos), [&](const auto zipType) {
-                return isSameTypeInfo(std::get<0>(zipType),
-                                      std::get<1>(zipType));
-              });
-          if (matches > maxMatches) {
-            maxMatches = matches;
-            bestTypeInfo = typeInfos;
-          }
+        ArrayRef<TypeInfo> typeInfos = complianceInfos.operandTypes;
+        if (current.size() != typeInfos.size())
+          continue;
+        const int matches = llvm::count_if(
+            llvm::zip_equal(current, typeInfos), [&](const auto zipType) {
+              return isSameTypeInfo(std::get<0>(zipType),
+                                    std::get<1>(zipType));
+            });
+        if (matches > maxMatches) {
+          maxMatches = matches;
+          bestTypeInfo = typeInfos;
         }
       }
     };
@@ -644,7 +641,7 @@ SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
   // be checked
   SmallVector<OpComplianceInfo<T>> matchedInfos;
   if (llvm::all_of(compInfo, [&matchedInfos](const OpComplianceInfo<T> &info) {
-        if (info.operandTypeInfoSet.empty()) {
+        if (info.operandTypes.empty()) {
           matchedInfos.push_back(info);
           return true;
         }
@@ -659,33 +656,27 @@ SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
     return {};
 
   // Compare 'present' against known type signatures in the compliance metadata
-  for (size_t i = 0; i < compInfo.size(); i++) {
-    ArrayRef<VersionedTypeInfo> sets = compInfo[i].operandTypeInfoSet;
-    for (const VersionedTypeInfo &set : sets) {
-      ArrayRef<TypeInfo> expected = set.first;
-      // Tensor-list operators can legitimately have multiple valid signatures
-      // with different operand/result counts, e.g. data-only and data+scale
-      // forms. Treat those as non-matches instead of asserting.
-      if (present.size() != expected.size())
-        continue;
+  for (const OpComplianceInfo<T> &info : compInfo) {
+    ArrayRef<TypeInfo> expected = info.operandTypes;
+    // Tensor-list operators can legitimately have multiple valid signatures
+    // with different operand/result counts, e.g. data-only and data+scale
+    // forms. Treat those as non-matches instead of asserting.
+    if (present.size() != expected.size())
+      continue;
 
-      bool isFound = true;
-      // Compare the type signature between the given operation and the
-      // compliance metadata.
-      for (size_t j = 0; j < expected.size(); j++) {
-        if (!isSameTypeInfo(present[j], expected[j])) {
-          // Verify the next mode set from the list.
-          isFound = false;
-          break;
-        }
-      }
-
-      if (isFound == true) {
-        matchedInfos.push_back(OpComplianceInfo<T>{
-            compInfo[i].mode, ArrayRef<VersionedTypeInfo>(&set, 1),
-            compInfo[i].condition});
+    bool isFound = true;
+    // Compare the type signature between the given operation and the
+    // compliance metadata.
+    for (size_t j = 0; j < expected.size(); j++) {
+      if (!isSameTypeInfo(present[j], expected[j])) {
+        // Verify the next mode set from the list.
+        isFound = false;
+        break;
       }
     }
+
+    if (isFound == true)
+      matchedInfos.push_back(info);
   }
 
   return matchedInfos;
