@@ -3185,7 +3185,7 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
 
   assert(New != N && "Expected a new node!");
 
-  assert(New->getNumValues() == N->getNumValues() &&
+  assert(New->getNumValues() >= N->getNumValues() &&
          "Invalid operand expansion");
 
   for (unsigned i = 0, e = N->getNumValues(); i < e; ++i) {
