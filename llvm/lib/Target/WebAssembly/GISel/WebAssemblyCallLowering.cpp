@@ -298,6 +298,9 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
     HasSwiftSelfArg |= Arg.hasSwiftSelfAttr();
     HasSwiftErrorArg |= Arg.hasSwiftErrorAttr();
+    // TODO: Pass swiftasync in parameter 0.
+    if (Arg.hasAttribute(Attribute::SwiftAsync))
+      return false;
     if (Arg.hasInAllocaAttr())
       return false;
     if (Arg.hasNestAttr())
@@ -432,6 +435,12 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // TODO: swiftcc
   if (CallConv == CallingConv::Swift)
     return false;
+
+  // TODO: Pass swiftasync in parameter 0.
+  if (Info.CB)
+    for (unsigned I = 0, E = Info.CB->arg_size(); I != E; ++I)
+      if (Info.CB->paramHasAttr(I, Attribute::SwiftAsync))
+        return false;
 
   MachineInstrBuilder CallInst;
 
