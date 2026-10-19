@@ -323,6 +323,13 @@ PTX behavior in software (``AGXStrictFP.cpp``):
   correctly rounded in the same way, on flushed operands and with a flushed
   result.
 
+  ``bfloat`` arithmetic (which keeps denormals) is computed as ``float``
+  arithmetic on the extended operands with the IEEE lowering, rounded back
+  once; ``float`` has more than twice the precision, so the result is
+  correctly rounded. ``llvm.fma`` on ``bfloat`` is computed exactly with
+  integer arithmetic (see `Double precision`_), since a ``float`` fma would
+  round twice.
+
 ``canonical-nan``
   NaN results of floating point arithmetic and conversions are ``0x7fffffff``
   (``0x7fff`` for ``half`` and ``bfloat``); minimum and maximum keep the bits
@@ -362,6 +369,15 @@ instructions per operation, about 590 for an addition, 350 for a
 multiplication, 690 for a fused multiply-add, 780 for a division (plus the
 iterations of the division loop), 460 for a square root (and 64 iterations),
 230 for a conversion and 20 for a comparison.
+
+Vector floating point arithmetic is scalarized before the floating point
+lowerings (the Scalarizer pass), and constrained vector operations are rounded
+lane by lane, so the strict modes, the rounding modes and the software double
+precision apply to vectors too. A ``fneg`` or ``fabs`` of ``float`` that is
+not a source modifier of another operation is a bit operation, and the
+results of ``float`` minimum and maximum are flushed in functions that flush
+``float`` denormals (the hardware returns a denormal operand unchanged).
+Conversions of ``float`` to ``bfloat`` round to nearest even.
 
 Rounding modes
 --------------

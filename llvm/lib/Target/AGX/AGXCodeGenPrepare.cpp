@@ -131,6 +131,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool lowerConstrainedFP(Function &F);
   bool lowerDivergentShuffles(Function &F, const UniformityInfo &UI);
   bool flushHalfDenormals(Function &F);
+  bool flushFloatMinMax(Function &F);
   bool diagnoseDoubles(Function &F);
 
 public:
@@ -458,6 +459,42 @@ static bool isFPArithmetic(const Instruction &I) {
 
 static bool isHalf(const Type *Ty) { return Ty->getScalarType()->isHalfTy(); }
 
+/// The hardware minimum and maximum return a denormal operand as it is, also
+/// where float denormals are flushed: flush their results.
+bool AGXCodeGenPrepare::flushFloatMinMax(Function &F) {
+  if (F.getDenormalMode(APFloat::IEEEsingle()).Output == DenormalMode::IEEE)
+    return false;
+  SmallVector<IntrinsicInst *, 8> MinMax;
+  for (Instruction &I : instructions(F)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II || !II->getType()->isFloatTy() || II->hasMetadata("agx.ieee") ||
+        II->hasMetadata("agx.exact"))
+      continue;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::minnum:
+    case Intrinsic::maxnum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimumnum:
+    case Intrinsic::maximumnum:
+      MinMax.push_back(II);
+      break;
+    default:
+      break;
+    }
+  }
+  for (IntrinsicInst *II : MinMax) {
+    IRBuilder<> B(II->getNextNode());
+    SmallVector<Use *, 4> Uses;
+    for (Use &U : II->uses())
+      Uses.push_back(&U);
+    Value *R = B.CreateUnaryIntrinsic(Intrinsic::canonicalize, II);
+    for (Use *U : Uses)
+      U->set(R);
+  }
+  return !MinMax.empty();
+}
+
 bool AGXCodeGenPrepare::flushHalfDenormals(Function &F) {
   DenormalMode Mode = F.getDenormalMode(APFloat::IEEEhalf());
   bool FlushInputs = Mode.Input != DenormalMode::IEEE &&
@@ -586,6 +623,7 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
         F, getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo());
   Changed |= lowerConstrainedFP(F);
   Changed |= flushHalfDenormals(F);
+  Changed |= flushFloatMinMax(F);
   Changed |= expandDivisions(F);
   Changed |= expandMemIntrinsics(F, TTI);
   Changed |= unifyExits(F);

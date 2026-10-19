@@ -27,6 +27,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
@@ -151,6 +152,9 @@ void AGXPassConfig::addIRPasses() {
     addPass(createInferAddressSpacesPass());
     addPass(createSROAPass());
   }
+  // Vector arithmetic is scalar code (as in instruction selection), which the
+  // software floating point lowerings below then see.
+  addPass(createScalarizerPass());
   // The floating point mode register and constrained floating point
   // intrinsics (directed rounding in software).
   addPass(createAGXLowerFPEnvPass());

@@ -244,9 +244,9 @@ public:
     return select(BothZero, select(Down, B.CreateOr(SX, SY), B.CreateAnd(SX, SY)), Down);
   }
 
-  Value *withZeroSign(Term T, Value *ZeroSign) {
+  Value *withZeroSign(Term T, Value *ZeroSign, Fmt F = F64) {
     // round() gives the sign of T to a zero.
-    return round({select(B.CreateICmpEQ(T.M, c128(0)), ZeroSign, T.Sign), T.M, T.E}, F64);
+    return round({select(B.CreateICmpEQ(T.M, c128(0)), ZeroSign, T.Sign), T.M, T.E}, F);
   }
 
   Value *add(Value *X, Value *Y, bool Sub) {
@@ -279,26 +279,26 @@ public:
     return select(NaN, nanResult({X, Y}, F64, F64), R);
   }
 
-  Value *fma(Value *X, Value *Y, Value *Z) {
-    Term TX = unpack(X, F64), TY = unpack(Y, F64), TZ = unpack(Z, F64);
+  Value *fma(Value *X, Value *Y, Value *Z, Fmt F = F64) {
+    Term TX = unpack(X, F), TY = unpack(Y, F), TZ = unpack(Z, F);
     Term P{B.CreateXor(TX.Sign, TY.Sign), B.CreateMul(TX.M, TY.M),
            B.CreateAdd(TX.E, TY.E)};
     Term S = addTerms(P, TZ);
-    Value *PZero = B.CreateOr(isZero(X, F64), isZero(Y, F64));
+    Value *PZero = B.CreateOr(isZero(X, F), isZero(Y, F));
     Value *R = withZeroSign(
-        S, zeroSumSign(B.CreateAnd(PZero, isZero(Z, F64)), P.Sign, TZ.Sign));
-    Value *XInf = isInf(X, F64), *YInf = isInf(Y, F64), *ZInf = isInf(Z, F64);
+        S, zeroSumSign(B.CreateAnd(PZero, isZero(Z, F)), P.Sign, TZ.Sign), F);
+    Value *XInf = isInf(X, F), *YInf = isInf(Y, F), *ZInf = isInf(Z, F);
     Value *PInf = B.CreateOr(XInf, YInf);
-    Value *PInfBits = B.CreateOr(c64(F64.infBits()),
-                                 select(P.Sign, c64(F64.signBit()), c64(0)));
-    Value *NaN = B.CreateOr(B.CreateOr(isNaN(X, F64), isNaN(Y, F64)), isNaN(Z, F64));
-    NaN = B.CreateOr(NaN, B.CreateOr(B.CreateAnd(XInf, isZero(Y, F64)),
-                                     B.CreateAnd(YInf, isZero(X, F64))));
+    Value *PInfBits = B.CreateOr(c64(F.infBits()),
+                                 select(P.Sign, c64(F.signBit()), c64(0)));
+    Value *NaN = B.CreateOr(B.CreateOr(isNaN(X, F), isNaN(Y, F)), isNaN(Z, F));
+    NaN = B.CreateOr(NaN, B.CreateOr(B.CreateAnd(XInf, isZero(Y, F)),
+                                     B.CreateAnd(YInf, isZero(X, F))));
     NaN = B.CreateOr(NaN, B.CreateAnd(B.CreateAnd(PInf, ZInf),
                                       B.CreateICmpNE(P.Sign, TZ.Sign)));
     R = select(ZInf, Z, R);
     R = select(PInf, PInfBits, R);
-    return select(NaN, nanResult({X, Y, Z}, F64, F64), R);
+    return select(NaN, nanResult({X, Y, Z}, F, F), R);
   }
 
   Value *div(Value *X, Value *Y) {
@@ -631,6 +631,19 @@ bool AGX::isDoubleArithmetic(const Instruction &I) {
     }
   }
   return false;
+}
+
+Value *AGX::buildSoftFMA(IRBuilderBase &B, Value *X, Value *Y, Value *Z,
+                         Value *Rounding, bool CanonicalNaN) {
+  Type *Ty = X->getType();
+  Fmt F = Ty->isDoubleTy() ? F64 : formatOf(Ty);
+  Type *IntTy = B.getIntNTy(F.W);
+  auto Bits = [&](Value *V) {
+    return B.CreateZExt(B.CreateBitCast(V, IntTy), B.getInt64Ty());
+  };
+  SoftDouble SD(B, Rounding, CanonicalNaN);
+  Value *R = SD.fma(Bits(X), Bits(Y), Bits(Z), F);
+  return B.CreateBitCast(B.CreateTrunc(R, IntTy), Ty);
 }
 
 Value *AGX::lowerDoubleArithmetic(Instruction &I, Value *Rounding,

@@ -141,6 +141,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   // bfloat16 is not a legal type: conversions are integer operations.
   setOperationAction({ISD::BF16_TO_FP, ISD::FP_TO_BF16},
                      {MVT::i16, MVT::f16, MVT::f32}, Expand);
+  // The generic expansion truncates; round to nearest even instead.
+  setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f16, MVT::f32}, Custom);
 
   // 64-bit conversions are expanded with 32-bit conversions.
   setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
@@ -160,8 +162,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                    {MVT::i8, MVT::i16, MVT::i32}, Expand);
   for (MVT MemVT : {MVT::i8, MVT::i16, MVT::i32})
     setTruncStoreAction(MVT::i64, MemVT, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, {MVT::f16, MVT::bf16}, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Expand);
 
@@ -374,6 +377,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTLZ:
   case ISD::CTTZ:
     return lowerCTLZ_CTTZ64(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return lowerFP_TO_BF16(Op, DAG);
   case ISD::FDIV:
     return lowerFDIV(Op, DAG);
   case ISD::FREM:
@@ -776,6 +781,31 @@ SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
   SDValue S = DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, Sign),
                           DAG.getConstant(SignMask, DL, IntVT));
   return DAG.getBitcast(VT, DAG.getNode(ISD::OR, DL, IntVT, M, S));
+}
+
+/// float to bfloat bits, rounded to nearest even: (x + 0x7fff + lsb) >> 16,
+/// with NaNs quieted.
+SDValue AGXTargetLowering::lowerFP_TO_BF16(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  if (Src.getValueType() != MVT::f32)
+    Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
+  SDValue X = DAG.getBitcast(MVT::i32, Src);
+  auto C = [&](uint32_t V) { return DAG.getConstant(V, DL, MVT::i32); };
+  SDValue Lsb = DAG.getNode(ISD::AND, DL, MVT::i32,
+                            DAG.getNode(ISD::SRL, DL, MVT::i32, X, C(16)), C(1));
+  SDValue R = DAG.getNode(ISD::ADD, DL, MVT::i32, X,
+                          DAG.getNode(ISD::ADD, DL, MVT::i32, Lsb, C(0x7fff)));
+  R = DAG.getNode(ISD::SRL, DL, MVT::i32, R, C(16));
+  SDValue Quiet = DAG.getNode(ISD::OR, DL, MVT::i32,
+                              DAG.getNode(ISD::SRL, DL, MVT::i32, X, C(16)), C(0x40));
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i32);
+  SDValue IsNaN = DAG.getSetCC(DL, CCVT,
+                               DAG.getNode(ISD::AND, DL, MVT::i32, X, C(0x7fffffff)),
+                               C(0x7f800000), ISD::SETUGT);
+  R = DAG.getSelect(DL, MVT::i32, IsNaN, Quiet, R);
+  return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), R);
 }
 
 SDValue AGXTargetLowering::lowerFREM(SDValue Op, SelectionDAG &DAG) const {

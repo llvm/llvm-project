@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_AGX_AGXSOFTF64_H
 
 namespace llvm {
+class IRBuilderBase;
 class Instruction;
 class Value;
 
@@ -24,6 +25,11 @@ bool isDoubleArithmetic(const Instruction &I);
 /// leaves I) if the operation is not supported.
 Value *lowerDoubleArithmetic(Instruction &I, Value *Rounding,
                              bool CanonicalNaN);
+
+/// The fused multiply-add of X, Y and Z (half, bfloat, float or double),
+/// computed exactly with integer arithmetic and rounded once.
+Value *buildSoftFMA(IRBuilderBase &B, Value *X, Value *Y, Value *Z,
+                    Value *Rounding, bool CanonicalNaN);
 
 } // namespace AGX
 } // namespace llvm

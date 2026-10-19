@@ -1038,6 +1038,79 @@ static bool lowerFlushing(Instruction &I) {
   return true;
 }
 
+/// bfloat arithmetic as float arithmetic on the extended operands, tagged
+/// for the IEEE lowering (bfloat operations keep denormals, which the float
+/// hardware flushes), with the result rounded back. Float has more than
+/// twice the precision of bfloat, so rounding twice gives the correctly
+/// rounded result. Returns false if I is not a bfloat operation.
+static bool promoteBFloat(Instruction &I, bool CanonicalNaN) {
+  bool IsCmp = isa<FCmpInst>(I);
+  Type *Ty = IsCmp ? I.getOperand(0)->getType() : I.getType();
+  if (!Ty->isBFloatTy())
+    return false;
+  Intrinsic::ID ID = getIntrinsicID(I);
+  switch (ID) {
+  case Intrinsic::not_intrinsic:
+    if (!isa<BinaryOperator>(I) && !IsCmp)
+      return false;
+    if (isa<BinaryOperator>(I) && I.getOpcode() == Instruction::FRem)
+      return false;
+    break;
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::sqrt:
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::roundeven:
+  case Intrinsic::round:
+  case Intrinsic::canonicalize:
+    break;
+  default:
+    return false;
+  }
+  IRBuilder<> B(&I);
+  if (ID == Intrinsic::fma || ID == Intrinsic::fmuladd) {
+    // A float fma would round twice: compute it exactly.
+    Value *R = AGX::buildSoftFMA(B, I.getOperand(0), I.getOperand(1),
+                                 I.getOperand(2), B.getInt32(RoundNearestEven),
+                                 CanonicalNaN);
+    R->takeName(&I);
+    I.replaceAllUsesWith(R);
+    I.eraseFromParent();
+    return true;
+  }
+  Type *F32 = B.getFloatTy();
+  SmallVector<Value *, 3> Ops;
+  unsigned N = isa<CallInst>(I) ? cast<CallInst>(I).arg_size() : I.getNumOperands();
+  for (unsigned K = 0; K < N; ++K)
+    Ops.push_back(B.CreateFPExt(I.getOperand(K), F32));
+  Value *New;
+  if (IsCmp)
+    New = B.CreateFCmp(cast<FCmpInst>(I).getPredicate(), Ops[0], Ops[1]);
+  else if (auto *BO = dyn_cast<BinaryOperator>(&I))
+    New = B.CreateBinOp(BO->getOpcode(), Ops[0], Ops[1]);
+  else
+    New = B.CreateIntrinsic(ID, {F32}, Ops);
+  auto *NI = cast<Instruction>(New);
+  if (isa<FPMathOperator>(I))
+    NI->copyFastMathFlags(&I);
+  NI->setMetadata(IEEETag, MDNode::get(I.getContext(), {}));
+  Value *R = IsCmp ? New : B.CreateFPTrunc(New, I.getType());
+  R->takeName(&I);
+  I.replaceAllUsesWith(R);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AGXStrictFP::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -1050,12 +1123,20 @@ bool AGXStrictFP::runOnFunction(Function &F) {
   if (!ST.hasIEEEFP32() && !CanonicalNaN)
     return false;
 
+  bool Changed = false;
+  if (ST.hasIEEEFP32()) {
+    SmallVector<Instruction *, 8> BFloat;
+    for (Instruction &I : instructions(F))
+      BFloat.push_back(&I);
+    for (Instruction *I : BFloat)
+      Changed |= promoteBFloat(*I, CanonicalNaN);
+  }
+
   SmallVector<Instruction *, 32> Worklist;
   for (Instruction &I : instructions(F))
     if (!I.hasMetadata(ExactTag))
       Worklist.push_back(&I);
 
-  bool Changed = false;
   // NaN canonicalization first: the IEEE lowering then replaces the
   // canonicalized value.
   if (CanonicalNaN)
@@ -1268,6 +1349,42 @@ static Value *lowerRounded(ConstrainedFPIntrinsic *CI, Value *Rounding,
   return R;
 }
 
+/// A vector constrained intrinsic as one scalar call per lane: the scalar
+/// calls, or none if CI is not a vector operation.
+static SmallVector<ConstrainedFPIntrinsic *, 4>
+scalarizeConstrained(ConstrainedFPIntrinsic *CI) {
+  SmallVector<ConstrainedFPIntrinsic *, 4> Lanes;
+  auto *VT = dyn_cast<FixedVectorType>(CI->getType());
+  if (!VT && CI->arg_size())
+    VT = dyn_cast<FixedVectorType>(CI->getArgOperand(0)->getType());
+  if (!VT)
+    return Lanes;
+  IRBuilder<> B(CI);
+  Type *ResTy = CI->getType()->getScalarType();
+  SmallVector<Type *, 4> ArgTys;
+  for (Value *A : CI->args())
+    ArgTys.push_back(A->getType()->getScalarType());
+  SmallVector<Type *, 2> OverloadTys;
+  FunctionType *FT = FunctionType::get(ResTy, ArgTys, false);
+  if (!Intrinsic::isSignatureValid(CI->getIntrinsicID(), FT, OverloadTys))
+    return Lanes;
+  Function *Decl = Intrinsic::getOrInsertDeclaration(
+      CI->getModule(), CI->getIntrinsicID(), OverloadTys);
+  Value *R = PoisonValue::get(CI->getType());
+  for (unsigned L = 0, E = VT->getNumElements(); L < E; ++L) {
+    SmallVector<Value *, 4> Args;
+    for (Value *A : CI->args())
+      Args.push_back(A->getType()->isVectorTy() ? B.CreateExtractElement(A, L) : A);
+    auto *Lane = cast<ConstrainedFPIntrinsic>(B.CreateCall(Decl, Args));
+    Lane->setAttributes(CI->getAttributes());
+    Lanes.push_back(Lane);
+    R = CI->getType()->isVectorTy() ? B.CreateInsertElement(R, Lane, L) : Lane;
+  }
+  CI->replaceAllUsesWith(R);
+  CI->eraseFromParent();
+  return Lanes;
+}
+
 bool AGXLowerFPEnv::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -1277,13 +1394,26 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
 
   SmallVector<IntrinsicInst *, 8> ModeOps;
   SmallVector<ConstrainedFPIntrinsic *, 16> Constrained;
+  SmallVector<ConstrainedFPIntrinsic *, 4> Vector;
   for (Instruction &I : instructions(F)) {
     if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&I))
-      Constrained.push_back(CI);
+      if (CI->getType()->isVectorTy() ||
+          (CI->arg_size() && CI->getArgOperand(0)->getType()->isVectorTy()))
+        Vector.push_back(CI);
+      else
+        Constrained.push_back(CI);
     else if (auto *II = dyn_cast<IntrinsicInst>(&I);
              II && (II->getIntrinsicID() == Intrinsic::agx_set_fpmode ||
                     II->getIntrinsicID() == Intrinsic::agx_get_fpmode))
       ModeOps.push_back(II);
+  }
+  // Vector operations are rounded lane by lane.
+  for (ConstrainedFPIntrinsic *CI : Vector) {
+    SmallVector<ConstrainedFPIntrinsic *, 4> Lanes = scalarizeConstrained(CI);
+    if (Lanes.empty())
+      Constrained.push_back(CI);
+    else
+      Constrained.append(Lanes.begin(), Lanes.end());
   }
   if (ModeOps.empty() && Constrained.empty())
     return false;
