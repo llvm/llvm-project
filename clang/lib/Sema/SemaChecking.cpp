@@ -12141,8 +12141,15 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
 
   // Try a full evaluation first.
   Expr::EvalResult result;
-  if (E->EvaluateAsRValue(result, C, InConstantContext))
+  if (E->EvaluateAsRValue(result, C, InConstantContext)) {
+    // GetValueRange only handles integer-like values.
+    // Return nullopt for unsupported types.
+    if (!result.Val.isInt() && !result.Val.isVector() &&
+        !result.Val.isComplexInt() && !result.Val.isLValue() &&
+        !result.Val.isAddrLabelDiff())
+      return std::nullopt;
     return GetValueRange(result.Val, GetExprType(E), MaxWidth);
+  }
 
   // I think we only want to look through implicit casts here; if the
   // user has an explicit widening cast, we should treat the value as
