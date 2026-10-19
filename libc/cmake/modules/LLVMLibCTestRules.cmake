@@ -782,8 +782,7 @@ function(create_libc_test fq_target_name)
     _get_common_test_compile_options(compile_options "${TEST_C_TEST}"
       "${TEST_FLAGS}")
   endif()
-  list(APPEND compile_options ${TEST_COMPILE_OPTIONS})
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options} ${TEST_COMPILE_OPTIONS})
 
   if(NOT TEST_CXX_STANDARD)
     set(TEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
