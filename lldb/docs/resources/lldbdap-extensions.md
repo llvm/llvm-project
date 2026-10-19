@@ -7,8 +7,8 @@ lldb-dap implements the
 Conventions:
 
 - New requests should be prefixed with `__lldb_`.
-- Added properties on standard messages are prefixed with `$__lldb_`. If the field
-  is lldb specific (e.g. $__lldb_version ) else it plain names
+- Added properties on standard messages are prefixed with `$__lldb_` if the field
+  is LLDB-specific (e.g. `$__lldb_version`); otherwise, they use plain names
   (e.g. `compileUnitId`).
 
 ## Custom Requests
@@ -91,8 +91,8 @@ interface ModuleSymbolsArguments {
   startIndex?: number;
 
   /**
-   * The number of symbols to return. If count is missing or 0, all variables
-   * are returned
+   * The number of symbols to return. If count is missing or 0, all symbols
+   * are returned.
    * @format uint32
    */
   count?: number;
@@ -141,7 +141,7 @@ interface Symbol {
   isExternal: boolean;
 
   /**
-   * The `lldb::SymbolType`, e.g 'Code', 'Trampoline, 'Data'.
+   * The `lldb::SymbolType`, e.g. 'Code', 'Trampoline', 'Data'.
    */
   type: string;
 
