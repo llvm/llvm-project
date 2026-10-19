@@ -76,9 +76,10 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // A private/deleted destructor would require somehow making std::make_unique
   // or some of its internal befriend the created type, so better be
   // conservative in that case.
-  const auto CanCallDtor =
-      unless(hasType(pointerType(pointee(recordType(hasDeclaration(
-          has(cxxDestructorDecl(anyOf(isDeleted(), unless(isPublic()))))))))));
+  const auto CanCallDtor = unless(hasType(hasUnqualifiedDesugaredType(
+      pointerType(pointee(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(has(cxxDestructorDecl(
+              anyOf(isDeleted(), unless(isPublic()))))))))))));
 
   auto IsPlacement = hasAnyPlacementArg(anything());
 
@@ -92,7 +93,7 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
               hasArgument(
                   0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
                                     equalsBoundNode(PointerType))))),
-                                CanCallCtor, CanCallDtor, unless(IsPlacement))
+                                CanCallCtor, unless(IsPlacement))
                          .bind(NewExpression)),
               unless(isInTemplateInstantiation()))
               .bind(ConstructorCall)),
