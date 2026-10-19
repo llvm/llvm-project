@@ -24,7 +24,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-         Return the shape of the iteration space to unroll.
+        Return the shape of the iteration space to unroll.
 
         For most vector operations, this is identical to the result shape.
         For operations such as vector.contract, it also includes reduction
