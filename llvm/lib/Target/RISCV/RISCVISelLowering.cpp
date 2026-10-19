@@ -13695,11 +13695,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue A = WidenAny(Rs1);
     SDValue B;
     if (IntNo == Intrinsic::riscv_pm2wadd_x) {
-      SDValue Rs2Dup = WidenAny(Rs2);
-      SDValue Swapped =
-          DAG.getNode(RISCVISD::PPAIROE, DL, MVT::v4i16, Rs2Dup, Rs2Dup);
-      SDValue SwappedLo = DAG.getExtractSubvector(DL, MVT::v2i16, Swapped, 0);
-      B = widenPackedVectorWithZeros(DAG, DL, SwappedLo, MVT::v4i16);
+      SDValue Rs2Wide = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+      B = DAG.getNode(RISCVISD::PPAIROE, DL, MVT::v4i16, Rs2Wide, Rs2Wide);
     } else {
       B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
     }

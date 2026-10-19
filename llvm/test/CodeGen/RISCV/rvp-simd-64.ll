@@ -8049,8 +8049,8 @@ define i64 @test_pm2wadd_x_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pm2wadd_x_v2i16_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ppairoe.h a1, a1, a1
 ; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    ppairoe.h a1, a1, a1
 ; RV64-NEXT:    pm4add.h a0, a0, a1
 ; RV64-NEXT:    ret
   %r = call i64 @llvm.riscv.pm2wadd.x.i64.v2i16(<2 x i16> %a, <2 x i16> %b)

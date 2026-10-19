@@ -4521,8 +4521,8 @@ int64_t test_pm2wadd_i64(int16x2_t rs1, int16x2_t rs2) {
 
 // CHECK-LABEL: test_pm2wadd_x_i64:
 // RV32:        pm2wadd.hx
-// RV64:        ppairoe.h
 // RV64:        pack{{[[:space:]]}}
+// RV64:        ppairoe.h
 // RV64:        pm4add.h
 int64_t test_pm2wadd_x_i64(int16x2_t rs1, int16x2_t rs2) {
   return __riscv_pm2wadd_x_i64(rs1, rs2);
