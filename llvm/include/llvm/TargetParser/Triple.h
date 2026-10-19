@@ -92,6 +92,7 @@ public:
     tcele64,
     thumb,          // Thumb (little endian): thumb, thumbv.*
     thumbeb,        // Thumb (big endian): thumbeb
+    toy64,          // ekayang: custom architecture
     x86,            // X86: i[3-9]86
     x86_64,         // X86-64: amd64, x86_64
     xcore,          // XCore: xcore

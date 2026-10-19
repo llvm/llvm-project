@@ -149,6 +149,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "thumb";
   case thumbeb:
     return "thumbeb";
+  case toy64: // ekayang: added
+    return "toy64";
   case ve:
     return "ve";
   case wasm32:
@@ -349,6 +351,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
     return "lanai";
   case shave:
     return "shave";
+  case toy64: // ekayang: added
+    return "toy64";
   case wasm32:
   case wasm64:
     return "wasm";
@@ -497,6 +501,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("tcele64", tcele64)
       .Case("thumb", thumb)
       .Case("thumbeb", thumbeb)
+      .Case("toy64", toy64) // ekayang: added
       .Case("x86", x86)
       .Case("i386", x86)
       .Case("x86-64", x86_64)
@@ -669,6 +674,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Case("renderscript32", Triple::renderscript32)
           .Case("renderscript64", Triple::renderscript64)
           .Case("shave", Triple::shave)
+          .Case("toy64", Triple::toy64) // added: ekayang
           .Case("ve", Triple::ve)
           .Case("wasm32", Triple::wasm32)
           .Case("wasm64", Triple::wasm64)
@@ -1010,6 +1016,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ve:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::toy64: // added: ekayang
     return Triple::ELF;
 
   case Triple::mipsel:
@@ -1799,6 +1806,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::spir64:
   case llvm::Triple::spirv64:
   case llvm::Triple::tcele64:
+  case llvm::Triple::toy64: // added: ekayang
   case llvm::Triple::systemz:
   case llvm::Triple::ve:
   case llvm::Triple::wasm64:
@@ -1848,6 +1856,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::bpfel:
   case Triple::msp430:
   case Triple::systemz:
+  case Triple::toy64: // added: ekayang
   case Triple::ve:
     T.setArch(UnknownArch);
     break;
@@ -1995,6 +2004,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::spirv64:
   case Triple::systemz:
   case Triple::tcele64:
+  case Triple::toy64: // added: ekayang
   case Triple::ve:
   case Triple::wasm64:
   case Triple::x86_64:
@@ -2116,6 +2126,7 @@ Triple Triple::getBigEndianArchVariant() const {
   // drop any arch suffixes.
   case Triple::arm:
   case Triple::thumb:
+  case Triple::toy64: // added: ekayang
     T.setArch(UnknownArch);
     break;
 
@@ -2250,6 +2261,7 @@ bool Triple::isLittleEndian() const {
   case Triple::tcele:
   case Triple::tcele64:
   case Triple::thumb:
+  case Triple::toy64: // added: ekayang
   case Triple::ve:
   case Triple::wasm32:
   case Triple::wasm64:
