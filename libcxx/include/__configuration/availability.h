@@ -260,6 +260,12 @@
 
 #endif
 
+// This controls the availability of the free function std::__thread_hardware_concurrency().
+// It has the same semantics as std::[j]thread::hardware_concurrency(), but allows to query this information
+// without depending on std::thread itself.
+#define _LIBCPP_AVAILABILITY_HAS_HARDWARE_CONCURRENCY_FREE_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_HARDWARE_CONCURRENCY_FREE_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
+
 // This controls the availability of the C++26 debugging functions.
 // The platform specific implementation is built in the library.
 #define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
