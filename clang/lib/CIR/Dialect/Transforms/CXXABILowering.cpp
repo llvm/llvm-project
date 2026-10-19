@@ -409,6 +409,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          const mlir::TypeConverter &tc,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
+  if (mlir::isa_and_present<cir::UndefAttr>(initVal))
+    return cir::UndefAttr::get(tc.convertType(ty));
+
+  if (mlir::isa_and_present<cir::PoisonAttr>(initVal))
+    return cir::PoisonAttr::get(tc.convertType(ty));
+
   if (mlir::isa<cir::DataMemberType>(ty)) {
     // Members without a CIR field index (e.g. no_unique_address empty fields)
     // are represented by an explicit byte offset instead of a field path.
@@ -468,14 +474,6 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
 
     if (auto recVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
       return cir::ZeroAttr::get(convertedTy);
-
-    if (auto undefVal = mlir::dyn_cast_if_present<cir::UndefAttr>(initVal))
-      return cir::UndefAttr::get(convertedTy);
-
-    // This might not be possible from Clang directly, but we can get here with
-    // hand-written IR.
-    if (auto poisonVal = mlir::dyn_cast_if_present<cir::PoisonAttr>(initVal))
-      return cir::PoisonAttr::get(convertedTy);
 
     if (auto recVal =
             mlir::dyn_cast_if_present<cir::ConstRecordAttr>(initVal)) {
@@ -848,6 +846,13 @@ public:
       return convertType(abiType);
     });
   }
+
+protected:
+  // Only member pointer types are rewritten. Records that reach none of them
+  // are left alone.
+  bool typeMayChange(mlir::Type type) const override {
+    return mlir::isa<cir::DataMemberType, cir::MethodType>(type);
+  }
 };
 } // namespace
 
@@ -886,6 +891,27 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
                              return typeConverter.isLegal(&region);
                            });
       });
+
+  // TargetLowering leaves same-type casts behind. Keep them illegal so the
+  // conversion driver folds them away.
+  target.addDynamicallyLegalOp<cir::CastOp>([&typeConverter](cir::CastOp op) {
+    if (op.getSrc().getType() == op.getType()) {
+      switch (op.getKind()) {
+      case cir::CastKind::bitcast:
+      case cir::CastKind::address_space:
+      case cir::CastKind::float_complex:
+      case cir::CastKind::int_complex:
+        return false;
+      default:
+        break;
+      }
+    }
+    if (!typeConverter.isLegal(op.getOperation()))
+      return false;
+    // CastOp has no regions, so operand/result types and inherent
+    // attributes are the whole legality check.
+    return areCXXABIInherentAttrsLegal(op, typeConverter);
+  });
 
   // Some CIR ops needs special checking for legality
   target.addDynamicallyLegalOp<cir::FuncOp>([&typeConverter](cir::FuncOp op) {

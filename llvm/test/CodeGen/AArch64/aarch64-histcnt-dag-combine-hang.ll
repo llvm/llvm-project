@@ -9,31 +9,28 @@ define void @histcnt_loop(ptr %0, i64 %1, ptr %2, i64 %3, i64 %4) {
 ; CHECK-LABEL: histcnt_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z0.d, #1 // =0x1
+; CHECK-NEXT:    lsl x8, x3, #1
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    add x9, x0, x1
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    lsl x10, x8, #1
-; CHECK-NEXT:    add x11, x0, x10
-; CHECK-NEXT:    add x10, x9, x10
+; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    add x9, x0, x1
+; CHECK-NEXT:    subs x4, x4, x3
+; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x9]
+; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x9, #1, mul vl]
 ; CHECK-NEXT:    lsl z1.d, z1.d, #1
-; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x11, #1, mul vl]
-; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x10, #1, mul vl]
 ; CHECK-NEXT:    histcnt z2.d, p0/z, z1.d, z1.d
 ; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x2, z1.d]
 ; CHECK-NEXT:    mad z2.d, p0/m, z0.d, z3.d
-; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x9, x8, lsl #1]
-; CHECK-NEXT:    add x8, x8, x3
-; CHECK-NEXT:    cmp x4, x8
-; CHECK-NEXT:    st1h { z2.d }, p0, [x2, z1.d]
-; CHECK-NEXT:    lsl z1.d, z4.d, #1
-; CHECK-NEXT:    histcnt z2.d, p0/z, z1.d, z1.d
-; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x2, z1.d]
-; CHECK-NEXT:    mad z2.d, p0/m, z0.d, z4.d
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    st1h { z2.d }, p0, [x2, z1.d]
 ; CHECK-NEXT:    lsl z1.d, z3.d, #1
+; CHECK-NEXT:    histcnt z2.d, p0/z, z1.d, z1.d
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x2, z1.d]
+; CHECK-NEXT:    mad z2.d, p0/m, z0.d, z3.d
+; CHECK-NEXT:    st1h { z2.d }, p0, [x2, z1.d]
+; CHECK-NEXT:    lsl z1.d, z4.d, #1
 ; CHECK-NEXT:    histcnt z2.d, p0/z, z1.d, z1.d
 ; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x2, z1.d]
 ; CHECK-NEXT:    mad z2.d, p0/m, z0.d, z3.d

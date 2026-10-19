@@ -2393,7 +2393,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));

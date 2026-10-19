@@ -86,15 +86,18 @@ private:
     bool savedIsFPConstrained;
     LangOptions::FPExceptionModeKind savedExcept;
     llvm::RoundingMode savedRounding;
+    cir::FastMathFlags savedFastMathFlags;
 
     explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
         : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
           savedExcept(builder.getDefaultConstrainedExcept()),
-          savedRounding(builder.getDefaultConstrainedRounding()) {}
+          savedRounding(builder.getDefaultConstrainedRounding()),
+          savedFastMathFlags(builder.getFastMathFlags()) {}
     ~ConstrainedFPRAII() {
       builder.setIsFPConstrained(savedIsFPConstrained);
       builder.setDefaultConstrainedExcept(savedExcept);
       builder.setDefaultConstrainedRounding(savedRounding);
+      builder.setFastMathFlags(savedFastMathFlags);
     }
   } constrainedFPState{builder};
 
@@ -129,6 +132,8 @@ public:
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
+  class CapturedCleanups;
+
   /// A cleanup whose destructor call is not emitted where the cleanup is
   /// registered. Used by the lifetime-extended cleanup stack, whose entries
   /// are later promoted onto the EH scope stack, and by the deferred
@@ -148,6 +153,9 @@ public:
     QualType type;
     Destroyer *destroyer;
     Address activeFlag = Address::invalid();
+    /// If set, the cleanup is captured by this owner instead of opening a
+    /// cir.cleanup.scope when it is pushed onto the EH stack.
+    CapturedCleanups *capturedBy = nullptr;
   };
 
   llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
@@ -199,6 +207,19 @@ public:
   /// cleanup scope only while this is set, since a FullExprCleanupScope is
   /// what closes those scopes.
   cir::CleanupScopeOp currentFullExprCleanupScope = nullptr;
+
+  /// Set by emitLoopConditionVariable while it emits the initializer of a loop
+  /// condition variable that lifetime-extends temporaries with a destructor.
+  /// The cleanups of the temporaries that \c extendingDecl extends are
+  /// captured by \c cleanups for the loop's cleanup region and guarded by
+  /// \c activeFlag, instead of opening cir.cleanup.scope operations around the
+  /// cir.condition.
+  struct LifetimeExtensionCapture {
+    const clang::ValueDecl *extendingDecl;
+    CapturedCleanups *cleanups;
+    Address activeFlag;
+  };
+  const LifetimeExtensionCapture *lifetimeExtensionCapture = nullptr;
 
   /// A cleanup that was pushed to the EH stack but whose deactivation is
   /// deferred until the enclosing CleanupDeactivationScope exits. Used to
@@ -331,8 +352,11 @@ public:
     clang::FPOptions oldFPFeatures;
     LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
+    std::optional<cir::FastMathFlags> oldFastMathFlags;
   };
   clang::FPOptions curFPFeatures;
+
+  void setFastMathFlags(FPOptions fpFeatures);
 
   /// Convert the active Clang floating-point options to CIR fast-math flags.
   cir::FastMathFlags getCurrentFastMathFlags() const;
@@ -800,11 +824,12 @@ public:
     }
 
     bool isReference() const { return valueAndIsReference.getInt(); }
-    LValue getReferenceLValue(CIRGenFunction &cgf, Expr *refExpr) const {
+    LValue getReferenceLValue(CIRGenFunction &cgf, const Expr *refExpr) const {
       assert(isReference());
-      cgf.cgm.errorNYI(refExpr->getSourceRange(),
-                       "ConstantEmission::getReferenceLValue");
-      return {};
+      mlir::Value addr = cgf.getBuilder().getConstant(
+          cgf.getLoc(refExpr->getSourceRange()),
+          mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer()));
+      return cgf.makeNaturalAlignAddrLValue(addr, refExpr->getType());
     }
 
     mlir::TypedAttr getValue() const {
@@ -1193,8 +1218,9 @@ public:
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
 
-  /// Emit the function prologue: declare function arguments in the symbol
-  /// table.
+  /// Emit the function prologue: initialize the return value of an
+  /// implicit-return-zero function and declare function arguments in the
+  /// symbol table.
   void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
                           const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
@@ -1563,9 +1589,9 @@ public:
 
     // On a coroutine body, the OnFallthrough sub stmt holds the handler
     // (CoreturnStmt) for control flow falling off the body. Keep track
-    // of emitted co_return in this scope and allow OnFallthrough to be
-    // skipeed.
-    bool hasCoreturnStmt = false;
+    // of a co_return emitted in this scope and not followed by a label, and
+    // allow OnFallthrough to be skipped.
+    bool hasCoreturnSinceLastLabel = false;
 
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
@@ -1617,8 +1643,16 @@ public:
     // ---
     // Coroutine tracking
     // ---
-    bool hasCoreturn() const { return hasCoreturnStmt; }
-    void setCoreturn() { hasCoreturnStmt = true; }
+    bool hasCoreturn() const { return hasCoreturnSinceLastLabel; }
+    // Record an emitted co_return for fallthrough tracking.
+    // A later label clears this state.
+    void markCoreturnEmitted() { hasCoreturnSinceLastLabel = true; }
+    // A goto can reach a label after a co_return, and the code after it, so
+    // the end of this scope and of the enclosing ones may be reachable again.
+    void clearCoreturnInEnclosingScopes() {
+      for (LexicalScope *s = this; s; s = s->parentScope)
+        s->hasCoreturnSinceLastLabel = false;
+    }
 
     // ---
     // Kind
@@ -1730,7 +1764,8 @@ public:
 
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
-                                   bool useEHCleanupForArray);
+                                   bool useEHCleanupForArray,
+                                   const clang::ValueDecl *extendingDecl);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
@@ -1909,8 +1944,17 @@ public:
 
   /// Emit a loop's condition-variable declaration. This needs special handling
   /// so that we can manage per-iteration cleanups for the loop condition.
+  /// \p extendedTemporaries are the types of the temporaries with a destructor
+  /// that its initializer lifetime-extends (see
+  /// getLifetimeExtendedTemporariesWithDestructor).
   void emitLoopConditionVariable(const clang::VarDecl &d,
-                                 CapturedCleanups &condCleanup);
+                                 CapturedCleanups &condCleanup,
+                                 llvm::ArrayRef<QualType> extendedTemporaries);
+
+  /// The types of the temporaries with a destructor that the initializer of
+  /// the variable \p d, which has automatic storage duration, lifetime-extends.
+  static llvm::SmallVector<QualType, 2>
+  getLifetimeExtendedTemporariesWithDestructor(const clang::VarDecl &d);
 
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the

@@ -370,6 +370,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::AliasedPointer:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
+  case spirv::Decoration::CPacked:
   case spirv::Decoration::Flat:
   case spirv::Decoration::NonReadable:
   case spirv::Decoration::NonWritable:
@@ -2870,6 +2871,8 @@ LogicalResult ControlFlowStructurizer::structurize() {
       if (it != blockMergeInfo.end()) {
         // Use the original location for nested selection/loop ops.
         Location loc = it->second.loc;
+        // Copy the control before the erase below invalidates `it`.
+        uint32_t nestedControl = it->second.control;
 
         Block *newHeader = mapper.lookupOrNull(block);
         if (!newHeader)
@@ -2888,10 +2891,9 @@ LogicalResult ControlFlowStructurizer::structurize() {
         if (Block *mappedTo = mapper.lookupOrNull(newMerge))
           newMerge = mappedTo;
 
-        // The iterator should be erased before adding a new entry into
-        // blockMergeInfo to avoid iterator invalidation.
+        // Erase the stale entry before inserting the remapped one.
         blockMergeInfo.erase(it);
-        blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
+        blockMergeInfo.try_emplace(newHeader, loc, nestedControl, newMerge,
                                    newContinue);
       }
 
