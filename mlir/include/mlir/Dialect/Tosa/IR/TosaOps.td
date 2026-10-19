@@ -2108,13 +2108,8 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad", [Pure]> {
     Returns a new tensor with the padding included. The pad_const value includes
     the zero point if the tensor uses a zero point.
 
-    The padding amounts must be non-negative. A negative padding is not valid
-    for execution. For a constant padding, the verifier accepts -1 as a
-    placeholder for an amount that is not known at compile time, in which case
-    the corresponding output dimension is dynamic.
-
-    The TOSA specification requires a negative padding to be diagnosed
-    (`ERROR_IF`). The lowering to the Tensor dialect emits a runtime assertion. 
+    The padding amounts must be non-negative. The TOSA specification requires
+    a negative padding to be diagnosed (`ERROR_IF`).
 
     Example:
 
