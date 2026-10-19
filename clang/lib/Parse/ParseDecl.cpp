@@ -4706,6 +4706,7 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_in:
     case tok::kw_inout:
     case tok::kw_out:
+    case tok::kw_precise:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
@@ -5879,6 +5880,7 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   case tok::kw_out:
   case tok::kw_row_major:
   case tok::kw_column_major:
+  case tok::kw_precise:
     return getLangOpts().HLSL;
   }
 }
@@ -6161,6 +6163,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_groupshared:
     return true;
 
+  case tok::kw_precise:
   case tok::kw_nointerpolation:
   case tok::kw_linear:
   case tok::kw_centroid:
@@ -6419,6 +6422,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_noperspective:
     case tok::kw_sample:
     case tok::kw_center:
+    case tok::kw_precise:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
