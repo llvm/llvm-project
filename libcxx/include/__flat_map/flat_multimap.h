@@ -87,9 +87,9 @@ class flat_multimap {
   static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>,
                 "The stored elements' mapped type must match the underlying mapped container's value_type.");
   static_assert(!__is_std_vector_bool_v<_KeyContainer>,
-                "The underlying key container must not be std::vector<bool>, which is not a sequence container.");
+                "The underlying key container must not be std::vector<bool> because it is not a sequence container.");
   static_assert(!__is_std_vector_bool_v<_MappedContainer>,
-                "The underlying mapped container must not be std::vector<bool>, which is not a sequence container.");
+                "The underlying mapped container must not be std::vector<bool> because it is not a sequence container.");
 
   template <bool _Const>
   using __iterator _LIBCPP_NODEBUG = __key_value_iterator<flat_multimap, _KeyContainer, _MappedContainer, _Const>;
