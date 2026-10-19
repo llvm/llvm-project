@@ -21,7 +21,7 @@ CIR passes to LLVM IR and the backend). In order to inspect CIR output, use
 
 :::{note}
 ClangIR can be disabled from the build of Clang via the `-DCLANG_ENABLE_CIR=OFF`,
-see [CMake](../../../llvm/docs/CMake.md) flag. Using this flag can reduce the compile
+see [CMake](https://llvm.org/docs/CMake.html) flag. Using this flag can reduce the compile
 time and binary size of Clang, however it will make the `-fclangir` flag unavaiable.
 :::
 
