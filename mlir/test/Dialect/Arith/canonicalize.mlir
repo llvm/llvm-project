@@ -4899,6 +4899,60 @@ func.func @truncIShrSIExactToTrunciShrUIExact(%a: i64) -> i32 {
   return %hi : i32
 }
 
+// For %a = -256, the arithmetic shift produces -1, which fits in signed i8.
+// The logical shift produces 255, so retaining nsw would introduce poison.
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nsw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_nsw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 : i16
+  %hi = arith.trunci %sh overflow<nsw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nuw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] overflow<nuw> : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_nuw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 : i16
+  %hi = arith.trunci %sh overflow<nuw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_exact_nsw_nuw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] exact : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] overflow<nuw> : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_exact_nsw_nuw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 exact : i16
+  %hi = arith.trunci %sh overflow<nsw, nuw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nsw_vector(
+//  CHECK-SAME:   %[[A:.+]]: vector<2xi16>
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant dense<8> : vector<2xi16>
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : vector<2xi16>
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : vector<2xi16> to vector<2xi8>
+//  CHECK-NEXT:   return %[[TRU]] : vector<2xi8>
+func.func @truncIShrSIToTrunciShrUI_nsw_vector(%a: vector<2xi16>) -> vector<2xi8> {
+  %c8 = arith.constant dense<8> : vector<2xi16>
+  %sh = arith.shrsi %a, %c8 : vector<2xi16>
+  %hi = arith.trunci %sh overflow<nsw> : vector<2xi16> to vector<2xi8>
+  return %hi : vector<2xi8>
+}
+
 // CHECK-LABEL: @truncIShrSIToTrunciShrUIBadShiftAmt1
 //       CHECK:   arith.shrsi
 func.func @truncIShrSIToTrunciShrUIBadShiftAmt1(%a: i64) -> i32 {
