@@ -88,10 +88,10 @@ function Build-LibXml2 {
     # Skipped steps leave the previous install in place. Callers can invoke
     # this unconditionally.
     if (-not (Test-ShouldRun 'dependencies')) {
-        $installDirectory = Join-Path $BuildDirectory 'install'
+        $InstallDirectory = Join-Path $BuildDirectory 'install'
         Write-SubStep "Skipping libxml2 (-StartAt $($script:StartAtStep))"
-        Assert-PathExists -Path $installDirectory -Description 'libxml2 install directory'
-        $script:LibXmlInstallDir = ConvertTo-UnixPath $installDirectory
+        Assert-PathExists -Path $InstallDirectory -Description 'libxml2 install directory'
+        $script:LibXmlInstallDir = ConvertTo-UnixPath $InstallDirectory
         return
     }
     Write-SubStep "Building libxml2..."
@@ -99,7 +99,7 @@ function Build-LibXml2 {
     New-Item -ItemType Directory -Path $BuildDirectory -Force | Out-Null
     Push-Location $BuildDirectory
     try {
-        $libxmlFlags = $ToolchainFlags + @(
+        $LibXmlFlags = $ToolchainFlags + @(
             "CMAKE_BUILD_TYPE=Release"
             # Suppress warnings in the downloaded dependencies with -w; clang,
             # clang-cl and cl all accept it.
@@ -143,9 +143,9 @@ function Build-LibXml2 {
             "LIBXML2_WITH_ZLIB=OFF"
             "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
         )
-        $cache = Write-CMakeCacheFile -Flags $libxmlFlags -FileName 'libxml2_cache.cmake'
-        $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags $SourceDir
+        $Cache = Write-CMakeCacheFile -Flags $LibXmlFlags -FileName 'libxml2_cache.cmake'
+        $OtherFlags = $Cache.OtherFlags
+        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
         $script:LibXmlInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
@@ -169,10 +169,10 @@ function Build-Zlib {
         [string[]]$ToolchainFlags
     )
     if (-not (Test-ShouldRun 'dependencies')) {
-        $installDirectory = Join-Path $BuildDirectory 'install'
+        $InstallDirectory = Join-Path $BuildDirectory 'install'
         Write-SubStep "Skipping zlib (-StartAt $($script:StartAtStep))"
-        Assert-PathExists -Path $installDirectory -Description 'zlib install directory'
-        $script:ZlibInstallDir = ConvertTo-UnixPath $installDirectory
+        Assert-PathExists -Path $InstallDirectory -Description 'zlib install directory'
+        $script:ZlibInstallDir = ConvertTo-UnixPath $InstallDirectory
         return
     }
     Write-SubStep "Building zlib..."
@@ -180,7 +180,7 @@ function Build-Zlib {
     New-Item -ItemType Directory -Path $BuildDirectory -Force | Out-Null
     Push-Location $BuildDirectory
     try {
-        $zlibFlags = $ToolchainFlags + @(
+        $ZlibFlags = $ToolchainFlags + @(
             "CMAKE_BUILD_TYPE=Release"
             "CMAKE_C_FLAGS=-w"
             "CMAKE_INSTALL_PREFIX=$(Join-Path $PWD 'install')"
@@ -190,9 +190,9 @@ function Build-Zlib {
             "ZLIB_INSTALL=ON"
             "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
         )
-        $cache = Write-CMakeCacheFile -Flags $zlibFlags -FileName 'zlib_cache.cmake'
-        $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags $SourceDir
+        $Cache = Write-CMakeCacheFile -Flags $ZlibFlags -FileName 'zlib_cache.cmake'
+        $OtherFlags = $Cache.OtherFlags
+        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
         $script:ZlibInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
@@ -216,10 +216,10 @@ function Build-Zstd {
         [string[]]$ToolchainFlags
     )
     if (-not (Test-ShouldRun 'dependencies')) {
-        $installDirectory = Join-Path $BuildDirectory 'install'
+        $InstallDirectory = Join-Path $BuildDirectory 'install'
         Write-SubStep "Skipping zstd (-StartAt $($script:StartAtStep))"
-        Assert-PathExists -Path $installDirectory -Description 'zstd install directory'
-        $script:ZstdInstallDir = ConvertTo-UnixPath $installDirectory
+        Assert-PathExists -Path $InstallDirectory -Description 'zstd install directory'
+        $script:ZstdInstallDir = ConvertTo-UnixPath $InstallDirectory
         return
     }
     Write-SubStep "Building zstd..."
@@ -227,7 +227,7 @@ function Build-Zstd {
     New-Item -ItemType Directory -Path $BuildDirectory -Force | Out-Null
     Push-Location $BuildDirectory
     try {
-        $zstdFlags = $ToolchainFlags + @(
+        $ZstdFlags = $ToolchainFlags + @(
             "CMAKE_BUILD_TYPE=Release"
             "CMAKE_C_FLAGS=-w"
             "CMAKE_CXX_FLAGS=-w"
@@ -240,9 +240,9 @@ function Build-Zstd {
             "CMAKE_POLICY_DEFAULT_CMP0091=NEW"
             "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
         )
-        $cache = Write-CMakeCacheFile -Flags $zstdFlags -FileName 'zstd_cache.cmake'
-        $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$SourceDir/build/cmake"
+        $Cache = Write-CMakeCacheFile -Flags $ZstdFlags -FileName 'zstd_cache.cmake'
+        $OtherFlags = $Cache.OtherFlags
+        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags "$SourceDir/build/cmake"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
         $script:ZstdInstallDir = ConvertTo-UnixPath (Join-Path $PWD 'install')
     } finally {
