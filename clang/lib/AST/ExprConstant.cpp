@@ -757,11 +757,7 @@ namespace {
     /// std::allocator<T>::allocate).
     const Expr *AllocExpr = nullptr;
 
-    enum Kind {
-      New,
-      ArrayNew,
-      StdAllocator
-    };
+    enum Kind { New, ArrayNew, StdAllocator };
 
     /// Get the kind of the allocation. This must match between allocation
     /// and deallocation.
@@ -1959,7 +1955,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   if (!B)
     return true;
 
-  if (const ValueDecl *D = B.dyn_cast<const ValueDecl*>()) {
+  if (const ValueDecl *D = B.dyn_cast<const ValueDecl *>()) {
     // ... the address of an object with static storage duration,
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->hasGlobalStorage();
@@ -1974,7 +1970,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   if (B.is<TypeInfoLValue>() || B.is<DynamicAllocLValue>())
     return true;
 
-  const Expr *E = B.get<const Expr*>();
+  const Expr *E = B.get<const Expr *>();
   switch (E->getStmtClass()) {
   default:
     return false;
@@ -3512,9 +3508,11 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     // have been value-dependent too), so diagnose that.
     assert(!VD->mightBeUsableInConstantExpressions(Info.Ctx));
     if (!Info.checkingPotentialConstantExpression()) {
-      Info.FFDiag(E, Info.getLangOpts().CPlusPlus11
-                         ? diag::note_constexpr_ltor_non_constexpr
-                         : diag::note_constexpr_ltor_non_integral, 1)
+      Info.FFDiag(E,
+                  Info.getLangOpts().CPlusPlus11
+                      ? diag::note_constexpr_ltor_non_constexpr
+                      : diag::note_constexpr_ltor_non_integral,
+                  1)
           << VD << VD->getType();
       NoteLValueLocation(Info, Base);
     }
@@ -20509,6 +20507,24 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     Result.copySign(RHS);
     return true;
+  }
+
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128: {
+    // const Expr * arg0 = E->getArg(0);
+
+    // FIXME: use 0 for now, will implement later
+    APFloat RHS(0.);
+    Result = RHS;
+    return true;
+
+    // llvm::errs() << "exprconstant: pending vinay";
+    // llvm::report_fatal_error(
+    //     "TODO: implement constexpr evaluation for __builtin_signbit");
+    // return false;
   }
 
   case Builtin::BI__builtin_fmax:

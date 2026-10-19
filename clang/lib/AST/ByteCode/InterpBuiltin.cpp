@@ -4756,6 +4756,23 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_fminimum_numf128:
     return interp__builtin_fmin(S, OpPC, Frame, /*IsNumBuiltin=*/true);
 
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128: {
+
+    // FIXME: implement after ExprConstant.cpp
+    // APFloat RHS(0.);
+    // Result = RHS;
+    // return true;
+
+    llvm::errs() << "interp: pending vinay";
+    // llvm::report_fatal_error(
+    //     "TODO: implement constexpr evaluation for __builtin_signbit");
+    return false;
+  }
+
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:

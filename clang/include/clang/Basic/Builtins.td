@@ -526,7 +526,7 @@ def TgammaF128 : Builtin {
 
 def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_trunc"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
@@ -4501,6 +4501,7 @@ def Trunc : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Cabs : FPMathTemplate, LibBuiltin<"complex.h"> {
