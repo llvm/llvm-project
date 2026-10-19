@@ -97,6 +97,7 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -316,6 +317,42 @@ public:
   /// Enables or disables dropping runtime-checkable may-alias dependencies in
   /// favor of runtime alias checks for the current vectorization attempt.
   void setTryRuntimeAliasChecks(bool V) { TryRuntimeAliasChecks = V; }
+
+  /// Splits the stored values of the root stores into halves, vectorized as
+  /// separate subtrees, while the returned guard is alive.
+  [[nodiscard]] SaveAndRestore<bool> splitStoredValues() {
+    return SaveAndRestore<bool>(SplitStoredValues, true);
+  }
+
+  /// Checks if the graph is built for the \p Stores and their stored values,
+  /// looking through the vectorized cast node, are vectorized as the alternate
+  /// node with the different opcodes in the halves.
+  bool canSplitStoredValues(ArrayRef<Value *> Stores) const {
+    if (VectorizableTree.empty() || getRootNode().isGather() ||
+        getRootNodeScalars() != Stores)
+      return false;
+    const TreeEntry *E = getOperandEntry(&getRootNode(), 0);
+    bool IsCast = E->State == TreeEntry::Vectorize && !E->isAltShuffle() &&
+                  E->getMainOp()->isCast();
+    if (IsCast)
+      E = getOperandEntry(E, 0);
+    if (E->State != TreeEntry::Vectorize || !E->isAltShuffle())
+      return false;
+    auto GetOpcode = [&](Value *V) -> unsigned {
+      V = cast<StoreInst>(V)->getValueOperand();
+      if (auto *CI = dyn_cast<CastInst>(V); CI && IsCast)
+        V = CI->getOperand(0);
+      auto *I = dyn_cast<Instruction>(V);
+      return I ? I->getOpcode() : 0;
+    };
+    unsigned Opcode0 = GetOpcode(Stores.front());
+    unsigned Opcode1 = GetOpcode(Stores.back());
+    ArrayRef<Value *> Half = Stores.take_front(Stores.size() / 2);
+    return Opcode0 != Opcode1 &&
+           all_of(Half, [&](Value *V) { return GetOpcode(V) == Opcode0; }) &&
+           all_of(Stores.drop_front(Half.size()),
+                  [&](Value *V) { return GetOpcode(V) == Opcode1; });
+  }
 
   /// Resets the runtime alias check data.
   void resetRuntimeAliasCheckState() {
@@ -3562,6 +3599,10 @@ private:
   /// distinct, range-checkable base objects and records them as runtime alias
   /// checks instead.
   bool TryRuntimeAliasChecks = false;
+
+  /// When true, the stored values of the root store node are split into
+  /// halves, which are vectorized as separate subtrees.
+  bool SplitStoredValues = false;
 
   /// Runtime alias checks collected during the last optimistic buildTree().
   RuntimeAliasCheckInfo RTChecks;
@@ -10274,12 +10315,14 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   return false;
 }
 
+/// The nodes with no more than this number of elements are not split.
+static constexpr unsigned SmallNodeSize = 4;
+
 bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                                 const InstructionsState &LocalState,
                                 SmallVectorImpl<Value *> &Op1,
                                 SmallVectorImpl<Value *> &Op2,
                                 OrdersType &ReorderIndices) const {
-  constexpr unsigned SmallNodeSize = 4;
   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
       !Opts.slp_split_alternate_instructions)
     return false;
@@ -12211,11 +12254,17 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<Value *> VL(VLRef);
 
   // Tries to build split node.
-  auto TrySplitNode = [&](const InstructionsState &LocalState) {
+  auto TrySplitNode = [&](const InstructionsState &LocalState,
+                          bool SplitInHalves = false) {
     SmallVector<Value *> Op1, Op2;
     OrdersType ReorderIndices;
-    if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
+    if (SplitInHalves) {
+      auto *Mid = std::next(VL.begin(), VL.size() / 2);
+      Op1.assign(VL.begin(), Mid);
+      Op2.assign(Mid, VL.end());
+    } else if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices)) {
       return false;
+    }
 
     auto Invalid = ScheduleBundle::invalid();
     auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
@@ -12276,6 +12325,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
+
+  if (SplitStoredValues && S && UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->Idx == 0 && TrySplitNode(S, /*SplitInHalves=*/true))
+    return;
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
   if (S.isAltShuffle() && TrySplitNode(S))
@@ -29704,6 +29757,23 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
                                        unsigned &Size) {
   std::optional<bool> Res = vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size);
+  // Retry the non-profitable tree, wider than the vector register, with the
+  // alternate stored values (looking through the cast) split into halves. The
+  // halves share the common operands instead of extracting them for the scalar
+  // stores of the other half.
+  if (Res && !*Res && Chain.size() > SmallNodeSize && Chain.size() % 2 == 0 &&
+      Chain.size() * R.getVectorElementSize(Chain.front()) >
+          R.getMaxVecRegSize() &&
+      R.canSplitStoredValues(Chain)) {
+    SaveAndRestore<bool> SplitGuard = R.splitStoredValues();
+    unsigned SplitSize;
+    std::optional<bool> SplitRes =
+        vectorizeStoreChainImpl(Chain, R, Idx, MinVF, SplitSize);
+    if (SplitRes.value_or(false)) {
+      Size = SplitSize;
+      return SplitRes;
+    }
+  }
   assert(!R.isTryingRuntimeAliasChecks() &&
          "Unexpected nested runtime alias check attempt");
   // Retry once with runtime alias checks, but only when the normal attempt
