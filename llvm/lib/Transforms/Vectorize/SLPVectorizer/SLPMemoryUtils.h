@@ -93,14 +93,15 @@ const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
-std::optional<CompressedLoadInfo> isMaskedLoadCompress(
-    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
-    const DominatorTree &DT, const TargetLibraryInfo &TLI,
-    const TargetTransformInfo::TargetCostKind CostKind,
-    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    PointersDiffCache &Cache);
+std::optional<CompressedLoadInfo>
+isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+                     const DataLayout &DL, ScalarEvolution &SE,
+                     AssumptionCache &AC, const DominatorTree &DT,
+                     const TargetLibraryInfo &TLI,
+                     const TargetTransformInfo::TargetCostKind CostKind,
+                     const function_ref<bool(Value *)> AreAllUsersVectorized,
+                     bool ReVec, PointersDiffCache &Cache);
 
 /// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
 /// can be replaced by a single load of the whole \p VL width. The loads must be

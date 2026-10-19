@@ -245,14 +245,15 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
-std::optional<CompressedLoadInfo> isMaskedLoadCompress(
-    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
-    const DominatorTree &DT, const TargetLibraryInfo &TLI,
-    const TargetTransformInfo::TargetCostKind CostKind,
-    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    PointersDiffCache &Cache) {
+std::optional<CompressedLoadInfo>
+isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+                     const DataLayout &DL, ScalarEvolution &SE,
+                     AssumptionCache &AC, const DominatorTree &DT,
+                     const TargetLibraryInfo &TLI,
+                     const TargetTransformInfo::TargetCostKind CostKind,
+                     const function_ref<bool(Value *)> AreAllUsersVectorized,
+                     bool ReVec, PointersDiffCache &Cache) {
   Type *ScalarTy = VL.front()->getType();
   const size_t Sz = VL.size();
   auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, Sz));
@@ -305,8 +306,8 @@ std::optional<CompressedLoadInfo> isMaskedLoadCompress(
   // TODO: perform the analysis of each scalar load for better
   // safe-load-unconditionally analysis.
   SmallVector<int> CompressMask;
-  bool IsStrided =
-      buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CompressMask, Cache);
+  bool IsStrided = buildCompressMask(PointerOps, Order, ScalarTy, DL, SE,
+                                     CompressMask, Cache);
   assert(CompressMask.size() >= 2 && "At least two elements are required");
   SmallVector<Value *> OrderedPointerOps(PointerOps);
   if (!Order.empty())
