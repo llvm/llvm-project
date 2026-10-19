@@ -14,6 +14,8 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -38,11 +40,16 @@ public:
   bool run();
 
 private:
+  DenseMap<Function *, Value *> McastHalfMasks;
+
   bool visitBarrier(IntrinsicInst &I);
   bool visitPtrSBufferLoad(IntrinsicInst &I);
   bool visitMonitorSleep(IntrinsicInst &I);
   bool visitCvtScale(IntrinsicInst &I);
   bool visitUnscaledWMMA(IntrinsicInst &I);
+  bool visitTensorLoadToLDS(IntrinsicInst &I);
+  Value *getMcastHalfMask(Function &F);
+  Value *splitFullMcastMask(IRBuilder<> &B, Value *Mask);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -109,6 +116,10 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
       forEachCall(
           F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
+      break;
+    case Intrinsic::amdgcn_tensor_load_to_lds:
+      forEachCall(
+          F, [&](IntrinsicInst *II) { Changed |= visitTensorLoadToLDS(*II); });
       break;
     }
   }
@@ -335,6 +346,64 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
   I.eraseFromParent();
 
   return true;
+}
+
+// A multicast tensor load whose workgroup mask has all 16 bits set may never
+// return to some of the workgroups. Split it into two multicasts of eight
+// workgroups by the cluster flat ID of the issuing workgroup: workgroups 0-7
+// use 0x00ff and workgroups 8-15 use 0xff00, so every named workgroup still
+// receives the data.
+bool AMDGPULowerIntrinsicsImpl::visitTensorLoadToLDS(IntrinsicInst &I) {
+  assert(I.getIntrinsicID() == Intrinsic::amdgcn_tensor_load_to_lds);
+
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
+  if (!ST.hasMcastFullMaskBug())
+    return false;
+
+  IRBuilder<> B(&I);
+  // The workgroup mask is in dword 0 of D# group 1.
+  Value *Group1 = I.getArgOperand(1);
+  Value *Dword0 = findScalarElement(Group1, 0);
+  if (!Dword0)
+    Dword0 = B.CreateExtractElement(Group1, uint64_t(0));
+  Value *NewDword0 = splitFullMcastMask(B, Dword0);
+  if (!NewDword0)
+    return false;
+  I.setArgOperand(1, B.CreateInsertElement(Group1, NewDword0, uint64_t(0)));
+  return true;
+}
+
+Value *AMDGPULowerIntrinsicsImpl::getMcastHalfMask(Function &F) {
+  Value *&HalfMask = McastHalfMasks[&F];
+  if (HalfMask)
+    return HalfMask;
+
+  IRBuilder<> B(F.getContext());
+  B.SetInsertPointPastAllocas(&F);
+  Value *FlatID =
+      B.CreateIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {});
+  Value *IsUpperHalf = B.CreateICmpUGE(FlatID, B.getInt32(8));
+  HalfMask = B.CreateSelect(IsUpperHalf, B.getInt32(0xffffff00),
+                            B.getInt32(0xffff00ff));
+  return HalfMask;
+}
+
+// Returns nullptr if Mask is a constant without all 16 workgroup bits set.
+Value *AMDGPULowerIntrinsicsImpl::splitFullMcastMask(IRBuilder<> &B,
+                                                     Value *Mask) {
+  constexpr uint32_t FullMask = 0xffff;
+  ConstantInt *CMask = dyn_cast<ConstantInt>(Mask);
+  if (CMask && (CMask->getZExtValue() & FullMask) != FullMask)
+    return nullptr;
+
+  Value *SplitMask =
+      B.CreateAnd(getMcastHalfMask(*B.GetInsertBlock()->getParent()), Mask);
+  if (CMask)
+    return SplitMask;
+
+  Value *IsFull =
+      B.CreateICmpEQ(B.CreateAnd(Mask, FullMask), B.getInt32(FullMask));
+  return B.CreateSelect(IsFull, SplitMask, Mask);
 }
 
 PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,
