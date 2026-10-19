@@ -61,6 +61,7 @@ void FunctionAttrPass::runOnOperation() {
     llvm::StringRef noalias = mlir::LLVM::LLVMDialect::getNoAliasAttrName();
     llvm::StringRef readonly = mlir::LLVM::LLVMDialect::getReadonlyAttrName();
     mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
+
     for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
       bool isNoCapture = false;
       bool isNoAlias = false;
@@ -82,8 +83,7 @@ void FunctionAttrPass::runOnOperation() {
         // !fir.box arguments will be passed as descriptor pointers
         // at LLVM IR dialect level - they cannot be captured,
         // and cannot alias with anything within the function.
-        isNoCapture = true;
-        isNoAlias = true;
+        isNoCapture = isNoAlias = true;
       }
       // nocapture/noalias are not applied to BIND(C) interfaces (C ABI).
       if (isNoCapture && setNoCapture && !isBindC)

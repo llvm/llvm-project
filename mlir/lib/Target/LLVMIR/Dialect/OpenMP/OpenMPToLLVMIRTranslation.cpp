@@ -977,8 +977,14 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Emits an empty side-effecting inline-asm barrier with a "memory" clobber
-/// over \p ptrs, pinning their accesses at this point even under `noalias`.
+/// Emits an empty side-effecting inline asm with a "memory" clobber that takes
+/// \p ptrs as operands. Since the pointers are passed to the asm, LLVM has to
+/// assume that the asm reads and writes them and that they escape here, so the
+/// OpenMP runtime calls that follow may access them too. This keeps accesses
+/// through `noalias` dummy arguments from being moved across a synchronization
+/// point, while `noalias` still holds everywhere else. A fence or an asm
+/// without operands would not be enough: alias analysis ignores
+/// synchronization effects on `noalias` arguments that never escape.
 static void emitNoAliasFlushBarrier(llvm::IRBuilderBase &builder,
                                     llvm::ArrayRef<llvm::Value *> ptrs) {
   if (ptrs.empty())
@@ -990,20 +996,35 @@ static void emitNoAliasFlushBarrier(llvm::IRBuilderBase &builder,
   for (size_t i = 0, e = ptrs.size(); i != e; ++i)
     constraints += "r,";
   constraints += "~{memory}";
-  llvm::FunctionType *asmFTy =
-      llvm::FunctionType::get(builder.getVoidTy(), ptrTypes, /*isVarArg=*/false);
+  llvm::FunctionType *asmFTy = llvm::FunctionType::get(
+      builder.getVoidTy(), ptrTypes, /*isVarArg=*/false);
   llvm::InlineAsm *barrier = llvm::InlineAsm::get(
       asmFTy, /*AsmString=*/"", constraints, /*hasSideEffects=*/true);
   builder.CreateCall(barrier, ptrs);
 }
 
-/// Collects the `noalias` pointer arguments of the function currently being
-/// built; these are the dummy arguments an implicit flush must keep ordered.
+/// Returns true if \p op is nested in a construct whose region is outlined into
+/// a separate function (e.g. omp.parallel or omp.task). The arguments of that
+/// function are not dummy arguments, so there is nothing to pin.
+static bool isInOutlinedRegion(Operation *op) {
+  return static_cast<bool>(
+      op->getParentOfType<omp::OutlineableOpenMPOpInterface>());
+}
+
+/// Returns true if \p ptr is a `noalias` pointer argument of the function being
+/// built, possibly with an offset. For Fortran these are dummy arguments.
+static bool isNoAliasArgument(llvm::Value *ptr) {
+  auto *arg = llvm::dyn_cast<llvm::Argument>(ptr->stripInBoundsOffsets());
+  return arg && arg->hasNoAliasAttr();
+}
+
+/// Collects the `noalias` pointer arguments of the function that \p op is
+/// translated into; these are the dummy arguments a flush must keep ordered.
 static llvm::SmallVector<llvm::Value *>
-collectNoAliasPointerArgs(llvm::IRBuilderBase &builder) {
+collectNoAliasPointerArgs(Operation *op, llvm::IRBuilderBase &builder) {
   llvm::SmallVector<llvm::Value *> ptrs;
   llvm::BasicBlock *insertBB = builder.GetInsertBlock();
-  if (!insertBB)
+  if (!insertBB || isInOutlinedRegion(op))
     return ptrs;
   if (llvm::Function *fn = insertBB->getParent())
     for (llvm::Argument &arg : fn->args())
@@ -1014,8 +1035,9 @@ collectNoAliasPointerArgs(llvm::IRBuilderBase &builder) {
 
 /// Returns true if translating \p op emits a construct that implies a flush of
 /// all thread-visible variables. For single/sections/wsloop the flush comes
-/// from the end barrier, which `nowait` omits. Explicit `omp.flush` with a list
-/// is handled separately, pinning only the listed variables.
+/// from the end barrier, which `nowait` omits. Explicit `omp.flush` is handled
+/// together with the op, since a flush with a list only pins the listed
+/// variables.
 static bool impliesFlushAll(mlir::Operation *op) {
   if (auto single = mlir::dyn_cast<mlir::omp::SingleOp>(op))
     return !single.getNowait();
@@ -10773,7 +10795,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   // A flush-implying construct must not let accesses to the function's noalias
   // dummy arguments move across it; pin them here while keeping `noalias`.
   if (impliesFlushAll(op))
-    emitNoAliasFlushBarrier(builder, collectNoAliasPointerArgs(builder));
+    emitNoAliasFlushBarrier(builder, collectNoAliasPointerArgs(op, builder));
 
   auto result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -10802,12 +10824,20 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             if (failed(checkImplementationStatus(*op)))
               return failure();
 
-            // __kmpc_flush ignores the list, so emit a compiler memory barrier
-            // over the listed pointers to keep their accesses ordered across the
-            // flush even when they carry the Fortran-implied `noalias`.
+            // __kmpc_flush ignores the list. Pin the `noalias` dummy arguments
+            // that are listed, or all of them for a flush without a list, so
+            // that their accesses stay ordered across the flush.
             llvm::SmallVector<llvm::Value *> flushPtrs;
-            for (mlir::Value flushVar : op.getVarList())
-              flushPtrs.push_back(moduleTranslation.lookupValue(flushVar));
+            if (op.getVarList().empty()) {
+              flushPtrs = collectNoAliasPointerArgs(op, builder);
+            } else if (!isInOutlinedRegion(op)) {
+              for (mlir::Value flushVar : op.getVarList()) {
+                llvm::Value *ptr = moduleTranslation.lookupValue(flushVar);
+                if (isNoAliasArgument(ptr) &&
+                    !llvm::is_contained(flushPtrs, ptr))
+                  flushPtrs.push_back(ptr);
+              }
+            }
             emitNoAliasFlushBarrier(builder, flushPtrs);
             ompBuilder->createFlush(builder);
             return success();

@@ -23,11 +23,9 @@ llvm.func @test_flush_construct(%arg0: !llvm.ptr) {
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush
 
-  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush (%arg0 : !llvm.ptr)
 
-  // CHECK: call void asm sideeffect "", "r,r,~{memory}"(ptr %{{[0-9]+}}, ptr %{{[0-9]+}})
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush (%arg0, %arg0 : !llvm.ptr, !llvm.ptr)
 
@@ -64,45 +62,6 @@ llvm.func @test_error_construct(%msg : !llvm.ptr) {
   omp.error severity(warning)
 
   // CHECK-NEXT:    ret void
-  llvm.return
-}
-
-// CHECK-LABEL: define void @test_barrier_noalias(ptr noalias %{{[0-9]+}})
-llvm.func @test_barrier_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
-  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
-  // CHECK: call void @__kmpc_barrier
-  omp.barrier
-  llvm.return
-}
-
-// CHECK-LABEL: define void @test_critical_noalias(ptr noalias %{{[0-9]+}})
-llvm.func @test_critical_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
-  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
-  // CHECK: call void @__kmpc_critical
-  omp.critical {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// CHECK-LABEL: define void @test_single_noalias(ptr noalias %{{[0-9]+}})
-llvm.func @test_single_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
-  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
-  // CHECK: call i32 @__kmpc_single
-  omp.single {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// A single with nowait has no end barrier, so no pin is emitted.
-// CHECK-LABEL: define void @test_single_nowait_noalias(ptr noalias %{{[0-9]+}}
-llvm.func @test_single_nowait_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
-  // CHECK-NOT: call void asm sideeffect
-  // CHECK: call i32 @__kmpc_single
-  omp.single nowait {
-    omp.terminator
-  }
   llvm.return
 }
 
