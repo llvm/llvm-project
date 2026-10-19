@@ -173,13 +173,12 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
 
 static bool isImageCompatible(const DeviceImageManager &Image,
                               const DeviceImpl &Device) {
-  const llvm::object::OffloadBinary &OB = Image.getOffloadBinary();
-  if (!(OB.getTriple() == DeviceBinaryTripleSPIRV64 &&
+  if (!(Image.getTargetArch() == DeviceBinaryArchSPIRV64 &&
         Device.getBackend() == sycl::backend::level_zero))
     return false;
 
   bool IsValid{};
-  llvm::StringRef ImageBytes = OB.getImage();
+  llvm::StringRef ImageBytes = Image.getOffloadBinary().getImage();
   callAndThrow(olIsValidBinary, Device.getOLHandle(), ImageBytes.data(),
                ImageBytes.size(), &IsValid);
   return IsValid;
