@@ -1714,7 +1714,8 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   // Perform any cleanups to the IR that aren't suitable for per TU compilation,
   // like removing CFI/WPD related instructions. Note, we reuse
   // DropTypeTestsPass to clean up type tests rather than duplicate that logic
-  // in FatLtoCleanup.
+  // in FatLtoCleanup; checked-load cleanup is shared the other way, with
+  // FatLtoCleanup calling lowertypetests::cleanUpTypeCheckedLoad.
   MPM.addPass(FatLtoCleanup());
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the
