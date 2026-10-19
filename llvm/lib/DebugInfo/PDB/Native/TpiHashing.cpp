@@ -88,10 +88,14 @@ static Expected<uint32_t> getSourceLineHash(const CVType &Rec) {
 Expected<TagRecordHash> llvm::pdb::hashTagRecord(const codeview::CVType &Type) {
   switch (Type.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
     return getTagRecordHashForUdt<ClassRecord>(Type);
   case LF_UNION:
+  case LF_UNION2:
     return getTagRecordHashForUdt<UnionRecord>(Type);
   case LF_ENUM:
     return getTagRecordHashForUdt<EnumRecord>(Type);
@@ -105,10 +109,14 @@ Expected<TagRecordHash> llvm::pdb::hashTagRecord(const codeview::CVType &Type) {
 Expected<uint32_t> llvm::pdb::hashTypeRecord(const CVType &Rec) {
   switch (Rec.kind()) {
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
     return getHashForUdt<ClassRecord>(Rec);
   case LF_UNION:
+  case LF_UNION2:
     return getHashForUdt<UnionRecord>(Rec);
   case LF_ENUM:
     return getHashForUdt<EnumRecord>(Rec);

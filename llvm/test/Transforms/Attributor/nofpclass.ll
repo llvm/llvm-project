@@ -104,7 +104,7 @@ define <2 x double> @returned_negzero_vector() {
 
 ; Test a vector element that's a constant but not ConstantFP.
 define <2 x double> @returned_strange_constant_vector_elt() {
-; CHECK-LABEL: define <2 x double> @returned_strange_constant_vector_elt() {
+; CHECK-LABEL: define noundef <2 x double> @returned_strange_constant_vector_elt() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <2 x double> <double -0.000000e+00, double bitcast (i64 ptrtoint (ptr @unknown to i64) to double)>
 ;
@@ -1626,7 +1626,7 @@ define <2 x float> @multiple_extractelement(<4 x float> nofpclass(zero) %arg0) {
 ; FIXME: Doesn't actually reach computeKnownFPClass
 define <4 x float> @shufflevector_constexpr() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <4 x float> @shufflevector_constexpr
+; CHECK-LABEL: define noundef <4 x float> @shufflevector_constexpr
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret <4 x float> <float 1.000000e+00, float bitcast (i32 ptrtoint (ptr @shufflevector_constexpr to i32) to float), float 4.000000e+00, float 0.000000e+00>
 ;

@@ -17,7 +17,8 @@ def ol_platform_info_t : Enum {
     TaggedEtor<"NAME", "char[]", "The string denoting name of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VENDOR_NAME", "char[]", "The string denoting name of the vendor of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VERSION", "char[]", "The string denoting the version of the platform. The size of the info needs to be dynamically queried.">,
-    TaggedEtor<"BACKEND", "ol_platform_backend_t", "The native backend of the platform.">
+    TaggedEtor<"BACKEND", "ol_platform_backend_t", "The native backend of the platform.">,
+    TaggedEtor<"ACTIVE", "bool", "True if the platform has already been initialized and has at least one device. Querying this does not initialize the platform.">
   ];
 }
 
