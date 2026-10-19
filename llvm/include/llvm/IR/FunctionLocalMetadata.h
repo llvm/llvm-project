@@ -420,11 +420,10 @@ public:
   // index.
   FLIndex<FLScope> getScope(const DILocalScope *Scope) {
     FLScope InsertedScope(const_cast<DILocalScope *>(Scope));
-    if (auto ScopeIt = ScopeMap.find(InsertedScope); ScopeIt != ScopeMap.end())
-      return ScopeIt->second;
-    FLIndex<FLScope> Index = FLContext->insertScope(InsertedScope);
-    ScopeMap.insert({InsertedScope, Index});
-    return Index;
+    auto [ScopeIt, Inserted] = ScopeMap.try_emplace(InsertedScope);
+    if (Inserted)
+      ScopeIt->second = FLContext->insertScope(InsertedScope);
+    return ScopeIt->second;
   }
   // Returns the index for a SrcLoc with the given arguments, either returning
   // the index of an existing copy or inserting a new entry and returning its
@@ -432,12 +431,10 @@ public:
   FLIndex<FLSrcLoc> getSrcLoc(uint32_t Line, uint16_t Column,
                               FLIndex<FLScope> ScopeIdx) {
     FLSrcLoc InsertedSrcLoc(Line, Column, ScopeIdx);
-    if (auto SrcLocIt = SrcLocMap.find(InsertedSrcLoc);
-        SrcLocIt != SrcLocMap.end())
-      return SrcLocIt->second;
-    FLIndex<FLSrcLoc> Index = FLContext->insertSrcLoc(InsertedSrcLoc);
-    SrcLocMap.insert({InsertedSrcLoc, Index});
-    return Index;
+    auto [SrcLocIt, Inserted] = SrcLocMap.try_emplace(InsertedSrcLoc);
+    if (Inserted)
+      SrcLocIt->second = FLContext->insertSrcLoc(InsertedSrcLoc);
+    return SrcLocIt->second;
   }
   // Returns the index for a SrcLoc with the given arguments, either returning
   // the index of an existing copy or inserting a new entry and returning its
