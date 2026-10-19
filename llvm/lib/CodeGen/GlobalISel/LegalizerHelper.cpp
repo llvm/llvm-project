@@ -1634,7 +1634,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       return UnableToLegalize;
 
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    if (DstTy.isScalar() && DstTy.getSizeInBits() < NarrowTy.getSizeInBits()) {
+    if (DstTy.getScalarSizeInBits() < NarrowTy.getScalarSizeInBits()) {
       auto Trunc = MIRBuilder.buildTrunc(NarrowTy, MI.getOperand(1));
       MIRBuilder.buildTrunc(MI.getOperand(0), Trunc);
       MI.eraseFromParent();

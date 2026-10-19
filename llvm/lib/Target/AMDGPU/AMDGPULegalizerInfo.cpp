@@ -1244,10 +1244,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // TODO: Do we need to clamp maximum bitwidth?
   getActionDefinitionsBuilder(G_TRUNC)
+      .legalIf(typeInSet(0, {S1, S32, S64}))
+      .legalIf(all(typeIs(0, S16), scalarNarrowerThan(1, 33)))
+      .legalFor({{V2S16, V2S32}})
       .narrowScalarIf(all(typeIs(0, S16), scalarWiderThan(1, 32)),
                       changeElementSizeTo(1, S32))
-      .legalIf(isScalar(0))
-      .legalFor({{V2S16, V2S32}})
       .clampMaxNumElements(0, S16, 2)
       // Avoid scalarizing in cases that should be truly illegal. In
       // unresolvable situations (like an invalid implicit use), we don't want
