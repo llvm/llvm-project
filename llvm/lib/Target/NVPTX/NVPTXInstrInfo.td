@@ -2093,23 +2093,23 @@ foreach rc = [B16, B32, B64] in
 // and then cvt to floating-point.
 
 // sint -> f16
-def : Pat<(f16 (sint_to_fp  i1:$a)), (CVT_f16_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a),
-    CvtRN)>;
+def : Pat<(f16 (sint_to_fp i1:$a)),
+          (CVT_f16_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a), CvtRN)>;
 def : Pat<(f16 (sint_to_fp i16:$a)), (CVT_f16_s16 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f16 (sint_to_fp i32:$a)), (CVT_f16_s32 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f16 (sint_to_fp i64:$a)), (CVT_f16_s64 reg_or_imm:$a, CvtRN)>;
 
 // uint -> f16
-def : Pat<(f16 (uint_to_fp  i1:$a)), (CVT_f16_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a),
-    CvtRN)>;
+def : Pat<(f16 (uint_to_fp i1:$a)),
+          (CVT_f16_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a), CvtRN)>;
 def : Pat<(f16 (uint_to_fp i16:$a)), (CVT_f16_u16 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f16 (uint_to_fp i32:$a)), (CVT_f16_u32 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f16 (uint_to_fp i64:$a)), (CVT_f16_u64 reg_or_imm:$a, CvtRN)>;
 
 // sint -> bf16
 let Predicates = [SM90] in {
-  def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a),
-      CvtRN)>;
+  def : Pat<(bf16 (sint_to_fp i1:$a)),
+            (CVT_bf16_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a), CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i16:$a)), (CVT_bf16_s16 reg_or_imm:$a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i32:$a)), (CVT_bf16_s32 reg_or_imm:$a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i64:$a)), (CVT_bf16_s64 reg_or_imm:$a, CvtRN)>;
@@ -2117,37 +2117,37 @@ let Predicates = [SM90] in {
 
 // uint -> bf16
 let Predicates = [SM90] in {
-  def : Pat<(bf16 (uint_to_fp i1:$a)), (CVT_bf16_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a),
-      CvtRN)>;
+  def : Pat<(bf16 (uint_to_fp i1:$a)),
+            (CVT_bf16_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a), CvtRN)>;
   def : Pat<(bf16 (uint_to_fp i16:$a)), (CVT_bf16_u16 reg_or_imm:$a, CvtRN)>;
   def : Pat<(bf16 (uint_to_fp i32:$a)), (CVT_bf16_u32 reg_or_imm:$a, CvtRN)>;
   def : Pat<(bf16 (uint_to_fp i64:$a)), (CVT_bf16_u64 reg_or_imm:$a, CvtRN)>;
 }
 
 // sint -> f32
-def : Pat<(f32 (sint_to_fp  i1:$a)), (CVT_f32_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a),
-    CvtRN)>;
+def : Pat<(f32 (sint_to_fp i1:$a)),
+          (CVT_f32_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a), CvtRN)>;
 def : Pat<(f32 (sint_to_fp i16:$a)), (CVT_f32_s16 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f32 (sint_to_fp i32:$a)), (CVT_f32_s32 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f32 (sint_to_fp i64:$a)), (CVT_f32_s64 reg_or_imm:$a, CvtRN)>;
 
 // uint -> f32
-def : Pat<(f32 (uint_to_fp  i1:$a)), (CVT_f32_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a),
-    CvtRN)>;
+def : Pat<(f32 (uint_to_fp i1:$a)),
+          (CVT_f32_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a), CvtRN)>;
 def : Pat<(f32 (uint_to_fp i16:$a)), (CVT_f32_u16 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f32 (uint_to_fp i32:$a)), (CVT_f32_u32 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f32 (uint_to_fp i64:$a)), (CVT_f32_u64 reg_or_imm:$a, CvtRN)>;
 
 // sint -> f64
-def : Pat<(f64 (sint_to_fp i1:$a)), (CVT_f64_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a),
-    CvtRN)>;
+def : Pat<(f64 (sint_to_fp i1:$a)),
+          (CVT_f64_s32 (SELP_b32 (i32 -1), (i32 0), reg_or_imm:$a), CvtRN)>;
 def : Pat<(f64 (sint_to_fp i16:$a)), (CVT_f64_s16 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f64 (sint_to_fp i32:$a)), (CVT_f64_s32 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f64 (sint_to_fp i64:$a)), (CVT_f64_s64 reg_or_imm:$a, CvtRN)>;
 
 // uint -> f64
-def : Pat<(f64 (uint_to_fp i1:$a)),  (CVT_f64_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a),
-    CvtRN)>;
+def : Pat<(f64 (uint_to_fp i1:$a)),
+          (CVT_f64_u32 (SELP_b32 (i32 1), (i32 0), reg_or_imm:$a), CvtRN)>;
 def : Pat<(f64 (uint_to_fp i16:$a)), (CVT_f64_u16 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f64 (uint_to_fp i32:$a)), (CVT_f64_u32 reg_or_imm:$a, CvtRN)>;
 def : Pat<(f64 (uint_to_fp i64:$a)), (CVT_f64_u64 reg_or_imm:$a, CvtRN)>;
