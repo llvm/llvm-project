@@ -6817,7 +6817,8 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
-    ElementCount MinProfitableTripCount, bool TailFoldedEpilogue) const {
+    ElementCount MinProfitableTripCount, bool TailFoldedEpilogue,
+    bool RequiresScalarEpilogue) const {
   const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
@@ -6826,7 +6827,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
   // it can handle any trip count, so the min iter check never needs
   // to branch to the scalar loop.
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount, Plan.requiresScalarEpilogue(),
+                 MinProfitableTripCount, RequiresScalarEpilogue,
                  Plan.hasTailFolded() || TailFoldedEpilogue, OrigLoop,
                  BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
@@ -7870,9 +7871,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
-                                 ElementCount::getFixed(0),
-                                 BestEpiPlan.hasTailFolded());
+    LVP.addMinimumIterationCheck(
+        BestMainPlan, EpilogueVF, /*UF=*/1, ElementCount::getFixed(0),
+        BestEpiPlan.hasTailFolded(), BestEpiPlan.requiresScalarEpilogue());
     LVP.attachRuntimeChecks(BestMainPlan, Checks, VF.Width, IC,
                             HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
@@ -7924,9 +7925,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
     ++LoopsEpilogueVectorized;
   } else {
-    LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
-                                 VF.MinProfitableTripCount,
-                                 /*TailFoldedEpilogue=*/false);
+    LVP.addMinimumIterationCheck(
+        BestPlan, VF.Width, IC, VF.MinProfitableTripCount,
+        /*TailFoldedEpilogue=*/false, BestPlan.requiresScalarEpilogue());
     LVP.attachRuntimeChecks(BestPlan, Checks, VF.Width, IC, HasBranchWeights);
 
     if (!IsInnerLoop)
