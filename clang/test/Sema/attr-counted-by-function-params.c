@@ -142,17 +142,35 @@ void not_a_reference_sized(int count, void *__sized_by(count + 1) buf);
 void not_a_reference_sized_or_null(int count, void *__sized_by_or_null(count + 1) buf);
 
 //==============================================================================
-// Not supported yet
+// Array parameters
 //==============================================================================
 
-// expected-error@+1{{'counted_by' on arrays only applies to C99 flexible array members}}
+// An array without a size decays to a pointer that carries the count, so each
+// kind is allowed, although a flexible array member takes only counted_by.
 void array(int count, int arr[] __counted_by(count));
-// expected-error@+1{{'counted_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
 void array_or_null(int count, int arr[] __counted_by_or_null(count));
-// expected-error@+1{{'sized_by' only applies to pointers; did you mean to use 'counted_by'?}}
 void array_sized(int count, int arr[] __sized_by(count));
-// expected-error@+1{{'sized_by_or_null' only applies to pointers; did you mean to use 'counted_by'?}}
 void array_sized_or_null(int count, int arr[] __sized_by_or_null(count));
+
+// expected-error@+1{{'counted_by' cannot be applied to an array parameter with an explicit size}}
+void array_with_size(int count, int arr[10] __counted_by(count));
+// expected-error@+1{{'counted_by_or_null' cannot be applied to an array parameter with an explicit size}}
+void array_with_size_or_null(int count, int arr[10] __counted_by_or_null(count));
+// expected-error@+1{{'sized_by' cannot be applied to an array parameter with an explicit size}}
+void array_with_size_sized(int count, int arr[10] __sized_by(count));
+// expected-error@+1{{'sized_by_or_null' cannot be applied to an array parameter with an explicit size}}
+void array_with_size_sized_or_null(int count, int arr[10] __sized_by_or_null(count));
+
+// A type attribute written after the count does not hide it, so the count
+// still moves to the pointer.
+void array_attr_after(int count,
+                      int arr[] [[clang::counted_by(count),
+                                  clang::annotate_type("x")]]);
+void array_attr_after(int count, int *__counted_by(count) arr);
+
+//==============================================================================
+// Not supported yet
+//==============================================================================
 
 // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
 void out(int count, int *__counted_by(count) *buf);
