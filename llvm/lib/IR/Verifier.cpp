@@ -1201,8 +1201,7 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
   // Validate indexes for SrcLocs and InlinedCalls.
   for (FLSrcLoc SrcLoc : N.getSrcLocs())
     CheckDI(SrcLoc.ScopeIdx.get() < N.getScopes().size(),
-            "FLSrcLoc has invalid ScopeIdx", SrcLoc.ScopeIdx.get(),
-            &N);
+            "FLSrcLoc has invalid ScopeIdx", SrcLoc.ScopeIdx.get(), &N);
   for (auto [Idx, InlinedCall] : enumerate(N.getInlinedCalls())) {
     if (!InlinedCall.SrcLocIdx) {
       CheckDI(IsNonDebugFLContext && !InlinedCall.isInlined(),
@@ -1214,7 +1213,8 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
     if (InlinedCall.isInlined()) {
       CheckDI(InlinedCall.InlinedAtIdx.get() < Idx,
               "FLInlinedCall's InlinedAtIdx cannot point to a later "
-              "FLInlinedCall entry", InlinedCall.InlinedAtIdx.get(), &N);
+              "FLInlinedCall entry",
+              InlinedCall.InlinedAtIdx.get(), &N);
       auto *InlinedFLMD = InlinedCall.getInlinedAt(&N).InlineeContext;
       CheckDI(InlinedCall.SrcLocIdx.get() < InlinedFLMD->getSrcLocs().size(),
               "Inlined FLInlinedCall has invalid SrcLocIdx",
@@ -1227,7 +1227,7 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
   }
   // Visit referenced MDNodes from here; most of the actual validation for the
   // contents of this class happen in vistFunction, where we have more context.
-  SmallVector<MDNode*> NodesToVisit;
+  SmallVector<MDNode *> NodesToVisit;
   N.getUsedMDNodes(NodesToVisit);
   for (auto *Node : NodesToVisit)
     visitMDNode(*Node, AreDebugLocsAllowed::No);

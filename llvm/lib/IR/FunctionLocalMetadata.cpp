@@ -24,7 +24,8 @@ MDFunctionLocalContext::getDistinct(LLVMContext &Context, bool NonDebug) {
   return NewMD;
 }
 
-void MDFunctionLocalContext::getUsedMDNodes(SmallVectorImpl<MDNode*> &Nodes) const {
+void MDFunctionLocalContext::getUsedMDNodes(
+    SmallVectorImpl<MDNode *> &Nodes) const {
   // Scopes should have no duplicate entries, just append.
   for (auto Scope : getScopes())
     Nodes.push_back(Scope.get());
