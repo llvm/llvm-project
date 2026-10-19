@@ -2602,7 +2602,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
       auto [Rsrc, Off] = getPtrParts(Ptr);
       auto *ConstOff = dyn_cast<ConstantInt>(Off);
       if (ConstOff && AMDGPU::isLegalSMRDEncodedSignedOffset(
-                          *ST, ConstOff->getSExtValue(), /*IsBuffer=*/true)) {
+                          *ST, ConstOff->getZExtValue(), /*IsBuffer=*/true)) {
         Value *NewPrefetch =
             IRB.CreateIntrinsic(Intrinsic::amdgcn_s_buffer_prefetch_data, {},
                                 {Rsrc, ConstOff, IRB.getInt32(0)});
