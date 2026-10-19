@@ -366,6 +366,11 @@ defm NSAClauseBug : AMDGPUSubtargetFeature<"nsa-clause-bug",
   /*GenPredicate=*/0
 >;
 
+defm MixedLoadStoreClauses : AMDGPUSubtargetFeature<"mixed-load-store-clauses",
+  "Loads, stores and atomics of the same memory class share one S_CLAUSE type",
+  /*GenPredicate=*/0
+>;
+
 defm FlatSegmentOffsetBug : AMDGPUSubtargetFeature<"flat-segment-offset-bug",
   "GFX10 bug where inst_offset is ignored when flat instructions access global memory",
   /*GenPredicate=*/0
@@ -1907,6 +1912,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureExtendedImageInsts,
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
+   FeatureMixedLoadStoreClauses,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
@@ -2206,7 +2212,8 @@ def FeatureISAVersion10_Common : FeatureSet<
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
-    [FeatureLDSAllocGranularity512,
+    [FeatureMixedLoadStoreClauses,
+     FeatureLDSAllocGranularity512,
      FeatureScalarStores,
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
