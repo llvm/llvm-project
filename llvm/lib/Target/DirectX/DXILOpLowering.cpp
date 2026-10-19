@@ -11,6 +11,7 @@
 #include "DXILOpBuilder.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -574,14 +575,16 @@ public:
       for (int I = 0, E = N; I != E; ++I) {
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
-        Value *GEP = IRB.CreateInBoundsGEP(
-            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)});
+        Value *GEP = GetElementPtrInst::CreateInBounds(
+            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)}, "",
+            IRB.GetInsertPoint());
         IRB.CreateStore(Extracts[I], GEP);
       }
 
       for (ExtractElementInst *EEI : DynamicAccesses) {
-        Value *GEP = IRB.CreateInBoundsGEP(ArrayTy, Alloca,
-                                           {Zero, EEI->getIndexOperand()});
+        Value *GEP = GetElementPtrInst::CreateInBounds(
+            ArrayTy, Alloca, {Zero, EEI->getIndexOperand()}, "",
+            IRB.GetInsertPoint());
         Value *Load = IRB.CreateLoad(ElTy, GEP);
         EEI->replaceAllUsesWith(Load);
         EEI->eraseFromParent();
@@ -944,6 +947,25 @@ public:
         return E;
 
       CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerBarrierByMemoryHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *SemanticFlags = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BarrierByMemoryHandle, {Handle, SemanticFlags});
+      if (Error E = OpCall.takeError())
+        return E;
+
       CI->eraseFromParent();
       return Error::success();
     });
@@ -1454,6 +1476,9 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
+      case Intrinsic::dx_barrier_by_memory_handle:
+        HasErrors |= lowerBarrierByMemoryHandle(F);
+        break;
       case Intrinsic::dx_resource_atomic_binop:
         HasErrors |= lowerResourceAtomicBinOp(F);
         break;
@@ -1506,6 +1531,7 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
   PA.preserve<RootSignatureAnalysis>();
+  PA.preserve<SignatureAnalysis>();
   return PA;
 }
 
@@ -1534,6 +1560,7 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<SignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;

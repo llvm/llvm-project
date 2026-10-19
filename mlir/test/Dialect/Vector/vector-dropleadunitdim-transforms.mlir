@@ -5,13 +5,13 @@
 // CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // CHECK-LABEL: cast_away_contraction_leading_one_dims
-//  CHECK-NEXT:   %[[R0:.+]] =  vector.extract %{{.*}}[0] : vector<16x8xf32> from vector<1x16x8xf32>
-//  CHECK-NEXT:   %[[R1:.+]] =  vector.extract %{{.*}}[0] : vector<8x16xf32> from vector<1x8x16xf32>
-//  CHECK-NEXT:   %[[R2:.+]] =  vector.extract %{{.*}}[0] : vector<16x16xf32> from vector<1x16x16xf32>
+//  CHECK-NEXT:   %[[R0:.+]] =  vector.shape_cast %{{.*}} : vector<1x16x8xf32> to vector<16x8xf32>
+//  CHECK-NEXT:   %[[R1:.+]] =  vector.shape_cast %{{.*}} : vector<1x8x16xf32> to vector<8x16xf32>
+//  CHECK-NEXT:   %[[R2:.+]] =  vector.shape_cast %{{.*}} : vector<1x16x16xf32> to vector<16x16xf32>
 //  CHECK-NEXT:   %[[R3:.+]] = vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
 //  CHECK-SAME:   %[[R0]], %[[R1]], %[[R2]] : vector<16x8xf32>, vector<8x16xf32> into vector<16x16xf32>
-//  CHECK-NEXT:   %[[R4:.+]] = vector.broadcast %[[R3]] : vector<16x16xf32> to vector<1x16x16xf32>
+//  CHECK-NEXT:   %[[R4:.+]] = vector.shape_cast %[[R3]] : vector<16x16xf32> to vector<1x16x16xf32>
 //  CHECK-NEXT:  return %[[R4]] : vector<1x16x16xf32>
 
 #contraction_accesses0 = [
@@ -36,14 +36,14 @@ func.func @cast_away_contraction_leading_one_dims(%arg0: vector<1x16x8xf32>, %ar
 
 // CHECK-LABEL:   func.func @cast_away_contraction_leading_one_dim_under_const_mask
 // CHECK:           %[[MASK:.*]] = vector.constant_mask [15, 15, 8] : vector<16x16x8xi1>
-// CHECK:           %[[R0:.*]] = vector.extract %{{.*}}[0] : vector<16x8xf32> from vector<1x16x8xf32>
-// CHECK:           %[[R1:.*]] = vector.extract %{{.*}}[0] : vector<8x16xf32> from vector<1x8x16xf32>
-// CHECK:           %[[R2:.*]] = vector.extract %{{.*}}[0] : vector<16x16xf32> from vector<1x16x16xf32>
+// CHECK:           %[[R0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x8xf32> to vector<16x8xf32>
+// CHECK:           %[[R1:.*]] = vector.shape_cast %{{.*}} : vector<1x8x16xf32> to vector<8x16xf32>
+// CHECK:           %[[R2:.*]] = vector.shape_cast %{{.*}} : vector<1x16x16xf32> to vector<16x16xf32>
 // CHECK:           %[[CONTRACT:.*]] = vector.mask %[[MASK]] {
 // CHECK-SAME:        vector.contract {indexing_maps = [#[[$MAP_0]], #[[$MAP_1]], #[[$MAP_2]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
 // CHECK-SAME:          %[[R0]], %[[R1]], %[[R2]] : vector<16x8xf32>, vector<8x16xf32> into vector<16x16xf32>
 // CHECK-SAME:      } : vector<16x16x8xi1> -> vector<16x16xf32>
-// CHECK:           %[[RES:.*]] = vector.broadcast %[[CONTRACT]] : vector<16x16xf32> to vector<1x16x16xf32>
+// CHECK:           %[[RES:.*]] = vector.shape_cast %[[CONTRACT]] : vector<16x16xf32> to vector<1x16x16xf32>
 // CHECK:           return %[[RES]] : vector<1x16x16xf32>
 
 #contraction_accesses0 = [
@@ -70,15 +70,15 @@ func.func @cast_away_contraction_leading_one_dim_under_const_mask(%arg0: vector<
 // CHECK-DAG: #[[$MAP2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // CHECK-LABEL:   func.func @cast_away_contraction_leading_one_dim_under_mask
-// CHECK:           %[[R0:.*]] = vector.extract %{{.*}} : vector<16x8xf32> from vector<1x16x8xf32>
-// CHECK:           %[[R1:.*]] = vector.extract %{{.*}} : vector<8x16xf32> from vector<1x8x16xf32>
-// CHECK:           %[[R2:.*]] = vector.extract %{{.*}} : vector<16x16xf32> from vector<1x16x16xf32>
-// CHECK:           %[[M:.*]] = vector.extract %{{.*}} : vector<16x16x8xi1> from vector<1x16x16x8xi1>
+// CHECK:           %[[R0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x8xf32> to vector<16x8xf32>
+// CHECK:           %[[R1:.*]] = vector.shape_cast %{{.*}} : vector<1x8x16xf32> to vector<8x16xf32>
+// CHECK:           %[[R2:.*]] = vector.shape_cast %{{.*}} : vector<1x16x16xf32> to vector<16x16xf32>
+// CHECK:           %[[M:.*]] = vector.shape_cast %{{.*}} : vector<1x16x16x8xi1> to vector<16x16x8xi1>
 // CHECK:           %[[CONTRACT:.*]] = vector.mask %[[M]] {
 // CHECK-SAME:      vector.contract {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
 // CHECK-SAME:          %[[R0]], %[[R1]], %[[R2]] : vector<16x8xf32>, vector<8x16xf32> into vector<16x16xf32>
 // CHECK-SAME:      } : vector<16x16x8xi1> -> vector<16x16xf32>
-// CHECK-NEXT:      %[[RES:.*]] = vector.broadcast %[[CONTRACT]] : vector<16x16xf32> to vector<1x16x16xf32>
+// CHECK-NEXT:      %[[RES:.*]] = vector.shape_cast %[[CONTRACT]] : vector<16x16xf32> to vector<1x16x16xf32>
 // CHECK-NEXT:      return %[[RES]] : vector<1x16x16xf32>
 
 #contraction_accesses0 = [
@@ -109,14 +109,13 @@ func.func @cast_away_contraction_leading_one_dim_under_mask(
 // CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1) -> (d0)>
 
 // CHECK-LABEL: cast_away_contraction_leading_one_dims_transposeneeded
-//  CHECK-NEXT:   %[[R0:.+]] =  vector.extract %{{.*}}[0] : vector<8x16xf32> from vector<1x8x16xf32>
-//  CHECK-NEXT:   %[[R1:.+]] =  vector.extract %{{.*}}[0, 0] : vector<8xf32> from vector<1x1x8xf32>
-//  CHECK-NEXT:   %[[R2:.+]] =  vector.extract %{{.*}}[0, 0] : vector<16xf32> from vector<1x1x16xf32>
+//  CHECK-NEXT:   %[[R0:.+]] =  vector.shape_cast %{{.*}} : vector<1x8x16xf32> to vector<8x16xf32>
+//  CHECK-NEXT:   %[[R1:.+]] =  vector.shape_cast %{{.*}} : vector<1x1x8xf32> to vector<8xf32>
+//  CHECK-NEXT:   %[[R2:.+]] =  vector.shape_cast %{{.*}} : vector<1x1x16xf32> to vector<16xf32>
 //  CHECK-NEXT:   %[[R3:.+]] = vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
 //  CHECK-SAME:   iterator_types = ["parallel", "reduction"], kind = #vector.kind<mul>}
 //  CHECK-SAME:   %[[R1]], %[[R0]], %[[R2]] : vector<8xf32>, vector<8x16xf32> into vector<16xf32>
-//  CHECK-NEXT:   %[[R4:.+]] = vector.broadcast %[[R3]] : vector<16xf32> to vector<1x16xf32>
-//  CHECK-NEXT:   %[[R5:.+]] = vector.broadcast %[[R4]] : vector<1x16xf32> to vector<1x1x16xf32>
+//  CHECK-NEXT:   %[[R5:.+]] = vector.shape_cast %[[R3]] : vector<16xf32> to vector<1x1x16xf32>
 //  CHECK-NEXT:  return %[[R5]] : vector<1x1x16xf32>
 
 #contraction_accesses1 = [
@@ -141,15 +140,13 @@ func.func @cast_away_contraction_leading_one_dims_transposeneeded(%arg0: vector<
 // CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // CHECK-LABEL: cast_away_contraction_leading_one_dims_transposeneeded2
-//  CHECK-NEXT:   %[[R0:.+]] =  vector.transpose %{{.*}}[1, 0, 2] : vector<8x1x16xf32> to vector<1x8x16xf32>
-//  CHECK-NEXT:   %[[R1:.+]] =  vector.extract %[[R0]][0] : vector<8x16xf32> from vector<1x8x16xf32>
-//  CHECK-NEXT:   %[[R2:.+]] =  vector.transpose %{{.*}}[2, 0, 1] : vector<2x8x1xf32> to vector<1x2x8xf32>
-//  CHECK-NEXT:   %[[R3:.+]] =  vector.extract %[[R2]][0] : vector<2x8xf32> from vector<1x2x8xf32>
-//  CHECK-NEXT:   %[[R4:.+]] =  vector.extract %{{.*}}[0] : vector<2x16xf32> from vector<1x2x16xf32>
+//  CHECK-NEXT:   %[[LHS:.*]] = vector.shape_cast %{{.*}} : vector<8x1x16xf32> to vector<8x16xf32>
+//  CHECK-NEXT:   %[[RHS:.*]] = vector.shape_cast %{{.*}} : vector<2x8x1xf32> to vector<2x8xf32>
+//  CHECK-NEXT:   %[[ACC:.*]] = vector.shape_cast %{{.*}} : vector<1x2x16xf32> to vector<2x16xf32>
 //  CHECK-NEXT:   %[[R5:.+]] = vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
-//  CHECK-SAME:   %[[R1]], %[[R3]], %[[R4]] : vector<8x16xf32>, vector<2x8xf32> into vector<2x16xf32>
-//  CHECK-NEXT:   %[[R6:.+]] = vector.broadcast %[[R5]] : vector<2x16xf32> to vector<1x2x16xf32>
+//  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ACC]] : vector<8x16xf32>, vector<2x8xf32> into vector<2x16xf32>
+//  CHECK-NEXT:   %[[R6:.+]] = vector.shape_cast %[[R5]] : vector<2x16xf32> to vector<1x2x16xf32>
 //  CHECK-NEXT:  return %[[R6]] : vector<1x2x16xf32>
 
 #contraction_accesses2 = [
@@ -175,18 +172,13 @@ func.func @cast_away_contraction_leading_one_dims_transposeneeded2(%arg0: vector
 
 
 // CHECK-LABEL: cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4
-//  CHECK-NEXT:   %[[R0:.+]] =  vector.extract %{{.*}}[0] : vector<8x1x16xf32> from vector<1x8x1x16xf32>
-//  CHECK-NEXT:   %[[R1:.+]] =  vector.extract %{{.*}}[0] : vector<2x8x1xf32> from vector<1x2x8x1xf32>
-//  CHECK-NEXT:   %[[R2:.+]] =  vector.transpose %[[R0]], [1, 0, 2] : vector<8x1x16xf32> to vector<1x8x16xf32>
-//  CHECK-NEXT:   %[[R3:.+]] =  vector.extract %[[R2]][0] : vector<8x16xf32> from vector<1x8x16xf32>
-//  CHECK-NEXT:   %[[R4:.+]] =  vector.transpose %[[R1]], [2, 0, 1] : vector<2x8x1xf32> to vector<1x2x8xf32>
-//  CHECK-NEXT:   %[[R5:.+]] =  vector.extract %[[R4]][0] : vector<2x8xf32> from vector<1x2x8xf32>
-//  CHECK-NEXT:   %[[R6:.+]] =  vector.extract %{{.*}}[0, 0] : vector<2x16xf32> from vector<1x1x2x16xf32>
+// CHECK-NEXT:  %[[LHS:.*]] = vector.shape_cast %{{.*}} : vector<1x8x1x16xf32> to vector<8x16xf32>
+// CHECK-NEXT:  %[[RHS:.*]] = vector.shape_cast %{{.*}} : vector<1x2x8x1xf32> to vector<2x8xf32>
+// CHECK-NEXT:  %[[ACC:.*]] = vector.shape_cast %{{.*}} : vector<1x1x2x16xf32> to vector<2x16xf32>
 //  CHECK-NEXT:   %[[R7:.+]] =  vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
-//  CHECK-SAME:   %[[R3]], %[[R5]], %[[R6]] : vector<8x16xf32>, vector<2x8xf32> into vector<2x16xf32>
-//  CHECK-NEXT:   %[[R8:.+]] =  vector.broadcast %[[R7]] : vector<2x16xf32> to vector<1x2x16xf32>
-//  CHECK-NEXT:   %[[R9:.+]] =  vector.broadcast %[[R8]] : vector<1x2x16xf32> to vector<1x1x2x16xf32>
+//  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ACC]] : vector<8x16xf32>, vector<2x8xf32> into vector<2x16xf32>
+//  CHECK-NEXT:   %[[R9:.+]] =  vector.shape_cast %[[R7]] : vector<2x16xf32> to vector<1x1x2x16xf32>
 //  CHECK-NEXT:  return %[[R9]] : vector<1x1x2x16xf32>
 
 #contraction_accesses2 = [
@@ -211,16 +203,13 @@ func.func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4(%arg0:
 // CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // CHECK-LABEL: cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4_acctranspose
-//  CHECK-NEXT:   %[[R0:.+]] =  vector.transpose %{{.*}}, [2, 0, 1, 3] : vector<1x8x1x16xf32> to vector<1x1x8x16xf32>
-//  CHECK-NEXT:   %[[R1:.+]] =  vector.transpose %{{.*}}, [3, 0, 1, 2] : vector<1x2x8x1xf32> to vector<1x1x2x8xf32>
-//  CHECK-NEXT:   %[[R2:.+]] =  vector.extract %[[R0]][0, 0] : vector<8x16xf32> from vector<1x1x8x16xf32>
-//  CHECK-NEXT:   %[[R3:.+]] =  vector.extract %[[R1]][0, 0] : vector<2x8xf32> from vector<1x1x2x8xf32>
-//  CHECK-NEXT:   %[[R4:.+]] =  vector.extract %{{.*}}[0, 0] : vector<2x16xf32> from vector<1x1x2x16xf32>
+// CHECK-NEXT:  %[[LHS:.*]] = vector.shape_cast %arg0 : vector<1x8x1x16xf32> to vector<8x16xf32>
+// CHECK-NEXT:  %[[RHS:.*]] = vector.shape_cast %arg1 : vector<1x2x8x1xf32> to vector<2x8xf32>
+// CHECK-NEXT:  %[[ACC:.*]] = vector.shape_cast %arg2 : vector<1x1x2x16xf32> to vector<2x16xf32>
 //  CHECK-NEXT:   %[[R5:.+]] =  vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
-//  CHECK-SAME:   %[[R2]], %[[R3]], %[[R4]] : vector<8x16xf32>, vector<2x8xf32> into vector<2x16xf32>
-//  CHECK-NEXT:   %[[R6:.+]] =  vector.broadcast %[[R5]] : vector<2x16xf32> to vector<1x2x16xf32>
-//  CHECK-NEXT:   %[[R7:.+]] =  vector.broadcast %[[R6]] : vector<1x2x16xf32> to vector<1x1x2x16xf32>
+//  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ACC]] : vector<8x16xf32>, vector<2x8xf32> into vector<2x16xf32>
+//  CHECK-NEXT:   %[[R7:.+]] =  vector.shape_cast %[[R5]] : vector<2x16xf32> to vector<1x1x2x16xf32>
 //  CHECK-NEXT:  return %[[R7]] : vector<1x1x2x16xf32>
 
 #contraction_accesses3 = [
@@ -256,7 +245,7 @@ func.func @cast_away_contraction_does_not_transpose_leading_unit_dims(%lhs: vect
 // CHECK-DAG: #[[$map_dp1:.*]] = affine_map<(d0) -> ()>
 
 // CHECK-LABEL: cast_away_contraction_leading_one_dims_to_dot_product
-//  CHECK-NEXT:   %[[R0:.+]] = vector.extract %{{.*}}[0] : vector<64xf32> from vector<1x64xf32>
+//  CHECK-NEXT:   %[[R0:.+]] = vector.shape_cast %{{.*}} : vector<1x64xf32> to vector<64xf32>
 //  CHECK-NEXT:   %[[R1:.+]] = vector.extract %{{.*}}[0] : f32 from vector<1xf32>
 //  CHECK-NEXT:   %[[R2:.+]] = vector.contract {indexing_maps = [#[[$map_dp0]], #[[$map_dp0]], #[[$map_dp1]]],
 //  CHECK-SAME:   iterator_types = ["reduction"], kind = #vector.kind<add>}

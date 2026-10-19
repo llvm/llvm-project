@@ -518,8 +518,8 @@ define i32 @fshr_i32_shift_by_bitwidth(i32 %x, i32 %y) {
 define <4 x i32> @fshl_v4i32_shift_by_bitwidth(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: fshl_v4i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    move $3, $5
+; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    move $4, $6
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    move $5, $7

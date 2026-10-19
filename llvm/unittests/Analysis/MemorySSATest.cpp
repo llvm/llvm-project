@@ -70,7 +70,7 @@ protected:
 
 public:
   MemorySSATest()
-      : M("MemorySSATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+      : M("MemorySSATest", C), B(M), DL(DLString), TLII(M.getTargetTriple()),
         TLI(TLII), F(nullptr) {}
 };
 
@@ -124,7 +124,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   Argument *PointerArg = &*F->arg_begin();
   B.SetInsertPoint(Left);
   B.CreateBr(Merge);
@@ -136,14 +136,14 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
   // Add the store
-  B.SetInsertPoint(Entry, Entry->begin());
+  B.SetInsertPoint(Entry->begin());
   StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *EntryStoreAccess = Updater.createMemoryAccessInBB(
       EntryStore, nullptr, Entry, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(EntryStoreAccess));
 
   // Add the load
-  B.SetInsertPoint(Merge, Merge->begin());
+  B.SetInsertPoint(Merge->begin());
   LoadInst *FirstLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // MemoryPHI should not already exist.
@@ -160,7 +160,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
 
   // Create a store on the left
   // Add the store
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   StoreInst *LeftStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *LeftStoreAccess = Updater.createMemoryAccessInBB(
       LeftStore, nullptr, Left, MemorySSA::Beginning);
@@ -171,7 +171,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   EXPECT_NE(MP, nullptr);
 
   // Add the second load
-  B.SetInsertPoint(Merge, Merge->begin());
+  B.SetInsertPoint(Merge->begin());
   LoadInst *SecondLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // Create the load memory access
@@ -185,7 +185,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
   EXPECT_EQ(MergePhi->getIncomingValue(1), LeftStoreAccess);
   // Now create a store below the existing one in the entry
-  B.SetInsertPoint(Entry, --Entry->end());
+  B.SetInsertPoint(--Entry->end());
   StoreInst *SecondEntryStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *SecondEntryStoreAccess = Updater.createMemoryAccessInBB(
       SecondEntryStore, nullptr, Entry, MemorySSA::End);
@@ -214,7 +214,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   Argument *PointerArg = &*F->arg_begin();
   B.SetInsertPoint(Left);
   B.CreateBr(Merge);
@@ -225,7 +225,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   // Add the store
   StoreInst *SI = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *StoreAccess =
@@ -237,7 +237,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   EXPECT_NE(MP, nullptr);
 
   // Add the load
-  B.SetInsertPoint(Merge, Merge->begin());
+  B.SetInsertPoint(Merge->begin());
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // Create the load memory acccess
@@ -258,7 +258,7 @@ TEST_F(MemorySSATest, SinkLoad) {
   BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   Argument *PointerArg = &*F->arg_begin();
   B.SetInsertPoint(Left);
   B.CreateBr(Merge);
@@ -267,10 +267,10 @@ TEST_F(MemorySSATest, SinkLoad) {
   ReturnInst::Create(C, Merge);
 
   // Load in left block
-  B.SetInsertPoint(Left, Left->begin());
+  B.SetInsertPoint(Left->begin());
   LoadInst *LoadInst1 = B.CreateLoad(B.getInt8Ty(), PointerArg);
   // Store in merge block
-  B.SetInsertPoint(Merge, Merge->begin());
+  B.SetInsertPoint(Merge->begin());
   B.CreateStore(B.getInt8(16), PointerArg);
 
   setupAnalyses();
@@ -896,7 +896,7 @@ TEST_F(MemorySSATest, Irreducible) {
   // }
   // use(x)
 
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -935,7 +935,7 @@ TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
   //
   // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
   // `2` after `1` is removed.
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -980,7 +980,7 @@ TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
   //
   // And be sure that MSSA's caching handles the removal of def `1`
   // appropriately.
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -1130,7 +1130,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // should both be clobbered by the lifetime.start call if they're dominated by
   // it.
 
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
@@ -1188,7 +1188,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
 }
 
 TEST_F(MemorySSATest, DefOptimizationsAreInvalidatedOnMoving) {
-  IRBuilder<> B(C);
+  IRBuilder<> B(M);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getInt1Ty()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 

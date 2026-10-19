@@ -138,9 +138,9 @@ static bool fixI8UseChain(Instruction &I,
     else
       GEPType = ArrayType::get(ElementType, 1); // its a scalar
 
-    Value *NewGEP = Builder.CreateGEP(
+    Value *NewGEP = GetElementPtrInst::Create(
         GEPType, PtrOperand, {Builder.getInt32(0), Builder.getInt32(Index)},
-        GEP->getName(), GEP->getNoWrapFlags());
+        GEP->getNoWrapFlags(), GEP->getName(), I.getIterator());
 
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
     ReplacedValues[Load] = NewLoad;
@@ -245,9 +245,9 @@ static bool fixI8UseChain(Instruction &I,
     uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
     assert(ElemSize > 0 && "ElementSize must be set");
     uint32_t Index = ByteOffset / ElemSize;
-    Value *NewGEP = Builder.CreateGEP(
+    Value *NewGEP = GetElementPtrInst::Create(
         GEPType, BasePtr, {Builder.getInt32(0), Builder.getInt32(Index)},
-        GEP->getName(), GEP->getNoWrapFlags());
+        GEP->getNoWrapFlags(), GEP->getName(), GEP->getIterator());
     ReplacedValues[GEP] = NewGEP;
     GEP->replaceAllUsesWith(NewGEP);
     ToRemove.push_back(GEP);

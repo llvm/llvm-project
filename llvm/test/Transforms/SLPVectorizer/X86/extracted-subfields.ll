@@ -426,3 +426,81 @@ entry:
   store double %sub1, ptr %gep.a, align 8
   ret void
 }
+
+; A byte reused in the add reduction: the fields of the reduction root are
+; emitted in the natural order, the repeat count scales the lane of that byte.
+
+define i32 @sum4_i32_reused(i32 %x) {
+; CHECK-LABEL: define i32 @sum4_i32_reused(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[X]] to <4 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %t0 = trunc i32 %x to i8
+  %s1 = lshr i32 %x, 8
+  %t1 = trunc i32 %s1 to i8
+  %s2 = lshr i32 %x, 16
+  %t2 = trunc i32 %s2 to i8
+  %s3 = lshr i32 %x, 24
+  %t3 = trunc i32 %s3 to i8
+  %f0 = zext i8 %t0 to i32
+  %f1 = zext i8 %t1 to i32
+  %f2 = zext i8 %t2 to i32
+  %f3 = zext i8 %t3 to i32
+  %a = add i32 %f2, %f0
+  %b = add i32 %a, %f3
+  %c = add i32 %b, %f1
+  %d = add i32 %c, %f3
+  %e = add i32 %d, %f3
+  ret i32 %e
+}
+
+; A byte reused twice in the xor reduction cancels out: the lane of that byte
+; is zeroed in the natural order of the fields of the reduction root.
+
+define i16 @xor8_i64_reused(i64 %x) {
+; CHECK-LABEL: define i16 @xor8_i64_reused(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <8 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP2]], <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> [[TMP3]])
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %t0 = trunc i64 %x to i8
+  %f0 = zext i8 %t0 to i16
+  %s1 = lshr i64 %x, 8
+  %t1 = trunc i64 %s1 to i8
+  %f1 = zext i8 %t1 to i16
+  %s2 = lshr i64 %x, 16
+  %t2 = trunc i64 %s2 to i8
+  %f2 = zext i8 %t2 to i16
+  %s3 = lshr i64 %x, 24
+  %t3 = trunc i64 %s3 to i8
+  %f3 = zext i8 %t3 to i16
+  %s4 = lshr i64 %x, 32
+  %t4 = trunc i64 %s4 to i8
+  %f4 = zext i8 %t4 to i16
+  %s5 = lshr i64 %x, 40
+  %t5 = trunc i64 %s5 to i8
+  %f5 = zext i8 %t5 to i16
+  %s6 = lshr i64 %x, 48
+  %t6 = trunc i64 %s6 to i8
+  %f6 = zext i8 %t6 to i16
+  %s7 = lshr i64 %x, 56
+  %t7 = trunc i64 %s7 to i8
+  %f7 = zext i8 %t7 to i16
+  %r0 = xor i16 %f5, %f2
+  %r1 = xor i16 %r0, %f7
+  %r2 = xor i16 %r1, %f0
+  %r3 = xor i16 %r2, %f3
+  %r4 = xor i16 %r3, %f6
+  %r5 = xor i16 %r4, %f1
+  %r6 = xor i16 %r5, %f4
+  %r7 = xor i16 %r6, %f7
+  ret i16 %r7
+}

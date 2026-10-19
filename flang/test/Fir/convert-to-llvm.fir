@@ -449,7 +449,7 @@ func.func @test_call_return_val() -> i32 {
 // result: (x + x') + i(y + y')
 
 func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.addc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.addc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -474,7 +474,7 @@ func.func @fir_complex_add(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: (x - x') + i(y - y')
 
 func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.subc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.subc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -499,7 +499,7 @@ func.func @fir_complex_sub(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: (xx'-yy')+i(xy'+yx')
 
 func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.mulc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.mulc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 
@@ -528,7 +528,7 @@ func.func @fir_complex_mul(%a: complex<f128>, %b: complex<f128>) -> complex<f128
 // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
 
 func.func @fir_complex_div(%a: complex<f128>, %b: complex<f128>) -> complex<f128> {
-  %c = fir.divc %a, %b {fastmath = #arith.fastmath<fast>} : complex<f128>
+  %c = fir.divc %a, %b fastmath("fast") : complex<f128>
   return %c : complex<f128>
 }
 

@@ -1851,12 +1851,13 @@ void ImmRenderer::emitAddImm(MatchTable &Table, unsigned InsnID, int64_t Imm,
 }
 
 void ImmRenderer::emitRenderOpcodes(MatchTable &Table) const {
-  if (CImmLLT) {
+  if (ConstantLLT) {
     assert(Table.isCombiner() &&
-           "ConstantInt immediate are only for combiners!");
-    Table << MatchTable::Opcode("GIR_AddCImm") << MatchTable::Comment("InsnID")
-          << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type");
-    emitType(Table, *CImmLLT);
+           "ConstantInt/ConstantFP immediates are only for combiners!");
+    Table << MatchTable::Opcode(IsFP ? "GIR_AddCFPImm" : "GIR_AddCImm")
+          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+          << MatchTable::Comment("Type");
+    emitType(Table, *ConstantLLT);
     Table << MatchTable::Comment("Imm") << MatchTable::IntValue(8, Imm)
           << MatchTable::LineBreak;
   } else {

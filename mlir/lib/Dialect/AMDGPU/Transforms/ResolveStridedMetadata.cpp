@@ -29,7 +29,7 @@ struct AmdgpuResolveStridedMetadataPass
 
 struct ExtractStridedMetadataOnFatRawBufferCastFolder final
     : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp metadataOp,
                                 PatternRewriter &rewriter) const override {
     auto castOp = metadataOp.getSource().getDefiningOp<FatRawBufferCastOp>();

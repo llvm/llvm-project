@@ -27,7 +27,7 @@ end program
 ! CPU:           %[[VAL_4:.*]] = arith.constant 3 : index
 ! CPU:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CPU:           %[[VAL_1:.*]] = fir.allocmem !fir.array<3xi32> <{bindc_name = ".tmp", uniq_name = ""}>
-! CPU:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3xi32>>,
+! CPU:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_5]]) uniq_name(".tmp") : (!fir.heap<!fir.array<3xi32>>,
 !fir.shape<1>) -> (!fir.heap<!fir.array<3xi32>>, !fir.heap<!fir.array<3xi32>>)
 ! CPU:           %[[C0:.*]] = arith.constant 0 : index
 ! CPU:           %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_3]], %[[C0]] : (!fir.box<!fir.array<3xi32>>, index) -> (index, index, index)
@@ -71,12 +71,12 @@ end program
 ! CPU:           %[[VAL_0:.*]] = fir.address_of(@_QFEi) : !fir.ref<!fir.array<3xi32>>
 ! CPU:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CPU:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-! CPU:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_2]]) {uniq_name = "_QFEi"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+! CPU:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_2]]) uniq_name("_QFEi") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
 ! CPU:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0(%[[VAL_2]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
 ! CPU:           %[[VAL_5:.*]] = fir.alloca !fir.box<!fir.array<3xi32>>
 ! CPU:           fir.store %[[VAL_4]] to %[[VAL_5]] : !fir.ref<!fir.box<!fir.array<3xi32>>>
 ! CPU:           omp.parallel reduction(byref @add_reduction_byref_box_3xi32 %[[VAL_5]] -> %[[VAL_6:.*]] : !fir.ref<!fir.box<!fir.array<3xi32>>>) {
-! CPU:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFEi"} : (!fir.ref<!fir.box<!fir.array<3xi32>>>) -> (!fir.ref<!fir.box<!fir.array<3xi32>>>, !fir.ref<!fir.box<!fir.array<3xi32>>>)
+! CPU:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFEi") : (!fir.ref<!fir.box<!fir.array<3xi32>>>) -> (!fir.ref<!fir.box<!fir.array<3xi32>>>, !fir.ref<!fir.box<!fir.array<3xi32>>>)
 ! CPU:             %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CPU:             %[[VAL_9:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.array<3xi32>>>
 ! CPU:             %[[VAL_10:.*]] = arith.constant 1 : index

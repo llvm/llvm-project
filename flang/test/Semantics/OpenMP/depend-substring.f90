@@ -48,9 +48,10 @@ subroutine substring_5(c)
   !$omp end task
 end
 
-! This is okay: interpreted as indexing the array
+! This is an array section, so DEPEND forbids the explicit stride.
 subroutine substring_5b(c)
   character(:), pointer :: c(:)
+  !ERROR: 'c' in DEPEND clause must not specify a stride
   !$omp task depend(out:c(1:20:5))
   !$omp end task
 end

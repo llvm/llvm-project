@@ -883,7 +883,7 @@ desired.
   void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(/*...*/) {
     // ...
 +   for (auto &PluginFN : CodeGenOpts.PassPlugins)
-+     if (auto PassPlugin = PassPlugin::Load(PluginFN))
++     if (auto PassPlugin = PassPlugin::load(PluginFN))
 +        PassPlugin->registerPassBuilderCallbacks(PB);
   }
 ```
@@ -2871,8 +2871,9 @@ Clang preserves in the normalized form intermediate concept-ids
 (`ConceptIdConstraint`) This is used for diagnostics only and no substitution
 happens in a ConceptIdConstraint if its expression is satisfied.
 
-The normal form of the associated constraints of a declaration is cached in
-Sema::NormalizationCache such that it is only computed once.
+The normal form of each associated constraint expression is cached in
+`Sema::NormalizedConstraintExprCache`, so that it is only computed once even if
+several declarations share it (e.g. members of class template specializations).
 
 A `NormalizedConstraint` is a recursive data structure, where each node
 contains a parameter mapping, represented by the indexes of all parameter

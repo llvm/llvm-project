@@ -118,7 +118,6 @@
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
-; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Legalizer
@@ -181,10 +180,10 @@
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
-; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
+; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler

@@ -1663,6 +1663,7 @@
 // RUN: %clang_cc1 -triple=riscv64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
 // RUN: %clang_cc1 -triple=x86_64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
 // MANAGARM: #define __managarm__ 1
+// MANAGARM: #define __mlibc__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=xcore-none-none < /dev/null | FileCheck -match-full-lines -check-prefix XCORE %s
 // XCORE:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__

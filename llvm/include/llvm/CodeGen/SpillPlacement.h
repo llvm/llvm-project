@@ -58,9 +58,6 @@ class SpillPlacement {
   // caller.
   BitVector *ActiveNodes = nullptr;
 
-  // Nodes with active links. Populated by scanActiveBundles.
-  SmallVector<unsigned, 8> Linked;
-
   // Nodes that went positive during the last call to scanActiveBundles or
   // iterate.
   SmallVector<unsigned, 8> RecentPositive;

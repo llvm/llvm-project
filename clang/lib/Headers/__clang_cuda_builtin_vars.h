@@ -29,8 +29,9 @@ struct dim3;
 
 #define __CUDA_DEVICE_BUILTIN(FIELD, INTRINSIC)                                \
   __declspec(property(get = __fetch_builtin_##FIELD)) unsigned int FIELD;      \
-  static inline __attribute__((always_inline))                                 \
-      __attribute__((device)) unsigned int __fetch_builtin_##FIELD(void) {     \
+  static inline __attribute__((always_inline)) __attribute__((const))          \
+  __attribute__((device)) unsigned int                                         \
+  __fetch_builtin_##FIELD(void) {                                              \
     return INTRINSIC;                                                          \
   }
 
