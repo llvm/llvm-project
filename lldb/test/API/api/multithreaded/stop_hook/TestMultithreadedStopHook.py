@@ -13,7 +13,7 @@ class MultithreadedStopHookTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # https://github.com/llvm/llvm-project/issues/225860
-    # Occasional SIGABRT, see https://github.com/llvm/llvm-project/issues/225860.
-    @skipIf(oslist=["linux"], archs=["aarch64"])
+    # Flaky on Linux, see https://github.com/llvm/llvm-project/issues/225860.
+    @skipIf(oslist=["linux"])
     def test(self):
         self.buildAndRunDriver("driver.cpp test_stop-hook.cpp", "inferior.cpp")
