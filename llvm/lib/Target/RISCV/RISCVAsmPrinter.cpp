@@ -61,12 +61,14 @@ public:
   static char ID;
 
 private:
+  const RISCVMCOptions &CLOpts;
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID) {}
+      : AsmPrinter(TM, std::move(Streamer), ID),
+        CLOpts(RISCV_MC::getCLOpts(TM.Options.MCOptions)) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -123,8 +125,6 @@ public:
   void emitNoteGnuProperty(const Module &M);
 
 private:
-  void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
-
   void emitNTLHint(const MachineInstr *MI);
 
   void emitLpadAlignedCall(const MachineInstr &MI);
@@ -463,7 +463,7 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       return true; // Unknown modifier.
     case 'z':      // Print zero register if zero, regular printing otherwise.
       if (MO.isImm() && MO.getImm() == 0) {
-        OS << RISCVInstPrinter::getRegisterName(RISCV::X0);
+        OS << RISCVInstPrinter::getRegisterName(CLOpts, RISCV::X0);
         return false;
       }
       break;
@@ -486,7 +486,7 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     OS << MO.getImm();
     return false;
   case MachineOperand::MO_Register:
-    OS << RISCVInstPrinter::getRegisterName(MO.getReg());
+    OS << RISCVInstPrinter::getRegisterName(CLOpts, MO.getReg());
     return false;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
@@ -538,7 +538,8 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     MMI->getContext().registerInlineAsmLabel(Sym);
   }
 
-  OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
+  OS << "(" << RISCVInstPrinter::getRegisterName(CLOpts, AddrReg.getReg())
+     << ")";
   return false;
 }
 
@@ -686,7 +687,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   }
 
   if (M.getTargetTriple().isOSBinFormatELF())
-    emitAttributes(SubtargetInfo);
+    RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign=*/true);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -697,14 +698,6 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
     emitNoteGnuProperty(M);
   }
   EmitHwasanMemaccessSymbols(M);
-}
-
-void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
-  RISCVTargetStreamer &RTS = getTargetStreamer();
-  // Use MCSubtargetInfo from TargetMachine. Individual functions may have
-  // attributes that differ from other functions in the module and we have no
-  // way to know which function is correct.
-  RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {

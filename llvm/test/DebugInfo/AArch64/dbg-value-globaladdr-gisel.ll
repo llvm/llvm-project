@@ -48,12 +48,13 @@ entry:
 }
 
 ;; A thread-local's address is not a link-time constant: describing it needs
-;; DW_OP_form_tls_address, so it must not be named as a symbol here. GlobalISel
-;; then drops it, which is what it did for every global before this -- naming the
-;; symbol does not regress that case, but does not fix it either.
+;; DW_OP_form_tls_address, so it must not be named as a symbol here. The call
+;; materializes the address, so the vreg holding it describes the variable.
 ; MIR-LABEL: name: thread_local_global
 ; MIR-NOT: DBG_VALUE @tls
-; MIR: DBG_VALUE $noreg, 0, ![[#]], !DIExpression()
+; MIR: %[[TLS:[0-9]+]]:_(p0) = G_GLOBAL_VALUE @tls
+; MIR-NOT: DBG_VALUE @tls
+; MIR: DBG_VALUE %[[TLS]](p0), $noreg, ![[#]], !DIExpression()
 define void @thread_local_global() !dbg !15 {
 entry:
     #dbg_value(ptr @tls, !16, !DIExpression(), !17)

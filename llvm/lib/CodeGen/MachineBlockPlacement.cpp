@@ -3118,10 +3118,10 @@ void MachineBlockPlacement::alignBlocks() {
     // Align all of the blocks in the function to a specific alignment.
     for (MachineBasicBlock &MBB : *F) {
       if (HasMaxBytesOverride)
-        MBB.setAlignment(Align(1ULL << AlignAllBlock),
+        MBB.setAlignment(Align::fromLog2(AlignAllBlock),
                          MaxBytesForAlignmentOverride);
       else
-        MBB.setAlignment(Align(1ULL << AlignAllBlock));
+        MBB.setAlignment(Align::fromLog2(AlignAllBlock));
     }
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
@@ -3130,10 +3130,10 @@ void MachineBlockPlacement::alignBlocks() {
       auto LayoutPred = std::prev(MBI);
       if (!LayoutPred->isSuccessor(&*MBI)) {
         if (HasMaxBytesOverride)
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks),
+          MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);
         else
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
+          MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks));
       }
     }
   }

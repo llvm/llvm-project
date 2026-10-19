@@ -142,6 +142,12 @@ public:
     All,
   };
 
+  enum class HLSLSemanticSignaturePackingMode {
+    Default,
+    PrefixStable,
+    Optimized,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
