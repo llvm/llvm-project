@@ -440,7 +440,7 @@ public:
   }
 
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
-  // \returns \p Reg otherwise.
+  // \returns NoRegister otherwise.
   MCRegister get32BitRegister(MCRegister Reg) const;
 
   // Returns true if a given register class is properly aligned for
