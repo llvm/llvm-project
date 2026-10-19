@@ -2,8 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 # Web entry point. This file stays on amd-staging so Run workflow is shown.
-# The selected branch can stay on amd-staging: the job always calls the
-# verifier implementation on amd-compiler-ci.
+# The selected branch can stay on amd-staging. Build workflows are pinned to
+# amd-compiler-ci.
+#
+# Linux:: and Windows:: are top-level jobs here. GitHub draws that separator
+# only for job names in the workflow that was started. Wrapping both platforms
+# in one called workflow nests them under a single node and the graph shows
+# "verify / ..." instead.
 
 name: LLVM trunk commit verifier
 
@@ -15,24 +20,14 @@ on:
         required: false
         type: string
         default: ""
-      LLVM_ROCm_PR_URL:
-        description: "LLVM ROCm PR url. ex: https://github.com/ROCm/llvm-project/pull/1"
-        required: false
-        type: string
-        default: ""
-      SPIRV_PR_URL:
-        description: "SPIRV PR url. ex: https://github.com/ROCm/SPIRV-LLVM-Translator/pull/1"
-        required: false
-        type: string
-        default: ""
-      HIPIFY_PR_URL:
-        description: "HIPIFY PR url. ex: https://github.com/ROCm/HIPIFY/pull/1 "
+      SPIRV_REF:
+        description: "SPIRV-LLVM-Translator PR URL, commit SHA, branch, or fork shorthand owner:branch. ex: https://github.com/ROCm/SPIRV-LLVM-Translator/pull/1"
         required: false
         type: string
         default: ""
       linux_amdgpu_families:
         type: string
-        description: "Comma-separated Linux GPU families. Leave both family inputs empty to run the default Linux and Windows sets. Setting only this input skips Windows. Setting only the Windows input skips Linux."
+        description: "Comma-separated Linux GPU families. default: gfx94x,gfx110x,gfx90a,gfx125x"
         default: ""
       linux_test_labels:
         type: string
@@ -40,7 +35,7 @@ on:
         default: ""
       windows_amdgpu_families:
         type: string
-        description: "Comma-separated Windows GPU families. Leave both family inputs empty to run the default Linux and Windows sets. Setting only this input skips Linux. Setting only the Linux input skips Windows."
+        description: "Comma-separated Windows GPU families. default: gfx1151"
         default: ""
       windows_test_labels:
         type: string
@@ -60,27 +55,111 @@ on:
         description: "Comma-separated list of changed projects to filter tests (empty = run all tests)"
       build_pytorch:
         type: boolean
-        default: true
+        default: false
         description: "Build PyTorch wheels"
 
 permissions:
   contents: read
   id-token: write
 
+concurrency:
+  # Same upstream ref cancels its older run. Different refs run together.
+  group: ${{ github.workflow }}-${{ inputs.LLVM_UPSTREAM_REF || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
-    uses: ROCm/llvm-project/.github/workflows/llvm-trunk-commit-verifier.yml@amd-compiler-ci
+  multiple_pr_sha_params:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Store LLVM and SPIRV refs into file
+        run: |
+          cat > ${{ github.run_id }}_PR_params.env <<'EOF'
+          LLVM_UPSTREAM_REF=${{ github.event.inputs.LLVM_UPSTREAM_REF }}
+          SPIRV_REF=${{ github.event.inputs.SPIRV_REF }}
+          EOF
+
+      - name: Upload stored file of PR URls
+        uses: actions/upload-artifact@v4
+        with:
+          name: multiple-pr-build-params
+          path: ${{ github.run_id }}_PR_params.env
+
+  setup:
+    uses: ROCm/llvm-project/.github/workflows/setup_multi_arch.yml@amd-compiler-ci
     with:
-      LLVM_UPSTREAM_REF: ${{ inputs.LLVM_UPSTREAM_REF }}
-      LLVM_ROCm_PR_URL: ${{ inputs.LLVM_ROCm_PR_URL }}
-      SPIRV_PR_URL: ${{ inputs.SPIRV_PR_URL }}
-      HIPIFY_PR_URL: ${{ inputs.HIPIFY_PR_URL }}
-      linux_amdgpu_families: ${{ inputs.linux_amdgpu_families }}
-      linux_test_labels: ${{ inputs.linux_test_labels }}
-      windows_amdgpu_families: ${{ inputs.windows_amdgpu_families }}
-      windows_test_labels: ${{ inputs.windows_test_labels }}
-      prebuilt_stages: ${{ inputs.prebuilt_stages }}
-      baseline_run_id: ${{ inputs.baseline_run_id }}
-      changed_projects: ${{ inputs.changed_projects }}
+      build_variant: "release"
+      # Both empty: default Linux and Windows families. Only one set: run
+      # that platform and pass "none" for the other so setup skips it.
+      linux_amdgpu_families: ${{ (github.event.inputs.linux_amdgpu_families == '' && github.event.inputs.windows_amdgpu_families == '') && 'gfx94x,gfx110x,gfx90a,gfx125x' || github.event.inputs.linux_amdgpu_families || 'none' }}
+      windows_amdgpu_families: ${{ (github.event.inputs.linux_amdgpu_families == '' && github.event.inputs.windows_amdgpu_families == '') && 'gfx1151' || github.event.inputs.windows_amdgpu_families || 'none' }}
+      use_configured_families: true
+      linux_test_labels: ${{ inputs.linux_test_labels || '' }}
+      windows_test_labels: ${{ inputs.windows_test_labels || '' }}
+      prebuilt_stages: ${{ inputs.prebuilt_stages || '' }}
+      baseline_run_id: ${{ inputs.baseline_run_id || '' }}
       build_pytorch: ${{ inputs.build_pytorch }}
+      build_jax: false
+      repository: "ROCm/TheRock"
+      ref: ""
     secrets: inherit
+
+  linux_build_and_test:
+    name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
+    needs:
+      - setup
+      - multiple_pr_sha_params
+    if: ${{ needs.setup.outputs.linux_build_config && needs.setup.outputs.enable_build_jobs == 'true' }}
+    uses: ROCm/llvm-project/.github/workflows/multi_arch_ci_linux.yml@amd-compiler-ci
+    with:
+      build_config: ${{ needs.setup.outputs.linux_build_config }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      rocm_deb_package_version: ${{ needs.setup.outputs.rocm_deb_package_version }}
+      rocm_rpm_package_version: ${{ needs.setup.outputs.rocm_rpm_package_version }}
+      test_type: 'quick'
+      changed_projects: ${{ inputs.changed_projects || '' }}
+      repository: "ROCm/TheRock"
+      ref: ${{ needs.setup.outputs.ref }}
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
+
+  windows_build_and_test:
+    name: Windows::${{ fromJSON(needs.setup.outputs.windows_build_config || '{}').build_variant_label || 'skip' }}
+    needs:
+      - setup
+      - multiple_pr_sha_params
+    if: ${{ needs.setup.outputs.windows_build_config && needs.setup.outputs.enable_build_jobs == 'true' }}
+    uses: ROCm/llvm-project/.github/workflows/multi_arch_ci_windows.yml@amd-compiler-ci
+    with:
+      build_config: ${{ needs.setup.outputs.windows_build_config }}
+      test_labels: ${{ needs.setup.outputs.windows_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: 'quick'
+      changed_projects: ${{ inputs.changed_projects || '' }}
+      repository: "ROCm/TheRock"
+      ref: ${{ needs.setup.outputs.ref }}
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
+
+  ci_summary:
+    name: CI Summary
+    if: always()
+    needs:
+      - setup
+      - linux_build_and_test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: "ROCm/TheRock"
+          ref: ${{ needs.setup.outputs.ref }}
+      - name: Evaluate workflow results
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python build_tools/github_actions/workflow_summary.py \
+            --needs-json '${{ toJSON(needs) }}'
