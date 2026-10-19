@@ -47,18 +47,21 @@ static SDValue stripBitcast(SDValue Val) {
 }
 
 // Figure out if this is really an extract of the high 16-bits of a dword.
-// Out is narrowed to the low register(s) holding the element pair.
+// Out is narrowed to the register(s) holding the element pair.
 static bool isExtractHiElt(SelectionDAG &DAG, SDValue In, SDValue &Out) {
   In = stripBitcast(In);
 
   SDValue Src;
   unsigned PairSize = 32;
+  unsigned PairStart = 0;
   if (In.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     ConstantSDNode *Idx = dyn_cast<ConstantSDNode>(In.getOperand(1));
-    if (!Idx || !Idx->isOne())
-      return false;
     Src = In.getOperand(0);
+    if (!Idx || !Idx->getAPIntValue()[0] ||
+        Idx->getAPIntValue().uge(Src.getValueType().getVectorNumElements()))
+      return false;
     PairSize = 2 * Src.getScalarValueSizeInBits();
+    PairStart = (Idx->getZExtValue() / 2) * (PairSize / 32);
   } else if (In.getOpcode() == ISD::TRUNCATE) {
     SDValue Srl = In.getOperand(0);
     ConstantSDNode *ShiftAmt = Srl.getOpcode() == ISD::SRL
@@ -71,12 +74,14 @@ static bool isExtractHiElt(SelectionDAG &DAG, SDValue In, SDValue &Out) {
     return false;
   }
 
+  if (PairSize != 32 && PairSize != 64)
+    return false;
+
   if (Src.getValueSizeInBits() > PairSize) {
-    if (PairSize != 32 && PairSize != 64)
-      return false;
-    Src = DAG.getTargetExtractSubreg(
-        PairSize == 32 ? AMDGPU::sub0 : AMDGPU::sub0_sub1, SDLoc(In),
-        MVT::getIntegerVT(PairSize), Src);
+    unsigned SubReg =
+        SIRegisterInfo::getSubRegFromChannel(PairStart, PairSize / 32);
+    Src = DAG.getTargetExtractSubreg(SubReg, SDLoc(In),
+                                     MVT::getIntegerVT(PairSize), Src);
   }
 
   Out = Src;
