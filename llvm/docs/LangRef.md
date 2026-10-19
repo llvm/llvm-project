@@ -4121,19 +4121,25 @@ Given that definition, R{sub}`byte` is defined as follows:
    synchronization.)
 -  Otherwise, if there is no write to the same byte that happens before
    R{sub}`byte`, R{sub}`byte` returns `undef` for that byte.
--  Otherwise, if R{sub}`byte` may see exactly one write,
-   R{sub}`byte` returns the value written by that write.
--  Otherwise, if R is atomic, and all the writes R{sub}`byte` may
-   see are atomic, and R and the writes all access the exact same set of
-   bytes, it chooses one of the values written. See the {ref}`Atomic
-   Memory Ordering Constraints <ordering>` section for additional
-   constraints on how the choice is made. Targets may impose additional
-   requirements on R and the writes it may see based on their `syncscope`.
+-  Otherwise, if every pair A{sub}`1`, A{sub}`2` that can be formed from
+   accesses in the set of R and the writes R{sub}`byte` may see
+   satisfies at least one of the following:
+     -  A{sub}`1` happens before A{sub}`2`,
+     -  A{sub}`2` happens before A{sub}`1`, or
+     -  A{sub}`1` and A{sub}`2` are atomic and access the exact same set
+        of bytes,
+
+   then R{sub}`byte` chooses one of the values written by the writes it
+   may see. See the {ref}`Atomic Memory Ordering Constraints <ordering>`
+   section for additional constraints on how the choice is made. Targets
+   may impose additional requirements on R and the writes it may see
+   based on their `syncscope`.
 -  Otherwise R{sub}`byte` returns `undef`.
 
-Atomic accesses cannot tear: If a byte subaccess R{sub}`byte1` of an
-atomic read R reads from an atomic write W, then all other byte
-subaccesses R{sub}`byte2` of R that may see W must also read from W.
+Accesses cannot tear: If a byte subaccess R{sub}`byte1` of a read R
+reads from a write W, then all other byte subaccesses R{sub}`byte2` of R
+that may see W must also read from W or return `undef` by the above
+definition.
 
 R returns the value composed of the series of bytes it read. This
 implies that some bytes within the value may be `undef` **without**
