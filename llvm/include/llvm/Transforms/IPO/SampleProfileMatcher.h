@@ -156,6 +156,8 @@ private:
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
   void findProfileAnchors(const FunctionSamples &FS,
                           AnchorMap &ProfileAnchors) const;
+  bool anchorsMatch(const FunctionId &IRAnchor,
+                    const FunctionId &ProfileAnchor) const;
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
   void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
@@ -233,7 +235,6 @@ private:
   // Match orphan IR functions to unused top-level profile entries by demangled
   // basename, without requiring a matched caller in the call graph.
   void matchFunctionsWithoutProfileByBasename();
-  void reportOrPersistProfileStats();
 };
 } // end namespace llvm
 #endif // LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H

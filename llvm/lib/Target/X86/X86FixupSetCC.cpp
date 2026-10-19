@@ -135,7 +135,8 @@ static bool fixupSetCC(MachineFunction &MF) {
       } else {
         // Initialize a register with 0. This must go before the eflags def
         BuildMI(MBB, FlagsDefMI, MI.getDebugLoc(), TII->get(X86::MOV32r0),
-                ZeroReg);
+                ZeroReg)
+            .setOperandDead(1);
       }
 
       BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),

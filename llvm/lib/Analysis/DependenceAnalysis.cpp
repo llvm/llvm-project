@@ -1597,8 +1597,6 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   if (DstUM)
     LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
 
-  APInt TU(APInt::getSignedMaxValue(Bits));
-  APInt TL(APInt::getSignedMinValue(Bits));
   OverflowSafeSignedAPInt TC = CM.sdiv(G);
   OverflowSafeSignedAPInt TX = OverflowSafeSignedAPInt(X) * TC;
   OverflowSafeSignedAPInt TY = OverflowSafeSignedAPInt(Y) * TC;
@@ -1643,8 +1641,8 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   if (!OptTL || !OptTU)
     return false;
 
-  TL = std::move(*OptTL);
-  TU = std::move(*OptTU);
+  APInt TL = std::move(*OptTL);
+  APInt TU = std::move(*OptTU);
   LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
@@ -1859,7 +1857,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
   if (!Constant)
     return false;
-  APInt ConstDelta = cast<SCEVConstant>(Constant)->getAPInt();
+  APInt ConstDelta = Constant->getAPInt();
   LLVM_DEBUG(dbgs() << "    ConstDelta = " << ConstDelta << "\n");
   if (ConstDelta == 0)
     return false;
@@ -1887,7 +1885,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const Loop *CurLoop = AddRec->getLoop();
     RunningGCD = 0;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
-    const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
+    const SCEV *DstCoeff = SE->getZero(SrcCoeff->getType());
 
     if (!accumulateCoefficientsGCD(Src, CurLoop, SrcCoeff, RunningGCD) ||
         !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
@@ -2743,17 +2741,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
   // Check that memory access offsets are multiples of element sizes.
-  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+  // Add to Assume if only runtime assumptions are allowed.
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize,
+                             UnderRuntimeAssumptions ? &Assume : nullptr) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize,
+                             UnderRuntimeAssumptions ? &Assume : nullptr)) {
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
-
-  // Runtime assumptions needed but not allowed.
-  if (!Assume.empty() && !UnderRuntimeAssumptions)
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
@@ -2782,8 +2778,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     for (unsigned P = 0; P < Pairs; ++P) {
       SmallBitVector Loops;
       Subscript::ClassificationKind TestClass =
-          classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()),
-                       Pair[P].Dst, LI->getLoopFor(Dst->getParent()), Loops);
+          classifyPair(Pair[P].Src, SrcLoop, Pair[P].Dst, DstLoop, Loops);
 
       if (TestClass != Subscript::ZIV && TestClass != Subscript::SIV &&
           TestClass != Subscript::RDIV) {
@@ -2807,13 +2802,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
     assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
-    Pair[P].GroupLoops.resize(MaxLevels + 1);
-    Pair[P].Group.resize(Pairs);
     Pair[P].Classification =
-        classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
-                     LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
-    Pair[P].GroupLoops = Pair[P].Loops;
-    Pair[P].Group.set(P);
+        classifyPair(Pair[P].Src, SrcLoop, Pair[P].Dst, DstLoop, Pair[P].Loops);
     LLVM_DEBUG(dbgs() << "    subscript " << P << "\n");
     LLVM_DEBUG(dbgs() << "\tsrc = " << *Pair[P].Src << "\n");
     LLVM_DEBUG(dbgs() << "\tdst = " << *Pair[P].Dst << "\n");
@@ -2836,10 +2826,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     case Subscript::NonLinear:
       // ignore these, but collect loops for later
       ++NonlinearSubscriptPairs;
-      collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
-                         Pair[SI].Loops);
-      collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
-                         Pair[SI].Loops);
+      collectCommonLoops(Pair[SI].Src, SrcLoop, Pair[SI].Loops);
+      collectCommonLoops(Pair[SI].Dst, DstLoop, Pair[SI].Loops);
       break;
     case Subscript::ZIV:
       LLVM_DEBUG(dbgs() << ", ZIV\n");

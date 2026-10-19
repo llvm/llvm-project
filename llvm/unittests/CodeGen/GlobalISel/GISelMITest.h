@@ -66,7 +66,7 @@ parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
   if (!M)
     return nullptr;
 
-  M->setDataLayout(TM.createDataLayout());
+  M->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   if (MIR->parseMachineFunctions(*M, MMI))
     return nullptr;
@@ -125,7 +125,10 @@ protected:
     MRI = &MF->getRegInfo();
     B.setInsertPt(*EntryMBB, EntryMBB->end());
     RTLCI.emplace(TM->getTargetTriple());
-    LibcallLowering.emplace(*RTLCI, MF->getSubtarget());
+    const TargetSubtargetInfo &STI = MF->getSubtarget();
+    LibcallLowering.emplace(*RTLCI, [&STI](LibcallLoweringInfo &Info) {
+      STI.initLibcallLoweringInfo(Info);
+    });
   }
 
   LLVMContext Context;

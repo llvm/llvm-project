@@ -64,16 +64,21 @@ public:
   // Each symbol file can claim to support one or more symbol file abilities.
   // These get returned from SymbolFile::GetAbilities(). These help us to
   // determine which plug-in will be best to load the debug information found
-  // in files.
+  // in files. Symbols is the least-significant bit so a plug-in reporting any
+  // other ability ranks ahead of one reporting only Symbols.
   enum Abilities {
-    CompileUnits = (1u << 0),
-    LineTables = (1u << 1),
-    Functions = (1u << 2),
-    Blocks = (1u << 3),
-    GlobalVariables = (1u << 4),
-    LocalVariables = (1u << 5),
-    VariableTypes = (1u << 6),
-    kAllAbilities = ((1u << 7) - 1u)
+    Symbols = (1u << 0),
+    CompileUnits = (1u << 1),
+    LineTables = (1u << 2),
+    Functions = (1u << 3),
+    Blocks = (1u << 4),
+    GlobalVariables = (1u << 5),
+    LocalVariables = (1u << 6),
+    VariableTypes = (1u << 7),
+    /// All detailed debug-information abilities. Symbols is excluded because
+    /// it describes information from the object file's symbol table.
+    kAllAbilities = CompileUnits | LineTables | Functions | Blocks |
+        GlobalVariables | LocalVariables | VariableTypes
   };
 
   static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
@@ -149,7 +154,9 @@ public:
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
-  virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
+  virtual XcodeSDKAndSysroot ParseXcodeSDK(CompileUnit &comp_unit) {
+    return {};
+  }
 
   /// This function exists because SymbolFileDWARFDebugMap may extra compile
   /// units which aren't exposed as "real" compile units. In every other
@@ -536,6 +543,12 @@ public:
   }
 
   std::string GetObjectName() const;
+
+  /// Get the semantically innermost non-function type that encloses the
+  /// provided variable
+  virtual lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+    return {};
+  }
 
 protected:
   void AssertModuleLock();

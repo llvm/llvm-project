@@ -1,4 +1,3 @@
-// XFAIL: mlir-expensive-checks
 
 //--------------------------------------------------------------------------------------------------
 // WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.

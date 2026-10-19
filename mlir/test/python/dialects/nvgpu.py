@@ -39,5 +39,5 @@ def testSmoke():
     mem_t = MemRefType.get((10, 10), F32Type.get(), memory_space=Attribute.parse("3"))
     vec_t = VectorType.get((4, 1), F32Type.get())
     mem = memref.AllocOp(mem_t, [], [])
-    # CHECK: %0 = nvgpu.ldmatrix %alloc[%c42, %c42] {numTiles = 4 : i32, transpose = false} : memref<10x10xf32, 3> -> vector<4x1xf32>
+    # CHECK: %0 = nvgpu.ldmatrix %alloc[%c42, %c42] numTiles = 4 transpose = false : memref<10x10xf32, 3> -> vector<4x1xf32>
     nvgpu.LdMatrixOp(vec_t, mem, [cst, cst], False, 4)

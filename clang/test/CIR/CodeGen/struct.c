@@ -12,7 +12,7 @@
 // CIR-DAG: !rec_OuterS = !cir.struct<"OuterS" {data !rec_InnerS, data !s32i}>  
 // CIR-DAG: !rec_InnerS = !cir.struct<"InnerS" {data !s32i, data !s8i}>
 // CIR-DAG: !rec_PackedS = !cir.struct<"PackedS" packed {data !s32i, data !s8i}>
-// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed padded {data !s32i, data !s8i, pad !u8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed {data !s32i, data !s8i, pad !u8i}>
 // CIR-DAG: !rec_NodeS = !cir.struct<"NodeS" {data !cir.ptr<!cir.struct<"NodeS">>}>
 // CIR-DAG: !rec_RightS = !cir.struct<"RightS" {data !cir.ptr<!cir.struct<"LeftS" {data !cir.ptr<!cir.struct<"RightS">>}>>}>
 // CIR-DAG: !rec_LeftS = !cir.struct<"LeftS" {data !cir.ptr<!rec_RightS>}>
@@ -202,8 +202,8 @@ char f3(int a) {
 }
 
 // CIR:      cir.func{{.*}} @f3(%[[ARG_A:.*]]: !s32i
-// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
 // CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
+// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
 // CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
 // CIR-NEXT:   %[[CS:.*]] = cir.get_global @cs
@@ -217,8 +217,8 @@ char f3(int a) {
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
-// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
+// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
@@ -242,9 +242,9 @@ char f4(int a, struct CompleteS *p) {
 }
 
 // CIR:      cir.func{{.*}} @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!rec_CompleteS>
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
 // CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca "p" align(8) init
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_P]], %[[P_ADDR]]
 // CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
@@ -259,9 +259,9 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
+// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, align 8
-// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store ptr %[[ARG_P]], ptr %[[P_ADDR]], align 8
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4

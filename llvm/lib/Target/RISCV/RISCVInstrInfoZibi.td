@@ -28,13 +28,7 @@ def imm5_zibi : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
 
 // The condition codes supported by BEQI/BNEI.
 def ZibiCond : PatLeaf<(cond), [{
-  switch (N->get()) {
-  default:
-    return false;
-  case ISD::SETEQ:
-  case ISD::SETNE:
-    return true;
-  }
+  return ISD::isIntEqualitySetCC(N->get());
 }]>;
 
 class Branch_imm<bits<3> funct3, string opcodestr>

@@ -243,10 +243,10 @@ end
 ! HLFIR:             arith.cmpi eq
 ! HLFIR:           }
 ! HLFIR:           omp.atomic.read %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, i32
-! HLFIR:         } {fail_only}
+! HLFIR:         } fail_only
 ! FIR-LABEL: func.func @_QPcc_failonly(
 ! FIR:         omp.atomic.capture memory_order(relaxed) {
-! FIR:         } {fail_only}
+! FIR:         } fail_only
 ! LLVM-LABEL: define void @cc_failonly_(
 ! LLVM:         %[[RES:.*]] = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} monotonic monotonic
 ! LLVM:         %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
@@ -316,9 +316,9 @@ end
 ! HLFIR-LABEL: func.func @_QPcc_real_failonly(
 ! HLFIR:         omp.atomic.capture memory_order(relaxed) {
 ! HLFIR:           omp.atomic.compare %{{.*}}#0 : !fir.ref<f32> {
-! HLFIR:         } {fail_only}
+! HLFIR:         } fail_only
 ! FIR-LABEL: func.func @_QPcc_real_failonly(
-! FIR:         } {fail_only}
+! FIR:         } fail_only
 ! LLVM-LABEL: define void @cc_real_failonly_(
 ! LLVM:         cmpxchg ptr
 ! LLVM:         br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
@@ -355,9 +355,9 @@ end
 
 ! logical, fail-only: conditional store (via the i32 atom).
 ! HLFIR-LABEL: func.func @_QPcc_logical_failonly(
-! HLFIR:         } {fail_only}
+! HLFIR:         } fail_only
 ! FIR-LABEL: func.func @_QPcc_logical_failonly(
-! FIR:         } {fail_only}
+! FIR:         } fail_only
 ! LLVM-LABEL: define void @cc_logical_failonly_(
 ! LLVM:         %[[RES:.*]] = cmpxchg ptr %{{.*}}, i32
 ! LLVM:         %[[OK:.*]] = extractvalue { i32, i1 } %[[RES]], 1
@@ -396,9 +396,9 @@ end
 ! complex, fail-only: conditional store of the old complex value.
 ! HLFIR-LABEL: func.func @_QPcc_complex_failonly(
 ! HLFIR:         omp.atomic.compare %{{.*}}#0 : !fir.ref<complex<f32>> {
-! HLFIR:         } {fail_only}
+! HLFIR:         } fail_only
 ! FIR-LABEL: func.func @_QPcc_complex_failonly(
-! FIR:         } {fail_only}
+! FIR:         } fail_only
 ! LLVM-LABEL: define void @cc_complex_failonly_(
 ! LLVM:         %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
 ! LLVM:         %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
@@ -424,14 +424,14 @@ end
 ! HLFIR:         omp.atomic.capture memory_order(relaxed) {
 ! HLFIR:           omp.atomic.compare %{{.*}}#0 : !fir.ref<i32> {
 ! HLFIR:             arith.cmpi eq
-! HLFIR:           } {weak}
+! HLFIR:           } weak
 ! HLFIR:           omp.atomic.read %{{.*}} = %{{.*}}#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 ! HLFIR:         }
 ! FIR-LABEL: func.func @_QPcc_weak(
 ! FIR:         omp.atomic.capture memory_order(relaxed) {
 ! FIR:           omp.atomic.compare %{{.*}} : !fir.ref<i32> {
 ! FIR:             arith.cmpi eq
-! FIR:           } {weak}
+! FIR:           } weak
 ! FIR:           omp.atomic.read %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, i32
 ! FIR:         }
 ! LLVM-LABEL: define void @cc_weak_(

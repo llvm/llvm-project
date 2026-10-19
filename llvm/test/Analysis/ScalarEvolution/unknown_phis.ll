@@ -4,9 +4,9 @@
 define void @merge_values_with_ranges(ptr %a_len_ptr, ptr %b_len_ptr, i1 %unknown_cond) {
 ; CHECK-LABEL: 'merge_values_with_ranges'
 ; CHECK-NEXT:  Classifying expressions for: @merge_values_with_ranges
-; CHECK-NEXT:    %len_a = load i32, ptr %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:    %len_a = load i32, ptr %a_len_ptr, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %len_a U: [0,2147483647) S: [0,2147483647)
-; CHECK-NEXT:    %len_b = load i32, ptr %b_len_ptr, align 4, !range !0
+; CHECK-NEXT:    %len_b = load i32, ptr %b_len_ptr, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %len_b U: [0,2147483647) S: [0,2147483647)
 ; CHECK-NEXT:    %len = phi i32 [ %len_a, %if.true ], [ %len_b, %if.false ]
 ; CHECK-NEXT:    --> %len U: [0,2147483647) S: [0,2147483647)
@@ -34,9 +34,9 @@ define void @merge_values_with_ranges_looped(ptr %a_len_ptr, ptr %b_len_ptr) {
 ;       go into infinite loop analyzing these Phis.
 ; CHECK-LABEL: 'merge_values_with_ranges_looped'
 ; CHECK-NEXT:  Classifying expressions for: @merge_values_with_ranges_looped
-; CHECK-NEXT:    %len_a = load i32, ptr %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:    %len_a = load i32, ptr %a_len_ptr, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %len_a U: [0,2147483647) S: [0,2147483647)
-; CHECK-NEXT:    %len_b = load i32, ptr %b_len_ptr, align 4, !range !0
+; CHECK-NEXT:    %len_b = load i32, ptr %b_len_ptr, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %len_b U: [0,2147483647) S: [0,2147483647)
 ; CHECK-NEXT:    %p1 = phi i32 [ %len_a, %entry ], [ %p2, %loop ]
 ; CHECK-NEXT:    --> %p1 U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }

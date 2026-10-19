@@ -9,7 +9,8 @@ define float @v_test_fmin_legacy_ole_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmin_legacy_ole_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e32 v0, v0, v1
+; GFX6-NEXT:    v_cmp_le_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_ole_f32:
@@ -63,7 +64,8 @@ define float @v_test_fmin_legacy_ult_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmin_legacy_ult_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e32 v0, v1, v0
+; GFX6-NEXT:    v_cmp_nge_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_ult_f32:
@@ -99,7 +101,8 @@ define float @v_test_fmin_legacy_oge_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmin_legacy_oge_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e32 v0, v1, v0
+; GFX6-NEXT:    v_cmp_ge_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_oge_f32:
@@ -135,7 +138,8 @@ define float @v_test_fmin_legacy_ugt_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmin_legacy_ugt_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e32 v0, v0, v1
+; GFX6-NEXT:    v_cmp_nle_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_ugt_f32:
@@ -153,7 +157,8 @@ define float @v_test_fmin_legacy_ole_f32_fneg_lhs(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmin_legacy_ole_f32_fneg_lhs:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e64 v0, -v0, v1
+; GFX6-NEXT:    v_cmp_le_f32_e64 s[4:5], -v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, v1, -v0, s[4:5]
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_ole_f32_fneg_lhs:
@@ -172,7 +177,8 @@ define float @v_test_fmin_legacy_ole_f32_fneg_rhs(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmin_legacy_ole_f32_fneg_rhs:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e64 v0, v0, -v1
+; GFX6-NEXT:    v_cmp_le_f32_e64 s[4:5], v0, -v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[4:5]
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_ole_f32_fneg_rhs:
@@ -387,8 +393,10 @@ define <2 x float> @v_test_fmin_legacy_ole_v2f32(<2 x float> %a, <2 x float> %b)
 ; GFX6-LABEL: v_test_fmin_legacy_ole_v2f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_min_legacy_f32_e32 v0, v0, v2
-; GFX6-NEXT:    v_min_legacy_f32_e32 v1, v1, v3
+; GFX6-NEXT:    v_cmp_le_f32_e32 vcc, v0, v2
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX6-NEXT:    v_cmp_le_f32_e32 vcc, v1, v3
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmin_legacy_ole_v2f32:
@@ -408,7 +416,10 @@ define amdgpu_ps float @s_test_fmin_legacy_f32(float inreg %a, float inreg %b) {
 ; GFX6-LABEL: s_test_fmin_legacy_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
-; GFX6-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
+; GFX6-NEXT:    v_cmp_le_f32_e32 vcc, s2, v0
+; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GFX6-NEXT:    s_cselect_b32 s0, s2, s3
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_test_fmin_legacy_f32:
@@ -421,5 +432,43 @@ define amdgpu_ps float @s_test_fmin_legacy_f32(float inreg %a, float inreg %b) {
 ; GFX8-NEXT:    ; return to shader part epilog
   %cmp = fcmp ole float %a, %b
   %val = select i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+; A nonzero constant operand rules out the signed zero tie.
+define float @v_test_fmin_legacy_ole_f32_const_rhs(float %a) {
+; GFX6-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_min_legacy_f32_e64 v0, v0, 2.0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_ge_f32_e32 vcc, 2.0, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float %a, 2.0
+  %val = select i1 %cmp, float %a, float 2.0
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ole_f32_zero_rhs(float %a) {
+; GFX6-LABEL: v_test_fmin_legacy_ole_f32_zero_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_test_fmin_legacy_ole_f32_zero_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float %a, 0.0
+  %val = select i1 %cmp, float %a, float 0.0
   ret float %val
 }

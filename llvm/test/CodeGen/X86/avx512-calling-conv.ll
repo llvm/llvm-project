@@ -2116,7 +2116,7 @@ define void @v64i1_mem(<128 x i32> %x, <64 x i1> %y) {
 ; SKX-NEXT:    movq %rsp, %rbp
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
-; SKX-NEXT:    subq $128, %rsp
+; SKX-NEXT:    addq $-128, %rsp
 ; SKX-NEXT:    vmovaps 16(%rbp), %zmm8
 ; SKX-NEXT:    vmovaps %zmm8, (%rsp)
 ; SKX-NEXT:    callq _v64i1_mem_callee
@@ -2283,7 +2283,7 @@ define void @v64i1_mem(<128 x i32> %x, <64 x i1> %y) {
 ; FASTISEL-NEXT:    movq %rsp, %rbp
 ; FASTISEL-NEXT:    .cfi_def_cfa_register %rbp
 ; FASTISEL-NEXT:    andq $-64, %rsp
-; FASTISEL-NEXT:    subq $128, %rsp
+; FASTISEL-NEXT:    addq $-128, %rsp
 ; FASTISEL-NEXT:    vpsllw $7, 16(%rbp), %zmm8
 ; FASTISEL-NEXT:    vpmovb2m %zmm8, %k0
 ; FASTISEL-NEXT:    vpmovm2b %k0, %zmm8

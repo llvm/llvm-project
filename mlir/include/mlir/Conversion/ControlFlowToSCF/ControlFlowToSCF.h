@@ -63,13 +63,12 @@ public:
   /// Creates a `ub.poison` op of the given type.
   Value getUndefValue(Location loc, OpBuilder &builder, Type type) override;
 
-  /// Creates a `func.return` op with poison for each of the return values of
-  /// the function. It is guaranteed to be directly within the function body.
-  /// TODO: This can be made independent of the `func` dialect once the UB
-  ///       dialect has a `ub.unreachable` op.
+  /// Creates a `ub.unreachable` op.
   FailureOr<Operation *> createUnreachableTerminator(Location loc,
                                                      OpBuilder &builder,
                                                      Region &region) override;
+
+  bool isUnreachableTerminator(Operation *op) override;
 };
 
 #define GEN_PASS_DECL_LIFTCONTROLFLOWTOSCFPASS

@@ -27,7 +27,7 @@ end module
 !--- use.f90
 ! The named reduction, imported under the alias, is still materialized (named from
 ! its source module) and the clause binds it, so no TODO aborts the compile.
-! CHECK: omp.declare_reduction @{{.*}}myred{{.*}} : !fir.ref
+! CHECK: omp.declare_reduction @{{.*}}myred{{.*}} byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @{{.*}}myred
 ! CHECK-NOT: not yet implemented

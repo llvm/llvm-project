@@ -40,8 +40,8 @@
 // CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<?x?xf32> to memref<?x?xf32>
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<?x?xf32> to memref<?x?xf32>
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.lvl %[[VAL_7]], %[[VAL_4]] : tensor<?x?x2x2xf32, #[[$MAP]]>
-// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.positions %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.positions %[[VAL_7]] level = 1 : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_7]] level = 1 : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_7]] : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xf32>
 // CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_11]] step %[[VAL_3]] {
 // CHECK:             %[[VAL_16:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_15]]] : memref<?xindex>

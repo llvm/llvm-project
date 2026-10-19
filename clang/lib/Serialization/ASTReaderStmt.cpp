@@ -539,8 +539,21 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 }
 
 void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  VisitExpr(E);
+  E->CaretCaretLoc = readSourceLocation();
+  E->Kind = static_cast<ReflectionKind>(Record.readInt());
+  switch (E->Kind) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    E->Operand = nullptr;
+    break;
+  case ReflectionKind::Type:
+    E->Operand = Record.readTypeSourceInfo();
+    break;
+  }
 }
 
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
@@ -939,7 +952,7 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
               break;
           }
         }
-        if (Expr *Ex = E.dyn_cast<Expr *>())
+        if (Expr *Ex = dyn_cast<Expr *>(E))
           R = new (Record.getContext()) concepts::ExprRequirement(
                   Ex, RK == concepts::Requirement::RK_Simple, NoexceptLoc,
                   std::move(*Req), Status, SubstitutedConstraintExpr);
@@ -2095,6 +2108,17 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
   E->SubExpr = Record.readSubExpr();
 }
 
+void ASTStmtReader::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  unsigned NumTemplateArgs = Record.readInt();
+  assert(NumTemplateArgs == E->getNumTemplateArgs() &&
+         "Wrong NumTemplateArgs!");
+  ReadTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects(),
+                            NumTemplateArgs);
+  E->NameInfo = Record.readDeclarationNameInfo();
+  E->Name = Record.readTemplateName();
+}
+
 void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
@@ -2228,6 +2252,7 @@ void ASTStmtReader::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   E->TypeTraitExprBits.IsBooleanTypeTrait = Record.readInt();
+  E->TypeTraitExprBits.IsComparisonResult = Record.readInt();
   E->TypeTraitExprBits.NumArgs = Record.readInt();
   E->TypeTraitExprBits.Kind = Record.readInt();
 
@@ -2561,6 +2586,10 @@ void ASTStmtReader::VisitOMPCanonicalLoopSequenceTransformationDirective(
 }
 
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPFlattenDirective(OMPFlattenDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
@@ -3766,6 +3795,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_FLATTEN_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPFlattenDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
     case STMT_OMP_FOR_DIRECTIVE: {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
@@ -4409,6 +4445,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case EXPR_DEPENDENT_TEMPLATE_ID:
+      S = DependentTemplateIdExpr::CreateEmpty(
+          Context, /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
     case EXPR_CXX_DEPENDENT_SCOPE_DECL_REF: {
       BitsUnpacker DependentScopeDeclRefBits(
           Record[ASTStmtReader::NumStmtFields]);
@@ -4455,7 +4496,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(
           Context, Record[ASTStmtReader::NumExprFields],
-          Record[ASTStmtReader::NumExprFields + 1]);
+          Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_ARRAY_TYPE_TRAIT:

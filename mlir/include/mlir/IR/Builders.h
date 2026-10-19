@@ -511,9 +511,8 @@ public:
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
     auto *op = create(state);
-    auto result = dyn_cast<OpTy>(op);
-    assert(result && "builder didn't return the right type");
-    return result;
+    assert((isa<OpTy>(op)) && "builder didn't return the right type");
+    return cast<OpTy>(op);
   }
 
   /// Create an operation of specific op type at the current insertion point,

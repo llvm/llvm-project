@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, setpwent, ()) {
-  auto res = passwd::open();
+  auto res = pwd::open();
   if (!res.has_value())
     libc_errno = res.error();
 }

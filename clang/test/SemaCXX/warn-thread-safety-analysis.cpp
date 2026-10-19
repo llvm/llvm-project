@@ -4782,7 +4782,22 @@ namespace UnreachableExitTest {
 class FemmeFatale {
 public:
   FemmeFatale();
+  template <typename T>
+  FemmeFatale& operator<<(const T&) { return *this; }
   ~FemmeFatale() __attribute__((noreturn));
+};
+
+class NonFatal {
+public:
+  NonFatal();
+  template <typename T>
+  NonFatal& operator<<(const T&) { return *this; }
+  ~NonFatal();
+};
+
+struct Voidify {
+  template <typename T>
+  void operator&&(T&&) const&&;
 };
 
 void exitNow() __attribute__((noreturn));
@@ -4811,6 +4826,46 @@ void test3() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
 
 void test4() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
   exitDestruct("foo");
+}
+
+void test5() {
+  fatalmu_.TryLock() ? (void)0 : (void)FemmeFatale();
+  fatalmu_.Unlock();
+}
+
+void test6() {
+  fatalmu_.TryLock() ? (void)0 : Voidify() && FemmeFatale() << "foo";
+  fatalmu_.Unlock();
+}
+
+void test7() {
+  fatalmu_.TryLock() ? (void)0 : Voidify() && NonFatal() << "foo"; // \
+    // expected-warning {{mutex 'fatalmu_' is not held on every path through here}} \
+    // expected-note {{mutex acquired here}}
+  fatalmu_.Unlock(); // expected-warning {{releasing mutex 'fatalmu_' that was not held}}
+}
+
+void test8() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
+  c ? (void)0 : (void)FemmeFatale();
+}
+
+void test9() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
+  c ? (void)FemmeFatale() : (void)0;
+}
+
+void test10() {
+  !fatalmu_.TryLock() ? (void)FemmeFatale() : (void)0;
+  fatalmu_.Unlock();
+}
+
+void test11() {
+  !fatalmu_.TryLock() ? (void)FemmeFatale() : (void)NonFatal();
+  fatalmu_.Unlock();
+}
+
+void test12() {
+  fatalmu_.TryLock() ? (void)NonFatal() : (void)FemmeFatale();
+  fatalmu_.Unlock();
 }
 
 }   // end namespace UnreachableExitTest
@@ -8092,6 +8147,28 @@ void test3() {
 
 } // namespace WideStringLiteral
 
+namespace PointerToMemberCall {
+
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(Guarded::*mu_of)();
+};
+
+// A call through a pointer to member function has no method declaration; it
+// must not crash when used as a capability expression. The analysis cannot
+// name the callee, so the expression does not resolve to a capability, and
+// calls through different objects are not taken for one capability either.
+void testCallInCapabilityExpr(Guarded *g, Guarded &h) {
+  (g->*g->mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}}
+  (h.*h.mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (g->*g->mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+}
+
+} // namespace PointerToMemberCall
+
 namespace FunctionPointers {
 
 Mutex mu;
@@ -8313,6 +8390,116 @@ void callDependent(F cb EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
 void testDependent(int n) {
   callDependent<void (*)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (*)(int)>' requested here}}
   callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
+}
+
+// lock_returned on a function pointer or reference.
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+};
+Mutex &mu_ref_impl(Guarded &g) LOCK_RETURNED(g.mu);
+Mutex *(*mu_of)(Guarded *g) LOCK_RETURNED(&g->mu);
+// As with the other attributes (see testReassignIncompatible), the initializer
+// is not checked against the attribute: the analysis trusts the declaration.
+Mutex &(&mu_ref_of)(Guarded &g) LOCK_RETURNED(g.mu) = mu_ref_impl;
+
+void testLockReturned(Guarded *g) {
+  mu_of(g)->Lock();
+  g->data = 1;
+  mu_ref_of(*g).Unlock(); // expected-note {{mutex released here}}
+  mu_of(g)->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+}
+
+// A dependent parameter type is classified after instantiation.
+template <typename F>
+void lockReturnedDependent(Guarded *g, F mu_of_g LOCK_RETURNED(&g->mu)) {
+  mu_of_g(g)->Lock();
+  g->data = 1;
+  g->mu.Unlock();
+}
+
+void testLockReturnedDependent(Guarded *g) {
+  lockReturnedDependent<Mutex *(*)(Guarded *)>(g, mu_of);
+}
+
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct GuardedOps {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(*mu_of)() LOCK_RETURNED(&mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)() UNLOCK_FUNCTION(mu);
+};
+
+void testMemberLockReturned(GuardedOps *g, GuardedOps &h) {
+  g->mu_of()->Lock();
+  g->data = 1;
+  g->unlock();
+  h.lock();
+  h.data = 2;
+  h.mu_of()->Unlock();
+}
+
+void testMemberLockReturnedFail(GuardedOps *g, GuardedOps &h) {
+  h.mu_of()->Lock();
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h.mu'}}
+  g->mu_of()->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+  h.unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void testMemberDeref(GuardedOps *g, GuardedOps &h) {
+  (*g->mu_of)()->Lock();
+  g->data = 1;
+  (*g->unlock)();
+  (**h.lock)();
+  h.data = 2;
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h.mu'}}
+  (*h.mu_of)()->Unlock();
+}
+
+// Inside a member function, a call through another object must not resolve
+// the sibling against 'this'.
+struct GuardedOpsSelf {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)() UNLOCK_FUNCTION(mu);
+  void self() {
+    lock();
+    data = 1;
+    (*unlock)();
+  }
+  void other(GuardedOpsSelf *o) {
+    o->lock();
+    o->data = 1;
+    data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'mu' exclusively}} \
+              // expected-note {{found near match 'o->mu'}}
+    o->unlock();
+  }
+};
+
+// '&mu' is '&this->mu', the mutex of the called object, whereas the pointer
+// to member '&GuardedOpsAddrOf::mu' is the 'mu' of any object.
+struct GuardedOpsAddrOf {
+  Mutex mu;
+  int data GUARDED_BY(&mu);
+  int any GUARDED_BY(&GuardedOpsAddrOf::mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(&mu);
+  void (*unlock)() UNLOCK_FUNCTION(&mu);
+};
+
+void testMemberAddrOf(GuardedOpsAddrOf *g, GuardedOpsAddrOf *h) {
+  h->lock();
+  h->data = 1;
+  g->any = 1;
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h->mu'}}
+  h->unlock();
+  g->any = 1; // expected-warning {{writing variable 'any' requires holding mutex '&FunctionPointers::GuardedOpsAddrOf::mu' exclusively}}
 }
 
 } // namespace FunctionPointers

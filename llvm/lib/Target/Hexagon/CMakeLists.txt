@@ -18,6 +18,7 @@ add_public_tablegen_target(HexagonCommonTableGen)
 
 add_llvm_target(HexagonCodeGen
   BitTracker.cpp
+  HexagonAlignGlobalArrays.cpp
   HexagonAsmPrinter.cpp
   HexagonBitSimplify.cpp
   HexagonBitTracker.cpp

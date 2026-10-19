@@ -8,6 +8,8 @@
 ; RUN: llc -mtriple=amdgpu12.00-mesa-mesa3d < %s | FileCheck -check-prefix=GFX1200-MESA %s
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdpal < %s | FileCheck -check-prefix=GFX1250-PAL %s
 ; RUN: llc -mtriple=amdgpu12.50-mesa-mesa3d < %s | FileCheck -check-prefix=GFX1250-MESA %s
+; RUN: llc -mtriple=amdgpu13.10-amd-amdpal < %s | FileCheck -check-prefix=GFX1310-PAL %s
+; RUN: llc -mtriple=amdgpu13.10-mesa-mesa3d < %s | FileCheck -check-prefix=GFX1310-MESA %s
 
 ; Check EXTRA_LDS_SIZE in SPI_SHADER_PGM_RSRC2_PS.
 
@@ -35,6 +37,11 @@
 
 ; GFX1250-MESA: .long 45100
 ; GFX1250-MESA-NEXT: .long 256
+
+; GFX1310-PAL: '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x200
+
+; GFX1310-MESA: .long 45100
+; GFX1310-MESA-NEXT: .long 512
 
 @lds = internal addrspace(3) global [4096 x i8] poison
 

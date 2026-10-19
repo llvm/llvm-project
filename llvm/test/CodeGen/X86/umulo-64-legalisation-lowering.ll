@@ -26,10 +26,10 @@ define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; X86-NEXT:    andb %dl, %cl
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    seto %bl
+; X86-NEXT:    setb %bl
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    seto %ch
+; X86-NEXT:    setb %ch
 ; X86-NEXT:    orb %bl, %ch
 ; X86-NEXT:    orb %cl, %ch
 ; X86-NEXT:    leal (%edi,%eax), %esi

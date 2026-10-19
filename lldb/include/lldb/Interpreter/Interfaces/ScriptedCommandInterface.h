@@ -15,6 +15,8 @@
 namespace lldb_private {
 class ScriptedCommandInterface : virtual public ScriptedInterface {
 public:
+  bool UserCanRunDirectly() const override { return true; }
+
   virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name,
                      lldb::DebuggerSP debugger_sp) = 0;

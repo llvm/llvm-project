@@ -1,4 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -mlir-to-llvmir -split-input-file %s | FileCheck %s --check-prefix=ROUNDTRIP
 
 ; CHECK-DAG: #[[$GROUP0:.*]] = #llvm.access_group<id = {{.*}}>
 ; CHECK-DAG: #[[$GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
@@ -59,7 +60,7 @@ declare void @foo(ptr %arg1)
 ; CHECK-LABEL: @simple
 define void @simple(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -79,7 +80,7 @@ end:
 ; CHECK-LABEL: @vectorize
 define void @vectorize(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -94,8 +95,7 @@ end:
 !7 = !{!"llvm.loop.vectorize.followup_epilogue", !9}
 !8 = !{!"llvm.loop.vectorize.followup_all", !9}
 
-!9 = distinct !{!9, !10}
-!10 = !{!"llvm.loop.disable_nonforced"}
+!9 = !{!"llvm.loop.disable_nonforced"}
 
 ; // -----
 
@@ -105,7 +105,7 @@ end:
 ; CHECK-LABEL: @interleave
 define void @interleave(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -123,7 +123,7 @@ end:
 ; CHECK-LABEL: @unroll
 define void @unroll(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -138,8 +138,7 @@ end:
 !7 = !{!"llvm.loop.unroll.followup_remainder", !9}
 !8 = !{!"llvm.loop.unroll.followup_all", !9}
 
-!9 = distinct !{!9, !10}
-!10 = !{!"llvm.loop.disable_nonforced"}
+!9 = !{!"llvm.loop.disable_nonforced"}
 
 ; // -----
 
@@ -149,7 +148,7 @@ end:
 ; CHECK-LABEL: @unroll_disable
 define void @unroll_disable(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -160,6 +159,69 @@ end:
 
 ; // -----
 
+; An explicitly empty followup must survive import and export, rather than
+; disappear or acquire a self-referential LoopID wrapper.
+; CHECK-DAG: #[[EMPTY:.*]] = #llvm.loop_annotation<>
+; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<count = 8 : i32, followupUnrolled = #[[EMPTY]]>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]]>
+; CHECK-LABEL: @unroll_empty_followup
+; ROUNDTRIP-LABEL: @unroll_empty_followup(
+define void @unroll_empty_followup() {
+entry:
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
+; ROUNDTRIP: br label {{.*}}, !llvm.loop ![[EMPTY_LOOP:[0-9]+]]
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.unroll.count", i32 8}
+!2 = !{!"llvm.loop.unroll.followup_unrolled"}
+
+; ROUNDTRIP: ![[EMPTY_LOOP]] = distinct !{![[EMPTY_LOOP]], ![[COUNT:[0-9]+]], ![[EMPTY_FOLLOWUP:[0-9]+]]}
+; ROUNDTRIP-DAG: ![[COUNT]] = !{!"llvm.loop.unroll.count", i32 8}
+; ROUNDTRIP-DAG: ![[EMPTY_FOLLOWUP]] = !{!"llvm.loop.unroll.followup_unrolled"}
+
+; // -----
+
+; Keep multiple direct properties and a later followup as separate properties.
+; In particular, do not recursively flatten the nested empty followup.
+; CHECK-DAG: #[[EMPTY:.*]] = #llvm.loop_annotation<>
+; CHECK-DAG: #[[VECTORIZE_ATTR:.*]] = #llvm.loop_vectorize<disable = true>
+; CHECK-DAG: #[[INNER_UNROLL:.*]] = #llvm.loop_unroll<count = 2 : i32, followupUnrolled = #[[EMPTY]]>
+; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<vectorize = #[[VECTORIZE_ATTR]], unroll = #[[INNER_UNROLL]], mustProgress = true>
+; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<count = 8 : i32, followupUnrolled = #[[FOLLOWUP]]>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]]>
+; CHECK-LABEL: @unroll_nested_followup
+; ROUNDTRIP-LABEL: @unroll_nested_followup(
+define void @unroll_nested_followup() {
+entry:
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
+; ROUNDTRIP: br label {{.*}}, !llvm.loop ![[NESTED_LOOP:[0-9]+]]
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.unroll.count", i32 8}
+!2 = !{!"llvm.loop.unroll.followup_unrolled", !3, !4, !5, !6}
+!3 = !{!"llvm.loop.mustprogress"}
+!4 = !{!"llvm.loop.vectorize.disable"}
+!5 = !{!"llvm.loop.unroll.count", i32 2}
+!6 = !{!"llvm.loop.unroll.followup_unrolled"}
+
+; ROUNDTRIP: ![[NESTED_LOOP]] = distinct !{![[NESTED_LOOP]], ![[COUNT:[0-9]+]], ![[FOLLOWUP:[0-9]+]]}
+; ROUNDTRIP: ![[COUNT]] = !{!"llvm.loop.unroll.count", i32 8}
+; ROUNDTRIP: ![[FOLLOWUP]] = !{!"llvm.loop.unroll.followup_unrolled", ![[PROGRESS:[0-9]+]], ![[VECTORIZE:[0-9]+]], ![[INNER_COUNT:[0-9]+]], ![[INNER_FOLLOWUP:[0-9]+]]}
+; ROUNDTRIP-DAG: ![[PROGRESS]] = !{!"llvm.loop.mustprogress"}
+; ROUNDTRIP-DAG: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.disable"}
+; ROUNDTRIP-DAG: ![[INNER_COUNT]] = !{!"llvm.loop.unroll.count", i32 2}
+; ROUNDTRIP-DAG: ![[INNER_FOLLOWUP]] = !{!"llvm.loop.unroll.followup_unrolled"}
+
+; // -----
+
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<disableNonforced = true>
 ; CHECK-DAG: #[[UNROLL_AND_JAM_ATTR:.*]] = #llvm.loop_unroll_and_jam<disable = false, count = 32 : i32, followupOuter = #[[FOLLOWUP]], followupInner = #[[FOLLOWUP]], followupRemainderOuter = #[[FOLLOWUP]], followupRemainderInner = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
 ; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unrollAndJam = #[[UNROLL_AND_JAM_ATTR]]>
@@ -167,7 +229,7 @@ end:
 ; CHECK-LABEL: @unroll_and_jam
 define void @unroll_and_jam(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -182,8 +244,7 @@ end:
 !7 = !{!"llvm.loop.unroll_and_jam.followup_remainder_inner", !9}
 !8 = !{!"llvm.loop.unroll_and_jam.followup_all", !9}
 
-!9 = distinct !{!9, !10}
-!10 = !{!"llvm.loop.disable_nonforced"}
+!9 = !{!"llvm.loop.disable_nonforced"}
 
 ; // -----
 
@@ -193,7 +254,7 @@ end:
 ; CHECK-LABEL: @licm
 define void @licm(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -212,7 +273,7 @@ end:
 ; CHECK-LABEL: @distribute
 define void @distribute(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -225,8 +286,7 @@ end:
 !5 = !{!"llvm.loop.distribute.followup_fallback", !9}
 !6 = !{!"llvm.loop.distribute.followup_all", !9}
 
-!9 = distinct !{!9, !10}
-!10 = !{!"llvm.loop.disable_nonforced"}
+!9 = !{!"llvm.loop.disable_nonforced"}
 
 ; // -----
 
@@ -236,7 +296,7 @@ end:
 ; CHECK-LABEL: @pipeline
 define void @pipeline(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -254,7 +314,7 @@ end:
 ; CHECK-LABEL: @peeled
 define void @peeled(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -271,7 +331,7 @@ end:
 ; CHECK-LABEL: @unswitched
 define void @unswitched(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -289,7 +349,7 @@ end:
 define void @parallel_accesses(ptr %arg) {
 entry:
   %0 = load i32, ptr %arg, !llvm.access.group !0
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -310,7 +370,7 @@ define void @multiple_parallel_accesses(ptr %arg) {
 entry:
   %0 = load i32, ptr %arg, !llvm.access.group !0
   %1 = load i32, ptr %arg, !llvm.access.group !3
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
   br label %end, !llvm.loop !1
 end:
   ret void
@@ -347,15 +407,20 @@ end:
 ; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
 ; CHECK: #[[start_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[start_loc]]])
 ; CHECK: #[[end_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[end_loc]]])
+; CHECK: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<mustProgress = true, startLoc = #[[start_loc_fused]], endLoc = #[[end_loc_fused]]>
+; CHECK: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<followupUnrolled = #[[FOLLOWUP]]>
 ; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<
+; CHECK-SAME: unroll = #[[UNROLL_ATTR]]
 ; CHECK-SAME: mustProgress = true
 ; CHECK-SAME: startLoc = #[[start_loc_fused]]
 ; CHECK-SAME: endLoc = #[[end_loc_fused]]
 
 ; CHECK-LABEL: @loop_locs
+; ROUNDTRIP-LABEL: @loop_locs(
 define void @loop_locs(i64 %n, ptr %A) {
 entry:
-; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
+; ROUNDTRIP: br label {{.*}}, !llvm.loop ![[LOC_LOOP:[0-9]+]]
   br label %end, !llvm.loop !6
 end:
   ret void
@@ -370,7 +435,16 @@ end:
 !4 = !DILocation(line: 1, column: 2, scope: !3)
 !5 = !DILocation(line: 2, column: 2, scope: !3)
 
-!6 = distinct !{!6, !4, !5, !7}
+!6 = distinct !{!6, !4, !5, !7, !8}
 !7 = !{!"llvm.loop.mustprogress"}
+!8 = !{!"llvm.loop.unroll.followup_unrolled", !4, !5, !7}
 !999 = !DISubroutineType(types: !1000)
 !1000 = !{null}
+
+; Debug locations are direct followup operands too, not named properties to
+; filter out when removing a LoopID wrapper.
+; ROUNDTRIP: ![[LOC_LOOP]] = distinct !{![[LOC_LOOP]], ![[START:[0-9]+]], ![[END:[0-9]+]], ![[PROGRESS:[0-9]+]], ![[FOLLOWUP:[0-9]+]]}
+; ROUNDTRIP-DAG: ![[START]] = !DILocation(line: 1, column: 2, scope:
+; ROUNDTRIP-DAG: ![[END]] = !DILocation(line: 2, column: 2, scope:
+; ROUNDTRIP-DAG: ![[PROGRESS]] = !{!"llvm.loop.mustprogress"}
+; ROUNDTRIP-DAG: ![[FOLLOWUP]] = !{!"llvm.loop.unroll.followup_unrolled", ![[START]], ![[END]], ![[PROGRESS]]}

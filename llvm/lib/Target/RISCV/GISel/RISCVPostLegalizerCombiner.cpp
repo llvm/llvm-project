@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -36,6 +37,7 @@
 #define DEBUG_TYPE "riscv-postlegalizer-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 namespace {
 
@@ -54,12 +56,7 @@ bool matchFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (!SrcReg.isVirtual())
     return false;
 
-  MachineInstr *Def = MRI.getVRegDef(SrcReg);
-  if (!Def || Def->getOpcode() != TargetOpcode::G_FCONSTANT)
-    return false;
-
-  auto *CFP = Def->getOperand(1).getFPImm();
-  if (!CFP || !CFP->getValueAPF().isPosZero())
+  if (!mi_match(SrcReg, MRI, m_PosZeroFP()))
     return false;
 
   unsigned ValBits = MRI.getType(SrcReg).getSizeInBits();

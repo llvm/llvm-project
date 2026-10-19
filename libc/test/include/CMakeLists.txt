@@ -246,6 +246,8 @@ add_libc_test(
     libc.include.llvm-libc-macros.netinet_in_macros
 )
 
+add_subdirectory(net)
+
 add_libc_test(
   signbit_test
   SUITE
@@ -441,6 +443,8 @@ add_libc_test(
 #     libc.src.math.iscanonical
 #     libc.src.math.iscanonicalf
 #     libc.src.math.iscanonicall
+#     libc.src.math.iscanonicalf16
+#     libc.src.math.iscanonicalf128
 # )
 
 add_libc_test(

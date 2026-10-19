@@ -2378,6 +2378,10 @@ void acc_combined() {
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop reduction(||:someVarArr[1:1])
   for(int i = 0; i < 5; ++i);
+  // CHECK-NEXT: cir.func {{.*}}@_Z4usesv()
+  // CHECK-NEXT: cir.call @_Z12acc_combinedI16DefaultOperatorsEvv() : () -> ()
+  // CHECK-NEXT: cir.return
+  // CHECK-NEXT: }
   // CHECK-NEXT: cir.func {{.*}}@_Z12acc_combined
 }
 

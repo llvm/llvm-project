@@ -11,8 +11,7 @@ define void @negative_stride_nuw(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 512, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 512, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 512, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], -2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 1022, [[TMP4]]
@@ -31,7 +30,7 @@ define void @negative_stride_nuw(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP12]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP13]], ptr [[TMP15]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

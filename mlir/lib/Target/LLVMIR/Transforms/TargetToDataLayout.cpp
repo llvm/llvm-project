@@ -33,7 +33,7 @@ struct TargetToDataLayoutPass
     if (initializeLLVMTargets)
       LLVM::detail::initializeBackendsOnce();
 
-    auto targetAttr = op->getAttrOfType<LLVM::TargetAttrInterface>(
+    auto targetAttr = op->getDiscardableAttrOfType<LLVM::TargetAttrInterface>(
         LLVM::LLVMDialect::getTargetAttrName());
     if (!targetAttr) {
       op->emitError()
@@ -52,11 +52,12 @@ struct TargetToDataLayoutPass
     DataLayoutSpecInterface dataLayoutSpec =
         mlir::translateDataLayout(dataLayout.value(), &getContext());
 
-    if (auto existingDlSpec = op->getAttrOfType<DataLayoutSpecInterface>(
-            DLTIDialect::kDataLayoutAttrName)) {
+    if (auto existingDlSpec =
+            op->getDiscardableAttrOfType<DataLayoutSpecInterface>(
+                DLTIDialect::kDataLayoutAttrName)) {
       dataLayoutSpec = existingDlSpec.combineWith({dataLayoutSpec});
     }
 
-    op->setAttr(DLTIDialect::kDataLayoutAttrName, dataLayoutSpec);
+    op->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName, dataLayoutSpec);
   }
 };

@@ -7,9 +7,9 @@ target triple = "amdgpu9.00--"
 define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace(8) %aux) !dbg !5 {
 ; CHECK-LABEL: define float @debug_stash_pointer
 ; CHECK-SAME: (ptr addrspace(8) [[BUF:%.*]], i32 [[IDX:%.*]], ptr addrspace(8) [[AUX:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
-; CHECK-NEXT:    [[BUF_PTR_VAR:%.*]] = alloca i160, align 32, addrspace(5), !dbg [[DBG22:![0-9]+]]
+; CHECK-NEXT:    [[BUF_PTR_VAR:%.*]] = alloca [32 x i8], align 32, addrspace(5), !dbg [[DBG22:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(5) [[BUF_PTR_VAR]], [[META11:![0-9]+]], !DIExpression(), [[DBG22]])
-; CHECK-NEXT:    [[AUX_PTR_VAR:%.*]] = alloca i160, align 32, addrspace(5), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    [[AUX_PTR_VAR:%.*]] = alloca [32 x i8], align 32, addrspace(5), !dbg [[DBG23:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(5) [[AUX_PTR_VAR]], [[META13:![0-9]+]], !DIExpression(), [[DBG23]])
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META14:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[META24:![0-9]+]])
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF]], [[META14]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[META24]])

@@ -9,49 +9,11 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::math;
-
-namespace {
-
-/// Fuse a math.sin and math.cos in the same block that use the same operand and
-/// have identical fastmath flags into a single math.sincos.
-struct SincosFusionPattern : OpRewritePattern<math::SinOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(math::SinOp sinOp,
-                                PatternRewriter &rewriter) const override {
-    Value operand = sinOp.getOperand();
-    mlir::arith::FastMathFlags sinFastMathFlags = sinOp.getFastmath();
-
-    math::CosOp cosOp = nullptr;
-    for (auto op : sinOp->getBlock()->getOps<math::CosOp>())
-      if (op.getOperand() == operand && op.getFastmath() == sinFastMathFlags) {
-        cosOp = op;
-        break;
-      }
-
-    if (!cosOp)
-      return failure();
-
-    Operation *firstOp = sinOp->isBeforeInBlock(cosOp) ? sinOp.getOperation()
-                                                       : cosOp.getOperation();
-    rewriter.setInsertionPoint(firstOp);
-
-    Type elemType = sinOp.getType();
-    auto sincos = math::SincosOp::create(rewriter, firstOp->getLoc(),
-                                         TypeRange{elemType, elemType}, operand,
-                                         sinOp.getFastmathAttr());
-
-    rewriter.replaceOp(sinOp, sincos.getSin());
-    rewriter.replaceOp(cosOp, sincos.getCos());
-    return success();
-  }
-};
-
-} // namespace
 
 namespace mlir::math {
 #define GEN_PASS_DEF_MATHSINCOSFUSIONPASS
@@ -60,18 +22,72 @@ namespace mlir::math {
 
 namespace {
 
+/// A math.sin and a math.cos in the same block, on the same operand and with
+/// identical fastmath flags, that can be replaced by a single math.sincos.
+struct SincosPair {
+  math::SinOp sinOp;
+  math::CosOp cosOp;
+  /// Whichever of the two comes first in the block; the math.sincos is
+  /// inserted there so that its results dominate both uses.
+  Operation *firstOp;
+};
+
+/// Find the math.cos that should be fused with `sinOp`: the earliest one in the
+/// same block that uses the same operand with the same fastmath flags and has
+/// not already been paired with another math.sin.
+static math::CosOp
+findFusionCandidate(math::SinOp sinOp,
+                    const llvm::DenseSet<Operation *> &pairedCosOps) {
+  Value operand = sinOp.getOperand();
+  arith::FastMathFlags sinFastMathFlags = sinOp.getFastmath();
+  Block *block = sinOp->getBlock();
+
+  math::CosOp candidate = nullptr;
+  for (Operation *user : operand.getUsers()) {
+    auto cosOp = dyn_cast<math::CosOp>(user);
+    if (!cosOp || cosOp->getBlock() != block)
+      continue;
+    if (cosOp.getFastmath() != sinFastMathFlags)
+      continue;
+    if (pairedCosOps.contains(cosOp))
+      continue;
+    // The operand use list is not in program order, so keep the earliest
+    // candidate to make the choice independent of use list order.
+    if (!candidate || cosOp->isBeforeInBlock(candidate))
+      candidate = cosOp;
+  }
+  return candidate;
+}
+
 struct MathSincosFusionPass final
     : math::impl::MathSincosFusionPassBase<MathSincosFusionPass> {
   using MathSincosFusionPassBase::MathSincosFusionPassBase;
 
   void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    patterns.add<SincosFusionPattern>(&getContext());
+    // Collect the pairs before touching the IR: fusing erases the math.cos,
+    // which may be the operation the walk is about to visit next.
+    llvm::SmallVector<SincosPair> pairs;
+    llvm::DenseSet<Operation *> pairedCosOps;
+    getOperation()->walk([&](math::SinOp sinOp) {
+      math::CosOp cosOp = findFusionCandidate(sinOp, pairedCosOps);
+      if (!cosOp)
+        return;
+      pairedCosOps.insert(cosOp);
+      Operation *firstOp = sinOp->isBeforeInBlock(cosOp) ? sinOp.getOperation()
+                                                         : cosOp.getOperation();
+      pairs.push_back({sinOp, cosOp, firstOp});
+    });
 
-    GreedyRewriteConfig config;
-    if (failed(
-            applyPatternsGreedily(getOperation(), std::move(patterns), config)))
-      return signalPassFailure();
+    IRRewriter rewriter(&getContext());
+    for (SincosPair &pair : pairs) {
+      rewriter.setInsertionPoint(pair.firstOp);
+      Type elemType = pair.sinOp.getType();
+      auto sincos = math::SincosOp::create(
+          rewriter, pair.firstOp->getLoc(), TypeRange{elemType, elemType},
+          pair.sinOp.getOperand(), pair.sinOp.getFastmathAttr());
+      rewriter.replaceOp(pair.sinOp, sincos.getSin());
+      rewriter.replaceOp(pair.cosOp, sincos.getCos());
+    }
   }
 };
 

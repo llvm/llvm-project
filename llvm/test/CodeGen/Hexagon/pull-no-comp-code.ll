@@ -65,8 +65,8 @@ delete.notnull.i:                                 ; preds = %for.end.i
 _ZN7ggTrainI8ggPoint2E6AppendES0_.exit:           ; preds = %for.end.i, %for.body4
   %nan.sink.0 = getelementptr inbounds %class.ggPoint2.2.74.104.146.152.164.176.212.248.266.272.278.284.290.314.326.344.422.434.684, ptr %nan.sink, i32 0, i32 0, i32 0
   %nan.sink.1 = getelementptr inbounds %class.ggPoint2.2.74.104.146.152.164.176.212.248.266.272.278.284.290.314.326.344.422.434.684, ptr %nan.sink, i32 0, i32 0, i32 1
-  store double 0x7FF8000000000000, ptr %nan.sink.0, align 8
-  store double 0x7FF8000000000000, ptr %nan.sink.1, align 8
+  store double +qnan, ptr %nan.sink.0, align 8
+  store double +qnan, ptr %nan.sink.1, align 8
   br label %for.body4
 
 return:                                           ; preds = %entry

@@ -137,3 +137,102 @@ body:             |
     %2:_(i64) = G_SEXT_INREG %1, 32
     $x0 = COPY %2
 ...
+---
+name: zext_unmerge_sextinreg_v4i32
+tracksRegLiveness: true
+legalized:         true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: zext_unmerge_sextinreg_v4i32
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: %c:_(<8 x i8>) = G_ICMP intpred(eq), [[COPY]](<8 x i8>), [[COPY]]
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<8 x i16>) = G_SEXT %c(<8 x i8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x i16>), [[UV1:%[0-9]+]]:_(<4 x i16>) = G_UNMERGE_VALUES [[SEXT]](<8 x i16>)
+    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(<4 x i32>) = G_SEXT [[UV]](<4 x i16>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT1]](<4 x i32>)
+    %0:_(<8 x i8>) = COPY $d0
+    %c:_(<8 x i8>) = G_ICMP intpred(eq), %0:_(<8 x i8>), %0
+    %1:_(<8 x i16>) = G_ZEXT %c
+    %2:_(<4 x i16>), %3:_(<4 x i16>) = G_UNMERGE_VALUES %1
+    %4:_(<4 x i32>) = G_ZEXT %2
+    %5:_(<4 x i32>) = G_SEXT_INREG %4, 1
+    $q0 = COPY %5
+...
+---
+name: zext_unmerge_sextinreg_v4i32_unknown
+tracksRegLiveness: true
+legalized:         true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: zext_unmerge_sextinreg_v4i32_unknown
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<8 x i16>) = G_ZEXT [[COPY]](<8 x i8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x i16>), [[UV1:%[0-9]+]]:_(<4 x i16>) = G_UNMERGE_VALUES [[ZEXT]](<8 x i16>)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(<4 x i32>) = G_ZEXT [[UV]](<4 x i16>)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<4 x i32>) = G_SEXT_INREG [[ZEXT1]], 1
+    ; CHECK-NEXT: $q0 = COPY [[SEXT_INREG]](<4 x i32>)
+    %0:_(<8 x i8>) = COPY $d0
+    %1:_(<8 x i16>) = G_ZEXT %0
+    %2:_(<4 x i16>), %3:_(<4 x i16>) = G_UNMERGE_VALUES %1
+    %4:_(<4 x i32>) = G_ZEXT %2
+    %5:_(<4 x i32>) = G_SEXT_INREG %4, 1
+    $q0 = COPY %5
+...
+---
+name: anyext_unmerge_sextinreg_v4i32
+tracksRegLiveness: true
+legalized:         true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: anyext_unmerge_sextinreg_v4i32
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: %c:_(<8 x i8>) = G_ICMP intpred(eq), [[COPY]](<8 x i8>), [[COPY]]
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<8 x i16>) = G_SEXT %c(<8 x i8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x i16>), [[UV1:%[0-9]+]]:_(<4 x i16>) = G_UNMERGE_VALUES [[SEXT]](<8 x i16>)
+    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(<4 x i32>) = G_SEXT [[UV]](<4 x i16>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT1]](<4 x i32>)
+    %0:_(<8 x i8>) = COPY $d0
+    %c:_(<8 x i8>) = G_ICMP intpred(eq), %0:_(<8 x i8>), %0
+    %1:_(<8 x i16>) = G_ANYEXT %c
+    %2:_(<4 x i16>), %3:_(<4 x i16>) = G_UNMERGE_VALUES %1
+    %4:_(<4 x i32>) = G_ANYEXT %2
+    %5:_(<4 x i32>) = G_SEXT_INREG %4, 1
+    $q0 = COPY %5
+...
+---
+name: zext_unmerge_sextinreg_v4i32_result2
+tracksRegLiveness: true
+legalized:         true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: zext_unmerge_sextinreg_v4i32_result2
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: %c:_(<8 x i8>) = G_ICMP intpred(eq), [[COPY]](<8 x i8>), [[COPY]]
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<8 x i16>) = G_SEXT %c(<8 x i8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x i16>), [[UV1:%[0-9]+]]:_(<4 x i16>) = G_UNMERGE_VALUES [[SEXT]](<8 x i16>)
+    ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(<4 x i32>) = G_SEXT [[UV1]](<4 x i16>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT1]](<4 x i32>)
+    %0:_(<8 x i8>) = COPY $d0
+    %c:_(<8 x i8>) = G_ICMP intpred(eq), %0:_(<8 x i8>), %0
+    %1:_(<8 x i16>) = G_ZEXT %c
+    %2:_(<4 x i16>), %3:_(<4 x i16>) = G_UNMERGE_VALUES %1
+    %4:_(<4 x i32>) = G_ZEXT %3
+    %5:_(<4 x i32>) = G_SEXT_INREG %4, 1
+    $q0 = COPY %5
+...

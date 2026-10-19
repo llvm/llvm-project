@@ -152,6 +152,13 @@ void DylinkSection::writeBody() {
       writeStr(sub.os, ref, "rpath entry");
     sub.writeTo(os);
   }
+
+  {
+    SubSection sub(WASM_DYLINK_TARGET_ARCH);
+    writeStr(sub.os, ctx.arg.is64.value_or(false) ? "wasm64" : "wasm32",
+             "target arch");
+    sub.writeTo(os);
+  }
 }
 
 uint32_t TypeSection::registerType(const WasmSignature &sig) {
@@ -733,6 +740,9 @@ void LinkingSection::writeBody() {
             writeUleb128(sub.os, dataSym->getVA(), "data offset");
           }
           writeUleb128(sub.os, dataSym->getSize(), "data size");
+        } else if (auto *commonSym = dyn_cast<CommonSymbol>(sym)) {
+          writeUleb128(sub.os, commonSym->getSize(), "common size");
+          writeU8(sub.os, commonSym->getAlignment(), "common alignment");
         }
       } else {
         auto *s = cast<OutputSectionSymbol>(sym);
@@ -801,6 +811,13 @@ void LinkingSection::writeBody() {
         writeUleb128(sub.os, entry.index, "entry index");
       }
     }
+    sub.writeTo(os);
+  }
+
+  {
+    SubSection sub(WASM_TARGET_ARCH);
+    writeStr(sub.os, ctx.arg.is64.value_or(false) ? "wasm64" : "wasm32",
+             "target arch");
     sub.writeTo(os);
   }
 }

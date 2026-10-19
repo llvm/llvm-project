@@ -120,6 +120,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
 
+  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+    CmdArgs.push_back("--no-demangle");
+
   // On `wasip2` the default linker is `wasm-component-ld` which wraps the
   // execution of `wasm-ld`. Find `wasm-ld` and pass it as an argument of where
   // to find it to avoid it needing to hunt and rediscover or search `PATH` for
@@ -163,7 +166,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // crt1-command.o. And once LLVM no longer needs to support WASI libc
     // versions before that, it can switch to using crt1-command.o.
     Crt1 = "crt1.o";
-    if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+    if (ToolChain.GetFilePathIfExists("crt1-command.o"))
       Crt1 = "crt1-command.o";
   } else {
     Crt1 = "crt1-reactor.o";
@@ -420,10 +423,13 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << CurOption << "-mno-reference-types";
 
+    if (DriverArgs.hasArg(options::OPT_femscripten_exceptions))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << CurOption << "-femscripten-exceptions";
+
     for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
       for (const auto *Option :
-           {"-enable-emscripten-cxx-exceptions", "-enable-emscripten-sjlj",
-            "-emscripten-cxx-exceptions-allowed"}) {
+           {"-enable-emscripten-sjlj", "-emscripten-cxx-exceptions-allowed"}) {
         if (StringRef(A->getValue(0)) == Option)
           getDriver().Diag(diag::err_drv_argument_not_allowed_with)
               << CurOption << Option;
@@ -450,27 +456,17 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
   if (DriverArgs.getLastArg(options::OPT_fwasm_exceptions)) {
     BanIncompatibleOptionsForWasmEHSjLj("-fwasm-exceptions");
     EnableFeaturesForWasmEHSjLj();
-    // Backend needs -wasm-enable-eh to enable Wasm EH
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("-wasm-enable-eh");
   }
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
     StringRef Opt = A->getValue(0);
     if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
       // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
-      // '-mllvm -enable-emscripten-cxx-exceptions'
-      bool EmEHArgExists = false;
-      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
-        if (StringRef(A->getValue(0)) == "-enable-emscripten-cxx-exceptions") {
-          EmEHArgExists = true;
-          break;
-        }
-      }
-      if (!EmEHArgExists)
+      // '-femscripten-exceptions'.
+      if (!DriverArgs.hasArg(options::OPT_femscripten_exceptions))
         getDriver().Diag(diag::err_drv_argument_only_allowed_with)
             << "-mllvm -emscripten-cxx-exceptions-allowed"
-            << "-mllvm -enable-emscripten-cxx-exceptions";
+            << "-femscripten-exceptions";
 
       // Prevent functions specified in -emscripten-cxx-exceptions-allowed list
       // from being inlined before reaching the wasm backend.
@@ -484,8 +480,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    for (const auto *Option :
-         {"-wasm-enable-eh", "-wasm-enable-sjlj", "-wasm-use-legacy-eh"}) {
+    for (const auto *Option : {"-wasm-enable-sjlj", "-wasm-use-legacy-eh"}) {
       if (Opt.starts_with(Option)) {
         BanIncompatibleOptionsForWasmEHSjLj(Option);
         EnableFeaturesForWasmEHSjLj();

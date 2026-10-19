@@ -11,6 +11,10 @@
 #include "BPFSubtarget.h"
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -26,9 +30,12 @@ extern cl::opt<bool> DisableMIPeephole;
 
 namespace {
 
-class BPFCodeGenPassBuilder
-    : public CodeGenPassBuilder<BPFCodeGenPassBuilder, BPFTargetMachine> {
-  using Base = CodeGenPassBuilder<BPFCodeGenPassBuilder, BPFTargetMachine>;
+class BPFCodeGenPassBuilder : public CodeGenPassBuilder {
+  using Base = CodeGenPassBuilder;
+
+  BPFTargetMachine &getTM() const {
+    return static_cast<BPFTargetMachine &>(TM);
+  }
 
 public:
   explicit BPFCodeGenPassBuilder(BPFTargetMachine &TM,
@@ -36,16 +43,23 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
-  void addIRPasses(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
-  void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
-  void addPreEmitPass(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
+  void addIRPasses(PassManagerWrapper &PMW) override;
+
+  Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
+  void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
+  void addPreEmitPass(PassManagerWrapper &PMW) override;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
-void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
+void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(BPFCheckAndAdjustIRPass(), PMW);
@@ -53,25 +67,45 @@ void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   Base::addIRPasses(PMW);
 }
 
-Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(BPFISelDAGToDAGPass(TM), PMW);
+Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(BPFISelDAGToDAGPass(getTM()), PMW);
   return Error::success();
 }
 
-void BPFCodeGenPassBuilder::addMachineSSAOptimization(
-    PassManagerWrapper &PMW) const {
+Error BPFCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+Error BPFCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+Error BPFCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error BPFCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(), PMW);
+  return Error::success();
+}
+
+void BPFCodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
   addMachineFunctionPass(BPFMISimplifyPatchablePass(), PMW);
 
   Base::addMachineSSAOptimization(PMW);
 
-  const BPFSubtarget *Subtarget = TM.getSubtargetImpl();
+  const BPFSubtarget *Subtarget = getTM().getSubtargetImpl();
   if (!DisableMIPeephole) {
     if (Subtarget->getHasAlu32())
       addMachineFunctionPass(BPFMIPeepholePass(), PMW);
   }
 }
 
-void BPFCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
+void BPFCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(BPFMIPreEmitCheckingPass(), PMW);
   if (!DisableMIPeephole) {
     addMachineFunctionPass(BPFMIExpandStackArgPseudosPass(), PMW);
@@ -79,15 +113,15 @@ void BPFCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
 }
 
-void BPFCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
+void BPFCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
   addModulePass(BPFAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
-void BPFCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+void BPFCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   addMachineFunctionPass(BPFAsmPrinterPass(), PMW);
 }
 
-void BPFCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+void BPFCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(BPFAsmPrinterEndPass(), PMW);
 }
 

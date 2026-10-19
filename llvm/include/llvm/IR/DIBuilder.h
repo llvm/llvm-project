@@ -548,6 +548,19 @@ namespace llvm {
                        StringRef GetterName, StringRef SetterName,
                        unsigned PropertyAttributes, DIType *Ty);
 
+    /// Create debugging information entry for a property, i.e. an entity that
+    /// is accessed like a data member but whose access is implemented by an
+    /// accessor.
+    /// \param Name          Property name.
+    /// \param File          File where this property is defined.
+    /// \param LineNumber    Line number.
+    /// \param Ty            Type of the property.
+    /// \param BackingStorage The data member holding the property's backing
+    ///                      storage.
+    LLVM_ABI DIProperty *createProperty(StringRef Name, DIFile *File,
+                                        unsigned LineNumber, DIType *Ty,
+                                        DIDerivedType *BackingStorage);
+
     /// Create debugging information entry for a class.
     /// \param Scope        Scope in which this class is defined.
     /// \param Name         class name.

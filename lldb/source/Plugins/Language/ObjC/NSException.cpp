@@ -25,6 +25,8 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <optional>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -51,24 +53,30 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
     return false;
   size_t ptr_size = process_sp->GetAddressByteSize();
 
-  Status error;
-  auto name = process_sp->ReadPointerFromMemory(ptr + 1 * ptr_size, error);
-  if (error.Fail() || name == LLDB_INVALID_ADDRESS)
+  // Read the ivar at the given pointer-sized slot in the NSException object.
+  // Returns std::nullopt if the read fails.
+  auto read_field = [&](size_t slot) {
+    return llvm::expectedToOptional(
+        process_sp->ReadPointerFromMemory(ptr + slot * ptr_size));
+  };
+
+  std::optional<lldb::addr_t> name = read_field(1);
+  if (!name)
     return false;
-  auto reason = process_sp->ReadPointerFromMemory(ptr + 2 * ptr_size, error);
-  if (error.Fail() || reason == LLDB_INVALID_ADDRESS)
+  std::optional<lldb::addr_t> reason = read_field(2);
+  if (!reason)
     return false;
-  auto userinfo = process_sp->ReadPointerFromMemory(ptr + 3 * ptr_size, error);
-  if (error.Fail() || userinfo == LLDB_INVALID_ADDRESS)
+  std::optional<lldb::addr_t> userinfo = read_field(3);
+  if (!userinfo)
     return false;
-  auto reserved = process_sp->ReadPointerFromMemory(ptr + 4 * ptr_size, error);
-  if (error.Fail() || reserved == LLDB_INVALID_ADDRESS)
+  std::optional<lldb::addr_t> reserved = read_field(4);
+  if (!reserved)
     return false;
 
-  InferiorSizedWord name_isw(name, *process_sp);
-  InferiorSizedWord reason_isw(reason, *process_sp);
-  InferiorSizedWord userinfo_isw(userinfo, *process_sp);
-  InferiorSizedWord reserved_isw(reserved, *process_sp);
+  InferiorSizedWord name_isw(*name, *process_sp);
+  InferiorSizedWord reason_isw(*reason, *process_sp);
+  InferiorSizedWord userinfo_isw(*userinfo, *process_sp);
+  InferiorSizedWord reserved_isw(*reserved, *process_sp);
 
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());

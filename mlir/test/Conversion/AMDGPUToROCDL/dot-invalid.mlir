@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx906 --split-input-file -verify-diagnostics
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx942 --split-input-file -verify-diagnostics
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=arch=amdgpu9.06-amd-amdhsa --split-input-file -verify-diagnostics
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=arch=amdgpu9.42-amd-amdhsa --split-input-file -verify-diagnostics
 
 // fp8 dot4 is only available on gfx12+.
 func.func @dot_fp8_requires_gfx12(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f32) -> f32 {
@@ -35,6 +35,6 @@ func.func @dot_f32_bf16_requires_gfx11_or_gfx950(%a: vector<2xbf16>, %b: vector<
 func.func @dot_mixed_sign_requires_gfx11(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
   // expected-error@below {{'amdgpu.dot' op no intrinsic matching dot on the given chipset}}
   // expected-error@below {{failed to legalize operation 'amdgpu.dot'}}
-  %r = amdgpu.dot %a * %b + %c {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %r = amdgpu.dot %a * %b + %c unsignedB : vector<4xi8>, vector<4xi8>, i32
   func.return %r : i32
 }

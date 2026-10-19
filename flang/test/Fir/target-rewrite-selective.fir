@@ -1,5 +1,7 @@
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu no-complex-conversion" %s | FileCheck --check-prefix=CMPLXOFF %s
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu no-character-conversion" %s | FileCheck --check-prefix=CHAROFF %s
+// RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu no-complex-conversion" %s | FileCheck --check-prefix=CMPLXOFF %s
+// RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu no-character-conversion" %s | FileCheck --check-prefix=SYSTEMZ_CHAROFF %s
 
 // Verify that selective TargetRewrite with no-complex-conversion and
 // no-character-conversion options works as expected.
@@ -30,6 +32,11 @@
 // CHAROFF-DAG: fir.call @_QPtest2({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.char<1,10>>, index, !fir.vector<2:f32>) -> !fir.boxchar<1>
 // CHAROFF-DAG: func.func private @_QPtest1(!fir.boxchar<1>, !fir.vector<2:f32>) -> !fir.vector<2:f32>
 // CHAROFF-DAG: func.func private @_QPtest2(!fir.ref<!fir.char<1,10>>, index, !fir.vector<2:f32>) -> !fir.boxchar<1>
+
+// SYSTEMZ_CHAROFF-DAG: fir.call @_QPtest1({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.sret = tuple<f32, f32>}, !fir.boxchar<1>, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
+// SYSTEMZ_CHAROFF-DAG: fir.call @_QPtest2({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> !fir.boxchar<1>
+// SYSTEMZ_CHAROFF-DAG: func.func private @_QPtest1(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.sret = tuple<f32, f32>}, !fir.boxchar<1>, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
+// SYSTEMZ_CHAROFF-DAG: func.func private @_QPtest2(!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> !fir.boxchar<1>
 
 module {
   func.func @_QPtest(%arg0: complex<f32> {fir.bindc_name = "value"}) -> complex<f32> {

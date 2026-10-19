@@ -17,7 +17,9 @@ class TestDAP_asan(DAPTestCaseBase):
         session = self.build_and_create_session()
         process_event = session.launch(LaunchArgs(program))
         stop_event = session.verify_stopped_on_exception(
-            after=process_event, expected_description="Use of deallocated memory"
+            after=process_event,
+            expected_description="Use of deallocated memory",
+            expected_text=r"^AddressSanitizer$",
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)
@@ -26,3 +28,7 @@ class TestDAP_asan(DAPTestCaseBase):
         description = self.expect_not_none(exception_info.description)
         self.assertRegex(description, r"fatal_error: heap-use-after-free")
         self.assertEqual(exception_info.exceptionId, "runtime-instrumentation")
+
+        stop_info = self.expect_not_none(exception_info.lldb_stop_reason_extended_info)
+        self.assertEqual(stop_info["instrumentation_class"], "AddressSanitizer")
+        self.assertEqual(stop_info["description"], "heap-use-after-free")

@@ -16,7 +16,7 @@ define i1 @or_non_negative_bounds(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[NONNEG]], [[AND_2]]
 ; CHECK-NEXT:    br i1 [[AND_3]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i64 [[D]], [[B]]
+; CHECK-NEXT:    [[IDX:%.*]] = add nuw nsw i64 [[D]], [[B]]
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 false

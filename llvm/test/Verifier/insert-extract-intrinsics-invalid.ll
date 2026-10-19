@@ -78,6 +78,23 @@ define <vscale x 8 x i32> @insert_overrun_scalable_fixed(<vscale x 8 x i32> %vec
   ret <vscale x 8 x i32> %1
 }
 
+;
+; Test that extractions/insertions of a scalable vector from/into a fixed vector
+; are captured.
+;
+
+; CHECK: cannot vector_extract a scalable vector from a fixed vector.
+define <vscale x 4 x i32> @extract_scalable_from_fixed(<8 x i32> %vec) {
+  %1 = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.v8i32(<8 x i32> %vec, i64 0)
+  ret <vscale x 4 x i32> %1
+}
+
+; CHECK: cannot vector_insert a scalable vector into a fixed vector.
+define <8 x i32> @insert_scalable_into_fixed(<8 x i32> %vec, <vscale x 4 x i32> %subvec) {
+  %1 = call <8 x i32> @llvm.vector.insert.v8i32.nxv4i32(<8 x i32> %vec, <vscale x 4 x i32> %subvec, i64 0)
+  ret <8 x i32> %1
+}
+
 declare <vscale x 3 x i32> @llvm.vector.extract.nxv8i32.nxv3i32(<vscale x 8 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv3i32(<vscale x 8 x i32>, <vscale x 3 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.v3i32(<vscale x 8 x i32>, <3 x i32>, i64)
@@ -88,3 +105,26 @@ declare <8 x i32> @llvm.vector.insert.v8i32.v3i32(<8 x i32>, <3 x i32>, i64)
 declare <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32>, <4 x i32>, i64)
 declare <16 x i16> @llvm.vector.extract.v16i16.nxv16i8(<vscale x 16 x i8>, i64)
 declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v4i16(<vscale x 16 x i8>, <4 x i16>, i64)
+
+;
+; Test that scalar operands are rejected without crashing the verifier when
+; the invalid declarations are actually called.
+;
+
+; CHECK: intrinsic argument 0 type (overload type 1) expected any vector type, but got i32
+; CHECK-NEXT: declare <4 x i32> @llvm.vector.extract.v4i32.i32(i32, i64)
+declare <4 x i32> @llvm.vector.extract.v4i32.i32(i32, i64)
+
+define <4 x i32> @extract_scalar_vector(i32 %x) {
+  %r = call <4 x i32> @llvm.vector.extract.v4i32.i32(i32 %x, i64 0)
+  ret <4 x i32> %r
+}
+
+; CHECK: intrinsic argument 1 type (overload type 1) expected any vector type, but got i32
+; CHECK-NEXT: declare <8 x i32> @llvm.vector.insert.v8i32.i32(<8 x i32>, i32, i64)
+declare <8 x i32> @llvm.vector.insert.v8i32.i32(<8 x i32>, i32, i64)
+
+define <8 x i32> @insert_scalar_subvector(<8 x i32> %v, i32 %x) {
+  %r = call <8 x i32> @llvm.vector.insert.v8i32.i32(<8 x i32> %v, i32 %x, i64 0)
+  ret <8 x i32> %r
+}

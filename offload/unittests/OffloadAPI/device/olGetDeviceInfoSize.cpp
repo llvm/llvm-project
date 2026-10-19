@@ -16,8 +16,8 @@ using olGetDeviceInfoSizeEqualTest = olGetHostDeviceInfoPropertyTest;
 using olGetDeviceInfoSizeNonZeroTest = olGetHostDeviceInfoPropertyTest;
 
 DeviceInfoProperties answerSizeEqualToTypeSizeProperties = mergeProperties(
-    {Uint32Properties, Uint64Properties, CapabilitesFlagsProperties,
-     PlatformProperties, DeviceTypeProperties});
+    {Uint32Properties, Uint64Properties, Uint64MayBeZeroProperties,
+     CapabilitesFlagsProperties, PlatformProperties, DeviceTypeProperties});
 
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
     olGetDeviceInfoSizeEqualTest, answerSizeEqualToTypeSizeProperties,
@@ -53,6 +53,15 @@ TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkSizePerDimension) {
       Device, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION, &Size));
   ASSERT_EQ(Size, sizeof(ol_dimensions_t));
   ASSERT_EQ(Size, sizeof(uint32_t) * 3);
+}
+
+TEST(olGetDeviceInfoSizeHostTest, SuccessDriverId) {
+  ol_device_handle_t Host = TestEnvironment::getHostDevice();
+  ASSERT_NE(Host, nullptr);
+
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_DRIVER_ID, &Size));
+  ASSERT_EQ(Size, sizeof(uint32_t));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullHandle) {

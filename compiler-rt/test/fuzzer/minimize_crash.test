@@ -10,7 +10,7 @@ CHECK_EXACT: CRASH_MIN: failed to minimize beyond {{.*}}exact_minimized_path{{.*
 RUN: rm %t.dir/not_minimal_crash %t.exact_minimized_path
 
 RUN: echo -n 'abcd*xyz' > %t.dir/not_minimal_crash
-RUN: %run %t-SingleByteInputTest -minimize_crash=1 %t.dir/not_minimal_crash -exact_artifact_path=%t.exact_minimized_path 2>&1 | FileCheck %s --check-prefix=MIN1
+RUN: %run %t-SingleByteInputTest -minimize_crash=1 -mutate_depth=2 %t.dir/not_minimal_crash -exact_artifact_path=%t.exact_minimized_path 2>&1 | FileCheck %s --check-prefix=MIN1
 MIN1: Test unit written to {{.*}}exact_minimized_path
 MIN1: Test unit written to {{.*}}exact_minimized_path
 MIN1: INFO: The input is small enough, exiting

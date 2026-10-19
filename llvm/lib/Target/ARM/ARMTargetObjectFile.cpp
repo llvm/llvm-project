@@ -33,19 +33,14 @@ ARMElfTargetObjectFile::ARMElfTargetObjectFile() {
   SupportIndirectSymViaGOTPCRel = true;
 }
 
-void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
-                                        const TargetMachine &TM) {
-  const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);
-  bool isAAPCS_ABI = ARM_TM.TargetABI == ARM::ARMABI::ARM_ABI_AAPCS;
+void ARMElfTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                        const Module &M) {
+  const ARMBaseTargetMachine &ARM_TM =
+      static_cast<const ARMBaseTargetMachine &>(TM);
   bool genExecuteOnly =
       ARM_TM.getMCSubtargetInfo().hasFeature(ARM::FeatureExecuteOnly);
 
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  InitializeELF(isAAPCS_ABI);
-
-  if (isAAPCS_ABI) {
-    LSDASection = nullptr;
-  }
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   // Make code section unreadable when in execute-only mode
   if (genExecuteOnly) {
@@ -58,6 +53,12 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
     TextSection =
         Ctx.getELFSection(".text", Type, Flags, 0, "", false, 0U, nullptr);
   }
+
+  bool isAAPCS_ABI = ARM_TM.getEffectiveABI(M) == ARM::ARMABI::ARM_ABI_AAPCS;
+  InitializeELF(isAAPCS_ABI);
+
+  if (isAAPCS_ABI)
+    LSDASection = nullptr;
 }
 
 MCRegister ARMElfTargetObjectFile::getStaticBase() const { return ARM::R9; }

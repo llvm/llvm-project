@@ -84,6 +84,13 @@ entry:
   ret i1 %ret
 }
 
+define noundef i1 @wave_readlane_first(i1 %x) {
+entry:
+  ; CHECK: Function wave_readlane_first : [[WAVE_FLAG]]
+  %ret = call i1 @llvm.dx.wave.readlane.first.i1(i1 %x)
+  ret i1 %ret
+}
+
 define noundef i32 @wave_reduce_sum(i32 noundef %x) {
 entry:
   ; CHECK: Function wave_reduce_sum : [[WAVE_FLAG]]

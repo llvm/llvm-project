@@ -143,8 +143,7 @@ define void @scalablevf_distinct_args(ptr %dst.start, i8 %a0, i8 %a1, i8 %a2, i8
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SCALABLE:       [[VECTOR_PH]]:
-; SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
-; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP2]]
+; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP1]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 2
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[TMP3]]
@@ -189,7 +188,7 @@ define void @scalablevf_distinct_args(ptr %dst.start, i8 %a0, i8 %a1, i8 %a2, i8
 ; SCALABLE-NEXT:    [[TMP21:%.*]] = add <vscale x 4 x i8> [[BROADCAST_SPLAT14]], [[TMP20]]
 ; SCALABLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x i8> @llvm.vector.interleave4.nxv16i8(<vscale x 4 x i8> [[TMP12]], <vscale x 4 x i8> [[TMP15]], <vscale x 4 x i8> [[TMP18]], <vscale x 4 x i8> [[TMP21]])
 ; SCALABLE-NEXT:    store <vscale x 16 x i8> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 1
-; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SCALABLE-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SCALABLE-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALABLE:       [[MIDDLE_BLOCK]]:

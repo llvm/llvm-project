@@ -8,7 +8,7 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-O0-NEXT:    pushq %rbp
 ; CHECK-O0-NEXT:    movq %rsp, %rbp
 ; CHECK-O0-NEXT:    andq $-32, %rsp
-; CHECK-O0-NEXT:    subq $64, %rsp
+; CHECK-O0-NEXT:    subq $32, %rsp
 ; CHECK-O0-NEXT:    vmovaps %ymm4, %ymm10
 ; CHECK-O0-NEXT:    vmovaps %ymm3, %ymm9
 ; CHECK-O0-NEXT:    vmovaps %ymm2, (%rsp) # 32-byte Spill

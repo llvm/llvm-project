@@ -70,12 +70,11 @@ private:
   ScriptedThread(const ScriptedThread &) = delete;
   const ScriptedThread &operator=(const ScriptedThread &) = delete;
 
-  std::shared_ptr<DynamicRegisterInfo> GetDynamicRegisterInfo();
+  lldb::DynamicRegisterInfoSP GetDynamicRegisterInfo();
 
   const ScriptedProcess &m_scripted_process;
   lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
   lldb_private::StructuredData::GenericSP m_script_object_sp = nullptr;
-  std::shared_ptr<DynamicRegisterInfo> m_register_info_sp = nullptr;
 };
 
 } // namespace lldb_private

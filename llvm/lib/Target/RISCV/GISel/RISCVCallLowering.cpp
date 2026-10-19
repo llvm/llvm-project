@@ -492,6 +492,37 @@ void RISCVCallLowering::saveVarArgRegisters(
   RVFI->setVarArgsSaveSize(VarArgsSaveSize);
 }
 
+/// Note the registers holding incoming arguments that the ABI guarantees are
+/// sign extended from 32 bits for the RISCVOptWInstrs pass.
+static void markSExt32Registers(MachineFunction &MF,
+                                ArrayRef<CallLowering::ArgInfo> Args,
+                                ArrayRef<CCValAssign> ArgLocs) {
+  if (!MF.getSubtarget<RISCVSubtarget>().is64Bit())
+    return;
+
+  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  for (const CCValAssign &VA : ArgLocs) {
+    if (!VA.isRegLoc() || VA.getLocVT() != MVT::i64)
+      continue;
+
+    // handleAssignments leaves Regs holding the registers the incoming values
+    // were copied into from the physical registers.
+    const CallLowering::ArgInfo &Arg = Args[VA.getValNo()];
+    if (Arg.Regs.size() != 1)
+      continue;
+
+    auto *IntTy = dyn_cast<IntegerType>(Arg.Ty);
+    if (!IntTy)
+      continue;
+
+    unsigned BitWidth = IntTy->getBitWidth();
+    // An input zero extended from i31 can also be considered sign extended.
+    if ((BitWidth <= 32 && Arg.Flags[0].isSExt()) ||
+        (BitWidth < 32 && Arg.Flags[0].isZExt()))
+      RVFI->addSExt32Register(Arg.Regs[0]);
+  }
+}
+
 bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
@@ -543,6 +574,8 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
              [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
     MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
+  markSExt32Registers(MF, SplitArgInfos, ArgLocs);
+
   if (F.isVarArg())
     saveVarArgRegisters(MIRBuilder, Handler, Assigner, CCInfo);
 
@@ -591,8 +624,11 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
+  if (Info.NoMerge)
+    Call.setMIFlag(MachineInstr::MIFlag::NoMerge);
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
+  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))
+      .setOperandDead(2); // $x1 (ra)
 
   OutgoingValueAssigner ArgAssigner(CC_RISCV);
   RISCVOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), Call);

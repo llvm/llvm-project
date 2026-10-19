@@ -2702,9 +2702,6 @@ TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   // Length Modifier Tests.
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%.9Le", 1000000000500000000.1L);
-  ASSERT_STREQ_LEN(written, buff, "1.000000001e+18");
-
   written = LIBC_NAMESPACE::sprintf(buff, "%.9Le", 1000000000500000000.0L);
   ASSERT_STREQ_LEN(written, buff, "1.000000000e+18");
 
@@ -2714,7 +2711,10 @@ TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%Le", 1.0L);
   ASSERT_STREQ_LEN(written, buff, "1.000000e+00");
 
-#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE)
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+  written = LIBC_NAMESPACE::sprintf(buff, "%.9Le", 1000000000500000000.1L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000001e+18");
+
   written = LIBC_NAMESPACE::sprintf(buff, "%Le", 0xf.fffffffffffffffp+16380L);
   ASSERT_STREQ_LEN(written, buff, "1.189731e+4932");
 
@@ -2762,7 +2762,7 @@ TEST(LlvmLibcSPrintfTest, FloatExponentFloat128Conv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%Qe", float128(1.0L));
   ASSERT_STREQ_LEN(written, buff, "1.000000e+00");
 
-#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE)
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   written = LIBC_NAMESPACE::sprintf(buff, "%Qe",
                                     float128(0xf.fffffffffffffffp+16380L));
   ASSERT_STREQ_LEN(written, buff, "1.189731e+4932");
@@ -2787,7 +2787,7 @@ TEST(LlvmLibcSPrintfTest, FloatExponentFloat128Conv) {
                                     float128(3.64519953188247460253E-4951L));
   ASSERT_STREQ_LEN(written, buff, "3.64519953188247460253e-4951");
 #endif // LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION
-#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 }
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 
@@ -3316,12 +3316,14 @@ TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0.1L);
   ASSERT_STREQ_LEN(written, buff, "0.1");
 
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   char big_buff[10000];
   written = LIBC_NAMESPACE::sprintf(big_buff, "%Lg", 1e1000L);
   ASSERT_STREQ_LEN(written, big_buff, "1e+1000");
 
   written = LIBC_NAMESPACE::sprintf(big_buff, "%Lg", 1e4900L);
   ASSERT_STREQ_LEN(written, big_buff, "1e+4900");
+#endif
 }
 
 #if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)

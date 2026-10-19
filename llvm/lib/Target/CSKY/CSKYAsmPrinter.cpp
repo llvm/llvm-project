@@ -129,7 +129,7 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     emitAttributes(M);
 }
 
@@ -137,7 +137,7 @@ void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     CTS.finishAttributeSection();
 }
 

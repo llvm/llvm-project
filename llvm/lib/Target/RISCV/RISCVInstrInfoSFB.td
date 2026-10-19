@@ -267,3 +267,7 @@ def PseudoCCLD : SFBLoad;
 let Predicates = [HasStdExtZibi, HasShortForwardBranchIALU] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;
+
+let Predicates = [HasStdExtZibi, HasConditionalMoveFusion, NoShortForwardBranch] in
+def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPRNoX0:$truev), GPRNoX0:$falsev),
+          (PseudoCCMOVGPRNoX0 GPRNoX0:$falsev, GPRNoX0:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;

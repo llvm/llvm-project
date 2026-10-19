@@ -257,8 +257,10 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
 
     // --- SCF FOR ---
     if (auto forOp = dyn_cast<scf::ForOp>(user)) {
-      unsigned idx = use.getOperandNumber();
-      if (auto *res = traceToVectorWriteLikeUserOperation(forOp.getResult(idx)))
+      OpResult loopResult = forOp.getTiedLoopResult(&use);
+      if (!loopResult)
+        continue;
+      if (auto *res = traceToVectorWriteLikeUserOperation(loopResult))
         return res;
       continue;
     }
@@ -370,9 +372,12 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   auto newVecA = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledLo);
   auto newVecB = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
 
-  // Update write operands in place via the rewriter to notify it of changes.
-  resultWriteOpA->replaceUsesOfWith(vecA, newVecA);
-  resultWriteOpB->replaceUsesOfWith(vecB, newVecB);
+  rewriter.modifyOpInPlace(resultWriteOpA, [&]() {
+    resultWriteOpA->replaceUsesOfWith(vecA, newVecA);
+  });
+  rewriter.modifyOpInPlace(resultWriteOpB, [&]() {
+    resultWriteOpB->replaceUsesOfWith(vecB, newVecB);
+  });
 
   return success();
 }

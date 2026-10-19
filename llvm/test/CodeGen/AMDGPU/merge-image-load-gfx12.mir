@@ -212,6 +212,26 @@ body:             |
 ...
 ---
 
+# GFX12-LABEL: name: image_load_dim_mismatch_not_merged
+# GFX12: %{{[0-9]+}}:vgpr_32 = IMAGE_LOAD_V1_V2_gfx12 %6, %7, %3, 1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
+# GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V2_gfx12 %6, %7, %3, 14, 4, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
+
+name: image_load_dim_mismatch_not_merged
+body:             |
+  bb.0.entry:
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
+    %4:vgpr_32 = COPY %2.sub3
+    %5:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load 16)
+    %6:vgpr_32 = COPY %5.sub0
+    %7:vgpr_32 = COPY %5.sub1
+    %8:vgpr_32 = IMAGE_LOAD_V1_V2_gfx12 %6:vgpr_32, %7:vgpr_32, %3:sgpr_256, 1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4, addrspace 4)
+    %9:vreg_96 = IMAGE_LOAD_V3_V2_gfx12 %6:vgpr_32, %7:vgpr_32, %3:sgpr_256, 14, 4, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 16, addrspace 4)
+...
+---
+
 # GFX12-LABEL: name: image_load_not_merged_0
 # GFX12: %{{[0-9]+}}:vgpr_32 = IMAGE_LOAD_V1_V2_gfx12 %6, %7, %3, 8, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V2_gfx12 %9, %10, %3, 7, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)

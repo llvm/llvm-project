@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/ObjCARC.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace llvm::objcarc;
@@ -77,9 +78,6 @@ class ObjCARCContract {
   ARCRuntimeEntryPoints EP;
   BundledRetainClaimRVs *BundledInsts = nullptr;
 
-  /// A flag indicating whether this optimization pass should run.
-  bool Run;
-
   /// Whether objc_claimAutoreleasedReturnValue is available.
   bool HasClaimRV = false;
 
@@ -108,6 +106,8 @@ class ObjCARCContract {
       const DenseMap<BasicBlock *, ColorVector> &BlockColors);
 
 public:
+  /// Returns whether \p M contains any ARC calls, i.e. whether run() can do
+  /// anything at all. The rest of the state is only set up in that case.
   bool init(Module &M);
   bool run(Function &F, AAResults *AA, DominatorTree *DT);
   bool hasCFGChanged() const { return CFGChanged; }
@@ -564,8 +564,7 @@ static bool useClaimRuntimeCall(Module &M) {
 //===----------------------------------------------------------------------===//
 
 bool ObjCARCContract::init(Module &M) {
-  Run = ModuleHasARC(M);
-  if (!Run)
+  if (!ModuleHasARC(M))
     return false;
 
   EP.init(&M);
@@ -575,13 +574,10 @@ bool ObjCARCContract::init(Module &M) {
   // Initialize RVInstMarker.
   RVInstMarker = getRVInstMarker(M);
 
-  return false;
+  return true;
 }
 
 bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
-  if (!Run)
-    return false;
-
   if (!EnableARCOpts)
     return false;
 
@@ -650,6 +646,10 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
         // Increment UI now, because we may unlink its element.
         Use &U = *UI++;
         unsigned OperandNo = U.getOperandNo();
+
+        if (!canReplaceOperandWithVariable(cast<Instruction>(U.getUser()),
+                                           OperandNo))
+          continue;
 
         // If the call's return value dominates a use of the call's argument
         // value, rewrite the use to use the return value. We check for
@@ -769,7 +769,8 @@ Pass *llvm::createObjCARCContractPass() {
 
 bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
   ObjCARCContract OCARCC;
-  OCARCC.init(*F.getParent());
+  if (!OCARCC.init(*F.getParent()))
+    return false;
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return OCARCC.run(F, AA, DT);
@@ -778,7 +779,8 @@ bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
 PreservedAnalyses ObjCARCContractPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   ObjCARCContract OCAC;
-  OCAC.init(*F.getParent());
+  if (!OCAC.init(*F.getParent()))
+    return PreservedAnalyses::all();
 
   bool Changed = OCAC.run(F, &AM.getResult<AAManager>(F),
                           &AM.getResult<DominatorTreeAnalysis>(F));

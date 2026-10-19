@@ -24,26 +24,8 @@ class ValueAPITestCase(TestBase):
         d = {"EXE": self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact(self.exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Create the breakpoint inside function 'main'.
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Get Frame #0.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
+        target, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line, exe_name=self.exe_name
         )
         frame0 = thread.GetFrameAtIndex(0)
 
@@ -273,6 +255,22 @@ class ValueAPITestCase(TestBase):
         a_null_int_ptr = frame0.FindVariable("a_null_int_ptr")
         self.assertEqual(a_null_int_ptr.GetValue(), "0x0")
 
+        a_val: lldb.SBValue = frame0.FindVariable("a_val")
+        self.assertTrue(a_val)
+        self.assertEqual(a_val.value, "10")
+        self.assertEqual(a_val.GetValue(), "10")
+
+        a_val.SetFormat(lldb.eFormatBoolean)
+        self.assertEqual(a_val.format, lldb.eFormatBoolean)
+        self.assertEqual(a_val.GetFormat(), lldb.eFormatBoolean)
+        self.assertEqual(a_val.value.lower(), "true")
+
+        # Verify the setter.
+        a_val.format = lldb.eFormatHex
+        self.assertEqual(a_val.format, lldb.eFormatHex)
+        self.assertEqual(a_val.GetFormat(), lldb.eFormatHex)
+        self.assertEqual(a_val.value.lower(), "0xa")
+
         # Check that dereferencing a null pointer produces reasonable results
         # (does not crash).
         self.assertEqual(
@@ -290,22 +288,8 @@ class ValueAPITestCase(TestBase):
         d = {"EXE": self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact(self.exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line, exe_name=self.exe_name
         )
         frame = thread.GetFrameAtIndex(0)
 
@@ -324,14 +308,20 @@ class ValueAPITestCase(TestBase):
                     and reg_name == "sp"
                 ):
                     # x86 has "rsp", and "sp" which is a subset of "rsp". Then there is
-                    # the ABI name "sp", which LLDB resolves to "rsp", not to the
-                    # architectural register "sp".
+                    # the ABI name "sp", which LLDB resolves to "rsp" ("esp" on i386),
+                    # not to the architectural register "sp".
                     # See https://github.com/llvm/llvm-project/issues/212778.
+                    full_sp = "esp" if self.getArchitecture() == "i386" else "rsp"
                     sp_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
                     self.assertTrue(sp_with_name_index < num_registers)
-                    rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
-                    self.assertTrue(rsp_with_name_index < num_registers)
-                    self.assertEqual(sp_with_name_index, rsp_with_name_index)
+                    full_sp_with_name_index = reg_set.GetIndexOfChildWithName(full_sp)
+                    if full_sp_with_name_index < num_registers:
+                        self.assertEqual(sp_with_name_index, full_sp_with_name_index)
+                    else:
+                        # The full width register is not in this set (on Windows,
+                        # "sp" is in "supplementary registers"), so we get the
+                        # architectural "sp" instead.
+                        self.assertEqual(sp_with_name_index, child_idx)
 
                     continue
 

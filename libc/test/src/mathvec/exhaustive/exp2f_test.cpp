@@ -13,12 +13,11 @@
 
 #include "exhaustive_test.h"
 #include "src/__support/CPP/simd.h"
-#include "src/math/exp2f.h"
+#include "src/__support/math/exp2f_double_eval.h"
 #include "src/mathvec/exp2f.h"
 
-using LlvmLibcExp2fExhaustiveTest =
-    LlvmLibcUnaryOpExhaustiveMathvecTest<float, LIBC_NAMESPACE::exp2f,
-                                         LIBC_NAMESPACE::exp2f>;
+using LlvmLibcExp2fExhaustiveTest = LlvmLibcUnaryOpExhaustiveMathvecTest<
+    float, LIBC_NAMESPACE::math::double_eval::exp2f, LIBC_NAMESPACE::exp2f>;
 
 // Tests all possible 32-bit input patterns
 TEST_F(LlvmLibcExp2fExhaustiveTest, EntireRange) { test_full_range_RN(); }

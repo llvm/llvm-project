@@ -8,8 +8,10 @@
 
 #include "SyntheticTypeNameBuilder.h"
 #include "DWARFLinkerCompileUnit.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 using namespace llvm;
 using namespace dwarf_linker;
@@ -273,39 +275,52 @@ void SyntheticTypeNameBuilder::addValueName(UnitEntryPairTy InputUnitEntryPair,
   }
 }
 
+Expected<std::optional<UnitEntryPairTy>>
+SyntheticTypeNameBuilder::resolveReference(UnitEntryPairTy InputUnitEntryPair,
+                                           dwarf::Attribute Attr) {
+  std::optional<DWARFFormValue> AttrValue =
+      InputUnitEntryPair.CU->find(InputUnitEntryPair.DieEntry, Attr);
+  if (!AttrValue)
+    return std::nullopt;
+
+  std::optional<UnitEntryPairTy> RefDie =
+      InputUnitEntryPair.CU->resolveDIEReference(
+          *AttrValue, ResolveInterCUReferencesMode::Resolve);
+  if (RefDie && !RefDie->DieEntry)
+    return createStringError(std::errc::invalid_argument,
+                             "cannot resolve DIE reference");
+  return RefDie;
+}
+
+Error SyntheticTypeNameBuilder::incrementRecursionDepth() {
+  if (++RecursionDepth > MaxRecursionDepth)
+    return createStringError(std::errc::invalid_argument,
+                             "cannot parse input DWARF: recursive dependence");
+  return Error::success();
+}
+
 Error SyntheticTypeNameBuilder::addReferencedODRDies(
     UnitEntryPairTy InputUnitEntryPair, bool AssignNameToTypeDescriptor,
     ArrayRef<dwarf::Attribute> ODRAttrs) {
   bool FirstIteration = true;
   for (dwarf::Attribute Attr : ODRAttrs) {
-    if (std::optional<DWARFFormValue> AttrValue =
-            InputUnitEntryPair.CU->find(InputUnitEntryPair.DieEntry, Attr)) {
-      std::optional<UnitEntryPairTy> RefDie =
-          InputUnitEntryPair.CU->resolveDIEReference(
-              *AttrValue, ResolveInterCUReferencesMode::Resolve);
+    Expected<std::optional<UnitEntryPairTy>> RefDie =
+        resolveReference(InputUnitEntryPair, Attr);
+    if (!RefDie)
+      return RefDie.takeError();
+    if (!*RefDie)
+      continue;
 
-      if (!RefDie)
-        continue;
+    if (!FirstIteration)
+      SyntheticName += ",";
 
-      if (!RefDie->DieEntry)
-        return createStringError(std::errc::invalid_argument,
-                                 "Cann't resolve DIE reference");
-
-      if (!FirstIteration)
-        SyntheticName += ",";
-
-      RecursionDepth++;
-      if (RecursionDepth > 1000)
-        return createStringError(
-            std::errc::invalid_argument,
-            "Cann't parse input DWARF. Recursive dependence.");
-
-      if (Error Err =
-              addDIETypeName(*RefDie, std::nullopt, AssignNameToTypeDescriptor))
-        return Err;
-      RecursionDepth--;
-      FirstIteration = false;
-    }
+    if (Error Err = incrementRecursionDepth())
+      return Err;
+    if (Error Err =
+            addDIETypeName(**RefDie, std::nullopt, AssignNameToTypeDescriptor))
+      return Err;
+    RecursionDepth--;
+    FirstIteration = false;
   }
 
   return Error::success();
@@ -337,6 +352,11 @@ Error SyntheticTypeNameBuilder::addTypeName(UnitEntryPairTy InputUnitEntryPair,
   } else {
     // Finally check for declaration attributes.
     addDieNameFromDeclFileAndDeclLine(InputUnitEntryPair, HasDeclFileName);
+
+    // Unnamed types declared on one line differ only in their contents.
+    if (HasDeclFileName)
+      if (Error Err = addUnnamedTypeContents(InputUnitEntryPair))
+        return Err;
   }
 
   // Add additional name parts for some DIEs.
@@ -412,7 +432,7 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
     // deterministic deduplication.
     if (Error Err = addParentName(*UnitEntryPair))
       return Err;
-    addTypePrefix(UnitEntryPair->DieEntry);
+    addTypePrefix(*UnitEntryPair->CU, UnitEntryPair->DieEntry);
 
     if (ChildIndex) {
       addOrderedName(*ChildIndex);
@@ -433,8 +453,66 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
   return Error::success();
 }
 
+Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
+    UnitEntryPairTy InputUnitEntryPair) {
+  if (!isIdentifiedByChildren(InputUnitEntryPair.DieEntry->getTag()))
+    return Error::success();
+
+  CompileUnit &CU = *InputUnitEntryPair.CU;
+  SyntheticName += '(';
+  for (const DWARFDebugInfoEntry *CurChild =
+           CU.getFirstChildEntry(InputUnitEntryPair.DieEntry);
+       CurChild && CurChild->getAbbreviationDeclarationPtr();
+       CurChild = CU.getSiblingEntry(CurChild)) {
+    if (!isIdentifyingChild(DWARFDie(&CU.getOrigUnit(), CurChild)))
+      continue;
+
+    if (SyntheticName.back() != '(')
+      SyntheticName += ", ";
+    addTypePrefix(CU, CurChild);
+    if (std::optional<DWARFFormValue> Val =
+            CU.find(CurChild, dwarf::DW_AT_name))
+      SyntheticName += dwarf::toStringRef(Val);
+    if (Error Err = addUnqualifiedTypeName(UnitEntryPairTy{&CU, CurChild}))
+      return Err;
+  }
+  SyntheticName += ')';
+  return Error::success();
+}
+
+Error SyntheticTypeNameBuilder::addUnqualifiedTypeName(
+    UnitEntryPairTy InputUnitEntryPair) {
+  Expected<std::optional<UnitEntryPairTy>> RefDie =
+      resolveReference(InputUnitEntryPair, dwarf::DW_AT_type);
+  if (!RefDie)
+    return RefDie.takeError();
+  if (!*RefDie)
+    return Error::success();
+
+  if (Error Err = incrementRecursionDepth())
+    return Err;
+
+  UnitEntryPairTy Type = **RefDie;
+  SyntheticName += ':';
+  addTypePrefix(*Type.CU, Type.DieEntry);
+  if (std::optional<DWARFFormValue> Val =
+          Type.CU->find(Type.DieEntry, dwarf::DW_AT_name)) {
+    SyntheticName += dwarf::toStringRef(Val);
+  } else {
+    if (Type.DieEntry->getTag() == dwarf::DW_TAG_array_type)
+      addArrayDimension(Type);
+    if (Error Err = addUnnamedTypeContents(Type))
+      return Err;
+    if (Error Err = addUnqualifiedTypeName(Type))
+      return Err;
+  }
+
+  RecursionDepth--;
+  return Error::success();
+}
+
 void SyntheticTypeNameBuilder::addTypePrefix(
-    const DWARFDebugInfoEntry *DieEntry) {
+    CompileUnit &CU, const DWARFDebugInfoEntry *DieEntry) {
   switch (DieEntry->getTag()) {
   case dwarf::DW_TAG_base_type: {
     SyntheticName += "{0}";
@@ -478,7 +556,12 @@ void SyntheticTypeNameBuilder::addTypePrefix(
     SyntheticName += "{A}";
   } break;
   case dwarf::DW_TAG_member: {
-    SyntheticName += "{B}";
+    // Treat a static data member the same way regardless of whether it's
+    // described as a DW_TAG_member or a DW_TAG_variable.
+    if (isStaticDataMember(DWARFDie(&CU.getOrigUnit(), DieEntry)))
+      SyntheticName += "{d}";
+    else
+      SyntheticName += "{B}";
   } break;
   case dwarf::DW_TAG_pointer_type: {
     SyntheticName += "{C}";
@@ -746,6 +829,10 @@ std::optional<size_t> OrderedChildrenIndexAssigner::tagToArrayIndex(
   case dwarf::DW_TAG_namelist_item:
     return 6;
   case dwarf::DW_TAG_member:
+    // Treat a static data member the same way regardless of whether it's
+    // described as a DW_TAG_member or a DW_TAG_variable.
+    if (isStaticDataMember(DWARFDie(&CU.getOrigUnit(), DieEntry)))
+      return std::nullopt;
     return 7;
   default:
     return std::nullopt;

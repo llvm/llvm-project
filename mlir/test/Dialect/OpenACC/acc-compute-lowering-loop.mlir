@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s
 
+// CHECK: [[UNROLL:#.*]] = #llvm.loop_unroll<disable = false, full = true>
+// CHECK: #loop_annotation = #llvm.loop_annotation<unroll = [[UNROLL]]>
+
 // CHECK-LABEL: func.func @parallel_independent_loop
 func.func @parallel_independent_loop(%buf: memref<16xi32>) {
   %c0 = arith.constant 0 : index
@@ -17,7 +20,7 @@ func.func @parallel_independent_loop(%buf: memref<16xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%i] : memref<16xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<16xi32>) to varPtr(%buf : memref<16xi32>)
@@ -46,7 +49,7 @@ func.func @parallel_loop_multi_block_body(%buf: memref<4xi32>) {
       cf.br ^bb1
     ^bb1:
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
@@ -74,7 +77,7 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {auto_ = [#acc.device_type<none>]}
+    } auto_
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -102,7 +105,7 @@ func.func @parallel_loop_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 : inde
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -121,7 +124,7 @@ func.func @serial_loop_normalized(%buf: memref<1xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK-NOT: acc.serial
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK-DAG: arith.muli
@@ -132,7 +135,7 @@ func.func @serial_loop_normalized(%buf: memref<1xi32>) {
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -154,7 +157,7 @@ func.func @orphan_loop(%buf: memref<8xi32>) {
   acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -177,7 +180,7 @@ func.func @device_routine_with_loop(%buf: memref<8xi32>) attributes {acc.special
   acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -197,10 +200,10 @@ func.func @device_routine_vector_with_loop(%buf: memref<8xi32>) attributes {acc.
   %c8 = arith.constant 8 : index
   %c0_i32 = arith.constant 0 : i32
 
-  acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
+  acc.loop vector control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -217,7 +220,7 @@ func.func @parallel_loop_auto_gang(%buf: memref<1xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK-NOT: acc.parallel
   // CHECK: acc.kernel_environment
-  // CHECK: acc.par_width {{.*}} {par_dim = #acc.par_dim<block_x>}
+  // CHECK: acc.par_width {{.*}} par_dim(#acc.par_dim<block_x>)
   // CHECK: acc.compute_region launch(
   // CHECK: scf.for
   // CHECK-NOT: scf.parallel
@@ -226,7 +229,82 @@ func.func @parallel_loop_auto_gang(%buf: memref<1xi32>) {
     acc.loop gang control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
       memref.store %arg0, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {auto_ = [#acc.device_type<none>]}
+    } auto_
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}
+
+// -----
+
+// Preserve llvm.loop_annotation (e.g. from !dir$ unroll) when lowering acc.loop.
+// CHECK-LABEL: func.func @orphan_loop_unroll_annotation
+// CHECK-NOT: acc.loop
+// CHECK: scf.for {{.*}} {
+// CHECK: } {llvm.loop_annotation = #loop_annotation}
+func.func @orphan_loop_unroll_annotation(%buf: memref<8xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c0_i32 = arith.constant 0 : i32
+
+  acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
+    memref.store %c0_i32, %buf[%i] : memref<8xi32>
+    acc.yield
+  } independent attributes {llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>} 
+  return
+}
+
+// -----
+
+// Independent loop with gang(static:N): chunk size and gang par_dims on scf.parallel.
+// CHECK-LABEL: func.func @parallel_loop_gang_static
+func.func @parallel_loop_gang_static(%buf: memref<1xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c32_i32 = arith.constant 32 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %c100_i32 = arith.constant 100 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK-NOT: acc.parallel
+  // CHECK: acc.kernel_environment
+  // CHECK: acc.compute_region
+  // CHECK: scf.parallel
+  // CHECK: acc.chunk_size = #acc.chunk_size<32>
+  // CHECK-SAME: acc.par_dims = #acc<par_dims[block_x]>
+  acc.parallel num_gangs({%c10_i32 : i32}) dataOperands(%dev : memref<1xi32>) {
+    acc.loop gang({static=%c32_i32 : i32}) control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+      memref.store %arg0, %dev[%c0] : memref<1xi32>
+      acc.yield
+    } independent
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}
+
+// -----
+
+// gang(static:*) is encoded as chunk size -1.
+// CHECK-LABEL: func.func @parallel_loop_gang_static_star
+func.func @parallel_loop_gang_static_star(%buf: memref<1xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c_m1 = arith.constant -1 : index
+  %c10_i32 = arith.constant 10 : i32
+  %c100_i32 = arith.constant 100 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK: scf.parallel
+  // CHECK: acc.chunk_size = #acc.chunk_size<-1>
+  // CHECK-SAME: acc.par_dims = #acc<par_dims[block_x]>
+  acc.parallel num_gangs({%c10_i32 : i32}) dataOperands(%dev : memref<1xi32>) {
+    acc.loop gang({static=%c_m1 : index}) control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+      memref.store %arg0, %dev[%c0] : memref<1xi32>
+      acc.yield
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)

@@ -104,9 +104,9 @@ public:
 
   const UUID &GetUUID() const { return m_uuid; }
 
-  ConstString &GetObjectName() { return m_object_name; }
+  void SetObjectName(std::string name) { m_object_name = std::move(name); }
 
-  ConstString GetObjectName() const { return m_object_name; }
+  const std::string &GetObjectName() const { return m_object_name; }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -164,7 +164,7 @@ public:
     m_symbol_file.Clear();
     m_arch.Clear();
     m_uuid.Clear();
-    m_object_name.Clear();
+    m_object_name.clear();
     m_object_offset = 0;
     m_object_size = 0;
     m_source_mappings.Clear(false);
@@ -186,7 +186,7 @@ public:
       return true;
     if (m_uuid.IsValid())
       return true;
-    if (m_object_name)
+    if (!m_object_name.empty())
       return true;
     if (m_object_size)
       return true;
@@ -235,10 +235,10 @@ public:
       m_uuid.Dump(strm);
       dumped_something = true;
     }
-    if (m_object_name) {
+    if (!m_object_name.empty()) {
       if (dumped_something)
         strm.PutCString(", ");
-      strm.Printf("object_name = %s", m_object_name.GetCString());
+      strm.Printf("object_name = %s", m_object_name.c_str());
       dumped_something = true;
     }
     if (m_object_offset > 0) {
@@ -273,7 +273,7 @@ public:
     if (match_module_spec.GetUUIDPtr() &&
         match_module_spec.GetUUID() != GetUUID())
       return false;
-    if (match_module_spec.GetObjectName() &&
+    if (!match_module_spec.GetObjectName().empty() &&
         match_module_spec.GetObjectName() != GetObjectName())
       return false;
     if (!FileSpec::Match(match_module_spec.GetFileSpec(), GetFileSpec()))
@@ -313,7 +313,7 @@ protected:
   FileSpec m_symbol_file;
   ArchSpec m_arch;
   UUID m_uuid;
-  ConstString m_object_name;
+  std::string m_object_name;
   /// The target used when resolving a module. A target can help locate a module
   /// specified by a ModuleSpec. The target settings, like the executable and
   /// debug info search paths, can be essential. The target's platform can also

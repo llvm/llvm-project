@@ -57,10 +57,10 @@ i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf1i1 to i64), i64 p
 i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @vf4i32 to i64), i64 ptrtoint (ptr @vt6_rel to i64)) to i32)
 ], !type !2
 
-; CHECK: @vt1 = alias [4 x ptr], getelementptr inbounds ({ [0 x i8], [4 x ptr], [8 x i8] }, ptr [[VT1DATA]], i32 0, i32 1)
-; CHECK: @vt2 = alias [3 x ptr], getelementptr inbounds ({ [0 x i8], [3 x ptr], [8 x i8] }, ptr [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [4 x ptr], getelementptr inbounds ({ [0 x i8], [4 x ptr], [8 x i8] }, ptr [[VT3DATA]], i32 0, i32 1)
-; CHECK: @vt4 = alias [3 x ptr], getelementptr inbounds ({ [0 x i8], [3 x ptr], [8 x i8] }, ptr [[VT4DATA]], i32 0, i32 1)
+; CHECK: @vt1 = alias [4 x ptr], ptr [[VT1DATA]]
+; CHECK: @vt2 = alias [3 x ptr], ptr [[VT2DATA]]
+; CHECK: @vt3 = alias [4 x ptr], ptr [[VT3DATA]]
+; CHECK: @vt4 = alias [3 x ptr], ptr [[VT4DATA]]
 
 define i1 @vf0i1(ptr %this) readnone {
   ret i1 0

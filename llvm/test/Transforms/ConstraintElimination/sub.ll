@@ -253,7 +253,7 @@ define i1 @sub_no_wrap_flags_ule(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @use(i1 [[C_NEG]])
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ule i8 [[B]], [[A]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -265,4 +265,21 @@ entry:
   %sub = sub i8 %a, %b
   %c = icmp ule i8 %sub, %a
   ret i1 %c
+}
+
+define <4 x i8> @sub_vector_no_nuw(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: @sub_vector_no_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <4 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ALLC:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[C]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ALLC]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <4 x i8> [[SUB]]
+;
+entry:
+  %c = icmp uge <4 x i8> %a, %b
+  %allc = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %c)
+  call void @llvm.assume(i1 %allc)
+  %sub = sub <4 x i8> %a, %b
+  ret <4 x i8> %sub
 }
