@@ -2208,23 +2208,18 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 
   unsigned Bytes = DL.getTypeStoreSize(Src);
-  unsigned MaxBytes = 16;
-  bool HasDwordx3 = ST->hasDwordx3LoadStores();
-  switch (AddressSpace) {
-  case AMDGPUAS::PRIVATE_ADDRESS:
-    MaxBytes = ST->getMaxPrivateElementSize();
-    break;
-  case AMDGPUAS::FLAT_ADDRESS:
-    if (!ST->hasMultiDwordFlatScratchAddressing())
-      MaxBytes = ST->getMaxPrivateElementSize();
-    break;
-  case AMDGPUAS::LOCAL_ADDRESS:
-  case AMDGPUAS::REGION_ADDRESS:
-    HasDwordx3 = ST->hasDS96AndDS128();
-    break;
-  default:
-    break;
-  }
+  unsigned MaxBytes =
+      std::min(16u, getLoadStoreVecRegBitWidth(AddressSpace) / 8);
+  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+      !ST->hasMultiDwordFlatScratchAddressing())
+    MaxBytes = getLoadStoreVecRegBitWidth(AMDGPUAS::PRIVATE_ADDRESS) / 8;
+  bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
+              AddressSpace == AMDGPUAS::REGION_ADDRESS;
+  bool HasDwordx3 = IsDS ? ST->hasDS96AndDS128() : ST->hasDwordx3LoadStores();
+  bool MergesDwords = !IsDS && AddressSpace != AMDGPUAS::PRIVATE_ADDRESS &&
+                      ST->hasFlatInstOffsets() &&
+                      (AddressSpace != AMDGPUAS::FLAT_ADDRESS ||
+                       !ST->hasFlatSegmentOffsetBug());
 
   if (Opcode == Instruction::Load) {
     if (Alignment >= PowerOf2Ceil(Bytes))
@@ -2232,24 +2227,19 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if (EltBits <= 16 && Alignment >= 4 && Bytes % 4) {
       unsigned Piece = std::min(EltBits == 8 ? 8u : 16u, MaxBytes);
       unsigned Granule = std::min<unsigned>(Alignment.value(), Piece);
-      bool MergesPieces = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
-                          AddressSpace == AMDGPUAS::REGION_ADDRESS ||
-                          (AddressSpace != AMDGPUAS::PRIVATE_ADDRESS &&
-                           ST->hasFlatInstOffsets() &&
-                           (AddressSpace != AMDGPUAS::FLAT_ADDRESS ||
-                            !ST->hasFlatSegmentOffsetBug()));
-      if (!MergesPieces)
+      if (!IsDS && !MergesDwords)
         return Bytes / Piece + llvm::popcount(Bytes % Piece / Granule) +
                (Bytes % Granule != 0);
       unsigned Tail = Bytes % Granule;
       if (Tail > EltBits / 8) {
         Bytes += std::max<unsigned>(4, PowerOf2Ceil(Tail)) - Tail;
-        if (AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
-            AddressSpace == AMDGPUAS::REGION_ADDRESS)
+        if (IsDS)
           HasDwordx3 = false;
       }
     }
   }
+  if (!MergesDwords && Bytes % MaxBytes > 12)
+    HasDwordx3 = false;
   return getNumMemoryInsts(Bytes, MaxBytes, HasDwordx3);
 }
 

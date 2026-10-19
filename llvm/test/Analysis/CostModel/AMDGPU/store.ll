@@ -592,12 +592,12 @@ define void @stores_underaligned(i32 %arg) {
 
 define void @stores_13_to_15_bytes(i32 %arg) {
 ; GFX8-LABEL: 'stores_13_to_15_bytes'
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <13 x i8> poison, ptr addrspace(1) poison, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(1) poison, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i8> poison, ptr addrspace(1) poison, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <13 x i8> poison, ptr addrspace(3) poison, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(3) poison, align 16
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i8> poison, ptr addrspace(3) poison, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i8> poison, ptr addrspace(1) poison, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i16> poison, ptr addrspace(1) poison, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i8> poison, ptr addrspace(1) poison, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i8> poison, ptr addrspace(3) poison, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i16> poison, ptr addrspace(3) poison, align 16
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i8> poison, ptr addrspace(3) poison, align 16
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <7 x i16> poison, ptr poison, align 16
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <7 x i16> poison, ptr addrspace(5) poison, align 16
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
@@ -606,9 +606,9 @@ define void @stores_13_to_15_bytes(i32 %arg) {
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <13 x i8> poison, ptr addrspace(1) poison, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(1) poison, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i8> poison, ptr addrspace(1) poison, align 16
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <13 x i8> poison, ptr addrspace(3) poison, align 16
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(3) poison, align 16
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i8> poison, ptr addrspace(3) poison, align 16
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i8> poison, ptr addrspace(3) poison, align 16
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i16> poison, ptr addrspace(3) poison, align 16
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i8> poison, ptr addrspace(3) poison, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr poison, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <7 x i16> poison, ptr addrspace(5) poison, align 16
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
@@ -617,11 +617,11 @@ define void @stores_13_to_15_bytes(i32 %arg) {
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <13 x i8> poison, ptr addrspace(1) poison, align 16
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(1) poison, align 16
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i8> poison, ptr addrspace(1) poison, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <13 x i8> poison, ptr addrspace(3) poison, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(3) poison, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i8> poison, ptr addrspace(3) poison, align 16
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i8> poison, ptr addrspace(3) poison, align 16
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i16> poison, ptr addrspace(3) poison, align 16
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i8> poison, ptr addrspace(3) poison, align 16
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr poison, align 16
-; GFX12-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i16> poison, ptr addrspace(5) poison, align 16
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i16> poison, ptr addrspace(5) poison, align 16
 ; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
   store <13 x i8> poison, ptr addrspace(1) poison, align 16
