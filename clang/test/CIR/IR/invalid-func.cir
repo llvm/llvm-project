@@ -109,3 +109,13 @@ module {
   cir.func comdat preferred_alignment 0 @f() { // expected-error {{expected '('}}
     cir.return
 }
+
+// -----
+
+// The inner function type is built while S is still incomplete; the purity
+// cache must not keep that answer once S completes with a non-CIR member.
+!rec_S = !cir.struct<"S" {data !cir.ptr<!cir.func<(!cir.ptr<!cir.struct<"S">>)>>, data i32}>
+
+module {
+  cir.func private @l0(!cir.ptr<!rec_S>) // expected-error {{expected all types in the function signature to be CIR types}}
+}

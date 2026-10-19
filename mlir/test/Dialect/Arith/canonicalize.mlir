@@ -1668,6 +1668,58 @@ func.func @truncTrunc(%arg0: i64) -> i8 {
   return %tr2 : i8
 }
 
+// The first truncation may discard nonzero bits. For example, 65537 truncates
+// to 1 without poison, but a direct flagged truncation would produce poison.
+// CHECK-LABEL: @truncTruncDropFlags(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncDropFlags(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncNsw(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] overflow<nsw> : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncNsw(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nsw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncNuw(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] overflow<nuw> : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncNuw(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nuw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncBothFlags(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] overflow<nsw, nuw> : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncBothFlags(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nsw, nuw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nsw, nuw> : i16 to i8
+  return %tr2 : i8
+}
+
+// CHECK-LABEL: @truncTruncDisjointFlags(
+//  CHECK-SAME:   %[[ARG:.*]]: i32
+//  CHECK-NEXT:   %[[RES:.*]] = arith.trunci %[[ARG]] : i32 to i8
+//  CHECK-NEXT:   return %[[RES]] : i8
+func.func @truncTruncDisjointFlags(%arg0: i32) -> i8 {
+  %tr1 = arith.trunci %arg0 overflow<nsw> : i32 to i16
+  %tr2 = arith.trunci %tr1 overflow<nuw> : i16 to i8
+  return %tr2 : i8
+}
+
 // CHECK-LABEL: @truncFPConstant
 //       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
 //       CHECK:   return %[[cres]]
@@ -2250,6 +2302,275 @@ func.func @tripleMulLargeInt(%arg0: i256) -> i256 {
   %2 = arith.addi %arg0, %0 : i256
   %3 = arith.addi %2, %1 : i256
   return %3 : i256
+}
+
+// At x = -100, the source computes 0, then 100, without signed overflow. The
+// folded constant is -56, so retaining nsw would make x + (-56) poison.
+// CHECK-LABEL: func.func @reassoc_add_add_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.addi %[[X]], %[[C]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_add_add_nsw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %a = arith.addi %x, %c100 overflow<nsw> : i8
+  %r = arith.addi %a, %c100 overflow<nsw> : i8
+  return %r : i8
+}
+
+// At x = 100, the source returns 1. The folded constant is unsigned 157,
+// so retaining nuw would make the new addition poison.
+// CHECK-LABEL: func.func @reassoc_add_sub_rhs_nuw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -99 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.addi %[[X]], %[[C]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_add_sub_rhs_nuw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %c1 = arith.constant 1 : i8
+  %a = arith.subi %x, %c100 overflow<nuw> : i8
+  %r = arith.addi %a, %c1 overflow<nuw> : i8
+  return %r : i8
+}
+
+// At x = 50, the source returns -6 and satisfies both flags. The folded
+// constant is 44, so retaining nuw would make 44 - x poison. Signed constant
+// addition does not overflow, so nsw is retained independently.
+// CHECK-LABEL: func.func @reassoc_add_sub_lhs_flags
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 44 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] overflow<nsw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_add_sub_lhs_flags(%x: i8) -> i8 {
+  %cm56 = arith.constant -56 : i8
+  %c100 = arith.constant 100 : i8
+  %a = arith.subi %cm56, %x overflow<nsw, nuw> : i8
+  %r = arith.addi %a, %c100 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// At x = -1, the source returns -128. The folded constant is -128, so
+// retaining nsw would make the new multiplication poison.
+// CHECK-LABEL: func.func @reassoc_mul_mul_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -128 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.muli %[[X]], %[[C]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_mul_mul_nsw(%x: i8) -> i8 {
+  %c2 = arith.constant 2 : i8
+  %c64 = arith.constant 64 : i8
+  %a = arith.muli %x, %c2 overflow<nsw> : i8
+  %r = arith.muli %a, %c64 overflow<nsw> : i8
+  return %r : i8
+}
+
+// At x = 100, the source returns 100. The folded constant is -56, so
+// retaining nsw would make -56 - x poison.
+// CHECK-LABEL: func.func @reassoc_sub_add_lhs_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_add_lhs_nsw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %cm100 = arith.constant -100 : i8
+  %a = arith.addi %x, %cm100 overflow<nsw> : i8
+  %r = arith.subi %c100, %a overflow<nsw> : i8
+  return %r : i8
+}
+
+// At x = 100, the source returns -100. The folded constant is -56, so
+// retaining nsw would make x - (-56) poison.
+// CHECK-LABEL: func.func @reassoc_sub_sub_rhs_rhs_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[X]], %[[C]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_sub_rhs_rhs_nsw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %a = arith.subi %x, %c100 overflow<nsw> : i8
+  %r = arith.subi %a, %c100 overflow<nsw> : i8
+  return %r : i8
+}
+
+// At x = 100, the source returns 100. The folded constant is -56, so
+// retaining nsw would make -56 - x poison.
+// CHECK-LABEL: func.func @reassoc_sub_sub_rhs_lhs_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_sub_rhs_lhs_nsw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %cm100 = arith.constant -100 : i8
+  %a = arith.subi %c100, %x overflow<nsw> : i8
+  %r = arith.subi %a, %cm100 overflow<nsw> : i8
+  return %r : i8
+}
+
+// At x = 100, the source returns 100. The folded constant is -56, so
+// retaining nsw would make -56 - x poison.
+// CHECK-LABEL: func.func @reassoc_sub_sub_lhs_rhs_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_sub_lhs_rhs_nsw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %a = arith.subi %x, %c100 overflow<nsw> : i8
+  %r = arith.subi %c100, %a overflow<nsw> : i8
+  return %r : i8
+}
+
+// At x = 100, the source returns 1. The folded constant is unsigned 157,
+// so retaining nuw would make the new addition poison.
+// CHECK-LABEL: func.func @reassoc_sub_sub_lhs_lhs_nuw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -99 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.addi %[[X]], %[[C]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_sub_lhs_lhs_nuw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %c1 = arith.constant 1 : i8
+  %a = arith.subi %c100, %x overflow<nuw> : i8
+  %r = arith.subi %c1, %a overflow<nuw> : i8
+  return %r : i8
+}
+
+// Both common flags survive when the constant sum fits in both interpretations.
+// CHECK-LABEL: func.func @reassoc_add_constants_keep_both
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 59 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.addi %[[X]], %[[C]] overflow<nsw, nuw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_add_constants_keep_both(%x: i8) -> i8 {
+  %c17 = arith.constant 17 : i8
+  %c42 = arith.constant 42 : i8
+  %a = arith.addi %x, %c17 overflow<nsw, nuw> : i8
+  %r = arith.addi %a, %c42 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// 100 + 100 overflows signed arithmetic but fits unsigned arithmetic. At
+// x = 100, the source returns 100 with both flags satisfied; the replacement
+// must drop nsw while preserving nuw.
+// CHECK-LABEL: func.func @reassoc_add_constants_keep_nuw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] overflow<nuw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_add_constants_keep_nuw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %a = arith.subi %c100, %x overflow<nsw, nuw> : i8
+  %r = arith.addi %a, %c100 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// -100 + -100 overflows in both interpretations. At x = -100, the source
+// returns -100 with both flags satisfied, but the replacement's 56 - x
+// overflows in both interpretations. Both flags must be dropped.
+// CHECK-LABEL: func.func @reassoc_add_constants_drop_both
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_add_constants_drop_both(%x: i8) -> i8 {
+  %cm100 = arith.constant -100 : i8
+  %a = arith.subi %cm100, %x overflow<nsw, nuw> : i8
+  %r = arith.addi %a, %cm100 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// The constant subtraction is c1 - c0, not c0 - c1. 1 - 100 fits signed
+// arithmetic but underflows unsigned arithmetic. At x = 100, the source and
+// the replacement with nsw return 1; retaining nuw would introduce poison.
+// CHECK-LABEL: func.func @reassoc_sub_constants_keep_nsw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -99 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.addi %[[X]], %[[C]] overflow<nsw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_constants_keep_nsw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %c1 = arith.constant 1 : i8
+  %a = arith.subi %x, %c100 overflow<nsw, nuw> : i8
+  %r = arith.addi %a, %c1 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// -100 - 100 overflows signed arithmetic, while unsigned 156 - 100 fits.
+// At x = 100, the source returns -100 with both flags satisfied; the new
+// addition must drop nsw while preserving nuw.
+// CHECK-LABEL: func.func @reassoc_sub_constants_keep_nuw
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 56 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.addi %[[X]], %[[C]] overflow<nuw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_constants_keep_nuw(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %cm100 = arith.constant -100 : i8
+  %a = arith.subi %x, %c100 overflow<nsw, nuw> : i8
+  %r = arith.addi %a, %cm100 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// This pattern combines c0 - c1, the opposite order from the previous two
+// patterns. 100 - 40 fits in both interpretations, so both flags survive.
+// CHECK-LABEL: func.func @reassoc_sub_constants_forward_order
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 60 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.subi %[[C]], %[[X]] overflow<nsw, nuw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_sub_constants_forward_order(%x: i8) -> i8 {
+  %c100 = arith.constant 100 : i8
+  %c40 = arith.constant 40 : i8
+  %a = arith.subi %c100, %x overflow<nsw, nuw> : i8
+  %r = arith.subi %a, %c40 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// A product that fits in both interpretations preserves both common flags.
+// CHECK-LABEL: func.func @reassoc_mul_constants_keep_both
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 21 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.muli %[[X]], %[[C]] overflow<nsw, nuw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_mul_constants_keep_both(%x: i8) -> i8 {
+  %c3 = arith.constant 3 : i8
+  %c7 = arith.constant 7 : i8
+  %a = arith.muli %x, %c3 overflow<nsw, nuw> : i8
+  %r = arith.muli %a, %c7 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// The negative signed boundary is representable: -64 * 2 is -128, unlike
+// the overflowing positive 2 * 64 in the original multiplication regression.
+// The unsigned constant product 192 * 2 overflows, so only nuw is removed.
+// CHECK-LABEL: func.func @reassoc_mul_constants_signed_min
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant -128 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.muli %[[X]], %[[C]] overflow<nsw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_mul_constants_signed_min(%x: i8) -> i8 {
+  %cm64 = arith.constant -64 : i8
+  %c2 = arith.constant 2 : i8
+  %a = arith.muli %x, %cm64 overflow<nsw, nuw> : i8
+  %r = arith.muli %a, %c2 overflow<nsw, nuw> : i8
+  return %r : i8
+}
+
+// Fitting constants only justify flags shared by both source operations.
+// Preserve nsw without incorrectly copying the first multiplication's nuw.
+// CHECK-LABEL: func.func @reassoc_mul_constants_intersect_flags
+// CHECK-SAME: (%[[X:.*]]: i8)
+// CHECK-NEXT: %[[C:.*]] = arith.constant 6 : i8
+// CHECK-NEXT: %[[R:.*]] = arith.muli %[[X]], %[[C]] overflow<nsw> : i8
+// CHECK-NEXT: return %[[R]] : i8
+func.func @reassoc_mul_constants_intersect_flags(%x: i8) -> i8 {
+  %c2 = arith.constant 2 : i8
+  %c3 = arith.constant 3 : i8
+  %a = arith.muli %x, %c2 overflow<nsw, nuw> : i8
+  %r = arith.muli %a, %c3 overflow<nsw> : i8
+  return %r : i8
 }
 
 // CHECK-LABEL: @addiMuliToSubiRhsI32
@@ -4576,6 +4897,60 @@ func.func @truncIShrSIExactToTrunciShrUIExact(%a: i64) -> i32 {
   %sh = arith.shrsi %a, %c32 exact : i64
   %hi = arith.trunci %sh: i64 to i32
   return %hi : i32
+}
+
+// For %a = -256, the arithmetic shift produces -1, which fits in signed i8.
+// The logical shift produces 255, so retaining nsw would introduce poison.
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nsw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_nsw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 : i16
+  %hi = arith.trunci %sh overflow<nsw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nuw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] overflow<nuw> : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_nuw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 : i16
+  %hi = arith.trunci %sh overflow<nuw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_exact_nsw_nuw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] exact : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] overflow<nuw> : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_exact_nsw_nuw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 exact : i16
+  %hi = arith.trunci %sh overflow<nsw, nuw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nsw_vector(
+//  CHECK-SAME:   %[[A:.+]]: vector<2xi16>
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant dense<8> : vector<2xi16>
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : vector<2xi16>
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : vector<2xi16> to vector<2xi8>
+//  CHECK-NEXT:   return %[[TRU]] : vector<2xi8>
+func.func @truncIShrSIToTrunciShrUI_nsw_vector(%a: vector<2xi16>) -> vector<2xi8> {
+  %c8 = arith.constant dense<8> : vector<2xi16>
+  %sh = arith.shrsi %a, %c8 : vector<2xi16>
+  %hi = arith.trunci %sh overflow<nsw> : vector<2xi16> to vector<2xi8>
+  return %hi : vector<2xi8>
 }
 
 // CHECK-LABEL: @truncIShrSIToTrunciShrUIBadShiftAmt1
