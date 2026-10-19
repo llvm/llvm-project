@@ -971,7 +971,9 @@ public:
   const MCSymbol *getSectionLabel(const MCSection *S);
   void insertSectionLabel(const MCSymbol *S);
 
-  static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
+  /// An unavailable source may leave valid empty pieces between fragments.
+  /// Return false if a partially emitted value expression must be discarded.
+  static bool emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                 const DbgValueLoc &Value,
                                 DwarfExpression &DwarfExpr);
 

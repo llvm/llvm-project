@@ -361,7 +361,10 @@ void DwarfCompileUnit::addLocationAttribute(
     // to detect in the verifier.
     if (DwarfExpr->isUnknownLocation())
       DwarfExpr->setMemoryLocationKind();
-    DwarfExpr->addExpression(Expr);
+    if (!DwarfExpr->addExpression(Expr)) {
+      Loc = nullptr;
+      break;
+    }
   }
   DD->addTargetVariableAttributes(*this, *VariableDIE, TargetAddrSpace,
                                   DwarfDebug::VariableLocationKind::Global,
@@ -912,7 +915,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
         // If there is an expression, emit raw unsigned bytes.
         DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.addUnsignedConstant(Entry->getInt());
-        DwarfExpr.addExpression(Expr);
+        if (!DwarfExpr.addExpression(Expr))
+          return;
         addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
         if (DwarfExpr.TagOffset)
           addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset,
@@ -944,7 +948,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
       const DIBasicType *BT = dyn_cast<DIBasicType>(
           static_cast<const Metadata *>(DV.getVariable()->getType()));
-      DwarfDebug::emitDebugLocValue(*Asm, BT, *DVal, DwarfExpr);
+      if (!DwarfDebug::emitDebugLocValue(*Asm, BT, *DVal, DwarfExpr))
+        return;
       addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
     }
     return;
@@ -1054,7 +1059,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     else
       DwarfExpr.addMachineRegExpression(
           *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, FrameReg);
-    DwarfExpr.addExpression(std::move(Cursor));
+    if (!DwarfExpr.addExpression(std::move(Cursor)))
+      return;
   }
   DD->addTargetVariableAttributes(*this, VariableDie, TargetAddrSpace,
                                   DwarfDebug::VariableLocationKind::FrameIndex);
@@ -1076,7 +1082,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     DwarfExpr.beginEntryValueExpression(Cursor);
     DwarfExpr.addMachineRegExpression(
         *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, Register);
-    DwarfExpr.addExpression(std::move(Cursor));
+    if (!DwarfExpr.addExpression(std::move(Cursor)))
+      return;
   }
   addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
 }
@@ -1513,7 +1520,9 @@ void DwarfCompileUnit::constructCallSiteParmEntryDIEs(
     DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
     DwarfExpr.setCallSiteParamValueFlag();
 
-    DwarfDebug::emitDebugLocValue(*Asm, nullptr, Param.getValue(), DwarfExpr);
+    if (!DwarfDebug::emitDebugLocValue(*Asm, nullptr, Param.getValue(),
+                                       DwarfExpr))
+      continue;
 
     addBlock(*CallSiteDieParam, getDwarf5OrGNUAttr(dwarf::DW_AT_call_value),
              DwarfExpr.finalize());
@@ -1774,7 +1783,8 @@ void DwarfCompileUnit::addLocationWithExpr(DIE &Die, dwarf::Attribute Attribute,
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
-  DwarfExpr.addExpression(std::move(Cursor));
+  if (!DwarfExpr.addExpression(std::move(Cursor)))
+    return;
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, DwarfExpr.finalize());
@@ -1821,7 +1831,8 @@ void DwarfCompileUnit::addComplexAddress(const DIExpression *DIExpr, DIE &Die,
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
-  DwarfExpr.addExpression(std::move(Cursor));
+  if (!DwarfExpr.addExpression(std::move(Cursor)))
+    return;
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, DwarfExpr.finalize());
@@ -1932,11 +1943,10 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
                     "_" + Twine(Btr.BitSize)).toStringRef(Str));
     addUInt(Die, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1, Btr.Encoding);
     // Round up to smallest number of bytes that contains this number of bits.
-    // ExprRefedBaseTypes is populated with types referenced by
-    // DW_OP_LLVM_convert operations in location expressions. These are often
-    // byte-sized, but one common counter-example is 1-bit sized conversions
-    // from `i1` types. TODO: Should these use DW_AT_bit_size? See
-    // DwarfUnit::constructTypeDIE.
+    // ExprRefedBaseTypes is populated with types referenced by typed operations
+    // in location expressions. These are often byte-sized, but one common
+    // counter-example is 1-bit sized conversions from `i1` types. TODO: Should
+    // these use DW_AT_bit_size? See DwarfUnit::constructTypeDIE.
     addUInt(Die, dwarf::DW_AT_byte_size, std::nullopt,
             divideCeil(Btr.BitSize, 8));
     Btr.Die = &Die;

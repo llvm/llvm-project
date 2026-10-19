@@ -461,7 +461,8 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
   DwarfExpr.setMemoryLocationKind();
-  DwarfExpr.addExpression(Expr);
+  if (!DwarfExpr.addExpression(Expr))
+    return;
   addBlock(Die, Attribute, DwarfExpr.finalize());
 }
 
