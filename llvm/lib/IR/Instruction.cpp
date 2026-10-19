@@ -1000,6 +1000,8 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(I1))
+    return LP->isCleanup() == cast<LandingPadInst>(I2)->isCleanup();
 
   return true;
 }

@@ -776,7 +776,9 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     // We should always emit a '.module fp=...' but binutils 2.24 does not
     // accept it. We therefore emit it when it contradicts the ABI defaults
     // (-mfpxx or -mfp64) and omit it otherwise.
-    if ((ABI.IsO32() && (STI.isABI_FPXX() || STI.isFP64bit())) ||
+    // Single-float uses its own ABI even when 64-bit FPRs are enabled.
+    if ((ABI.IsO32() && !STI.isSingleFloat() &&
+         (STI.isABI_FPXX() || STI.isFP64bit())) ||
         STI.useSoftFloat())
       TS.emitDirectiveModuleFP();
 

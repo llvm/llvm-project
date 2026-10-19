@@ -10,16 +10,18 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-DeviceInfoProperties JustSupportedProperties =
-    mergeProperties({BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
-                     IrrelevantForHostGTUint32Properties});
+DeviceInfoProperties JustSupportedProperties = mergeProperties(
+    {BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
+     IrrelevantForHostGTUint32Properties, Uint64MayBeZeroProperties,
+     IrrelevantForHostGTUint64Properties});
 
 DeviceInfoProperties NonZeroProperties =
     mergeProperties({RelevantGTCapabilitiesProperties,
-                     RelevantGTUint32Properties, Uint64Properties});
+                     RelevantGTUint32Properties, RelevantGTUint64Properties});
 
 using olGetHostDeviceInfoPropertySupportTest = olGetHostDeviceInfoPropertyTest;
 using olGetHostDeviceInfoPropertyNonZeroTest = olGetHostDeviceInfoPropertyTest;
+using olGetDeviceInfoPropertyNonZeroTest = olGetHostDeviceInfoPropertyTest;
 
 OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE_WITH_PARAM(
     olGetHostDeviceInfoPropertySupportTest, JustSupportedProperties,
@@ -29,6 +31,11 @@ OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE_WITH_PARAM(
     olGetHostDeviceInfoPropertyNonZeroTest, NonZeroProperties,
     defaultPropertyTestPrinter<ol_device_info_t>);
 
+// Properties that only the host is allowed to report as zero.
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olGetDeviceInfoPropertyNonZeroTest, IrrelevantForHostGTUint64Properties,
+    defaultPropertyTestPrinter<ol_device_info_t>);
+
 // Properties without gt test
 TEST_P(olGetHostDeviceInfoPropertySupportTest, Success) {
   char Value[MAX_DEVICE_INFO_BYTES];
@@ -36,6 +43,13 @@ TEST_P(olGetHostDeviceInfoPropertySupportTest, Success) {
 }
 
 TEST_P(olGetHostDeviceInfoPropertyNonZeroTest, Value) {
+  char Value[MAX_DEVICE_INFO_BYTES] = {};
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, Property, PropertySize, &Value));
+
+  ASSERT_TRUE(defaultCheckIsNonZero(Value));
+}
+
+TEST_P(olGetDeviceInfoPropertyNonZeroTest, Value) {
   char Value[MAX_DEVICE_INFO_BYTES] = {};
   ASSERT_SUCCESS(olGetDeviceInfo(Device, Property, PropertySize, &Value));
 

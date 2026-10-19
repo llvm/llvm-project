@@ -35,7 +35,8 @@ LLVM_LIBC_FUNCTION(int, regexec,
   // will be wired in subsequent patches.
   (void)nmatch;
   (void)pmatch;
-  (void)eflags;
+  if (eflags != 0)
+    return REG_BADPAT;
 
   // Guard against a null internal pointer (e.g. called after regfree).
   auto *internal = static_cast<regex::RegexInternal *>(preg->__internal);
