@@ -142,6 +142,8 @@ class ETMDecoderImpl : public ETMDecoder {
   Callback *CurrentCallback = nullptr;
 
   // Iterate through the ELF program headers to collect executable code regions.
+  // Using program headers groups contiguous code sections into a single region
+  // for OpenCSD.
   void collectCodeRegions(const object::Binary &SourceBin) {
     auto ProcessHeaders = [&](const auto &ElfFile) {
       auto ProgramHeaders = ElfFile.program_headers();
@@ -171,10 +173,9 @@ class ETMDecoderImpl : public ETMDecoder {
       ProcessHeaders(O->getELFFile());
   }
 
-  // Iterate through the ELF sections to collect data and BSS regions.
-  // Unlike CodeRegions, which requires file offsets from program headers for
-  // OpenCSD, DataRegions only needs runtime address ranges, and the input
-  // binary always has section headers for symbolization.
+  // Iterate through the ELF sections to collect data and BSS regions. The input
+  // binary always has section headers since llvm-profgen requires them for
+  // symbolization.
   void collectDataRegions(const object::Binary &SourceBin) {
     const auto *Obj = dyn_cast<object::ObjectFile>(&SourceBin);
     if (!Obj)
