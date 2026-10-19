@@ -893,12 +893,15 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
          "Only store instructions should be used as sequencing stores");
   LLVM_DEBUG(dbgs() << "Promoting " << *SU << " to sequencing store\n");
 
-  // Discount the memops we plan to clear and the sequencing store if there is
-  // one.
-  MemopsInFlight -= F.size() + (F.SequencingStore ? 1 : 0);
+  // Discount the memops we plan to clear.
+  MemopsInFlight -= F.size();
 
-  if (F.SequencingStore)
+  if (F.SequencingStore) {
     F.SequencingStore->addPredBarrier(SU);
+  } else {
+    // Account for the new sequencing store.
+    ++MemopsInFlight;
+  }
 
   // Sequence all stores against the sequencing store and clear the map.
   for (SUnit *S : F.Stores)
@@ -919,6 +922,9 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
         ++It;
       }
     }
+
+    // Re-account for the potentially remaining loads.
+    MemopsInFlight += F.Loads.size();
   } else {
     // Sequence all loads against the sequencing store and clear the map.
     for (SUnit *S : F.Loads)
@@ -928,9 +934,6 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
   }
 
   F.SequencingStore = SU;
-
-  // Re-account for the potentially remaining loads and the sequencing store.
-  MemopsInFlight += F.size() + 1;
 }
 
 void ScheduleDAGDependencyBuilder::updateSequencingStore(
