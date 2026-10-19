@@ -3,7 +3,7 @@
 
 define i32 @select_bit(ptr addrspace(1) %p, i32 %g, i32 %acc) {
 ; CHECK-LABEL: define i32 @select_bit(
-; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[G:%.*]], i32 [[ACC:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[G:%.*]], i32 [[ACC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[G]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
