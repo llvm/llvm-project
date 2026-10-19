@@ -776,6 +776,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
                              cast<AtomicCmpXchgInst>(R)->isVolatile()))
       return Res;
     if (int Res =
+            cmpAligns(CXI->getAlign(), cast<AtomicCmpXchgInst>(R)->getAlign()))
+      return Res;
+    if (int Res =
             cmpNumbers(CXI->isWeak(), cast<AtomicCmpXchgInst>(R)->isWeak()))
       return Res;
     if (int Res =
@@ -798,6 +801,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       return Res;
     if (int Res = cmpNumbers(RMWI->isElementwise(),
                              cast<AtomicRMWInst>(R)->isElementwise()))
+      return Res;
+    if (int Res =
+            cmpAligns(RMWI->getAlign(), cast<AtomicRMWInst>(R)->getAlign()))
       return Res;
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                                cast<AtomicRMWInst>(R)->getOrdering()))

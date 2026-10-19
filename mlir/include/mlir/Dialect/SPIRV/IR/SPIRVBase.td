@@ -4679,6 +4679,8 @@ def SPIRV_OC_OpKill                           : I32EnumAttrCase<"OpKill", 252>;
 def SPIRV_OC_OpReturn                         : I32EnumAttrCase<"OpReturn", 253>;
 def SPIRV_OC_OpReturnValue                    : I32EnumAttrCase<"OpReturnValue", 254>;
 def SPIRV_OC_OpUnreachable                    : I32EnumAttrCase<"OpUnreachable", 255>;
+def SPIRV_OC_OpLifetimeStart                  : I32EnumAttrCase<"OpLifetimeStart", 256>;
+def SPIRV_OC_OpLifetimeStop                   : I32EnumAttrCase<"OpLifetimeStop", 257>;
 def SPIRV_OC_OpGroupBroadcast                 : I32EnumAttrCase<"OpGroupBroadcast", 263>;
 def SPIRV_OC_OpGroupIAdd                      : I32EnumAttrCase<"OpGroupIAdd", 264>;
 def SPIRV_OC_OpGroupFAdd                      : I32EnumAttrCase<"OpGroupFAdd", 265>;
@@ -4846,7 +4848,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpPhi, SPIRV_OC_OpLoopMerge, SPIRV_OC_OpSelectionMerge,
       SPIRV_OC_OpLabel, SPIRV_OC_OpBranch, SPIRV_OC_OpBranchConditional,
       SPIRV_OC_OpSwitch, SPIRV_OC_OpKill, SPIRV_OC_OpReturn, SPIRV_OC_OpReturnValue,
-      SPIRV_OC_OpUnreachable, SPIRV_OC_OpGroupBroadcast, SPIRV_OC_OpGroupIAdd,
+      SPIRV_OC_OpUnreachable, SPIRV_OC_OpLifetimeStart, SPIRV_OC_OpLifetimeStop,
+      SPIRV_OC_OpGroupBroadcast, SPIRV_OC_OpGroupIAdd,
       SPIRV_OC_OpGroupFAdd, SPIRV_OC_OpGroupFMin, SPIRV_OC_OpGroupUMin,
       SPIRV_OC_OpGroupSMin, SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax,
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,
