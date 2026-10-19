@@ -46,6 +46,10 @@
 #include <vector>
 
 namespace llvm {
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
 namespace sampleprof {
 
 class ProfiledBinary;
@@ -203,6 +207,7 @@ struct MMapEvent {
 };
 
 class ProfiledBinary {
+  const cl::LibraryOptionsContext &LibraryOptions;
   // The executable binary file.
   object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
@@ -427,7 +432,8 @@ class ProfiledBinary {
                                      bool UseProbeDiscriminator = false);
 
 public:
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
+  ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
+                 const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
 
   /// Decode the interesting parts of the binary and build internal data

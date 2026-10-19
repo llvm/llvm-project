@@ -10,8 +10,8 @@
 #define FORTRAN_COMMON_ERFC_SCALED_H_
 
 #include "flang/Common/api-attrs.h"
+#include "flang/Common/numeric-limits.h"
 #include <cmath>
-#include <limits>
 
 namespace Fortran::common {
 template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {

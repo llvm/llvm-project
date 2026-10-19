@@ -88,7 +88,11 @@ struct DataStack : public std::vector<DataStackElement> {
   }
 };
 
-llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig);
+/// Interpret the bytecode on \p control. \p version is the version of the
+/// record the bytecode was loaded from, which determines the types used by
+/// selectors.
+llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
+                      uint32_t version);
 
 } // namespace FormatterBytecode
 

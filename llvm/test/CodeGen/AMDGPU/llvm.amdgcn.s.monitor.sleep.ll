@@ -15,7 +15,7 @@ define amdgpu_ps void @test_monitor_sleep_1() {
 ; FIXME: 0x8000 would look better
 
 ; GCN-LABEL: {{^}}test_monitor_sleep_forever:
-; GFX1250: s_monitor_sleep 0x2000
+; GFX1250: s_monitor_sleep 0x7f
 ; GFX1251: s_monitor_sleep 0xffff8000
 define amdgpu_ps void @test_monitor_sleep_forever() {
   call void @llvm.amdgcn.s.monitor.sleep(i16 32768)

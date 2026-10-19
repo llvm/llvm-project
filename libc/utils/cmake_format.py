@@ -721,6 +721,14 @@ def scan_dynamic_schemas(
         for m in regex.finditer(content):
             if not RE_CACHE.search(m.group(2)):
                 words = set(RE_IDENTIFIER_TOKENS.findall(m.group(2)))
+                if m.group(1).upper() in {
+                    "LLVM_LIBC_OPTIONAL_ARGS",
+                    "LLVM_LIBC_SINGLE_VALUE_ARGS",
+                    "LLVM_LIBC_MULTI_VALUE_ARGS",
+                }:
+                    words |= {f"OVERLAY_{w}" for w in words} | {
+                        f"FULL_BUILD_{w}" for w in words
+                    }
                 target_set.update(words)
                 if target_set is context.learned_multi_value:
                     context.list_keywords.update(words)
@@ -1392,7 +1400,7 @@ def process_file(
                         pass
                 print(f"Error writing file {filepath}: {e}", file=sys.stderr)
                 return None
-        elif dry_run:
+        elif dry_run and not show_diff:
             print(f"Formatting needed: {filepath}")
 
     return has_changes
@@ -1496,6 +1504,7 @@ def main() -> None:
     pre_scan_workspace_modules(args.paths)
 
     files_needing_format = 0
+    had_errors = False
     if args.jobs > 1 and len(cmake_files) > 1:
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -1520,8 +1529,11 @@ def main() -> None:
                     result = future.result()
                     if result is True:
                         files_needing_format += 1
+                    elif result is None:
+                        had_errors = True
                 except Exception as e:
                     print(f"Error processing {fpath}: {e}", file=sys.stderr)
+                    had_errors = True
     else:
         for fpath in cmake_files:
             changed = process_file(
@@ -1529,9 +1541,16 @@ def main() -> None:
             )
             if changed is True:
                 files_needing_format += 1
+            elif changed is None:
+                had_errors = True
+
+    if had_errors:
+        sys.exit(1)
 
     if args.dry_run and files_needing_format > 0:
-        print(f"\n{files_needing_format} file(s) need formatting.")
+        if not args.diff:
+            print(f"\n{files_needing_format} file(s) need formatting.")
+            print("Run with -i / --inplace to format files in-place.")
         sys.exit(1)
 
     sys.exit(0)

@@ -88,8 +88,8 @@ inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
 template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
   auto ip{static_cast<int>(p)};
   if (ip != p) {
-    ip = p < 0 ? std::numeric_limits<int>::min()
-               : std::numeric_limits<int>::max();
+    ip = p < 0 ? common::numeric_limits<int>::min()
+               : common::numeric_limits<int>::max();
   }
   return std::ldexp(x, ip); // x*2**p
 }

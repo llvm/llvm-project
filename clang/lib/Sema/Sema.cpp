@@ -2095,9 +2095,16 @@ public:
       return;
     InUsePath.insert(FD);
     UsePath.push_back(FD);
-    if (auto *S = FD->getBody()) {
-      this->Visit(S);
+    const FunctionDecl *Definition = nullptr;
+    auto *Body = FD->getBody(Definition);
+    if (Body)
+      this->Visit(Body);
+
+    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Definition)) {
+      for (auto *Init : Ctor->inits())
+        this->Visit(Init->getInit());
     }
+
     if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
       asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();

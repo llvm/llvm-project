@@ -149,7 +149,7 @@ private:
   // Sets *this to an unsigned integer value.
   // Returns any remainder.
   template <typename UINT> RT_API_ATTRS UINT SetTo(UINT n) {
-    static_assert(!common::numeric_limits<UINT>::is_signed);
+    static_assert(common::is_unsigned_v<UINT>);
     SetToZero();
     while (n != 0) {
       auto q{n / 10u};

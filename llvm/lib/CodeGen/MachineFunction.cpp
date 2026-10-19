@@ -55,6 +55,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SectionKind.h"
@@ -237,7 +238,7 @@ void MachineFunction::init() {
     Alignment = std::max(Alignment, Align(4));
 
   if (AlignAllFunctions)
-    Alignment = Align(1ULL << AlignAllFunctions);
+    Alignment = Align::fromLog2(AlignAllFunctions);
 
   JumpTableInfo = nullptr;
 
@@ -745,6 +746,16 @@ bool MachineFunction::needsFrameMoves() const {
   return getTarget().Options.ForceDwarfFrameSection ||
          F.needsUnwindTableEntry() ||
          !F.getParent()->debug_compile_units().empty();
+}
+
+bool MachineFunction::usesWindowsUnwindInfo() const {
+  const MCAsmInfo &MAI = getTarget().getMCAsmInfo();
+  return MAI.getExceptionHandlingType() == ExceptionHandling::WinEH &&
+         MAI.usesWindowsCFI();
+}
+
+bool MachineFunction::needsWinCFI() const {
+  return usesWindowsUnwindInfo() && getFunction().needsUnwindTableEntry();
 }
 
 bool MachineFunction::disableFramePointerElim() const {
