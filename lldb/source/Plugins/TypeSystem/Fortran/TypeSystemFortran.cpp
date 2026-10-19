@@ -70,8 +70,8 @@ bool TypeSystemFortran::Verify(lldb::opaque_compiler_type_t type) {
 bool TypeSystemFortran::IsFloatingPointType(opaque_compiler_type_t type) {
   if (!type)
     return false;
-  int kind = static_cast<FortranType *>(type)->GetKind();
 
+  int kind = static_cast<FortranType *>(type)->GetKind();
   if (kind == FortranType::KIND_REAL || kind == FortranType::KIND_COMPLEX)
     return true;
 
