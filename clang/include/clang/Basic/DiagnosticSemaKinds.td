@@ -3468,6 +3468,11 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
+  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_invalid_harden_pac_ret_spec : Error<
+  "invalid or misspelled pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
@@ -3742,6 +3747,10 @@ def warn_nsdictionary_duplicate_key : Warning<
   InGroup<DiagGroup<"objc-dictionary-duplicate-keys">>;
 def note_nsdictionary_duplicate_key_here : Note<
   "previous equal key is here">;
+def warn_objc_dictionary_ill_formed_utf8_key : Warning<
+  "dictionary key is ill-formed as UTF-8 and will be truncated in a static "
+  "constant dictionary, so it may not be found at runtime">,
+  InGroup<DiagGroup<"objc-dictionary-invalid-utf8-key">>;
 def err_swift_param_attr_not_swiftcall : Error<
   "'%0' parameter can only be used with swiftcall%select{ or swiftasynccall|}1 "
   "calling convention%select{|s}1">;
@@ -6418,7 +6427,7 @@ def warn_deprecated_builtin : Warning<
   InGroup<DeprecatedBuiltins>;
 def warn_hip_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
-  InGroup<HipDeprecatedBuiltins>, DefaultIgnore;
+  InGroup<HipDeprecatedBuiltins>;
 def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
@@ -7259,13 +7268,19 @@ def err_builtin_counted_by_ref_invalid_arg
             "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
-
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
   "variable|passed into a function|returned from a function}0">;
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
+  "'__builtin_counted_by_ref' cannot be used on %0 because its 'counted_by' attribute refers to bit-field %1">;
+def note_counted_by_counter_field : Note<
+  "bit-field %0 declared here">;
+
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -9627,7 +9642,7 @@ def err_atomic_builtin_must_be_pointer_intptr : Error<
 
 def err_atomic_hint_builtin_must_be_pointer : Error<
   "address argument to atomic hint builtin must be a pointer to a scalar "
-  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+  "%select{integral|integral or floating-point}1 type of 8, 16, 32, or 64 bits (%0 invalid)">;
 def err_atomic_hint_has_invalid_hint_type : Error<
    "invalid hint type argument to atomic hint operation (%0)">;
 
@@ -9700,7 +9715,7 @@ def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
 def err_atomic_op_hint_data_size : Error<
-  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+  "address argument to atomic %select{fetch|store}0 with hint must be of size 8, 16, 32 or 64 bits">;
 def err_atomic_hint_has_invalid_memory_order : Error<
    "invalid memory order argument to atomic hint operation (%0 invalid)">;
 def warn_atomic_hint_has_invalid_hint_type : Warning<
@@ -10141,6 +10156,8 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_unwind_and_goto : Error<"unwind clobber cannot be used with asm goto">;
   def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
     "global register variables on this target">;
+  def err_asm_invalid_local_var_reg : Error<"register '%0' unsuitable for "
+    "register variables">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
   def err_asm_unsupported_register_type : Error<
@@ -11142,6 +11159,14 @@ def warn_lifetime_safety_noescape_escapes
     : Warning<"parameter is marked [[clang::noescape]] but escapes">,
       InGroup<LifetimeSafetyNoescape>,
       DefaultIgnore;
+
+def warn_lifetime_safety_field_origin_escape
+    : Warning<"return value depends on the object referenced by %0, not on '*this'">,
+      InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+
+def note_lifetime_safety_owned_field_suggestion
+    : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12403,7 +12428,8 @@ def err_omp_atomic_not_expression_statement : Error<
 def note_omp_atomic_update: Note<
   "%select{expected an expression statement|expected built-in binary or unary operator|expected unary decrement/increment operation|"
   "expected expression of scalar type|expected assignment expression|expected built-in binary operator|"
-  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression}0">;
+  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression|"
+  "expected a valid expression}0">;
 def err_omp_atomic_capture_not_expression_statement : Error<
   "the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x',"
   " where x and v are both lvalue expressions with scalar type">;

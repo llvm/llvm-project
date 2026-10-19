@@ -5,12 +5,14 @@
 ; CMP(A,C)||CMP(B,C) => CMP(MIN/MAX(A,B), C)
 ; CMP(A,C)&&CMP(B,C) => CMP(MIN/MAX(A,B), C)
 
+; Not folded: A or B may be a signaling NaN, for which MIN/MAX may return NaN.
 define i1 @test1(float %arg1, float %arg2, float %arg3) #0 {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    fcmp s0, s2
-; CHECK-NEXT:    cset w0, mi
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    fcmp s1, s2
+; CHECK-NEXT:    csinc w0, w8, wzr, pl
 ; CHECK-NEXT:    ret
   %cmp1 = fcmp olt float %arg1, %arg3
   %cmp2 = fcmp olt float %arg2, %arg3
@@ -21,9 +23,10 @@ define i1 @test1(float %arg1, float %arg2, float %arg3) #0 {
 define i1 @test2(double %arg1, double %arg2, double %arg3) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fcmp d0, d2
-; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    fcmp d1, d2
+; CHECK-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-NEXT:    ret
   %cmp1 = fcmp ogt double %arg1, %arg3
   %cmp2 = fcmp ogt double %arg2, %arg3
@@ -67,5 +70,40 @@ define i1 @test4(float %arg1, float %arg2, float %arg3) {
   %cmp2 = fcmp nnan ogt float %add2, %arg3
   %or1  = and i1 %cmp1, %cmp2
   ret i1 %or1
+}
+
+; A and B cannot be signaling NaNs, so the folds happen.
+define i1 @test5(i32 %arg1, i32 %arg2, float %arg3) {
+; CHECK-LABEL: test5:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf s1, w0
+; CHECK-NEXT:    scvtf s2, w1
+; CHECK-NEXT:    fminnm s1, s1, s2
+; CHECK-NEXT:    fcmp s1, s0
+; CHECK-NEXT:    cset w0, mi
+; CHECK-NEXT:    ret
+  %conv1 = sitofp i32 %arg1 to float
+  %conv2 = sitofp i32 %arg2 to float
+  %cmp1 = fcmp olt float %conv1, %arg3
+  %cmp2 = fcmp olt float %conv2, %arg3
+  %or1  = or i1 %cmp1, %cmp2
+  ret i1 %or1
+}
+
+define i1 @test6(i32 %arg1, i32 %arg2, double %arg3) {
+; CHECK-LABEL: test6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d1, w0
+; CHECK-NEXT:    scvtf d2, w1
+; CHECK-NEXT:    fmaxnm d1, d1, d2
+; CHECK-NEXT:    fcmp d1, d0
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
+  %conv1 = sitofp i32 %arg1 to double
+  %conv2 = sitofp i32 %arg2 to double
+  %cmp1 = fcmp ult double %conv1, %arg3
+  %cmp2 = fcmp ult double %conv2, %arg3
+  %and1 = and i1 %cmp1, %cmp2
+  ret i1 %and1
 }
 

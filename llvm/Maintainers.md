@@ -143,7 +143,9 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 #### SROA, Mem2Reg
 
 Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub) \
+Yonah Goldberg \
+ygoldberg@nvidia.com (email), [yonahgoldberg](https://github.com/yonahgoldberg) (GitHub)
 
 #### DFAJumpThreading
 
