@@ -206,6 +206,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.tanf
+    libc.src.__support.math.tanf_double_eval
+    libc.src.__support.math.tanf_float_eval
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
