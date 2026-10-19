@@ -3238,7 +3238,7 @@ static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
 static bool isNonZeroAddrPlusOffset(const SimplifyQuery &Q, Value *X,
                                     Value *Y) {
   const APInt *Off;
-  if (!match(Y, m_APInt(Off)))
+  if (!match(Y, m_APInt(Off)) || Off->isZero())
     return false;
 
   // ptrtoaddr always produces the address. ptrtoint only does so when its
@@ -3263,7 +3263,7 @@ static bool isNonZeroAddrPlusOffset(const SimplifyQuery &Q, Value *X,
   if (CanBeNull || DerefBytes == 0 || !Off->ule(DerefBytes))
     return false;
 
-  return !Off->isZero();
+  return true;
 }
 
 static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
@@ -3942,14 +3942,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
     if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
       return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
 
-    // A global variable in address space 0 is non null unless extern weak
-    // or an absolute symbol reference. Other address spaces may have null as a
-    // valid address for a global, so we can't assume anything. An alias is
-    // also excluded, as it may resolve to a weak undefined symbol and thus to
-    // the null address.
+    // A global variable is non null unless extern weak or an absolute symbol
+    // reference. An alias is also excluded, as it may resolve to a weak
+    // undefined symbol and thus to the null address. Where null is a valid
+    // address an allocation may start there, so nothing can be assumed; that
+    // covers both null_pointer_is_valid and address spaces other than zero.
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
-      if (!GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
-          !isa<GlobalAlias>(GV) && GV->getType()->getAddressSpace() == 0)
+      if (!NullPointerIsDefined(Q.getFunction(),
+                                GV->getType()->getAddressSpace()) &&
+          !GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
+          !isa<GlobalAlias>(GV))
         return true;
     }
 
