@@ -282,37 +282,78 @@ void CanonicalizationOfOmp::CanonicalizeUtilityDirectives(
   }
 }
 
-static bool IsExecutableOrNothing(const parser::OmpDirectiveSpecification &x) {
-  llvm::omp::Directive dirId = x.DirId();
-  if (dirId == llvm::omp::Directive::OMPD_nothing) {
-    return true;
+static const parser::OmpDirectiveSpecification *GetODS(
+    const parser::OmpClause &clause) {
+  if (auto *other = parser::Unwrap<parser::OmpOtherwiseClause>(clause)) {
+    return other->v.has_value() ? &other->v->value() : nullptr;
   }
-  return llvm::omp::getDirectiveCategory(dirId) ==
-      llvm::omp::Category::Executable;
+  if (auto *when = parser::Unwrap<parser::OmpWhenClause>(clause)) {
+    using OmpDirectiveSpecification =
+        std::optional<common::Indirection<parser::OmpDirectiveSpecification>>;
+    if (auto &ods = std::get<OmpDirectiveSpecification>(when->t)) {
+      return &ods->value();
+    }
+    return nullptr;
+  }
+  if (auto *dv = parser::Unwrap<parser::OmpDefaultVariantClause>(clause)) {
+    return &dv->v.value();
+  }
+  return nullptr;
 }
 
-static bool IsExecutable(const parser::OmpMetadirectiveDirective &md) {
+static bool IsConsideredExecutable(const parser::OmpDirectiveSpecification &x) {
+  switch (llvm::omp::getDirectiveCategory(x.DirId())) {
+  case llvm::omp::Category::Executable:
+  case llvm::omp::Category::Utility:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool IsConsideredExecutable(
+    const parser::OmpMetadirectiveDirective &md) {
+  // NOTHING as a variant by itself should not decide whether the METADIRECTIVE
+  // as a whole executable or not. But when all variants are NOTHING then the
+  // METADIRECTIVE should be treated as executable.
+  bool something = false;
   for (const parser::OmpClause &clause : md.v.Clauses().v) {
-    if (auto *other = parser::Unwrap<parser::OmpOtherwiseClause>(clause)) {
-      if (other->v.has_value() && !IsExecutableOrNothing(other->v->value())) {
-        return false;
-      }
-    } else if (auto *when = parser::Unwrap<parser::OmpWhenClause>(clause)) {
-      using OmpDirectiveSpecification =
-          std::optional<common::Indirection<parser::OmpDirectiveSpecification>>;
-      if (auto &ods = std::get<OmpDirectiveSpecification>(when->t)) {
-        if (!IsExecutableOrNothing(ods->value())) {
-          return false;
+    if (auto *ods = GetODS(clause)) {
+      if (ods->DirId() != llvm::omp::Directive::OMPD_nothing) {
+        something = true;
+        if (IsConsideredExecutable(*ods)) {
+          return true;
         }
       }
-    } else if (auto *dv =
-                   parser::Unwrap<parser::OmpDefaultVariantClause>(clause)) {
-      if (!IsExecutableOrNothing(dv->v.value())) {
-        return false;
-      }
+    }
+    // If the directive specification is missing, it's NOTHING.
+  }
+  // If everything is NOTHING, return true.
+  return !something;
+}
+
+static bool IsConsideredExecutable(
+    const parser::OpenMPDeclarativeConstruct &x) {
+  if (std::holds_alternative<parser::OmpUtilityDirective>(x.u)) {
+    return true;
+  }
+  if (auto *md = parser::Unwrap<parser::OmpMetadirectiveDirective>(x)) {
+    if (IsConsideredExecutable(*md)) {
+      return true;
     }
   }
-  return true;
+  return false;
+}
+
+static parser::ExecutionPartConstruct MakeExec(
+    parser::OpenMPDeclarativeConstruct &x) {
+  if (auto *s = std::get_if<parser::OmpMetadirectiveDirective>(&x.u)) {
+    return MakeExec(parser::OpenMPStandaloneConstruct(std::move(*s)));
+  }
+  if (auto *s = std::get_if<parser::OmpUtilityDirective>(&x.u)) {
+    return MakeExec(std::move(*s));
+  }
+  llvm_unreachable("Unexpected OpenMPDeclarativeConstruct");
 }
 
 void CanonicalizationOfOmp::MoveUtilityDirectivesFromDecls(
@@ -322,17 +363,10 @@ void CanonicalizationOfOmp::MoveUtilityDirectivesFromDecls(
   std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
     for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
       parser::DeclarationConstruct &dc = *rit;
-      if (auto *odc = parser::Unwrap<parser::OpenMPDeclarativeConstruct>(dc)) {
-        if (std::holds_alternative<parser::OmpUtilityDirective>(odc->u)) {
-          continue;
-        }
-        if (auto *md = parser::Unwrap<parser::OmpMetadirectiveDirective>(dc)) {
-          if (IsExecutable(*md)) {
-            continue;
-          }
-        }
+      auto *odc = parser::Unwrap<parser::OpenMPDeclarativeConstruct>(dc);
+      if (!odc || !IsConsideredExecutable(*odc)) {
+        return rit;
       }
-      return rit;
     }
     return decls.rend();
   }();
@@ -343,13 +377,7 @@ void CanonicalizationOfOmp::MoveUtilityDirectivesFromDecls(
         using OpenMPDeclarativeConstruct =
             common::Indirection<parser::OpenMPDeclarativeConstruct>;
         auto &oc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
-        if (auto *x = std::get_if<parser::OmpMetadirectiveDirective>(&oc.u)) {
-          return MakeExec(parser::OpenMPStandaloneConstruct(std::move(*x)));
-        }
-        if (auto *x = std::get_if<parser::OmpUtilityDirective>(&oc.u)) {
-          return MakeExec(std::move(*x));
-        }
-        llvm_unreachable("Unexpected OpenMPDeclarativeConstruct");
+        return MakeExec(oc);
       });
 
   decls.erase(rlast.base(), decls.end());
@@ -362,8 +390,7 @@ void CanonicalizationOfOmp::MoveUtilityDirectivesFromOmps(
   // utility directive, that are to be moved to the execution part.
   std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
     for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
-      OpenMPDeclarativeConstruct &dc = *rit;
-      if (!std::holds_alternative<parser::OmpUtilityDirective>(dc.u)) {
+      if (!IsConsideredExecutable(*rit)) {
         return rit;
       }
     }
@@ -371,11 +398,7 @@ void CanonicalizationOfOmp::MoveUtilityDirectivesFromOmps(
   }();
 
   std::transform(omps.rbegin(), rlast, std::front_inserter(block),
-      [](parser::OpenMPDeclarativeConstruct &dc) {
-        auto &ut = std::get<parser::OmpUtilityDirective>(dc.u);
-        return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
-            common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
-      });
+      [](parser::OpenMPDeclarativeConstruct &dc) { return MakeExec(dc); });
 
   omps.erase(rlast.base(), omps.end());
 }
