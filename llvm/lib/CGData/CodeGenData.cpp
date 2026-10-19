@@ -108,8 +108,9 @@ const char *CodeGenDataSectNamePrefix[] = {
 
 } // namespace
 
-bool llvm::cgdata::thinLTOTwoRounds() {
-  return CGDataOptions::Global.codegen_data_thinlto_two_rounds;
+bool llvm::cgdata::thinLTOTwoRounds(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<CGDataOptions>().codegen_data_thinlto_two_rounds;
 }
 
 namespace llvm {
@@ -133,11 +134,12 @@ std::string getCodeGenDataSectionName(CGDataSectKind CGSK,
 std::unique_ptr<CodeGenData> CodeGenData::Instance = nullptr;
 std::once_flag CodeGenData::OnceFlag;
 
-CodeGenData &CodeGenData::getInstance() {
-  std::call_once(CodeGenData::OnceFlag, []() {
+CodeGenData &
+CodeGenData::getInstance(const cl::LibraryOptionsContext &LibraryOptions) {
+  std::call_once(CodeGenData::OnceFlag, [&LibraryOptions]() {
     Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
-    const CGDataOptions &Opts = CGDataOptions::Global;
+    const CGDataOptions &Opts = LibraryOptions.get<CGDataOptions>();
     if (Opts.codegen_data_generate || Opts.codegen_data_thinlto_two_rounds)
       Instance->EmitCGData = true;
     else if (!Opts.codegen_data_use_path.empty()) {
@@ -146,9 +148,9 @@ CodeGenData &CodeGenData::getInstance() {
       // Instead, just emit an warning message and fall back as if no CGData
       // were available.
       auto FS = vfs::getRealFileSystem();
-      auto ReaderOrErr =
-          CodeGenDataReader::create(Opts.codegen_data_use_path, *FS,
-                                    Opts.indexed_codegen_data_lazy_loading);
+      auto ReaderOrErr = CodeGenDataReader::create(
+          LibraryOptions, Opts.codegen_data_use_path, *FS,
+          Opts.indexed_codegen_data_lazy_loading);
       if (Error E = ReaderOrErr.takeError()) {
         warn(std::move(E), Opts.codegen_data_use_path);
         return;
@@ -250,7 +252,9 @@ std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
   return std::move(*RestoredModule);
 }
 
-Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjFiles) {
+Expected<stable_hash>
+mergeCodeGenData(const cl::LibraryOptionsContext &LibraryOptions,
+                 ArrayRef<StringRef> ObjFiles) {
   OutlinedHashTreeRecord GlobalOutlineRecord;
   StableFunctionMapRecord GlobalStableFunctionMapRecord;
   stable_hash CombinedHash = 0;
@@ -271,13 +275,14 @@ Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjFiles) {
       return E;
   }
 
-  GlobalStableFunctionMapRecord.finalize();
+  GlobalStableFunctionMapRecord.finalize(LibraryOptions);
 
   if (!GlobalOutlineRecord.empty())
-    cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
+    cgdata::publishOutlinedHashTree(LibraryOptions,
+                                    std::move(GlobalOutlineRecord.HashTree));
   if (!GlobalStableFunctionMapRecord.empty())
     cgdata::publishStableFunctionMap(
-        std::move(GlobalStableFunctionMapRecord.FunctionMap));
+        LibraryOptions, std::move(GlobalStableFunctionMapRecord.FunctionMap));
 
   return CombinedHash;
 }

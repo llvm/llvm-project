@@ -108,7 +108,6 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
@@ -3934,21 +3933,14 @@ static StringRef getCanonicalArchString(Compilation &C,
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  // AMDGCN target IDs carry a processor and xnack/sramecc modifiers to
-  // canonicalize. Other AMD offload arches (e.g. the amdgcnspirv pseudo-arch on
-  // a SPIR-V triple) have no target-id features and pass through unchanged.
-  if (Arch.isAMDGPU() && Triple.isAMDGCN()) {
-    StringRef TargetIDStr = ArchStr;
-    if (llvm::Triple::parseSubArch(ArchStr) != llvm::Triple::NoSubArch)
-      TargetIDStr = getProcessorFromTargetID(Triple, ArchStr);
-
-    std::optional<llvm::AMDGPU::TargetID> ID =
-        llvm::AMDGPU::TargetID::parse(Triple, TargetIDStr);
-    if (!ID) {
+  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
+    llvm::StringMap<bool> Features;
+    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
+    if (!Arch) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
       return StringRef();
     }
-    return Args.MakeArgStringRef(ID->getCanonicalTargetIDString());
+    return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
   }
 
   // If the input isn't CUDA or HIP just return the architecture.
@@ -3959,18 +3951,13 @@ static StringRef getCanonicalArchString(Compilation &C,
 /// incompatible pair if a conflict occurs.
 static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
-                                  const llvm::Triple &Triple) {
+                                  llvm::Triple Triple) {
   if (!Triple.isAMDGPU())
     return std::nullopt;
 
-  // Sort for a deterministic conflicting pair in the diagnostic.
-  llvm::SmallVector<StringRef> ArchList(Archs.begin(), Archs.end());
-  llvm::sort(ArchList);
-
-  llvm::SmallVector<clang::TargetIDEntry> Entries;
-  for (StringRef Arch : ArchList)
-    Entries.emplace_back(Triple, Arch);
-  return getConflictTargetIDCombination(Entries);
+  std::set<StringRef> ArchSet;
+  llvm::copy(Archs, std::inserter(ArchSet, ArchSet.begin()));
+  return getConflictTargetIDCombination(ArchSet);
 }
 
 llvm::SmallVector<BoundArch>
@@ -5194,6 +5181,16 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
         /*CreatePrefixForHost=*/true);
   }
 
+  StringRef DefaultExt = ".json";
+  StringRef DefaultExtNoDot = "json";
+  if (const Arg *CompressArg =
+          Args.getLastArgNoClaim(options::OPT_ftime_trace_compress_EQ)) {
+    if (StringRef(CompressArg->getValue()) == "zstd") {
+      DefaultExt = ".json.zst";
+      DefaultExtNoDot = "json.zst";
+    }
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
@@ -5202,7 +5199,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
                                ? llvm::sys::path::stem(Result.getFilename())
                                : llvm::sys::path::stem(BaseInput));
       Tmp += OffloadingPrefix;
-      Tmp += ".json";
+      Tmp += DefaultExt;
       llvm::sys::path::append(Path, Tmp);
     }
   } else {
@@ -5212,7 +5209,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Path = DumpDir->getValue();
       Path += llvm::sys::path::stem(BaseInput);
       Path += OffloadingPrefix;
-      Path += ".json";
+      Path += DefaultExt;
     } else if (!OffloadingPrefix.empty()) {
       // For offloading, derive path from -o output directory combined with
       // the input filename and offload prefix.
@@ -5221,10 +5218,10 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         Path = llvm::sys::path::parent_path(FinalOutput->getValue());
       llvm::sys::path::append(Path, TraceName);
-      Path += ".json";
+      Path += DefaultExt;
     } else {
       Path = Result.getFilename();
-      llvm::sys::path::replace_extension(Path, "json");
+      llvm::sys::path::replace_extension(Path, DefaultExtNoDot);
     }
   }
   const char *ResultFile = C.getArgs().MakeArgString(Path);

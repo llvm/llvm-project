@@ -57,7 +57,6 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
         "ConstantRangeListAttr"},
        "ATTRIBUTE_ENUM");
   Emit({"StrBoolAttr"}, "ATTRIBUTE_STRBOOL");
-  Emit({"ComplexStrAttr"}, "ATTRIBUTE_COMPLEXSTR");
 
   OS << "#undef ATTRIBUTE_ALL\n";
   OS << "#endif\n\n";
