@@ -18,6 +18,11 @@
 
 namespace clang::CodeGenUtils {
 
+/// Recursively searches all of the bases of \p Decl to find out whether
+/// \p Query is not the primary vbase of some base class.
+bool hasOwnStorage(const ASTContext &Ctx, const CXXRecordDecl *Decl,
+                   const CXXRecordDecl *Query);
+
 /// The Microsoft bitfield layout rule allocates discrete storage units of the
 /// field's formal type and only combines adjacent fields of the same formal
 /// type.  We want to emit a layout with these discrete storage units instead

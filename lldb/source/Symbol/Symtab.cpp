@@ -1167,7 +1167,7 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache();
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
   if (!cache)
     return; // Caching is not enabled.
 
@@ -1234,7 +1234,7 @@ constexpr uint32_t CURRENT_CACHE_VERSION = 3;
 // CURRENT_CACHE_VERSION number will need to be incremented.
 #if __SIZEOF_POINTER__ == 8
 static_assert(
-    sizeof(lldb_private::Symbol) == 80,
+    sizeof(lldb_private::Symbol) == 72,
     "Symbol size has changed, DataFileCache version likely needs updating");
 #endif
 
@@ -1346,7 +1346,7 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache();
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
   if (!cache)
     return false;
 

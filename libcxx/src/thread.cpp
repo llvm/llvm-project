@@ -64,29 +64,8 @@ void thread::detach() {
     std::__throw_system_error(ec, "thread::detach failed");
 }
 
-unsigned thread::hardware_concurrency() noexcept {
-#if defined(_SC_NPROCESSORS_ONLN)
-  long result = sysconf(_SC_NPROCESSORS_ONLN);
-  // sysconf returns -1 if the name is invalid, the option does not exist or
-  // does not have a definite limit.
-  // if sysconf returns some other negative number, we have no idea
-  // what is going on. Default to something safe.
-  if (result < 0)
-    return 0;
-  return static_cast<unsigned>(result);
-#elif defined(_WIN32)
-  return static_cast<unsigned>(GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
-#else // defined(CTL_HW) && defined(HW_NCPU)
-  // TODO: grovel through /proc or check cpuid on x86 and similar
-  // instructions on other architectures.
-#  if defined(_LIBCPP_WARNING)
-  _LIBCPP_WARNING("hardware_concurrency not yet implemented")
-#  else
-#    warning hardware_concurrency not yet implemented
-#  endif
-  return 0; // Means not computable [thread.thread.static]
-#endif // defined(CTL_HW) && defined(HW_NCPU)
-}
+// Defined here only for backwards compatibility.
+unsigned thread::hardware_concurrency() noexcept { return std::__thread_hardware_concurrency(); }
 
 namespace this_thread {
 
@@ -170,6 +149,30 @@ void __thread_struct::notify_all_at_thread_exit(condition_variable* cv, mutex* m
 }
 
 void __thread_struct::__make_ready_at_thread_exit(__assoc_sub_state* __s) { __p_->__make_ready_at_thread_exit(__s); }
+
+unsigned __thread_hardware_concurrency() noexcept {
+#if defined(_SC_NPROCESSORS_ONLN)
+  long result = sysconf(_SC_NPROCESSORS_ONLN);
+  // sysconf returns -1 if the name is invalid, the option does not exist or
+  // does not have a definite limit.
+  // if sysconf returns some other negative number, we have no idea
+  // what is going on. Default to something safe.
+  if (result < 0)
+    return 0;
+  return static_cast<unsigned>(result);
+#elif defined(_WIN32)
+  return static_cast<unsigned>(GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
+#else // defined(CTL_HW) && defined(HW_NCPU)
+  // TODO: grovel through /proc or check cpuid on x86 and similar
+  // instructions on other architectures.
+#  if defined(_LIBCPP_WARNING)
+  _LIBCPP_WARNING("hardware_concurrency not yet implemented")
+#  else
+#    warning hardware_concurrency not yet implemented
+#  endif
+  return 0; // Means not computable [thread.thread.static]
+#endif // defined(CTL_HW) && defined(HW_NCPU)
+}
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

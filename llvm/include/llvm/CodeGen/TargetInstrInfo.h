@@ -44,7 +44,6 @@ namespace llvm {
 class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
-class LiveVariables;
 class MachineCycleInfo;
 class MachineLoop;
 class MachineLoopInfo;
@@ -1021,29 +1020,38 @@ public:
     return false;
   }
 
+  /// Describes how the select will be materialized:
+  ///   CondCycles        - number of cycles for compare and branch
+  ///   TrueCycles        - number of cycles to the True register
+  ///   FalseCycles       - same for False
+  ///   NumInsts          - number of instructions required for the select, 0 if
+  ///                       this field is not supported by a given backend
+  ///   ClobberedPhysRegs - physical registers which will be defined by the
+  ///                       newly inserted select. Useful for finding a legal
+  ///                       insertion point
+  struct SelectExpansion {
+    int CondCycles = 1;
+    int TrueCycles = 1;
+    int FalseCycles = 1;
+    unsigned NumInsts = 0;
+    SmallVector<MCRegister, 2> ClobberedPhysRegs;
+  };
+
   /// Return true if it is possible to insert a select
   /// instruction that chooses between TrueReg and FalseReg based on the
-  /// condition code in Cond.
+  /// condition code in Cond. Exp provides information on how the select
+  /// will be materialized.
   ///
-  /// When successful, also return the latency in cycles from TrueReg,
-  /// FalseReg, and Cond to the destination register. In most cases, a select
-  /// instruction will be 1 cycle, so CondCycles = TrueCycles = FalseCycles = 1
-  ///
-  /// Some x86 implementations have 2-cycle cmov instructions.
-  ///
-  /// @param MBB         Block where select instruction would be inserted.
-  /// @param Cond        Condition returned by analyzeBranch.
-  /// @param DstReg      Virtual dest register that the result should write to.
-  /// @param TrueReg     Virtual register to select when Cond is true.
-  /// @param FalseReg    Virtual register to select when Cond is false.
-  /// @param CondCycles  Latency from Cond+Branch to select output.
-  /// @param TrueCycles  Latency from TrueReg to select output.
-  /// @param FalseCycles Latency from FalseReg to select output.
+  /// @param MBB      Block where select instruction would be inserted.
+  /// @param Cond     Condition returned by analyzeBranch.
+  /// @param DstReg   Virtual dest register that the result should write to.
+  /// @param TrueReg  Virtual register to select when Cond is true.
+  /// @param FalseReg Virtual register to select when Cond is false.
+  /// @param Exp      Latency and number of instructions added by the select.
   virtual bool canInsertSelect(const MachineBasicBlock &MBB,
                                ArrayRef<MachineOperand> Cond, Register DstReg,
                                Register TrueReg, Register FalseReg,
-                               int &CondCycles, int &TrueCycles,
-                               int &FalseCycles) const {
+                               SelectExpansion &Exp) const {
     return false;
   }
 
@@ -1301,7 +1309,7 @@ public:
 
   /// This function defines the logic to lower COPY instruction to
   /// target specific instruction(s).
-  void lowerCopy(MachineInstr *MI, const TargetRegisterInfo *TRI) const;
+  void lowerCopy(MachineInstr *MI) const;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
@@ -1597,8 +1605,7 @@ public:
   /// abstraction that supports negative offsets.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
-                               bool &OffsetIsScalable,
-                               const TargetRegisterInfo *TRI) const;
+                               bool &OffsetIsScalable) const;
 
   /// Get zero or more base operands and the byte offset of an instruction that
   /// reads/writes memory. Note that there may be zero base operands if the
@@ -1611,8 +1618,7 @@ public:
   /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const {
+      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
     return false;
   }
 
@@ -1630,8 +1636,7 @@ public:
   /// struct ExtAddrMode which contains all relevant information to make up the
   /// address.
   virtual std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const {
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const {
     return std::nullopt;
   }
 
@@ -1661,8 +1666,7 @@ public:
   /// function can return true even if becomes zero. Specifically cases such as
   /// NullValueReg = shl NullValueReg, 63.
   virtual bool preservesZeroValueInReg(const MachineInstr *MI,
-                                       const Register NullValueReg,
-                                       const TargetRegisterInfo *TRI) const {
+                                       const Register NullValueReg) const {
     return false;
   }
 
@@ -1673,9 +1677,9 @@ public:
 
   /// Returns true if the two given memory operations should be scheduled
   /// adjacent. Note that you have to add:
-  ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   /// or
-  ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   /// to TargetMachine::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
@@ -1729,9 +1733,9 @@ public:
   }
 
   // Returns a MIRPrinter comment for this machine operand.
-  virtual std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx, const TargetRegisterInfo *TRI) const;
+  virtual std::string createMIROperandComment(const MachineInstr &MI,
+                                              const MachineOperand &Op,
+                                              unsigned OpIdx) const;
 
   /// Returns true if the instruction is a
   /// terminator instruction that has not been predicated.
@@ -2038,9 +2042,8 @@ public:
   /// 3. Calling breakPartialRegDependency() with the same arguments.  This
   ///    allows the target to insert a dependency breaking instruction.
   ///
-  virtual unsigned
-  getPartialRegUpdateClearance(const MachineInstr &MI, unsigned OpNum,
-                               const TargetRegisterInfo *TRI) const {
+  virtual unsigned getPartialRegUpdateClearance(const MachineInstr &MI,
+                                                unsigned OpNum) const {
     // The default implementation returns 0 for no partial register dependency.
     return 0;
   }
@@ -2059,8 +2062,8 @@ public:
   /// This hook works similarly to getPartialRegUpdateClearance, except that it
   /// does not take an operand index. Instead sets \p OpNum to the index of the
   /// unused register.
-  virtual unsigned getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
-                                        const TargetRegisterInfo *TRI) const {
+  virtual unsigned getUndefRegClearance(const MachineInstr &MI,
+                                        unsigned OpNum) const {
     // The default implementation returns 0 for no undef register dependency.
     return 0;
   }
@@ -2082,8 +2085,8 @@ public:
   /// An <imp-kill> operand should be added to MI if an instruction was
   /// inserted.  This ties the instructions together in the post-ra scheduler.
   ///
-  virtual void breakPartialRegDependency(MachineInstr &MI, unsigned OpNum,
-                                         const TargetRegisterInfo *TRI) const {}
+  virtual void breakPartialRegDependency(MachineInstr &MI,
+                                         unsigned OpNum) const {}
 
   /// Create machine specific model for scheduling.
   virtual DFAPacketizer *
@@ -2246,6 +2249,14 @@ public:
   virtual void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const;
 
+  /// Return true if the target supports outlining candidates from multiple
+  /// input sections in one pass.
+  ///
+  /// A target that enables this must not independently reject functions with
+  /// a section marking in isFunctionSafeToOutlineFrom(), otherwise such
+  /// functions never reach the outliner and this hook has no effect.
+  virtual bool supportsSectionAwareOutlining() const { return false; }
+
 protected:
   /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
@@ -2321,10 +2332,7 @@ public:
   /// produced from instructions in F will produce a program which produces the
   /// same output for any set of given inputs.
   virtual bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
-                                           bool OutlineFromLinkOnceODRs) const {
-    llvm_unreachable("Target didn't implement "
-                     "TargetInstrInfo::isFunctionSafeToOutlineFrom!");
-  }
+                                           bool OutlineFromLinkOnceODRs) const;
 
   /// Return true if the function should be outlined from by default.
   virtual bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const {

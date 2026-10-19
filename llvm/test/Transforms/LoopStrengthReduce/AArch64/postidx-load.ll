@@ -10,23 +10,22 @@ define i32 @i32_initially_postidx(ptr %p, i64 %n) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    b.lt .LBB0_5
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x0], #4
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    ldr w9, [x8], #4
+; CHECK-NEXT:    add w0, w0, w9
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    b.lo .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %for.inc
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    subs x1, x1, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.4: // %cleanup
-; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -147,22 +146,23 @@ cleanup:
 define float @float_initially_offset(ptr %p, i64 %n) {
 ; CHECK-LABEL: float_initially_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    b.lt .LBB3_3
-; CHECK-NEXT:  .LBB3_1: // %for.body
+; CHECK-NEXT:    b.lt .LBB3_5
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:  .LBB3_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr s1, [x0], #4
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    b.mi .LBB3_4
-; CHECK-NEXT:  // %bb.2: // %for.cond
-; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
+; CHECK-NEXT:    b.mi .LBB3_5
+; CHECK-NEXT:  // %bb.3: // %for.cond
+; CHECK-NEXT:    // in Loop: Header=BB3_2 Depth=1
 ; CHECK-NEXT:    subs x1, x1, #1
-; CHECK-NEXT:    b.ne .LBB3_1
-; CHECK-NEXT:  .LBB3_3: // %cleanup
+; CHECK-NEXT:    b.ne .LBB3_2
+; CHECK-NEXT:  // %bb.4: // %cleanup
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
 entry:

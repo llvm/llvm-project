@@ -580,8 +580,8 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX10-SDAG:       ; %bb.0: ; %bb
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    s_movk_i32 s4, 0x211e
-; GFX10-SDAG-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
-; GFX10-SDAG-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s4 op_sel_hi:[0,1,0]
+; GFX10-SDAG-NEXT:    v_pk_mul_f16 v1, v0, 0x291e op_sel_hi:[1,0]
+; GFX10-SDAG-NEXT:    v_pk_fma_f16 v0, v0, 0x291e, s4 op_sel_hi:[1,0,0]
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-SDAG-NEXT:    v_pk_min_f16 v1, v1, v0
 ; GFX10-SDAG-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v1
@@ -594,8 +594,8 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX10-GISEL:       ; %bb.0: ; %bb
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0x211e211e
-; GFX10-GISEL-NEXT:    v_pk_mul_f16 v2, 0x291e291e, v0
-; GFX10-GISEL-NEXT:    v_pk_fma_f16 v0, 0x291e291e, v0, v1
+; GFX10-GISEL-NEXT:    v_pk_mul_f16 v2, v0, 0x291e291e
+; GFX10-GISEL-NEXT:    v_pk_fma_f16 v0, v0, 0x291e291e, v1
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
 ; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e64 s4, 0, v0
@@ -611,8 +611,8 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    s_movk_i32 s0, 0x211e
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s0 op_sel_hi:[0,1,0]
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v1, v0, 0x291e op_sel_hi:[1,0]
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e, s0 op_sel_hi:[1,0,0]
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_min_f16 v1, v1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v1.l
@@ -626,8 +626,8 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX11-SDAG-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    s_movk_i32 s0, 0x211e
-; GFX11-SDAG-FAKE16-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
-; GFX11-SDAG-FAKE16-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s0 op_sel_hi:[0,1,0]
+; GFX11-SDAG-FAKE16-NEXT:    v_pk_mul_f16 v1, v0, 0x291e op_sel_hi:[1,0]
+; GFX11-SDAG-FAKE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e, s0 op_sel_hi:[1,0,0]
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_min_f16 v0, v1, v0
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -642,9 +642,9 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX11-GISEL-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0x211e211e
-; GFX11-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v2, 0x291e291e, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v2, v0, 0x291e291e
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-GISEL-TRUE16-NEXT:    v_pk_fma_f16 v0, 0x291e291e, v0, v1
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e291e, v1
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-TRUE16-NEXT:    v_cmp_gt_f16_e64 s1, 0, v2.h
@@ -662,9 +662,9 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX11-GISEL-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0x211e211e
-; GFX11-GISEL-FAKE16-NEXT:    v_pk_mul_f16 v2, 0x291e291e, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_pk_mul_f16 v2, v0, 0x291e291e
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-GISEL-FAKE16-NEXT:    v_pk_fma_f16 v0, 0x291e291e, v0, v1
+; GFX11-GISEL-FAKE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e291e, v1
 ; GFX11-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
@@ -688,9 +688,9 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_movk_i32 s0, 0x211e
-; GFX12-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
+; GFX12-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v1, v0, 0x291e op_sel_hi:[1,0]
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s0 op_sel_hi:[0,1,0]
+; GFX12-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e, s0 op_sel_hi:[1,0,0]
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_min_num_f16 v1, v1, v0
 ; GFX12-SDAG-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v1.l
@@ -710,9 +710,9 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_movk_i32 s0, 0x211e
-; GFX12-SDAG-FAKE16-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
+; GFX12-SDAG-FAKE16-NEXT:    v_pk_mul_f16 v1, v0, 0x291e op_sel_hi:[1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s0 op_sel_hi:[0,1,0]
+; GFX12-SDAG-FAKE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e, s0 op_sel_hi:[1,0,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_min_num_f16 v0, v1, v0
 ; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -733,9 +733,9 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0x211e211e
-; GFX12-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v2, 0x291e291e, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v2, v0, 0x291e291e
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-TRUE16-NEXT:    v_pk_fma_f16 v0, 0x291e291e, v0, v1
+; GFX12-GISEL-TRUE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e291e, v1
 ; GFX12-GISEL-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-GISEL-TRUE16-NEXT:    v_cmp_gt_f16_e64 s1, 0, v2.h
@@ -758,9 +758,9 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0x211e211e
-; GFX12-GISEL-FAKE16-NEXT:    v_pk_mul_f16 v2, 0x291e291e, v0
+; GFX12-GISEL-FAKE16-NEXT:    v_pk_mul_f16 v2, v0, 0x291e291e
 ; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-FAKE16-NEXT:    v_pk_fma_f16 v0, 0x291e291e, v0, v1
+; GFX12-GISEL-FAKE16-NEXT:    v_pk_fma_f16 v0, v0, 0x291e291e, v1
 ; GFX12-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX12-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
 ; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
