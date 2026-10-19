@@ -1127,6 +1127,9 @@ getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
     if (I->isBundle())
       continue;
 
+    if (I->isMetaInstruction())
+      continue;
+
     if (IsHazard(*I))
       return WaitStates;
 
@@ -2174,7 +2177,7 @@ bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
     return false;
 
   auto IsHazardFn = [TRI](const MachineInstr &I) {
-    if (I.isMetaInstruction() || SIInstrInfo::isVALU(I, /*AllowLDSDMA=*/true))
+    if (SIInstrInfo::isVALU(I, /*AllowLDSDMA=*/true))
       return false;
     return I.readsRegister(AMDGPU::EXEC, TRI);
   };
