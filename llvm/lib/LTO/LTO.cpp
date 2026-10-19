@@ -1199,11 +1199,6 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
             auto IT = IRSpecifiedGUIDs.insert({VI.name(), VI.getGUID()});
             (void)IT;
             assert(IT.second);
-            if (auto GRIt = GlobalResolutions->find(VI.name());
-                GRIt != GlobalResolutions->end() &&
-                Prevailing.count(VI.name())) {
-              GRIt->second.setGUID(VI.getGUID());
-            }
           }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
@@ -1224,6 +1219,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     if (!Sym.getIRName().empty() &&
         (R.Prevailing || R.FinalDefinitionInLinkageUnit)) {
       if (R.Prevailing) {
+        (*GlobalResolutions)[Sym.getName()].setGUID(GUID);
         ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.

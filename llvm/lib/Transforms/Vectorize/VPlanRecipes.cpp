@@ -2341,12 +2341,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
-
-  CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
+  CallInst *V = State.Builder.CreateCall(Variant, Args);
   applyFlags(*V);
   applyMetadata(*V);
   applyAttrs(*V);
@@ -2452,12 +2447,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
-
-  CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+  CallInst *V = State.Builder.CreateCall(VectorF, Args);
 
   applyFlags(*V);
   applyMetadata(*V);
