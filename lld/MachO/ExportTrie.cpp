@@ -200,11 +200,14 @@ TrieNode *TrieBuilder::makeNode() {
   return node;
 }
 
+// Like operator[], but returns -1 past the end of the name. -1 sorts below
+// every byte, so a name sorts ahead of the longer names it is a prefix of. The
+// cast keeps bytes >= 0x80 from going negative and colliding with that -1.
 static int charAt(const Symbol *sym, size_t pos) {
   StringRef str = sym->getName();
   if (pos >= str.size())
     return -1;
-  return str[pos];
+  return static_cast<unsigned char>(str[pos]);
 }
 
 // Build the trie by performing a three-way radix quicksort: We start by sorting
