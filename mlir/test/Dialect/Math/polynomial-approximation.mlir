@@ -370,7 +370,7 @@ func.func @exp_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK-DAG:       %[[VAL_80:.*]] = arith.subf %[[VAL_75]], %[[VAL_79]] : f32
 // CHECK-DAG:       %[[VAL_81:.*]] = arith.addf %[[VAL_78]], %[[VAL_77]] : f32
 // CHECK-DAG:       %[[VAL_82:.*]] = arith.mulf %[[VAL_81]], %[[VAL_81]] : f32
-// CHECK-DAG:       %[[VAL_83:.*]] = arith.mulf %[[VAL_82]], %[[VAL_81]] : f32
+// CHECK-DAG:       %[[VAL_83:.*]] = arith.mulf %[[VAL_81]], %[[VAL_82]] : f32
 // CHECK-DAG:       %[[VAL_84:.*]] = math.fma %[[VAL_25]], %[[VAL_81]], %[[VAL_26]] : f32
 // CHECK-DAG:       %[[VAL_85:.*]] = math.fma %[[VAL_28]], %[[VAL_81]], %[[VAL_29]] : f32
 // CHECK-DAG:       %[[VAL_86:.*]] = math.fma %[[VAL_31]], %[[VAL_81]], %[[VAL_32]] : f32
@@ -470,7 +470,7 @@ func.func @expm1_scalable_vector(%arg0: vector<8x[8]xf32>) -> vector<8x[8]xf32> 
 // CHECK:           %[[VAL_37:.*]] = arith.subf %[[VAL_32]], %[[VAL_36]] : f32
 // CHECK:           %[[VAL_38:.*]] = arith.addf %[[VAL_35]], %[[VAL_34]] : f32
 // CHECK:           %[[VAL_39:.*]] = arith.mulf %[[VAL_38]], %[[VAL_38]] : f32
-// CHECK:           %[[VAL_40:.*]] = arith.mulf %[[VAL_39]], %[[VAL_38]] : f32
+// CHECK:           %[[VAL_40:.*]] = arith.mulf %[[VAL_38]], %[[VAL_39]] : f32
 // CHECK:           %[[VAL_41:.*]] = math.fma %[[VAL_9]], %[[VAL_38]], %[[VAL_10]] : f32
 // CHECK:           %[[VAL_42:.*]] = math.fma %[[VAL_12]], %[[VAL_38]], %[[VAL_13]] : f32
 // CHECK:           %[[VAL_43:.*]] = math.fma %[[VAL_15]], %[[VAL_38]], %[[VAL_16]] : f32

@@ -19,13 +19,13 @@ func.func @f2(%a : !fir.ref<i32>) -> i32 {
   // CHECK: %[[r3:.*]] = add i32 %[[r2]], %[[r2]]
   %3 = arith.addi %1, %2 : i32
   %4 = fir.load %a : !fir.ref<i32>
-  // CHECK: %[[r4:.*]] = add i32 %[[r3]], %[[r2]]
+  // CHECK: %[[r4:.*]] = add i32 %[[r2]], %[[r3]]
   %5 = arith.addi %3, %4 : i32
   %6 = fir.load %a : !fir.ref<i32>
-  // CHECK: %[[r5:.*]] = add i32 %[[r4]], %[[r2]]
+  // CHECK: %[[r5:.*]] = add i32 %[[r2]], %[[r4]]
   %7 = arith.addi %5, %6 : i32
   %8 = fir.load %a : !fir.ref<i32>
-  // CHECK: %[[r6:.*]] = add i32 %[[r5]], %[[r2]]
+  // CHECK: %[[r6:.*]] = add i32 %[[r2]], %[[r5]]
   %9 = arith.addi %7, %8 : i32
   %10 = fir.load %a : !fir.ref<i32>
   // CHECK: %[[r7:.*]] = add i32 %[[r2]], %[[r6]]

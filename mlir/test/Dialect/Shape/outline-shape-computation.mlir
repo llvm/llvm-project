@@ -194,7 +194,7 @@ func.func @multiple_reused(%arg0: tensor<?x4xf32>, %arg1: tensor<?x4xf32>) -> (t
 // CHECK-DAG:    %[[V2:.*]] = get_extent %[[V0]], %c0 : tensor<2xindex>, index -> index
 // CHECK-DAG:    %[[V3:.*]] = get_extent %[[V1]], %c0 : tensor<2xindex>, index -> index
 // CHECK-DAG:    %[[V4:.*]] = arith.addi %[[V2]], %[[V3]] : index
-// CHECK-DAG:    %[[V5:.*]] = arith.addi %[[V4]], %[[V2]] : index
+// CHECK-DAG:    %[[V5:.*]] = arith.addi %[[V2]], %[[V4]] : index
 // CHECK-DAG:    %[[V6:.*]] = from_extents %[[V5]], %c4 : index, index
 // CHECK-DAG:    return %[[V6]] : !shape.shape
 

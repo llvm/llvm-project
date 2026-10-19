@@ -70,6 +70,30 @@ func.func @test_commutative_multi_cst(%arg0: i32, %arg1: i32) -> (i32, i32) {
   return %y, %z: i32, i32
 }
 
+// CHECK-LABEL: func @test_commutative_dependent_operand
+// CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32, %[[ARG_1:[a-z0-9]*]]: i32)
+func.func @test_commutative_dependent_operand(%arg0: i32, %arg1: i32) -> i32 {
+  // CHECK: %[[INNER:.*]] = "test.op_commutative2"(%[[ARG_0]], %[[ARG_1]])
+  %inner = "test.op_commutative2"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK-NEXT: %[[OUTER:.*]] = "test.op_commutative2"(%[[ARG_0]], %[[INNER]])
+  %outer = "test.op_commutative2"(%inner, %arg0) : (i32, i32) -> i32
+  // CHECK-NEXT: return %[[OUTER]]
+  return %outer : i32
+}
+
+// CHECK-LABEL: func @test_commutative_constant_priority
+// CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32)
+func.func @test_commutative_constant_priority(%arg0: i32) -> i32 {
+  // CHECK: %[[CST:.*]] = arith.constant 42 : i32
+  %cst = arith.constant 42 : i32
+  // CHECK-NEXT: %[[INNER:.*]] = "test.op_commutative2"(%[[ARG_0]], %[[CST]])
+  %inner = "test.op_commutative2"(%arg0, %cst) : (i32, i32) -> i32
+  // CHECK-NEXT: %[[OUTER:.*]] = "test.op_commutative2"(%[[INNER]], %[[CST]])
+  %outer = "test.op_commutative2"(%inner, %cst) : (i32, i32) -> i32
+  // CHECK-NEXT: return %[[OUTER]]
+  return %outer : i32
+}
+
 // CHECK-LABEL: test_dialect_canonicalizer
 func.func @test_dialect_canonicalizer() -> (i32) {
   %0 = "test.dialect_canonicalizable"() : () -> (i32)
