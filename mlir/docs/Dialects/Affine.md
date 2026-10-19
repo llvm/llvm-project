@@ -83,8 +83,10 @@ location of the SSA use. Dimensions may be bound not only to anything that a
 symbol is bound to, but also to induction variables of enclosing
 [`affine.for`](#affinefor-affineaffineforop) and
 [`affine.parallel`](#affineparallel-affineaffineparallelop) operations, and the result
-of an [`affine.apply` operation](#affineapply-affineaffineapplyop) (which recursively
-may use other dimensions and symbols).
+of an [`affine.apply` operation](#affineapply-affineaffineapplyop), or an
+[`affine.min`](#affinemin-affineaffineminop) or
+[`affine.max`](#affinemax-affineaffinemaxop) operation, whose operands are
+valid dimensions (which recursively may use other dimensions and symbols).
 
 ### Affine Expressions
 
