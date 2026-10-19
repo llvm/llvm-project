@@ -492,6 +492,9 @@ bool AGXCodeGenPrepare::flushHalfDenormals(Function &F) {
 
   SmallVector<Instruction *, 32> Worklist;
   for (Instruction &I : instructions(F)) {
+    // Operations with their own denormal handling (from AGXLowerFPEnv).
+    if (I.hasMetadata("agx.ieee") || I.hasMetadata("agx.exact"))
+      continue;
     bool Arith = isFPArithmetic(I) && isHalf(I.getType());
     bool Reads = Arith || (isa<FCmpInst>(I) &&
                            isHalf(I.getOperand(0)->getType())) ||

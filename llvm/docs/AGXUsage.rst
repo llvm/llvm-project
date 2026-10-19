@@ -318,6 +318,10 @@ PTX behavior in software (``AGXStrictFP.cpp``):
     functions, ``llvm.agx.rcp``, ``llvm.agx.rsqrt``, ``llvm.log2`` and
     ``llvm.exp2`` handle denormal operands or results explicitly.
 
+  In functions that flush ``float`` denormals, ``fdiv`` and ``llvm.sqrt`` are
+  correctly rounded in the same way, on flushed operands and with a flushed
+  result.
+
 ``canonical-nan``
   NaN results of floating point arithmetic and conversions are ``0x7fffffff``
   (``0x7fff`` for ``half`` and ``bfloat``); minimum and maximum keep the bits
@@ -327,6 +331,35 @@ Measured on the functional simulator, per SIMD-group and operation with
 normal operands, ``ieee-fp32`` adds about 8 instructions to an addition, 12
 to a multiplication, 22 to a fused multiply-add, 13 to a comparison, 65 to a
 division and 39 to a square root.
+
+Rounding modes
+--------------
+
+The hardware rounds to nearest even only. ``llvm.agx.set.fpmode(i32)`` and
+``llvm.agx.get.fpmode()`` access an emulated floating point mode register:
+
+  ===== ======================================================
+  Bits  Meaning
+  ===== ======================================================
+  0-1   ``float`` rounding: 0 toward zero, 1 to nearest even,
+        2 upward, 3 downward (the ``FLT_ROUNDS`` numbering)
+  2-3   ``half`` (and ``double``) rounding, same encoding
+  4     ``float`` denormals are flushed
+  5     ``half`` (and ``double``) denormals are flushed
+  ===== ======================================================
+
+It holds round to nearest even and the function's ``denormal_fpenv`` at
+entry, and is kept in SSA values by the ``agx-lower-fp-env`` pass, which also
+lowers the constrained floating point intrinsics
+(``llvm.experimental.constrained.*``). Those that round to nearest even,
+statically or through the register, become ordinary operations. The others
+(``fadd``, ``fsub``, ``fmul``, ``fdiv``, ``fma``, ``sqrt``, ``fptrunc`` to
+``half``, ``sitofp``/``uitofp`` and the rounding functions) are computed in
+software and correctly rounded in their direction, with the overflow result
+of that direction (the largest finite value or infinity) and the sign of an
+exact zero sum that it requires. An operation whose denormal mode differs
+from its function's flushes its operands and result explicitly. The software
+paths do not depend on the ``ieee-fp32`` feature.
 
 SIMD-group shuffles
 -------------------

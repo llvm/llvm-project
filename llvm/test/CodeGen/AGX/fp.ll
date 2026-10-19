@@ -38,14 +38,19 @@ define agx_kernel void @arith(ptr addrspace(1) %out, float %a, float %b, float %
 define agx_kernel void @div(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-LABEL: div:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 4 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 6 x 32-bit
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    rcp r1, u3
 ; CHECK-NEXT:    fmul32 r2, u2, r1
 ; CHECK-NEXT:    fmadd32 r3, u3.neg, r2, u2
-; CHECK-NEXT:    fmadd32 r2, r3, r1, r2
+; CHECK-NEXT:    mov_imm r4, 2139095040
+; CHECK-NEXT:    fcmpsel eq, r4, r2.abs, r4, 1, 0
+; CHECK-NEXT:    fcmpsel eq, r5, r2.abs, 0.0, 1, 0
+; CHECK-NEXT:    fmadd32 r3, r3, r1, r2
+; CHECK-NEXT:    or r4, r5, r4
+; CHECK-NEXT:    icmpsel ueq, r2, r4, 0, r3, r2
 ; CHECK-NEXT:    fmul32 r1, r2, r1
 ; CHECK-NEXT:    rcp r1, r1
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed

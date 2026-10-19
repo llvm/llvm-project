@@ -44,7 +44,9 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 using namespace llvm;
 
@@ -64,6 +66,28 @@ public:
   }
 };
 
+/// A binary floating point format.
+struct Format {
+  unsigned Precision; // significand bits, including the implicit one
+  int Bias;
+  unsigned Width;
+  int minLSB() const { return 2 - Bias - int(Precision); }
+  uint32_t fracMask() const { return (1u << (Precision - 1)) - 1; }
+  uint32_t expMask() const { return uint32_t(2 * Bias + 1); }
+  uint32_t infBits() const { return expMask() << (Precision - 1); }
+  uint32_t signBit() const { return 1u << (Width - 1); }
+};
+constexpr Format Binary32 = {24, 127, 32};
+constexpr Format Binary16 = {11, 15, 16};
+
+/// Rounding directions, numbered like FLT_ROUNDS and llvm.get.rounding.
+enum RoundingCode : uint32_t {
+  RoundTowardZero = 0,
+  RoundNearestEven = 1,
+  RoundUp = 2,
+  RoundDown = 3,
+};
+
 /// sign * M * 2^E: Sign is i1, M is i64 and E is i32.
 struct Term {
   Value *Sign;
@@ -73,13 +97,21 @@ struct Term {
 
 /// Builds the integer implementations at the builder's insertion point.
 class SoftFloat {
-  IRBuilder<> &B;
+  IRBuilderBase &B;
   Type *I1, *I32, *I64, *F32;
 
 public:
-  explicit SoftFloat(IRBuilder<> &B)
+  /// The rounding direction (a RoundingCode, constant or not) of the
+  /// results built by convert().
+  Value *Rounding;
+
+  explicit SoftFloat(IRBuilderBase &B)
       : B(B), I1(B.getInt1Ty()), I32(B.getInt32Ty()), I64(B.getInt64Ty()),
-        F32(B.getFloatTy()) {}
+        F32(B.getFloatTy()), Rounding(B.getInt32(RoundNearestEven)) {}
+
+  Value *roundingIs(RoundingCode C) {
+    return B.CreateICmpEQ(Rounding, B.getInt32(C));
+  }
 
   Value *c32(uint32_t V) { return B.getInt32(V); }
   Value *c64(uint64_t V) { return B.getInt64(V); }
@@ -132,51 +164,71 @@ public:
   }
   Value *signBit(Value *Bits) { return B.CreateICmpSLT(Bits, c32(0)); }
 
-  /// A finite value as sign * M * 2^E with M < 2^24. With Normalize, the
-  /// most significant bit of a nonzero M is bit 23.
-  Term unpack(Value *Bits, bool Normalize) {
-    Value *Exp = B.CreateAnd(B.CreateLShr(Bits, 23), c32(0xff));
-    Value *Frac = B.CreateAnd(Bits, c32(0x7fffff));
+  /// A finite value (bits in an i32) as sign * M * 2^E with M <
+  /// 2^Precision. With Normalize, the most significant bit of a nonzero M is
+  /// bit Precision - 1.
+  Term unpack(Value *Bits, bool Normalize, Format Fmt = Binary32) {
+    unsigned P = Fmt.Precision;
+    Value *Exp = B.CreateAnd(B.CreateLShr(Bits, P - 1), c32(Fmt.expMask()));
+    Value *Frac = B.CreateAnd(Bits, c32(Fmt.fracMask()));
     Value *Den = B.CreateICmpEQ(Exp, c32(0));
-    Value *M = B.CreateSelect(Den, Frac, B.CreateOr(Frac, c32(0x800000)));
-    Value *E = B.CreateSub(B.CreateSelect(Den, c32(1), Exp), c32(150));
+    Value *M = B.CreateSelect(Den, Frac, B.CreateOr(Frac, c32(1u << (P - 1))));
+    Value *E = B.CreateSub(B.CreateSelect(Den, c32(1), Exp),
+                           c32(Fmt.Bias + P - 1));
     if (Normalize) {
       Value *Lz = B.CreateBinaryIntrinsic(Intrinsic::ctlz, M, B.getFalse());
       Value *Sh = B.CreateSelect(B.CreateICmpEQ(M, c32(0)), c32(0),
-                                 B.CreateSub(Lz, c32(8)));
+                                 B.CreateSub(Lz, c32(32 - P)));
       M = B.CreateShl(M, Sh);
       E = B.CreateSub(E, Sh);
     }
-    return {signBit(Bits), B.CreateZExt(M, I64), E};
+    Value *Sign = B.CreateICmpNE(B.CreateAnd(Bits, c32(Fmt.signBit())), c32(0));
+    return {Sign, B.CreateZExt(M, I64), E};
   }
 
-  /// Round sign * M * 2^E to nearest even: the bits of the binary32 result.
-  Value *convert(const Term &T) {
+  /// Round sign * M * 2^E in the direction Rounding: the bits of the result
+  /// in Fmt (in an i32).
+  Value *convert(const Term &T, Format Fmt = Binary32) {
+    unsigned P = Fmt.Precision;
     Value *L = bitLength(T.M);
-    // Shift so that 24 significant bits remain, or fewer for denormals.
-    Value *S = smax(B.CreateSub(L, c32(24)), B.CreateSub(c32(-149), T.E));
+    // Shift so that P significant bits remain, or fewer for denormals.
+    Value *S = smax(B.CreateSub(L, c32(P)), B.CreateSub(c32(Fmt.minLSB()), T.E));
     Value *Right = B.CreateICmpSGT(S, c32(0));
     Value *K = B.CreateSelect(Right, umin(S, c32(64)), c32(0));
     Value *Q = lshr(T.M, K);
     Value *Rem = B.CreateSub(T.M, shl(Q, K));
     Value *Half = shl(c64(1), B.CreateSub(smax(K, c32(1)), c32(1)));
-    Value *Up = B.CreateOr(
+    Value *Inexact = B.CreateICmpNE(Rem, c64(0));
+    Value *Nearest = B.CreateOr(
         B.CreateICmpUGT(Rem, Half),
         B.CreateAnd(B.CreateICmpEQ(Rem, Half),
                     B.CreateICmpNE(B.CreateAnd(Q, c64(1)), c64(0))));
+    Value *Up = B.CreateSelect(
+        roundingIs(RoundNearestEven), Nearest,
+        B.CreateSelect(roundingIs(RoundUp), B.CreateAnd(Inexact, B.CreateNot(T.Sign)),
+                       B.CreateSelect(roundingIs(RoundDown),
+                                      B.CreateAnd(Inexact, T.Sign), B.getFalse())));
     Up = B.CreateAnd(Up, Right);
     Value *Rounded = B.CreateAdd(Q, B.CreateZExt(Up, I64));
     Value *Left = shl(T.M, B.CreateSelect(Right, c32(0), B.CreateNeg(S)));
     Value *Mant = B.CreateTrunc(B.CreateSelect(Right, Rounded, Left), I32);
     // The exponent field minus one: the implicit bit of Mant adds the one,
-    // and a rounding carry into bit 24 increments the exponent.
-    Value *Biased = B.CreateAdd(B.CreateAdd(T.E, S), c32(149));
-    Value *Bits = B.CreateAdd(B.CreateShl(Biased, 23), Mant);
-    Value *Over = B.CreateOr(B.CreateICmpSGT(Biased, c32(253)),
-                             B.CreateICmpUGE(Bits, c32(0x7f800000)));
-    Bits = B.CreateSelect(Over, c32(0x7f800000), Bits);
+    // and a rounding carry into bit P increments the exponent.
+    Value *Biased = B.CreateAdd(B.CreateAdd(T.E, S), c32(Fmt.Bias + P - 2));
+    Value *Bits = B.CreateAdd(B.CreateShl(Biased, P - 1), Mant);
+    Value *Over = B.CreateOr(B.CreateICmpSGT(Biased, c32(2 * Fmt.Bias - 1)),
+                             B.CreateICmpUGE(Bits, c32(Fmt.infBits())));
+    // Overflows give infinity, or the largest finite value when rounding
+    // toward zero or away from the sign's infinity.
+    Value *Max = c32(Fmt.infBits() - 1), *Inf = c32(Fmt.infBits());
+    Value *OverBits = B.CreateSelect(
+        roundingIs(RoundTowardZero), Max,
+        B.CreateSelect(roundingIs(RoundUp), B.CreateSelect(T.Sign, Max, Inf),
+                       B.CreateSelect(roundingIs(RoundDown),
+                                      B.CreateSelect(T.Sign, Inf, Max), Inf)));
+    Bits = B.CreateSelect(Over, OverBits, Bits);
     Bits = B.CreateSelect(B.CreateICmpEQ(T.M, c64(0)), c32(0), Bits);
-    return B.CreateOr(Bits, B.CreateShl(B.CreateZExt(T.Sign, I32), 31));
+    return B.CreateOr(Bits, B.CreateSelect(T.Sign, c32(Fmt.signBit()), c32(0)));
   }
 
   Term mul(const Term &X, const Term &Y) {
@@ -208,13 +260,18 @@ public:
                                 B.CreateSub(MB, Aligned));
     Value *Neg = B.CreateICmpSLT(Sum, c64(0));
     Value *M = B.CreateSelect(Neg, B.CreateNeg(Sum), Sum);
-    // An exact cancellation is +0 when rounding to nearest.
-    Value *Sign = B.CreateAnd(B.CreateXor(SB, Neg), B.CreateICmpNE(M, c64(0)));
-    // Zero terms: the other term, and -0 + -0 = -0.
+    // An exact cancellation is +0, or -0 when rounding down.
+    Value *Sign = B.CreateSelect(B.CreateICmpNE(M, c64(0)), B.CreateXor(SB, Neg),
+                                 roundingIs(RoundDown));
+    // Zero terms: the other term; the sum of two zeros is negative if both
+    // are, or (rounding down) if either is.
     Value *XZero = B.CreateICmpEQ(X.M, c64(0));
     Value *YZero = B.CreateICmpEQ(Y.M, c64(0));
     Value *BothZero = B.CreateAnd(XZero, YZero);
-    Sign = B.CreateSelect(BothZero, B.CreateAnd(X.Sign, Y.Sign),
+    Value *ZeroSign = B.CreateSelect(roundingIs(RoundDown),
+                                     B.CreateOr(X.Sign, Y.Sign),
+                                     B.CreateAnd(X.Sign, Y.Sign));
+    Sign = B.CreateSelect(BothZero, ZeroSign,
                           B.CreateSelect(XZero, Y.Sign,
                                          B.CreateSelect(YZero, X.Sign, Sign)));
     M = B.CreateSelect(XZero, Y.M, B.CreateSelect(YZero, X.M, M));
@@ -247,6 +304,25 @@ public:
   /// The neighbors of a positive normal value.
   Value *nextUp(Value *X) { return flt(B.CreateAdd(bits(X), c32(1))); }
   Value *nextDown(Value *X) { return flt(B.CreateSub(bits(X), c32(1))); }
+
+  /// Q, the correctly rounded positive magnitude of a result with sign Neg,
+  /// rounded in the direction Rounding instead: Err has the sign of the exact
+  /// magnitude minus Q.
+  Value *adjustMagnitude(Value *Q, Value *Err, Value *Neg) {
+    Value *Above = B.CreateFCmpOGT(Err, fconst(0.0f));
+    Value *Below = B.CreateFCmpOLT(Err, fconst(0.0f));
+    // Rounding up a positive or down a negative result increases the
+    // magnitude; toward zero, down a positive or up a negative one decreases
+    // it.
+    Value *Away = B.CreateOr(B.CreateAnd(roundingIs(RoundUp), B.CreateNot(Neg)),
+                             B.CreateAnd(roundingIs(RoundDown), Neg));
+    Value *Toward = B.CreateOr(
+        roundingIs(RoundTowardZero),
+        B.CreateOr(B.CreateAnd(roundingIs(RoundUp), Neg),
+                   B.CreateAnd(roundingIs(RoundDown), B.CreateNot(Neg))));
+    Value *R = B.CreateSelect(B.CreateAnd(Away, Above), nextUp(Q), Q);
+    return B.CreateSelect(B.CreateAnd(Toward, Below), nextDown(Q), R);
+  }
 
   /// Division of normal operands with a normal result, using the hardware:
   /// the mantissas (in [1, 2)) are divided with a refined reciprocal, and
@@ -282,6 +358,10 @@ public:
                                  B.CreateAnd(B.CreateFCmpOEQ(R, NegHalfDown), Odd));
       Q = B.CreateSelect(GoUp, Up, B.CreateSelect(GoDown, Down, Q));
     }
+    // Directed rounding: the remainder gives the direction of the error of
+    // the magnitude.
+    Value *Neg = B.CreateICmpSLT(B.CreateXor(AB, DB), c32(0));
+    Q = adjustMagnitude(Q, fma(NegD, Q, A1), Neg);
     Value *QB = bits(Q);
     Value *Shift = B.CreateSub(EA, ED);
     Value *Exp = B.CreateAdd(B.CreateAnd(B.CreateLShr(QB, 23), c32(0xff)), Shift);
@@ -315,6 +395,7 @@ public:
       Value *High = B.CreateFCmpOLT(fma(S, Up, NegM), fconst(0.0f));
       S = B.CreateSelect(High, Up, B.CreateSelect(Low, Down, S));
     }
+    S = adjustMagnitude(S, fma(B.CreateFNeg(S), S, M), B.getFalse());
     Value *Half = B.CreateAShr(B.CreateSub(K, Odd), 1);
     Value *R = B.CreateAdd(bits(S), B.CreateShl(Half, 23));
     return {flt(R), Valid};
@@ -414,6 +495,83 @@ public:
         c32(0x7fc00000), Bits);
     Bits = B.CreateSelect(isZero(XB), XB, Bits);
     return flt(Bits);
+  }
+
+  /// Binary32 X + Y (or X - Y), rounded in the direction Rounding.
+  Value *roundedAdd(Value *X, Value *Y, bool Sub) {
+    Value *XB = bits(X), *YB = bits(Y);
+    Term TX = unpack(XB, false), TY = unpack(YB, false);
+    if (Sub)
+      TY.Sign = B.CreateNot(TY.Sign);
+    Value *Exact = flt(convert(add(TX, TY)));
+    // Infinities and NaNs: denormal operands do not change the result.
+    Value *HW = Sub ? B.CreateFSub(X, Y) : B.CreateFAdd(X, Y);
+    return B.CreateSelect(B.CreateOr(isInfOrNaN(XB), isInfOrNaN(YB)), HW, Exact);
+  }
+
+  /// Binary32 X * Y, rounded in the direction Rounding.
+  Value *roundedMul(Value *X, Value *Y) {
+    Value *XB = bits(X), *YB = bits(Y);
+    Value *Exact = flt(convert(mul(unpack(XB, false), unpack(YB, false))));
+    Value *HW = B.CreateFMul(nonzeroNormal(X), nonzeroNormal(Y));
+    return B.CreateSelect(B.CreateOr(isInfOrNaN(XB), isInfOrNaN(YB)), HW, Exact);
+  }
+
+  /// Binary32 X * Y + Z with one rounding in the direction Rounding.
+  Value *roundedFma(Value *X, Value *Y, Value *Z) {
+    Value *XB = bits(X), *YB = bits(Y), *ZB = bits(Z);
+    Term P = mul(unpack(XB, false), unpack(YB, false));
+    Value *Exact = flt(convert(add(P, unpack(ZB, false))));
+    Value *HW = fma(nonzeroNormal(X), nonzeroNormal(Y), nonzeroNormal(Z));
+    Value *Special = B.CreateOr(isInfOrNaN(XB),
+                                B.CreateOr(isInfOrNaN(YB), isInfOrNaN(ZB)));
+    return B.CreateSelect(Special, HW, Exact);
+  }
+
+  /// An integer converted to Fmt (float or half), rounded in the direction
+  /// Rounding.
+  Value *roundedFromInt(Value *V, bool Signed, Type *Ty) {
+    Format Fmt = Ty->isHalfTy() ? Binary16 : Binary32;
+    Value *W = Signed ? B.CreateSExtOrTrunc(V, I64) : B.CreateZExtOrTrunc(V, I64);
+    Value *Neg = Signed ? B.CreateICmpSLT(W, c64(0)) : B.getFalse();
+    Value *M = B.CreateSelect(Neg, B.CreateNeg(W), W);
+    Value *Bits = convert({Neg, M, c32(0)}, Fmt);
+    return toFloat(Bits, Ty);
+  }
+
+  /// A float converted to half, rounded in the direction Rounding.
+  Value *roundedToHalf(Value *X) {
+    Value *XB = bits(X);
+    Value *Exact = toFloat(convert(unpack(XB, false), Binary16), B.getHalfTy());
+    Value *HW = B.CreateFPTrunc(X, B.getHalfTy());
+    return B.CreateSelect(isInfOrNaN(XB), HW, Exact);
+  }
+
+  /// Bits of Fmt in an i32 as a value of type Ty.
+  Value *toFloat(Value *Bits, Type *Ty) {
+    if (Ty->isHalfTy())
+      return B.CreateBitCast(B.CreateTrunc(Bits, B.getInt16Ty()), Ty);
+    return flt(Bits);
+  }
+
+  /// Round to an integral value in the direction Rounding.
+  Value *roundedIntegral(Value *X) {
+    auto Call = [&](Intrinsic::ID ID) { return B.CreateUnaryIntrinsic(ID, X); };
+    Value *R = B.CreateSelect(roundingIs(RoundDown), Call(Intrinsic::floor),
+                              Call(Intrinsic::roundeven));
+    R = B.CreateSelect(roundingIs(RoundUp), Call(Intrinsic::ceil), R);
+    return B.CreateSelect(roundingIs(RoundTowardZero), Call(Intrinsic::trunc), R);
+  }
+
+  /// flush(X) = |X| below the smallest normal ? +-0 : X, for float or half.
+  Value *flushDenormal(Value *X) {
+    Type *Ty = X->getType();
+    APFloat Min = APFloat::getSmallestNormalized(Ty->getFltSemantics());
+    Value *Small = B.CreateFCmpOLT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+                                   ConstantFP::get(Ty, Min));
+    Value *Zero = B.CreateBinaryIntrinsic(Intrinsic::copysign,
+                                          ConstantFP::get(Ty, 0.0), X);
+    return B.CreateSelect(Small, Zero, X);
   }
 
   /// A comparison operand as a signed integer, for zeros and denormals.
@@ -590,11 +748,11 @@ static void lowerWithSlowPath(Instruction &I, CondFn BuildCond,
 
 /// Replace I by the result of BuildFast, or of BuildSlow (in a conditional
 /// block) where BuildFast says that its result is not valid.
-template <typename FastFn, typename SlowFn>
+template <typename BuilderT = IRBuilder<>, typename FastFn, typename SlowFn>
 static void replaceWithSlowPath(Instruction &I, FastFn BuildFast,
                                 SlowFn BuildSlow) {
   Instruction *Next = I.getNextNode();
-  IRBuilder<> B(Next);
+  BuilderT B(Next);
   SoftFloat SF(B);
   auto [Fast, Valid] = BuildFast(SF, B);
   Instruction *ThenTerm =
@@ -640,7 +798,7 @@ static bool lowerIEEE(Instruction &I) {
     // the denormal range.
     lowerWithSlowPath(
         I,
-        [&](SoftFloat &SF, IRBuilder<> &B) {
+        [&](SoftFloat &SF, IRBuilderBase &B) {
           Value *Limit = SF.fconst(0x1p-101f);
           auto Small = [&](Value *V) {
             return B.CreateFCmpOLT(
@@ -648,7 +806,7 @@ static bool lowerIEEE(Instruction &I) {
           };
           return B.CreateAnd(Small(X), Small(Y));
         },
-        [&](SoftFloat &SF, IRBuilder<> &B) {
+        [&](SoftFloat &SF, IRBuilderBase &B) {
           Term TX = SF.unpack(SF.bits(X), false);
           Term TY = SF.unpack(SF.bits(Y), false);
           if (Sub)
@@ -663,7 +821,7 @@ static bool lowerIEEE(Instruction &I) {
     Value *X = I.getOperand(0), *Y = I.getOperand(1);
     lowerWithSlowPath(
         I,
-        [&](SoftFloat &SF, IRBuilder<> &B) {
+        [&](SoftFloat &SF, IRBuilderBase &B) {
           // A product at most 2^-125 (or NaN) of nonzero operands.
           Value *Tiny = B.CreateFCmpULE(
               B.CreateUnaryIntrinsic(Intrinsic::fabs, &I),
@@ -672,7 +830,7 @@ static bool lowerIEEE(Instruction &I) {
                                        SF.isZero(SF.bits(X)),
                                        SF.isZero(SF.bits(Y)))));
         },
-        [&](SoftFloat &SF, IRBuilder<> &B) {
+        [&](SoftFloat &SF, IRBuilderBase &B) {
           Value *XB = SF.bits(X), *YB = SF.bits(Y);
           Value *Exact = SF.flt(SF.convert(
               SF.mul(SF.unpack(XB, false), SF.unpack(YB, false))));
@@ -687,8 +845,8 @@ static bool lowerIEEE(Instruction &I) {
       return false;
     Value *X = I.getOperand(0), *Y = I.getOperand(1);
     replaceWithSlowPath(
-        I, [&](SoftFloat &SF, IRBuilder<> &) { return SF.fastDiv(X, Y); },
-        [&](SoftFloat &SF, IRBuilder<> &) { return SF.div(X, Y); });
+        I, [&](SoftFloat &SF, IRBuilderBase &) { return SF.fastDiv(X, Y); },
+        [&](SoftFloat &SF, IRBuilderBase &) { return SF.div(X, Y); });
     return true;
   }
   case Instruction::FCmp: {
@@ -723,7 +881,7 @@ static bool lowerIEEE(Instruction &I) {
           *Z = II->getArgOperand(2);
     lowerWithSlowPath(
         I,
-        [&](SoftFloat &SF, IRBuilder<> &B) {
+        [&](SoftFloat &SF, IRBuilderBase &B) {
           Value *XB = SF.bits(X), *YB = SF.bits(Y), *ZB = SF.bits(Z);
           Value *Den = B.CreateOr(SF.isDenormal(XB),
                                   B.CreateOr(SF.isDenormal(YB), SF.isDenormal(ZB)));
@@ -733,7 +891,7 @@ static bool lowerIEEE(Instruction &I) {
                                                           SF.isZero(YB))));
           return B.CreateOr(Den, Tiny);
         },
-        [&](SoftFloat &SF, IRBuilder<> &B) {
+        [&](SoftFloat &SF, IRBuilderBase &B) {
           Value *XB = SF.bits(X), *YB = SF.bits(Y), *ZB = SF.bits(Z);
           Term P = SF.mul(SF.unpack(XB, false), SF.unpack(YB, false));
           Value *Exact = SF.flt(SF.convert(SF.add(P, SF.unpack(ZB, false))));
@@ -751,8 +909,8 @@ static bool lowerIEEE(Instruction &I) {
       return false;
     Value *X = II->getArgOperand(0);
     replaceWithSlowPath(
-        I, [&](SoftFloat &SF, IRBuilder<> &) { return SF.fastSqrt(X); },
-        [&](SoftFloat &SF, IRBuilder<> &) { return SF.sqrt(X); });
+        I, [&](SoftFloat &SF, IRBuilderBase &) { return SF.fastSqrt(X); },
+        [&](SoftFloat &SF, IRBuilderBase &) { return SF.sqrt(X); });
     return true;
   }
   case Intrinsic::minnum:
@@ -765,7 +923,7 @@ static bool lowerIEEE(Instruction &I) {
     bool Min = ID == Intrinsic::minnum || ID == Intrinsic::minimumnum ||
                ID == Intrinsic::minimum;
     bool Propagate = ID == Intrinsic::minimum || ID == Intrinsic::maximum;
-    replace(I, [&](SoftFloat &SF, IRBuilder<> &) {
+    replace(I, [&](SoftFloat &SF, IRBuilderBase &) {
       return SF.minMax(X, Y, Min, Propagate);
     });
     return true;
@@ -844,22 +1002,57 @@ static bool lowerIEEE(Instruction &I) {
   }
 }
 
+/// Instructions built by the software implementations themselves, which
+/// need no further lowering.
+static constexpr const char *ExactTag = "agx.exact";
+/// Instructions whose denormals follow IEEE although their function flushes
+/// them (their operands and results were flushed explicitly if needed).
+static constexpr const char *IEEETag = "agx.ieee";
+
+/// Division and square root, which the hardware only approximates.
+static bool isCorrectlyRounded(const Instruction &I) {
+  if (!isF32(&I) || (isa<FPMathOperator>(I) &&
+                     (I.hasApproxFunc() || I.hasAllowReciprocal())))
+    return false;
+  return I.getOpcode() == Instruction::FDiv ||
+         getIntrinsicID(I) == Intrinsic::sqrt;
+}
+
+/// A correctly rounded operation in a flushing function: the IEEE lowering
+/// on flushed operands, with a flushed result.
+static bool lowerFlushing(Instruction &I) {
+  IRBuilder<> B(&I);
+  SoftFloat SF(B);
+  for (Use &Op : I.operands())
+    if (Op->getType()->isFloatTy())
+      Op.set(SF.flushDenormal(Op));
+  SmallVector<Use *, 4> Uses;
+  for (Use &U : I.uses())
+    Uses.push_back(&U);
+  B.SetInsertPoint(I.getNextNode());
+  Value *Result = SF.flushDenormal(&I);
+  for (Use *U : Uses)
+    U->set(Result);
+  lowerIEEE(I);
+  return true;
+}
+
 bool AGXStrictFP::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   const TargetMachine &TM =
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   const auto &ST = TM.getSubtarget<AGXSubtarget>(F);
-  bool IEEE = ST.hasIEEEFP32() &&
-              F.getDenormalMode(APFloat::IEEEsingle()).Output ==
-                  DenormalMode::IEEE;
+  bool FunctionIEEE = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
+                      DenormalMode::IEEE;
   bool CanonicalNaN = ST.hasCanonicalNaN();
-  if (!IEEE && !CanonicalNaN)
+  if (!ST.hasIEEEFP32() && !CanonicalNaN)
     return false;
 
   SmallVector<Instruction *, 32> Worklist;
   for (Instruction &I : instructions(F))
-    Worklist.push_back(&I);
+    if (!I.hasMetadata(ExactTag))
+      Worklist.push_back(&I);
 
   bool Changed = false;
   // NaN canonicalization first: the IEEE lowering then replaces the
@@ -870,8 +1063,320 @@ bool AGXStrictFP::runOnFunction(Function &F) {
         canonicalizeNaN(*I);
         Changed = true;
       }
-  if (IEEE)
-    for (Instruction *I : Worklist)
-      Changed |= lowerIEEE(*I);
+  if (ST.hasIEEEFP32())
+    for (Instruction *I : Worklist) {
+      if (FunctionIEEE || I->hasMetadata(IEEETag))
+        Changed |= lowerIEEE(*I);
+      else if (isCorrectlyRounded(*I))
+        Changed |= lowerFlushing(*I);
+    }
   return Changed;
+}
+
+//===----------------------------------------------------------------------===//
+// AGXLowerFPEnv
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Models the floating point mode register of llvm.agx.set.fpmode and
+/// llvm.agx.get.fpmode with a value per program point, and lowers the
+/// constrained floating point intrinsics: those that round to nearest even
+/// become ordinary operations, the others are computed in software with the
+/// rounding direction of their metadata or of the mode. Operations whose
+/// denormal mode differs from their function's flush their operands and
+/// results explicitly, and are tagged agx.ieee.
+class AGXLowerFPEnv : public FunctionPass {
+public:
+  static char ID;
+  AGXLowerFPEnv() : FunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "AGX Lower Floating Point Environment";
+  }
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+  }
+};
+
+/// A builder that tags the floating point operations it creates.
+struct TaggingBuilder : IRBuilder<ConstantFolder, IRBuilderCallbackInserter> {
+  explicit TaggingBuilder(Instruction *IP)
+      : IRBuilder(IP->getContext(), ConstantFolder(),
+                  IRBuilderCallbackInserter([](Instruction *I) {
+                    if (isa<FPMathOperator>(I) || isa<CallBase>(I) ||
+                        isa<FPTruncInst>(I))
+                      I->setMetadata(ExactTag, MDNode::get(I->getContext(), {}));
+                  })) {
+    SetInsertPoint(IP);
+  }
+};
+
+} // namespace
+
+char AGXLowerFPEnv::ID = 0;
+
+INITIALIZE_PASS_BEGIN(AGXLowerFPEnv, "agx-lower-fp-env",
+                      "AGX Lower Floating Point Environment", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AGXLowerFPEnv, "agx-lower-fp-env",
+                    "AGX Lower Floating Point Environment", false, false)
+
+FunctionPass *llvm::createAGXLowerFPEnvPass() { return new AGXLowerFPEnv(); }
+
+static constexpr uint32_t ModeHalfShift = 2;
+static constexpr uint32_t ModeFloatFlush = 0x10, ModeHalfFlush = 0x20;
+
+static bool flushes(const Function &F, const fltSemantics &Sem) {
+  DenormalMode M = F.getDenormalMode(Sem);
+  return M.Output != DenormalMode::IEEE && M.Output != DenormalMode::Dynamic;
+}
+
+static uint32_t roundingCode(RoundingMode RM) {
+  switch (RM) {
+  case RoundingMode::TowardZero:
+    return RoundTowardZero;
+  case RoundingMode::TowardPositive:
+    return RoundUp;
+  case RoundingMode::TowardNegative:
+    return RoundDown;
+  default:
+    return RoundNearestEven;
+  }
+}
+
+/// The constrained intrinsic as the ordinary operation.
+static Value *lowerToPlain(ConstrainedFPIntrinsic *CI, IRBuilderBase &B) {
+  Function &F = *CI->getFunction();
+  SmallVector<Value *, 4> Args(CI->args().begin(),
+                               CI->args().begin() + CI->getNonMetadataArgCount());
+  switch (CI->getIntrinsicID()) {
+#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
+  case Intrinsic::INTRINSIC:                                                   \
+    if (Instruction::isBinaryOp(Instruction::NAME))                            \
+      return B.CreateBinOp(Instruction::BinaryOps(Instruction::NAME), Args[0], \
+                           Args[1]);                                           \
+    return B.CreateCast(Instruction::CastOps(Instruction::NAME), Args[0],      \
+                        CI->getType());
+#define CMP_INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC, DAGN)              \
+  case Intrinsic::INTRINSIC:                                                   \
+    return B.CreateFCmp(cast<ConstrainedFPCmpIntrinsic>(CI)->getPredicate(),   \
+                        Args[0], Args[1]);
+#define FUNCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                           \
+  case Intrinsic::INTRINSIC: {                                                 \
+    SmallVector<Type *, 4> ArgTys;                                             \
+    for (Value *A : Args)                                                      \
+      ArgTys.push_back(A->getType());                                          \
+    SmallVector<Type *, 2> OverloadTys;                                        \
+    FunctionType *FT = FunctionType::get(CI->getType(), ArgTys, false);        \
+    if (!Intrinsic::isSignatureValid(Intrinsic::NAME, FT, OverloadTys))        \
+      return nullptr;                                                          \
+    return B.CreateCall(Intrinsic::getOrInsertDeclaration(                     \
+                            F.getParent(), Intrinsic::NAME, OverloadTys),      \
+                        Args);                                                 \
+  }
+#include "llvm/IR/ConstrainedOps.def"
+  default:
+    return nullptr;
+  }
+}
+
+/// The constrained intrinsic computed in software with the rounding
+/// direction Rounding (an i32 RoundingCode), or null if it does not depend on
+/// the rounding direction.
+static Value *lowerRounded(ConstrainedFPIntrinsic *CI, Value *Rounding,
+                           bool CanonicalNaN) {
+  Type *Ty = CI->getType();
+  Value *R = nullptr;
+  auto Arg = [&](unsigned I) { return CI->getArgOperand(I); };
+  bool Float = Ty->isFloatTy();
+  {
+    TaggingBuilder B(CI);
+    SoftFloat SF(B);
+    SF.Rounding = Rounding;
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::experimental_constrained_fadd:
+    case Intrinsic::experimental_constrained_fsub:
+      if (Float)
+        R = SF.roundedAdd(Arg(0), Arg(1), CI->getIntrinsicID() ==
+                                              Intrinsic::experimental_constrained_fsub);
+      break;
+    case Intrinsic::experimental_constrained_fmul:
+      if (Float)
+        R = SF.roundedMul(Arg(0), Arg(1));
+      break;
+    case Intrinsic::experimental_constrained_fma:
+    case Intrinsic::experimental_constrained_fmuladd:
+      if (Float)
+        R = SF.roundedFma(Arg(0), Arg(1), Arg(2));
+      break;
+    case Intrinsic::experimental_constrained_sitofp:
+    case Intrinsic::experimental_constrained_uitofp:
+      if (Float || Ty->isHalfTy())
+        R = SF.roundedFromInt(Arg(0), CI->getIntrinsicID() ==
+                                          Intrinsic::experimental_constrained_sitofp,
+                              Ty);
+      break;
+    case Intrinsic::experimental_constrained_fptrunc:
+      if (Ty->isHalfTy() && Arg(0)->getType()->isFloatTy())
+        R = SF.roundedToHalf(Arg(0));
+      break;
+    case Intrinsic::experimental_constrained_rint:
+    case Intrinsic::experimental_constrained_nearbyint:
+      R = SF.roundedIntegral(Arg(0));
+      break;
+    default:
+      break;
+    }
+  }
+  bool DivOrSqrt = Float && (CI->getIntrinsicID() ==
+                                 Intrinsic::experimental_constrained_fdiv ||
+                             CI->getIntrinsicID() ==
+                                 Intrinsic::experimental_constrained_sqrt);
+  if (!R && !DivOrSqrt)
+    return nullptr;
+  if (DivOrSqrt) {
+    // Placeholder replaced below by the correctly rounded division or root.
+    Value *X = Arg(0);
+    Value *Y = CI->getIntrinsicID() == Intrinsic::experimental_constrained_fdiv
+                   ? Arg(1)
+                   : nullptr;
+    IRBuilder<> B(CI);
+    Instruction *Stub = cast<Instruction>(B.CreateFreeze(X));
+    replaceWithSlowPath<TaggingBuilder>(
+        *Stub,
+        [&](SoftFloat &SF, IRBuilderBase &) {
+          SF.Rounding = Rounding;
+          return Y ? SF.fastDiv(X, Y) : SF.fastSqrt(X);
+        },
+        [&](SoftFloat &SF, IRBuilderBase &) {
+          SF.Rounding = Rounding;
+          return Y ? SF.div(X, Y) : SF.sqrt(X);
+        });
+    // The phi that replaced the stub is the first instruction of the block
+    // that now holds CI.
+    R = &*CI->getParent()->begin();
+  }
+  if (CanonicalNaN) {
+    IRBuilder<> B(CI);
+    APFloat NaN(Ty->getFltSemantics(),
+                APInt::getSignedMaxValue(Ty->getPrimitiveSizeInBits()));
+    R = B.CreateSelect(B.CreateFCmpUNO(R, R), ConstantFP::get(Ty, NaN), R);
+  }
+  return R;
+}
+
+bool AGXLowerFPEnv::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  const auto &ST = TM.getSubtarget<AGXSubtarget>(F);
+
+  SmallVector<IntrinsicInst *, 8> ModeOps;
+  SmallVector<ConstrainedFPIntrinsic *, 16> Constrained;
+  for (Instruction &I : instructions(F)) {
+    if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&I))
+      Constrained.push_back(CI);
+    else if (auto *II = dyn_cast<IntrinsicInst>(&I);
+             II && (II->getIntrinsicID() == Intrinsic::agx_set_fpmode ||
+                    II->getIntrinsicID() == Intrinsic::agx_get_fpmode))
+      ModeOps.push_back(II);
+  }
+  if (ModeOps.empty() && Constrained.empty())
+    return false;
+
+  // The mode as a variable, promoted to SSA values.
+  bool FloatFlush = flushes(F, APFloat::IEEEsingle());
+  bool HalfFlush = flushes(F, APFloat::IEEEhalf());
+  uint32_t Initial = RoundNearestEven | (RoundNearestEven << ModeHalfShift) |
+                     (FloatFlush ? ModeFloatFlush : 0) |
+                     (HalfFlush ? ModeHalfFlush : 0);
+  IRBuilder<> Entry(&*F.getEntryBlock().getFirstInsertionPt());
+  AllocaInst *Mode = Entry.CreateAlloca(Entry.getInt32Ty());
+  Entry.CreateStore(Entry.getInt32(Initial), Mode);
+  for (IntrinsicInst *II : ModeOps) {
+    IRBuilder<> B(II);
+    if (II->getIntrinsicID() == Intrinsic::agx_set_fpmode) {
+      B.CreateStore(II->getArgOperand(0), Mode);
+    } else {
+      Value *V = B.CreateLoad(B.getInt32Ty(), Mode);
+      II->replaceAllUsesWith(V);
+    }
+    II->eraseFromParent();
+  }
+  // The mode at each constrained intrinsic, kept through the promotion by a
+  // freeze.
+  DenseMap<ConstrainedFPIntrinsic *, FreezeInst *> ModeAt;
+  for (ConstrainedFPIntrinsic *CI : Constrained) {
+    IRBuilder<> B(CI);
+    ModeAt[CI] = cast<FreezeInst>(B.CreateFreeze(B.CreateLoad(B.getInt32Ty(), Mode)));
+  }
+  DominatorTree DT(F);
+  PromoteMemToReg({Mode}, DT);
+
+  for (ConstrainedFPIntrinsic *CI : Constrained) {
+    FreezeInst *Fr = ModeAt[CI];
+    Value *Env = Fr->getOperand(0);
+    IRBuilder<> B(CI);
+    // The rounding of the result's format and the denormal mode of the
+    // operands' format.
+    Type *ResTy = CI->getType()->getScalarType();
+    Type *OpTy = CI->getArgOperand(0)->getType()->getScalarType();
+    bool ResHalf = !ResTy->isFloatTy();
+    Value *Rounding;
+    if (std::optional<RoundingMode> RM = CI->getRoundingMode();
+        RM && *RM != RoundingMode::Dynamic)
+      Rounding = B.getInt32(roundingCode(*RM));
+    else
+      Rounding = B.CreateAnd(ResHalf ? B.CreateLShr(Env, ModeHalfShift) : Env, 3);
+    bool HasFPOperand = OpTy->isFloatingPointTy();
+    Type *FlushTy = HasFPOperand ? OpTy : ResTy;
+    bool FlushFloat = FlushTy->isFloatTy();
+    Value *Flush = B.CreateICmpNE(
+        B.CreateAnd(Env, FlushFloat ? ModeFloatFlush : ModeHalfFlush),
+        B.getInt32(0));
+    bool Default = FlushFloat ? FloatFlush : HalfFlush;
+    bool KnownDefault = isa<ConstantInt>(Flush) &&
+                        cast<ConstantInt>(Flush)->isOne() == Default;
+    bool Mismatch = !KnownDefault &&
+                    (FlushTy->isFloatTy() || FlushTy->isHalfTy()) &&
+                    !CI->getType()->isVectorTy();
+    SoftFloat SF(B);
+    // A denormal mode that differs from the function's: flush the operands
+    // explicitly (and the result below).
+    if (Mismatch)
+      for (unsigned I = 0, E = CI->getNonMetadataArgCount(); I < E; ++I)
+        if (CI->getArgOperand(I)->getType() == FlushTy)
+          CI->setArgOperand(I, B.CreateSelect(Flush,
+                                              SF.flushDenormal(CI->getArgOperand(I)),
+                                              CI->getArgOperand(I)));
+
+    bool Nearest = isa<ConstantInt>(Rounding) &&
+                   cast<ConstantInt>(Rounding)->getZExtValue() == RoundNearestEven;
+    Value *R = Nearest ? nullptr : lowerRounded(CI, Rounding, ST.hasCanonicalNaN());
+    if (!R) {
+      B.SetInsertPoint(CI);
+      R = lowerToPlain(CI, B);
+    }
+    if (!R)
+      continue;
+    if (Mismatch) {
+      if (auto *RI = dyn_cast<Instruction>(R))
+        RI->setMetadata(IEEETag, MDNode::get(F.getContext(), {}));
+      if (R->getType() == FlushTy) {
+        B.SetInsertPoint(CI);
+        R = B.CreateSelect(Flush, SF.flushDenormal(R), R);
+      }
+    }
+    R->takeName(CI);
+    CI->replaceAllUsesWith(R);
+    CI->eraseFromParent();
+  }
+  for (auto &[CI, Fr] : ModeAt) {
+    Fr->replaceAllUsesWith(Fr->getOperand(0));
+    Fr->eraseFromParent();
+  }
+  return true;
 }

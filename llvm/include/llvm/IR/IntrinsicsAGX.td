@@ -83,6 +83,29 @@ def int_agx_wait
                  IntrNoFree, ImmArg<ArgIndex<0>>]>;
 
 //===----------------------------------------------------------------------===//
+// Floating point environment.
+//===----------------------------------------------------------------------===//
+
+// There is no floating point mode register: these model one, and the AGX
+// backend turns it into SSA values before instruction selection. The mode is
+//   bits 0-1  float rounding (0 toward zero, 1 nearest even, 2 up, 3 down,
+//             like llvm.get.rounding),
+//   bits 2-3  half and double rounding,
+//   bit  4    float denormals flushed to zero,
+//   bit  5    half and double denormals flushed to zero.
+// Constrained floating point intrinsics with dynamic rounding use it. At
+// function entry, rounding is to nearest even and the denormal bits follow
+// the function's denormal_fpenv.
+def int_agx_set_fpmode
+    : Intrinsic<[], [llvm_i32_ty],
+                [IntrInaccessibleMemOnly, IntrWillReturn, IntrNoCallback,
+                 IntrNoFree]>;
+def int_agx_get_fpmode
+    : Intrinsic<[llvm_i32_ty], [],
+                [IntrInaccessibleMemOnly, IntrReadMem, IntrWillReturn,
+                 IntrNoCallback, IntrNoFree]>;
+
+//===----------------------------------------------------------------------===//
 // SIMD-group and quad-group operations.
 //===----------------------------------------------------------------------===//
 

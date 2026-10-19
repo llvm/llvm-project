@@ -740,7 +740,19 @@ SDValue AGXTargetLowering::lowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   // One Newton-Raphson step on the quotient: q += (a - b * q) * rcp(b).
   SDValue E = DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, B),
                           Q, A);
-  return DAG.getNode(ISD::FMA, DL, VT, E, R, Q);
+  SDValue Refined = DAG.getNode(ISD::FMA, DL, VT, E, R, Q);
+  // The step turns an infinite quotient into NaN (0 * inf) and a zero one
+  // into +0; those quotients are already exact.
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue AbsQ = DAG.getNode(ISD::FABS, DL, VT, Q);
+  SDValue Zero = DAG.getConstantFP(0.0, DL, VT);
+  SDValue Inf = DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), DL,
+                                  VT);
+  SDValue Exact =
+      DAG.getNode(ISD::OR, DL, CCVT,
+                  DAG.getSetCC(DL, CCVT, AbsQ, Zero, ISD::SETOEQ),
+                  DAG.getSetCC(DL, CCVT, AbsQ, Inf, ISD::SETOEQ));
+  return DAG.getSelect(DL, VT, Exact, Q, Refined);
 }
 
 /// copysign(m, s) = (m & ~sign) | (s & sign), on the bits.
