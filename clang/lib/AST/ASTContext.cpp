@@ -9818,9 +9818,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  // An overflow behavior type has the representation of its underlying type.
+  case Type::OverflowBehavior:
+    getObjCEncodingForTypeImpl(
+        cast<OverflowBehaviorType>(CT)->getUnderlyingType(), S, Options, FD,
+        NotEncodedT);
+    return;
+
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
-  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
