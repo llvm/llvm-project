@@ -94,9 +94,7 @@ public:
   using ContextSamplesTy = std::vector<FunctionSamples *>;
 
   SampleContextTracker() = default;
-  LLVM_ABI
-  SampleContextTracker(SampleProfileMap &Profiles,
-                       const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap);
+  LLVM_ABI SampleContextTracker(SampleProfileMap &Profiles);
   // Populate the FuncToCtxtProfiles map after the trie is built.
   LLVM_ABI void populateFuncToCtxtMap();
   // Query context profile for a specific callee with given name at a given
@@ -125,8 +123,6 @@ public:
                                               bool MergeContext = true);
   // Retrieve the context trie node for given profile context
   LLVM_ABI ContextTrieNode *getContextFor(const SampleContext &Context);
-  // Get real function name for a given trie node.
-  LLVM_ABI StringRef getFuncNameFor(ContextTrieNode *Node) const;
   // Mark a context profile as inlined when function is inlined.
   // This makes sure that inlined context profile will be excluded in
   // function's base profile.
@@ -216,9 +212,6 @@ private:
 
   // Map from current FunctionSample to the belonged context trie.
   DenseMap<const FunctionSamples *, ContextTrieNode *> ProfileToNodeMap;
-
-  // Map from function guid to real function names. Only used in md5 mode.
-  const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap;
 
   // Root node for context trie tree
   ContextTrieNode RootContext;
