@@ -1011,7 +1011,8 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
                                unsigned specifierLen,
-                               const TargetInfo &Target) override {
+                               const TargetInfo &Target,
+                               const llvm::TextEncodingConverter &) override {
       if (FS.getConversionSpecifier().getKind() !=
           analyze_printf::PrintfConversionSpecifier::sArg)
         return true; // continue parsing
