@@ -260,6 +260,17 @@ getReservedRegs(const MachineFunction &MF) const {
 
 bool ARMBaseRegisterInfo::
 isAsmClobberable(const MachineFunction &MF, MCRegister PhysReg) const {
+  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
+  if (!STI.hasD32())
+    // D16-D31 are only reserved because they don't exist without d32, but a
+    // function without d32 can be inlined into a function with d32.
+    //
+    // It is safe for frontends to mark these registers as clobbered.
+    // The Arm ABI does not require D16-D31 to be preserved across a function
+    // call. When the registers don't exist, the clobber is just ignored.
+    for (unsigned R = 0; R < 16; ++R)
+      if (regsOverlap(PhysReg, ARM::D16 + R))
+        return true;
   return !getReservedRegs(MF).test(PhysReg);
 }
 
@@ -969,7 +980,12 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
   //  (3) Doesn't regress any test cases (in-tree, test-suite, and SPEC)
   // In practice the SizeMultiplier will only factor in for straight line code
   // that uses a lot of NEON vectors, which isn't terribly common.
-  unsigned SizeMultiplier = MBB->size()/100;
+  // Preserve the previous treatment of bundled instructions and pseudo probes,
+  // but do not let debug instructions affect code generation.
+  auto NonDebugInstrs = instructionsWithoutDebug(
+      MBB->instr_begin(), MBB->instr_end(), /*SkipPseudoOp=*/false);
+  unsigned SizeMultiplier =
+      std::distance(NonDebugInstrs.begin(), NonDebugInstrs.end()) / 100;
   SizeMultiplier = SizeMultiplier ? SizeMultiplier : 1;
   if (It->second < NewRCWeight.WeightLimit * SizeMultiplier) {
     It->second += NewRCWeight.RegWeight;

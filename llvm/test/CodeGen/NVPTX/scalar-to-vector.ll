@@ -9,10 +9,10 @@ define void @test_insertelement_int32x2() {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
-; CHECK-NEXT:    mov.b64 {%r2, _}, %rd2;
-; CHECK-NEXT:    mov.b64 %rd1, {%r2, %r1};
+; CHECK-NEXT:    cvt.u64.u32 %rd2, 0;
+; CHECK-NEXT:    mov.b64 {%r1, _}, %rd2;
+; CHECK-NEXT:    mov.b32 %r2, 0;
+; CHECK-NEXT:    mov.b64 %rd1, {%r1, %r2};
 ; CHECK-NEXT:    bra.uni $L__BB0_1;
 ; CHECK-NEXT:  $L__BB0_1:
 ; CHECK-NEXT:    ret;

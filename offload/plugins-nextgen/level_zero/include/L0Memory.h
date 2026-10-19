@@ -210,7 +210,7 @@ class MemAllocatorTy {
     /// Map from allocated pointer to allocation information.
     std::map<void *, MemAllocInfoTy> Map;
     /// Map from target alloc kind to number of implicit arguments.
-    std::array<uint32_t, MaxMemKind> NumImplicitArgs;
+    std::array<uint32_t, MaxMemKind> NumImplicitArgs{};
 
   public:
     /// Add allocation information to the map.

@@ -352,6 +352,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
+
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
                                                std::move(Consumer));
@@ -476,6 +479,18 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                             std::unique_ptr<CompilerInstance> DCI) {
+  return createWithDevice(std::move(CI), std::move(DCI), OffloadType::CUDA);
+}
+
+llvm::Expected<std::unique_ptr<Interpreter>>
+Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI,
+                              OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -512,9 +527,15 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceCI = std::move(DCI);
 
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(),
-      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  if (Type == OffloadType::HIP)
+    DeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  else
+    DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
   if (Err)
     return std::move(Err);
@@ -566,11 +587,7 @@ Interpreter::Parse(llvm::StringRef Code) {
 
     DeviceParser->RegisterPTU(*DeviceTU);
 
-    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
-    if (!PTX)
-      return PTX.takeError();
-
-    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    llvm::Error Err = DeviceParser->GenerateOffloadBinary();
     if (Err)
       return std::move(Err);
   }
@@ -607,6 +624,10 @@ llvm::Error Interpreter::CreateExecutor() {
 
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+
+  // Propagate mllvm args so the wasm executor can restore them after each
+  // lldMain invocation (which resets all cl options for test isolation).
+  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

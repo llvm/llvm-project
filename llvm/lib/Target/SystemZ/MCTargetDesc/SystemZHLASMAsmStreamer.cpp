@@ -13,6 +13,7 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Signals.h"
 #include <sstream>
 
@@ -513,9 +514,9 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
                                                  unsigned Size, bool Parens) {
   switch (Value->getKind()) {
   case MCExpr::Constant: {
-    OS << "XL" << Size << '\'';
-    MAI->printExpr(OS, *Value);
-    OS << '\'';
+    int64_t Val = cast<MCConstantExpr>(Value)->getValue();
+    OS << "XL" << Size << '\''
+       << format_hex_no_prefix(Val, Size * 2, /*Upper=*/true) << '\'';
     return;
   }
   case MCExpr::Binary: {

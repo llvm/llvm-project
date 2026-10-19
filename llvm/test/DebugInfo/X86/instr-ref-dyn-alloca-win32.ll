@@ -21,7 +21,7 @@
 ; DYN_LOWERED-NEXT: - { srcinst: 1, srcop: 2, dstinst: 2, dstop: 6, subreg: 0 }
 ;; Test that it's operand six, and labelled.
 ; DYN_LOWERED:      CALLpcrel32 &_chkstk, implicit $esp, implicit $ssp,
-; DYN_LOWERED-SAME: implicit killed $eax, implicit $esp, implicit-def dead $eax,
+; DYN_LOWERED-SAME: implicit $eax, implicit $esp, implicit-def dead $eax,
 ; DYN_LOWERED-SAME: implicit-def $esp, implicit-def dead $eflags,
 ; DYN_LOWERED-SAME:  debug-instr-number 2,
 
