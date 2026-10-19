@@ -25,7 +25,7 @@ void llvm::checkRISCVStateCall(const Function &Caller, StringRef CalleeName) {
     return;
 
   std::string Message = (Caller.getName() + ": cannot emit call to '" +
-                         CalleeName + "' from an RISC-V attributed function.")
+                         CalleeName + "' from a RISC-V attributed function.")
                             .str();
   Caller.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
