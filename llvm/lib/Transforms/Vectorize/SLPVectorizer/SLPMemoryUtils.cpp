@@ -358,8 +358,12 @@ bool isMaskedLoadCompress(
   // shuffle cost estimation in that case.
   if (VectorGEPCost + LoadCost >= GatherCost)
     return false;
-  InstructionCost CompressCost = getShuffleCost(
-      TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CostKind, CompressMask);
+  // For REVEC the scalars are vectors, and the emitted shuffle uses the
+  // compress mask expanded to the individual elements. Cost that mask.
+  SmallVector<int> CostMask(CompressMask.begin(), CompressMask.end());
+  transformScalarShuffleIndiciesToVector(getNumElements(ScalarTy), CostMask);
+  InstructionCost CompressCost = getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                                LoadVecTy, CostKind, CostMask);
   if (!Order.empty()) {
     SmallVector<int> NewMask(Sz, PoisonMaskElem);
     for (unsigned I : seq<unsigned>(Sz)) {

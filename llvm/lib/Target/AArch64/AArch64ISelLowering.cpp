@@ -3477,8 +3477,11 @@ AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   const DebugLoc &DL = MI.getDebugLoc();
   Register ResultReg = MI.getOperand(0).getReg();
-  if (MF->getRegInfo().use_empty(ResultReg)) {
-    // Nothing to do. Pseudo erased below.
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  if (MRI.use_nodbg_empty(ResultReg)) {
+    // There are no non-debug uses, so no state read is needed. ResultReg will
+    // have no definition, so make its debug uses undef.
+    MRI.markUsesInDebugValueAsUndef(ResultReg);
   } else if (Subtarget->hasSME()) {
     BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
         .addImm(AArch64SysReg::SVCR)
@@ -31276,9 +31279,9 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   // Create uzp1, extract_high and extract_low.
   if (TruncHighOpVT != UZP1VT)
-    TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
+    TruncHighOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncHighOp);
   if (TruncLowOpVT != UZP1VT)
-    TruncLowOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncLowOp);
+    TruncLowOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncLowOp);
 
   SDValue UZP1 =
       DAG.getNode(AArch64ISD::UZP1, DL, UZP1VT, TruncLowOp, TruncHighOp);

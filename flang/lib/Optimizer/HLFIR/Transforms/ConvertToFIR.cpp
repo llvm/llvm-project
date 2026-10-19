@@ -443,6 +443,11 @@ public:
     firDeclareOp->setDiscardableAttrs(
         declareOp->getDiscardableAttrDictionary());
 
+    // Give line 0 to code that materializes the HLFIR base.
+    if (auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>())
+      loc = mlir::FileLineColLoc::get(fileLoc.getFilename(), /*line=*/0,
+                                      /*column=*/0);
+
     auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;
     mlir::Type hlfirBaseType = declareOp.getBase().getType();
