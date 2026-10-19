@@ -4481,12 +4481,11 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   Builder.SetInsertPoint(overflowBB);
 
   // Get the overflow handler.
-  llvm::Type *Int8Ty = CGF.Int8Ty;
-  llvm::Type *argTypes[] = { CGF.Int64Ty, CGF.Int64Ty, Int8Ty, Int8Ty };
-  llvm::FunctionType *handlerTy =
-      llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
+  ASTContext &Ctx = CGF.getContext();
+  QualType ArgTys[] = {Ctx.LongLongTy, Ctx.LongLongTy, Ctx.UnsignedCharTy,
+                       Ctx.UnsignedCharTy};
   llvm::FunctionCallee handler =
-      CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+      CGF.CGM.CreateRuntimeFunction(Ctx.LongLongTy, ArgTys, *handlerName);
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.

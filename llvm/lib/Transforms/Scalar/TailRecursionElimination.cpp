@@ -1103,7 +1103,7 @@ bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
 
   if (UncondBrInst *BI = dyn_cast<UncondBrInst>(TI)) {
     BasicBlock *Succ = BI->getSuccessor();
-    ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrDbg(true));
+    ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrPseudoProbe());
 
     if (!Ret)
       return false;
@@ -1148,7 +1148,8 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool MadeChange = false;
   MadeChange |= markTails(Opts, F, ORE, PSI, BFI);
 

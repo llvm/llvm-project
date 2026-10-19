@@ -67,7 +67,8 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 
 static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
                              const LowerAllowCheckPass::Options &Opts) {
-  const InstrumentationOptions &CLOpts = InstrumentationOptions::Global;
+  const InstrumentationOptions &CLOpts =
+      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
   // Lazy analysis getters.
   auto GetBFI = [&AM, &F, BFI = (BlockFrequencyInfo *)nullptr]() mutable
       -> const BlockFrequencyInfo & {
@@ -194,8 +195,10 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
              : PreservedAnalyses::all();
 }
 
-bool LowerAllowCheckPass::IsRequested() {
-  const InstrumentationOptions &CLOpts = InstrumentationOptions::Global;
+bool LowerAllowCheckPass::isRequested(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  const InstrumentationOptions &CLOpts =
+      LibraryOptions.get<InstrumentationOptions>();
   return CLOpts.lower_allow_check_random_rate ||
          CLOpts.lower_allow_check_percentile_cutoff_hot;
 }

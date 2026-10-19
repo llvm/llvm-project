@@ -640,14 +640,29 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   return res;
 }
 
-static bool memberCallExpressionCanThrow(const Expr *e) {
-  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
-    if (const auto *proto =
-            ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
-          proto->canThrow() == CT_Cannot)
-        return false;
-  return true;
+static bool functionCanThrow(const FunctionDecl *d) {
+  const auto *proto = d->getType()->getAs<FunctionProtoType>();
+  if (!proto)
+    return true;
+  return !isNoexceptExceptionSpec(proto->getExceptionSpecType()) ||
+         proto->canThrow() != CT_Cannot;
+}
+
+static bool stmtCanThrow(const Stmt *s) {
+  if (const auto *ce = dyn_cast<CallExpr>(s)) {
+    const FunctionDecl *callee = ce->getDirectCallee();
+    if (!callee || functionCanThrow(callee))
+      return true;
+  }
+
+  // The destructor call of a bound temporary is not among the children.
+  if (const auto *te = dyn_cast<CXXBindTemporaryExpr>(s))
+    if (functionCanThrow(te->getTemporary()->getDestructor()))
+      return true;
+
+  return llvm::any_of(s->children(), [](const Stmt *child) {
+    return child && stmtCanThrow(child);
+  });
 }
 
 // Given a suspend expression which roughly looks like:
@@ -673,6 +688,12 @@ struct LValueOrRValue {
 };
 } // namespace
 
+static bool isResumeExprInTryCatch(const CGCoroData &coro, cir::AwaitKind kind,
+                                   const CoroutineSuspendExpr &s) {
+  return coro.exceptionHandler && kind == cir::AwaitKind::Init &&
+         stmtCanThrow(s.getResumeExpr());
+}
+
 static LValueOrRValue
 emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                       CoroutineSuspendExpr const &s, cir::AwaitKind kind,
@@ -687,10 +708,9 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   // Exception handling requires additional IR. We avoid generating it when
-  // the resume expression is a direct call to a 'noexcept' member function.
-  const bool resumeInTry = coro.exceptionHandler &&
-                           kind == cir::AwaitKind::Init &&
-                           memberCallExpressionCanThrow(s.getResumeExpr());
+  // neither the await_resume() call nor the destruction of its result can
+  // throw.
+  const bool resumeInTry = isResumeExprInTryCatch(coro, kind, s);
 
   // If the await_resume() result needs a destructor, take over its
   // destruction, unless the destination owns it. The try/catch path destroys
@@ -782,8 +802,10 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                   resumeEHVar(resumeEHVar.getPointer()) {}
 
             mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+              CIRGenFunction::RunCleanupsScope resumeCleanups(cgf);
               mlir::LogicalResult res =
                   cgf.emitStmt(tryStmt.getTryBlock(), /*useCurrentScope=*/true);
+              resumeCleanups.forceCleanup();
               cgf.getBuilder().createFlagStore(loc, true, resumeEHVar);
               return res;
             }
