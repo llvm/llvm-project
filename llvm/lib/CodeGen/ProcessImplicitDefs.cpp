@@ -167,8 +167,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   // If we have added an undef flag to all uses (i.e. we have found a redefining
   // MI or there are no successors), we can erase the IMPLICIT_DEF.
   if (ImplicitDefIsDead || (SearchedWholeBlock && MBB->succ_empty())) {
-    MI->eraseFromParent();
     LLVM_DEBUG(dbgs() << "Deleting implicit-def: " << *MI);
+    MI->eraseFromParent();
     return;
   }
 
