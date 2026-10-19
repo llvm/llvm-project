@@ -12,6 +12,7 @@
 #include <__algorithm/min.h>
 #include <__algorithm/mismatch.h>
 #include <__config>
+#include <__execution/is_execution_policy.h>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
@@ -19,7 +20,6 @@
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/backends/statpart/basis.h>
-#include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
