@@ -58,16 +58,16 @@ bb:
   %mul9 = mul nuw nsw i32 %sub, %sub7
   %mul10 = mul nuw nsw i32 %and, %sub7
   %trunc = trunc i32 %mul9 to i16
-  %insertelement = insertelement <vscale x 8 x i16> undef, i16 %trunc, i64 0
+  %insertelement = insertelement <vscale x 8 x i16> poison, i16 %trunc, i64 0
   %shufflevector = shufflevector <vscale x 8 x i16> %insertelement, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %trunc11 = trunc i32 %mul10 to i16
-  %insertelement12 = insertelement <vscale x 8 x i16> undef, i16 %trunc11, i64 0
+  %insertelement12 = insertelement <vscale x 8 x i16> poison, i16 %trunc11, i64 0
   %shufflevector13 = shufflevector <vscale x 8 x i16> %insertelement12, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %trunc14 = trunc i32 %mul to i16
-  %insertelement15 = insertelement <vscale x 8 x i16> undef, i16 %trunc14, i64 0
+  %insertelement15 = insertelement <vscale x 8 x i16> poison, i16 %trunc14, i64 0
   %shufflevector16 = shufflevector <vscale x 8 x i16> %insertelement15, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %trunc17 = trunc i32 %mul8 to i16
-  %insertelement18 = insertelement <vscale x 8 x i16> undef, i16 %trunc17, i64 0
+  %insertelement18 = insertelement <vscale x 8 x i16> poison, i16 %trunc17, i64 0
   %shufflevector19 = shufflevector <vscale x 8 x i16> %insertelement18, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   br label %bb20
 
