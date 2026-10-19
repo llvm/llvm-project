@@ -2,8 +2,6 @@
 # RUN: llc -mtriple=aarch64-unknown-linux-gnu -run-pass=finalize-isel -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  target triple = "aarch64-unknown-linux-gnu"
-
   define void @debug_uses() !dbg !5 {
   entry:
     ret void, !dbg !10
