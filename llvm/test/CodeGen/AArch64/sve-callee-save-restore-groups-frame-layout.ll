@@ -3,7 +3,7 @@
 
 ; This test is to check callee-saved ZPR group spills use the expected frame layout.
 ; A ZPR group must be stored in reverse register order e.g (z(n) -> fi(n+1)), (z(n+1) -> fi(n))
-; And incorrect frame-setup and frame-destroy ordering can silently miscompile.
+; This also checks that the correct ordering of frame-setup and frame-destroy is used
 
 define aarch64_sve_vector_pcs void @single_pair_zpr_spills() {
   ; CHECK-LABEL: name: single_pair_zpr_spills
