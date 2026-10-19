@@ -349,11 +349,9 @@ define { <8 x i16>, <8 x i16> } @foo_ld2_v8i16(<8 x i1> %mask, ptr %p) {
 define { <4 x float>, <4 x float> } @foo_ld2_v4f32(<4 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    trn1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    zip1 v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
