@@ -217,9 +217,6 @@ body:             |
     SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0
 
 ...
-
-# FIXME: SP should be set to 0 before the tail call.
-
 ---
 name:            entry_reset_sp_before_chain_call
 tracksRegLiveness: true
@@ -240,14 +237,13 @@ body:             |
     ; GCN-LABEL: name: entry_reset_sp_before_chain_call
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: $sgpr32 = S_MOV_B32 8
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    ; GCN-NEXT: $sgpr32 = frame-destroy S_MOV_B32 0
     ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0
     renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0
 
 ...
-
 ---
 name:            entry_no_frame_reset_sp
 tracksRegLiveness: true
@@ -265,14 +261,13 @@ body:             |
     ; GCN-LABEL: name: entry_no_frame_reset_sp
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: $sgpr32 = S_MOV_B32 0
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    ; GCN-NEXT: $sgpr32 = frame-destroy S_MOV_B32 0
     ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0
     renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0
 
 ...
-
 ---
 name:            entry_call_and_chain_call
 tracksRegLiveness: true
@@ -294,6 +289,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @gfx_callee + 4, target-flags(amdgpu-gotprel32-hi) @gfx_callee + 12, implicit-def dead $scc
     ; GCN-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @gfx_callee, csr_amdgpu_si_gfx
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
+    ; GCN-NEXT: $sgpr32 = frame-destroy S_MOV_B32 0
     ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs
     renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @gfx_callee + 4, target-flags(amdgpu-gotprel32-hi) @gfx_callee + 12, implicit-def dead $scc
     dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @gfx_callee, csr_amdgpu_si_gfx

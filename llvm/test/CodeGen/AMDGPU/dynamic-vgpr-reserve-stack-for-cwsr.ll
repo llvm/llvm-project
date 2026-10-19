@@ -137,7 +137,6 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
   ret void
 }
 
-; FIXME: The SP points past this frame's locals - we should reset it before the chain call.
 define amdgpu_cs void @with_chain_call() #0 {
 ; CHECK-TRUE16-LABEL: with_chain_call:
 ; CHECK-TRUE16:       ; %bb.0:
@@ -149,9 +148,9 @@ define amdgpu_cs void @with_chain_call() #0 {
 ; CHECK-TRUE16-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s0, 0
-; CHECK-TRUE16-NEXT:    s_cselect_b32 s32, 0x1c8, 8
 ; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-TRUE16-NEXT:    s_mov_b32 exec_lo, -1
 ; CHECK-TRUE16-NEXT:    s_setpc_b64 s[2:3]
 ;
@@ -165,9 +164,9 @@ define amdgpu_cs void @with_chain_call() #0 {
 ; CHECK-FAKE16-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s0, 0
-; CHECK-FAKE16-NEXT:    s_cselect_b32 s32, 0x1c8, 8
 ; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-FAKE16-NEXT:    s_mov_b32 exec_lo, -1
 ; CHECK-FAKE16-NEXT:    s_setpc_b64 s[2:3]
   %local = alloca i32, addrspace(5)
@@ -180,14 +179,14 @@ define amdgpu_cs void @with_chain_call() #0 {
 define amdgpu_cs void @with_chain_call_no_local() #0 {
 ; CHECK-LABEL: with_chain_call_no_local:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v8, 0
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; CHECK-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-NEXT:    v_mov_b32_e32 v8, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
 ; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
-; CHECK-NEXT:    s_cselect_b32 s32, 0x1c0, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_mov_b32 exec_lo, -1
 ; CHECK-NEXT:    s_setpc_b64 s[2:3]
   call void(ptr, i32, i32, i32, i32, ...) @llvm.amdgcn.cs.chain(ptr @chain_callee, i32 -1, i32 inreg 0, i32 0, i32 0)
@@ -208,9 +207,9 @@ define amdgpu_cs void @with_chain_call_dvgpr() #0 {
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s0, 0
-; CHECK-TRUE16-NEXT:    s_cselect_b32 s32, 0x1c8, 8
 ; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-TRUE16-NEXT:    s_alloc_vgpr 64
 ; CHECK-TRUE16-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[2:3]
 ; CHECK-TRUE16-NEXT:    s_cselect_b32 exec_lo, -1, -1
@@ -228,9 +227,9 @@ define amdgpu_cs void @with_chain_call_dvgpr() #0 {
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s0, 0
-; CHECK-FAKE16-NEXT:    s_cselect_b32 s32, 0x1c8, 8
 ; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-FAKE16-NEXT:    s_alloc_vgpr 64
 ; CHECK-FAKE16-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[2:3]
 ; CHECK-FAKE16-NEXT:    s_cselect_b32 exec_lo, -1, -1
