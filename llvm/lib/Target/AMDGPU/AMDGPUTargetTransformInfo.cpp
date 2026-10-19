@@ -1630,7 +1630,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
       unsigned EndIndex = Index + NumInsertElts;
       unsigned BeginSubIdx = Index % EltsPerReg;
       unsigned EndSubIdx = EndIndex % EltsPerReg;
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
 
       if (BeginSubIdx != 0) {
         // Need to shift the inserted vector into place. The cost is the number
@@ -1677,7 +1677,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
       //
       // For each destination register, derive the cost of obtaining it based
       // on the number of source registers that feed into it.
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += EltsPerReg) {
         SmallVector<int, 4> Regs;
         bool Aligned = true;
@@ -1699,7 +1699,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
             Regs.push_back(Reg);
         }
         if (Regs.size() >= 2)
-          Cost += static_cast<unsigned>(Regs.size() - 1);
+          Cost += Regs.size() - 1;
         else if (!Aligned)
           Cost += 1;
       }
