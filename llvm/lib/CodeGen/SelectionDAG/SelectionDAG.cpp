@@ -6879,7 +6879,7 @@ static bool hasSpecialNszSemantics(unsigned Opcode) {
 bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   assert(Use.getValueType().isFloatingPoint());
   const SDNode *User = Use.getUser();
-  const auto Opcode = (ISD::NodeType)User->getOpcode();
+  unsigned Opcode = User->getOpcode();
   if (User->getFlags().hasNoSignedZeros() && !hasSpecialNszSemantics(Opcode))
     return true;
 
@@ -6919,8 +6919,8 @@ bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
     bool IsMin = Opcode == ISD::FMINNUM || Opcode == ISD::FMINNUM_IEEE ||
                  Opcode == ISD::FMINIMUM || Opcode == ISD::FMINIMUMNUM ||
                  Opcode == ISD::PSEUDO_FMIN;
-    FPClassTest AlwaysBeatsZero = fcNone;
-    AlwaysBeatsZero = IsMin ? fcNegNormal | fcNegInf : fcPosNormal | fcPosInf;
+    FPClassTest AlwaysBeatsZero =
+        IsMin ? fcNegNormal | fcNegInf : fcPosNormal | fcPosInf;
     SDValue Other = User->getOperand(1 - OperandNo);
     KnownFPClass Known = computeKnownFPClass(Other, ~AlwaysBeatsZero);
     return Known.isKnownNever(~AlwaysBeatsZero);
