@@ -26,11 +26,18 @@ Cache::Cache(LiveIntervals &LIS, LiveRegMatrix &Matrix,
              MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
              const RegisterClassInfo &RegClassInfo, unsigned MaxFreedRegs)
     : LIS(LIS), Matrix(Matrix), MRI(MRI), TRI(TRI), RegClassInfo(RegClassInfo),
-      MaxFreedRegs(MaxFreedRegs) {}
+      MaxFreedRegs(MaxFreedRegs),
+      IndexEpochSeen(LIS.getSlotIndexes()->getIndexEpoch()) {}
 
 void Cache::clear() {
   Entries.clear();
   Buckets.clear();
+  IndexEpochSeen = LIS.getSlotIndexes()->getIndexEpoch();
+}
+
+void Cache::dropIfRenumbered() {
+  if (LIS.getSlotIndexes()->getIndexEpoch() != IndexEpochSeen)
+    clear();
 }
 
 bool Cache::isSaturated(unsigned VirtRegId) const {
@@ -84,6 +91,9 @@ void Cache::removeFromBuckets(unsigned VirtReg, const Entry &E) {
 }
 
 void Cache::erase(unsigned VirtRegId) {
+  // Renumbering stales every bucket key. Dropping the cache removes entries
+  // without searching those keys.
+  dropIfRenumbered();
   auto It = Entries.find(VirtRegId);
   if (It == Entries.end())
     return;
@@ -116,6 +126,7 @@ bool Cache::isFree(const LiveInterval &LI, MCRegister Reg) const {
 void Cache::remember(const LiveInterval &LI, bool HintOnly) {
   if (LI.empty())
     return;
+  dropIfRenumbered();
   unsigned Id = LI.reg().id();
   auto It = Entries.find(Id);
   if (It != Entries.end())
@@ -130,6 +141,7 @@ void Cache::remember(const LiveInterval &LI, bool HintOnly) {
 }
 
 Reuse Cache::reuse(const LiveInterval &LI, MCRegister FromReg) {
+  dropIfRenumbered();
   auto It = Entries.find(LI.reg().id());
   if (It == Entries.end())
     return Reuse::Miss;
@@ -173,6 +185,12 @@ void Cache::noteUnassign(const LiveInterval &Unassigned, MCRegister PhysReg,
     clear();
     return;
   }
+  // Bucket keys are distances captured at remember time. After a renumber
+  // they no longer cover the freed segments, so drop every failure and let
+  // the next query scan instead of keeping a stale false.
+  dropIfRenumbered();
+  if (Entries.empty())
+    return;
   MCPhysReg Freed = PhysReg.id();
   for (const LiveRange::Segment &Seg : Unassigned.segments) {
     forEachBucket(Seg.start, Seg.end, [&](unsigned Bucket) {

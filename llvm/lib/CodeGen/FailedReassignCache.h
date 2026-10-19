@@ -10,7 +10,10 @@
 // interferes with Intf. Assignments cannot create a new free register, so the
 // failure stays valid until an unassign frees one across Intf's live range.
 // Entries are indexed by slot-index buckets so an unassign updates only the
-// intervals that overlap the freed range.
+// intervals that overlap the freed range. renumberIndexes() and packIndexes()
+// rewrite the numbers behind existing SlotIndex handles without changing
+// equality, which makes the bucket keys stale. The cache drops every entry when
+// that happens rather than trying to rebuild the index.
 //
 //===----------------------------------------------------------------------===//
 
@@ -62,8 +65,9 @@ public:
   /// Look up a prior canReassign failure for \p LI (currently on \p FromReg).
   ///
   /// \returns
-  /// - Miss: no entry, fingerprint mismatch (entry erased), saturated, or
-  ///   HintOnly with pending frees. Caller must run the full order scan.
+  /// - Miss: no entry, fingerprint mismatch (entry erased), saturated,
+  ///   HintOnly with pending frees, or slot indexes were renumbered since the
+  ///   entry was recorded (the cache is dropped). Caller runs the full scan.
   /// - HitFalse: entry is valid and FreedRegs is empty; failure still holds.
   /// - RecheckFalse: FreedRegs were tested (and aliases in the order); none
   ///   are free. FreedRegs is cleared so later queries can HitFalse.
@@ -71,8 +75,9 @@ public:
   Reuse reuse(const LiveInterval &LI, MCRegister FromReg);
 
   /// Notify that \p PhysReg was unassigned from \p Unassigned. Overlapping
-  /// entries append \p PhysReg to FreedRegs; \p ClearAllReferencingSegments
-  /// (or an empty/invalid free) clears the whole cache.
+  /// entries append \p PhysReg to FreedRegs. \p ClearAllReferencingSegments,
+  /// an empty or invalid free, or a slot-index renumber since the entries
+  /// were recorded clears the whole cache.
   void noteUnassign(const LiveInterval &Unassigned, MCRegister PhysReg,
                     bool ClearAllReferencingSegments);
 
@@ -109,8 +114,10 @@ private:
   /// Reverse index from slot-index bucket (`index >> BucketShift`) to the
   /// virtreg ids whose cached ranges cover that bucket. Unassign walks only
   /// the buckets that overlap the freed segments, then checks real overlap
-  /// before updating an entry.
+  /// before updating an entry. Valid only while SlotIndexes::getIndexEpoch()
+  /// equals IndexEpochSeen; a mismatch drops the cache.
   DenseMap<unsigned, SmallVector<unsigned, 8>> Buckets;
+  unsigned IndexEpochSeen = 0;
 
   /// Lazy bitvectors of `RegClassInfo.getOrder(RC)`, one per register class
   /// touched by a recheck. Used to test whether a freed physreg (or alias)
@@ -118,6 +125,9 @@ private:
   DenseMap<const TargetRegisterClass *, BitVector> OrderBits;
 
   static bool hasFingerprint(const Entry &E, const LiveInterval &LI);
+  /// Drop every entry when slot indexes have been renumbered since the last
+  /// insert. Bucket keys are distances, so they would miss freed ranges.
+  void dropIfRenumbered();
   void forEachBucket(SlotIndex Begin, SlotIndex End,
                      function_ref<void(unsigned)> Fn) const;
   void addToBuckets(unsigned VirtReg, const Entry &E);

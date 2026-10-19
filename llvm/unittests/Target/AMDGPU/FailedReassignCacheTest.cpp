@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -81,6 +82,35 @@ public:
     }
 
     void unassign(unsigned VirtIdx) { Matrix.unassign(LI(VirtIdx)); }
+
+    /// Insert enough instructions that packIndexes() moves \p LI into a
+    /// different slot-index bucket, and pack.
+    void shiftAcrossBucket(const LiveInterval &Range) {
+      SlotIndexes &Indexes = *LIS.getSlotIndexes();
+      SlotIndex Zero = Indexes.getZeroIndex();
+      unsigned Before = static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
+                        reassign::Cache::BucketShift;
+
+      MachineBasicBlock &MBB = MF.front();
+      const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+      DebugLoc DL;
+      MachineBasicBlock::iterator InsertPt = MBB.begin();
+      // One bucket is 1 << BucketShift index units. Packed instructions are
+      // SlotIndex::InstrDist apart, so this many new entries advance every
+      // later index by one bucket.
+      constexpr unsigned NumInsert =
+          (1u << reassign::Cache::BucketShift) / SlotIndex::InstrDist;
+      for (unsigned I = 0; I < NumInsert; ++I) {
+        MachineInstr *MI =
+            BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
+        LIS.InsertMachineInstrInMaps(*MI);
+      }
+      Indexes.packIndexes();
+
+      unsigned After = static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
+                       reassign::Cache::BucketShift;
+      EXPECT_NE(Before, After);
+    }
 
     void installListener() {
       Matrix.setUnassignListener(
@@ -289,6 +319,35 @@ TEST_F(FailedReassignCacheTest, DuplicateFreeIsIgnored) {
     F.Cache.noteUnassign(F.LI(1), F.vgpr(1), false);
     F.Cache.noteUnassign(F.LI(1), F.vgpr(1), false);
     EXPECT_EQ(F.Cache.freedRegs(LI.reg().id()).size(), 1u);
+  });
+}
+
+TEST_F(FailedReassignCacheTest, RenumberDropsCache) {
+  runWithFixture(64, [&](Fixture &F) {
+    const LiveInterval &LI = F.LI(0);
+    F.Cache.remember(LI, /*HintOnly=*/false);
+    F.shiftAcrossBucket(LI);
+
+    // The fingerprint would still match, but bucket keys are stale. Consulting
+    // the cache drops it instead of returning HitFalse.
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_TRUE(F.Cache.empty());
+  });
+
+  runWithFixture(64, [&](Fixture &F) {
+    F.installListener();
+    for (unsigned I = 1; I < NumKeepVGPRs; ++I)
+      F.assign(I, I);
+
+    const LiveInterval &LI = F.LI(0);
+    F.Cache.remember(LI, /*HintOnly=*/false);
+    F.shiftAcrossBucket(LI);
+
+    // The unassign searches the new buckets and would miss this entry. Drop
+    // the cache instead of leaving a stale failure.
+    F.unassign(1);
+    EXPECT_TRUE(F.Cache.empty());
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
   });
 }
 
