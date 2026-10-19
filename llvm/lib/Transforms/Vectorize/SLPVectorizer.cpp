@@ -991,7 +991,7 @@ public:
             !LI2->isSimple())
           return CheckSameEntryOrFail();
 
-        std::optional<int64_t> Dist = getPointersDiff(
+        std::optional<int64_t> Dist = R.getPointersDiff(
             LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
             LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
         if (!Dist || *Dist == 0) {
@@ -2067,6 +2067,17 @@ public:
 
   /// Checks if the instruction is marked for deletion.
   bool isDeleted(Instruction *I) const { return DeletedInstructions.count(I); }
+
+  /// llvm::getPointersDiff through a cache shared by everything that works on
+  /// this tree. Building and pricing trees asks for the distance between the
+  /// same pointers over and over.
+  std::optional<int64_t>
+  getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
+                  const DataLayout &DL, ScalarEvolution &SE,
+                  bool StrictCheck = false, bool CheckType = true) const {
+    return PtrsDiffCache.get(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE, StrictCheck,
+                             CheckType);
+  }
 
   /// Checks if the value is used only by the assume-like intrinsics.
   bool isEphemeralValue(const Value *V) const { return EphValues.contains(V); }
@@ -3612,6 +3623,9 @@ private:
   /// can happen if a new instruction is allocated at the same address as a
   /// previously deleted instruction.
   DenseSet<Instruction *> DeletedInstructions;
+
+  /// Distances between pointers, see getPointersDiff().
+  mutable PointersDiffCache PtrsDiffCache;
 
   /// Set of the instruction, being analyzed already for reductions.
   SmallPtrSet<Instruction *, 16> AnalyzedReductionsRoots;
@@ -6249,7 +6263,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               return areAllUsersVectorized(cast<Instruction>(V),
                                            UserIgnoreList);
             },
-            Opts.slp_revec))
+            Opts.slp_revec, PtrsDiffCache))
       return LoadsState::CompressVectorize;
     // Widened strided loads must be legal for every group, not just the first
     // pointer, which may have a stronger alignment than the remaining loads.
@@ -6520,7 +6534,8 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   BoUpSLP::OrdersType Order;
   if (!LoadEntriesToVectorize.contains(TE.Idx) &&
       clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE,
-                             Opts.slp_recursion_max_depth, Order))
+                             Opts.slp_recursion_max_depth, Order,
+                             PtrsDiffCache))
     return std::move(Order);
   return std::nullopt;
 }
@@ -8337,7 +8352,7 @@ static void gatherPossiblyVectorizableLoads(
                                      R.Opts.slp_recursion_max_depth) &&
              "Expected loads with the same type, same parent and same "
              "underlying pointer.");
-      std::optional<int64_t> Dist = getPointersDiff(
+      std::optional<int64_t> Dist = R.getPointersDiff(
           LI->getType(), LI->getPointerOperand(), Data.front().first->getType(),
           Data.front().first->getPointerOperand(), DL, SE,
           /*StrictCheck=*/true);
@@ -8375,10 +8390,10 @@ static void gatherPossiblyVectorizableLoads(
               LI->getType() != Data.front().first->getType())
             continue;
           std::optional<int64_t> Dist =
-              getPointersDiff(LI->getType(), LI->getPointerOperand(),
-                              Data.front().first->getType(),
-                              Data.front().first->getPointerOperand(), DL, SE,
-                              /*StrictCheck=*/true);
+              R.getPointersDiff(LI->getType(), LI->getPointerOperand(),
+                                Data.front().first->getType(),
+                                Data.front().first->getPointerOperand(), DL, SE,
+                                /*StrictCheck=*/true);
           if (!Dist)
             continue;
           SmallSet<int64_t, 4> DataDists;
@@ -9695,7 +9710,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (Opts.slp_enable_masked_stores &&
           isMaskedStoreCompress(VL, PointerOps, CurrentOrder, *TTI, *DL, *SE,
                                 CommonAlignment, ReuseShuffleIndices,
-                                StoreVecTy)) {
+                                StoreVecTy, PtrsDiffCache)) {
         SPtrInfo.Ty = StoreVecTy;
         return TreeEntry::ExpandVectorize;
       }
@@ -15432,7 +15447,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
-      if (Value *V1 = InVectors.front().Vec.dyn_cast<Value *>()) {
+      if (Value *V1 = dyn_cast<Value *>(InVectors.front().Vec)) {
         VF = std::max(VF, getVF(V1));
       } else {
         const auto *E = cast<const TreeEntry *>(InVectors.front().Vec);
@@ -15523,7 +15538,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 TTI::VectorInstrContext Ctx2 = TTI::VectorInstrContext::None) {
     ShuffleCostBuilder Builder(TTI, CostKind);
     SmallVector<int> CommonMask(Mask);
-    Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
+    Value *V1 = dyn_cast<Value *>(P1), *V2 = dyn_cast_if_present<Value *>(P2);
     unsigned CommonVF = Mask.size();
     InstructionCost ExtraCost = 0;
     auto GetNodeMinBWAffectedCost = [&](const TreeEntry &E,
@@ -15980,7 +15995,7 @@ public:
       transformMaskAfterShuffle(CommonMask, CommonMask);
       VF = std::max<unsigned>(VF, CommonMask.size());
     } else if (const auto *InTE =
-                   InVectors.front().Vec.dyn_cast<const TreeEntry *>()) {
+                   dyn_cast<const TreeEntry *>(InVectors.front().Vec)) {
       VF = std::max(VF, InTE->getVectorFactor());
     } else {
       VF = std::max(VF, cast<FixedVectorType>(
@@ -17734,7 +17749,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy);
+            IsMasked, InterleaveFactor, CompressMask, LoadVecTy, PtrsDiffCache);
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
         Align CommonAlignment = LI0->getAlign();
@@ -27076,6 +27091,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
+  // The cached distances refer to the code just rewritten.
+  PtrsDiffCache.clear();
 
   // The new vector code may capture pointers that were previously not captured
   // (e.g. the pointer operands of a masked gather), so the capture results

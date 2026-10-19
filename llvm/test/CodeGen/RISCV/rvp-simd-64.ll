@@ -2830,23 +2830,9 @@ define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.wb a2, a0
-; RV64-NEXT:    ppairoe.w a0, a0, a0
-; RV64-NEXT:    ppairoe.w a3, a1, a1
-; RV64-NEXT:    pwcvtu.wb a0, a0
-; RV64-NEXT:    psext.h.b a2, a2
-; RV64-NEXT:    psext.h.b a0, a0
-; RV64-NEXT:    pwcvtu.wb a1, a1
-; RV64-NEXT:    pwcvtu.wb a3, a3
-; RV64-NEXT:    pmul.w.h11 a4, a0, a3
-; RV64-NEXT:    pmul.w.h00 a0, a0, a3
-; RV64-NEXT:    pmul.w.h11 a3, a2, a1
-; RV64-NEXT:    pmul.w.h00 a1, a2, a1
-; RV64-NEXT:    ppaire.h a0, a0, a4
-; RV64-NEXT:    ppaire.h a1, a1, a3
-; RV64-NEXT:    psrli.h a1, a1, 8
-; RV64-NEXT:    psrli.h a0, a0, 8
-; RV64-NEXT:    unzip8p a0, a1, a0
+; RV64-NEXT:    pmulsu.h.b11 a2, a0, a1
+; RV64-NEXT:    pmulsu.h.b00 a0, a0, a1
+; RV64-NEXT:    ppairo.b a0, a0, a2
 ; RV64-NEXT:    ret
   %a_ext = sext <8 x i8> %a to <8 x i16>
   %b_ext = zext <8 x i8> %b to <8 x i16>
@@ -2867,23 +2853,9 @@ define <8 x i8> @test_pmulhsu_b_commuted(<8 x i8> %a, <8 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.wb a2, a0
-; RV64-NEXT:    ppairoe.w a0, a0, a0
-; RV64-NEXT:    ppairoe.w a3, a1, a1
-; RV64-NEXT:    pwcvtu.wb a0, a0
-; RV64-NEXT:    pwcvtu.wb a1, a1
-; RV64-NEXT:    pwcvtu.wb a3, a3
-; RV64-NEXT:    psext.h.b a1, a1
-; RV64-NEXT:    psext.h.b a3, a3
-; RV64-NEXT:    pmul.w.h11 a4, a0, a3
-; RV64-NEXT:    pmul.w.h00 a0, a0, a3
-; RV64-NEXT:    pmul.w.h11 a3, a2, a1
-; RV64-NEXT:    pmul.w.h00 a1, a2, a1
-; RV64-NEXT:    ppaire.h a0, a0, a4
-; RV64-NEXT:    ppaire.h a1, a1, a3
-; RV64-NEXT:    psrli.h a1, a1, 8
-; RV64-NEXT:    psrli.h a0, a0, 8
-; RV64-NEXT:    unzip8p a0, a1, a0
+; RV64-NEXT:    pmulsu.h.b11 a2, a1, a0
+; RV64-NEXT:    pmulsu.h.b00 a0, a1, a0
+; RV64-NEXT:    ppairo.b a0, a0, a2
 ; RV64-NEXT:    ret
   %a_ext = zext <8 x i8> %a to <8 x i16>
   %b_ext = sext <8 x i8> %b to <8 x i16>
