@@ -6,15 +6,25 @@
 
 ; The issue's basic pattern: insert a register value into the third byte.
 define void @issue_i32_middle(ptr %p, i32 %x) {
-; CHECK-LABEL: define void @issue_i32_middle(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 8
-; CHECK-NEXT:    [[SHIFTED:%.*]] = shl i32 [[X]], 16
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[SHIFTED]], 16711680
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -16711681
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 8
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @issue_i32_middle(
+; LE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; LE-NEXT:    [[SHIFTED:%.*]] = shl i32 [[X]], 16
+; LE-NEXT:    [[INSERT:%.*]] = and i32 [[SHIFTED]], 16711680
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 16
+; LE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; LE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 2
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @issue_i32_middle(
+; BE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; BE-NEXT:    [[SHIFTED:%.*]] = shl i32 [[X]], 16
+; BE-NEXT:    [[INSERT:%.*]] = and i32 [[SHIFTED]], 16711680
+; BE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 16
+; BE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; BE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 1
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 8
   %shifted = shl i32 %x, 16
@@ -26,14 +36,20 @@ define void @issue_i32_middle(ptr %p, i32 %x) {
 }
 
 define void @narrow_i16_low(ptr %p, i16 %x) {
-; CHECK-LABEL: define void @narrow_i16_low(
-; CHECK-SAME: ptr [[P:%.*]], i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i16, ptr [[P]], align 4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i16 [[X]], 255
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i16 [[OLD]], -256
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i16 [[INSERT]], [[CLEAR]]
-; CHECK-NEXT:    store i16 [[NEW]], ptr [[P]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @narrow_i16_low(
+; LE-SAME: ptr [[P:%.*]], i16 [[X:%.*]]) {
+; LE-NEXT:    [[INSERT:%.*]] = and i16 [[X]], 255
+; LE-NEXT:    [[TMP1:%.*]] = trunc i16 [[INSERT]] to i8
+; LE-NEXT:    store i8 [[TMP1]], ptr [[P]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @narrow_i16_low(
+; BE-SAME: ptr [[P:%.*]], i16 [[X:%.*]]) {
+; BE-NEXT:    [[INSERT:%.*]] = and i16 [[X]], 255
+; BE-NEXT:    [[TMP1:%.*]] = trunc i16 [[INSERT]] to i8
+; BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; BE-NEXT:    store i8 [[TMP1]], ptr [[TMP2]], align 1
+; BE-NEXT:    ret void
 ;
   %old = load i16, ptr %p, align 4
   %insert = and i16 %x, 255
@@ -44,14 +60,22 @@ define void @narrow_i16_low(ptr %p, i16 %x) {
 }
 
 define void @narrow_i64_high(ptr %p, i64 %x) {
-; CHECK-LABEL: define void @narrow_i64_high(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[INSERT:%.*]] = and i64 [[X]], -72057594037927936
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i64 [[OLD]], 72057594037927935
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i64 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i64 [[NEW]], ptr [[P]], align 8
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @narrow_i64_high(
+; LE-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; LE-NEXT:    [[INSERT:%.*]] = and i64 [[X]], -72057594037927936
+; LE-NEXT:    [[TMP1:%.*]] = lshr i64 [[INSERT]], 56
+; LE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; LE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 7
+; LE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 1
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @narrow_i64_high(
+; BE-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; BE-NEXT:    [[INSERT:%.*]] = and i64 [[X]], -72057594037927936
+; BE-NEXT:    [[TMP1:%.*]] = lshr i64 [[INSERT]], 56
+; BE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
+; BE-NEXT:    store i8 [[TMP2]], ptr [[P]], align 8
+; BE-NEXT:    ret void
 ;
   %old = load i64, ptr %p, align 8
   %insert = and i64 %x, -72057594037927936
@@ -62,15 +86,25 @@ define void @narrow_i64_high(ptr %p, i64 %x) {
 }
 
 define void @narrow_i128_middle(ptr %p, i128 %x) {
-; CHECK-LABEL: define void @narrow_i128_middle(
-; CHECK-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i128, ptr [[P]], align 16
-; CHECK-NEXT:    [[SHIFTED:%.*]] = shl nuw i128 [[X]], 40
-; CHECK-NEXT:    [[INSERT:%.*]] = and i128 [[SHIFTED]], 280375465082880
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i128 [[OLD]], -280375465082881
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i128 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i128 [[NEW]], ptr [[P]], align 16
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @narrow_i128_middle(
+; LE-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) {
+; LE-NEXT:    [[SHIFTED:%.*]] = shl nuw i128 [[X]], 40
+; LE-NEXT:    [[INSERT:%.*]] = and i128 [[SHIFTED]], 280375465082880
+; LE-NEXT:    [[TMP1:%.*]] = lshr i128 [[INSERT]], 40
+; LE-NEXT:    [[TMP2:%.*]] = trunc i128 [[TMP1]] to i8
+; LE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 5
+; LE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 1
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @narrow_i128_middle(
+; BE-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) {
+; BE-NEXT:    [[SHIFTED:%.*]] = shl nuw i128 [[X]], 40
+; BE-NEXT:    [[INSERT:%.*]] = and i128 [[SHIFTED]], 280375465082880
+; BE-NEXT:    [[TMP1:%.*]] = lshr i128 [[INSERT]], 40
+; BE-NEXT:    [[TMP2:%.*]] = trunc i128 [[TMP1]] to i8
+; BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 10
+; BE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 2
+; BE-NEXT:    ret void
 ;
   %old = load i128, ptr %p, align 16
   %shifted = shl nuw i128 %x, 40
@@ -83,14 +117,23 @@ define void @narrow_i128_middle(ptr %p, i128 %x) {
 
 ; Both the OR and AND may have their operands commuted.
 define void @commuted(ptr %p, i32 %x) {
-; CHECK-LABEL: define void @commuted(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 65280, [[X]]
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 -65281, [[OLD]]
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[INSERT]], [[CLEAR]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @commuted(
+; LE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; LE-NEXT:    [[INSERT:%.*]] = and i32 65280, [[X]]
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 8
+; LE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; LE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 1
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @commuted(
+; BE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; BE-NEXT:    [[INSERT:%.*]] = and i32 65280, [[X]]
+; BE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 8
+; BE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; BE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 2
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 4
   %insert = and i32 65280, %x
@@ -585,16 +628,26 @@ define void @overlapping_byte_store(ptr %p, i32 %x, i8 %clobber) {
 
 ; A store of Old restores the needed value, even after an earlier clobber.
 define void @restored_word(ptr %p, i32 %x, i32 %clobber) {
-; CHECK-LABEL: define void @restored_word(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[CLOBBER:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    store i32 [[CLOBBER]], ptr [[P]], align 4
-; CHECK-NEXT:    store i32 [[OLD]], ptr [[P]], align 4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -256
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @restored_word(
+; LE-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[CLOBBER:%.*]]) {
+; LE-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
+; LE-NEXT:    store i32 [[CLOBBER]], ptr [[P]], align 4
+; LE-NEXT:    store i32 [[OLD]], ptr [[P]], align 4
+; LE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
+; LE-NEXT:    [[TMP1:%.*]] = trunc i32 [[INSERT]] to i8
+; LE-NEXT:    store i8 [[TMP1]], ptr [[P]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @restored_word(
+; BE-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[CLOBBER:%.*]]) {
+; BE-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
+; BE-NEXT:    store i32 [[CLOBBER]], ptr [[P]], align 4
+; BE-NEXT:    store i32 [[OLD]], ptr [[P]], align 4
+; BE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
+; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[INSERT]] to i8
+; BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; BE-NEXT:    store i8 [[TMP1]], ptr [[TMP2]], align 1
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 4
   store i32 %clobber, ptr %p, align 4
@@ -611,15 +664,22 @@ declare void @read_only(ptr) memory(read)
 ; A read-only call does not clobber the word. It need not be nounwind: the
 ; replacement store stays after the call, so an exception bypasses either store.
 define void @read_only_call(ptr %p, i32 %x) {
-; CHECK-LABEL: define void @read_only_call(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    call void @read_only(ptr [[P]])
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -256
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @read_only_call(
+; LE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; LE-NEXT:    call void @read_only(ptr [[P]])
+; LE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
+; LE-NEXT:    [[TMP1:%.*]] = trunc i32 [[INSERT]] to i8
+; LE-NEXT:    store i8 [[TMP1]], ptr [[P]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @read_only_call(
+; BE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; BE-NEXT:    call void @read_only(ptr [[P]])
+; BE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
+; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[INSERT]] to i8
+; BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; BE-NEXT:    store i8 [[TMP1]], ptr [[TMP2]], align 1
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 4
   call void @read_only(ptr %p)
@@ -632,16 +692,24 @@ define void @read_only_call(ptr %p, i32 %x) {
 
 ; The availability utility can skip a provably non-overlapping store.
 define void @nonoverlapping_store(ptr %p, i32 %x, i32 %other) {
-; CHECK-LABEL: define void @nonoverlapping_store(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[OTHER:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i32 [[OTHER]], ptr [[Q]], align 4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -256
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @nonoverlapping_store(
+; LE-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[OTHER:%.*]]) {
+; LE-NEXT:    [[Q:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    store i32 [[OTHER]], ptr [[Q]], align 4
+; LE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
+; LE-NEXT:    [[TMP1:%.*]] = trunc i32 [[INSERT]] to i8
+; LE-NEXT:    store i8 [[TMP1]], ptr [[P]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @nonoverlapping_store(
+; BE-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[OTHER:%.*]]) {
+; BE-NEXT:    [[Q:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    store i32 [[OTHER]], ptr [[Q]], align 4
+; BE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
+; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[INSERT]] to i8
+; BE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; BE-NEXT:    store i8 [[TMP1]], ptr [[TMP2]], align 1
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 4
   %q = getelementptr inbounds i8, ptr %p, i64 4
@@ -655,14 +723,23 @@ define void @nonoverlapping_store(ptr %p, i32 %x, i32 %other) {
 
 ; The byte GEP preserves the address space and does not strengthen alignment.
 define void @address_space(ptr addrspace(1) %p, i32 %x) {
-; CHECK-LABEL: define void @address_space(
-; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr addrspace(1) [[P]], align 1
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 16711680
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -16711681
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr addrspace(1) [[P]], align 1
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @address_space(
+; LE-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
+; LE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 16711680
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 16
+; LE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i64 2
+; LE-NEXT:    store i8 [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @address_space(
+; BE-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
+; BE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 16711680
+; BE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 16
+; BE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i64 1
+; BE-NEXT:    store i8 [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr addrspace(1) %p, align 1
   %insert = and i32 %x, 16711680
@@ -675,14 +752,23 @@ define void @address_space(ptr addrspace(1) %p, i32 %x) {
 ; Select the tbaa.struct field at the new byte address, preserve alias scopes,
 ; and discard the old whole-word tbaa.struct description.
 define void @aa_metadata(ptr %p, i32 %x) {
-; CHECK-LABEL: define void @aa_metadata(
-; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 16711680
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -16711681
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4, !tbaa.struct [[TBAA_STRUCT0:![0-9]+]], !alias.scope [[META10:![0-9]+]], !noalias [[META13:![0-9]+]]
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @aa_metadata(
+; LE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; LE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 16711680
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 16
+; LE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; LE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 2, !tbaa [[BYTE2_TBAA0:![0-9]+]], !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @aa_metadata(
+; BE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
+; BE-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 16711680
+; BE-NEXT:    [[TMP1:%.*]] = lshr i32 [[INSERT]], 16
+; BE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; BE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; BE-NEXT:    store i8 [[TMP2]], ptr [[TMP3]], align 1, !tbaa [[BYTE1_TBAA0:![0-9]+]], !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
+; BE-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 4
   %insert = and i32 %x, 16711680
@@ -714,56 +800,33 @@ define void @aa_metadata(ptr %p, i32 %x) {
 ;.
 ; BE: attributes #[[ATTR0:[0-9]+]] = { memory(read) }
 ;.
-; X86: [[TBAA_STRUCT0]] = !{i64 0, i64 1, [[META1:![0-9]+]], i64 1, i64 1, [[META4:![0-9]+]], i64 2, i64 1, [[META6:![0-9]+]], i64 3, i64 1, [[META8:![0-9]+]]}
-; X86: [[META1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; X86: [[META2]] = !{!"byte0", [[META3:![0-9]+]], i64 0}
-; X86: [[META3]] = !{!"root"}
-; X86: [[META4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-; X86: [[META5]] = !{!"byte1", [[META3]], i64 0}
-; X86: [[META6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-; X86: [[META7]] = !{!"byte2", [[META3]], i64 0}
-; X86: [[META8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-; X86: [[META9]] = !{!"byte3", [[META3]], i64 0}
-; X86: [[META10]] = !{[[META11:![0-9]+]]}
-; X86: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]], !"scope"}
-; X86: [[META12]] = distinct !{[[META12]], i1 false, !"domain"}
-; X86: [[META13]] = !{[[META14:![0-9]+]]}
-; X86: [[META14]] = distinct !{[[META14]], [[META12]], !"other"}
+; X86: [[BYTE2_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; X86: [[META1]] = !{!"byte2", [[META2:![0-9]+]], i64 0}
+; X86: [[META2]] = !{!"root"}
+; X86: [[META3]] = !{[[META4:![0-9]+]]}
+; X86: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]], !"scope"}
+; X86: [[META5]] = distinct !{[[META5]], i1 false, !"domain"}
+; X86: [[META6]] = !{[[META7:![0-9]+]]}
+; X86: [[META7]] = distinct !{[[META7]], [[META5]], !"other"}
 ;.
-; AARCH64: [[TBAA_STRUCT0]] = !{i64 0, i64 1, [[META1:![0-9]+]], i64 1, i64 1, [[META4:![0-9]+]], i64 2, i64 1, [[META6:![0-9]+]], i64 3, i64 1, [[META8:![0-9]+]]}
-; AARCH64: [[META1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; AARCH64: [[META2]] = !{!"byte0", [[META3:![0-9]+]], i64 0}
-; AARCH64: [[META3]] = !{!"root"}
-; AARCH64: [[META4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-; AARCH64: [[META5]] = !{!"byte1", [[META3]], i64 0}
-; AARCH64: [[META6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-; AARCH64: [[META7]] = !{!"byte2", [[META3]], i64 0}
-; AARCH64: [[META8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-; AARCH64: [[META9]] = !{!"byte3", [[META3]], i64 0}
-; AARCH64: [[META10]] = !{[[META11:![0-9]+]]}
-; AARCH64: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]], !"scope"}
-; AARCH64: [[META12]] = distinct !{[[META12]], i1 false, !"domain"}
-; AARCH64: [[META13]] = !{[[META14:![0-9]+]]}
-; AARCH64: [[META14]] = distinct !{[[META14]], [[META12]], !"other"}
+; AARCH64: [[BYTE2_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; AARCH64: [[META1]] = !{!"byte2", [[META2:![0-9]+]], i64 0}
+; AARCH64: [[META2]] = !{!"root"}
+; AARCH64: [[META3]] = !{[[META4:![0-9]+]]}
+; AARCH64: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]], !"scope"}
+; AARCH64: [[META5]] = distinct !{[[META5]], i1 false, !"domain"}
+; AARCH64: [[META6]] = !{[[META7:![0-9]+]]}
+; AARCH64: [[META7]] = distinct !{[[META7]], [[META5]], !"other"}
 ;.
-; BE: [[TBAA_STRUCT0]] = !{i64 0, i64 1, [[META1:![0-9]+]], i64 1, i64 1, [[META4:![0-9]+]], i64 2, i64 1, [[META6:![0-9]+]], i64 3, i64 1, [[META8:![0-9]+]]}
-; BE: [[META1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; BE: [[META2]] = !{!"byte0", [[META3:![0-9]+]], i64 0}
-; BE: [[META3]] = !{!"root"}
-; BE: [[META4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-; BE: [[META5]] = !{!"byte1", [[META3]], i64 0}
-; BE: [[META6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-; BE: [[META7]] = !{!"byte2", [[META3]], i64 0}
-; BE: [[META8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-; BE: [[META9]] = !{!"byte3", [[META3]], i64 0}
-; BE: [[META10]] = !{[[META11:![0-9]+]]}
-; BE: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]], !"scope"}
-; BE: [[META12]] = distinct !{[[META12]], i1 false, !"domain"}
-; BE: [[META13]] = !{[[META14:![0-9]+]]}
-; BE: [[META14]] = distinct !{[[META14]], [[META12]], !"other"}
+; BE: [[BYTE1_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; BE: [[META1]] = !{!"byte1", [[META2:![0-9]+]], i64 0}
+; BE: [[META2]] = !{!"root"}
+; BE: [[META3]] = !{[[META4:![0-9]+]]}
+; BE: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]], !"scope"}
+; BE: [[META5]] = distinct !{[[META5]], i1 false, !"domain"}
+; BE: [[META6]] = !{[[META7:![0-9]+]]}
+; BE: [[META7]] = distinct !{[[META7]], [[META5]], !"other"}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; AARCH64: {{.*}}
-; BE: {{.*}}
-; LE: {{.*}}
 ; X86: {{.*}}
