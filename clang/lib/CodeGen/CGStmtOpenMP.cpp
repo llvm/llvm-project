@@ -7635,10 +7635,34 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     if (IsOffloadEntry) {
       OMPLoopScope PreInitScope(CGF, D);
       // Emit calculation of the iterations count.
-      llvm::Value *NumIterations = CGF.EmitScalarExpr(D.getNumIterations());
-      NumIterations = CGF.Builder.CreateIntCast(NumIterations, CGF.Int64Ty,
-                                                /*isSigned=*/false);
-      return NumIterations;
+      auto EmitNumIterations = [&CGF, &D]() {
+        return CGF.Builder.CreateIntCast(
+            CGF.EmitScalarExpr(D.getNumIterations()), CGF.Int64Ty,
+            /*isSigned=*/false);
+      };
+      const LangOptions &LangOpts = CGF.getLangOpts();
+      if (!LangOpts.OpenMPTeamSubscription ||
+          !LangOpts.OpenMPThreadSubscription)
+        return EmitNumIterations();
+
+      // A no-loop kernel's grid is sized from this count, so an empty loop
+      // must report 0 rather than a wrapped count.
+      bool CondConstant;
+      if (CGF.ConstantFoldsToSimpleInteger(D.getPreCond(), CondConstant))
+        return CondConstant ? EmitNumIterations() : CGF.Builder.getInt64(0);
+      Address TC = CGF.CreateMemTemp(
+          CGF.getContext().getIntTypeForBitwidth(64, /*Signed=*/0),
+          ".omp.tripcount");
+      CGF.Builder.CreateStore(CGF.Builder.getInt64(0), TC);
+      llvm::BasicBlock *ThenBB = CGF.createBasicBlock("omp.tripcount.then");
+      llvm::BasicBlock *ContBB = CGF.createBasicBlock("omp.tripcount.end");
+      emitPreCond(CGF, D, D.getPreCond(), ThenBB, ContBB,
+                  CGF.getProfileCount(&D));
+      CGF.EmitBlock(ThenBB);
+      CGF.Builder.CreateStore(EmitNumIterations(), TC);
+      CGF.EmitBranch(ContBB);
+      CGF.EmitBlock(ContBB);
+      return CGF.Builder.CreateLoad(TC);
     }
     return nullptr;
   };

@@ -1068,7 +1068,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   if (Config.isTargetDevice())
     applyDeclareTargetGlobalReplacements();
 
-  if (Config.EmitLLVMUsedMetaInfo.value_or(false)) {
+  if (!Fn && Config.EmitLLVMUsedMetaInfo.value_or(false)) {
     std::vector<WeakTrackingVH> LLVMCompilerUsed = {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);

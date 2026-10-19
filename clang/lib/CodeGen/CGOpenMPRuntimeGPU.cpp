@@ -727,6 +727,17 @@ checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
       LD.getSingleClause<OMPDistScheduleClause>())
     return nullptr;
 
+  for (const auto *C : LD.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() != OMPD_unknown &&
+        C->getNameModifier() != OMPD_parallel &&
+        C->getNameModifier() != OMPD_teams)
+      continue;
+    bool CondVal;
+    if (!C->getCondition()->EvaluateAsBooleanCondition(CondVal, Ctx) ||
+        !CondVal)
+      return nullptr;
+  }
+
   if (const auto *TTD =
           dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&LD))
     return TTD->hasCancel() ? nullptr : &LD;
@@ -772,7 +783,6 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
   IsInTTDRegion = false;
-  NoLoopDirective = nullptr;
 }
 
 void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
@@ -791,15 +801,15 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags =
+      IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
+             : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+
   NoLoopDirective =
       IsSPMD ? checkAndGetNoLoopDirective(CGM.getContext(), D) : nullptr;
   if (NoLoopDirective)
     Attrs.ExecFlags =
         llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-  else
-    Attrs.ExecFlags =
-        IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
-               : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
 
@@ -893,7 +903,6 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
   IsInTTDRegion = false;
-  NoLoopDirective = nullptr;
 }
 
 void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
