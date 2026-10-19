@@ -9,17 +9,13 @@
 define { i64, i64 } @compute_min(ptr noundef nonnull align 2 dereferenceable(16) %x, ptr noundef nonnull align 2 dereferenceable(16) %y) {
 ; CHECK-LABEL: @compute_min(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PT1_4:%.*]] = getelementptr inbounds nuw i8, ptr [[X:%.*]], i64 8
-; CHECK-NEXT:    [[PT0_4:%.*]] = getelementptr inbounds nuw i8, ptr [[Y:%.*]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[Y]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[X]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i16>, ptr [[PT0_4]], align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[PT1_4]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = tail call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP6]], <4 x i16> [[TMP7]])
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
 ; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[TMP11]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]
 ;

@@ -12,6 +12,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -51,7 +52,7 @@ const char *SBEnvironment::Get(const char *name) {
   if (entry == m_opaque_up->end()) {
     return nullptr;
   }
-  return ConstString(entry->second).AsCString("");
+  return StringPool::GetSystemPool().Intern(entry->second);
 }
 
 const char *SBEnvironment::GetNameAtIndex(size_t index) {
@@ -59,8 +60,8 @@ const char *SBEnvironment::GetNameAtIndex(size_t index) {
 
   if (index >= GetNumValues())
     return nullptr;
-  return ConstString(std::next(m_opaque_up->begin(), index)->first())
-      .AsCString("");
+  return StringPool::GetSystemPool().Intern(
+      std::next(m_opaque_up->begin(), index)->first());
 }
 
 const char *SBEnvironment::GetValueAtIndex(size_t index) {
@@ -68,8 +69,8 @@ const char *SBEnvironment::GetValueAtIndex(size_t index) {
 
   if (index >= GetNumValues())
     return nullptr;
-  return ConstString(std::next(m_opaque_up->begin(), index)->second)
-      .AsCString("");
+  return StringPool::GetSystemPool().Intern(
+      std::next(m_opaque_up->begin(), index)->second);
 }
 
 bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -stop-after=irtranslator %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -stop-after=ir-translator %s -o - | FileCheck %s
 
 ; Test that extends correctly translate to G_[ZS]EXT. The translator will never
 ; emit a G_SEXT_INREG.

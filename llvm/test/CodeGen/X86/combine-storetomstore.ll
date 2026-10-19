@@ -132,80 +132,72 @@ define void @test_masked_store_success_v4i64(<4 x i64> %x, ptr %ptr, <4 x i1> %m
 define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_success_v4f16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlq $48, %xmm0, %xmm2
-; AVX-NEXT:    vpextrw $0, %xmm2, %edx
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm2
-; AVX-NEXT:    vpextrw $0, %xmm2, %ecx
-; AVX-NEXT:    movzwl 2(%rdi), %eax
-; AVX-NEXT:    vpextrb $4, %xmm1, %esi
-; AVX-NEXT:    testb $1, %sil
-; AVX-NEXT:    cmovnel %ecx, %eax
-; AVX-NEXT:    vpextrb $8, %xmm1, %ecx
-; AVX-NEXT:    testb $1, %cl
-; AVX-NEXT:    jne .LBB4_1
-; AVX-NEXT:  # %bb.2:
-; AVX-NEXT:    movl 4(%rdi), %ecx
-; AVX-NEXT:    jmp .LBB4_3
-; AVX-NEXT:  .LBB4_1:
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vpextrw $0, %xmm2, %ecx
-; AVX-NEXT:  .LBB4_3:
-; AVX-NEXT:    movzwl 6(%rdi), %esi
-; AVX-NEXT:    vpextrb $12, %xmm1, %r8d
-; AVX-NEXT:    testb $1, %r8b
-; AVX-NEXT:    cmovnel %edx, %esi
-; AVX-NEXT:    vmovd %xmm1, %edx
-; AVX-NEXT:    testb $1, %dl
-; AVX-NEXT:    jne .LBB4_4
-; AVX-NEXT:  # %bb.5:
-; AVX-NEXT:    movl (%rdi), %edx
-; AVX-NEXT:    jmp .LBB4_6
-; AVX-NEXT:  .LBB4_4:
-; AVX-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX-NEXT:  .LBB4_6:
-; AVX-NEXT:    movw %dx, (%rdi)
-; AVX-NEXT:    movw %si, 6(%rdi)
-; AVX-NEXT:    movw %cx, 4(%rdi)
-; AVX-NEXT:    movw %ax, 2(%rdi)
+; AVX-NEXT:    vpinsrw $0, 6(%rdi), %xmm0, %xmm2
+; AVX-NEXT:    vpinsrw $0, 4(%rdi), %xmm0, %xmm3
+; AVX-NEXT:    vpinsrw $0, 2(%rdi), %xmm0, %xmm4
+; AVX-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm5
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    andl $1, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    vmovd %eax, %xmm6
+; AVX-NEXT:    vpblendvb %xmm6, %xmm0, %xmm5, %xmm5
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm6
+; AVX-NEXT:    vpextrb $4, %xmm1, %eax
+; AVX-NEXT:    andl $1, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    vmovd %eax, %xmm7
+; AVX-NEXT:    vpblendvb %xmm7, %xmm6, %xmm4, %xmm4
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; AVX-NEXT:    vpextrb $8, %xmm1, %eax
+; AVX-NEXT:    andl $1, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    vmovd %eax, %xmm7
+; AVX-NEXT:    vpblendvb %xmm7, %xmm6, %xmm3, %xmm3
+; AVX-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; AVX-NEXT:    vpextrb $12, %xmm1, %eax
+; AVX-NEXT:    andl $1, %eax
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpblendvb %xmm1, %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpextrw $0, %xmm0, 6(%rdi)
+; AVX-NEXT:    vpextrw $0, %xmm3, 4(%rdi)
+; AVX-NEXT:    vpextrw $0, %xmm4, 2(%rdi)
+; AVX-NEXT:    vpextrw $0, %xmm5, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_masked_store_success_v4f16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm2
-; AVX2-NEXT:    vpextrw $0, %xmm2, %edx
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm2
-; AVX2-NEXT:    vpextrw $0, %xmm2, %ecx
-; AVX2-NEXT:    movzwl 2(%rdi), %eax
-; AVX2-NEXT:    vpextrb $4, %xmm1, %esi
-; AVX2-NEXT:    testb $1, %sil
-; AVX2-NEXT:    cmovnel %ecx, %eax
-; AVX2-NEXT:    vpextrb $8, %xmm1, %ecx
-; AVX2-NEXT:    testb $1, %cl
-; AVX2-NEXT:    jne .LBB4_1
-; AVX2-NEXT:  # %bb.2:
-; AVX2-NEXT:    movl 4(%rdi), %ecx
-; AVX2-NEXT:    jmp .LBB4_3
-; AVX2-NEXT:  .LBB4_1:
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpextrw $0, %xmm2, %ecx
-; AVX2-NEXT:  .LBB4_3:
-; AVX2-NEXT:    movzwl 6(%rdi), %esi
-; AVX2-NEXT:    vpextrb $12, %xmm1, %r8d
-; AVX2-NEXT:    testb $1, %r8b
-; AVX2-NEXT:    cmovnel %edx, %esi
-; AVX2-NEXT:    vmovd %xmm1, %edx
-; AVX2-NEXT:    testb $1, %dl
-; AVX2-NEXT:    jne .LBB4_4
-; AVX2-NEXT:  # %bb.5:
-; AVX2-NEXT:    movl (%rdi), %edx
-; AVX2-NEXT:    jmp .LBB4_6
-; AVX2-NEXT:  .LBB4_4:
-; AVX2-NEXT:    vpextrw $0, %xmm0, %edx
-; AVX2-NEXT:  .LBB4_6:
-; AVX2-NEXT:    movw %dx, (%rdi)
-; AVX2-NEXT:    movw %si, 6(%rdi)
-; AVX2-NEXT:    movw %cx, 4(%rdi)
-; AVX2-NEXT:    movw %ax, 2(%rdi)
+; AVX2-NEXT:    vpinsrw $0, 6(%rdi), %xmm0, %xmm2
+; AVX2-NEXT:    vpinsrw $0, 4(%rdi), %xmm0, %xmm3
+; AVX2-NEXT:    vpinsrw $0, 2(%rdi), %xmm0, %xmm4
+; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm5
+; AVX2-NEXT:    vmovd %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    vmovd %eax, %xmm6
+; AVX2-NEXT:    vpblendvb %xmm6, %xmm0, %xmm5, %xmm5
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm6
+; AVX2-NEXT:    vpextrb $4, %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    vmovd %eax, %xmm7
+; AVX2-NEXT:    vpblendvb %xmm7, %xmm6, %xmm4, %xmm4
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpextrb $8, %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    vmovd %eax, %xmm7
+; AVX2-NEXT:    vpblendvb %xmm7, %xmm6, %xmm3, %xmm3
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; AVX2-NEXT:    vpextrb $12, %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vpblendvb %xmm1, %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, 6(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm3, 4(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm4, 2(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm5, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_masked_store_success_v4f16:

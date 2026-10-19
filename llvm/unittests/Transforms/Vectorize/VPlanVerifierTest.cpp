@@ -12,13 +12,10 @@
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
-
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> VerifyEachVPlan;
-} // namespace llvm
 
 using VPVerifierTest = VPlanTestBase;
 
@@ -487,9 +484,9 @@ TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  bool OrigVerifyEachVPlan = VerifyEachVPlan;
-  VerifyEachVPlan = true;
-  llvm::scope_exit _([&]() { VerifyEachVPlan = OrigVerifyEachVPlan; });
+  const char *Args[] = {"prog", "-vplan-verify-each"};
+  ASSERT_TRUE(
+      cl::parseCommandLineOptions(C.getLibraryOptions(), Args, "", &nulls()));
   auto NopPass = [](VPlan &Plan) {};
   EXPECT_DEATH(
       { VPlanTransforms::runPass("simplifyRecipes", NopPass, Plan); },

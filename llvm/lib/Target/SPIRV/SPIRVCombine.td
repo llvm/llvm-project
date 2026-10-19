@@ -8,23 +8,24 @@
 include "llvm/Target/GlobalISel/Combine.td"
 
 
+// length(x - y) -> distance(x, y)
 def vector_length_sub_to_distance_lowering : GICombineRule <
   (defs root:$root),
-  (match (wip_match_opcode G_INTRINSIC):$root,
-          [{ return Helper.matchLengthToDistance(*${root}); }]),
-  (apply [{ Helper.applySPIRVDistance(*${root}); }])
+  (match (G_FSUB $sub, $x, $y),
+         (int_spv_length $dst, $sub):$root),
+  (apply (int_spv_distance $dst, $x, $y))
 >;
 
 def vector_fdiv_length_to_normalize_lowering : GICombineRule <
   (defs root:$root),
-  (match (wip_match_opcode G_FDIV):$root,
+  (match (G_FDIV $dst, $src1, $src2):$root,
           [{ return Helper.matchFDivToNormalize(*${root}); }]),
   (apply [{ Helper.applySPIRVNormalize(*${root}); }])
 >;
 
 def vector_select_to_faceforward_lowering : GICombineRule <
   (defs root:$root),
-  (match (wip_match_opcode G_SELECT):$root,
+  (match (G_SELECT $dst, $cond, $t, $f):$root,
           [{ return Helper.matchSelectToFaceForward(*${root}); }]),
   (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
 >;
@@ -32,17 +33,13 @@ def vector_select_to_faceforward_lowering : GICombineRule <
 def matrix_transpose_lowering
     : GICombineRule<
           (defs root:$root),
-          (match (wip_match_opcode G_INTRINSIC):$root,
-              [{ return mi_match(*${root}, MRI,
-                                 m_GIntrinsic<Intrinsic::matrix_transpose>()); }]),
+          (match (int_matrix_transpose $dst, $matrix, $rows, $cols):$root),
           (apply [{ Helper.applyMatrixTranspose(*${root}); }])>;
 
 def matrix_multiply_lowering
     : GICombineRule<
           (defs root:$root),
-          (match (wip_match_opcode G_INTRINSIC):$root,
-              [{ return mi_match(*${root}, MRI,
-                                 m_GIntrinsic<Intrinsic::matrix_multiply>()); }]),
+          (match (int_matrix_multiply $dst, $a, $b, $m, $n, $k):$root),
           (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
 
 def SPIRVPreLegalizerCombiner

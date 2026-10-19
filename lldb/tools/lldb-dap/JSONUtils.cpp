@@ -275,7 +275,7 @@ VariableDescription::VariableDescription(
 
   type_obj = val.GetType();
   const llvm::StringRef type_name = type_obj.GetDisplayTypeName();
-  display_type_name = type_name.empty() ? NO_TYPENAME : type_name;
+  display_type_name = type_name;
 
   // Only format hex/default if there is no existing special format.
   if (const lldb::Format current_format = val.GetFormat();

@@ -156,76 +156,76 @@ define void @narrow_to_bfloat(<4 x i8> %a, <4 x i12> %b, <4 x i16> %c, <4 x i17>
 
 define void @narrow_scalars_to_bfloat(i8 %a, i12 %b, i16 %c, i17 %d, i31 %e) {
 ; GFX6-LABEL: 'narrow_scalars_to_bfloat'
-; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %as = sitofp i8 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i8 %a to bfloat
 ; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %au = uitofp i8 %a to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %bs = sitofp i12 %b to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %bu = uitofp i12 %b to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %cs = sitofp i16 %c to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %cu = uitofp i16 %c to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %ds = sitofp i17 %d to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %du = uitofp i17 %d to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %es = sitofp i31 %e to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %eu = uitofp i31 %e to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %bs = sitofp i12 %b to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %bu = uitofp i12 %b to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %cs = sitofp i16 %c to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %cu = uitofp i16 %c to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %ds = sitofp i17 %d to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %du = uitofp i17 %d to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %es = sitofp i31 %e to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %eu = uitofp i31 %e to bfloat
 ;
 ; GFX8-LABEL: 'narrow_scalars_to_bfloat'
 ; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i8 %a to bfloat
 ; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %au = uitofp i8 %a to bfloat
-; GFX8:  Cost Model: Found an estimated cost of 1 for instruction: %bs = sitofp i12 %b to bfloat
-; GFX8:  Cost Model: Found an estimated cost of 1 for instruction: %bu = uitofp i12 %b to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 10 for instruction: %bs = sitofp i12 %b to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %bu = uitofp i12 %b to bfloat
 ; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %cs = sitofp i16 %c to bfloat
 ; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %cu = uitofp i16 %c to bfloat
-; GFX8:  Cost Model: Found an estimated cost of 1 for instruction: %ds = sitofp i17 %d to bfloat
-; GFX8:  Cost Model: Found an estimated cost of 1 for instruction: %du = uitofp i17 %d to bfloat
-; GFX8:  Cost Model: Found an estimated cost of 1 for instruction: %es = sitofp i31 %e to bfloat
-; GFX8:  Cost Model: Found an estimated cost of 1 for instruction: %eu = uitofp i31 %e to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %ds = sitofp i17 %d to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %du = uitofp i17 %d to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %es = sitofp i31 %e to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %eu = uitofp i31 %e to bfloat
 ;
 ; GFX9-LABEL: 'narrow_scalars_to_bfloat'
 ; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %as = sitofp i8 %a to bfloat
 ; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %au = uitofp i8 %a to bfloat
-; GFX9:  Cost Model: Found an estimated cost of 1 for instruction: %bs = sitofp i12 %b to bfloat
-; GFX9:  Cost Model: Found an estimated cost of 1 for instruction: %bu = uitofp i12 %b to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 9 for instruction: %bs = sitofp i12 %b to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %bu = uitofp i12 %b to bfloat
 ; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %cs = sitofp i16 %c to bfloat
 ; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %cu = uitofp i16 %c to bfloat
-; GFX9:  Cost Model: Found an estimated cost of 1 for instruction: %ds = sitofp i17 %d to bfloat
-; GFX9:  Cost Model: Found an estimated cost of 1 for instruction: %du = uitofp i17 %d to bfloat
-; GFX9:  Cost Model: Found an estimated cost of 1 for instruction: %es = sitofp i31 %e to bfloat
-; GFX9:  Cost Model: Found an estimated cost of 1 for instruction: %eu = uitofp i31 %e to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %ds = sitofp i17 %d to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %du = uitofp i17 %d to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %es = sitofp i31 %e to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %eu = uitofp i31 %e to bfloat
 ;
 ; NOSDWA-LABEL: 'narrow_scalars_to_bfloat'
-; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %as = sitofp i8 %a to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i8 %a to bfloat
 ; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %au = uitofp i8 %a to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 1 for instruction: %bs = sitofp i12 %b to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 1 for instruction: %bu = uitofp i12 %b to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %cs = sitofp i16 %c to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %cu = uitofp i16 %c to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 1 for instruction: %ds = sitofp i17 %d to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 1 for instruction: %du = uitofp i17 %d to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 1 for instruction: %es = sitofp i31 %e to bfloat
-; NOSDWA:  Cost Model: Found an estimated cost of 1 for instruction: %eu = uitofp i31 %e to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 10 for instruction: %bs = sitofp i12 %b to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %bu = uitofp i12 %b to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %cs = sitofp i16 %c to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %cu = uitofp i16 %c to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %ds = sitofp i17 %d to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %du = uitofp i17 %d to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %es = sitofp i31 %e to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %eu = uitofp i31 %e to bfloat
 ;
 ; GFX950-LABEL: 'narrow_scalars_to_bfloat'
 ; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %as = sitofp i8 %a to bfloat
 ; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %au = uitofp i8 %a to bfloat
-; GFX950:  Cost Model: Found an estimated cost of 1 for instruction: %bs = sitofp i12 %b to bfloat
-; GFX950:  Cost Model: Found an estimated cost of 1 for instruction: %bu = uitofp i12 %b to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 4 for instruction: %bs = sitofp i12 %b to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %bu = uitofp i12 %b to bfloat
 ; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %cs = sitofp i16 %c to bfloat
 ; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %cu = uitofp i16 %c to bfloat
-; GFX950:  Cost Model: Found an estimated cost of 1 for instruction: %ds = sitofp i17 %d to bfloat
-; GFX950:  Cost Model: Found an estimated cost of 1 for instruction: %du = uitofp i17 %d to bfloat
-; GFX950:  Cost Model: Found an estimated cost of 1 for instruction: %es = sitofp i31 %e to bfloat
-; GFX950:  Cost Model: Found an estimated cost of 1 for instruction: %eu = uitofp i31 %e to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %ds = sitofp i17 %d to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %du = uitofp i17 %d to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %es = sitofp i31 %e to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %eu = uitofp i31 %e to bfloat
 ;
 ; GFX1250-LABEL: 'narrow_scalars_to_bfloat'
-; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %as = sitofp i8 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i8 %a to bfloat
 ; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %au = uitofp i8 %a to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 1 for instruction: %bs = sitofp i12 %b to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 1 for instruction: %bu = uitofp i12 %b to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %cs = sitofp i16 %c to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %cu = uitofp i16 %c to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 1 for instruction: %ds = sitofp i17 %d to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 1 for instruction: %du = uitofp i17 %d to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 1 for instruction: %es = sitofp i31 %e to bfloat
-; GFX1250:  Cost Model: Found an estimated cost of 1 for instruction: %eu = uitofp i31 %e to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 5 for instruction: %bs = sitofp i12 %b to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %bu = uitofp i12 %b to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %cs = sitofp i16 %c to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %cu = uitofp i16 %c to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %ds = sitofp i17 %d to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %du = uitofp i17 %d to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %es = sitofp i31 %e to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %eu = uitofp i31 %e to bfloat
 ;
   %as = sitofp i8 %a to bfloat
   %au = uitofp i8 %a to bfloat
@@ -239,3 +239,165 @@ define void @narrow_scalars_to_bfloat(i8 %a, i12 %b, i16 %c, i17 %d, i31 %e) {
   %eu = uitofp i31 %e to bfloat
   ret void
 }
+
+define void @loaded_scalars_to_bfloat(ptr addrspace(1) %p) {
+; GFX6-LABEL: 'loaded_scalars_to_bfloat'
+; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %as = sitofp i24 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %bu = uitofp i24 %b to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %cs = sitofp i16 %c to bfloat
+;
+; GFX8-LABEL: 'loaded_scalars_to_bfloat'
+; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i24 %a to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %bu = uitofp i24 %b to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %cs = sitofp i16 %c to bfloat
+;
+; GFX9-LABEL: 'loaded_scalars_to_bfloat'
+; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %as = sitofp i24 %a to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %bu = uitofp i24 %b to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %cs = sitofp i16 %c to bfloat
+;
+; NOSDWA-LABEL: 'loaded_scalars_to_bfloat'
+; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %as = sitofp i24 %a to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %bu = uitofp i24 %b to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %cs = sitofp i16 %c to bfloat
+;
+; GFX950-LABEL: 'loaded_scalars_to_bfloat'
+; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %as = sitofp i24 %a to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %bu = uitofp i24 %b to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %cs = sitofp i16 %c to bfloat
+;
+; GFX1250-LABEL: 'loaded_scalars_to_bfloat'
+; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %as = sitofp i24 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %bu = uitofp i24 %b to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %cs = sitofp i16 %c to bfloat
+;
+  %a = load i24, ptr addrspace(1) %p
+  %as = sitofp i24 %a to bfloat
+  %b = load i24, ptr addrspace(1) %p
+  %bu = uitofp i24 %b to bfloat
+  %c = load i16, ptr addrspace(1) %p
+  %cs = sitofp i16 %c to bfloat
+  ret void
+}
+
+define void @loaded_wide_scalars_to_bfloat(ptr addrspace(1) %p) {
+; GFX6-LABEL: 'loaded_wide_scalars_to_bfloat'
+; GFX6:  Cost Model: Found an estimated cost of 13 for instruction: %as = sitofp i40 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 9 for instruction: %bu = uitofp i56 %b to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 15 for instruction: %cs = sitofp i48 %c to bfloat
+;
+; GFX8-LABEL: 'loaded_wide_scalars_to_bfloat'
+; GFX8:  Cost Model: Found an estimated cost of 19 for instruction: %as = sitofp i40 %a to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 15 for instruction: %bu = uitofp i56 %b to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 21 for instruction: %cs = sitofp i48 %c to bfloat
+;
+; GFX9-LABEL: 'loaded_wide_scalars_to_bfloat'
+; GFX9:  Cost Model: Found an estimated cost of 18 for instruction: %as = sitofp i40 %a to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 14 for instruction: %bu = uitofp i56 %b to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 20 for instruction: %cs = sitofp i48 %c to bfloat
+;
+; NOSDWA-LABEL: 'loaded_wide_scalars_to_bfloat'
+; NOSDWA:  Cost Model: Found an estimated cost of 18 for instruction: %as = sitofp i40 %a to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 14 for instruction: %bu = uitofp i56 %b to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 20 for instruction: %cs = sitofp i48 %c to bfloat
+;
+; GFX950-LABEL: 'loaded_wide_scalars_to_bfloat'
+; GFX950:  Cost Model: Found an estimated cost of 13 for instruction: %as = sitofp i40 %a to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 9 for instruction: %bu = uitofp i56 %b to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 15 for instruction: %cs = sitofp i48 %c to bfloat
+;
+; GFX1250-LABEL: 'loaded_wide_scalars_to_bfloat'
+; GFX1250:  Cost Model: Found an estimated cost of 13 for instruction: %as = sitofp i40 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 9 for instruction: %bu = uitofp i56 %b to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 15 for instruction: %cs = sitofp i48 %c to bfloat
+;
+  %a = load i40, ptr addrspace(1) %p
+  %as = sitofp i40 %a to bfloat
+  %b = load i56, ptr addrspace(1) %p
+  %bu = uitofp i56 %b to bfloat
+  %c = load volatile i48, ptr addrspace(1) %p
+  %cs = sitofp i48 %c to bfloat
+  ret void
+}
+
+define void @loaded_constant_scalars_to_bfloat(ptr addrspace(4) %p, ptr addrspace(1) %r) {
+; GFX6-LABEL: 'loaded_constant_scalars_to_bfloat'
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i24 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %bs = sitofp i24 %b to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 10 for instruction: %cu = uitofp i48 %c to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 9 for instruction: %du = uitofp i48 %d to bfloat
+;
+; GFX8-LABEL: 'loaded_constant_scalars_to_bfloat'
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %as = sitofp i24 %a to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 8 for instruction: %bs = sitofp i24 %b to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 16 for instruction: %cu = uitofp i48 %c to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 15 for instruction: %du = uitofp i48 %d to bfloat
+;
+; GFX9-LABEL: 'loaded_constant_scalars_to_bfloat'
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i24 %a to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 7 for instruction: %bs = sitofp i24 %b to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 15 for instruction: %cu = uitofp i48 %c to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 14 for instruction: %du = uitofp i48 %d to bfloat
+;
+; NOSDWA-LABEL: 'loaded_constant_scalars_to_bfloat'
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i24 %a to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 7 for instruction: %bs = sitofp i24 %b to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 15 for instruction: %cu = uitofp i48 %c to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 14 for instruction: %du = uitofp i48 %d to bfloat
+;
+; GFX950-LABEL: 'loaded_constant_scalars_to_bfloat'
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i24 %a to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %bs = sitofp i24 %b to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 10 for instruction: %cu = uitofp i48 %c to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 9 for instruction: %du = uitofp i48 %d to bfloat
+;
+; GFX1250-LABEL: 'loaded_constant_scalars_to_bfloat'
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i24 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 2 for instruction: %bs = sitofp i24 %b to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 10 for instruction: %cu = uitofp i48 %c to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 9 for instruction: %du = uitofp i48 %d to bfloat
+;
+  %a = load i24, ptr addrspace(4) %p, align 4
+  %as = sitofp i24 %a to bfloat
+  %b = load i24, ptr addrspace(4) %p, align 2
+  %bs = sitofp i24 %b to bfloat
+  %c = load i48, ptr addrspace(1) %r, align 8, !invariant.load !0
+  %cu = uitofp i48 %c to bfloat
+  %d = load i48, ptr addrspace(4) %p, align 2
+  %du = uitofp i48 %d to bfloat
+  ret void
+}
+
+define void @loaded_buffer_scalars_to_bfloat(ptr addrspace(7) %p, ptr addrspace(9) %q) {
+; GFX6-LABEL: 'loaded_buffer_scalars_to_bfloat'
+; GFX6:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i24 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 10 for instruction: %bu = uitofp i48 %b to bfloat
+;
+; GFX8-LABEL: 'loaded_buffer_scalars_to_bfloat'
+; GFX8:  Cost Model: Found an estimated cost of 9 for instruction: %as = sitofp i24 %a to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 16 for instruction: %bu = uitofp i48 %b to bfloat
+;
+; GFX9-LABEL: 'loaded_buffer_scalars_to_bfloat'
+; GFX9:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i24 %a to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 15 for instruction: %bu = uitofp i48 %b to bfloat
+;
+; NOSDWA-LABEL: 'loaded_buffer_scalars_to_bfloat'
+; NOSDWA:  Cost Model: Found an estimated cost of 8 for instruction: %as = sitofp i24 %a to bfloat
+; NOSDWA:  Cost Model: Found an estimated cost of 15 for instruction: %bu = uitofp i48 %b to bfloat
+;
+; GFX950-LABEL: 'loaded_buffer_scalars_to_bfloat'
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i24 %a to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 10 for instruction: %bu = uitofp i48 %b to bfloat
+;
+; GFX1250-LABEL: 'loaded_buffer_scalars_to_bfloat'
+; GFX1250:  Cost Model: Found an estimated cost of 3 for instruction: %as = sitofp i24 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 10 for instruction: %bu = uitofp i48 %b to bfloat
+;
+  %a = load i24, ptr addrspace(7) %p
+  %as = sitofp i24 %a to bfloat
+  %b = load i48, ptr addrspace(9) %q
+  %bu = uitofp i48 %b to bfloat
+  ret void
+}
+
+!0 = !{}

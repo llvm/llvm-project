@@ -149,7 +149,7 @@ union BIUnionArr biuarr = { .arr = { 'a', 'b', 'c' } };
 // CIR-DAG: cir.global external @biuarr = #cir.const_record<{#cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i], trailing_zeros> : !cir.array<!s8i x 20>}> : !rec_BIUnionArr align(8)
 // Classic-codegen represents the constant by splitting the init part of
 // the string and the zeros separately, plus not as a string.  Else this is effectively the same.
-// LLVMCIR-DAG: @biuarr = global <{ [20 x i8], [4 x i8] }> <{ [20 x i8] c"abc\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", [4 x i8] zeroinitializer }>, align 8
+// LLVMCIR-DAG: @biuarr = global <{ <{ i8, i8, i8, [17 x i8] }>, [4 x i8] }> <{ <{ i8, i8, i8, [17 x i8] }> <{ i8 97, i8 98, i8 99, [17 x i8] zeroinitializer }>, [4 x i8] zeroinitializer }>, align 8
 // OGCG-DAG:    @biuarr = global { <{ i8, i8, i8, [17 x i8] }>, [4 x i8] } { <{ i8, i8, i8, [17 x i8] }> <{ i8 97, i8 98, i8 99, [17 x i8] zeroinitializer }>, [4 x i8] zeroinitializer }, align 8
 
 struct First65 f65[2] = {{1, 222}, {3, 444}};
@@ -200,8 +200,8 @@ struct Outer2 nestedArr2[2] = {{1, 222}, {3, 444}};
 _BitInt(128) get_bi(void) { return l128[1].bi; }
 // CIR-LABEL: cir.func no_inline dso_local @get_bi() -> !s128i_bitint
 // CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
-// CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @l128 : !cir.ptr<!cir.array<!rec_Last128 x 2>>
+// CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element %[[GET_GLOB]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!rec_Last128 x 2>> -> !cir.ptr<!rec_Last128>
 // CIR-NEXT: %[[GET_BI:.*]] = cir.get_member %[[ARR_GEP]][2] {name = "bi"} : !cir.ptr<!rec_Last128> -> !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[LOAD_BI:.*]] = cir.load align(8) %[[GET_BI]] : !cir.ptr<!s128i_bitint>, !s128i_bitint
@@ -212,13 +212,13 @@ _BitInt(128) get_bi(void) { return l128[1].bi; }
 // LLVM: load i128, ptr getelementptr inbounds nuw (i8, ptr @l128, i64 32), align 8
 
 _BitInt(128) get_bi2(void) { return arrMem[1].bi[1]; }
-// CIR-LABEL: cir.func no_inline dso_local @get_bi2() -> !s128i_bitint attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", nothrow} {
+// CIR-LABEL: cir.func no_inline dso_local @get_bi2() -> !s128i_bitint attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", nothrow, optnone} {
 // CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
-// CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @arrMem : !cir.ptr<!cir.array<!rec_ArrMem x 2>>
+// CIR-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element %[[GET_GLOB]][%[[ONE_2]] : !s64i] : !cir.ptr<!cir.array<!rec_ArrMem x 2>> -> !cir.ptr<!rec_ArrMem>
 // CIR-NEXT: %[[GET_BI_ARR:.*]] = cir.get_member %[[ARR_GEP]][2] {name = "bi"} : !cir.ptr<!rec_ArrMem> -> !cir.ptr<!cir.array<!s128i_bitint x 2>>
+// CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[GET_BI_ELT:.*]] = cir.get_element %[[GET_BI_ARR]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!s128i_bitint x 2>> -> !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[LOAD_BI:.*]] = cir.load align(8) %[[GET_BI_ELT]] : !cir.ptr<!s128i_bitint>, !s128i_bitint
 // CIR-NEXT: cir.store %[[LOAD_BI]], %[[RET_ALLOC]] : !s128i_bitint, !cir.ptr<!s128i_bitint>
