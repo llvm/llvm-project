@@ -1804,21 +1804,7 @@ feature_test_macros = [
     ]
 ]
 
-sorted_feature_test_macros = sorted(feature_test_macros, key=lambda tc: tc["name"])
-out_of_order_macros = [
-    (index, current["name"], following["name"])
-    for index, (current, following) in enumerate(
-        zip(feature_test_macros, feature_test_macros[1:])
-    )
-    if current["name"] > following["name"]
-]
-if out_of_order_macros:
-    print("Adjacent feature_test_macros out of name order:")
-    for index, current, following in out_of_order_macros:
-        print("  [{}] {} > [{}] {}".format(index, current, index + 1, following))
-
-assert feature_test_macros == sorted_feature_test_macros
-
+assert feature_test_macros == sorted(feature_test_macros, key=lambda tc: tc["name"])
 for tc in feature_test_macros:
     assert tc["headers"] == sorted(tc["headers"]), tc
     assert ("libcxx_guard" in tc) == ("test_suite_guard" in tc), tc
