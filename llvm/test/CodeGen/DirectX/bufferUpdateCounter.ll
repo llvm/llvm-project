@@ -1,4 +1,5 @@
 ; RUN: opt -S -dxil-op-lower %s | FileCheck %s
+; RUN: opt -S -passes=dxil-legalize -verify-each %s | opt -S -dxil-op-lower | FileCheck %s
 
 
 target triple = "dxil-pc-shadermodel6.6-compute"
