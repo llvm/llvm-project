@@ -242,13 +242,12 @@ static bool runIPSCCP(
     // nodes in executable blocks we found values for. The function's entry
     // block is not part of BlocksToErase, so we have to handle it separately.
     for (BasicBlock *BB : BlocksToErase) {
-      NumInstRemoved += changeToUnreachable(&*BB->getFirstNonPHIOrPseudoProbe(),
+      NumInstRemoved += changeToUnreachable(&*BB->getFirstNonPHIIt(),
                                             /*PreserveLCSSA=*/false, &DTU);
     }
     if (!Solver.isBlockExecutable(&F.front()))
-      NumInstRemoved +=
-          changeToUnreachable(&*F.front().getFirstNonPHIOrPseudoProbe(),
-                              /*PreserveLCSSA=*/false, &DTU);
+      NumInstRemoved += changeToUnreachable(&*F.front().getFirstNonPHIIt(),
+                                            /*PreserveLCSSA=*/false, &DTU);
 
     BasicBlock *NewUnreachableBB = nullptr;
     for (BasicBlock &BB : F)

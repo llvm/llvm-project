@@ -1024,7 +1024,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   // Block and string pointers are the only ones we can actually read from.
-  if (!Ptr.isReadablePointerType())
+  if (!Ptr.isStringPointer())
     return diagnoseDummy(S, OpPC, Ptr, AK);
 
   assert(Ptr.isStringPointer());
@@ -1242,7 +1242,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 }
 
 static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
-  if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
+  if ((S.FrameDepth + 1) > S.getLangOpts().ConstexprCallDepth) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_depth_limit_exceeded)
         << S.getLangOpts().ConstexprCallDepth;
@@ -1949,7 +1949,7 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 /// Opcode. Check if the function decl can be called at compile time.
 bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+  if (S.checkingPotentialConstantExpression() && !S.Current->isBottomFrame())
     return false;
 
   const FunctionDecl *Definition = nullptr;
@@ -2099,11 +2099,11 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
 
   InterpFrame *NewFrame = S.allocFrame(Func, S.PC, VarArgSize);
-  S.Current = NewFrame;
+  S.enterFrame(NewFrame);
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
-  S.resetCurrentFrame();
+  S.exitFrame();
   return Success;
 }
 
@@ -2184,7 +2184,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     return cleanup();
 
   InterpFrame *NewFrame = S.allocFrame(Func, S.PC, VarArgSize);
-  S.Current = NewFrame;
+  S.enterFrame(NewFrame);
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
@@ -2192,7 +2192,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (InstancePtrTracked)
     S.InitializingPtrs.pop_back();
 
-  S.resetCurrentFrame();
+  S.exitFrame();
   return Success;
 }
 
