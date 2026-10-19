@@ -16,6 +16,7 @@ namespace mlir {
 namespace tosa {
 
 namespace {
+
 constexpr TypeInfo boolT = {ComplianceTypeKind::Integer, 1};
 constexpr TypeInfo i4T = {ComplianceTypeKind::Integer, 4};
 constexpr TypeInfo i8T = {ComplianceTypeKind::Integer, 8};
@@ -74,6 +75,7 @@ lookupComplianceInfos(ArrayRef<OpComplianceEntry<T>> table, StringRef opName) {
     return it->infos;
   return {};
 }
+
 } // namespace
 
 TosaProfileCompliance::TosaProfileCompliance() {
