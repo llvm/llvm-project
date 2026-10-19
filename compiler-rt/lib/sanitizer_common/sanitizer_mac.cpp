@@ -654,10 +654,14 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 // Offset example:
 // XNU 17 -- macOS 10.13 -- iOS 11 -- tvOS 11 -- watchOS 4
 constexpr u16 GetOSMajorKernelOffset() {
-  if (TARGET_OS_OSX) return 4;
-  if (TARGET_OS_IOS || TARGET_OS_TV) return 6;
-  if (TARGET_OS_WATCH) return 13;
-  if (TARGET_OS_VISION) return 22;
+  if (TARGET_OS_OSX)
+    return 4;
+  if (TARGET_OS_IOS || TARGET_OS_TV)
+    return 6;
+  if (TARGET_OS_WATCH)
+    return 13;
+  if (TARGET_OS_VISION)
+    return 22;
 }
 
 using VersStr = char[64];
