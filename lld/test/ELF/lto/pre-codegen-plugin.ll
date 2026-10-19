@@ -13,12 +13,16 @@
 ; RUN: FileCheck %s --check-prefix=PARALLEL0 < %t.parallel.lto.s
 ; RUN: FileCheck %s --check-prefix=PARALLEL1 < %t.parallel.lto.1.s
 
+;; Errors from loading plugins are reported by the linker.
+; RUN: not ld.lld -shared --load-pass-plugin=%t.dir/nonexistent.so %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOADERR
+
 ; INACTIVE-NOT: Bye
 ; INACTIVE: f:
 ; ACTIVE: CodeGen Bye
 ; ERR: error: last words unsupported for binary output
 ; PARALLEL0: CodeGen Bye
 ; PARALLEL1: CodeGen Bye
+; LOADERR: error: Could not load library {{.*}}nonexistent.so
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
