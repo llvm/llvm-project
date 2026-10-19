@@ -152,8 +152,7 @@ define i64 @ptrdiff() {
 
 define <2 x i31> @vector_element_constant_expr() {
 ; CHECK-LABEL: @vector_element_constant_expr(
-; CHECK-NEXT:    [[R:%.*]] = freeze <2 x i31> <i31 34, i31 ptrtoint (ptr @g to i31)>
-; CHECK-NEXT:    ret <2 x i31> [[R]]
+; CHECK-NEXT:    ret <2 x i31> <i31 34, i31 ptrtoint (ptr @g to i31)>
 ;
   %r = freeze <2 x i31> <i31 34, i31 ptrtoint (ptr @g to i31)>
   ret <2 x i31> %r
@@ -269,12 +268,12 @@ define ptr @call_noundef_ptr(ptr %ptr) {
 define ptr @invoke_noundef_ptr(ptr %ptr) personality i8 1 {
 ; CHECK-LABEL: @invoke_noundef_ptr(
 ; CHECK-NEXT:    invoke void @f3(ptr noundef [[PTR:%.*]])
-; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK-NEXT:            to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ; CHECK:       unwind:
 ; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    resume ptr [[PTR]]
 ;
   %q = freeze ptr %ptr
@@ -443,7 +442,7 @@ EXIT:
 define i32 @brcond_switch(i32 %x) {
 ; CHECK-LABEL: @brcond_switch(
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A:%.*]]
+; CHECK-NEXT:      i32 0, label [[A:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 [[X]]

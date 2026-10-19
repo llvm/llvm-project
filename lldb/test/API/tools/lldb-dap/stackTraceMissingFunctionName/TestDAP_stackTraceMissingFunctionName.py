@@ -8,7 +8,6 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_stackTraceMissingFunctionName(DAPTestCaseBase):
-    @skipIfWindows
     @skipIfWasm  # a Wasm indirect call traps without transferring control to the callee
     def test_missingFunctionName(self):
         """
