@@ -77,14 +77,14 @@ void test() {
 
   check<true, std::deque<int> >();
   check<true, std::deque<int, test_allocator<int> > >();
-  check<true, std::deque<MoveOnly> >();
-  check<true, std::deque<ThrowOnMove> >();
+  check<false, std::deque<MoveOnly> >();
+  check<false, std::deque<ThrowOnMove> >();
   check<false, std::deque<NonCopyThrowOnMove> >();
 
   check<true, std::vector<int> >();
   check<true, std::vector<int, test_allocator<int> > >();
-  check<true, std::vector<MoveOnly> >();
-  check<true, std::vector<ThrowOnMove> >();
+  check<false, std::vector<MoveOnly> >();
+  check<false, std::vector<ThrowOnMove> >();
   check<false, std::vector<NonCopyThrowOnMove> >();
 
   check<true, std::set<int> >();
