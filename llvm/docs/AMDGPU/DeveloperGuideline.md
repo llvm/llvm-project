@@ -6,8 +6,8 @@ This document highlights coding conventions, test policies, and other
 development guidelines that apply to all AMDGPU-related code across the LLVM
 project (the backend in `llvm/lib/Target/AMDGPU`, Clang AMDGPU support, LLD,
 associated tests, etc.). It is **not** a replacement for or summary of the
-{doc}`LLVM Coding Standards <../CodingStandards>` or the
-{doc}`LLVM Testing Guide <../TestingGuide>`; contributors
+[LLVM Coding Standards](../CodingStandards.md) or the
+[LLVM Testing Guide](../TestingGuide.md); contributors
 are expected to be familiar with those documents as well.
 
 The topics covered here are those that come up frequently during AMDGPU code
@@ -17,7 +17,7 @@ easy reference.
 ## Coding Standards
 
 AMDGPU-related code follows the
-{doc}`LLVM Coding Standards <../CodingStandards>` with the
+[LLVM Coding Standards](../CodingStandards.md) with the
 refinements listed below.
 
 ### Use of `auto`
@@ -410,4 +410,3 @@ when the auto-generated output would be excessively verbose and obscure the
 intent. In such cases, keep the hand-written checks focused and document
 why auto-generation was not used.
 :::
-
