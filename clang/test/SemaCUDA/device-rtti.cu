@@ -334,9 +334,11 @@ struct LambdaBody {
   const std::type_info *t = [] { return &typeid(int); }(); // #lambda_body
 };
 // dev-error@#lambda_body {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+// dev-note@#lambda_body {{called by 'LambdaBody'}}
 // dev-note@#lambda_body {{called by 'lambda_body'}}
 __device__ void lambda_body() {
   LambdaBody l;
+  // dev-note@-1 {{which is called by 'lambda_body'}}
   (void)l;
 }
 
