@@ -6789,13 +6789,13 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
-    ElementCount MinProfitableTripCount) const {
+    ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue) const {
   const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
           : nullptr;
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount, Plan.requiresScalarEpilogue(),
+                 MinProfitableTripCount, RequiresScalarEpilogue,
                  Plan.hasTailFolded(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
@@ -7867,7 +7867,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
     LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
-                                 ElementCount::getFixed(0));
+                                 ElementCount::getFixed(0),
+                                 BestEpiPlan.requiresScalarEpilogue());
     LVP.attachRuntimeChecks(BestMainPlan, Checks, VF.Width, IC,
                             HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
@@ -7922,7 +7923,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
                            BestPlan);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
-                                 VF.MinProfitableTripCount);
+                                 VF.MinProfitableTripCount,
+                                 BestPlan.requiresScalarEpilogue());
     LVP.attachRuntimeChecks(BestPlan, Checks, VF.Width, IC, HasBranchWeights);
 
     if (!IsInnerLoop)
