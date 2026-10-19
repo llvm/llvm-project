@@ -634,6 +634,12 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::ppc64:
   case Triple::ppc64le:
     return computePowerDataLayout(*this, ABIName);
+  case Triple::agx:
+    // Device and constant pointers are 64-bit; threadgroup (3) and private
+    // (5) pointers are 32-bit offsets. Allocas are private.
+    return "e-m:e-p:64:64-p1:64:64-p3:32:32-p4:64:64-p5:32:32-i1:8-i8:8-"
+           "i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-v16:16-v32:32-v64:64-"
+           "v96:32-v128:128-n16:32:64-S32-A5-G1";
   case Triple::amdgpu:
   case Triple::r600:
     return computeAMDDataLayout(*this);

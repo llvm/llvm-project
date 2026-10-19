@@ -17,6 +17,7 @@
 #include "mlir/Target/LLVMIR/Dialect/ArmNeon/ArmNeonToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmSME/ArmSMEToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmSVE/ArmSVEToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/AGXIR/AGXIRToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
@@ -36,6 +37,7 @@ class DialectRegistry;
 /// Registers all dialects that can be translated to LLVM IR and the
 /// corresponding translation interfaces.
 static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
+  registerAGXIRDialectTranslation(registry);
   registerArmNeonDialectTranslation(registry);
   registerArmSMEDialectTranslation(registry);
   registerArmSVEDialectTranslation(registry);
@@ -59,6 +61,7 @@ static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
 /// mechanism is implemented, see D157703.
 static inline void
 registerAllGPUToLLVMIRTranslations(DialectRegistry &registry) {
+  registerAGXIRDialectTranslation(registry);
   registerBuiltinDialectTranslation(registry);
   registerGPUDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);

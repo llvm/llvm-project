@@ -60,6 +60,13 @@ ASM_FUNCTION_AMDGPU_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+ASM_FUNCTION_AGX_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*//+[ \t]*@"?(?P=func)"?\n'
+    r"(?P<body>.*?)\n"  # (body of the function)
+    r"^\s*\.Lfunc_end[0-9]+:\n",
+    flags=(re.M | re.S),
+)
+
 ASM_FUNCTION_BPF_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
     r"(?:[ \t]+.cfi_startproc\n|.seh_proc[^\n]+\n)?"  # drop optional cfi
@@ -455,6 +462,17 @@ def scrub_asm_lanai(asm, args):
     return asm
 
 
+def scrub_asm_agx(asm, args):
+    # Scrub runs of whitespace out of the assembly, but leave the leading
+    # whitespace in place.
+    asm = common.SCRUB_WHITESPACE_RE.sub(r" ", asm)
+    # Expand the tabs used for indentation.
+    asm = string.expandtabs(asm, 2)
+    # Strip trailing whitespace.
+    asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r"", asm)
+    return asm
+
+
 def scrub_asm_sparc(asm, args):
     # Scrub runs of whitespace out of the assembly, but leave the leading
     # whitespace in place.
@@ -605,6 +623,7 @@ def get_run_handler(triple):
         "riscv32-apple-none-macho": (scrub_asm_riscv, ASM_FUNCTION_RISCV_MACHO_RE),
         "riscv64": (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
         "lanai": (scrub_asm_lanai, ASM_FUNCTION_LANAI_RE),
+        "agx": (scrub_asm_agx, ASM_FUNCTION_AGX_RE),
         "sparc": (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
         "spirv": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),
         "spirv32": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),

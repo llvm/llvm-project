@@ -297,6 +297,10 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Used for Apple AGX GPU compute kernels. Kernel arguments are delivered
+    /// in uniform registers, see AGXUsage.rst.
+    AGX_KERNEL = 128,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

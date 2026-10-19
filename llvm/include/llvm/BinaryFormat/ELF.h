@@ -325,6 +325,9 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
+  // Apple AGX GPU. This value is not assigned by the ELF ABI registry; it is
+  // used only for objects produced by the LLVM AGX backend (see AGXUsage.rst).
+  EM_AGX = 0x4147,
 };
 
 // Object file classes.

@@ -3305,6 +3305,11 @@ void Verifier::visitFunction(const Function &F) {
           "Calling convention parameter requires byval", &F);
     break;
   }
+  case CallingConv::AGX_KERNEL:
+    Check(F.getReturnType()->isVoidTy(),
+          "Calling convention requires void return type", &F);
+    Check(!F.isVarArg(), "Calling convention does not support varargs", &F);
+    break;
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
   case CallingConv::AMDGPU_CS_Chain:
