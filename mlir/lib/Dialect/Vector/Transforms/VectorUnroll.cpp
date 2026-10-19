@@ -370,10 +370,11 @@ struct UnrollContractionPattern
     // TODO: This is shared between all Unroll patterns - merge.
     auto iface = dyn_cast<VectorUnrollOpInterface>(contractOp.getOperation());
     auto targetShape = getTargetShape(options, iface);
-    bool scalarResult = !isa<VectorType>(contractOp.getResultType());
+    Type targetType = contractOp.getResultType();
+    bool scalarResult = !isa<VectorType>(targetType);
     if (!targetShape)
       return failure();
-    auto dstVecType = dyn_cast<VectorType>(contractOp.getResultType());
+    auto dstVecType = dyn_cast<VectorType>(targetType);
     SmallVector<int64_t> originalSize = *contractOp.getIterationShapeToUnroll();
 
     Location loc = contractOp.getLoc();
@@ -427,7 +428,6 @@ struct UnrollContractionPattern
         slicesOperands[2] = contractOp.getAcc();
       else
         extractOperand(2, contractOp.getAcc(), accPermutationMap, accOffets);
-      Type targetType = contractOp.getResultType();
       if (!scalarResult) {
         SmallVector<int64_t> dstShape =
             applyPermutationMap(dstAffineMap, ArrayRef<int64_t>(*targetShape));
@@ -442,6 +442,8 @@ struct UnrollContractionPattern
       accCache[dstOffets] = newOp->getResult(0);
     }
     if (scalarResult) {
+      // With a scalar result, the last tile's value replaces the op
+      // and we return since there is nothing to reassemble.
       rewriter.replaceOp(contractOp, accCache.begin()->second);
       return success();
     }
