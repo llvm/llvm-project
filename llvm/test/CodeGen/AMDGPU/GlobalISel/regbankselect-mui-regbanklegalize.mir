@@ -1013,18 +1013,35 @@ body: |
 ...
 
 ---
-name: trunc_s64_to_s16
+name: trunc_i64_to_i16
 legalized: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
 
-    ; CHECK-LABEL: name: trunc_s64_to_s16
-    ; CHECK: [[SRC:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[TRUNC32:%[0-9]+]]:sgpr(i32) = G_TRUNC [[SRC]](s64)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[TRUNC32]](i32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16)
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s16) = G_TRUNC %0
+    ; CHECK-LABEL: name: trunc_i64_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[TRUNC32:%[0-9]+]]:sgpr(i32) = G_TRUNC [[SRC]](i64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[TRUNC32]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](i16)
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i16) = G_TRUNC %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: trunc_i128_to_i16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    ; CHECK-LABEL: name: trunc_i128_to_i16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(i128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[TRUNC32:%[0-9]+]]:sgpr(i32) = G_TRUNC [[SRC]](i128)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[TRUNC32]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](i16)
+    %0:sgpr(i128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr(i16) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
