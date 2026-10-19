@@ -45,7 +45,7 @@ def MyTarget : Target;
 // all, but only two of them are distinct. Both are emitted once, after
 // the sub-class masks, and the offsets below point at those two.
 
-// CHECK:      extern const MCRegisterClassStorage<3, {{[0-9]+}}, {{[0-9]+}}, 5, 6, {{[0-9]+}}, {{[0-9]+}}> MyTargetMCRegisterClassStorage = {
+// CHECK:      inline constexpr MCRegisterClassStorage<3, {{[0-9]+}}, {{[0-9]+}}, 5, 6, {{[0-9]+}}, {{[0-9]+}}> MyTargetMCRegisterClassStorage = {
 
 // CHECK:      // 0 SRegs
 // CHECK-NEXT: 0x00000001,
