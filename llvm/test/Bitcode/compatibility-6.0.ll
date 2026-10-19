@@ -13,7 +13,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ;; Module-level assembly
 module asm "beep boop"
-; CHECK: module asm "beep boop"
+; CHECK: module asm
+; CHECK-NEXT: "beep boop"
 
 ;; Comdats
 $comdat.any = comdat any

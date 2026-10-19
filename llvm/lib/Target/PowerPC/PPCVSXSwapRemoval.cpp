@@ -79,6 +79,7 @@ struct PPCVSXSwapEntry {
   unsigned int SpecialHandling : 3;
   unsigned int WebRejected : 1;
   unsigned int WillRemove : 1;
+  unsigned int HasUnanalyzableDef : 1;
 };
 
 enum SHValues {
@@ -611,7 +612,12 @@ void PPCVSXSwapRemoval::formWebs() {
       if (!MO.isUse())
         continue;
 
-      MachineInstr* DefMI = MRI->getVRegDef(Reg);
+      MachineInstr *DefMI = MRI->getVRegDef(Reg);
+      if (!DefMI) {
+        SwapVector[EntryIdx].HasUnanalyzableDef = 1;
+        continue;
+      }
+
       assert(SwapMap.contains(DefMI) &&
              "Inconsistency: def of vector reg not found in swap map!");
       int DefIdx = SwapMap[DefMI];
@@ -647,14 +653,14 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
     // permuted region.
     if (SwapVector[EntryIdx].MentionsPhysVR ||
         SwapVector[EntryIdx].MentionsPartialVR ||
+        SwapVector[EntryIdx].HasUnanalyzableDef ||
         !(SwapVector[EntryIdx].IsSwappable || SwapVector[EntryIdx].IsSwap)) {
 
       SwapVector[Repr].WebRejected = 1;
 
-      LLVM_DEBUG(
-          dbgs() << format("Web %d rejected for physreg, partial reg, or not "
-                           "swap[pable]\n",
-                           Repr));
+      LLVM_DEBUG(dbgs() << format("Web %d rejected for physreg, partial reg, "
+                                  "unanalyzable def, or not swap[pable]\n",
+                                  Repr));
       LLVM_DEBUG(dbgs() << "  in " << EntryIdx << ": ");
       LLVM_DEBUG(SwapVector[EntryIdx].VSEMI->dump());
       LLVM_DEBUG(dbgs() << "\n");
@@ -1007,6 +1013,8 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
       dbgs() << "physreg ";
     if (SwapVector[EntryIdx].MentionsPartialVR)
       dbgs() << "partialreg ";
+    if (SwapVector[EntryIdx].HasUnanalyzableDef)
+      dbgs() << "unanalyzabledef ";
 
     if (SwapVector[EntryIdx].IsSwappable) {
       dbgs() << "swappable ";

@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu fiji -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu8.03-unknown-unknown -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK %s
 
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

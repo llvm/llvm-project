@@ -28,6 +28,54 @@
 
 #include <immintrin.h>
 
+__m256d test_mm256_ceil_pd(__m256d x) {
+  // CIR-LABEL: test_mm256_ceil_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.pd.256" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.double>, !s32i) -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_ceil_pd
+  // LLVM: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
+
+  // OGCG-LABEL: test_mm256_ceil_pd
+  // OGCG: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
+  return _mm256_ceil_pd(x);
+}
+
+__m256 test_mm_ceil_ps(__m256 x) {
+  // CIR-LABEL: test_mm_ceil_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.ps.256" %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.float>, !s32i) -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm_ceil_ps
+  // LLVM: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 2)
+
+  // OGCG-LABEL: test_mm_ceil_ps
+  // OGCG: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 2)
+  return _mm256_ceil_ps(x);
+}
+
+__m256d test_mm256_floor_pd(__m256d x) {
+  // CIR-LABEL: test_mm256_floor_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.pd.256" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.double>, !s32i) -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_floor_pd
+  // LLVM: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 1)
+
+  // OGCG-LABEL: test_mm256_floor_pd
+  // OGCG: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 1)
+  return _mm256_floor_pd(x);
+}
+
+__m256 test_mm_floor_ps(__m256 x) {
+  // CIR-LABEL: test_mm_floor_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.ps.256" %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.float>, !s32i) -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm_floor_ps
+  // LLVM: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 1)
+
+  // OGCG-LABEL: test_mm_floor_ps
+  // OGCG: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 1)
+  return _mm256_floor_ps(x);
+}
+
 __m256 test_mm256_undefined_ps(void) {
   // CIR-LABEL: _mm256_undefined_ps
   // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.double>
@@ -214,4 +262,112 @@ __m256d test_mm256_permute_pd(__m256d A) {
     // OGCG-LABEL: test_mm256_permute_pd
     // OGCG: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
     return _mm256_permute_pd(A, 0x5);
+}
+
+__m256d test_mm256_permute2f128_pd(__m256d A, __m256d B) {
+  // CIR-LABEL: test_mm256_permute2f128_pd
+  // CIR: {{.*}} = cir.vec.shuffle({{.*}}, {{.*}} : !cir.vector<4 x !cir.double>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_permute2f128_pd
+  // LLVM: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+
+  // OGCG-LABEL: test_mm256_permute2f128_pd
+  // OGCG: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  return _mm256_permute2f128_pd(A, B, 0x31);
+}
+
+__m256 test_mm256_permute2f128_ps(__m256 A, __m256 B) {
+  // CIR-LABEL: test_mm256_permute2f128_ps
+  // CIR: {{.*}} = cir.vec.shuffle({{.*}}, {{.*}} : !cir.vector<8 x !cir.float>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<8 x !cir.float>
+ 
+  // LLVM-LABEL: test_mm256_permute2f128_ps
+  // LLVM: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+ 
+  // OGCG-LABEL: test_mm256_permute2f128_ps
+  // OGCG: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+  return _mm256_permute2f128_ps(A, B, 0x13);
+}
+
+__m256i test_mm256_permute2f128_si256(__m256i A, __m256i B) {
+  // CIR-LABEL: test_mm256_permute2f128_si256
+  // CIR: {{.*}} = cir.vec.shuffle({{.*}}, {{.*}} : !cir.vector<8 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i] : !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: test_mm256_permute2f128_si256
+  // LLVM: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: test_mm256_permute2f128_si256
+  // OGCG: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  return _mm256_permute2f128_si256(A, B, 0x20);
+}
+
+__m256d test_mm256_round_pd(__m256d x) {
+  // CIR-LABEL: test_mm256_round_pd
+  // CIR: cir.roundeven %{{.*}} : !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_round_pd
+  // LLVM: call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_round_pd
+  // OGCG: call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
+  return _mm256_round_pd(x, 0b1000);
+}
+
+__m256d test_mm256_round_pd_mxcsr(__m256d x) {
+  // CIR-LABEL: test_mm256_round_pd_mxcsr
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.pd.256" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.double>, !s32i) -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_round_pd_mxcsr
+  // LLVM: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 12)
+
+  // OGCG-LABEL: test_mm256_round_pd_mxcsr
+  // OGCG: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 12)
+  return _mm256_round_pd(x, 0b1100);
+}
+
+__m256d test_mm256_round_pd_fround_no_exc(__m256d x) {
+  // CIR-LABEL: test_mm256_round_pd_fround_no_exc
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.pd.256" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.double>, !s32i) -> !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: test_mm256_round_pd_fround_no_exc
+  // LLVM: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 0)
+
+  // OGCG-LABEL: test_mm256_round_pd_fround_no_exc
+  // OGCG: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 0)
+  return _mm256_round_pd(x, 0b0000);
+}
+
+__m256 test_mm256_round_ps(__m256 x) {
+  // CIR-LABEL: test_mm256_round_ps
+  // CIR: cir.roundeven %{{.*}} : !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm256_round_ps
+  // LLVM: call <8 x float> @llvm.roundeven.v8f32(<8 x float> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_round_ps
+  // OGCG: call <8 x float> @llvm.roundeven.v8f32(<8 x float> %{{.*}})
+  return _mm256_round_ps(x, 0b1000);
+}
+
+__m256 test_mm256_round_ps_mxcsr(__m256 x) {
+  // CIR-LABEL: test_mm256_round_ps_mxcsr
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.ps.256" %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.float>, !s32i) -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm256_round_ps_mxcsr
+  // LLVM: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 12)
+
+  // OGCG-LABEL: test_mm256_round_ps_mxcsr
+  // OGCG: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 12)
+  return _mm256_round_ps(x, 0b1100);
+}
+
+__m256 test_mm256_round_ps_fround_no_exc(__m256 x) {
+  // CIR-LABEL: test_mm256_round_ps_fround_no_exc
+  // CIR: cir.call_llvm_intrinsic "x86.avx.round.ps.256" %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.float>, !s32i) -> !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: test_mm256_round_ps_fround_no_exc
+  // LLVM: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 0)
+
+  // OGCG-LABEL: test_mm256_round_ps_fround_no_exc
+  // OGCG: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 0)
+  return _mm256_round_ps(x, 0b0000);
 }

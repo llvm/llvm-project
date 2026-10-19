@@ -17,17 +17,6 @@
 
 namespace lldb_private {
 
-// Thread Step Types
-enum StepType {
-  eStepTypeNone,
-  eStepTypeTrace,     ///< Single step one instruction.
-  eStepTypeTraceOver, ///< Single step one instruction, stepping over.
-  eStepTypeInto,      ///< Single step into a specified context.
-  eStepTypeOver,      ///< Single step over a specified context.
-  eStepTypeOut,       ///< Single step out a specified context.
-  eStepTypeScripted   ///< A step type implemented by the script interpreter.
-};
-
 // Address Types
 enum AddressType {
   eAddressTypeInvalid = 0,
@@ -255,6 +244,17 @@ enum LoadDependentFiles {
 enum class IterationAction {
   Continue = 0,
   Stop,
+};
+
+/// Controls how the `show-autosuggestion` setting drives inline suggestions
+/// in the interactive command line.
+enum AutosuggestionMode {
+  /// Do not show any autosuggestion.
+  eAutosuggestionOff = 0,
+  /// Show a suggestion sourced from previously entered commands.
+  eAutosuggestionOn = 1,
+  /// Show the prefix that tab completion would insert for the current line.
+  eAutosuggestionTabMode = 2,
 };
 
 /// Specifies the type of PCs when creating a `HistoryThread`.

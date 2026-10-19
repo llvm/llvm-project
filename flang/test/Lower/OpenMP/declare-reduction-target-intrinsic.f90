@@ -4,21 +4,21 @@
 ! These should generate inline constant initialization (no runtime calls),
 ! so they work on GPU targets without requiring the device Fortran runtime.
 
-! CHECK-LABEL: omp.declare_reduction @_QQFaddc : complex<f32> init {
+! CHECK-LABEL: omp.declare_reduction @_QQFaddc_z32 : complex<f32> init {
 ! CHECK:         %[[CZERO:.*]] = fir.zero_bits complex<f32>
 ! CHECK:         omp.yield(%[[CZERO]] : complex<f32>)
 ! CHECK:       } combiner {
 ! CHECK:         fir.addc
 ! CHECK:       }
 
-! CHECK-LABEL: omp.declare_reduction @_QQFaddr : f32 init {
+! CHECK-LABEL: omp.declare_reduction @_QQFaddr_f32 : f32 init {
 ! CHECK:         %[[FZERO:.*]] = fir.zero_bits f32
 ! CHECK:         omp.yield(%[[FZERO]] : f32)
 ! CHECK:       } combiner {
 ! CHECK:         arith.addf
 ! CHECK:       }
 
-! CHECK-LABEL: omp.declare_reduction @_QQFaddi : i32 init {
+! CHECK-LABEL: omp.declare_reduction @_QQFaddi_i32 : i32 init {
 ! CHECK:         %[[IZERO:.*]] = fir.zero_bits i32
 ! CHECK:         omp.yield(%[[IZERO]] : i32)
 ! CHECK:       } combiner {
@@ -26,16 +26,16 @@
 ! CHECK:       }
 
 ! CHECK: omp.target
-! CHECK:   omp.teams reduction(@_QQFaddi
-! CHECK:     omp.wsloop reduction(@_QQFaddi
+! CHECK:   omp.teams reduction(@_QQFaddi_i32
+! CHECK:     omp.wsloop reduction(@_QQFaddi_i32
 
 ! CHECK: omp.target
-! CHECK:   omp.teams reduction(@_QQFaddr
-! CHECK:     omp.wsloop reduction(@_QQFaddr
+! CHECK:   omp.teams reduction(@_QQFaddr_f32
+! CHECK:     omp.wsloop reduction(@_QQFaddr_f32
 
 ! CHECK: omp.target
-! CHECK:   omp.teams reduction(@_QQFaddc
-! CHECK:     omp.wsloop reduction(@_QQFaddc
+! CHECK:   omp.teams reduction(@_QQFaddc_z32
+! CHECK:     omp.wsloop reduction(@_QQFaddc_z32
 
 program test_target_named_reduction
   implicit none

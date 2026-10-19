@@ -24,7 +24,12 @@ using namespace mlir::vector;
 namespace {
 
 struct StepToArithConstantOpRewrite final : OpRewritePattern<vector::StepOp> {
-  using Base::Base;
+  StepToArithConstantOpRewrite(MLIRContext *context, unsigned indexBitwidth,
+                               PatternBenefit benefit)
+      : OpRewritePattern(context, benefit), indexBitwidth(indexBitwidth) {
+    assert(indexBitwidth <= IndexType::kInternalStorageBitWidth &&
+           "indexBitwidth cannot exceed the index storage bitwidth");
+  }
 
   LogicalResult matchAndRewrite(vector::StepOp stepOp,
                                 PatternRewriter &rewriter) const override {
@@ -32,18 +37,41 @@ struct StepToArithConstantOpRewrite final : OpRewritePattern<vector::StepOp> {
     if (resultType.isScalable()) {
       return failure();
     }
+    Type elementType = resultType.getElementType();
+    // An `indexBitwidth` of 0 means "leave `index`-typed steps alone": the
+    // index bitwidth is target-dependent, so callers that don't know it (and
+    // defer to a later lowering, e.g. to `llvm.intr.stepvector`) opt out.
+    if (elementType.isIndex() && indexBitwidth == 0) {
+      return failure();
+    }
+    // Values wrap around at `computeWidth`. `index` elements are stored in a
+    // `DenseElementsAttr` using the internal storage bitwidth, so the wrapped
+    // value is widened to it; integer elements use their own bitwidth.
+    unsigned computeWidth = elementType.isIndex()
+                                ? indexBitwidth
+                                : elementType.getIntOrFloatBitWidth();
+    unsigned storageWidth = elementType.isIndex()
+                                ? IndexType::kInternalStorageBitWidth
+                                : computeWidth;
     int64_t elementCount = resultType.getNumElements();
-    SmallVector<APInt> indices =
-        llvm::map_to_vector(llvm::seq(elementCount),
-                            [](int64_t i) { return APInt(/*width=*/64, i); });
+    SmallVector<APInt> indices = llvm::map_to_vector(
+        llvm::seq(elementCount), [computeWidth, storageWidth](int64_t i) {
+          return APInt(computeWidth, i, /*isSigned=*/false,
+                       /*implicitTrunc=*/true)
+              .zext(storageWidth);
+        });
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(
         stepOp, DenseElementsAttr::get(resultType, indices));
     return success();
   }
+
+  unsigned indexBitwidth;
 };
 } // namespace
 
 void mlir::vector::populateVectorStepLoweringPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<StepToArithConstantOpRewrite>(patterns.getContext(), benefit);
+    RewritePatternSet &patterns, unsigned indexBitwidth,
+    PatternBenefit benefit) {
+  patterns.add<StepToArithConstantOpRewrite>(patterns.getContext(),
+                                             indexBitwidth, benefit);
 }

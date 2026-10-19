@@ -7,10 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUWaitcntUtils.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm::AMDGPU {
+
+static cl::opt<bool> ExpertSchedulingModeFlag(
+    "amdgpu-expert-scheduling-mode",
+    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
+    cl::init(false), cl::Hidden);
+
+bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F) {
+  return ST.hasExpertSchedulingMode() &&
+         (ExpertSchedulingModeFlag.getNumOccurrences()
+              ? ExpertSchedulingModeFlag
+              : F.getFnAttribute("amdgpu-expert-scheduling-mode")
+                    .getValueAsBool());
+}
 
 iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
   return enum_seq(LOAD_CNT, MaxCounter);
@@ -38,8 +54,10 @@ StringLiteral getInstCounterName(InstCounterType T) {
     return "ASYNC_CNT";
   case TENSOR_CNT:
     return "TENSOR_CNT";
-  case VA_VDST:
-    return "VA_VDST";
+  case VA_VDST_RD:
+    return "VA_VDST_RD";
+  case VA_VDST_WR:
+    return "VA_VDST_WR";
   case VM_VSRC:
     return "VM_VSRC";
   case NUM_INST_CNTS:
@@ -86,7 +104,8 @@ unsigned HardwareLimits::get(InstCounterType T) const {
     return KmcntMax;
   case AMDGPU::X_CNT:
     return XcntMax;
-  case AMDGPU::VA_VDST:
+  case AMDGPU::VA_VDST_RD:
+  case AMDGPU::VA_VDST_WR:
     return VaVdstMax;
   case AMDGPU::VM_VSRC:
     return VmVsrcMax;

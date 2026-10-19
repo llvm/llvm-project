@@ -67,7 +67,6 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
   let dependentDialects = [
     "affine::AffineDialect",
     "linalg::LinalgDialect",
-    "sparse_tensor::SparseTensorDialect",
   ];
   let options = [
     Option<"scope", "scope", "mlir::ReinterpretMapScope",
@@ -106,7 +105,7 @@ def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
-    "sparse_tensor::SparseTensorDialect",
+    "vector::VectorDialect",
   ];
 }
 
@@ -202,6 +201,7 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   }];
   let constructor = "mlir::createStageSparseOperationsPass()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }
@@ -219,7 +219,6 @@ def LowerSparseOpsToForeach : Pass<"lower-sparse-ops-to-foreach", "ModuleOp"> {
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
-    "sparse_tensor::SparseTensorDialect",
   ];
   let options = [
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",

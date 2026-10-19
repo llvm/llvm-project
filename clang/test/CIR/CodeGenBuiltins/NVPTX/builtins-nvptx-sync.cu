@@ -15,7 +15,7 @@
 
 #define __device__ __attribute__((device))
 
-// Tests CIR/LLVM lowering for NVPTX CTA-level sync barrier builtins.
+// Tests CIR/LLVM lowering for NVPTX CTA-level sync and bar0 reduction builtins.
 // Mirrors the relevant slices of clang/test/CodeGen/builtins-nvptx.c and
 // clang/test/CodeGen/builtins-nvptx-ptx60.cu.
 
@@ -42,4 +42,43 @@ __device__ void nvvm_sync(unsigned mask) {
   // LLVM: call void @llvm.nvvm.barrier.cta.sync.count(i32 %{{.*}}, i32 0)
   // OGCG: call void @llvm.nvvm.barrier.cta.sync.count(i32 %{{.*}}, i32 0)
   __nvvm_barrier_sync_cnt(mask, 0);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z20nvvm_bar0_reductionsi
+// LLVM-LABEL: define{{.*}} i32 @_Z20nvvm_bar0_reductionsi(
+// OGCG-LABEL: define{{.*}} i32 @_Z20nvvm_bar0_reductionsi(
+__device__ int nvvm_bar0_reductions(int i) {
+  int ret = 0;
+
+  // CIR:  %[[NE_AND:.*]] = cir.cmp ne {{.*}} : !s32i
+  // CIR:  %[[AND:.*]] = cir.call_llvm_intrinsic "nvvm.barrier.cta.red.and.aligned.all" {{.*}} : (!s32i, !cir.bool) -> !cir.bool
+  // CIR:  cir.cast bool_to_int %[[AND]] : !cir.bool -> !s32i
+  // LLVM: %[[NE_AND:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM: %[[AND:.*]] = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 0, i1 %[[NE_AND]])
+  // LLVM: zext i1 %[[AND]] to i32
+  // OGCG: %[[NE_AND:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG: %[[AND:.*]] = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 0, i1 %[[NE_AND]])
+  // OGCG: zext i1 %[[AND]] to i32
+  ret += __nvvm_bar0_and(i);
+
+  // CIR:  %[[NE_OR:.*]] = cir.cmp ne {{.*}} : !s32i
+  // CIR:  %[[OR:.*]] = cir.call_llvm_intrinsic "nvvm.barrier.cta.red.or.aligned.all" {{.*}} : (!s32i, !cir.bool) -> !cir.bool
+  // CIR:  cir.cast bool_to_int %[[OR]] : !cir.bool -> !s32i
+  // LLVM: %[[NE_OR:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM: %[[OR:.*]] = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 0, i1 %[[NE_OR]])
+  // LLVM: zext i1 %[[OR]] to i32
+  // OGCG: %[[NE_OR:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG: %[[OR:.*]] = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 0, i1 %[[NE_OR]])
+  // OGCG: zext i1 %[[OR]] to i32
+  ret += __nvvm_bar0_or(i);
+
+  // CIR:  %[[NE_POPC:.*]] = cir.cmp ne {{.*}} : !s32i
+  // CIR:  cir.call_llvm_intrinsic "nvvm.barrier.cta.red.popc.aligned.all" {{.*}} : (!s32i, !cir.bool) -> !s32i
+  // LLVM: %[[NE_POPC:.*]] = icmp ne i32 %{{.*}}, 0
+  // LLVM: call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %[[NE_POPC]])
+  // OGCG: %[[NE_POPC:.*]] = icmp ne i32 %{{.*}}, 0
+  // OGCG: call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %[[NE_POPC]])
+  ret += __nvvm_bar0_popc(i);
+
+  return ret;
 }

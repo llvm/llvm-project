@@ -189,6 +189,10 @@ public:
     Record->push_back(Value);
   }
 
+  void writeDynAllocKind(DynAllocKind Value) {
+    Record->push_back(llvm::to_underlying(Value));
+  }
+
   void writeUnsignedOrNone(UnsignedOrNone Value) {
     Record->push_back(Value.toInternalRepresentation());
   }

@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 %s -verify
 // RUN: %clang_cc1 %s -DCODEGEN -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -DCODEGEN -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+
+// RUN: %clang_cc1 %s -fexperimental-new-constant-interpreter -verify
+// RUN: %clang_cc1 %s -fexperimental-new-constant-interpreter -DCODEGEN -emit-llvm -o - | FileCheck %s
 
 #define O_CREAT 0x100
 typedef int mode_t;

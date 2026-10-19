@@ -53,6 +53,10 @@ def AsmPred1 : Predicate<"Pred1">, AssemblerPredicate<(all_of AsmCond1)>;
 def AsmPred2 : Predicate<"Pred2">, AssemblerPredicate<(all_of AsmCond2a, AsmCond2b)>;
 def AsmPred3 : Predicate<"Pred3">, AssemblerPredicate<(any_of AsmCond3a, AsmCond3b)>;
 def AsmPred4 : Predicate<"Pred4">, AssemblerPredicate<(all_of AsmCond4, (not (any_of AsmCond3a, AsmCond3b)))>;
+def AsmPred5 : Predicate<"Pred5">, AssemblerPredicate<(all_of AsmCond1, (none_of AsmCond4))>;
+def AsmPred6 : Predicate<"Pred6">, AssemblerPredicate<(all_of AsmCond4, (none_of AsmCond3a, AsmCond3b))>;
+def AsmPred7 : Predicate<"Pred7">, AssemblerPredicate<(none_of AsmCond1)>;
+def AsmPred8 : Predicate<"Pred8">, AssemblerPredicate<(none_of AsmCond2a, AsmCond2b)>;
 // MATCHER:      if (FB[arch::AsmCond1])
 // MATCHER-NEXT:   Features.set(Feature_AsmPred1Bit);
 // MATCHER-NEXT: if (FB[arch::AsmCond2a] && FB[arch::AsmCond2b])
@@ -61,6 +65,14 @@ def AsmPred4 : Predicate<"Pred4">, AssemblerPredicate<(all_of AsmCond4, (not (an
 // MATCHER-NEXT:   Features.set(Feature_AsmPred3Bit);
 // MATCHER-NEXT: if (FB[arch::AsmCond4] && !(FB[arch::AsmCond3a] || FB[arch::AsmCond3b]))
 // MATCHER-NEXT:   Features.set(Feature_AsmPred4Bit);
+// MATCHER-NEXT: if (FB[arch::AsmCond1] && !(FB[arch::AsmCond4]))
+// MATCHER-NEXT:   Features.set(Feature_AsmPred5Bit);
+// MATCHER-NEXT: if (FB[arch::AsmCond4] && !(FB[arch::AsmCond3a] || FB[arch::AsmCond3b]))
+// MATCHER-NEXT:   Features.set(Feature_AsmPred6Bit);
+// MATCHER-NEXT: if (!(FB[arch::AsmCond1]))
+// MATCHER-NEXT:   Features.set(Feature_AsmPred7Bit);
+// MATCHER-NEXT: if (!(FB[arch::AsmCond2a] || FB[arch::AsmCond2b]))
+// MATCHER-NEXT:   Features.set(Feature_AsmPred8Bit);
 
 def insn1 : TestInsn<1, [AsmPred1]>;
 // DISASS: return FB[arch::AsmCond1];
@@ -106,3 +118,15 @@ def : InstAlias<"alias5", (insn6 R4)> { let Predicates = [AsmPred1, AsmPred3]; }
 // WRITER-NEXT: {AliasPatternCond::K_OrFeature, arch::AsmCond3a},
 // WRITER-NEXT: {AliasPatternCond::K_OrFeature, arch::AsmCond3b},
 // WRITER-NEXT: {AliasPatternCond::K_EndOrFeatures, 0},
+
+def insn7 : TestInsn<7, []>;
+def : InstAlias<"alias6", (insn7 R0)> { let Predicates = [AsmPred5]; }
+// WRITER:      // (insn7 R0)
+// WRITER-NEXT: {AliasPatternCond::K_Reg, arch::R0},
+// WRITER-NEXT: {AliasPatternCond::K_Feature, arch::AsmCond1},
+// WRITER-NEXT: {AliasPatternCond::K_NegFeature, arch::AsmCond4},
+def : InstAlias<"alias7", (insn7 R1)> { let Predicates = [AsmPred8]; }
+// WRITER:      // (insn7 R1)
+// WRITER-NEXT: {AliasPatternCond::K_Reg, arch::R1},
+// WRITER-NEXT: {AliasPatternCond::K_NegFeature, arch::AsmCond2a},
+// WRITER-NEXT: {AliasPatternCond::K_NegFeature, arch::AsmCond2b},

@@ -20,6 +20,7 @@
 
 #include "hdr/netinet_in_macros.h"
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
 #include "hdr/types/struct_sockaddr_in.h"
 #include "hdr/types/struct_sockaddr_in6.h"
 #include "hdr/types/struct_sockaddr_un.h"
@@ -28,9 +29,8 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcBindTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcBindTest, BindLocalSocket) {
-
-  const char *FILENAME = "bind_file.test";
-  auto SOCK_PATH = libc_make_test_file_path(FILENAME);
+  LIBC_NAMESPACE::testing::TestDirectoryScope dir_scope;
+  constexpr char SOCK_PATH[] = "bind_file.test";
 
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);

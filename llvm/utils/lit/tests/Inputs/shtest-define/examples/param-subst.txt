@@ -1,4 +1,4 @@
-; This example originally appeared in TestingGuide.rst except here we've added
+; This example originally appeared in TestingGuide.md except here we've added
 ; echo to the clang/FileCheck command line to be executed.
 
 ; DEFINE: %{cflags} =

@@ -758,7 +758,7 @@ struct LiftIllegalVectorTransposeToMemory
 /// Values larger than a single tile are supported via decomposition.
 struct LowerIllegalTransposeStoreViaZA
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
@@ -903,7 +903,7 @@ struct LowerIllegalTransposeStoreViaZA
 ///  required.
 struct LowerColumnTransferReadToLoops
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -943,7 +943,9 @@ struct LowerColumnTransferReadToLoops
     auto upperBound = createVscaleMultiple(numRows);
     auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
     Value init = arith::ConstantOp::create(
-        rewriter, loc, newResType, DenseElementsAttr::get(newResType, 0.0f));
+        rewriter, loc, newResType,
+        DenseElementsAttr::get(newResType,
+                               rewriter.getZeroAttr(resType.getElementType())));
 
     scf::ForOp loadLoop;
     {

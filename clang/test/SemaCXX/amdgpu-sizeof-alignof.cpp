@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn---amdgiz -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu---amdgiz -std=c++11 -fsyntax-only -verify %s
 // expected-no-diagnostics
 typedef __SIZE_TYPE__ size_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;

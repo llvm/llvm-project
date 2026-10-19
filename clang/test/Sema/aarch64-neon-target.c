@@ -44,7 +44,7 @@ void bf16(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8
 
 __attribute__((target("f16mm")))
 void f16mm(float16x8_t v8f16) {
-  vmmlaq_f16_f16(v8f16, v8f16, v8f16);
+  vmmlaq_f16(v8f16, v8f16, v8f16);
 }
 
 __attribute__((target("f16f32mm")))
@@ -96,7 +96,7 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vcvt_f32_bf16(v4bf16); // expected-error {{always_inline function 'vcvt_f32_bf16' requires target feature 'bf16'}}
   vcvt_bf16_f32(v4f32); // expected-error {{always_inline function 'vcvt_bf16_f32' requires target feature 'bf16'}}
   // f16mm / f16f32mm
-  vmmlaq_f16_f16(v8f16, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f16_f16' requires target feature 'f16mm'}}
+  vmmlaq_f16(v8f16, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f16' requires target feature 'f16mm'}}
   vmmlaq_f32_f16(v4f32, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f32_f16' requires target feature 'f16f32mm'}}
   // v8.1 - qrdmla
   vqrdmlahq_s32(v4i32, v4i32, v4i32); // expected-error {{always_inline function 'vqrdmlahq_s32' requires target feature 'v8.1a'}}

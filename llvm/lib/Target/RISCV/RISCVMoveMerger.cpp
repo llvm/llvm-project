@@ -75,16 +75,6 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static unsigned getGPRPairCopyOpcode(const RISCVSubtarget &ST) {
-  if (ST.hasStdExtZdinx())
-    return RISCV::FSGNJ_D_IN32X;
-
-  if (ST.hasStdExtP())
-    return RISCV::PADD_DW;
-
-  llvm_unreachable("Unhandled subtarget with paired move.");
-}
-
 static unsigned getCM_MVOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
   if (ST.hasStdExtZcmp())
     return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
@@ -137,7 +127,7 @@ bool RISCVMoveMerge::isCandidateToMergeMVA01S(const DestSourcePair &RegPair) {
   // If destination is not a0 or a1.
   if ((ST->hasStdExtZcmp() || ST->hasVendorXqccmp()) &&
       (Destination == RISCV::X10 || Destination == RISCV::X11) &&
-      RISCV::SR07RegClass.contains(Source))
+      RISCV::GPRS07RegClass.contains(Source))
     return true;
   return false;
 }
@@ -149,7 +139,7 @@ bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
   // If Source is s0 - s7.
   if ((ST->hasStdExtZcmp() || ST->hasVendorXqccmp()) &&
       (Source == RISCV::X10 || Source == RISCV::X11) &&
-      RISCV::SR07RegClass.contains(Destination))
+      RISCV::GPRS07RegClass.contains(Destination))
     return true;
   return false;
 }
@@ -186,25 +176,19 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
   // flag.
   MachineOperand PairedSource = *SecondPair.Source;
 
-  unsigned Opcode = getGPRPairCopyOpcode(*ST);
   for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
     if (It->readsRegister(PairedSource.getReg(), TRI))
       PairedSource.setIsKill(false);
 
-  Register SrcReg1, SrcReg2, DestReg;
   unsigned GPRPairIdx =
       RegPairIsEven ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-  SrcReg1 = TRI->getMatchingSuperReg(FirstPair.Source->getReg(), GPRPairIdx,
-                                     &RISCV::GPRPairRegClass);
-  SrcReg2 = ST->hasStdExtZdinx() ? SrcReg1 : Register(RISCV::X0_Pair);
-  DestReg = TRI->getMatchingSuperReg(FirstPair.Destination->getReg(),
-                                     GPRPairIdx, &RISCV::GPRPairRegClass);
+  MCRegister SrcReg = TRI->getMatchingSuperReg(
+      FirstPair.Source->getReg(), GPRPairIdx, &RISCV::GPRPairRegClass);
+  MCRegister DestReg = TRI->getMatchingSuperReg(
+      FirstPair.Destination->getReg(), GPRPairIdx, &RISCV::GPRPairRegClass);
+  bool KillSrc = PairedSource.isKill() && FirstPair.Source->isKill();
 
-  BuildMI(*I->getParent(), I, DL, TII->get(Opcode), DestReg)
-      .addReg(SrcReg1, getKillRegState(PairedSource.isKill() &&
-                                       FirstPair.Source->isKill()))
-      .addReg(SrcReg2, getKillRegState(PairedSource.isKill() &&
-                                       FirstPair.Source->isKill()));
+  TII->copyPhysReg(*I->getParent(), I, DL, DestReg, SrcReg, KillSrc);
 
   I->eraseFromParent();
   Paired->eraseFromParent();
@@ -306,8 +290,15 @@ RISCVMoveMerge::findMatchingGPRPairCopy(MachineBasicBlock::iterator &MBBI,
       RegPair.Source->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
   Register DestGPRPair = TRI->getMatchingSuperReg(
       RegPair.Destination->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+
+  if (!SrcGPRPair.isValid() || !DestGPRPair.isValid())
+    return E;
+
   Register ExpectedSourceReg = TRI->getSubReg(SrcGPRPair, SecondPairIdx);
   Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
+
+  if (!ExpectedSourceReg.isValid() || !ExpectedDestReg.isValid())
+    return E;
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {
@@ -405,7 +396,9 @@ RISCVMoveMerge::findMatchingPLI(MachineBasicBlock::iterator &MBBI,
   // Get the expected destination register of the matching lane.
   Register DestGPRPair = TRI->getMatchingSuperReg(FirstDestReg, RegPairIdx,
                                                   &RISCV::GPRPairRegClass);
+  assert(DestGPRPair.isValid());
   Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
+  assert(ExpectedDestReg.isValid());
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {

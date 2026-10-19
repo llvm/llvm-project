@@ -27,6 +27,7 @@
 #include <format>
 #include <locale>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #include "make_string.h"

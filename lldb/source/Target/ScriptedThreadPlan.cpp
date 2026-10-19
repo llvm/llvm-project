@@ -20,6 +20,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -89,6 +90,10 @@ void ScriptedThreadPlan::DidPush() {
                                                       this->shared_from_this());
     if (!obj_or_err) {
       m_error_str = llvm::toString(obj_or_err.takeError());
+      Debugger::ReportError(
+          llvm::formatv("failed to create ScriptedThreadPlan: {0}", m_error_str)
+              .str(),
+          m_process.GetTarget().GetDebugger().GetID());
       SetPlanComplete(false);
     } else
       m_implementation_sp = *obj_or_err;
@@ -104,7 +109,7 @@ bool ScriptedThreadPlan::ShouldStop(Event *event_ptr) {
     auto should_stop_or_err = m_interface->ShouldStop(event_ptr);
     if (!should_stop_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), should_stop_or_err.takeError(),
-                     "Can't call ScriptedThreadPlan::ShouldStop.");
+                     "Can't call ScriptedThreadPlan::ShouldStop: {0}");
       SetPlanComplete(false);
     } else
       should_stop = *should_stop_or_err;
@@ -121,7 +126,7 @@ bool ScriptedThreadPlan::IsPlanStale() {
     auto is_stale_or_err = m_interface->IsStale();
     if (!is_stale_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), is_stale_or_err.takeError(),
-                     "Can't call ScriptedThreadPlan::IsStale.");
+                     "Can't call ScriptedThreadPlan::IsStale: {0}");
       SetPlanComplete(false);
     } else
       is_stale = *is_stale_or_err;
@@ -139,7 +144,7 @@ bool ScriptedThreadPlan::DoPlanExplainsStop(Event *event_ptr) {
     if (!explains_stop_or_error) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread),
                      explains_stop_or_error.takeError(),
-                     "Can't call ScriptedThreadPlan::ExplainsStop.");
+                     "Can't call ScriptedThreadPlan::ExplainsStop: {0}");
       SetPlanComplete(false);
     } else
       explains_stop = *explains_stop_or_error;
@@ -168,8 +173,16 @@ lldb::StateType ScriptedThreadPlan::GetPlanRunState() {
   Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOG(log, "called on Scripted Thread Plan: {0}", GetScriptClassName());
   lldb::StateType run_state = eStateRunning;
-  if (m_implementation_sp)
-    run_state = m_interface->GetRunState();
+  if (m_implementation_sp) {
+    llvm::Expected<lldb::StateType> run_state_or_err =
+        m_interface->GetRunState();
+    if (!run_state_or_err) {
+      LLDB_LOG_ERROR(log, run_state_or_err.takeError(),
+                     "Can't call ScriptedThreadPlan::GetRunState: {0}");
+      return run_state;
+    }
+    run_state = *run_state_or_err;
+  }
   return run_state;
 }
 
@@ -181,16 +194,22 @@ void ScriptedThreadPlan::GetDescription(Stream *s,
     ScriptInterpreter *script_interp = GetScriptInterpreter();
     if (script_interp) {
       lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
-      llvm::Error err = m_interface->GetStopDescription(stream);
-      if (err) {
+      if (llvm::Error err = m_interface->GetStopDescription(stream))
         LLDB_LOG_ERROR(
             GetLog(LLDBLog::Thread), std::move(err),
             "Can't call ScriptedThreadPlan::GetStopDescription: {0}");
+
+      // Fall back on the class name whenever the plan didn't describe itself,
+      // whether that's because `stop_description` failed or because the plan
+      // doesn't implement it at all. A plan with no description at all is
+      // never the right answer.
+      StreamString *description =
+          reinterpret_cast<StreamString *>(stream.get());
+      if (description->GetString().empty())
         s->Format("Scripted thread plan implemented by class {0}.",
                   GetScriptClassName());
-      } else
-        s->PutCString(
-            reinterpret_cast<StreamString *>(stream.get())->GetData());
+      else
+        s->PutCString(description->GetData());
     }
     return;
   }

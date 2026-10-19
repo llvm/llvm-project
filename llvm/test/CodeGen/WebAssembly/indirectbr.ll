@@ -1,7 +1,7 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; This tests that indirectbr instructions are lowered to switches. Currently we
-; just re-use the IndirectBrExpand Pass; it has its own IR-level test.
+; just reuse the IndirectBrExpand Pass; it has its own IR-level test.
 ; So this test just ensures that the pass gets run and we can lower indirectbr
 
 target triple = "wasm32"

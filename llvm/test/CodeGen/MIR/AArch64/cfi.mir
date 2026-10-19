@@ -49,4 +49,8 @@ body: |
     ; CHECK: CFI_INSTRUCTION window_save
     CFI_INSTRUCTION negate_ra_sign_state
     ; CHECK: CFI_INSTRUCTION negate_ra_sign_state
+    CFI_INSTRUCTION negate_ra_sign_state_with_pc
+    ; CHECK: CFI_INSTRUCTION negate_ra_sign_state_with_pc
+    CFI_INSTRUCTION llvm_set_ra_state 2, 0
+    ; CHECK: CFI_INSTRUCTION llvm_set_ra_state 2, 0
     RET_ReallyLR

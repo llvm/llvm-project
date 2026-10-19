@@ -41,7 +41,7 @@ if __name__ == "__main__":
         source_root = Path(args.source_root).resolve()
 
     files_to_update = (
-        "clang/docs/ReleaseNotes.rst",
+        "clang/docs/ReleaseNotes.md",
         "clang-tools-extra/docs/ReleaseNotes.rst",
         "flang/docs/ReleaseNotes.md",
         "lld/docs/ReleaseNotes.rst",

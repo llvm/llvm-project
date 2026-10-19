@@ -20,13 +20,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <vector>
 
 namespace llvm {
-
-namespace vfs {
-class FileSystem;
-} // end namespace vfs
 
 class raw_ostream;
 class SMDiagnostic;
@@ -272,6 +269,11 @@ public:
   /// \param IncludeLoc The location of the include.
   /// \param OS the raw_ostream to print on.
   LLVM_ABI void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
+
+  /// Prints the include stack of a buffer unless it is a macro instantiation
+  /// buffer.
+  LLVM_ABI void printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const;
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.

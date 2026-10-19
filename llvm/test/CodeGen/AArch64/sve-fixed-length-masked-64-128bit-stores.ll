@@ -35,6 +35,34 @@ define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
   ret void
 }
 
+define void @masked_store_v8bf16_without_bf16_attr(ptr %dst, <8 x i1> %mask) {
+; CHECK-LABEL: masked_store_v8bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v8bf16(<8 x bfloat> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
+  ret void
+}
+
+define void @masked_store_v8bf16_with_bf16_attr(ptr %dst, <8 x i1> %mask) #0 {
+; CHECK-LABEL: masked_store_v8bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v8bf16(<8 x bfloat> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
+  ret void
+}
+
 define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
@@ -116,3 +144,44 @@ define void @masked_store_v4f16(ptr %ap, ptr %bp) {
   ret void
 }
 
+define void @masked_store_v4bf16_without_bf16_attr(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_store_v4bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  call void @llvm.masked.store.v4bf16(<4 x bfloat> %a, ptr %bp, i32 2, <4 x i1> %mask)
+  ret void
+}
+
+define void @masked_store_v4bf16_with_bf16_attr(ptr %ap, ptr %bp) #0 {
+; CHECK-LABEL: masked_store_v4bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v2.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  call void @llvm.masked.store.v4bf16(<4 x bfloat> %a, ptr %bp, i32 2, <4 x i1> %mask)
+  ret void
+}
+
+attributes #0 = { "target-features"="+bf16" }

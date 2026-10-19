@@ -21,9 +21,9 @@
 #include <__ranges/concepts.h>
 #include <__type_traits/remove_cvref.h>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <ranges::input_range _Rp>
   requires same_as<_Rp, remove_cvref_t<_Rp>>
@@ -50,8 +50,8 @@ inline constexpr range_format format_kind<_Rp> = [] {
     return range_format::sequence;
 }();
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif

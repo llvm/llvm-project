@@ -6,7 +6,7 @@ acc.routine @routine_seq func(@host_foo) seq
 // CHECK: acc.routine @routine_seq func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_seq, <seq>, "host_foo">
 // CHECK-NOT: acc.kernel_environment
-// CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
 // CHECK: acc.compute_region
 // CHECK: origin = "acc.routine"
 func.func @host_foo(%buf: memref<8xi32>) {
@@ -23,7 +23,7 @@ acc.routine @routine_vec func(@host_bar) vector
 // CHECK: acc.routine @routine_vec func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_vec, <vector>, "host_bar">
 // CHECK-NOT: acc.kernel_environment
-// CHECK: acc.par_width {par_dim = #acc.par_dim<thread_x>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<thread_x>)
 // CHECK: acc.compute_region
 // CHECK: origin = "acc.routine"
 func.func @host_bar(%buf: memref<4xi32>) {
@@ -39,7 +39,7 @@ func.func @host_bar(%buf: memref<4xi32>) {
 acc.routine @routine_worker func(@host_worker) worker
 // CHECK: acc.routine @routine_worker func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_worker, <worker>, "host_worker">
-// CHECK: acc.par_width {par_dim = #acc.par_dim<thread_y>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<thread_y>)
 // CHECK: acc.compute_region
 // CHECK: origin = "acc.routine"
 func.func @host_worker(%x: i32) {
@@ -52,7 +52,7 @@ func.func @host_worker(%x: i32) {
 acc.routine @routine_gang func(@host_gang) gang
 // CHECK: acc.routine @routine_gang func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "host_gang">
-// CHECK: acc.par_width {par_dim = #acc.par_dim<block_x>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<block_x>)
 // CHECK: acc.compute_region
 // CHECK: origin = "acc.routine"
 func.func @host_gang() {
@@ -81,12 +81,12 @@ func.func @host_ret(%cond: i1) -> i32 {
 acc.routine @routine_cf func(@host_cf) seq
 // CHECK: acc.routine @routine_cf func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_cf, <seq>, "host_cf">
-// CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
 // CHECK: %[[CR:[0-9]+]] = acc.compute_region
 // CHECK: %[[EXE:[0-9]+]] = scf.execute_region
 // CHECK: scf.yield %{{.*}} : i32
 // CHECK: acc.yield %[[EXE]] : i32
-// CHECK: } {origin = "acc.routine"}
+// CHECK: } <{origin = "acc.routine"}>
 // CHECK: return %[[CR]] : i32
 func.func @host_cf(%cond: i1) -> i32 {
   cf.cond_br %cond, ^then, ^else
@@ -116,10 +116,34 @@ acc.routine @r_a func(@f_a) seq
 acc.routine @r_b func(@f_a) vector
 // CHECK: acc.routine @r_a func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@r_a, <seq>, "f_a">
-// CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<sequential>)
 // CHECK: acc.routine @r_b func(@
 // CHECK: acc.specialized_routine = #acc.specialized_routine<@r_b, <vector>, "f_a">
-// CHECK: acc.par_width {par_dim = #acc.par_dim<thread_x>}
+// CHECK: acc.par_width par_dim(#acc.par_dim<thread_x>)
 func.func @f_a() {
   return
 }
+
+// -----
+
+// Test nohost routine is specialized.
+acc.routine @routine_nohost func(@host_nohost) gang nohost
+// CHECK: func.func @host_nohost()
+// CHECK: acc.routine @routine_nohost func(@
+// CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_nohost, <gang_dim1>, "host_nohost">
+func.func @host_nohost() {
+  return
+}
+
+// -----
+
+// The device copy keeps the host's visibility, signature attributes and
+// function properties.
+acc.routine @routine_attrs func(@host_attrs) seq
+func.func private @host_attrs(%v: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext}) attributes {no_inline, test.marker = "keep"} {
+  return %v : i16
+}
+// CHECK-LABEL: func.func private @host_attrs(
+// CHECK:       func.func private @host_attrs_0(
+// CHECK-SAME:    %{{.*}}: i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+// CHECK-SAME:    attributes {acc.specialized_routine = #acc.specialized_routine<@routine_attrs, <seq>, "host_attrs">, test.marker = "keep", no_inline}

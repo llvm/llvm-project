@@ -106,3 +106,71 @@ TEST(LlvmLibcFixedVectorTest, ConstForwardIteration) {
     ASSERT_EQ(*it, arr[idx]);
   }
 }
+
+TEST(LlvmLibcFixedVectorTest, FullCapacityIteration) {
+  constexpr size_t CAPACITY = 10;
+  LIBC_NAMESPACE::FixedVector<int, CAPACITY> vec;
+  for (size_t i = 0; i < CAPACITY; ++i)
+    ASSERT_TRUE(vec.push_back(static_cast<int>(i)));
+
+  // Test forward iteration on full capacity.
+  size_t count = 0;
+  for (auto it = vec.begin(); it != vec.end(); ++it, ++count)
+    ASSERT_EQ(*it, static_cast<int>(count));
+  ASSERT_EQ(count, CAPACITY);
+
+  // Test const forward iteration.
+  const auto &const_vec = vec;
+  count = 0;
+  for (auto it = const_vec.begin(); it != const_vec.end(); ++it, ++count)
+    ASSERT_EQ(*it, static_cast<int>(count));
+  ASSERT_EQ(count, CAPACITY);
+
+  // Test reverse iteration on full capacity.
+  int expected = static_cast<int>(CAPACITY) - 1;
+  for (auto it = vec.rbegin(); it != vec.rend(); ++it, --expected)
+    ASSERT_EQ(*it, expected);
+  ASSERT_EQ(expected, -1);
+}
+
+TEST(LlvmLibcFixedVectorTest, EmptyIteration) {
+  LIBC_NAMESPACE::FixedVector<int, 5> vec;
+  ASSERT_TRUE(vec.begin() == vec.end());
+  ASSERT_TRUE(vec.rbegin() == vec.rend());
+
+  const auto &const_vec = vec;
+  ASSERT_TRUE(const_vec.begin() == const_vec.end());
+  ASSERT_TRUE(vec.rbegin() == vec.rend());
+}
+
+TEST(LlvmLibcFixedVectorTest, ConstructionFromEdgeRanges) {
+  LIBC_NAMESPACE::cpp::array<int, 5> arr{10, 20, 30, 40, 50};
+
+  // Construct from empty range.
+  LIBC_NAMESPACE::FixedVector<int, 5> empty_vec(arr.begin(), arr.begin());
+  ASSERT_TRUE(empty_vec.empty());
+  ASSERT_EQ(empty_vec.size(), static_cast<size_t>(0));
+
+  // Construct exactly at capacity.
+  LIBC_NAMESPACE::FixedVector<int, 5> full_vec(arr.begin(), arr.end());
+  ASSERT_EQ(full_vec.size(), static_cast<size_t>(5));
+  for (size_t i = 0; i < 5; ++i)
+    ASSERT_EQ(full_vec[i], arr[i]);
+}
+
+TEST(LlvmLibcFixedVectorTest, TriviallyCopyableCustomType) {
+  struct Point {
+    int x;
+    int y;
+  };
+  LIBC_NAMESPACE::FixedVector<Point, 3> vec;
+  ASSERT_TRUE(vec.push_back(Point{1, 2}));
+  ASSERT_TRUE(vec.push_back(Point{3, 4}));
+  ASSERT_EQ(vec.size(), static_cast<size_t>(2));
+  ASSERT_EQ(vec[0].x, 1);
+  ASSERT_EQ(vec[0].y, 2);
+  ASSERT_EQ(vec[1].x, 3);
+  ASSERT_EQ(vec[1].y, 4);
+  vec.reset();
+  ASSERT_TRUE(vec.empty());
+}

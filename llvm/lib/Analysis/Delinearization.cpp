@@ -56,8 +56,11 @@ struct SCEVCollectStrides {
       : SE(SE), Strides(S) {}
 
   bool follow(const SCEV *S) {
-    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S))
-      Strides.push_back(AR->getStepRecurrence(SE));
+    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
+    if (!AR || !AR->isAffine())
+      return false;
+
+    Strides.push_back(AR->getStepRecurrence(SE));
     return true;
   }
 

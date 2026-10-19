@@ -9,6 +9,7 @@
 
 #include <__verbose_abort>
 #include <exception>
+#include <new>
 #include "include/atomic_support.h"
 
 namespace std {

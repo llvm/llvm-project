@@ -18,6 +18,7 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <initializer_list>

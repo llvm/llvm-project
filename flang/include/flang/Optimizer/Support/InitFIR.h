@@ -38,9 +38,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
-#include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/Passes.h"
 
 namespace fir::support {

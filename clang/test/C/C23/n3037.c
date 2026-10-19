@@ -930,3 +930,21 @@ struct GH199417_2 {   // c17-note {{previous definition is here}}
 struct GH199417_2 {
   enum GH199417_E2 { eGH199417 } u; // c23-note {{field 'u' has type 'enum GH199417_E2' here}}
 };
+
+struct GH199417_3 {     // c17-note {{previous definition is here}}
+  struct GH199417_4 {   // c17-note {{previous definition is here}}
+    union { int i; } u; // c23-note-re {{field 'u' has type 'union (unnamed at {{.*}})' here}}
+  } a;                  // c23-note {{field 'a' has type 'struct GH199417_4' here}}
+};
+
+// c23-error@+2 {{type 'struct GH199417_3' has incompatible definitions}}
+// c17-error@+1 {{redefinition of 'GH199417_3'}}
+struct GH199417_3 {
+  // c23-error@+2 {{type 'struct GH199417_4' has incompatible definitions}}
+  // c17-error@+1 {{redefinition of 'GH199417_4'}}
+  struct GH199417_4 {
+    enum GH199417_E3 { eeGH199417 } u; // c23-note {{field 'u' has type 'enum GH199417_E3' here}}
+    // FIXME: the below diagnostic uses type 'int' because of error recovery,
+    // it would be better to print the original type.
+  } a;                                 // c23-note {{field 'a' has type 'int' here}}
+};

@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang;
@@ -103,6 +104,7 @@ public:
   };
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
+  bool WarnOnLockOrderReversal = false;
 
 private:
   typedef void (PthreadLockChecker::*FnCheck)(const CallEvent &Call,
@@ -226,7 +228,8 @@ private:
                                                 const SymbolRef *sym) const;
   void reportBug(CheckerContext &C, std::unique_ptr<BugType> BT[],
                  const Expr *MtxExpr, const MemRegion *MtxRegion,
-                 CheckerKind CheckKind, StringRef Desc) const;
+                 CheckerKind CheckKind, StringRef Desc,
+                 const MemRegion *ExtraInteresting = nullptr) const;
 
   // Init.
   void InitAnyLock(const CallEvent &Call, CheckerContext &C,
@@ -556,25 +559,21 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
   LockSetTy LS = state->get<LockSet>();
 
   if (!LS.isEmpty()) {
-    const MemRegion *firstLockR = LS.getHead();
-    if (firstLockR != lockR) {
-      ExplodedNode *N = C.generateErrorNode();
-      if (!N)
-        return;
-      initBugType(CheckKind);
-      auto Report = std::make_unique<PathSensitiveBugReport>(
-          *BT_lor[CheckKind],
-          "This was not the most recently acquired lock. Possible lock "
-          "order reversal",
-          N);
-      Report->addRange(MtxExpr->getSourceRange());
-      Report->markInteresting(lockR);
-      Report->markInteresting(firstLockR);
-      C.emitReport(std::move(Report));
+    if (WarnOnLockOrderReversal && LS.getHead() != lockR) {
+      reportBug(C, BT_lor, MtxExpr, lockR, CheckKind,
+                "This was not the most recently acquired lock. Possible lock "
+                "order reversal",
+                LS.getHead());
       return;
     }
-    // Record that the lock was released.
-    state = state->set<LockSet>(LS.getTail());
+
+    auto &Factory = state->get_context<LockSet>();
+    llvm::ImmutableList<const MemRegion *> NewLS = Factory.getEmptyList();
+    for (const MemRegion *LockReg :
+         llvm::make_filter_range(LS, llvm::not_equal_to(lockR))) {
+      NewLS = Factory.add(LockReg, NewLS);
+    }
+    state = state->set<LockSet>(NewLS);
   }
 
   state = state->set<LockMap>(lockR, LockState::getUnlocked());
@@ -689,9 +688,12 @@ void PthreadLockChecker::InitLockAux(const CallEvent &Call, CheckerContext &C,
   reportBug(C, BT_initlock, MtxExpr, LockR, CheckKind, Message);
 }
 
-void PthreadLockChecker::reportBug(
-    CheckerContext &C, std::unique_ptr<BugType> BT[], const Expr *MtxExpr,
-    const MemRegion *MtxRegion, CheckerKind CheckKind, StringRef Desc) const {
+void PthreadLockChecker::reportBug(CheckerContext &C,
+                                   std::unique_ptr<BugType> BT[],
+                                   const Expr *MtxExpr,
+                                   const MemRegion *MtxRegion,
+                                   CheckerKind CheckKind, StringRef Desc,
+                                   const MemRegion *ExtraInteresting) const {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
@@ -701,6 +703,8 @@ void PthreadLockChecker::reportBug(
   Report->addRange(MtxExpr->getSourceRange());
   if (MtxRegion)
     Report->markInteresting(MtxRegion);
+  if (ExtraInteresting)
+    Report->markInteresting(ExtraInteresting);
   C.emitReport(std::move(Report));
 }
 
@@ -782,8 +786,21 @@ bool ento::shouldRegisterPthreadLockBase(const CheckerManager &mgr) { return tru
                                                                                \
   bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
-REGISTER_CHECKER(PthreadLockChecker)
 REGISTER_CHECKER(FuchsiaLockChecker)
 REGISTER_CHECKER(C11LockChecker)
 
 #undef REGISTER_CHECKER
+
+void ento::registerPthreadLockChecker(CheckerManager &Mgr) {
+  PthreadLockChecker *Checker = Mgr.getChecker<PthreadLockChecker>();
+  Checker->ChecksEnabled[PthreadLockChecker::CK_PthreadLockChecker] = true;
+  Checker->CheckNames[PthreadLockChecker::CK_PthreadLockChecker] =
+      Mgr.getCurrentCheckerName();
+  Checker->WarnOnLockOrderReversal =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckerName(), "WarnOnLockOrderReversal");
+}
+
+bool ento::shouldRegisterPthreadLockChecker(const CheckerManager &) {
+  return true;
+}

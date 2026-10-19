@@ -192,6 +192,13 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
+  /// Cached result of Function::callsFunctionThatReturnsTwice(), used to
+  /// account for longjmp re-entry paths not visible to the forward CFG.
+  std::optional<bool> CallsReturnsTwiceFn;
+
+  /// Whether the function contains a call that may return twice (e.g., setjmp).
+  bool callsReturnsTwiceFn();
+
 public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
                          const CycleInfo *CI = nullptr)
@@ -456,21 +463,6 @@ public:
     return getMemoryEffects(Call).doesNotAccessMemory();
   }
 
-  /// Checks if the specified function is known to never read or write memory.
-  ///
-  /// Note that if the function only reads from known-constant memory, it is
-  /// also legal to return true. Also, function that unwind the stack are legal
-  /// for this predicate.
-  ///
-  /// Many optimizations (such as CSE and LICM) can be performed on such calls
-  /// to such functions without worrying about aliasing properties, and many
-  /// functions have this property (e.g. 'sin' and 'cos').
-  ///
-  /// This property corresponds to the GCC 'const' attribute.
-  bool doesNotAccessMemory(const Function *F) {
-    return getMemoryEffects(F).doesNotAccessMemory();
-  }
-
   /// Checks if the specified call is known to only read from non-volatile
   /// memory (or not access memory at all).
   ///
@@ -482,19 +474,6 @@ public:
   /// This property corresponds to the GCC 'pure' attribute.
   bool onlyReadsMemory(const CallBase *Call) {
     return getMemoryEffects(Call).onlyReadsMemory();
-  }
-
-  /// Checks if the specified function is known to only read from non-volatile
-  /// memory (or not access memory at all).
-  ///
-  /// Functions that unwind the stack are legal for this predicate.
-  ///
-  /// This property allows many common optimizations to be performed in the
-  /// absence of interfering store instructions, such as CSE of strlen calls.
-  ///
-  /// This property corresponds to the GCC 'pure' attribute.
-  bool onlyReadsMemory(const Function *F) {
-    return getMemoryEffects(F).onlyReadsMemory();
   }
 
   /// Check whether or not an instruction may read or write the optionally
@@ -528,22 +507,6 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
 
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
-
-  /// A convenience wrapper to synthesize a memory location.
-  ModRefInfo callCapturesBefore(const Instruction *I, const Value *P,
-                                LocationSize Size, DominatorTree *DT) {
-    return callCapturesBefore(I, MemoryLocation(P, Size), DT);
-  }
-
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Higher level methods for querying mod/ref information.
@@ -553,12 +516,6 @@ public:
   /// modify the location Loc.
   LLVM_ABI bool canBasicBlockModify(const BasicBlock &BB,
                                     const MemoryLocation &Loc);
-
-  /// A convenience wrapper synthesizing a memory location.
-  bool canBasicBlockModify(const BasicBlock &BB, const Value *P,
-                           LocationSize Size) {
-    return canBasicBlockModify(BB, MemoryLocation(P, Size));
-  }
 
   /// Check if it is possible for the execution of the specified instructions
   /// to mod\ref (according to the mode) the location Loc.
@@ -570,19 +527,13 @@ public:
                                           const MemoryLocation &Loc,
                                           const ModRefInfo Mode);
 
-  /// A convenience wrapper synthesizing a memory location.
-  bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
-                                 const Value *Ptr, LocationSize Size,
-                                 const ModRefInfo Mode) {
-    return canInstructionRangeModRef(I1, I2, MemoryLocation(Ptr, Size), Mode);
-  }
-
   // CtxI can be nullptr, in which case the query is whether or not the aliasing
   // relationship holds through the entire function.
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI = nullptr);
-  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc,
+                                  const Instruction *CtxI);
 
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI,
@@ -765,7 +716,7 @@ public:
   /// Returns an AliasResult indicating whether a specific memory location
   /// aliases errno.
   virtual AliasResult aliasErrno(const MemoryLocation &Loc,
-                                 const Module *M) = 0;
+                                 const Instruction *CtxI) = 0;
 
   /// @}
   //===--------------------------------------------------------------------===//
@@ -834,8 +785,9 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
-  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
-    return Result.aliasErrno(Loc, M);
+  AliasResult aliasErrno(const MemoryLocation &Loc,
+                         const Instruction *CtxI) override {
+    return Result.aliasErrno(Loc, CtxI);
   }
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
@@ -898,7 +850,7 @@ public:
     return AliasResult::MayAlias;
   }
 
-  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Instruction *CtxI) {
     return AliasResult::MayAlias;
   }
 
@@ -1116,7 +1068,8 @@ struct ExternalAAWrapperPass : ImmutablePass {
 /// function, and the AAResults object to populate. This should be used when
 /// setting up a custom pass pipeline to inject a hook into the AA results.
 LLVM_ABI ImmutablePass *createExternalAAWrapperPass(
-    std::function<void(Pass &, Function &, AAResults &)> Callback);
+    std::function<void(Pass &, Function &, AAResults &)> Callback,
+    bool RunEarly = false);
 
 } // end namespace llvm
 

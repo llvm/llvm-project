@@ -3,11 +3,6 @@
 ; RUN: llc -mtriple=mips64el-- -disable-mips-delay-filler \
 ; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC64
 
-; RUN: llc -mtriple=mipsel-- -disable-mips-delay-filler -mips-fix-global-base-reg=false \
-; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATICGP32
-; RUN: llc -mtriple=mips64el-- -disable-mips-delay-filler -mips-fix-global-base-reg=false \
-; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATICGP64
-
 @t1 = dso_local thread_local global i32 0, align 4
 
 define dso_local i32 @f1() nounwind {
@@ -36,16 +31,6 @@ define dso_local i32 @f2() nounwind {
 entry:
   %tmp = load i32, ptr @t2, align 4
   ret i32 %tmp
-
-; STATICGP32-LABEL: f2:
-; STATICGP32: lui     $[[R0:[0-9]+]], %hi(__gnu_local_gp)
-; STATICGP32: addiu   $[[GP:[0-9]+]], $[[R0]], %lo(__gnu_local_gp)
-; STATICGP32: lw      ${{[0-9]+}}, %gottprel(t2)($[[GP]])
-
-; STATICGP64-LABEL: f2:
-; STATICGP64: lui     $[[R0:[0-9]+]], %hi(%neg(%gp_rel(f2)))
-; STATICGP64: daddiu  $[[GP:[0-9]+]], $[[R0]], %lo(%neg(%gp_rel(f2)))
-; STATICGP64: ld      $1, %gottprel(t2)($[[GP]])
 
 ; STATIC32-LABEL:   f2:
 ; STATIC32:   lui     $[[R0:[0-9]+]], %hi(__gnu_local_gp)

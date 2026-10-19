@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ProcessSaveCoreMinidump64bTestCase(TestBase):
     def verify_minidump(
         self,
@@ -72,7 +72,7 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
             if core_target is not None:
                 self.assertTrue(self.dbg.DeleteTarget(core_target))
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_minidump_save_style_full(self):
         """Test that a full minidump is the same byte for byte."""
@@ -87,7 +87,7 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
             if os.path.isfile(minidump_path):
                 os.unlink(minidump_path)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_minidump_save_style_mixed_memory(self):
         """Test that a mixed memory minidump is the same byte for byte."""

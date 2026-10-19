@@ -34,7 +34,7 @@ if.end:
   ret void
 }
 
-define internal fastcc i32 @cond(i32 %i) #1 !prof !30 !PGOFuncName !36 {
+define internal fastcc i32 @cond(i32 %i) #1 !prof !30 {
 entry:
   %rem = srem i32 %i, 2
   ret i32 %rem
@@ -79,4 +79,3 @@ attributes #1 = { inlinehint noinline }
 !33 = !{!"int", !34, i64 0}
 !34 = !{!"omnipotent char", !35, i64 0}
 !35 = !{!"Simple C/C++ TBAA"}
-!36 = !{!"cspgo_bar.c:cond"}

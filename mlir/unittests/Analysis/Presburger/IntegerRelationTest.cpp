@@ -119,6 +119,25 @@ TEST(IntegerRelationTest, applyDomainAndRange) {
   }
 }
 
+TEST(IntegerRelationTest, composeRemoveRedundantLocalVars) {
+  // map x to  y = x + 10.
+  IntegerRelation map1 =
+      parseRelationFromSet("(x, y) : (y - x - 10 == 0)", /*numDomain=*/1);
+
+  // map y to z = y + 20.
+  IntegerRelation map2 =
+      parseRelationFromSet("(y, z) : (z - y - 20 == 0)", /*numDomain=*/1);
+
+  // composing projects out y (converting it to a local variable)
+  map1.compose(map2);
+
+  // y is fully determined by x so should be eliminated after composition
+  EXPECT_EQ(map1.getNumLocalVars(), 0u);
+  IntegerRelation expectedMap =
+      parseRelationFromSet("(x, z) : (z - x - 30 == 0)", /*numDomain=*/1);
+  EXPECT_TRUE(map1.isEqual(expectedMap));
+}
+
 TEST(IntegerRelationTest, symbolicLexmin) {
   SymbolicLexOpt lexmin =
       parseRelationFromSet("(a, x)[b] : (x - a >= 0, x - b >= 0)", 1)

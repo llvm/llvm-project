@@ -11,7 +11,7 @@
 ; not appear on the predecessors list of the second one.
 define i32 @test_disjoint(ptr %P, i32 %v) {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: test_disjoint:%bb.0
 ; CHECK:SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx)
 ; CHECK-NOT: Successors:

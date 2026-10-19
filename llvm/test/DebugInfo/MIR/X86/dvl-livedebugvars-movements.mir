@@ -1,4 +1,4 @@
-# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
+# RUN: llc -start-after=phi-node-elimination -stop-after=virt-reg-rewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
 #
 # Test that when a livedebugvars interval is split, DBG_VALUE_LISTs are created
 # with the correct operands and exprs. Force values to be moved around between
@@ -13,7 +13,7 @@
 # CHECK-NEXT:  DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rax, $rbx,
 # CHECK-NEXT:  CALL64pcrel32 @foo
 # CHECK-NEXT:  DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_LLVM_arg, 1, DW_OP_plus), %stack.0, $rbx,
-# CHECK-NEXT:  $rcx = COPY killed renamable $rbx
+# CHECK-NEXT:  $rcx = lr-split COPY killed renamable $rbx
 # CHECK-NEXT:  DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_LLVM_arg, 1, DW_OP_plus), %stack.0, $rcx,
 # CHECK-NEXT:  INLINEASM
 # CHECK-NEXT:  $rax = MOV64rm %stack.0

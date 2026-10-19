@@ -147,15 +147,9 @@ define <2 x float> @extract_v2f32_nxv16f32_2(<vscale x 16 x float> %arg) {
 define <4 x i1> @extract_v4i1_nxv32i1_0(<vscale x 32 x i1> %arg) {
 ; CHECK-LABEL: extract_v4i1_nxv32i1_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    umov w8, v1.b[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    umov w9, v1.b[2]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    umov w8, v1.b[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %ext = call <4 x i1> @llvm.vector.extract.v4i1.nxv32i1(<vscale x 32 x i1> %arg, i64 0)
   ret <4 x i1> %ext
@@ -167,33 +161,23 @@ define <4 x i1> @extract_v4i1_nxv32i1_16(<vscale x 32 x i1> %arg) {
 ; CHECK-LABEL: extract_v4i1_nxv32i1_16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-8
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
+; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    str z0, [sp, #1, mul vl]
-; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    punpkhi p2.h, p1.b
+; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    mov z0.h, p2/z, #1 // =0x1
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    mov z1.h, p1/z, #1 // =0x1
+; CHECK-NEXT:    mov z2.h, p2/z, #1 // =0x1
 ; CHECK-NEXT:    str z0, [sp, #3, mul vl]
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
 ; CHECK-NEXT:    str z1, [sp, #2, mul vl]
-; CHECK-NEXT:    str z0, [sp, #5, mul vl]
-; CHECK-NEXT:    str z1, [sp, #4, mul vl]
-; CHECK-NEXT:    str z0, [sp, #7, mul vl]
-; CHECK-NEXT:    str z1, [sp, #6, mul vl]
-; CHECK-NEXT:    ld1 { v0.b }[0], [x8]
-; CHECK-NEXT:    addvl x8, sp, #2
-; CHECK-NEXT:    add x8, x8, #17
-; CHECK-NEXT:    ld1 { v0.b }[2], [x8]
-; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    add x8, x8, #18
-; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-NEXT:    addvl x8, sp, #6
-; CHECK-NEXT:    add x8, x8, #19
-; CHECK-NEXT:    ld1 { v0.b }[6], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    addvl sp, sp, #8
+; CHECK-NEXT:    str z2, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    ldr d0, [sp, #32]
+; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ext = call <4 x i1> @llvm.vector.extract.v4i1.nxv32i1(<vscale x 32 x i1> %arg, i64 16)

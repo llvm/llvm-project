@@ -1,4 +1,4 @@
-if (LIBC_CONF_PRINTF_MODULAR)
+if(LIBC_CONF_PRINTF_MODULAR)
   message(FATAL_ERROR "modular printf is only supported in baremetal stdio")
 endif()
 
@@ -100,14 +100,17 @@ add_entrypoint_object(
     .gpu_file
 )
 
-add_entrypoint_object(
-  fflush
+add_object_library(
+  fflush_internal
   SRCS
-    fflush.cpp
+    fflush_internal.cpp
   HDRS
-    ../fflush.h
+    ../fflush_internal.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.hdr.types.FILE
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.error_or
     .gpu_file
 )
 

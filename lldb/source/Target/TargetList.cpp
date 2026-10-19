@@ -205,7 +205,7 @@ Status TargetList::CreateTargetInternal(
             error_strm.PutCString(platform_name);
             platform_set.insert(platform_name);
           }
-          error_strm.Printf("), specify an architecture to disambiguate");
+          error_strm.PutCString("), specify an architecture to disambiguate");
           error = Status(error_strm.GetString().str());
           return error;
         }
@@ -326,7 +326,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
       debugger.GetTargetList().RegisterInProcessTarget(target_sp);
-      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
+      target_sp->RebuildModuleListWithExecutable(exe_module_sp,
+                                                 load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));
@@ -356,7 +357,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       target_sp->SetArg0(file.GetPath().c_str());
     }
   }
-  if (file.GetDirectory()) {
+  if (!file.GetDirectory().empty()) {
     FileSpec file_dir;
     file_dir.SetDirectory(file.GetDirectory());
     target_sp->AppendExecutableSearchPaths(file_dir);

@@ -115,6 +115,46 @@ bool test() {
     assert(*std::next(m.begin(), 7) == V(3, 1.5));
     assert(*std::next(m.begin(), 8) == V(3, 2));
   }
+  {
+    typedef std::pair<const int, double> V;
+    V ar[] = {
+        V(1, 1),
+        V(1, 1.5),
+        V(1, 2),
+        V(2, 1),
+        V(2, 1.5),
+        V(2, 2),
+        V(3, 1),
+        V(3, 1.5),
+        V(3, 2),
+    };
+    {
+      typedef min_allocator<V> A;
+      typedef test_less<int> C;
+      A a;
+      std::multimap<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), a);
+
+      assert(m.size() == 9);
+      assert(std::distance(m.begin(), m.end()) == 9);
+      assert(*m.begin() == V(1, 1));
+      assert(*std::next(m.begin(), 3) == V(2, 1));
+      assert(*std::next(m.begin(), 6) == V(3, 1));
+      assert(m.get_allocator() == a);
+    }
+    {
+      typedef explicit_allocator<V> A;
+      typedef test_less<int> C;
+      A a;
+      std::multimap<int, double, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), a);
+
+      assert(m.size() == 9);
+      assert(std::distance(m.begin(), m.end()) == 9);
+      assert(*m.begin() == V(1, 1));
+      assert(*std::next(m.begin(), 3) == V(2, 1));
+      assert(*std::next(m.begin(), 6) == V(3, 1));
+      assert(m.get_allocator() == a);
+    }
+  }
 #endif
 
   return true;

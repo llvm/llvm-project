@@ -44,6 +44,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
@@ -52,16 +53,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-avoid-sfb"
-
-static cl::opt<bool> DisableX86AvoidStoreForwardBlocks(
-    "x86-disable-avoid-SFB", cl::Hidden,
-    cl::desc("X86: Disable Store Forwarding Blocks fixup."), cl::init(false));
-
-static cl::opt<unsigned> X86AvoidSFBInspectionLimit(
-    "x86-sfb-inspection-limit",
-    cl::desc("X86: Number of instructions backward to "
-             "inspect for store forwarding blocks."),
-    cl::init(20), cl::Hidden);
 
 namespace {
 
@@ -116,6 +107,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   }
 };
 
@@ -292,10 +284,8 @@ static unsigned getYMMtoXMMStoreOpcode(unsigned StoreOpcode) {
 }
 
 static int getAddrOffset(const MachineInstr *MI) {
-  const MCInstrDesc &Descl = MI->getDesc();
-  int AddrOffset = X86II::getMemoryOperandNo(Descl.TSFlags);
-  assert(AddrOffset != -1 && "Expected Memory Operand");
-  AddrOffset += X86II::getOperandBias(Descl);
+  int AddrOffset = X86II::getMemoryOperandIdx(MI->getDesc());
+  assert(AddrOffset >= 0 && "Expected a memory operand");
   return AddrOffset;
 }
 
@@ -339,10 +329,9 @@ static bool isRelevantAddressingMode(MachineInstr *MI) {
 // and load instructions have enough instructions in between to
 // keep the core busy.
 static SmallVector<MachineInstr *, 2>
-findPotentialBlockers(MachineInstr *LoadInst) {
+findPotentialBlockers(MachineInstr *LoadInst, unsigned InspectionLimit) {
   SmallVector<MachineInstr *, 2> PotentialBlockers;
   unsigned BlockCount = 0;
-  const unsigned InspectionLimit = X86AvoidSFBInspectionLimit;
   for (auto PBInst = std::next(MachineBasicBlock::reverse_iterator(LoadInst)),
             E = LoadInst->getParent()->rend();
        PBInst != E; ++PBInst) {
@@ -655,8 +644,8 @@ removeRedundantBlockingStores(DisplacementSizeMap &BlockingStoresDispSizeMap) {
 bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  if (DisableX86AvoidStoreForwardBlocks ||
-      !MF.getSubtarget<X86Subtarget>().is64Bit())
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.getCLOpts().disable_avoid_SFB || !ST.is64Bit())
     return false;
 
   MRI = &MF.getRegInfo();
@@ -673,7 +662,7 @@ bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
     DisplacementSizeMap BlockingStoresDispSizeMap;
 
     SmallVector<MachineInstr *, 2> PotentialBlockers =
-        findPotentialBlockers(LoadInst);
+        findPotentialBlockers(LoadInst, ST.getCLOpts().sfb_inspection_limit);
     for (auto *PBInst : PotentialBlockers) {
       if (!isPotentialBlockingStoreInst(PBInst->getOpcode(),
                                         LoadInst->getOpcode()) ||

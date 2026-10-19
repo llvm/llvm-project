@@ -124,6 +124,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.CPlusPlus20 = Std.isCPlusPlus20();
   Opts.CPlusPlus23 = Std.isCPlusPlus23();
   Opts.CPlusPlus26 = Std.isCPlusPlus26();
+  Opts.CPlusPlus29 = Std.isCPlusPlus29();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUCVersion = 0;
   Opts.HexFloats = Std.hasHexFloats();
@@ -216,14 +217,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.HIP = Lang == Language::HIP;
   Opts.CUDA = Lang == Language::CUDA || Opts.HIP;
   if (Opts.HIP) {
-    // HIP toolchain does not support 'Fast' FPOpFusion in backends since it
-    // fuses multiplication/addition instructions without contract flag from
-    // device library functions in LLVM bitcode, which causes accuracy loss in
-    // certain math functions, e.g. tan(-1e20) becomes -0.933 instead of 0.8446.
-    // For device library functions in bitcode to work, 'Strict' or 'Standard'
-    // FPOpFusion options in backends is needed. Therefore 'fast-honor-pragmas'
-    // FP contract option is used to allow fuse across statements in frontend
-    // whereas respecting contract flag in backend.
     Opts.setDefaultFPContractMode(LangOptions::FPM_FastHonorPragmas);
   } else if (Opts.CUDA) {
     if (T.isSPIRV()) {
@@ -277,7 +270,9 @@ std::optional<uint32_t> LangOptions::getCPlusPlusLangStd() const {
     return std::nullopt;
 
   LangStandard::Kind Std;
-  if (CPlusPlus26)
+  if (CPlusPlus29)
+    Std = LangStandard::lang_cxx29;
+  else if (CPlusPlus26)
     Std = LangStandard::lang_cxx26;
   else if (CPlusPlus23)
     Std = LangStandard::lang_cxx23;

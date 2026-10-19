@@ -119,9 +119,9 @@ void LinuxSignals::Reset() {
   ADD_LINUX_SIGNAL(6,      "SIGABRT",      false,    true,   true,   "abort()/IOT trap", "SIGIOT");
 
   ADD_LINUX_SIGNAL(7,      "SIGBUS",       false,    true,   true,   "bus error");
-  ADD_SIGCODE(SIGBUS, 7, BUS_ADRALN, 1, "illegal alignment");
-  ADD_SIGCODE(SIGBUS, 7, BUS_ADRERR, 2, "illegal address");
-  ADD_SIGCODE(SIGBUS, 7, BUS_OBJERR, 3, "hardware error");
+  ADD_SIGCODE(SIGBUS, 7, BUS_ADRALN, 1, "illegal alignment", SignalCodePrintOption::Address);
+  ADD_SIGCODE(SIGBUS, 7, BUS_ADRERR, 2, "illegal address", SignalCodePrintOption::Address);
+  ADD_SIGCODE(SIGBUS, 7, BUS_OBJERR, 3, "hardware error", SignalCodePrintOption::Address);
 
   ADD_LINUX_SIGNAL(8,      "SIGFPE",       false,    true,   true,   "floating point exception");
   ADD_SIGCODE(SIGFPE, 8, FPE_INTDIV, 1, "integer divide by zero");

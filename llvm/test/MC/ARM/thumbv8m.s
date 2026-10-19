@@ -274,12 +274,12 @@ tt pc, r0
 // UNDEF:     tt r0, pc
 tt r0, pc
 
-// UNDEF-BASELINE: error: invalid instruction
+// UNDEF-BASELINE: error: operand must be a register in range [r0, r14]
 // UNDEF-MAINLINE: error: operand must be a register in range [r0, r14]
 // UNDEF:     vlldm pc
 vlldm pc
 
-// UNDEF-BASELINE: error: invalid instruction
+// UNDEF-BASELINE: error: operand must be a register in range [r0, r14]
 // UNDEF-MAINLINE: error: operand must be a register in range [r0, r14]
 // UNDEF:     vlstm pc
 vlstm pc

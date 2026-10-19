@@ -132,7 +132,7 @@ private:
   friend class SBProcess;
   friend class SBMemoryRegionInfoList;
   friend class SBSaveCoreOptions;
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   lldb_private::MemoryRegionInfo &ref();
 

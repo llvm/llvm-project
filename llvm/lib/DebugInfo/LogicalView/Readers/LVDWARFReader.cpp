@@ -794,8 +794,14 @@ void LVDWARFReader::processLocationList(dwarf::Attribute Attr,
                                         bool CallSiteLocation) {
 
   auto ProcessLocationExpression = [&](const DWARFExpression &Expression) {
-    for (const DWARFExpression::Operation &Op : Expression)
+    for (const DWARFExpression::Operation &Op : Expression) {
+      // The operands of an operation that failed to decode are undefined, and
+      // nothing after it can be located. Stop rather than record a location
+      // built from them.
+      if (Op.isError())
+        break;
       CurrentSymbol->addLocationOperands(Op.getCode(), Op.getRawOperands());
+    }
   };
 
   DWARFUnit *U = Die.getDwarfUnit();

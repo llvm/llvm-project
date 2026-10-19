@@ -22,7 +22,7 @@ end subroutine
 ! CHECK: hlfir.designate
 ! CHECK: arith.addi %{{.*}}, %{{.*}} : i32
 ! CHECK: hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
-! CHECK: collapse = [3]
+! CHECK: collapse([3])
 
 ! collapse(force:N) on a DO CONCURRENT must lower the body too (force takes a
 ! different path in Bridge.cpp).
@@ -41,4 +41,4 @@ end subroutine
 ! CHECK: acc.loop combined(parallel)
 ! CHECK-SAME: control(%{{[a-z_0-9]+}} : i32, %{{[a-z_0-9]+}} : i32, %{{[a-z_0-9]+}} : i32)
 ! CHECK: hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
-! CHECK: collapse = [3]
+! CHECK: collapse([3])

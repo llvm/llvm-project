@@ -7,7 +7,7 @@ define i32 @test() {
 ; CHECK-NEXT:    br label %[[FUNC_135_EXIT_I:.*]]
 ; CHECK:       [[FUNC_135_EXIT_I]]:
 ; CHECK-NEXT:    [[G_228_PROMOTED166_I1105_I:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <5 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0>, i32 [[G_228_PROMOTED166_I1105_I]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <5 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0>, i32 [[G_228_PROMOTED166_I1105_I]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <5 x i32> [[TMP0]], <5 x i32> poison, <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <5 x i32> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <5 x i32> [[TMP2]], <5 x i32> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4>

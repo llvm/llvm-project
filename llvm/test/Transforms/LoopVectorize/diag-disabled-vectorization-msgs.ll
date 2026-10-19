@@ -29,7 +29,7 @@
 ; RUN:     < %s 2>&1 | FileCheck --check-prefix=ALL %s
 
 ; ALL-LABEL: 'disabled_loop_vectorization' from <stdin>
-; ALL-NOT: LV: We can vectorize this loop
+; ALL-NOT: LV: Loop passed LoopVectorizationLegality checks
 ; ALL-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
 ; ALL-NOT: LV: Not vectorizing: Disabled/already vectorized
 ; ALL-NOT: LV: Not vectorizing: Cannot prove legality
@@ -63,10 +63,10 @@ exit:
   ret void
 }
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 false}
+!1 = !{!"llvm.loop.vectorize.disable"}
 
 ; ALL-LABEL: 'disable_nonforced' from <stdin>
-; ALL-NOT: LV: We can vectorize this loop
+; ALL-NOT: LV: Loop passed LoopVectorizationLegality checks
 ; ALL-NOT: LV: Not vectorizing: #pragma vectorize disable.
 ; ALL-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
 ; ALL-NOT: LV: Not vectorizing: Disabled/already vectorized

@@ -28,6 +28,11 @@ class TestFunctionAnalysis : public AnalysisInfoMixin<TestFunctionAnalysis> {
 public:
   struct Result {
     Result(int Count) : InstructionCount(Count) {}
+
+    // Test that analysis results can be immovable.
+    Result(const Result &) = delete;
+    Result &operator=(const Result &) = delete;
+
     int InstructionCount;
     bool invalidate(Function &, const PreservedAnalyses &PA,
                     FunctionAnalysisManager::Invalidator &) {

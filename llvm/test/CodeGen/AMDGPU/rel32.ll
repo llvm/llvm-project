@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck %s
 
 @g = protected local_unnamed_addr addrspace(4) externally_initialized global i32 0, align 4
 

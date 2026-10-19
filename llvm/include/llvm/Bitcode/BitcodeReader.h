@@ -37,6 +37,7 @@ class Metadata;
 class ModuleSummaryIndex;
 class Type;
 class Value;
+struct ValueInfo;
 
 // Callback to override the data layout string of an imported bitcode module.
 // The first argument is the target triple, the second argument the data layout
@@ -173,7 +174,8 @@ struct ParserCallbacks {
     /// into CombinedIndex.
     LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+                std::function<bool(StringRef)> IsPrevailing = nullptr,
+                std::function<void(ValueInfo)> OnValueInfo = nullptr);
   };
 
   struct BitcodeFileContents {

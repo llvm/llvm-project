@@ -464,6 +464,20 @@ define i8 @assume_ptr_eq_same_prov(ptr %p, i64 %x) {
   ret i8 %v
 }
 
+define ptr @test_launder_invariant(ptr %x) {
+; CHECK-LABEL: define ptr @test_launder_invariant(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[X_LAUNDER:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], [[X_LAUNDER]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret ptr [[X_LAUNDER]]
+;
+  %x.launder = call ptr @llvm.launder.invariant.group(ptr %x)
+  %cmp = icmp eq ptr %x, %x.launder
+  call void @llvm.assume(i1 %cmp)
+  ret ptr %x.launder
+}
+
 declare noalias ptr @_Znwm(i64)
 declare void @_ZN1AC1Ev(ptr)
 declare void @llvm.assume(i1)

@@ -3,7 +3,6 @@ RUN: llvm-objcopy --dump-section=DXIL=%t0.bc %t.dxbc
 RUN: %md5sum %t0.bc >%t0.bc.md5
 RUN: obj2yaml %t.dxbc >%t.yaml
 RUN: cat %t.yaml %t0.bc.md5 | FileCheck %s
-RUN: %python %S/Inputs/check_pdb_exists.py "" "%t0.bc.md5"
 
 CHECK-NOT:   - Name:            PDBN
 CHECK-NOT:   - Name:            PDBH

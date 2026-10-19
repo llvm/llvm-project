@@ -141,12 +141,11 @@ void test17(void) {
                            // both-note {{use array indexing}}
 }
 
-/// FIXME
-static void foo(int i) __attribute__((__diagnose_if__(!__builtin_constant_p(i), "not constant", "error"))) // expected-note {{from}}
+static void foo(int i) __attribute__((__diagnose_if__(!__builtin_constant_p(i), "not constant", "error")))
 {
 }
 static void bar(int i) {
-  foo(15); // expected-error {{not constant}}
+  foo(15);
 }
 
 namespace Inactive {

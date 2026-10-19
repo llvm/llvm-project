@@ -3,7 +3,7 @@
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers            | FileCheck %s --check-prefixes=ALL,DEFISEL
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel | FileCheck %s --check-prefixes=ALL,FASTISEL
 
-; Tests for various operations on half precison float. Much of the test is
+; Tests for various operations on half precision float. Much of the test is
 ; copied from test/CodeGen/X86/half.ll.
 
 target triple = "wasm32-unknown-unknown"

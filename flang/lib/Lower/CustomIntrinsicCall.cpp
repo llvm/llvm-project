@@ -12,7 +12,6 @@
 
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"

@@ -31,7 +31,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter>
-class __wrap_iter {
+class _LIBCPP_WARN_UNUSED __wrap_iter {
 public:
   typedef typename iterator_traits<_Iter>::value_type value_type;
   typedef typename iterator_traits<_Iter>::difference_type difference_type;

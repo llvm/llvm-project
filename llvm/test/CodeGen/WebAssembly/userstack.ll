@@ -550,7 +550,7 @@ define void @llvm_stack_builtins(i32 %alloc) noredzone {
  ret void
 }
 
-; Use of stacksave requires local SP definition even without dymamic alloca.
+; Use of stacksave requires local SP definition even without dynamic alloca.
 ; CHECK-LABEL: llvm_stacksave_noalloca:
 define void @llvm_stacksave_noalloca() noredzone {
  ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer{{$}}

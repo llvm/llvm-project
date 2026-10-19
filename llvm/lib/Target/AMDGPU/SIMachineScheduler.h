@@ -46,7 +46,6 @@ struct SISchedulerCandidate {
 
   SISchedulerCandidate() = default;
 
-  bool isRepeat(SIScheduleCandReason R) { return RepeatReasonSet & (1 << R); }
   void setRepeat(SIScheduleCandReason R) { RepeatReasonSet |= (1 << R); }
 };
 
@@ -151,12 +150,6 @@ public:
 
   bool isScheduled() { return Scheduled; }
 
-  // Needs the block to be scheduled inside
-  // TODO: find a way to compute it.
-  std::vector<unsigned> &getInternalAdditionalRegUsage() {
-    return InternalAdditionalPressure;
-  }
-
   std::set<Register> &getInRegs() { return LiveInRegs; }
   std::set<Register> &getOutRegs() { return LiveOutRegs; }
 
@@ -200,7 +193,6 @@ private:
 
   void nodeScheduled(SUnit *SU);
   void tryCandidateTopDown(SISchedCandidate &Cand, SISchedCandidate &TryCand);
-  void tryCandidateBottomUp(SISchedCandidate &Cand, SISchedCandidate &TryCand);
   SUnit* pickNode();
   void traceCandidate(const SISchedCandidate &Cand);
   void initRegPressure(MachineBasicBlock::iterator BeginBlock,
@@ -277,21 +269,9 @@ private:
   // (TODO: else if all their users depend on the same group, put them there)
   void colorMergeConstantLoadsNextGroup();
 
-  // Merge SUs that have all their users into another group to the group
-  void colorMergeIfPossibleNextGroup();
-
   // Merge SUs that have all their users into another group to the group,
   // but only for Reserved groups.
   void colorMergeIfPossibleNextGroupOnlyForReserved();
-
-  // Merge SUs that have all their users into another group to the group,
-  // but only if the group is no more than a few SUs.
-  void colorMergeIfPossibleSmallGroupsToNextGroup();
-
-  // Divides Blocks with important size.
-  // Idea of implementation: attribute new colors depending on topdown and
-  // bottom up links to other blocks.
-  void cutHugeBlocks();
 
   // Put in one group all instructions with no users in this scheduling region
   // (we'd want these groups be at the end).
@@ -398,8 +378,6 @@ private:
   // by scheduling a block with these LiveIn and LiveOut.
   std::vector<int> checkRegUsageImpact(std::set<Register> &InRegs,
                                        std::set<Register> &OutRegs);
-
-  void schedule();
 };
 
 struct SIScheduleBlockResult {
@@ -452,8 +430,6 @@ public:
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
   ScheduleDAGTopologicalSort *GetTopo() { return &Topo; }
-  SUnit &getEntrySU() { return EntrySU; }
-  SUnit& getExitSU() { return ExitSU; }
 
   void restoreSULinksLeft();
 

@@ -99,7 +99,9 @@ function(llvm_ExternalProject_Add name source_dir)
   is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
-    set(ARG_TOOLCHAIN_TOOLS clang)
+    # Targets using C++20 or newer may need module dependency scanning. Build
+    # the scanner before CMake looks for it during compiler detection.
+    set(ARG_TOOLCHAIN_TOOLS clang clang-scan-deps)
     if (ARG_ENABLE_FORTRAN)
       list(APPEND ARG_TOOLCHAIN_TOOLS flang-lazy)
     endif ()
@@ -229,6 +231,7 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   endforeach()
 
+  set(maybe_configure_environment_modification "")
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
       if(is_msvc_target)
@@ -242,7 +245,11 @@ function(llvm_ExternalProject_Add name source_dir)
       endif()
     endif()
     if(FLANG_IN_TOOLCHAIN)
-      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/flang${CMAKE_EXECUTABLE_SUFFIX})
+      # Use fakeflang to not require having all of flang built for the configure step.
+      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/fakeflang${CMAKE_EXECUTABLE_SUFFIX})
+      if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.2)
+        set(maybe_configure_environment_modification CONFIGURE_ENVIRONMENT_MODIFICATION "FLANG_BOOTSTRAP_PROBE=set:1")
+      endif()
     endif()
     if(lld IN_LIST TOOLCHAIN_TOOLS)
       if(is_msvc_target)
@@ -285,8 +292,8 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-mt IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
       list(APPEND compiler_args -DCMAKE_MT=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-mt${CMAKE_EXECUTABLE_SUFFIX})
     endif()
-    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
-      list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
+    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target AND CLANG_IN_TOOLCHAIN)
+        list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
     # Add LLVMgold.so dependency if it is available, as clang may need it for
@@ -424,6 +431,7 @@ function(llvm_ExternalProject_Add name source_dir)
                ${PASSTHROUGH_VARIABLES}
     CMAKE_CACHE_DEFAULT_ARGS ${CMAKE_CACHE_DEFAULT_ARGS}
     ${build_command_arg}
+    ${maybe_configure_environment_modification}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1

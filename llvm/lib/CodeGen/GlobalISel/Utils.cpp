@@ -130,7 +130,7 @@ Register llvm::constrainOperandRegClass(
     // register types (E.g., AMDGPU's VGPR and AGPR). The regbank ambiguity
     // resolved by targets during regbankselect should not be overridden.
     if (const auto *SubRC = TRI.getCommonSubClass(
-            OpRC, TRI.getConstrainedRegClassForOperand(RegMO, MRI)))
+            OpRC, TRI.getConstrainedRegClassForReg(Reg, MRI)))
       OpRC = SubRC;
 
     OpRC = TRI.getAllocatableClass(OpRC);
@@ -659,19 +659,6 @@ MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
 
-APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
-  if (Size == 32)
-    return APFloat(float(Val));
-  if (Size == 64)
-    return APFloat(Val);
-  if (Size != 16)
-    llvm_unreachable("Unsupported FPConstant size");
-  bool Ignored;
-  APFloat APF(Val);
-  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
-  return APF;
-}
-
 std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
                                              const Register Op1,
                                              const Register Op2,
@@ -1173,8 +1160,8 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
       int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
                                 TargetTy.getElementCount().getKnownMinValue());
       // Prefer the original element type.
-      ElementCount Mul = OrigTy.getElementCount().multiplyCoefficientBy(
-          TargetTy.getElementCount().getKnownMinValue());
+      ElementCount Mul = OrigTy.getElementCount() *
+                         TargetTy.getElementCount().getKnownMinValue();
       return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
                          OrigTy.getElementType());
     }
@@ -1344,7 +1331,7 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
 
     // If AllowUndef, treat undef as value that will result in a constant splat.
     if (!ElementValAndReg) {
-      if (AllowUndef && isa<GImplicitDef>(MRI.getVRegDef(Element)))
+      if (AllowUndef && mi_match(Element, MRI, m_GImplicitDef()))
         continue;
       return std::nullopt;
     }
@@ -1456,18 +1443,19 @@ bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
   return isBuildVectorConstantSplat(MI, MRI, -1, AllowUndef);
 }
 
-std::optional<RegOrConstant>
-llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+std::optional<Register> llvm::getVectorSplat(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI) {
   unsigned Opc = MI.getOpcode();
+  if (Opc == TargetOpcode::G_SPLAT_VECTOR)
+    return MI.getOperand(1).getReg();
+
   if (!isBuildVectorOp(Opc))
     return std::nullopt;
-  if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
-    return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
   if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
-  return RegOrConstant(Reg);
+  return Reg;
 }
 
 static bool isConstantScalar(const MachineInstr &MI,
@@ -1527,12 +1515,11 @@ bool llvm::isConstantOrConstantVector(const MachineInstr &MI,
 }
 
 std::optional<APInt>
-llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVector(Register Def,
                                       const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
     return C->Value;
-  auto MaybeCst = getIConstantSplatSExtVal(MI, MRI);
+  auto MaybeCst = getIConstantSplatSExtVal(Def, MRI);
   if (!MaybeCst)
     return std::nullopt;
   const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();
@@ -1540,9 +1527,8 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
 }
 
 std::optional<APFloat>
-llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVectorFP(Register Def,
                                         const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
     return FpConst->Value;
   auto MaybeCstFP = getFConstantSplat(Def, MRI, /*allowUndef=*/false);
@@ -1586,7 +1572,8 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
 
 bool llvm::matchUnaryPredicate(
     const MachineRegisterInfo &MRI, Register Reg,
-    std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {
+    llvm::function_ref<bool(const Constant *ConstVal)> Match,
+    bool AllowUndefs) {
 
   const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (AllowUndefs && Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
@@ -1662,6 +1649,7 @@ void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
   DeadInstChain.remove(&MI);
+  salvageDebugInfo(MRI, MI);
   MI.eraseFromParent();
   if (LocObserver)
     LocObserver->checkpoint(false);
@@ -1703,6 +1691,10 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+
+    // MI is about to go away, so whatever could not be salvaged would be left
+    // referring to a register without a definition.
+    MRI.markUsesInDebugValueAsUndef(Def.getReg());
   }
 }
 
@@ -2089,7 +2081,8 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
                                           unsigned DstAS, unsigned SrcAS,
                                           const AttributeList &FuncAttributes,
                                           const TargetLowering &TLI) {
-  if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
+  if (Op.isMemcpyOrMemmoveWithFixedDstAlign() &&
+      Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
   LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
@@ -2128,7 +2121,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       unsigned Fast;
       // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
       MVT VT = getMVTForLLT(Ty);
-      if (NumMemOps && Op.allowOverlap() && NewTySize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewTySize < Size &&
           TLI.allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
@@ -2235,13 +2228,10 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     const auto &SrcMMO = **std::next(MI.memoperands_begin());
     MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
     unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
-    // FIXME: SelectionDAG always passes false for 'AllowOverlap', apparently
-    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
-    // the same thing here.
     return findGISelOptimalMemOpLowering(
         MemOps, Limit,
-        MemOp::Copy(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
-                    SrcAlign, /*IsVolatile=*/true),
+        MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+                    SrcAlign, IsVolatile),
         DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
         MF.getFunction().getAttributes(), TLI);
   }

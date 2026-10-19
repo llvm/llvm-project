@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s  -DTGT=dx
-// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-compute  %s \
+// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-library  %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DTGT=spv
 
@@ -58,5 +58,12 @@ float3 test_f32_ddx_fine3(float3 val) {
 // CHECK: %hlsl.ddx.fine = call {{.*}} <4 x float> @llvm.[[TGT]].ddx.fine.v4f32(<4 x float> %{{.*}})
 // CHECK: ret <4 x float> %hlsl.ddx.fine
 float4 test_f32_ddx_fine4(float4 val) {
+    return ddx_fine(val);
+}
+
+// CHECK-LABEL: <5 x float> @{{.*}}test_f32_ddx_fine5
+// CHECK: %hlsl.ddx.fine = call {{.*}} <5 x float> @llvm.[[TGT]].ddx.fine.v5f32(<5 x float> %{{.*}})
+// CHECK: ret <5 x float> %hlsl.ddx.fine
+vector<float, 5> test_f32_ddx_fine5(vector<float, 5> val) {
     return ddx_fine(val);
 }

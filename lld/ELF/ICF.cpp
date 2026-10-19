@@ -510,9 +510,16 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // From now on, sections in Sections vector are ordered so that sections
   // in the same equivalence class are consecutive in the vector.
-  llvm::stable_sort(sections, [](const InputSection *a, const InputSection *b) {
-    return a->eqClass[0] < b->eqClass[0];
+  SmallVector<uint64_t, 0> keys(sections.size());
+  parallelFor(0, sections.size(), [&](size_t i) {
+    keys[i] = uint64_t(sections[i]->eqClass[0]) << 32 | i;
   });
+  parallelSort(keys.begin(), keys.end());
+  SmallVector<InputSection *, 0> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(sections[uint32_t(k)]);
+  sections = std::move(sorted);
 
   // Compare static contents and assign unique equivalence class IDs for each
   // static content. Use a base offset for these IDs to ensure no overlap with
@@ -532,16 +539,9 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
-  auto print = [&ctx = ctx]() -> ELFSyncStream {
-    return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
-  };
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
-    if (end - begin == 1)
-      return;
-    print() << "selected section " << sections[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence
@@ -551,6 +551,22 @@ template <class ELFT> void ICF<ELFT>::run() {
         isec->markDead();
     }
   });
+
+  // Print classes in input order, independent of the hash.
+  if (ctx.arg.printIcfSections) {
+    DenseMap<InputSection *, SmallVector<InputSection *, 0>> folded;
+    for (InputSectionBase *sec : ctx.inputSections)
+      if (auto *s = dyn_cast<InputSection>(sec); s && s->repl != s)
+        folded[s->repl].push_back(s);
+    for (InputSectionBase *sec : ctx.inputSections) {
+      auto it = folded.find(dyn_cast<InputSection>(sec));
+      if (it == folded.end())
+        continue;
+      Msg(ctx) << "selected section " << sec;
+      for (InputSection *s : it->second)
+        Msg(ctx) << "  removing identical section " << s;
+    }
+  }
 
   // Change Defined symbol's section field to the canonical one.
   auto fold = [](Symbol *sym) {

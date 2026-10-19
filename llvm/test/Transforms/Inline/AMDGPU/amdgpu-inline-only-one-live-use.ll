@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=inline -inline-threshold=0 -debug-only=inline-cost %s -o - 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -S -passes=inline -inline-threshold=0 -debug-only=inline-cost %s -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: Analyzing call of callee_not_only_one_live_use... (caller:caller)

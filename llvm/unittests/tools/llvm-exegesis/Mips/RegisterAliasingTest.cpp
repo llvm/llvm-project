@@ -25,14 +25,14 @@ class MipsRegisterAliasingTest : public MipsTestBase {};
 
 TEST_F(MipsRegisterAliasingTest, TrackSimpleRegister) {
   const auto &RegInfo = State.getRegInfo();
-  const RegisterAliasingTracker tracker(RegInfo, Mips::T0_64);
+  const RegisterAliasingTracker tracker(RegInfo, Mips::R8_64);
   std::set<MCPhysReg> ActualAliasedRegisters;
   for (unsigned I : tracker.aliasedBits().set_bits())
     ActualAliasedRegisters.insert(static_cast<MCPhysReg>(I));
-  const std::set<MCPhysReg> ExpectedAliasedRegisters = {Mips::T0, Mips::T0_64};
+  const std::set<MCPhysReg> ExpectedAliasedRegisters = {Mips::R8, Mips::R8_64};
   ASSERT_THAT(ActualAliasedRegisters, ExpectedAliasedRegisters);
   for (MCPhysReg aliased : ExpectedAliasedRegisters) {
-    ASSERT_THAT(tracker.getOrigin(aliased), Mips::T0_64);
+    ASSERT_THAT(tracker.getOrigin(aliased), Mips::R8_64);
   }
 }
 
@@ -49,10 +49,10 @@ TEST_F(MipsRegisterAliasingTest, TrackRegisterClass) {
           Mips::GPR64_with_sub_32_in_GPRMM16MoveP_and_GPRMM16ZeroRegClassID));
 
   BitVector sum(RegInfo.getNumRegs());
-  sum |= RegisterAliasingTracker(RegInfo, Mips::ZERO_64).aliasedBits();
-  sum |= RegisterAliasingTracker(RegInfo, Mips::V0_64).aliasedBits();
-  sum |= RegisterAliasingTracker(RegInfo, Mips::V1_64).aliasedBits();
-  sum |= RegisterAliasingTracker(RegInfo, Mips::S1_64).aliasedBits();
+  sum |= RegisterAliasingTracker(RegInfo, Mips::R0_64).aliasedBits();
+  sum |= RegisterAliasingTracker(RegInfo, Mips::R2_64).aliasedBits();
+  sum |= RegisterAliasingTracker(RegInfo, Mips::R3_64).aliasedBits();
+  sum |= RegisterAliasingTracker(RegInfo, Mips::R17_64).aliasedBits();
 
   ASSERT_THAT(RegClassTracker.aliasedBits(), sum);
 }
@@ -62,7 +62,7 @@ TEST_F(MipsRegisterAliasingTest, TrackRegisterClassCache) {
   const auto &RegInfo = State.getRegInfo();
   const BitVector NoReservedReg(RegInfo.getNumRegs());
   RegisterAliasingTrackerCache Cache(RegInfo, NoReservedReg);
-  ASSERT_THAT(&Cache.getRegister(Mips::T0), &Cache.getRegister(Mips::T0));
+  ASSERT_THAT(&Cache.getRegister(Mips::R8), &Cache.getRegister(Mips::R8));
 
   ASSERT_THAT(&Cache.getRegisterClass(Mips::ACC64RegClassID),
               &Cache.getRegisterClass(Mips::ACC64RegClassID));

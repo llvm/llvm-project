@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
 

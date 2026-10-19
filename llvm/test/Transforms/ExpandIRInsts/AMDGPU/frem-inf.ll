@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn -passes="require<libcall-lowering-info>,expand-ir-insts<O0>" %s -S -o - | FileCheck --check-prefixes CHECK %s
-; RUN: opt -mtriple=amdgcn -passes="require<libcall-lowering-info>,expand-ir-insts<O1>" %s -S -o - | FileCheck --check-prefixes CHECK,OPT1 %s
+; RUN: opt -mtriple=amdgpu6.00 -passes="require<libcall-lowering-info>,expand-ir-insts<O0>" %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=amdgpu6.00 -passes="require<libcall-lowering-info>,expand-ir-insts<O1>" %s -S -o - | FileCheck --check-prefixes CHECK,OPT1 %s
 
 ; Check the handling of potentially infinite numerators in the frem
 ; expansion at different optimization levels and with different
@@ -27,13 +27,13 @@ define float @frem_x_maybe_inf(float %x, float %y)  {
 ; OPT0-LABEL: define float @frem_x_assumed_non_inf(float %x, float %y)
 ; OPT0: 2:
 ; OPT0: [[FABS:%.*]] = call float @llvm.fabs.f32(float %x)
-; OPT0: [[FCMP:%.*]] = fcmp ult float [[FABS]], 0x7FF0000000000000
+; OPT0: [[FCMP:%.*]] = fcmp ult float [[FABS]], +inf
 ; OPT0-NEXT: %ret = select i1 [[FCMP]], float %{{.*}}, float 0x7FF8000000000000
 ; OPT0-NEXT: ret float %ret
 ; OPT0-LABEL: }
 define float @frem_x_assumed_non_inf(float %x, float %y)  {
   %absx = call float @llvm.fabs.f32(float %x)
-  %noninf = fcmp ult float %absx, 0x7FF0000000000000
+  %noninf = fcmp ult float %absx, +inf
   call void @llvm.assume(i1 %noninf)
   %ret = frem float %x, %y
   ret float %ret

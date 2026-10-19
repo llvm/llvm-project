@@ -203,8 +203,15 @@ extern llvm::cl::opt<bool> DumpModuleFiles;
 extern llvm::cl::list<ModuleSubsection> DumpModuleSubsections;
 extern llvm::cl::opt<bool> DumpModuleSyms;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
+extern llvm::cl::opt<bool> DumpSectionContribs;
 extern llvm::cl::opt<bool> DXContainerStream;
 } // namespace pdb2yaml
+
+namespace yaml2pdb {
+extern llvm::cl::opt<std::string> YamlPdbOutputFile;
+extern llvm::cl::opt<std::string> InputFilename;
+extern llvm::cl::opt<unsigned> DocNum;
+} // namespace yaml2pdb
 
 namespace explain {
 enum class InputFileType { PDBFile, PDBStream, DBIStream, Names, ModuleStream };

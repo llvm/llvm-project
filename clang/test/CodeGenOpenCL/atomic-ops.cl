@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -O0 -o - -triple=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -O0 -o - -triple=amdgpu-amd-amdhsa \
 // RUN:   | FileCheck %s
 
 // Also test serialization of atomic operations here, to avoid duplicating the test.
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-pch -O0 -o %t -triple=amdgcn-amd-amdhsa
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -include-pch %t -O0 -triple=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-pch -O0 -o %t -triple=amdgpu-amd-amdhsa
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -include-pch %t -O0 -triple=amdgpu-amd-amdhsa \
 // RUN:   -emit-llvm -o - | FileCheck %s
 
 #ifndef ALREADY_INCLUDED

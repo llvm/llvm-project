@@ -47,11 +47,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-  }
-
   bool IsDefault() const override { return m_current_value == m_default_value; }
 
   void AutoComplete(CommandInterpreter &interpreter,
@@ -75,6 +70,11 @@ public:
 protected:
   void SetEnumerations(const OptionEnumValues &enumerators);
   void DumpEnum(Stream &strm, enum_type value);
+
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+  }
 
   enum_type m_current_value;
   enum_type m_default_value;

@@ -275,6 +275,13 @@ static StructType *getFouri32sType(LLVMContext &Context) {
                                {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Context);
 }
 
+static StructType *getTwoI32Type(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.twoi32"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.twoi32");
+}
+
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
                                     Type *OverloadTy) {
   switch (Kind) {
@@ -336,6 +343,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getDimensionsType(Ctx);
   case OpParamType::Fouri32s:
     return getFouri32sType(Ctx);
+  case OpParamType::TwoI32Ty:
+    return getTwoI32Type(Ctx);
   }
 
   llvm_unreachable("Invalid parameter kind");
@@ -495,7 +504,7 @@ namespace dxil {
 // Triple is well-formed or that the target is supported since these checks
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
-DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M.getContext()) {
+DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M) {
   const Triple &TT = M.getTargetTriple();
   DXILVersion = TT.getDXILVersion();
   ShaderStage = TT.getEnvironment();
@@ -559,7 +568,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
     return makeOpError(OpCode, Twine("No valid stage for DXIL version ") +
                                    DXILVersion.getAsString());
 
-  uint16_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
+  uint32_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
 
   // Ensure valid shader stage properties are specified
   if (ValidShaderKindMask == ShaderKind::removed)

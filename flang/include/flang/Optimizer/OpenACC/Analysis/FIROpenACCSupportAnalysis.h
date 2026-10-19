@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 #define FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 
+#include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
@@ -38,7 +39,8 @@ class FIROpenACCSupportAnalysis {
 public:
   FIROpenACCSupportAnalysis() = default;
 
-  std::string getVariableName(mlir::Value v);
+  std::string getVariableName(mlir::Value v,
+                              mlir::acc::VariableNameConfig config);
 
   std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type,
                             mlir::Value var);
@@ -50,6 +52,10 @@ public:
                         mlir::Operation **definingOpPtr);
 
   bool isValidValueUse(mlir::Value v, mlir::Region &region);
+
+  std::optional<mlir::acc::TypeSizeAndAlignment>
+  getTypeSizeAndAlignment(mlir::Type ty, mlir::ModuleOp module,
+                          mlir::acc::OpenACCSupport &support);
 };
 
 } // namespace acc

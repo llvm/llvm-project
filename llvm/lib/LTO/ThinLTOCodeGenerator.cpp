@@ -379,7 +379,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder) {
+      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      ArrayRef<std::string> MllvmArgs) {
     if (CachePath.empty())
       return;
 
@@ -400,6 +401,7 @@ public:
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
+    append_range(Conf.MllvmArgs, MllvmArgs);
     std::string Key =
         computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
                            ResolvedODR, DefinedGVSummaries);
@@ -461,7 +463,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM.getTargetTriple().isOSBinFormatELF() &&
+      TheModule.getTargetTriple().isOSBinFormatELF() &&
       TM.getRelocationModel() != Reloc::Static &&
       TheModule.getPIELevel() == PIELevel::Default;
 
@@ -1152,7 +1154,7 @@ void ThinLTOCodeGenerator::run() {
                                     ImportLists[ModuleIdentifier], ExportList,
                                     ResolvedODR[ModuleIdentifier],
                                     DefinedGVSummaries, OptLevel, Freestanding,
-                                    TMBuilder);
+                                    TMBuilder, MllvmArgs);
         auto CacheEntryPath = CacheEntry.getEntryPath();
 
         {

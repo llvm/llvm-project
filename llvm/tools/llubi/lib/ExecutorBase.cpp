@@ -72,22 +72,32 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   // undefined behavior.
   if (IsStore ? MO->getState() != MemoryObjectState::Alive
               : MO->getState() == MemoryObjectState::Freed) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Try to access a dead memory object at address 0x"
-                        << Twine::utohexstr(Address.getZExtValue()) << ".";
+                        << AddrStr << ".";
+    return {};
+  }
+
+  if (IsStore && MO->isConstant()) {
+    reportImmediateUB() << "Try to write to a constant memory object: " << Ptr
+                        << ".";
     return {};
   }
 
   if (Address.countr_zero() < Log2(Alignment)) {
-    reportImmediateUB() << "Misaligned memory access. Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
+    reportImmediateUB() << "Misaligned memory access. Address: 0x" << AddrStr
                         << ", Required alignment: " << Alignment.value() << ".";
     return {};
   }
 
   if (AccessSize > MO->getSize() || Address.ult(MO->getAddress())) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
-                        << AccessSize << ", Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+                        << AccessSize << ", Address: 0x" << AddrStr
                         << ", Object base: 0x"
                         << Twine::utohexstr(MO->getAddress())
                         << ", Object size: " << MO->getSize() << ".";
@@ -97,9 +107,10 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
   APInt Offset = Address - MO->getAddress();
 
   if (Offset.ugt(MO->getSize() - AccessSize)) {
+    SmallString<32> AddrStr;
+    Address.toStringUnsigned(AddrStr, 16);
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
-                        << AccessSize << ", Address: 0x"
-                        << Twine::utohexstr(Address.getZExtValue())
+                        << AccessSize << ", Address: 0x" << AddrStr
                         << ", Object base: 0x"
                         << Twine::utohexstr(MO->getAddress())
                         << ", Object size: " << MO->getSize() << ".";
@@ -120,10 +131,6 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/false);
       MO) {
-    // Load from a dead stack object yields poison value.
-    if (MO->getState() == MemoryObjectState::Dead)
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-
     bool ContainsUndefinedBits = false;
     AnyValue Res = Ctx.load(*MO, Offset, ValTy,
                             NoUndef ? &ContainsUndefinedBits : nullptr);
@@ -144,14 +151,8 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/true);
-      MO) {
-    if (MO->isConstant()) {
-      reportImmediateUB() << "Try to write to a constant memory object: "
-                          << PtrVal << ".";
-      return;
-    }
+      MO)
     Ctx.store(*MO, Offset, Val, ValTy);
-  }
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,

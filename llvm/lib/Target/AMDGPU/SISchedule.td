@@ -67,6 +67,7 @@ def Write8PassDGEMM : SchedWrite;
 def Write16PassDGEMM : SchedWrite;
 
 // WMMA/SWMMA instructions
+def WriteXDL1PassWMMA : SchedWrite;
 def WriteXDL2PassWMMA : SchedWrite;
 def WriteXDL4PassWMMA : SchedWrite;
 def WriteXDL8PassWMMA : SchedWrite;
@@ -93,32 +94,7 @@ def WriteSALUDummy : SchedWrite;
 // instructions and have VALU rates, but write to the SALU (i.e. VOPC
 // instructions)
 
-class SISchedMachineModel : SchedMachineModel {
-  let CompleteModel = 1;
-  // MicroOpBufferSize = 1 means that instructions will always be added
-  // the ready queue when they become available.  This exposes them
-  // to the register pressure analysis.
-  let MicroOpBufferSize = 1;
-  let IssueWidth = 1;
-  let PostRAScheduler = 1;
-
-  // FIXME:Approximate 2 * branch cost.  Try to hack around bad
-  // early-ifcvt heuristics. These need improvement to avoid the OOE
-  // heuristics.
-  int MispredictPenalty = 20;
-}
-
-def SIFullSpeedModel : SISchedMachineModel;
-def SIQuarterSpeedModel : SISchedMachineModel;
-def SIDPFullSpeedModel : SISchedMachineModel;
-def SIDPGFX942FullSpeedModel : SISchedMachineModel;
-def SIDPGFX950FullSpeedModel : SISchedMachineModel;
-def GFX10SpeedModel : SISchedMachineModel;
-def GFX11SpeedModel : SISchedMachineModel;
-def GFX12SpeedModel : SISchedMachineModel;
-def GFX1250SpeedModel : SISchedMachineModel;
-def GFX1251SpeedModel : SISchedMachineModel;
-def GFX125xGenericSpeedModel : SISchedMachineModel;
+include "AMDGPUSchedModels.td"
 
 // XXX: Are the resource counts correct?
 def HWBranch : ProcResource<1> {
@@ -497,18 +473,30 @@ def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 
 }  // End SchedModel = GFX12SpeedModel
 
-// Check if any matrix inputs are interpreted as f8 in an f8f6f4
-// wmma instruction.
-def PredIsF8_WMMA_SCALE : SchedPredicate<[{
-  TII->getNamedOperand(*MI, AMDGPU::OpName::matrix_a_fmt)->getImm() <= AMDGPU::WMMA::MATRIX_FMT_BF8 ||
-  TII->getNamedOperand(*MI, AMDGPU::OpName::matrix_b_fmt)->getImm() <= AMDGPU::WMMA::MATRIX_FMT_BF8
-}]>;
+def PredIsGFX1250Strict : FeatureSchedPredicate<FeatureGFX1250_STRICT>;
 
-// If either matrix format is f8, the instruction takes 2x as many
-// cycles. TODO: This isn't reflected in MCA.
+def PredIsBothF4_WMMA_SCALE : MCSchedPredicate<
+    CheckFunctionPredicate<"AMDGPU::isWMMABothF4", "AMDGPU::isWMMABothF4">>;
+
+def PredIsAnyF8_WMMA_SCALE : MCSchedPredicate<
+    CheckFunctionPredicate<"AMDGPU::isWMMAAnyF8", "AMDGPU::isWMMAAnyF8">>;
+
+// f8f6f4 latency: 4 cycles if both inputs are f4, otherwise 8. On
+// gfx1250-strict: 16 cycles if any input is f8, otherwise 8.
+def WriteWMMAScaleStrict_16X16X128_F8F6F4 : SchedWriteVariant<[
+    SchedVar<PredIsAnyF8_WMMA_SCALE, [WriteXDL4PassWMMA]>,
+    SchedVar<NoSchedPred,            [WriteXDL2PassWMMA]>
+]>;
+
 def WriteWMMAScale_16X16X128_F8F6F4 : SchedWriteVariant<[
-    SchedVar<PredIsF8_WMMA_SCALE, [WriteXDL4PassWMMA]>,
-    SchedVar<NoSchedPred, [WriteXDL2PassWMMA]>
+    SchedVar<PredIsGFX1250Strict,     [WriteWMMAScaleStrict_16X16X128_F8F6F4]>,
+    SchedVar<PredIsBothF4_WMMA_SCALE, [WriteXDL1PassWMMA]>,
+    SchedVar<NoSchedPred,             [WriteXDL2PassWMMA]>
+]>;
+
+def WriteWMMA_16X16X64_FP8BF8 : SchedWriteVariant<[
+    SchedVar<PredIsGFX1250Strict, [WriteXDL2PassWMMA]>,
+    SchedVar<NoSchedPred,         [WriteXDL1PassWMMA]>
 ]>;
 
 // Check whether matrix_a_fmt and matrix_a_fmt are both MATRIX_FMT_FP4.
@@ -526,6 +514,8 @@ def WriteWMMAScaleFP4_16X16X128_F8F6F4 : SchedWriteVariant<[
 
 multiclass GFX125xCommonWriteRes {
 
+let ReleaseAtCycles = [4] in
+def : HWWriteRes<WriteXDL1PassWMMA, [HWXDL], 4>;
 let ReleaseAtCycles = [8] in
 def : HWWriteRes<WriteXDL2PassWMMA, [HWXDL], 8>;
 let ReleaseAtCycles = [16] in
@@ -573,7 +563,12 @@ def : HWWriteRes<WriteDoubleAdd,         [HWVALU, HWRC],   37>;
 def : HWWriteRes<WriteDoubleCvt,         [HWVALU, HWRC],   37>;
 def : HWWriteRes<WriteTrans64,           [HWVALU, HWTransVALU, HWRC], 38>;
 
-def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(FP8|BF8|BF16|F16)_w32")>;
+// gfx1250 WMMA/XDL latencies. 16x16x64 FP8/BF8 run in 4 cycles (8 on
+// gfx1250-strict); 16x16x128 FP8/BF8 and F16/BF16 run in 8 cycles; IU8/IU4 run
+// in 16 cycles.
+def : InstRW<[WriteWMMA_16X16X64_FP8BF8], (instregex "^V_[S]*WMMA[C]*_.*_16X16X64_(FP8|BF8)_(FP8|BF8)_w32")>;
+def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(BF16|F16)_w32")>;
+def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_16X16X128_(FP8|BF8)_(FP8|BF8)_w32")>;
 def : InstRW<[WriteXDL4PassWMMA], (instregex "^V_[S]*WMMA[C]*_.*_(IU8|IU4)_w32")>;
 def : InstRW<[WriteWMMAScale_16X16X128_F8F6F4], (instregex "^V_WMMA_.*_16X16X128_F8F6F4.*_w32")>;
 def : InstRW<[WriteXDL2PassWMMA], (instregex "^V_WMMA.*_F32_32X16X128_F4")>;

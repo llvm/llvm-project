@@ -48,15 +48,15 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3_f16(<8 x half> %src) {
 ;
 ; CHECKFP-LABEL: shuffle3_f16:
 ; CHECKFP:       @ %bb.0: @ %entry
-; CHECKFP-NEXT:    vmovx.f16 s5, s3
-; CHECKFP-NEXT:    vmovx.f16 s6, s1
-; CHECKFP-NEXT:    vmovx.f16 s4, s0
-; CHECKFP-NEXT:    vins.f16 s1, s0
-; CHECKFP-NEXT:    vins.f16 s6, s4
-; CHECKFP-NEXT:    vins.f16 s5, s3
-; CHECKFP-NEXT:    vmov.f32 s4, s2
-; CHECKFP-NEXT:    vmov.f32 s7, s1
-; CHECKFP-NEXT:    vmov q0, q1
+; CHECKFP-NEXT:    vmov q1, q0
+; CHECKFP-NEXT:    vmovx.f16 s2, s5
+; CHECKFP-NEXT:    vmovx.f16 s0, s4
+; CHECKFP-NEXT:    vins.f16 s5, s4
+; CHECKFP-NEXT:    vins.f16 s2, s0
+; CHECKFP-NEXT:    vmov.f32 s0, s6
+; CHECKFP-NEXT:    vmovx.f16 s1, s7
+; CHECKFP-NEXT:    vmov.f32 s3, s5
+; CHECKFP-NEXT:    vins.f16 s1, s7
 ; CHECKFP-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x half> %src, <8 x half> undef, <8 x i32> <i32 4, i32 5, i32 7, i32 6, i32 3, i32 1, i32 2, i32 0>
@@ -944,12 +944,12 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP-NEXT:    vins.f16 s21, s3
 ; CHECKFP-NEXT:    vins.f16 s0, s2
 ; CHECKFP-NEXT:    vmov.f32 s24, s1
-; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s25, s5
+; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s27, s13
-; CHECKFP-NEXT:    vmov.f32 s2, s8
-; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
 ; CHECKFP-NEXT:    vmov.f32 s1, s4
+; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
+; CHECKFP-NEXT:    vmov.f32 s2, s8
 ; CHECKFP-NEXT:    vmov.f32 s3, s12
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q5
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q4

@@ -12,7 +12,10 @@
 
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
+#include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,15 +44,9 @@ using namespace llvm::mcdxbc;
 
 static cl::opt<bool> ShaderHashDependsOnSource(
     "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
-static cl::opt<std::string>
-    PdbFileName("dx-pdb-file",
-                cl::desc("Specify the PDB output file path for DirectX target"),
-                cl::value_desc("filename"));
-static cl::opt<std::string> PdbOutputDir(
-    "dx-pdb-dir",
-    cl::desc("Specify the PDB output directory for DirectX target. The file "
-             "name is derived from the shader hash"),
-    cl::value_desc("directory"));
+
+cl::opt<bool> dxil::PdbInPrivate("dx-pdb-in-private",
+                                 cl::desc("Store PDB in private user data"));
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
@@ -86,6 +83,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addRequired<SignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
@@ -148,9 +146,9 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   }
 
   Digest.update(DXILConstant->getRawDataValues());
-  MD5::MD5Result Result = Digest.final();
+  MD5::MD5Result MD5 = Digest.final();
 
-  memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
+  memcpy(reinterpret_cast<void *>(&HashData.Digest), MD5.data(), 16);
   if (sys::IsBigEndianHost)
     HashData.swapBytes();
   StringRef Data(reinterpret_cast<char *>(&HashData), sizeof(dxbc::ShaderHash));
@@ -160,47 +158,45 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   Globals.emplace_back(
       buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH"));
 
-  // Emit ILDN part in debug info mode.
-  // DXIL bitcode hash is used, which corresponds to DXC behavior with
-  // `/Zi /Qembed_debug /Zsb` flags.
   if (M.debug_compile_units().empty())
     return;
 
-  if (!PdbFileName.empty() && !PdbOutputDir.empty())
-    report_fatal_error(
-        "--dx-pdb-file and --dx-pdb-dir are mutually exclusive options");
-
   SmallString<40> DebugNameStr;
-  Digest.stringifyResult(Result, DebugNameStr);
+  Digest.stringifyResult(MD5, DebugNameStr);
   DebugNameStr += ".pdb";
+  if (!PdbDebugPath.empty() || PdbInPrivate) {
+    if (!PdbDebugPath.empty()) {
+      StringRef DebugFile = PdbDebugPath.getValue();
+      SmallString<256> AbsoluteDebugName;
+      if (sys::path::is_separator(DebugFile.back())) {
+        // If PDB output path was specified as a directory, put the MD5.pdb file
+        // there.
+        AbsoluteDebugName = DebugFile;
+        sys::path::append(AbsoluteDebugName, DebugNameStr);
+      } else {
+        // Otherwise, use PDB output path as a user-provided PDB file name.
+        DebugNameStr = DebugFile;
+        AbsoluteDebugName = DebugNameStr;
+      }
 
-  mcdxbc::DebugName DebugName;
-  if (PdbFileName.empty()) {
-    // Use the MD5 hash as the file name.
-    Digest.stringifyResult(Result, DebugNameStr);
-    DebugNameStr += ".pdb";
-  } else {
-    // Use user-provided PDB file name.
-    DebugNameStr = PdbFileName;
+      // Pass PDB name to DXContainerPDBPass via PDBNAME section.
+      addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
+                 PdbFileNameSectionName);
+    }
+
+    // Pass module hash to DXContainerPDBPass.
+    Globals.emplace_back(buildContainerGlobal(
+        M, ConstantDataArray::get(M.getContext(), ArrayRef(HashData.Digest)),
+        "dx.pdb.hash", ModuleHashSectionName));
   }
+
+  // Emit ILDN part in debug info mode.
+  mcdxbc::DebugName DebugName;
   DebugName.setFilename(DebugNameStr);
-
-  SmallString<256> AbsoluteDebugName(PdbOutputDir);
-  sys::path::append(AbsoluteDebugName, DebugNameStr);
-
   SmallString<64> ILDNData;
   raw_svector_ostream OS(ILDNData);
   DebugName.write(OS);
   addSection(M, Globals, ILDNData, "dx.ildn", "ILDN");
-
-  // TODO: Do not create PDB in embedded mode.
-  // Pass PDB name to DXContainerPDBPass via PDBNAME section.
-  addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
-             PdbFileNameSectionName);
-  // Pass module hash to DXContainerPDBPass.
-  Globals.emplace_back(buildContainerGlobal(
-      M, ConstantDataArray::get(M.getContext(), ArrayRef(HashData.Digest)),
-      "dx.pdb.hash", ModuleHashSectionName));
 }
 
 GlobalVariable *DXContainerGlobals::buildContainerGlobal(
@@ -225,13 +221,16 @@ GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
 
 void DXContainerGlobals::addSignature(Module &M,
                                       SmallVector<GlobalValue *> &Globals) {
-  // FIXME: support graphics shader.
-  //  see issue https://github.com/llvm/llvm-project/issues/90504.
+  const auto &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+  const auto &Signatures =
+      getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+  Signature InputSig, OutputSig;
+  if (MMI.ShaderProfile != Triple::Library && MMI.EntryPropertyVec.size() == 1)
+    if (const auto *Sig = Signatures.get(MMI.EntryPropertyVec[0].Entry))
+      Sig->buildSignatures(InputSig, OutputSig, MMI.ValidatorVersion);
 
-  Signature InputSig;
   Globals.emplace_back(buildSignature(M, InputSig, "dx.isg1", "ISG1"));
-
-  Signature OutputSig;
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
@@ -292,17 +291,23 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
       };
 
   for (const dxil::ResourceInfo &RI : DRM.cbuffers()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
                                         dxil::ResourceKind::CBuffer));
   }
   for (const dxil::ResourceInfo &RI : DRM.samplers()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding,
                                         dxbc::PSV::ResourceType::Sampler,
                                         dxil::ResourceKind::Sampler));
   }
   for (const dxil::ResourceInfo &RI : DRM.srvs()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -318,6 +323,8 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
   }
   for (const dxil::ResourceInfo &RI : DRM.uavs()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -332,9 +339,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
       ResType = dxbc::PSV::ResourceType::UAVRaw;
 
     dxbc::PSV::ResourceFlags Flags;
-    // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
-    // with https://github.com/llvm/llvm-project/issues/104392
-    Flags.Flags = 0u;
+    Flags.Bits.UsedByAtomic64 = RI.HasAtomic64Use;
 
     PSV.Resources.push_back(
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind(), Flags));
@@ -358,6 +363,24 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
   addResourcesForPSV(M, PSV);
+  unsigned PSVVersion = 3;
+  if (MMI.ShaderProfile != Triple::Library &&
+      MMI.EntryPropertyVec.size() == 1) {
+    const auto &Signatures =
+        getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+    if (const auto *Sig = Signatures.get(MMI.EntryPropertyVec[0].Entry)) {
+      Sig->updatePSV(PSV, MMI.ValidatorVersion);
+      // Preserve the existing empty-signature path, and select an ABI version
+      // compatible with the validator for graphics signature data.
+      VersionTuple V = MMI.ValidatorVersion;
+      if ((!Sig->Inputs.empty() || !Sig->Outputs.empty()) && !V.empty() &&
+          V != VersionTuple(0, 0))
+        PSVVersion = V < VersionTuple(1, 1)   ? 0
+                     : V < VersionTuple(1, 6) ? 1
+                     : V < VersionTuple(1, 8) ? 2
+                                              : 3;
+    }
+  }
 
   // Hardcoded values here to unblock loading the shader into D3D.
   //
@@ -385,8 +408,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
       MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  PSV.finalize(MMI.ShaderProfile);
-  PSV.write(OS);
+  PSV.finalize(MMI.ShaderProfile, PSVVersion);
+  PSV.write(OS, PSVVersion);
   addSection(M, Globals, Data, "dx.psv0", "PSV0");
 }
 
@@ -407,7 +430,7 @@ void DXContainerGlobals::addSourceInfo(Module &M,
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  if (!MMI.SourceInfo)
+  if (!MMI.SourceInfo || SourceInDebugModule)
     return;
 
   MMI.SourceInfo->computeEntries();
@@ -422,6 +445,7 @@ char DXContainerGlobals::ID = 0;
 INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(SignatureAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)

@@ -21,6 +21,7 @@ typedef float V2f __attribute__((vector_size(8)));
 
 // 128-bit
 typedef char V16c __attribute__((vector_size(16)));
+typedef unsigned char V16Uc __attribute__((vector_size(16)));
 typedef signed short V8s __attribute__((vector_size(16)));
 typedef unsigned short V8u __attribute__((vector_size(16)));
 typedef signed int V4i __attribute__((vector_size(16)));
@@ -289,7 +290,7 @@ void f0(void) {
 #ifdef USE_64
   (void) __builtin_ia32_movnti64(tmp_LLip, tmp_LLi);
 #endif
-  tmp_V2LLi = __builtin_ia32_psadbw128(tmp_V16c, tmp_V16c);
+  tmp_V2LLi = __builtin_ia32_psadbw128((V16Uc)tmp_V16c, (V16Uc)tmp_V16c);
   tmp_V4i = __builtin_ia32_cvtpd2dq(tmp_V2d);
   tmp_V4f = __builtin_ia32_cvtpd2ps(tmp_V2d);
   tmp_V4i = __builtin_ia32_cvttpd2dq(tmp_V2d);

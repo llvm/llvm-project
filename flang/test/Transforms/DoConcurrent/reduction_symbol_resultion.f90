@@ -23,10 +23,10 @@ end subroutine test2
 ! CHECK:         omp.parallel {
 ! CHECK:           omp.wsloop reduction(@[[RED_SYM]] {{.*}} : !fir.ref<f32>) {
 ! CHECK:           }
-! CHECK:         }
+! CHECK:         } {omp.combined}
 
 ! CHECK-LABEL: func.func @_QPtest2
 ! CHECK:         omp.parallel {
 ! CHECK:           omp.wsloop reduction(@[[RED_SYM]] {{.*}} : !fir.ref<f32>) {
 ! CHECK:           }
-! CHECK:         }
+! CHECK:         } {omp.combined}
