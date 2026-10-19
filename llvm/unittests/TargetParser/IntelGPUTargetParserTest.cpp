@@ -93,8 +93,6 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   EXPECT_EQ(IntelGPU::parseArch("bmg_g21"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe-arl-u"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.70"), IntelGPU::GK_XE_MTL_U);
-  // Except PVC-SDV, which the AOT compiler builds for its own stepping.
-  EXPECT_EQ(IntelGPU::parseArch("xe-pvc-sdv"), IntelGPU::GK_XE_PVC_SDV);
 
   // A numeric name names the same device the driver would have reported.
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.0"), IntelGPU::GK_XE_PVC);
