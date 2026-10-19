@@ -21,8 +21,8 @@ maks@meta.com (email), [maksfb](https://github.com/maksfb) (GitHub)
 Alexey Moksyakov
 moksyakov.alexey@huawei.com (email), [yavtuk](https://github.com/yavtuk) (GitHub)
 
-Paschalis Mpeis
-paschalis.mpeis@arm.com (email), [paschalis-mpeis](https://github.com/paschalis-mpeis) (GitHub)
+Alexandros Lamprineas
+alexandros.lamprineas@arm.com (email), [labrinea](https://github.com/labrinea) (GitHub)
 
 ### X86 Backend
 
