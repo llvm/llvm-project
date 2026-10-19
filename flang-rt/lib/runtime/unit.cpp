@@ -531,7 +531,7 @@ void ExternalFileUnit::Sought(std::int64_t zeroBasedPos) {
   } else {
     // We no longer know which record we're in.  Set currentRecordNumber to
     // a large value from whence we can both advance and backspace.
-    currentRecordNumber = std::numeric_limits<std::int64_t>::max() / 2;
+    currentRecordNumber = common::numeric_limits<std::int64_t>::max() / 2;
     endfileRecordNumber.reset();
   }
 }

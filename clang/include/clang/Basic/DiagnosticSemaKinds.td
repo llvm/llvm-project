@@ -6427,7 +6427,7 @@ def warn_deprecated_builtin : Warning<
   InGroup<DeprecatedBuiltins>;
 def warn_hip_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
-  InGroup<HipDeprecatedBuiltins>, DefaultIgnore;
+  InGroup<HipDeprecatedBuiltins>;
 def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
@@ -7268,13 +7268,19 @@ def err_builtin_counted_by_ref_invalid_arg
             "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
-
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
   "variable|passed into a function|returned from a function}0">;
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
+  "'__builtin_counted_by_ref' cannot be used on %0 because its 'counted_by' attribute refers to bit-field %1">;
+def note_counted_by_counter_field : Note<
+  "bit-field %0 declared here">;
+
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -10150,6 +10156,8 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_unwind_and_goto : Error<"unwind clobber cannot be used with asm goto">;
   def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
     "global register variables on this target">;
+  def err_asm_invalid_local_var_reg : Error<"register '%0' unsuitable for "
+    "register variables">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
   def err_asm_unsupported_register_type : Error<
@@ -12420,7 +12428,8 @@ def err_omp_atomic_not_expression_statement : Error<
 def note_omp_atomic_update: Note<
   "%select{expected an expression statement|expected built-in binary or unary operator|expected unary decrement/increment operation|"
   "expected expression of scalar type|expected assignment expression|expected built-in binary operator|"
-  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression}0">;
+  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression|"
+  "expected a valid expression}0">;
 def err_omp_atomic_capture_not_expression_statement : Error<
   "the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x',"
   " where x and v are both lvalue expressions with scalar type">;

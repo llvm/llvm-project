@@ -466,6 +466,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitMULHU(SDNode *N);
     SDValue visitMULHS(SDNode *N);
     SDValue visitAVG(SDNode *N);
+    SDValue visitAVGSUB(SDNode *N);
     SDValue visitABD(SDNode *N);
     SDValue visitSMUL_LOHI(SDNode *N);
     SDValue visitUMUL_LOHI(SDNode *N);
@@ -802,10 +803,11 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
                                 unsigned NumStores);
 
-    /// Helper function for mergeConsecutiveStores which checks if all the store
-    /// nodes have the same underlying object. We can still reuse the first
-    /// store's pointer info if all the stores are from the same object.
-    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes);
+    /// Helper function for mergeConsecutiveStores which checks if all the
+    /// load/store nodes have the same underlying object. We can still reuse the
+    /// first load/store's pointer info if all the load/stores are from the same
+    /// object.
+    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> MemOps);
 
     /// This is a helper function for mergeConsecutiveStores. When the source
     /// elements of the consecutive stores are all constants or all extracted
@@ -2017,6 +2019,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:           return visitAVG(N);
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:       return visitAVGSUB(N);
   case ISD::ABDS:
   case ISD::ABDU:               return visitABD(N);
   case ISD::SMUL_LOHI:          return visitSMUL_LOHI(N);
@@ -4401,7 +4405,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                                       m_SMin(m_Value(X), NegPat),
                                       m_UMin(m_Value(X), NegPat))))) {
       unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
-      if (hasOperation(NewOpc, VT))
+      // If the type is legal and the existing min/max isn't supported go ahead
+      // and do the conversion. The expansion of the new min/max will likely be
+      // similar to the old.
+      if (hasOperation(NewOpc, VT) ||
+          (isTypeLegal(VT) && !hasOperation(N1->getOpcode(), VT)))
         return DAG.getNode(NewOpc, DL, VT, X, S0);
     }
 
@@ -5852,6 +5860,34 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitAVGSUB(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fold (avgsub c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
+    return C;
+
+  if (VT.isVector())
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
+      return FoldedVOp;
+
+  // fold (avgsub x, x) --> 0
+  if (N0 == N1)
+    return DAG.getConstant(0, DL, VT);
+
+  // fold (avgsubfloors x, 0) -> x >> 1
+  // fold (avgsubflooru x, 0) -> x >>u 1
+  if (isNullOrNullSplat(N1))
+    return DAG.getNode(Opcode == ISD::AVGSUBFLOORS ? ISD::SRA : ISD::SRL, DL,
+                       VT, N0, DAG.getShiftAmountConstant(1, VT, DL));
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitAVG(SDNode *N) {
   unsigned Opcode = N->getOpcode();
   SDValue N0 = N->getOperand(0);
@@ -5935,9 +5971,15 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
         sd_match(N, m_c_BinOp(Opcode, m_Value(Add, m_Add(m_Value(X), m_One())),
                               m_Value(Y)))) {
 
-      if (IsSigned && Add->getFlags().hasNoSignedWrap())
+      // Check nsw flag or willNotOverflowAdd because we don't infer nsw flags
+      // in SelectionDAG.
+      if (IsSigned &&
+          (Add->getFlags().hasNoSignedWrap() ||
+           DAG.willNotOverflowAdd(/*IsSigned=*/true, Add->getOperand(0),
+                                  Add->getOperand(1))))
         return DAG.getNode(ISD::AVGCEILS, DL, VT, X, Y);
 
+      // FIXME: Use willNotOverflowAdd here?
       if (!IsSigned && Add->getFlags().hasNoUnsignedWrap())
         return DAG.getNode(ISD::AVGCEILU, DL, VT, X, Y);
     }
@@ -6385,6 +6427,11 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
     return SDValue();
 
   unsigned BW = (C1 + 1).exactLogBase2();
+  // When BW is 0, there is no equivalent i0 VT. And since an unsigned value is
+  // never < 0, the result is always 0.
+  if (BW == 0)
+    return DAG.getConstant(0, SDLoc(N0), N3.getValueType());
+
   EVT FPVT = N0.getOperand(0).getValueType();
   EVT NewVT = FPVT.changeElementType(*DAG.getContext(),
                                      EVT::getIntegerVT(*DAG.getContext(), BW));
@@ -12901,6 +12948,7 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
 }
 
 // Convert (sr[al] (add n[su]w x, y)) -> (avgfloor[su] x, y)
+// Convert (sr[al] (sub n[su]w x, y)) -> (avgsubfloor[su] x, y)
 SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   const unsigned Opcode = N->getOpcode();
   if (Opcode != ISD::SRA && Opcode != ISD::SRL)
@@ -12923,6 +12971,15 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
     unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
     if (hasOperation(FloorISD, VT))
       return DAG.getNode(FloorISD, DL, VT, {A, B});
+  }
+
+  // Match the subtract form, ensuring the sub doesn't wrap.
+  if (sd_match(N,
+               m_BinOp(Opcode, m_BinOp(ISD::SUB, m_Value(A), m_Value(B), Flags),
+                       m_One()))) {
+    unsigned SubISD = IsUnsigned ? ISD::AVGSUBFLOORU : ISD::AVGSUBFLOORS;
+    if (hasOperation(SubISD, VT))
+      return DAG.getNode(SubISD, DL, VT, {A, B});
   }
 
   return SDValue();
@@ -20568,8 +20625,8 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
     // Do not create a cbrt() libcall if the target does not have it, and do not
     // turn a pow that has lowering support into a cbrt() libcall.
     RTLIB::Libcall LC = RTLIB::getCBRT(VT);
-    bool HasLibCall =
-        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool HasLibCall = DAG.getLibcalls().getVectorLibcallImplOrMasked(LC) !=
+                      RTLIB::Unsupported;
     if (!HasLibCall ||
         (!DAG.getTargetLoweringInfo().isOperationExpand(ISD::FPOW, VT) &&
          DAG.getTargetLoweringInfo().isOperationExpand(ISD::FCBRT, VT)))
@@ -23350,12 +23407,12 @@ SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
   return DAG.getTokenFactor(StoreDL, Chains);
 }
 
-bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes) {
+bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> MemOps) {
   const Value *UnderlyingObj = nullptr;
-  for (const auto &MemOp : StoreNodes) {
+  for (const auto &MemOp : MemOps) {
     const MachineMemOperand *MMO = MemOp.MemNode->getMemOperand();
     // Pseudo value like stack frame has its own frame index and size, should
-    // not use the first store's frame index for other frames.
+    // not use the first load/store's frame index for other frames.
     if (MMO->getPseudoValue())
       return false;
 
@@ -24155,6 +24212,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     unsigned FirstStoreAS = FirstInChain->getAddressSpace();
     Align FirstStoreAlign = FirstInChain->getAlign();
     LoadSDNode *FirstLoad = cast<LoadSDNode>(LoadNodes[0].MemNode);
+    unsigned FirstLoadAS = FirstLoad->getAddressSpace();
 
     // Scan the memory operations on the chain and find the first
     // non-consecutive load memory address. These variables hold the index in
@@ -24319,10 +24377,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
-
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
-    bool CanReusePtrInfo = hasSameUnderlyingObj(StoreNodes);
     AddToWorklist(NewStoreChain.getNode());
+
+    bool StoreCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(StoreNodes).take_front(NumElem));
+    bool LoadCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(LoadNodes).take_front(NumElem));
 
     MachineMemOperand::Flags LdMMOFlags =
         isDereferenceable ? MachineMemOperand::MODereferenceable
@@ -24350,7 +24411,9 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     if (UseVectorTy || !DoIntegerTruncate) {
       NewLoad = DAG.getLoad(
           JointMemOpVT, LoadDL, FirstLoad->getChain(), FirstLoad->getBasePtr(),
-          FirstLoad->getPointerInfo(), FirstLoadAlign, LdMMOFlags,
+          LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                              : MachinePointerInfo(FirstLoadAS),
+          FirstLoadAlign, LdMMOFlags,
           MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       SDValue StoreOp = NewLoad;
       if (NeedRotate) {
@@ -24364,22 +24427,24 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       }
       NewStore = DAG.getStore(
           NewStoreChain, StoreDL, StoreOp, FirstInChain->getBasePtr(),
-          CanReusePtrInfo ? FirstInChain->getPointerInfo()
-                          : MachinePointerInfo(FirstStoreAS),
+          StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
+                               : MachinePointerInfo(FirstStoreAS),
           FirstStoreAlign, StMMOFlags,
           MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
     } else { // This must be the truncstore/extload case
       EVT ExtendedTy =
           TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad = DAG.getExtLoad(
-          ISD::EXTLOAD, LoadDL, ExtendedTy, FirstLoad->getChain(),
-          FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), JointMemOpVT,
-          FirstLoadAlign, LdMMOFlags,
-          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
+      NewLoad =
+          DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
+                         FirstLoad->getChain(), FirstLoad->getBasePtr(),
+                         LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                                             : MachinePointerInfo(FirstLoadAS),
+                         JointMemOpVT, FirstLoadAlign, LdMMOFlags,
+                         MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       NewStore = DAG.getTruncStore(
           NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
-          CanReusePtrInfo ? FirstInChain->getPointerInfo()
-                          : MachinePointerInfo(FirstStoreAS),
+          StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
+                               : MachinePointerInfo(FirstStoreAS),
           JointMemOpVT, FirstInChain->getAlign(),
           FirstInChain->getMemOperand()->getFlags(),
           MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
@@ -24897,14 +24962,26 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       Value.getValueType().isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
-    // Convert a truncating store of a extension into a standard store.
-    if ((Value.getOpcode() == ISD::ZERO_EXTEND ||
-         Value.getOpcode() == ISD::SIGN_EXTEND ||
-         Value.getOpcode() == ISD::ANY_EXTEND) &&
-        Value.getOperand(0).getValueType() == ST->getMemoryVT() &&
-        TLI.isOperationLegalOrCustom(ISD::STORE, ST->getMemoryVT()))
-      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                          ST->getMemOperand());
+    // Convert a truncating store of a extension into a standard store or a
+    // smaller truncating store.
+    if (Value.getOpcode() == ISD::ZERO_EXTEND ||
+        Value.getOpcode() == ISD::SIGN_EXTEND ||
+        Value.getOpcode() == ISD::ANY_EXTEND) {
+      SDValue PreExtendVal = Value.getOperand(0);
+      EVT PreExtendTy = PreExtendVal.getValueType();
+      EVT StoreMemTy = ST->getMemoryVT();
+
+      if (PreExtendTy == StoreMemTy &&
+          TLI.isOperationLegalOrCustom(ISD::STORE, StoreMemTy))
+        return DAG.getStore(Chain, SDLoc(N), PreExtendVal, Ptr,
+                            ST->getMemOperand());
+      if (PreExtendTy.getScalarSizeInBits() >
+              StoreMemTy.getScalarSizeInBits() &&
+          TLI.canCombineTruncStore(PreExtendTy, StoreMemTy, ST->getAlign(),
+                                   ST->getAddressSpace(), LegalOperations))
+        return DAG.getTruncStore(Chain, SDLoc(N), PreExtendVal, Ptr, StoreMemTy,
+                                 ST->getMemOperand());
+    }
 
     APInt TruncDemandedBits =
         APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),
