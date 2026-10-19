@@ -656,35 +656,41 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @prefetch_inst_lds(ptr addrspace(3) inreg %ptr) {
+define void @prefetch_inst_lds(ptr addrspace(3) inreg %ptr) {
 ; GFX12-LABEL: prefetch_inst_lds:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_endpgm
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: prefetch_inst_lds:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.s.prefetch.inst.p3(ptr addrspace(3) %ptr, i32 0)
   ret void
 }
 
-define amdgpu_ps void @prefetch_inst_buffer_resource(ptr addrspace(8) inreg %rsrc) {
+define void @prefetch_inst_buffer_resource(ptr addrspace(8) inreg %rsrc) {
 ; GFX12-LABEL: prefetch_inst_buffer_resource:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_endpgm
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: prefetch_inst_buffer_resource:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.s.prefetch.inst.p8(ptr addrspace(8) %rsrc, i32 0)
   ret void
