@@ -2215,11 +2215,11 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     MaxBytes = getLoadStoreVecRegBitWidth(AMDGPUAS::PRIVATE_ADDRESS) / 8;
   bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
               AddressSpace == AMDGPUAS::REGION_ADDRESS;
-  bool HasDwordx3 = IsDS ? ST->hasDS96AndDS128() : ST->hasDwordx3LoadStores();
-  bool MergesDwords = !IsDS && AddressSpace != AMDGPUAS::PRIVATE_ADDRESS &&
-                      ST->hasFlatInstOffsets() &&
-                      (AddressSpace != AMDGPUAS::FLAT_ADDRESS ||
-                       !ST->hasFlatSegmentOffsetBug());
+  bool HasDwordx3 = ST->hasDwordx3LoadStores();
+  bool MergesDwords = ST->hasFlatInstOffsets() &&
+                      (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
+                       (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+                        !ST->hasFlatSegmentOffsetBug()));
 
   if (Opcode == Instruction::Load) {
     if (Alignment >= PowerOf2Ceil(Bytes))
