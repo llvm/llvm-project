@@ -199,17 +199,13 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-// Obtain dynamic pass-plugins in registration order: the ones requested by file
-// name followed by those pre-loaded in the host application
+// Obtain dynamic pass-plugin infos for the given config in registration order
 static SmallVector<PassPluginLibraryInfo, 0>
 getPassPlugins(const Config &Conf) {
+  // lto::LTO loads plugins requested by file name before running backends
+  assert(Conf.PassPluginFilenames.empty() &&
+         "Pass-plugins must be loaded before running LTO backends");
   SmallVector<PassPluginLibraryInfo, 0> Plugins;
-  for (const std::string &PluginFN : Conf.PassPluginFilenames) {
-    Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    Plugins.push_back(Plugin->getInfo());
-  }
   for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
     Plugins.push_back(Plugin->getInfo());
   return Plugins;
