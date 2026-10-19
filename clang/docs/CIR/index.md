@@ -19,6 +19,12 @@ Pass `-fclangir` to the Clang driver to compile through CIR (AST to CIR to
 CIR passes to LLVM IR and the backend). In order to inspect CIR output, use
 `-emit-cir`, the equivalent of `-emit-llvm` for CIR.
 
+:::{note}
+ClangIR can be disabled from the build of Clang via the `-DCLANG_ENABLE_CIR=OFF`,
+see [CMake](../llvm/docs/Cmake.md) flag. Using this flag can reduce the compile
+time and binary size of Clang, however it will make the `-fclangir` flag unavaiable.
+:::
+
 See this [Compiler Explorer
 example](https://godbolt.org/z/dTGqMGx54), which shows the flow of compilation
 through CIR, from higher-level CIR constructs to lower-level ones, the

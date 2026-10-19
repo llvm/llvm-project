@@ -321,9 +321,10 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 **CLANG_ENABLE_CIR**:BOOL
 
 :   Used to disable building the experimental MLIR Code Generator, ClangIR when
-    build ing Clang. The ClangIR build automatically includes a significant amount
+    building Clang. The ClangIR build automatically includes a significant amount
     of the MLIR project as well, and results in a significant increase in the time
-    required to build Clang. Defaults to ON.
+    required to build Clang and the resulting size of the clang binary. Defaults
+    to ON.
 
 **LLVM_ABI_BREAKING_CHECKS**:STRING
 

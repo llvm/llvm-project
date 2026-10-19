@@ -176,7 +176,7 @@ features cannot lower the translation-unit ABI level;
 work for many workloads in some narrow configurations (ie, Itanium only), it
 should prove useful for MLIR experimentation in Clang. This does however have a
 measureable and significant impact on the build-time of clang itself. It can be
-disabled with the CMake option `-DCLANG_ENABLE_CIR=Off`. See [the CIR
+disabled with the CMake option `-DCLANG_ENABLE_CIR=OFF`. See [the CIR
 documentation](CIR/index.md) for more information regarding ClangIR's status and design.
 
 ### C++ Language Changes
