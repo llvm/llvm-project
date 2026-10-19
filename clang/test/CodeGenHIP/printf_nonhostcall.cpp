@@ -521,43 +521,81 @@ __device__ int fmt_array() { return printf(fmt_arr, "x"); }
 // CHECK-LABEL: define dso_local noundef i32 @_Z9arg_arrayv
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
-// CHECK-NEXT:    br i1 [[TMP0]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr), null
+// CHECK-NEXT:    br i1 [[TMP0]], label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
+// CHECK:       strlen.while:
+// CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr), [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[STRLEN_WHILE]] ]
+// CHECK-NEXT:    [[TMP2]] = getelementptr i8, ptr [[TMP1]], i64 1
+// CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 0
+// CHECK-NEXT:    br i1 [[TMP4]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
+// CHECK:       strlen.while.done:
+// CHECK-NEXT:    [[TMP5:%.*]] = ptrtoaddr ptr [[TMP1]] to i64
+// CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr) to i64)
+// CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 1
+// CHECK-NEXT:    br label [[STRLEN_JOIN]]
+// CHECK:       strlen.join:
+// CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP7]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
+// CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 7
+// CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967288
+// CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 12
+// CHECK-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP11]] to i32
+// CHECK-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 [[TMP12]])
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK-NEXT:    br i1 [[TMP13]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
 // CHECK:       end.block:
-// CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-// CHECK-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP1]] to i32
+// CHECK-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
+// CHECK-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP14]] to i32
 // CHECK-NEXT:    ret i32 [[PRINTF_RESULT]]
 // CHECK:       argpush.block:
-// CHECK-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK-NEXT:    store i64 -88937716022153584, ptr addrspace(1) [[TMP2]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP2]], i32 8
-// CHECK-NEXT:    store i32 6779489, ptr addrspace(1) [[TMP3]], align 4
-// CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP3]], i32 4
-// CHECK-NEXT:    store i32 0, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
-// CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 4
+// CHECK-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP12]], 2
+// CHECK-NEXT:    [[TMP16:%.*]] = or i32 [[TMP15]], 2
+// CHECK-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK-NEXT:    store i64 -88937716022153584, ptr addrspace(1) [[TMP17]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP17]], i32 8
+// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP18]], ptr align 1 addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr), i64 [[TMP8]], i1 false)
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP18]], i64 [[TMP10]]
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
 // CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z9arg_arrayv
 // CHECK_CONSTRAINED-SAME: () #[[ATTR0]] {
 // CHECK_CONSTRAINED-NEXT:  entry:
-// CHECK_CONSTRAINED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
-// CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
-// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP0]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = icmp eq ptr addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr), null
+// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP0]], label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
+// CHECK_CONSTRAINED:       strlen.while:
+// CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr), [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[STRLEN_WHILE]] ]
+// CHECK_CONSTRAINED-NEXT:    [[TMP2]] = getelementptr i8, ptr [[TMP1]], i64 1
+// CHECK_CONSTRAINED-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
+// CHECK_CONSTRAINED-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 0
+// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP4]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
+// CHECK_CONSTRAINED:       strlen.while.done:
+// CHECK_CONSTRAINED-NEXT:    [[TMP5:%.*]] = ptrtoaddr ptr [[TMP1]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr) to i64)
+// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 1
+// CHECK_CONSTRAINED-NEXT:    br label [[STRLEN_JOIN]]
+// CHECK_CONSTRAINED:       strlen.join:
+// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP7]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
+// CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 7
+// CHECK_CONSTRAINED-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967288
+// CHECK_CONSTRAINED-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 12
+// CHECK_CONSTRAINED-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP11]] to i32
+// CHECK_CONSTRAINED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 [[TMP12]])
+// CHECK_CONSTRAINED-NEXT:    [[TMP13:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP13]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
 // CHECK_CONSTRAINED:       end.block:
-// CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-// CHECK_CONSTRAINED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP1]] to i32
+// CHECK_CONSTRAINED-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
+// CHECK_CONSTRAINED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP14]] to i32
 // CHECK_CONSTRAINED-NEXT:    ret i32 [[PRINTF_RESULT]]
 // CHECK_CONSTRAINED:       argpush.block:
-// CHECK_CONSTRAINED-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
-// CHECK_CONSTRAINED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK_CONSTRAINED-NEXT:    store i64 -88937716022153584, ptr addrspace(1) [[TMP2]], align 8
-// CHECK_CONSTRAINED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP2]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i32 6779489, ptr addrspace(1) [[TMP3]], align 4
-// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP3]], i32 4
-// CHECK_CONSTRAINED-NEXT:    store i32 0, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
-// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 4
+// CHECK_CONSTRAINED-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP12]], 2
+// CHECK_CONSTRAINED-NEXT:    [[TMP16:%.*]] = or i32 [[TMP15]], 2
+// CHECK_CONSTRAINED-NEXT:    store i32 [[TMP16]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK_CONSTRAINED-NEXT:    store i64 -88937716022153584, ptr addrspace(1) [[TMP17]], align 8
+// CHECK_CONSTRAINED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP17]], i32 8
+// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP18]], ptr align 1 addrspacecast (ptr addrspace(4) @_ZL7arg_arr to ptr), i64 [[TMP8]], i1 false)
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP18]], i64 [[TMP10]]
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
 __device__ int arg_array() { return printf("%s\n", arg_arr); }
@@ -606,7 +644,7 @@ __device__ int arg_array() { return printf("%s\n", arg_arr); }
 //
 __device__ int member_fmt() { return printf(S::fmt, "y"); }
 
-// The initializer's type differs from the array type because of the zero tail.
+// An array with a zero tail.
 const char long_fmt[64] = {'%', 's', '\n'};
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z14long_fmt_arrayv
@@ -699,90 +737,52 @@ template <class T> struct TS { static constexpr char fmt[] = "%s\n"; };
 //
 __device__ int tmpl_member_fmt() { return printf(TS<int>::fmt, "t"); }
 
-// Already declared with a type different from its initializer's when printf
-// is emitted, so its definition is not pulled forward and the format is
-// treated as non-constant.
+// Already declared when printf is emitted.
 __device__ int sink(const char *, int);
 const char decl_fmt[64] = {'%', 's', '\n'};
 
 // CHECK-LABEL: define dso_local noundef i32 @_Z15predeclared_fmtv
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), null
-// CHECK-NEXT:    br i1 [[TMP0]], label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
-// CHECK:       strlen.while:
-// CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[STRLEN_WHILE]] ]
-// CHECK-NEXT:    [[TMP2]] = getelementptr i8, ptr [[TMP1]], i64 1
-// CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 0
-// CHECK-NEXT:    br i1 [[TMP4]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
-// CHECK:       strlen.while.done:
-// CHECK-NEXT:    [[TMP5:%.*]] = ptrtoaddr ptr [[TMP1]] to i64
-// CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr) to i64)
-// CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 1
-// CHECK-NEXT:    br label [[STRLEN_JOIN]]
-// CHECK:       strlen.join:
-// CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP7]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
-// CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 7
-// CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967288
-// CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 12
-// CHECK-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP11]] to i32
-// CHECK-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 [[TMP12]])
-// CHECK-NEXT:    [[TMP13:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
-// CHECK-NEXT:    br i1 [[TMP13]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK-NEXT:    br i1 [[TMP0]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
 // CHECK:       end.block:
-// CHECK-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
-// CHECK-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP14]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
+// CHECK-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP1]] to i32
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z4sinkPKci(ptr noundef addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), i32 noundef [[PRINTF_RESULT]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    ret i32 [[CALL]]
 // CHECK:       argpush.block:
-// CHECK-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP12]], 2
-// CHECK-NEXT:    store i32 [[TMP15]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP16]], ptr align 1 addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), i64 [[TMP8]], i1 false)
-// CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP16]], i64 [[TMP10]]
-// CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str.10 to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
-// CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
+// CHECK-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK-NEXT:    store i64 -88937716022153584, ptr addrspace(1) [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP2]], i32 8
+// CHECK-NEXT:    store i32 119, ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP3]], i32 4
+// CHECK-NEXT:    store i32 0, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 4
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
 // CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z15predeclared_fmtv
 // CHECK_CONSTRAINED-SAME: () #[[ATTR0]] {
 // CHECK_CONSTRAINED-NEXT:  entry:
-// CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = icmp eq ptr addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), null
-// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP0]], label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
-// CHECK_CONSTRAINED:       strlen.while:
-// CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[STRLEN_WHILE]] ]
-// CHECK_CONSTRAINED-NEXT:    [[TMP2]] = getelementptr i8, ptr [[TMP1]], i64 1
-// CHECK_CONSTRAINED-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
-// CHECK_CONSTRAINED-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 0
-// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP4]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
-// CHECK_CONSTRAINED:       strlen.while.done:
-// CHECK_CONSTRAINED-NEXT:    [[TMP5:%.*]] = ptrtoaddr ptr [[TMP1]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr) to i64)
-// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 1
-// CHECK_CONSTRAINED-NEXT:    br label [[STRLEN_JOIN]]
-// CHECK_CONSTRAINED:       strlen.join:
-// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP7]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
-// CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 7
-// CHECK_CONSTRAINED-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 4294967288
-// CHECK_CONSTRAINED-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 12
-// CHECK_CONSTRAINED-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP11]] to i32
-// CHECK_CONSTRAINED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 [[TMP12]])
-// CHECK_CONSTRAINED-NEXT:    [[TMP13:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
-// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP13]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK_CONSTRAINED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
+// CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP0]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
 // CHECK_CONSTRAINED:       end.block:
-// CHECK_CONSTRAINED-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
-// CHECK_CONSTRAINED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP14]] to i32
+// CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
+// CHECK_CONSTRAINED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP1]] to i32
 // CHECK_CONSTRAINED-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z4sinkPKci(ptr noundef addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), i32 noundef [[PRINTF_RESULT]]) #[[ATTR4:[0-9]+]]
 // CHECK_CONSTRAINED-NEXT:    ret i32 [[CALL]]
 // CHECK_CONSTRAINED:       argpush.block:
-// CHECK_CONSTRAINED-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP12]], 2
-// CHECK_CONSTRAINED-NEXT:    store i32 [[TMP15]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
-// CHECK_CONSTRAINED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP16]], ptr align 1 addrspacecast (ptr addrspace(4) @_ZL8decl_fmt to ptr), i64 [[TMP8]], i1 false)
-// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP16]], i64 [[TMP10]]
-// CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(4) @.str.10 to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
-// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
+// CHECK_CONSTRAINED-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK_CONSTRAINED-NEXT:    store i64 -88937716022153584, ptr addrspace(1) [[TMP2]], align 8
+// CHECK_CONSTRAINED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP2]], i32 8
+// CHECK_CONSTRAINED-NEXT:    store i32 119, ptr addrspace(1) [[TMP3]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP3]], i32 4
+// CHECK_CONSTRAINED-NEXT:    store i32 0, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 4
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
 __device__ int predeclared_fmt() { return sink(decl_fmt, printf(decl_fmt, "w")); }
