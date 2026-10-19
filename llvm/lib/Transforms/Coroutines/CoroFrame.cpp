@@ -1274,7 +1274,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   }
 }
 
-// Moves the values in the PHIs in SuccBB that correspong to PredBB into a new
+// Moves the values in the PHIs in SuccBB that correspond to PredBB into a new
 // PHI in InsertedBB.
 static void movePHIValuesToInsertedBlock(BasicBlock *SuccBB,
                                          BasicBlock *InsertedBB,
@@ -1295,7 +1295,8 @@ static void movePHIValuesToInsertedBlock(BasicBlock *SuccBB,
 
 // Rewrites the PHI Nodes in a cleanuppad.
 static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
-                                     CleanupPadInst *CleanupPad) {
+                                     CleanupPadInst *CleanupPad,
+                                     const coro::Shape &Shape) {
   // For every incoming edge to a CleanupPad we will create a new block holding
   // all incoming values in single-value PHI nodes. We will then create another
   // block to act as a dispather (as all unwind edges for related EH blocks
@@ -1323,6 +1324,50 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
   //    %8 = phi i32 [%4, %cleanuppad.from.catchswitch],
   //                 [%6, %cleanuppad.from.catch.1]
 
+  // The single-value PHI nodes take their values from the dispatcher, which
+  // all predecessors of the cleanuppad now unwind to. That is only valid if
+  // the value dominates the cleanuppad, or if it lives across a suspend point
+  // (in which case insertSpills replaces the PHI with a reload from the
+  // frame). Any other value, for example a PHI in the catchswitch block or the
+  // result of an invoke that unwinds to the cleanuppad, is passed through a
+  // PHI in the dispatcher, which is poison on the edges from the other
+  // predecessors:
+  //
+  // cleanuppad.corodispatch
+  //    %2 = phi i8[0, %catchswitch], [1, %catch.1]
+  //    %0.corodispatch = phi i32[%0, %catchswitch], [poison, %catch.1]
+  //    %3 = cleanuppad within none []
+  //    ...
+  // cleanuppad.from.catchswitch:
+  //    %4 = phi i32 [%0.corodispatch, %cleanuppad.corodispatch]
+  //
+  // Such a PHI is not analyzed for suspend crossing, so it may only be used
+  // for values that do not live across a suspend point.
+  SmallVector<BasicBlock *, 8> Preds(predecessors(CleanupPadBB));
+  /// Values with corresponding predecessors that need to be forwarded via a phi
+  /// in the dispatcher.
+  DenseSet<std::pair<BasicBlock *, Value *>> PassThroughDispatcher;
+  {
+    Function &F = *CleanupPadBB->getParent();
+    DominatorTree DT(F);
+    std::optional<SuspendCrossingInfo> Checker;
+    for (BasicBlock *Pred : Preds)
+      for (PHINode &PN : CleanupPadBB->phis()) {
+        auto *I = dyn_cast<Instruction>(PN.getIncomingValueForBlock(Pred));
+        if (!I || DT.dominates(I, CleanupPadBB))
+          continue;
+        if (!Checker)
+          Checker.emplace(F, Shape);
+        // Note:
+        // Currently, a spill is inserted if any path crosses a suspend point.
+        // If in the future a conditional suspend doesn't always lead to a
+        // spill, this check should be updated. Otherwise, the non-spilled
+        // value's definition will not dominate its use.
+        if (!Checker->hasPathCrossingSuspendPoint(I->getParent(), Pred))
+          PassThroughDispatcher.insert({Pred, I});
+      }
+  }
+
   // Unreachable BB, in case switching on an invalid value in the dispatcher.
   auto *UnreachBB = BasicBlock::Create(
       CleanupPadBB->getContext(), "unreachable", CleanupPadBB->getParent());
@@ -1344,7 +1389,6 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
                                                 pred_size(CleanupPadBB));
 
   int SwitchIndex = 0;
-  SmallVector<BasicBlock *, 8> Preds(predecessors(CleanupPadBB));
   for (BasicBlock *Pred : Preds) {
     // Create a new cleanuppad and move the PHI values to there.
     auto *CaseBB = BasicBlock::Create(CleanupPadBB->getContext(),
@@ -1357,6 +1401,22 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
     Builder.SetInsertPoint(CaseBB);
     Builder.CreateBr(CleanupPadBB);
     movePHIValuesToInsertedBlock(CleanupPadBB, CaseBB, NewCleanupPadBB);
+
+    for (PHINode &InputV : CaseBB->phis()) {
+      Value *V = InputV.getIncomingValue(0);
+      if (!PassThroughDispatcher.contains({Pred, V}))
+        continue;
+      // Forward the value via a phi in the dispatcher.
+      auto *DispatchPN = PHINode::Create(V->getType(), Preds.size(),
+                                         V->getName() + ".corodispatch");
+      DispatchPN->insertBefore(CleanupPad->getIterator());
+      // Forward value for the predecessor where it's defined.
+      // For others, forward poison.
+      for (BasicBlock *P : Preds)
+        DispatchPN->addIncoming(P == Pred ? V : PoisonValue::get(V->getType()),
+                                P);
+      InputV.setIncomingValue(0, DispatchPN);
+    }
 
     // Update this Pred to the new unwind point.
     setUnwindEdgeTo(Pred->getTerminator(), NewCleanupPadBB);
@@ -1400,7 +1460,7 @@ static void cleanupSinglePredPHIs(Function &F) {
   }
 }
 
-static void rewritePHIs(BasicBlock &BB) {
+static void rewritePHIs(BasicBlock &BB, const coro::Shape &Shape) {
   // For every incoming edge we will create a block holding all
   // incoming values in a single PHI nodes.
   //
@@ -1435,7 +1495,7 @@ static void rewritePHIs(BasicBlock &BB) {
           // unwind destination that needs to be handle specially.
           assert(CS->getUnwindDest() == &BB);
           (void)CS;
-          rewritePHIsForCleanupPad(&BB, CleanupPad);
+          rewritePHIsForCleanupPad(&BB, CleanupPad, Shape);
           return;
         }
       }
@@ -1476,7 +1536,7 @@ static void rewritePHIs(BasicBlock &BB) {
   }
 }
 
-static void rewritePHIs(Function &F) {
+static void rewritePHIs(Function &F, const coro::Shape &Shape) {
   SmallVector<BasicBlock *, 8> WorkList;
 
   for (BasicBlock &BB : F)
@@ -1485,7 +1545,7 @@ static void rewritePHIs(Function &F) {
         WorkList.push_back(&BB);
 
   for (BasicBlock *BB : WorkList)
-    rewritePHIs(*BB);
+    rewritePHIs(*BB, Shape);
 }
 
 // Splits the block at a particular instruction unless it is the first
@@ -2014,7 +2074,7 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
 
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will
   // never have its definition separated from the PHI by the suspend point.
-  rewritePHIs(F);
+  rewritePHIs(F, Shape);
 }
 
 void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
