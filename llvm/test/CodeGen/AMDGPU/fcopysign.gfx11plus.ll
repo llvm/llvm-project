@@ -37,8 +37,9 @@ define amdgpu_kernel void @f_copy_sign (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF2]], %subreg.hi16
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; GFX11-REAL16-NEXT:   [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[S_MOV_B32_2]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], implicit $exec
-  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_16 = COPY [[V_BFI_B32_e64_]].lo16
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], [[COPY8]], [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s16) into %ir.3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[V_BFI_B32_e64_]]
+  ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:vgpr_16 = COPY [[COPY8]].lo16
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], [[COPY9]], [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s16) into %ir.3, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: f_copy_sign
