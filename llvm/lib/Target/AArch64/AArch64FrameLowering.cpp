@@ -1640,7 +1640,7 @@ struct RegGroupInfo {
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
 
-  SmallVector<Register, 2> getRegisters() const {
+  SmallVector<Register, 4> getRegisters() const {
     if (isPaired())
       return {Reg1, Reg2};
     return {Reg1};
