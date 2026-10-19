@@ -124,14 +124,9 @@ combiner {
 
 func.func @sections_custom_scalar_reduction(%x: memref<f32>) {
   // A custom scalar reduction can access arbitrary memory through a call.
+  // Without assume_bounded_recipe_effects, the recipe effects are unspecified.
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
   omp.sections nowait reduction(@custom_f32 %x -> %p : memref<f32>) {
