@@ -1868,13 +1868,13 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     //
     // The order of the registers in the list is controlled by
     // getCalleeSavedRegs(), so they will always be in-order, as well.
-    bool RegsOrdered = all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
-      return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
+    [[maybe_unused]] bool RegsOrdered =
+        all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
+          return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
 
-             CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
-    });
+                 CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
+        });
     assert(RegsOrdered && "Out of order callee saved regs!");
-    (void)RegsOrdered;
 
     assert((!RGI.isPaired() || !NeedsFrameRecord || RGI.Reg2 != AArch64::FP ||
             RGI.Reg1 == AArch64::LR) &&
