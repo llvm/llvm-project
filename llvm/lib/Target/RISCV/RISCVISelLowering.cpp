@@ -19833,8 +19833,12 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     break;
   case ISD::MUL:
-    // MULH*/MULHR*: shift amount must be element size, only for i16/i32
-    if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
+    // MULH*/MULHR*: shift amount must be element size, only for i16/i32. The
+    // exception is the RV64 v8i8 MULHSU which is built from multiply halves.
+    if (ShAmtVal != EltBits)
+      return SDValue();
+    if (EltBits != 16 && EltBits != 32 &&
+        !(Subtarget.is64Bit() && VT == MVT::v8i8 && !IsRounding))
       return SDValue();
     if (!Subtarget.is64Bit() && VT == MVT::v4i16)
       return SDValue();
