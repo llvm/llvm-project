@@ -37,7 +37,7 @@ jobs:
     runs-on: aws-linux-scale-rocm-large
     timeout-minutes: 120
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada
     steps:
       # ---- Checkout ---------------------------------------------------------
       # llvm-project at PR head (this repo) provides LLVM/Clang/LLD + amd/
@@ -403,7 +403,7 @@ jobs:
     runs-on: aws-linux-scale-rocm-large
     timeout-minutes: 30
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada
     permissions:
       contents: read
 
@@ -470,7 +470,7 @@ jobs:
     runs-on: aws-linux-scale-rocm-large
     timeout-minutes: 15
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada
 
     steps:
       - name: Checkout llvm-project (PR head)
@@ -518,7 +518,7 @@ jobs:
     runs-on: aws-linux-scale-rocm-large
     timeout-minutes: 30
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada
 
     steps:
       - name: Checkout llvm-project (PR head)
@@ -640,7 +640,7 @@ jobs:
     # slow/contended and 45m was cutting the job before it could finish.
     timeout-minutes: 240
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada
       options: |
         --device=/dev/kfd --device=/dev/dri  --group-add video
 
@@ -752,7 +752,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:702a5133851e6d1daf1207d2c9fbb01c2667914a5b6dc5a01faeb3ce66ea6421
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada
       options: |
         --device=/dev/kfd --device=/dev/dri  --group-add video
 
