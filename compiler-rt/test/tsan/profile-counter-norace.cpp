@@ -1,4 +1,4 @@
-// REQUIRES: profile
+// REQUIRES: Clang, profile
 // RUN: %clangxx_tsan -fprofile-instr-generate -O3 %s -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
