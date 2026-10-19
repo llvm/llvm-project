@@ -249,8 +249,7 @@ public:
   bool legalizeTrapEndpgm(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
-  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
-                       MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 

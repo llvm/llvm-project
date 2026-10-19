@@ -380,7 +380,7 @@ private:
                                      unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
                                SmallVirtRegSet &, RecoloringStack &, unsigned);
-  void tryHintRecoloring(const LiveInterval &);
+  void tryHintRecoloring(const LiveInterval &, DenseSet<Register> &);
   void tryHintsRecoloring();
 
   /// Model the information carried by one end of a copy.

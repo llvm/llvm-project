@@ -529,11 +529,11 @@ def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
     (`mlir::TypedAttribute`).
 
     These must be initialized with a set of types that exactly match the type of
-    the attribute, with one exception: flexible array members.  If the last
-    member of the struct type is a zero-length array, the `ConstRecordAttr` is
-    allowed to hold an unbounded number of elements. This is necessary to
-    support global and static storage duration variables that use the flexible
-    array member functionality.
+    the attribute, with one exception: flexible array members. If the last
+    member of a struct type or a member of a union type is a zero-length array,
+    the `ConstRecordAttr` may initialize it with a larger array of the same
+    element type. This is necessary to support global and static storage
+    duration variables that use the flexible array member functionality.
 
     Example:
     ```
@@ -2572,5 +2572,30 @@ def CIR_AnnotationArrayAttr
 
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
+
+//===----------------------------------------------------------------------===//
+// CXXModuleInitAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_CXXModuleInitAttr : CIR_Attr<"CXXModuleInit", "cxx_module_init"> {
+  let summary = "Initializer function of an imported C++20 named module";
+  let description = [{
+    The Itanium-mangled name of the initializer function of a C++20 named
+    module the translation unit imports, with the location of the import
+    declaration. CIRGen lists one per module whose initializer the unit's
+    global init function must call, in call order, in the
+    `cir.cxx_module_imported_inits` module attribute; LoweringPrepare declares
+    each function at that location and calls it before the unit's own
+    initializers.
+
+    Example:
+    ```mlir
+    cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", loc("use.cpp":1:1)>]
+    ```
+  }];
+  let parameters = (ins "mlir::StringAttr":$name, "mlir::LocationAttr":$loc);
+  let assemblyFormat = [{ `<` $name `,` $loc `>` }];
+  let canHaveIllegalCXXABIType = 0;
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
