@@ -262,7 +262,13 @@ flushed explicitly.
 Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
 precision`_; diagnosed as unsupported), vector memory
 operations (vectors are scalarized), textures and graphics shaders, calls
-and recursion.
+to functions that are not defined in the module, and recursion.
+
+The hardware has no calls: all functions are inlined into the kernels. An
+indirect call becomes a test of the callee against each address-taken
+function of the module with the same type, with a direct call (inlined) for
+each, and a trap if none matches. The address of such a function, as a
+value (stored, compared or passed), is its number in the module (1, 2, ...).
 
 .. _agx-apple9:
 

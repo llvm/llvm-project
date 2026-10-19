@@ -39,6 +39,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -81,14 +82,62 @@ INITIALIZE_PASS(AGXAlwaysInline, "agx-always-inline", "AGX Always Inline",
 
 ModulePass *llvm::createAGXAlwaysInlinePass() { return new AGXAlwaysInline(); }
 
+/// There are no calls in the hardware, direct or indirect: an indirect call
+/// becomes a test of the callee against each address-taken function of its
+/// type, with a direct call (inlined later) for each, and a trap if none
+/// matches. The addresses of these functions, as values, become their
+/// numbers (1, 2, ...), so that they can be stored, compared and passed.
+static bool lowerIndirectCalls(Module &M) {
+  SmallVector<CallBase *, 8> Indirect;
+  for (Function &F : M)
+    for (Instruction &I : instructions(F))
+      if (auto *CB = dyn_cast<CallBase>(&I); CB && CB->isIndirectCall() &&
+                                             !CB->isInlineAsm())
+        Indirect.push_back(CB);
+  SmallVector<Function *, 8> Taken;
+  for (Function &F : M)
+    if (!F.isIntrinsic() && F.getCallingConv() != CallingConv::AGX_KERNEL &&
+        F.hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/true,
+                          /*IngoreLLVMUsed=*/true))
+      Taken.push_back(&F);
+  if (Indirect.empty() && Taken.empty())
+    return false;
+  for (CallBase *CB : Indirect) {
+    CallBase *Rest = CB;
+    for (Function *F : Taken) {
+      if (F->getFunctionType() != CB->getFunctionType())
+        continue;
+      // The direct call is in the then block; the indirect one stays in the
+      // else block.
+      promoteCallWithIfThenElse(*Rest, F);
+    }
+    // No address-taken function of this type matches.
+    IRBuilder<> B(Rest);
+    B.CreateIntrinsic(Intrinsic::trap, {});
+    if (!Rest->getType()->isVoidTy())
+      Rest->replaceAllUsesWith(PoisonValue::get(Rest->getType()));
+    Rest->eraseFromParent();
+  }
+  for (auto [N, F] : enumerate(Taken)) {
+    Constant *Id = ConstantExpr::getIntToPtr(
+        ConstantInt::get(Type::getInt64Ty(M.getContext()), N + 1), F->getType());
+    F->replaceUsesWithIf(Id, [](Use &U) {
+      auto *CB = dyn_cast<CallBase>(U.getUser());
+      return !CB || !CB->isCallee(&U);
+    });
+  }
+  return true;
+}
+
 bool AGXAlwaysInline::runOnModule(Module &M) {
+  bool Changed = lowerIndirectCalls(M);
   // Modules without any agx_kernel function (for example tests of single
   // functions) compile every external function as an entry point.
   bool HasKernels = any_of(M, [](const Function &F) {
     return F.getCallingConv() == CallingConv::AGX_KERNEL;
   });
 
-  bool Changed = false;
   SmallVector<Function *, 8> Dead;
   for (Function &F : M) {
     if (F.isDeclaration() || F.getCallingConv() == CallingConv::AGX_KERNEL)
