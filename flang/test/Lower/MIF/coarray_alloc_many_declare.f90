@@ -29,7 +29,7 @@ end program p
 !CHECK-LABEL: func.func private @_QFPinner() attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>}
 !CHECK:       %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK-NEXT:  %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
-!CHECK-NEXT:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
+!CHECK-NEXT:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFEa") fortran_attrs<allocatable, internal_assoc> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
 !CHECK-NEXT:  %c1_i32 = arith.constant 1 : i32
 !CHECK-NEXT:  hlfir.assign %c1_i32 to %[[VAL_2:.*]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
 

@@ -2550,12 +2550,24 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
+/// Whether storage may be accessed indirectly through internal procedure calls.
 static bool
 isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
                               const Fortran::semantics::Symbol &sym) {
   const Fortran::lower::pft::FunctionLikeUnit *funit =
       converter.getCurrentFunctionUnit();
-  if (!funit || funit->getHostAssoc().empty())
+  if (!funit)
+    return false;
+  if (const auto *host =
+          funit->parent.getIf<Fortran::lower::pft::FunctionLikeUnit>()) {
+    // Only canonical host globals share storage with sibling procedures.
+    // Private copies can resolve to the same ultimate symbol but have separate
+    // storage and are absent from the canonical global capture set.
+    if (&sym.owner() == &host->getScope() &&
+        host->getHostAssoc().isAssociatedGlobal(sym))
+      return true;
+  }
+  if (funit->getHostAssoc().empty())
     return false;
   if (funit->getHostAssoc().isAssociated(sym))
     return true;
