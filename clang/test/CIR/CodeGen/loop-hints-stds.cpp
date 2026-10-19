@@ -10,11 +10,11 @@ void use(int);
 
 // CIR-LABEL: cir.func {{.*}} @_Z5hintsi
 void hints(int n) {
-// CXX17: } loop_hints < must_progress unroll_count = 4>
-// CXX98: } loop_hints < unroll_count = 4>
 #pragma GCC unroll 4
   for (int i = 0; i < n; ++i)
     use(i);
+// CXX17: } loop_hints < must_progress unroll_count = 4>
+// CXX98: } loop_hints < unroll_count = 4>
 #pragma clang loop unroll(disable)
   for (int i = 0; i < n; ++i)
     use(i);
