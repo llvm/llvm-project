@@ -246,11 +246,7 @@ define float @exp2_f32(float %x) #0 {
 define float @rint_f32(float %x) #0 {
 ; CHECK-LABEL: rint_f32:
 ; CHECK-R2: jal rintf
-<<<<<<< HEAD
 ; CHECK-R6: rint.s
-=======
-; CHECK-R6: balc rintf
->>>>>>> 544b04d01d3a ([Mips] Fix MipsJmpLink and MipsTailCall to use compact branch instructions on MIPS32/64 R6)
   %val = call float @llvm.experimental.constrained.rint.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
