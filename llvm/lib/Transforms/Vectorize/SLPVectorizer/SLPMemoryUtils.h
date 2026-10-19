@@ -42,13 +42,11 @@ class VectorType;
 
 namespace llvm::slpvectorizer {
 
-/// Memoizes `llvm::getPointersDiff`. SLP asks for the distance between the
-/// same pointers many times while it builds and prices trees, and every
-/// answer is a SCEV query. The first computation of (A, B) also records
-/// (B, A), so a later query in either order is a lookup.
-///
-/// Entries are keyed by `Value` addresses, so the owner clears the cache
-/// once it has rewritten the code, after each successful vectorization.
+/// Caches pointer distances. The same pointers are queried over and over while
+/// trees are built and priced, and a miss may need a SCEV query. The answer for
+/// (A, B) also serves (B, A). The answers for the surviving pointers may change
+/// once the code is rewritten, so the owner clears the cache after each
+/// successful vectorization.
 class PointersDiffCache {
 public:
   /// Same contract as `llvm::getPointersDiff`.
