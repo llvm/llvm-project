@@ -32,6 +32,10 @@
 #    error "__cpp_lib_freestanding_string_view should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should not be defined before c++20"
 #  endif
@@ -62,6 +66,10 @@
 #    error "__cpp_lib_freestanding_string_view should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should not be defined before c++20"
 #  endif
@@ -90,6 +98,10 @@
 
 #  ifdef __cpp_lib_freestanding_string_view
 #    error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_starts_ends_with
@@ -135,6 +147,10 @@
 
 #  ifdef __cpp_lib_freestanding_string_view
 #    error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_starts_ends_with
@@ -183,6 +199,10 @@
 
 #  ifdef __cpp_lib_freestanding_string_view
 #    error "__cpp_lib_freestanding_string_view should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_basic_string_view
+#    error "__cpp_lib_hardened_basic_string_view should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_starts_ends_with
@@ -242,6 +262,19 @@
 #  else
 #    ifdef __cpp_lib_freestanding_string_view
 #      error "__cpp_lib_freestanding_string_view should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_basic_string_view != 202502L
+#      error "__cpp_lib_hardened_basic_string_view should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -305,6 +338,19 @@
 #  else
 #    ifdef __cpp_lib_freestanding_string_view
 #      error "__cpp_lib_freestanding_string_view should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_basic_string_view != 202502L
+#      error "__cpp_lib_hardened_basic_string_view should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_basic_string_view
+#      error "__cpp_lib_hardened_basic_string_view should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
