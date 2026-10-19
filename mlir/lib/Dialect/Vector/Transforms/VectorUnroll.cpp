@@ -94,6 +94,13 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
     LDBG() << "--no filter constraint -> BAIL";
     return std::nullopt;
   }
+  // Unrolling a masked op would put several ops inside its vector.mask region,
+  // and the enclosing mask would not be sliced to match them.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
+  if (maskableOp && maskableOp.isMasked()) {
+    LDBG() << "--op is masked -> BAIL";
+    return std::nullopt;
+  }
   assert(options.nativeShape &&
          "vector unrolling expects the native shape or native"
          "shape call back function to be set");
@@ -1732,6 +1739,13 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollBitCastPattern, UnrollInterleavePattern,
                UnrollDeinterleavePattern>(patterns.getContext(), options,
                                           benefit);
+}
+
+void mlir::vector::populateVectorContractUnrollPatterns(
+    RewritePatternSet &patterns, const UnrollVectorOptions &options,
+    PatternBenefit benefit) {
+  patterns.add<UnrollContractionPattern>(patterns.getContext(), options,
+                                         benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

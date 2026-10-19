@@ -854,16 +854,16 @@ multiclass Cvt_PK_F8_F32_t16_Pat<SDPatternOperator node, VOP3_Pseudo inst> {
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, -1)),
     (REG_SEQUENCE VGPR_32,
-      (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), lo16,
+      (i16 (vgpr32_lo16 $old)), lo16,
       (i16 (inst 0, $src0, 0, $src1,
-         (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), 0)), hi16)
+         (i16 (vgpr32_hi16 $old)), 0)), hi16)
 >;
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, 0)),
     (REG_SEQUENCE VGPR_32,
       (i16 (inst 0, $src0, 0, $src1,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), 0)), lo16,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), hi16)
+        (i16 (vgpr32_lo16 $old)), 0)), lo16,
+        (i16 (vgpr32_hi16 $old)), hi16)
 >;
 }
 
@@ -871,16 +871,16 @@ multiclass Cvt_PK_F8_F32_E5M3_t16_Pat<SDPatternOperator node, VOP3_Pseudo inst, 
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, -1)),
     (REG_SEQUENCE VGPR_32,
-      (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), lo16,
+      (i16 (vgpr32_lo16 $old)), lo16,
       (i16 (inst 0, $src0, 0, $src1, Clamp,
-         (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), 0)), hi16)
+         (i16 (vgpr32_hi16 $old)), 0)), hi16)
 >;
 def : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, 0)),
     (REG_SEQUENCE VGPR_32,
       (i16 (inst 0, $src0, 0, $src1, Clamp,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), lo16)), 0)), lo16,
-        (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $old, VGPR_32)), hi16)), hi16)
+        (i16 (vgpr32_lo16 $old)), 0)), lo16,
+        (i16 (vgpr32_hi16 $old)), hi16)
 >;
 }
 

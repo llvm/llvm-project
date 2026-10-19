@@ -120,7 +120,7 @@ export float TestLoadWithStatus() {
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
 // CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWSB1, i32 noundef 1, ptr {{.*}} %tmp) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
-// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @SB1, i32 noundef 2, ptr {{.*}} %tmp1) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret float
 

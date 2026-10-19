@@ -435,8 +435,12 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: ccmp64rr_of:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
-; CHECK-NEXT:    ccmpbq {dfv=of} %rsi, %rdi # encoding: [0x62,0xf4,0xc4,0x02,0x39,0xf7]
-; CHECK-NEXT:    jno .LBB6_1 # encoding: [0x71,A]
+; CHECK-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
+; CHECK-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; CHECK-NEXT:    notb %cl # encoding: [0xf6,0xd1]
+; CHECK-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
+; CHECK-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
@@ -449,8 +453,12 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; NDD-LABEL: ccmp64rr_of:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
-; NDD-NEXT:    ccmpbq {dfv=of} %rsi, %rdi # encoding: [0x62,0xf4,0xc4,0x02,0x39,0xf7]
-; NDD-NEXT:    jno .LBB6_1 # encoding: [0x71,A]
+; NDD-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; NDD-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
+; NDD-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; NDD-NEXT:    notb %cl # EVEX TO LEGACY Compression encoding: [0xf6,0xd1]
+; NDD-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
+; NDD-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
@@ -465,7 +473,8 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; PREFER_NO_LEGACY_SETCC-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; PREFER_NO_LEGACY_SETCC-NEXT:    setzuno %cl # encoding: [0x62,0xf4,0x7f,0x18,0x41,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    setzuo %cl # encoding: [0x62,0xf4,0x7f,0x18,0x40,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    notb %cl # encoding: [0xf6,0xd1]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
@@ -482,7 +491,8 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; PREFER_LEGACY_SETCC-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; PREFER_LEGACY_SETCC-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
 ; PREFER_LEGACY_SETCC-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; PREFER_LEGACY_SETCC-NEXT:    setno %cl # encoding: [0x0f,0x91,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    notb %cl # encoding: [0xf6,0xd1]
 ; PREFER_LEGACY_SETCC-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
 ; PREFER_LEGACY_SETCC-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; PREFER_LEGACY_SETCC-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1

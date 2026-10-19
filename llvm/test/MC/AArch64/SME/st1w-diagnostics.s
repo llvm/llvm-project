@@ -35,7 +35,7 @@ st1w {za0h.s[w16, 0]}, p0, [x0]
 // Invalid vector select offset (expected: 0-3)
 
 st1w {za0h.s[w12]}, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 3].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: st1w {za0h.s[w12]}, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

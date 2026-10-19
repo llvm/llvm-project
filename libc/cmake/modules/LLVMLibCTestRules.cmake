@@ -476,7 +476,7 @@ function(add_libc_fuzzer target_name)
     "LIBC_FUZZER"
     "NEED_MPFR" # Optional arguments
     "" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_FUZZER_SRCS)
@@ -488,13 +488,13 @@ function(add_libc_fuzzer target_name)
       "'add_entrypoint_object' targets.")
   endif()
 
-  list(APPEND LIBC_FUZZER_LINK_LIBRARIES "")
+  set(link_libraries ${LIBC_FUZZER_LINK_LIBRARIES})
   if(LIBC_FUZZER_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message(VERBOSE "Fuzz test ${name} will be skipped as MPFR library is not available.")
+      message(VERBOSE "Fuzz test ${target_name} will be skipped as MPFR library is not available.")
       return()
     endif()
-    list(APPEND LIBC_FUZZER_LINK_LIBRARIES mpfr gmp)
+    list(APPEND link_libraries mpfr gmp)
   endif()
 
 
@@ -530,7 +530,7 @@ function(add_libc_fuzzer target_name)
 
   target_link_libraries(${fq_target_name} PRIVATE
     ${link_object_files}
-    ${LIBC_FUZZER_LINK_LIBRARIES}
+    ${link_libraries}
   )
 
   set_target_properties(${fq_target_name}
@@ -553,6 +553,29 @@ if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
     OUTPUT_VARIABLE LIBGCC_S_LOCATION)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
+endif()
+
+# Hermetic and integration tests link with -nodefaultlibs, so the compiler
+# runtime builtins have to be linked explicitly. -print-libgcc-file-name
+# reports whichever library the driver would use (libgcc.a or
+# libclang_rt.builtins.a). The query uses the same flags as the test link so
+# that the driver selects the same multilib. GPU and UEFI targets do not link a
+# compiler runtime.
+if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND
+  NOT LIBC_TARGET_OS_IS_UEFI AND
+  NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
+  separate_arguments(libc_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} ${libc_cxx_flags}
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+      -print-libgcc-file-name
+    OUTPUT_VARIABLE LIBC_TEST_BUILTINS_LIBRARY
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT EXISTS "${LIBC_TEST_BUILTINS_LIBRARY}")
+    message(FATAL_ERROR "Compiler runtime builtins library "
+      "'${LIBC_TEST_BUILTINS_LIBRARY}' not found. Set "
+      "LIBC_TEST_BUILTINS_LIBRARY or LIBC_TEST_BUILTINS_TARGET.")
+  endif()
 endif()
 
 # DEPRECATED: Use add_hermetic_test instead.
@@ -686,8 +709,8 @@ function(add_integration_test test_name)
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
@@ -698,8 +721,8 @@ function(add_integration_test test_name)
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
@@ -712,8 +735,13 @@ function(add_integration_test test_name)
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
     ${fq_target_name}.__libc__
+    ${LIBC_TEST_BUILTINS_LIBRARY}
     ${compiler_runtime}
   )
+  if(LIBC_TEST_BUILTINS_TARGET)
+    target_link_libraries(${fq_build_target_name} $<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>)
+    add_dependencies(${fq_build_target_name} ${LIBC_TEST_BUILTINS_TARGET})
+  endif()
   add_dependencies(${fq_build_target_name}
     libc.test.IntegrationTest.test
     ${INTEGRATION_TEST_DEPENDS})
@@ -1037,8 +1065,8 @@ function(add_libc_hermetic test_name)
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
@@ -1055,8 +1083,8 @@ function(add_libc_hermetic test_name)
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
@@ -1086,8 +1114,13 @@ function(add_libc_hermetic test_name)
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
       ${coverage_link_libs}
+      ${LIBC_TEST_BUILTINS_LIBRARY}
       ${compiler_runtime}
   )
+  if(LIBC_TEST_BUILTINS_TARGET)
+    target_link_libraries(${fq_build_target_name} PRIVATE $<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>)
+    add_dependencies(${fq_build_target_name} ${LIBC_TEST_BUILTINS_TARGET})
+  endif()
   add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
