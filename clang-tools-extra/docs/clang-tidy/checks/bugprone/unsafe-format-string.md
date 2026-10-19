@@ -91,8 +91,8 @@ literal argument.
 The following configuration will give a warning:
 
 ```c
-// bugprone-unsafe-format-string.CustomPrintfFunctions: 'mysprintf, 0;'
-// bugprone-unsafe-format-string.CustomScanfFunctions: 'myscanf, 1;'
+// bugprone-unsafe-format-string.CustomPrintfFunctions: 'mysprintf, 1;'
+// bugprone-unsafe-format-string.CustomScanfFunctions: 'myscanf, 0;'
 
 extern int myscanf( const char* format, ... );
 extern int mysprintf( char* buffer, const char* format, ... );
