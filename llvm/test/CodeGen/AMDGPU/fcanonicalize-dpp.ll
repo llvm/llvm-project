@@ -8,7 +8,6 @@ define float @canonical_f32_dpp_i32(float %a, float %b) #0 {
 ; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; CHECK-NEXT:    v_max_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sum = fadd float %a, %b
   %bits = bitcast float %sum to i32
@@ -26,7 +25,6 @@ define float @canonical_f32_dpp_shift(float %a, float %b) #0 {
 ; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mov_b32_dpp v0, v0 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; CHECK-NEXT:    v_max_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sum = fadd float %a, %b
   %shuffle = call float @llvm.amdgcn.update.dpp.f32(
