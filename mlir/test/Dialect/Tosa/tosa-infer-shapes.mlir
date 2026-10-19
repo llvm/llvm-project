@@ -838,6 +838,17 @@ func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_padding_constant_arithmetic
+func.func @test_padding_constant_arithmetic(%arg0 : tensor<10x20xf32>) {
+  %0 = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %1 = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // CHECK: tosa.pad %arg0, %0, %1 : (tensor<10x20xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<11x27xf32>
+  %2 = tosa.pad %arg0, %0, %1 : (tensor<10x20xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_slice
 func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
   // CHECK-DAG: %[[SIZE:.+]] = tosa.const_shape values(dense<2> : tensor<1xindex>) : () -> !tosa.shape<1>

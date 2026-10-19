@@ -225,6 +225,7 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   // 32-bit alloca.
   bool Is64Bit = STI->is64Bit();
   bool Is64BitAlloca = MI->getOpcode() == X86::DYN_ALLOCA_64;
+  bool DeadEFLAGS = MI->registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr);
   assert(SlotSize == 4 || SlotSize == 8);
 
   std::optional<MachineFunction::DebugInstrOperandPair> InstrNum;
@@ -257,9 +258,12 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
           .addReg(RegA, RegState::Undef);
     } else {
       // Sub.
-      BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64BitAlloca)), StackPtr)
-          .addReg(StackPtr)
-          .addImm(Amount);
+      MachineInstrBuilder Sub =
+          BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64BitAlloca)), StackPtr)
+              .addReg(StackPtr)
+              .addImm(Amount);
+      if (DeadEFLAGS)
+        Sub.setOperandDead(3); // implicit-def $eflags
     }
     break;
   case Probe:
@@ -274,10 +278,14 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
                                               /*InProlog=*/false, InstrNum);
     } else {
       // Sub
-      BuildMI(*MBB, I, DL,
-              TII->get(Is64BitAlloca ? X86::SUB64rr : X86::SUB32rr), StackPtr)
-          .addReg(StackPtr)
-          .addReg(MI->getOperand(0).getReg());
+      MachineInstrBuilder Sub =
+          BuildMI(*MBB, I, DL,
+                  TII->get(Is64BitAlloca ? X86::SUB64rr : X86::SUB32rr),
+                  StackPtr)
+              .addReg(StackPtr)
+              .addReg(MI->getOperand(0).getReg());
+      if (DeadEFLAGS)
+        Sub.setOperandDead(3); // implicit-def $eflags
     }
     break;
   }

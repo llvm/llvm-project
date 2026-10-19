@@ -193,6 +193,11 @@ class IRTranslatorImpl {
   SmallVector<std::pair<const PHINode *, SmallVector<MachineInstr *, 1>>, 4>
       PendingPHIs;
 
+  // Constant DbgValues that cannot be materialized as DBG_VALUEs
+  // because they are not an immediate or symbol reference.
+  SmallVector<std::pair<MachineInstr *, const Constant *>, 4>
+      PendingConstDbgValues;
+
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
   DenseMap<const AllocaInst *, int> FrameIndices;
@@ -337,6 +342,11 @@ class IRTranslatorImpl {
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
       ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
 
+  /// Report an intrinsic the subtarget does not support and define its results
+  /// with G_IMPLICIT_DEF. Prevents creating a malformed MIR.
+  bool handleUnsupportedIntrinsic(const CallBase &CB, Intrinsic::ID ID,
+                                  MachineIRBuilder &MIRBuilder);
+
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
   /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -380,6 +390,10 @@ class IRTranslatorImpl {
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
+
+  /// Describe any constants in PendingConstDbgValues that are
+  /// materialized as vregs.
+  void finishPendingConstDbgValues();
 
   /// Translate \p Inst into a unary operation \p Opcode.
   /// \pre \p U is a unary operation.
@@ -2058,8 +2072,8 @@ bool IRTranslatorImpl::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -2348,16 +2362,22 @@ bool IRTranslatorImpl::translateBitCast(const User &U,
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
 
-  // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
-  // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
-  // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
-  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
-  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
-  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
-  if (DstTy->isPointerTy() && SrcTy->isByteTy())
-    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
-  if (SrcTy->isPointerTy() && DstTy->isByteTy())
-    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
+  // The IR only allows pointer/non-pointer bitcasts with byte types, but
+  // G_BITCAST can't convert between pointers and other types. Go through an
+  // integer with the pointer's shape instead: `bitcast <2 x b32> to ptr`
+  // becomes a G_BITCAST to i64 and a G_INTTOPTR.
+  if (SrcTy->isPtrOrPtrVectorTy() != DstTy->isPtrOrPtrVectorTy()) {
+    assert((SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy()) &&
+           "only byte types can be bitcast to or from pointers");
+    Type *PtrIRTy = SrcTy->isPtrOrPtrVectorTy() ? SrcTy : DstTy;
+    LLT IntTy = getLLTForType(*DL->getIntPtrType(PtrIRTy), *DL);
+    Register Src = getOrCreateVReg(*U.getOperand(0));
+    Register Dst = getOrCreateVReg(U);
+    if (MRI->getType(Src) != IntTy && MRI->getType(Dst) != IntTy)
+      Src = MIRBuilder.buildCast(IntTy, Src).getReg(0);
+    MIRBuilder.buildCast(Dst, Src);
+    return true;
+  }
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
 }
@@ -2604,12 +2624,15 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   StringRef TrapFuncName =
       CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
   if (TrapFuncName.empty()) {
+    MachineInstrBuilder MIB;
     if (Opcode == TargetOpcode::G_UBSANTRAP) {
       uint64_t Code = cast<ConstantInt>(CI.getOperand(0))->getZExtValue();
-      MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
+      MIB = MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
     } else {
-      MIRBuilder.buildInstr(Opcode);
+      MIB = MIRBuilder.buildInstr(Opcode);
     }
+    if (CI.cannotMerge())
+      MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
     return true;
   }
 
@@ -2621,6 +2644,7 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
   Info.CB = &CI;
   Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+  Info.NoMerge = CI.cannotMerge();
   return CLI->lowerCall(MIRBuilder, Info);
 }
 
@@ -3063,24 +3087,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     MF->setHasFakeUses(true);
     return true;
   }
-  case Intrinsic::dbg_declare: {
-    const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
-    assert(DI.getVariable() && "Missing variable");
-    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
-    return true;
-  }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
-    assert(DI.getLabel() && "Missing label");
-
-    assert(DI.getLabel()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-
-    MIRBuilder.buildDbgLabel(DI.getLabel());
-    return true;
-  }
   case Intrinsic::vaend:
     // No target I know of cares about va_end. Certainly no in-tree target
     // does. Simplest intrinsic ever!
@@ -3094,20 +3100,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
         .addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Ptr),
                                                 MachineMemOperand::MOStore,
                                                 ListSize, Alignment));
-    return true;
-  }
-  case Intrinsic::dbg_assign:
-    // A dbg.assign is a dbg.value with more information about stack locations,
-    // typically produced during optimisation of variables with leaked
-    // addresses. We can treat it like a normal dbg_value intrinsic here; to
-    // benefit from the full analysis of stack/SSA locations, GlobalISel would
-    // need to register for and use the AssignmentTrackingAnalysis pass.
-    [[fallthrough]];
-  case Intrinsic::dbg_value: {
-    // This form of DBG_VALUE is target-independent.
-    const DbgValueInst &DI = cast<DbgValueInst>(CI);
-    translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::uadd_with_overflow:
@@ -3664,11 +3656,8 @@ bool IRTranslatorImpl::translateCall(const User &U,
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID))
+    return handleUnsupportedIntrinsic(CI, ID, MIRBuilder);
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
@@ -3679,15 +3668,26 @@ bool IRTranslatorImpl::translateCall(const User &U,
   return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
+bool IRTranslatorImpl::handleUnsupportedIntrinsic(
+    const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+  const Function &F = MF->getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
+
+  if (!CB.getType()->isVoidTy()) {
+    for (Register Reg : getOrCreateVRegs(CB))
+      MIRBuilder.buildUndef(Reg);
+  }
+
+  return true;
+}
+
 /// Translate a call or callbr to an intrinsic.
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &F = MF->getFunction();
-    F.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID))
+    return handleUnsupportedIntrinsic(CB, ID, MIRBuilder);
 
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())
@@ -3980,6 +3980,9 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   if (LP.getType()->isTokenTy())
     return true;
 
+  if (!isExceptionPointerAndSelectorType(LP.getType()))
+    return false;
+
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
@@ -4033,7 +4036,11 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
   if (AI.isStaticAlloca()) {
     Register Res = getOrCreateVReg(AI);
     int FI = getOrCreateFrameIndex(AI);
-    MIRBuilder.buildFrameIndex(Res, FI);
+    auto MIB = MIRBuilder.buildFrameIndex(Res, FI);
+    // The frame address may be materialized before the alloca's source line is
+    // reached. Clear its debug location to avoid reporting that line early.
+    if (AI.getDebugLoc())
+      MIB->setDebugLoc(DebugLoc::getDropped());
     return true;
   }
 
@@ -4598,6 +4605,22 @@ bool IRTranslatorImpl::translateFreeze(const User &U,
   return true;
 }
 
+void IRTranslatorImpl::finishPendingConstDbgValues() {
+  for (auto [MI, C] : PendingConstDbgValues) {
+    auto VRegsIt = VMap.findVRegs(*C);
+    if (VRegsIt == VMap.vregs_end() || VRegsIt->second->size() != 1)
+      continue;
+    // Constants are materialized in the entry block, so the vreg dominates
+    // every debug value; where it is not live, the location is dropped later.
+    MachineIRBuilder Builder(*MI);
+    Builder.buildDirectDbgValue(VRegsIt->second->front(),
+                                MI->getDebugVariable(),
+                                MI->getDebugExpression());
+    MI->eraseFromParent();
+  }
+  PendingConstDbgValues.clear();
+}
+
 void IRTranslatorImpl::finishPendingPhis() {
 #ifndef NDEBUG
   DILocationVerifier Verifier;
@@ -4651,7 +4674,9 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
   }
 
   if (const auto *CI = dyn_cast<Constant>(V)) {
-    MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    MachineInstr *MI = MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    if (MI->getDebugOperand(0).isReg() && !isa<UndefValue>(CI))
+      PendingConstDbgValues.emplace_back(MI, CI);
     return;
   }
 
@@ -5082,6 +5107,7 @@ void IRTranslatorImpl::finalizeFunction() {
   // Release the memory used by the different maps we
   // needed during the translation.
   PendingPHIs.clear();
+  PendingConstDbgValues.clear();
   VMap.reset();
   FrameIndices.clear();
   MachinePreds.clear();
@@ -5328,6 +5354,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   }
 
   finishPendingPhis();
+  finishPendingConstDbgValues();
 
   SwiftError.propagateVRegs();
 

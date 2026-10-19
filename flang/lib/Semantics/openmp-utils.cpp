@@ -17,6 +17,7 @@
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/check-expression.h"
@@ -58,6 +59,33 @@
 
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
+
+static SemanticOverrides *GetSemanticOverridesOrNull(
+    SemanticsContext *semaCtx) {
+  if (semaCtx) {
+    return &semaCtx->GetOmpSemanticOverrides();
+  }
+  return nullptr;
+}
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticOverrides *overrides) {
+  if (overrides) {
+    auto f{overrides->allowedClauses.find(clauseId)};
+    if (f != overrides->allowedClauses.end() && f->second.test(dirId)) {
+      return true;
+    }
+  }
+  return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+}
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticsContext *semaCtx) {
+  return IsClauseAllowedOnDirective(
+      clauseId, dirId, version, GetSemanticOverridesOrNull(semaCtx));
+}
 
 const Scope &GetScopingUnit(const Scope &scope) {
   const Scope *iter{&scope};
@@ -463,14 +491,6 @@ struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
 
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Indirection<Contained> &x) {
-    return Visit(x.value());
-  }
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Reference<Contained> &x) {
-    return Visit(x.get());
-  }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
     return common::visit([&](auto &&s) { return Visit(s); }, x.u);
   }
@@ -1282,8 +1302,7 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
       parser::Unwrap<parser::ContinueStmt>(x);
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
@@ -1292,8 +1311,7 @@ WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   return WithReason<T>();
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }
@@ -1304,10 +1322,11 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
-  bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
-      dir, llvm::omp::Clause::OMPC_collapse, version)};
-  bool allowsOrdered{llvm::omp::isAllowedClauseForDirective(
-      dir, llvm::omp::Clause::OMPC_ordered, version)};
+  SemanticOverrides *overrides{GetSemanticOverridesOrNull(semaCtx)};
+  bool allowsCollapse{IsClauseAllowedOnDirective(
+      llvm::omp::Clause::OMPC_collapse, dir, version, overrides)};
+  bool allowsOrdered{IsClauseAllowedOnDirective(
+      llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
   if (allowsCollapse || allowsOrdered) {
     auto [ccount, creason]{GetArgumentValueWithReason(
@@ -1533,8 +1552,9 @@ WithReason<int64_t> GetRectangularNestDepthWithReason(
   auto clauseAt{
       llvm::find_if(spec.Clauses().v, [&](const parser::OmpClause &c) {
         llvm::omp::Clause clauseId{c.Id()};
+        SemanticOverrides *overrides{GetSemanticOverridesOrNull(semaCtx)};
         return llvm::is_contained(clauses, clauseId) &&
-            llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+            IsClauseAllowedOnDirective(clauseId, dirId, version, overrides);
       })};
   if (clauseAt != spec.Clauses().v.end()) {
     depth.reason.Say(clauseAt->source,

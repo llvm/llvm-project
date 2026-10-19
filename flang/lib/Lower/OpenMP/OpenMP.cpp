@@ -3091,9 +3091,12 @@ static void genCanonicalLoopNest(
         loc, isDownwards, loopLBVar, loopUBVar);
 
     // Compute the trip count assuming lb <= ub. This guarantees that the result
-    // is non-negative and we can use unsigned arithmetic.
-    mlir::Value span = firOpBuilder.createOrFold<mlir::arith::SubIOp>(
-        loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
+    // is non-negative and we can use unsigned arithmetic. The subtraction
+    // cannot be nuw: lb <= ub is a signed comparison, and lb may be negative
+    // while ub is not. It cannot be nsw either, since the span may not fit in
+    // the signed loop variable type.
+    mlir::Value span =
+        firOpBuilder.createOrFold<mlir::arith::SubIOp>(loc, ub, lb);
     mlir::Value tcMinusOne =
         firOpBuilder.createOrFold<mlir::arith::DivUIOp>(loc, span, incr);
     mlir::Value tcIfLooping = firOpBuilder.createOrFold<mlir::arith::AddIOp>(
@@ -5239,11 +5242,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   ConstructQueue::const_iterator parallelItem = std::next(distributeItem);
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
 
+  // Operands evaluated outside omp.parallel are destroyed once, after it.
+  lower::StatementContext parallelStmtCtx;
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
-  genParallelClauses(converter, semaCtx, stmtCtx, parallelItem->clauses, loc,
-                     parallelClauseOps, parallelReductionObjects);
+  genParallelClauses(converter, semaCtx, parallelStmtCtx, parallelItem->clauses,
+                     loc, parallelClauseOps, parallelReductionObjects);
 
   DataSharingProcessor dsp(converter, semaCtx, doItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -5256,8 +5262,10 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
   parallelArgs.reduction.objects = parallelReductionObjects;
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
-  genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
-                parallelClauseOps, parallelArgs, &dsp, /*isComposite=*/true);
+  mlir::omp::ParallelOp parallelOp =
+      genParallelOp(converter, symTable, semaCtx, eval, loc, queue,
+                    parallelItem, parallelClauseOps, parallelArgs, &dsp,
+                    /*isComposite=*/true);
 
   // Clause processing.
   mlir::omp::DistributeOperands distributeClauseOps;
@@ -5293,6 +5301,11 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
                 loopNestClauseOps, iv,
                 {{distributeOp, distributeArgs}, {wsloopOp, wsloopArgs}},
                 llvm::omp::Directive::OMPD_distribute_parallel_do, dsp);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(parallelOp);
+  parallelStmtCtx.finalizeAndPop();
   return distributeOp;
 }
 
@@ -5307,11 +5320,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
   ConstructQueue::const_iterator simdItem = std::next(doItem);
 
+  // Operands evaluated outside omp.parallel are destroyed once, after it.
+  lower::StatementContext parallelStmtCtx;
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
-  genParallelClauses(converter, semaCtx, stmtCtx, parallelItem->clauses, loc,
-                     parallelClauseOps, parallelReductionObjects);
+  genParallelClauses(converter, semaCtx, parallelStmtCtx, parallelItem->clauses,
+                     loc, parallelClauseOps, parallelReductionObjects);
 
   DataSharingProcessor parallelItemDSP(
       converter, semaCtx, parallelItem->clauses, eval,
@@ -5325,9 +5341,9 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
   parallelArgs.reduction.objects = parallelReductionObjects;
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
-  genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
-                parallelClauseOps, parallelArgs, &parallelItemDSP,
-                /*isComposite=*/true);
+  mlir::omp::ParallelOp parallelOp = genParallelOp(
+      converter, symTable, semaCtx, eval, loc, queue, parallelItem,
+      parallelClauseOps, parallelArgs, &parallelItemDSP, /*isComposite=*/true);
 
   // Clause processing.
   // Use a shared cache so that both wsloop and simd produce the same SSA
@@ -5402,6 +5418,11 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
                  {simdOp, simdArgs}},
                 llvm::omp::Directive::OMPD_distribute_parallel_do_simd,
                 simdItemDSP);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(parallelOp);
+  parallelStmtCtx.finalizeAndPop();
   return distributeOp;
 }
 

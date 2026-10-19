@@ -12,7 +12,7 @@ subroutine scalar(x, found)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPscalar(
-! CHECK: %[[X:[^ ,:]+]]:2 = hlfir.declare {{.*}}fortran_attrs = #fir.var_attrs<optional>
+! CHECK: %[[X:[^ ,:]+]]:2 = hlfir.declare {{.*}}fortran_attrs<optional>
 ! CHECK: %[[PRESENT:[^ ,:]+]] = fir.is_present %[[X]]#1
 ! CHECK: %[[ZERO:[^ ,:]+]] = arith.constant 0 : index
 ! CHECK: %[[ONE:[^ ,:]+]] = arith.constant 1 : index
@@ -23,7 +23,7 @@ end subroutine
 ! CHECK: %[[BOUNDS:[^ ,:]+]] = omp.map.bounds lower_bound(%[[ZERO]] : index) upper_bound(%[[UB]] : index) extent(%[[EXTENT]] : index)
 ! CHECK: %[[MAP:[^ ,:]+]] = omp.map.info var_ptr(%[[X]]#1 : !fir.ref<f32>, f32) map_clauses(storage) capture(ByRef) bounds(%[[BOUNDS]])
 ! CHECK: omp.target {{.*}}map_entries(%[[MAP]] -> %[[ARG:[^ ,:]+]],
-! CHECK: %[[DEVICE_X:[^ ,:]+]]:2 = hlfir.declare %[[ARG]] {fortran_attrs = #fir.var_attrs<optional>
+! CHECK: %[[DEVICE_X:[^ ,:]+]]:2 = hlfir.declare %[[ARG]] {{.*}}fortran_attrs<optional>
 ! CHECK: fir.is_present %[[DEVICE_X]]#0
 
 subroutine array(n, x, found)
@@ -36,7 +36,7 @@ subroutine array(n, x, found)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QParray(
-! CHECK: %[[X:[^ ,:]+]]:2 = hlfir.declare {{.*}}fortran_attrs = #fir.var_attrs<optional>
+! CHECK: %[[X:[^ ,:]+]]:2 = hlfir.declare {{.*}}fortran_attrs<optional>
 ! CHECK: omp.map.bounds lower_bound(%[[LB0:[^ ,:]+]] : index) upper_bound(%[[UB0:[^ ,:]+]] : index) extent(%[[EXT0:[^ ,:]+]] : index)
 ! CHECK: omp.map.bounds lower_bound(%[[LB1:[^ ,:]+]] : index) upper_bound(%[[UB1:[^ ,:]+]] : index) extent(%[[EXT1:[^ ,:]+]] : index)
 ! CHECK: %[[PRESENT:[^ ,:]+]] = fir.is_present %[[X]]#1
@@ -68,7 +68,7 @@ subroutine section(n, x, found)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsection(
-! CHECK: %[[X:[^ ,:]+]]:2 = hlfir.declare {{.*}}fortran_attrs = #fir.var_attrs<optional>
+! CHECK: %[[X:[^ ,:]+]]:2 = hlfir.declare {{.*}}fortran_attrs<optional>
 ! CHECK: omp.map.bounds lower_bound(%[[LB:[^ ,:]+]] : index) upper_bound(%[[UB:[^ ,:]+]] : index) extent(%[[EXT:[^ ,:]+]] : index)
 ! CHECK: %[[PRESENT:[^ ,:]+]] = fir.is_present %[[X]]#1
 ! CHECK: %[[ZERO:[^ ,:]+]] = arith.constant 0 : index

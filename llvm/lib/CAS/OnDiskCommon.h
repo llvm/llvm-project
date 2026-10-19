@@ -66,8 +66,8 @@ Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize,
 /// Get boot time for the OS. This can be used to check if the CAS has been
 /// validated since boot.
 ///
-/// \returns the boot time in seconds (0 if operation not supported), or an \c
-/// Error.
+/// \returns the boot time in platform-specific units (0 if operation not
+/// supported), or an \c Error.
 LLVM_ABI_FOR_TEST Expected<uint64_t> getBootTime();
 
 /// Helper RAII class for copying a file to a unique file path. At destruction

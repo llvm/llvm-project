@@ -394,6 +394,13 @@ module ModuleFlagBehavior :sig
   | AppendUnique
 end
 
+module GEPNoWrapFlags : sig
+  val none : int
+  val inbounds : int
+  val nusw : int
+  val nuw : int
+end
+
 (** {6 Data Layout} *)
 
 module Endian : sig
@@ -471,7 +478,6 @@ module DataLayout : sig
       See the method [llvm::StructLayout::getElementContainingOffset]. *)
   val offset_of_element : lltype -> int -> t -> Int64.t
 end
-
 
 (** {6 Iteration} *)
 
@@ -604,14 +610,13 @@ val target_triple: llmodule -> string
     the string [triple]. See the method [llvm::Module::setTargetTriple]. *)
 val set_target_triple: string -> llmodule -> unit
 
-(** [data_layout m] is the data layout specifier for the module [m], something
-    like [e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-...-a0:0:64-f80:128:128]. See the
-    method [llvm::Module::getDataLayout]. *)
-val data_layout: llmodule -> string
+(** [data_layout m] is the data layout for the module [m].
+    See the method [llvm::Module::getDataLayout]. *)
+val data_layout: llmodule -> DataLayout.t
 
-(** [set_data_layout s m] changes the data layout specifier for the module [m]
-    to the string [s]. See the method [llvm::Module::setDataLayout]. *)
-val set_data_layout: string -> llmodule -> unit
+(** [set_data_layout dl m] changes the data layout specifier for the module [m]
+    to [dl]. See the method [llvm::Module::setDataLayout]. *)
+val set_data_layout: DataLayout.t -> llmodule -> unit
 
 (** [dump_module m] prints the .ll representation of the module [m] to standard
     error. See the method [llvm::Module::dump]. *)
@@ -1200,16 +1205,21 @@ val const_nuw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
 
-(** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
-    with source element type [srcty] and the constant integers indices from the
-    array [indices].
-    See the method [llvm::ConstantExpr::getGetElementPtr]. *)
-val const_gep : lltype -> llvalue -> llvalue array -> llvalue
+(** [const_ptradd pc offset flags] returns the constant ptradd
+    (getelementptr i8) of [pc] with constant [offset] and the given
+    {!GEPNoWrapFlags} no-wrap flags (combined with [lor]).
+    See the method [llvm::ConstantExpr::getPtrAdd]. *)
+val const_ptradd : llvalue -> llvalue -> int -> llvalue
 
-(** [const_in_bounds_gep ty pc indices] returns the constant [getElementPtr] of
-    [pc] with the constant integers indices from the array [indices].
-    See the method [llvm::ConstantExpr::getInBoundsGetElementPtr]. *)
-val const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
+(** [const_ptradd_from_indices dl srcty pc indices flags] returns the constant
+    ptradd of [pc] with the offset derived from the data layout [dl], the
+    source element type [srcty] and the constant integers indices from the
+    array [indices]. The flags are {!GEPNoWrapFlags} (combined with [lor]).
+    The result may be [None] if the indices cannot be converted to ptradd
+    representation.
+    See the method [llvm::ConstantExpr::getGetElementPtr]. *)
+val const_ptradd_from_indices : DataLayout.t -> lltype -> llvalue ->
+                                llvalue array -> int -> llvalue option
 
 (** [const_trunc c ty] returns the constant truncation of integer constant [c]
     to the smaller integer type [ty].

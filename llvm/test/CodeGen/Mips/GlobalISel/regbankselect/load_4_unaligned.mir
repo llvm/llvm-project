@@ -82,16 +82,16 @@ body:             |
     ; MIPS32-LABEL: name: load_i32_align8
     ; MIPS32: [[GV:%[0-9]+]]:gprb(p0) = G_GLOBAL_VALUE @i32_align8
     ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
-    ; MIPS32: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32: RetRA implicit $r2
     ; MIPS32R6-LABEL: name: load_i32_align8
     ; MIPS32R6: [[GV:%[0-9]+]]:gprb(p0) = G_GLOBAL_VALUE @i32_align8
     ; MIPS32R6: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
-    ; MIPS32R6: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32R6: RetRA implicit $v0
+    ; MIPS32R6: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32R6: RetRA implicit $r2
     %1:_(p0) = G_GLOBAL_VALUE @i32_align8
     %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
 ...

@@ -41,7 +41,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insertion_sort_move(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __insertion_sort_move(
     _BidirectionalIterator __first1,
     _BidirectionalIterator __last1,
     typename iterator_traits<_BidirectionalIterator>::value_type* __first2,
@@ -74,7 +74,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insertion_sort_move(
 }
 
 template <class _AlgPolicy, class _Compare, class _InputIterator1, class _InputIterator2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_construct(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_construct(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -112,7 +112,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_construct(
 }
 
 template <class _AlgPolicy, class _Compare, class _InputIterator1, class _InputIterator2, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_assign(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_assign(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -199,7 +199,7 @@ struct __stable_sort_switch {
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
+constexpr unsigned __radix_sort_min_bound() {
   static_assert(__is_ordered_integer_representable_v<_Tp>);
   if constexpr (sizeof(_Tp) == 1) {
     return 1 << 8;
@@ -209,7 +209,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_max_bound() {
+constexpr unsigned __radix_sort_max_bound() {
   static_assert(__is_ordered_integer_representable_v<_Tp>);
   if constexpr (sizeof(_Tp) >= 8) {
     return 1 << 15;
@@ -287,7 +287,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void
 __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare& __comp) {
   using value_type      = typename iterator_traits<_RandomAccessIterator>::value_type;
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
@@ -306,14 +306,13 @@ __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, 
 }
 
 template <class _RandomAccessIterator, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void
 stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   std::__stable_sort_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __comp);
 }
 
 template <class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   std::stable_sort(__first, __last, __less<>());
 }
 

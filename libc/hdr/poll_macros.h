@@ -20,7 +20,7 @@
 
 #else // Overlay mode
 
-#include <poll.h>
+#include "hdr/poll_overlay.h"
 
 #endif // LIBC_FULL_BUILD
 

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -debug-pass=Structure -enable-fs-discriminator=true -improved-fs-discriminator=true 2>&1 | FileCheck %s --check-prefix=NOPROFILE
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -debug-pass=Structure -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -enable-fs-discriminator=true -improved-fs-discriminator=true 2>&1 | FileCheck %s --check-prefix=PROFILE-NOMFS
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -debug-pass=Structure -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -split-machine-functions -enable-fs-discriminator=true -improved-fs-discriminator=true 2>&1 | FileCheck %s --check-prefix=PROFILE-MFS
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -debug-pass=Structure -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -function-splitting=all -enable-fs-discriminator=true -improved-fs-discriminator=true 2>&1 | FileCheck %s --check-prefix=PROFILE-MFS
 
 ;; No profile is specified, no load passes.
 ; NOPROFILE: Add FS discriminators in MIR
@@ -26,7 +26,7 @@
 ; PROFILE-MFS: SampleFDO loader in MIR
 ; PROFILE-MFS: Add FS discriminators in MIR
 ; PROFILE-MFS: SampleFDO loader in MIR
-; PROFILE-MFS: Machine Function Splitter Transformation
+; PROFILE-MFS: Basic Block Sections Transformation
 
 define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind {
   br i1 %0, label %3, label %7

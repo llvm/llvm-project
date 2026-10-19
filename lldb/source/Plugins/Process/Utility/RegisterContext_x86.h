@@ -390,6 +390,102 @@ uint16_t AbridgedToFullTagWord(uint8_t abridged_tw, uint16_t sw,
                                llvm::ArrayRef<MMSReg> st_regs);
 uint8_t FullToAbridgedTagWord(uint16_t tw);
 
+namespace x86_register_info {
+extern uint32_t g_contained_eax[];
+extern uint32_t g_contained_ebx[];
+extern uint32_t g_contained_ecx[];
+extern uint32_t g_contained_edx[];
+extern uint32_t g_contained_edi[];
+extern uint32_t g_contained_esi[];
+extern uint32_t g_contained_ebp[];
+extern uint32_t g_contained_esp[];
+
+extern uint32_t g_invalidate_eax[];
+extern uint32_t g_invalidate_ebx[];
+extern uint32_t g_invalidate_ecx[];
+extern uint32_t g_invalidate_edx[];
+extern uint32_t g_invalidate_edi[];
+extern uint32_t g_invalidate_esi[];
+extern uint32_t g_invalidate_ebp[];
+extern uint32_t g_invalidate_esp[];
+
+extern uint32_t g_contained_rax[];
+extern uint32_t g_contained_rbx[];
+extern uint32_t g_contained_rcx[];
+extern uint32_t g_contained_rdx[];
+extern uint32_t g_contained_rdi[];
+extern uint32_t g_contained_rsi[];
+extern uint32_t g_contained_rbp[];
+extern uint32_t g_contained_rsp[];
+extern uint32_t g_contained_r8[];
+extern uint32_t g_contained_r9[];
+extern uint32_t g_contained_r10[];
+extern uint32_t g_contained_r11[];
+extern uint32_t g_contained_r12[];
+extern uint32_t g_contained_r13[];
+extern uint32_t g_contained_r14[];
+extern uint32_t g_contained_r15[];
+
+extern uint32_t g_invalidate_rax[];
+extern uint32_t g_invalidate_rbx[];
+extern uint32_t g_invalidate_rcx[];
+extern uint32_t g_invalidate_rdx[];
+extern uint32_t g_invalidate_rdi[];
+extern uint32_t g_invalidate_rsi[];
+extern uint32_t g_invalidate_rbp[];
+extern uint32_t g_invalidate_rsp[];
+extern uint32_t g_invalidate_r8[];
+extern uint32_t g_invalidate_r9[];
+extern uint32_t g_invalidate_r10[];
+extern uint32_t g_invalidate_r11[];
+extern uint32_t g_invalidate_r12[];
+extern uint32_t g_invalidate_r13[];
+extern uint32_t g_invalidate_r14[];
+extern uint32_t g_invalidate_r15[];
+
+extern uint32_t g_contained_fip[];
+extern uint32_t g_contained_fdp[];
+
+extern uint32_t g_invalidate_fip[];
+extern uint32_t g_invalidate_fdp[];
+
+extern uint32_t g_contained_st0_32[];
+extern uint32_t g_contained_st1_32[];
+extern uint32_t g_contained_st2_32[];
+extern uint32_t g_contained_st3_32[];
+extern uint32_t g_contained_st4_32[];
+extern uint32_t g_contained_st5_32[];
+extern uint32_t g_contained_st6_32[];
+extern uint32_t g_contained_st7_32[];
+
+extern uint32_t g_invalidate_st0_32[];
+extern uint32_t g_invalidate_st1_32[];
+extern uint32_t g_invalidate_st2_32[];
+extern uint32_t g_invalidate_st3_32[];
+extern uint32_t g_invalidate_st4_32[];
+extern uint32_t g_invalidate_st5_32[];
+extern uint32_t g_invalidate_st6_32[];
+extern uint32_t g_invalidate_st7_32[];
+
+extern uint32_t g_contained_st0_64[];
+extern uint32_t g_contained_st1_64[];
+extern uint32_t g_contained_st2_64[];
+extern uint32_t g_contained_st3_64[];
+extern uint32_t g_contained_st4_64[];
+extern uint32_t g_contained_st5_64[];
+extern uint32_t g_contained_st6_64[];
+extern uint32_t g_contained_st7_64[];
+
+extern uint32_t g_invalidate_st0_64[];
+extern uint32_t g_invalidate_st1_64[];
+extern uint32_t g_invalidate_st2_64[];
+extern uint32_t g_invalidate_st3_64[];
+extern uint32_t g_invalidate_st4_64[];
+extern uint32_t g_invalidate_st5_64[];
+extern uint32_t g_invalidate_st6_64[];
+extern uint32_t g_invalidate_st7_64[];
+} // namespace x86_register_info
+
 } // namespace lldb_private
 
 #endif
