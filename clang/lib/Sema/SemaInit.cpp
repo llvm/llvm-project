@@ -3657,8 +3657,8 @@ MultiExprArg Sema::getInitsWithEmbedExpanded(InitListExpr *ILE,
     for (unsigned I = Embed->getStartingElementPos(),
                   E = I + Embed->getDataElementCount();
          I != E; ++I)
-      Storage.push_back(new (Context) EmbedExpr(
-          Context, Embed->getLocation(), Embed->getData(), I, 1));
+      Storage.push_back(new (Context) EmbedExpr(Context, Embed->getLocation(),
+                                                Embed->getData(), I, 1));
   }
   return Storage;
 }

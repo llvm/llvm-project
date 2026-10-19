@@ -5404,8 +5404,8 @@ public:
   bool hasOneInit() const {
     if (InitExprs.size() != 1)
       return false;
-    auto *EE = dyn_cast<EmbedExpr>(
-        cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
+    auto *EE =
+        dyn_cast<EmbedExpr>(cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
     return !EE || EE->getDataElementCount() == 1;
   }
 
