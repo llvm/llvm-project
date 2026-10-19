@@ -437,6 +437,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
     Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+    Opts.IsBigEndian = !T.isLittleEndian();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
                                   getLangOpts().getClangABICompat());
@@ -628,10 +629,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       CodeGenOpts.CoverageNotesFile.size() ||
       CodeGenOpts.CoverageDataFile.size())
     DebugInfo.reset(new CGDebugInfo(*this));
-  else if (getTriple().isOSWindows())
-    // On Windows targets, we want to emit compiler info even if debug info is
-    // otherwise disabled. Use a temporary CGDebugInfo instance to emit only
-    // basic compiler metadata.
+  else if (getTriple().isOSWindows() || getTriple().isUEFI())
+    // On Windows and UEFI targets, we want to emit compiler info even if debug
+    // info is otherwise disabled. Use a temporary CGDebugInfo instance to emit
+    // only basic compiler metadata.
     CGDebugInfo(*this);
 
   Block.GlobalUniqueCount = 0;
@@ -1433,7 +1434,7 @@ void CodeGenModule::Release() {
                               "StrictVTablePointersRequirement",
                               llvm::MDNode::get(VMContext, Ops));
   }
-  if (getModuleDebugInfo() || getTriple().isOSWindows())
+  if (getModuleDebugInfo() || getTriple().isOSWindows() || getTriple().isUEFI())
     // We support a single version in the linked module. The LLVM
     // parser will drop debug info with a different version number
     // (and warn about it, too).

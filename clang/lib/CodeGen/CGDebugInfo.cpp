@@ -2118,6 +2118,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
 
     llvm::DIFile *VUnit = getOrCreateFile(Loc);
 
+    FieldIndexCache[*Field] = elements.size();
     elements.push_back(createFieldType(
         GetLambdaCaptureName(Capture), Field->getType(), Loc,
         Field->getAccess(), FieldOffset, Align, VUnit, RecordTy, CXXDecl));
@@ -2238,6 +2239,7 @@ void CGDebugInfo::CollectRecordNormalField(
                         OffsetInBits, Align, tunit, RecordTy, RD, Annotations);
   }
 
+  FieldIndexCache[field] = elements.size();
   elements.push_back(FieldType);
 }
 
@@ -3097,11 +3099,21 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   EltTys.push_back(VPtrMember);
 }
 
-llvm::DIType *CGDebugInfo::getOrCreateRecordType(QualType RTy,
-                                                 SourceLocation Loc) {
-  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  llvm::DIType *T = getOrCreateType(RTy, getOrCreateFile(Loc));
-  return T;
+std::pair<llvm::DIType *, unsigned>
+CGDebugInfo::getOrCreatePreserveAccessInfo(QualType Ty,
+                                           const FieldDecl *Field) {
+  const RecordDecl *RD = Field->getParent();
+  // Preserve-access intrinsics need complete layouts, including base classes.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    CXXRD->forallBases([this](const CXXRecordDecl *Base) {
+      completeClass(Base);
+      return true;
+    });
+  completeClass(RD);
+  llvm::DIType *T = getOrCreateStandaloneType(Ty, RD->getLocation());
+  auto I = FieldIndexCache.find(Field);
+  assert(I != FieldIndexCache.end() && "Missing field debug information");
+  return {T, I->second};
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateInterfaceType(QualType D,

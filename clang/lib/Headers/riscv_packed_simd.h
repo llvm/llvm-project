@@ -478,6 +478,14 @@ __packed_mulh_builtin(mulhsu_i32, int32_t, int32_t, uint32_t)
 __packed_mulh_builtin(mulhrsu_i32, int32_t, int32_t, uint32_t)
 #undef __packed_mulh_builtin
 
+/* Scalar Multiply High Accumulate */
+__packed_ternary_builtin(mhacc_i32, int32_t, __builtin_riscv_mhacc_i32)
+__packed_ternary_builtin(mhracc_i32, int32_t, __builtin_riscv_mhracc_i32)
+__packed_ternary_builtin(mhaccu_u32, uint32_t, __builtin_riscv_mhaccu_u32)
+__packed_ternary_builtin(mhraccu_u32, uint32_t, __builtin_riscv_mhraccu_u32)
+__packed_ternary_builtin_mixed(mhaccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhaccsu_i32)
+__packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhraccsu_i32)
+
 /* Scalar "Q-format" Multiplication */
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)
 __packed_binary_builtin(mulqr_i32, int32_t, __builtin_riscv_mulqr_i32)
