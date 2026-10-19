@@ -226,7 +226,7 @@ tailcall:
   if (vec.empty())
     return;
 
-  // A singleton needs just one edge for its remaining suffix.
+  // Create singletons in one go instead of doing a tail call per character.
   if (vec.size() == 1) {
     const Symbol *sym = vec.front();
     StringRef suffix = sym->getName().drop_front(lastPos);
@@ -277,7 +277,8 @@ tailcall:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);
     vec = vec.slice(i, j - i);
     ++pos;
-    // Skip the rest of a common prefix without partitioning at every byte.
+    // Skip the rest of a common prefix instead of doing a tail call per
+    // character.
     if (vec.size() > 1) {
       StringRef firstName = vec.front()->getName();
       size_t commonEnd = firstName.size();
