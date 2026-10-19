@@ -50,15 +50,17 @@ exit:
 define void @gathered(ptr %p, ptr %q, float %x, float %y) {
 ; CHECK-LABEL: define void @gathered(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SX:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    [[SY:%.*]] = call fast float @llvm.sqrt.f32(float [[Y]])
-; CHECK-NEXT:    [[D2:%.*]] = fdiv fast float 1.000000e+00, [[SY]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast float [[D2]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP1]], float [[SX]], i64 0
+; CHECK-NEXT:    [[D0:%.*]] = fdiv fast float 1.000000e+00, [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[Y]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv fast <2 x float> splat (float 1.000000e+00), [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP4]], <float 1.000000e+00, float -0.000000e+00>
-; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP4]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds float, ptr [[Q]], i64 1
+; CHECK-NEXT:    store float [[D0]], ptr [[Q1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i64 0
+; CHECK-NEXT:    store float [[TMP6]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i64 1
 ; CHECK-NEXT:    store float [[TMP7]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
