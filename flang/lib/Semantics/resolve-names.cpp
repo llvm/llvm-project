@@ -6832,7 +6832,9 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
-      if (symbol.detailsIf<ProcEntityDetails>() || symbol.detailsIf<ObjectEntityDetails>() || symbol.detailsIf<EntityDetails>()) {
+      if (symbol.detailsIf<ProcEntityDetails>() ||
+          symbol.detailsIf<ObjectEntityDetails>() ||
+          symbol.detailsIf<EntityDetails>()) {
         SetBindNameOn(symbol);
       }
     }
