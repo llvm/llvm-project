@@ -17049,6 +17049,8 @@ isSequentialConcatOfVectorInterleave(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
 static SDValue PerformInterleavedStoreCombine(
     StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
     const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
+    return SDValue();
   if (SDValue Res =
           PerformLegalizedInterleavedStoreCombine(ST, DCI, DAG, Subtarget))
     return Res;
