@@ -330,8 +330,13 @@ PTX behavior in software (``AGXStrictFP.cpp``):
     the normal range use integer arithmetic.
   * Comparisons, ``minnum``/``maxnum``/``minimum``/``maximum`` (and the
     ``num`` variants) compare zeros and denormals as integers, and rounding
-    functions, ``llvm.agx.rcp``, ``llvm.agx.rsqrt``, ``llvm.log2`` and
-    ``llvm.exp2`` handle denormal operands or results explicitly.
+    functions, ``llvm.agx.rcp``, ``llvm.agx.rsqrt`` and ``llvm.log2`` handle
+    denormal operands or results explicitly. ``llvm.exp2`` computes
+    2\ :sup:`f` in hardware for the fraction f of x and scales it by
+    2\ :sup:`floor(x)` exactly, so that integral operands give exact powers of
+    2 and denormal results are rounded once; ``llvm.sin`` and ``llvm.cos`` of
+    operands below 2\ :sup:`-12` are x and 1 (keeping the sign of zero and
+    denormal operands). They are otherwise the hardware approximations.
 
   In functions that flush ``float`` denormals, ``fdiv`` and ``llvm.sqrt`` are
   correctly rounded in the same way, on flushed operands and with a flushed

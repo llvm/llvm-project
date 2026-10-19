@@ -979,21 +979,45 @@ static bool lowerIEEE(Instruction &I) {
     return true;
   }
   case Intrinsic::exp2: {
-    // Results below 2^-126 are denormals: 2^(x + 64) * 2^-64.
+    // 2^x = 2^f * 2^n with n = floor(x): the hardware computes 2^f in
+    // [1, 2), and the scaling by 2^n is exact (rounded once for denormal
+    // results), so integral x give exact powers of 2.
     Value *X = II->getArgOperand(0);
     SmallVector<Use *, 4> Uses;
     for (Use &U : I.uses())
       Uses.push_back(&U);
     IRBuilder<> B(I.getNextNode());
     SoftFloat SF(B);
-    Value *Scaled = B.CreateIntrinsic(Intrinsic::exp2, {B.getFloatTy()},
-                                      {B.CreateFAdd(X, SF.fconst(64.0f))});
-    Value *N = B.CreateUnaryIntrinsic(
-        Intrinsic::rint, B.CreateFMul(Scaled, SF.fconst(0x1p85f)));
-    Value *Den = SF.flt(B.CreateFPToUI(N, B.getInt32Ty()));
-    Value *InRange = B.CreateAnd(B.CreateFCmpOLT(X, SF.fconst(-126.0f)),
-                                 B.CreateFCmpOGT(X, SF.fconst(-151.0f)));
-    Value *R = B.CreateSelect(InRange, Den, &I);
+    // Below -152 the result rounds to 0 anyway; clamp so that n fits.
+    Value *XC = B.CreateBinaryIntrinsic(Intrinsic::maxnum, X, SF.fconst(-160.0f));
+    XC = B.CreateBinaryIntrinsic(Intrinsic::minnum, XC, SF.fconst(160.0f));
+    Value *N = B.CreateUnaryIntrinsic(Intrinsic::floor, XC);
+    Value *Frac = B.CreateFSub(XC, N);
+    Value *P = B.CreateIntrinsic(Intrinsic::exp2, {B.getFloatTy()}, {Frac});
+    Term T = SF.unpack(SF.bits(P), false);
+    T.E = B.CreateAdd(T.E, B.CreateFPToSI(N, B.getInt32Ty()));
+    Value *R = SF.flt(SF.convert(T));
+    // NaN and infinities (2^-inf = 0) as the hardware gives them.
+    Value *Special = B.CreateFCmpUEQ(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+                                     SF.fconst(INFINITY));
+    R = B.CreateSelect(Special, &I, R);
+    for (Use *U : Uses)
+      U->set(R);
+    return true;
+  }
+  case Intrinsic::sin:
+  case Intrinsic::cos: {
+    // Below 2^-12, sin x and cos x round to x and 1 (the hardware flushes
+    // denormal operands and loses the sign of zero).
+    Value *X = II->getArgOperand(0);
+    SmallVector<Use *, 4> Uses;
+    for (Use &U : I.uses())
+      Uses.push_back(&U);
+    IRBuilder<> B(I.getNextNode());
+    SoftFloat SF(B);
+    Value *Small = B.CreateFCmpOLT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+                                   SF.fconst(0x1p-12f));
+    Value *R = B.CreateSelect(Small, ID == Intrinsic::sin ? X : SF.fconst(1.0f), &I);
     for (Use *U : Uses)
       U->set(R);
     return true;

@@ -82,3 +82,16 @@ declare <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float>, <2 x 
 
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { strictfp }
+
+; With ieee-fp32, 2^x is 2^f * 2^n with n = floor(x), scaled exactly, and
+; sin x is x for tiny x.
+; STRICT-LABEL: @exp2_sin(
+; STRICT: call float @llvm.floor.f32
+; STRICT: call float @llvm.exp2.f32
+; STRICT: fcmp olt float {{.*}}, f0x39800000
+define agx_kernel void @exp2_sin(ptr addrspace(1) %o, float %a) {
+  %e = call float @llvm.exp2.f32(float %a)
+  %s = call float @llvm.sin.f32(float %e)
+  store float %s, ptr addrspace(1) %o
+  ret void
+}

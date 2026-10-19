@@ -617,16 +617,16 @@ def : Pat<(f16 (fmul (AGXFPSrc16 f16:$a, i32:$am), (AGXFPSrc16 f16:$b, i32:$bm))
           (FMUL16_F16 $am, $a, $bm, $b)>;
 
 // A negation or absolute value of its own is a bit operation: an addition
-// with a source modifier would flush a denormal operand. (Those that feed a
-// floating point operation are its source modifiers.)
+// with a source modifier would flush a denormal operand and change NaNs.
+// (Those that feed a floating point operation are its source modifiers.)
 def : Pat<(f32 (fneg f32:$a)),
           (BITOP_I32 TT_XOR, 0, $a, 0, (MOV_IMM32 0x80000000))>;
 def : Pat<(f32 (fabs f32:$a)),
           (BITOP_I32 TT_AND, 0, $a, 0, (MOV_IMM32 0x7fffffff))>;
 def : Pat<(f16 (fneg f16:$a)),
-          (FADD16_F16 MOD_NEG, $a, 0, (i16 FPIMM_NEG_ZERO))>;
+          (BITOP_I16 TT_XOR, 0, $a, 0, (MOV_IMM16 0x8000))>;
 def : Pat<(f16 (fabs f16:$a)),
-          (FADD16_F16 MOD_ABS, $a, 0, (i16 FPIMM_NEG_ZERO))>;
+          (BITOP_I16 TT_AND, 0, $a, 0, (MOV_IMM16 0x7fff))>;
 def : Pat<(f32 (fcanonicalize (AGXFPSrc32 f32:$a, i32:$am))),
           (FADD32_F32 $am, $a, 0, (i32 FPIMM_NEG_ZERO))>;
 
