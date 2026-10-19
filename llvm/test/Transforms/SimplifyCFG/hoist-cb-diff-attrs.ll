@@ -193,6 +193,28 @@ else:
   ret ptr %r2
 }
 
+define ptr @test_hoist_fail_different_fnty(i1 %c, ptr %f, i64 %x) {
+; CHECK-LABEL: define {{[^@]+}}@test_hoist_fail_different_fnty
+; CHECK-SAME: (i1 [[C:%.*]], ptr [[F:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr [[F]](i64 [[X]])
+; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret ptr [[R]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @side.effect()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  br i1 %c, label %if, label %else
+if:
+  %r = call ptr (i64) %f(i64 %x)
+  ret ptr %r
+
+else:
+  %r2 = call ptr (i64, ...) %f(i64 %x)
+  call void @side.effect()
+  ret ptr %r2
+}
+
 ;.
 ; CHECK: attributes #[[ATTR0]] = { memory(readwrite) }
 ; CHECK: attributes #[[ATTR1]] = { memory(read) }
