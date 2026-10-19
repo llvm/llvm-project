@@ -1190,6 +1190,36 @@ define <2 x i128> @fcmp_v2f128(<2 x fp128> %a, <2 x fp128> %b) {
   ret <2 x i128> %s
 }
 
+define <8 x i16> @ushll_8h(<8 x i8> %a) {
+; COST-LABEL: 'ushll_8h'
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp1 = shl <8 x i16> %tmp0, splat (i16 2)
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %tmp1
+;
+; CODE-LABEL: ushll_8h:
+; CODE:       // %bb.0:
+; CODE-NEXT:    ushll v0.8h, v0.8b, #2
+; CODE-NEXT:    ret
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = shl <8 x i16> %tmp0, splat (i16 2)
+  ret <8 x i16> %tmp1
+}
+
+define <4 x i32> @sshll_4s(<4 x i16> %a) {
+; COST-LABEL: 'sshll_4s'
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = sext <4 x i16> %a to <4 x i32>
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp1 = shl <4 x i32> %tmp0, splat (i32 3)
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %tmp1
+;
+; CODE-LABEL: sshll_4s:
+; CODE:       // %bb.0:
+; CODE-NEXT:    sshll v0.4s, v0.4h, #3
+; CODE-NEXT:    ret
+  %tmp0 = sext <4 x i16> %a to <4 x i32>
+  %tmp1 = shl <4 x i32> %tmp0, splat (i32 3)
+  ret <4 x i32> %tmp1
+}
+
 define <8 x i16> @neg_add_multi_user_not_all_absorbed(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c) {
 ; COST-LABEL: 'neg_add_multi_user_not_all_absorbed'
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
@@ -1355,4 +1385,36 @@ t:
   ret <4 x i32> %s
 e:
   ret <4 x i32> zeroinitializer
+}
+
+define <8 x i16> @neg_shl_too_far(<8 x i8> %a) {
+; COST-LABEL: 'neg_shl_too_far'
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp1 = shl <8 x i16> %tmp0, splat (i16 9)
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %tmp1
+;
+; CODE-LABEL: neg_shl_too_far:
+; CODE:       // %bb.0:
+; CODE-NEXT:    ushll v0.8h, v0.8b, #0
+; CODE-NEXT:    shl v0.8h, v0.8h, #9
+; CODE-NEXT:    ret
+  %tmp0 = zext <8 x i8> %a to <8 x i16>
+  %tmp1 = shl <8 x i16> %tmp0, splat (i16 9)
+  ret <8 x i16> %tmp1
+}
+
+define <4 x i16> @neg_shl_illegal_src(<4 x i8> %a) {
+; COST-LABEL: 'neg_shl_illegal_src'
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <4 x i8> %a to <4 x i16>
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp1 = shl <4 x i16> %tmp0, splat (i16 3)
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %tmp1
+;
+; CODE-LABEL: neg_shl_illegal_src:
+; CODE:       // %bb.0:
+; CODE-NEXT:    bic v0.4h, #255, lsl #8
+; CODE-NEXT:    shl v0.4h, v0.4h, #3
+; CODE-NEXT:    ret
+  %tmp0 = zext <4 x i8> %a to <4 x i16>
+  %tmp1 = shl <4 x i16> %tmp0, splat (i16 3)
+  ret <4 x i16> %tmp1
 }
