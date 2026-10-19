@@ -123,7 +123,7 @@ public:
   }
 
   /// Dump this operation.
-  void dump() { state->dump(); }
+  LLVM_DUMP_METHOD void dump() { state->dump(); }
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }

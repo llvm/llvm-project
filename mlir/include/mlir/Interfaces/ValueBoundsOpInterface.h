@@ -353,7 +353,7 @@ public:
 
   /// Debugging only: Dump the constraint set and the column-to-value/dim
   /// mapping to llvm::errs.
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 protected:
   /// Dimension identifier to indicate a value is index-typed. This is used for

@@ -205,7 +205,7 @@ public:
 
   /// Print the tableau's internal state.
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 protected:
   /// Construct a SimplexBase with the specified number of variables and fixed
