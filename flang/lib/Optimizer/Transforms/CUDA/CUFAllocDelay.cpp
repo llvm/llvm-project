@@ -178,9 +178,8 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
         continue;
 
       llvm::SmallVector<fir::StoreOp> hostAssocStores;
-      mlir::Operation *delayTarget =
-          findDelayTarget(declareOp, &entryBlock, domInfo, cyclicBlocks,
-                          hostAssocStores);
+      mlir::Operation *delayTarget = findDelayTarget(
+          declareOp, &entryBlock, domInfo, cyclicBlocks, hostAssocStores);
       if (!delayTarget)
         continue;
 
