@@ -38,13 +38,12 @@ define amdgpu_kernel void @min_num_agpr_1_1() #2 {
 attributes #2 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,1" }
 
 ; Check parse of single entry 4, interpreted as the minimum. Total budget is 64.
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_4__amdgpu_no_agpr': desired occupancy was 8, final occupancy is 7
-; WARN: warning: inline asm clobber list contains reserved registers: v60 at line 4
+; WARN: warning: inline asm clobber list contains reserved registers: v32 at line 4
 define amdgpu_kernel void @min_num_agpr_4__amdgpu_no_agpr() #3 {
   call void asm sideeffect "; clobber $0","~{a0}"(), !srcloc !{i32 4}
   call void asm sideeffect "; clobber $0","~{a3}"(), !srcloc !{i32 4}
-  call void asm sideeffect "; clobber $0","~{v59}"(), !srcloc !{i32 4}
-  call void asm sideeffect "; clobber $0","~{v60}"(), !srcloc !{i32 4}
+  call void asm sideeffect "; clobber $0","~{v31}"(), !srcloc !{i32 4}
+  call void asm sideeffect "; clobber $0","~{v32}"(), !srcloc !{i32 4}
   ret void
 }
 
@@ -106,7 +105,8 @@ define amdgpu_kernel void @min_num_agpr_63_64() #7 {
 attributes #7 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="63,64" }
 
 
-; No-op value.
+; WARN: warning: inline asm clobber list contains reserved registers: v0 at line 9
+; WARN: warning: inline asm clobber list contains reserved registers: v59 at line 9
 define amdgpu_kernel void @min_num_agpr_occ8_0_64() #8 {
   call void asm sideeffect "; clobber $0","~{v0}"(), !srcloc !{i32 9}
   call void asm sideeffect "; clobber $0","~{v59}"(), !srcloc !{i32 9}
@@ -117,42 +117,39 @@ attributes #8 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,
 
 
 ; Register budget 64
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ8_11_59': desired occupancy was 8, final occupancy is 7
 ; WARN: warning: inline asm clobber list contains reserved registers: a12 at line 10
-; WARN: warning: inline asm clobber list contains reserved registers: v52 at line 10
+; WARN: warning: inline asm clobber list contains reserved registers: v4 at line 10
 define amdgpu_kernel void @min_num_agpr_occ8_11_59() #9 {
   call void asm sideeffect "; clobber $0","~{a11}"(), !srcloc !{i32 10}
   call void asm sideeffect "; clobber $0","~{a12}"(), !srcloc !{i32 10}
-  call void asm sideeffect "; clobber $0","~{v51}"(), !srcloc !{i32 10}
-  call void asm sideeffect "; clobber $0","~{v52}"(), !srcloc !{i32 10}
+  call void asm sideeffect "; clobber $0","~{v3}"(), !srcloc !{i32 10}
+  call void asm sideeffect "; clobber $0","~{v4}"(), !srcloc !{i32 10}
   ret void
 }
 
 attributes #9 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="11,59" }
 
 
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ8_12_59': desired occupancy was 8, final occupancy is 7
 ; WARN: warning: inline asm clobber list contains reserved registers: a12 at line 11
-; WARN: warning: inline asm clobber list contains reserved registers: v52 at line 11
+; WARN: warning: inline asm clobber list contains reserved registers: v4 at line 11
 define amdgpu_kernel void @min_num_agpr_occ8_12_59() #10 {
   call void asm sideeffect "; clobber $0","~{a11}"(), !srcloc !{i32 11}
   call void asm sideeffect "; clobber $0","~{a12}"(), !srcloc !{i32 11}
-  call void asm sideeffect "; clobber $0","~{v51}"(), !srcloc !{i32 11}
-  call void asm sideeffect "; clobber $0","~{v52}"(), !srcloc !{i32 11}
+  call void asm sideeffect "; clobber $0","~{v3}"(), !srcloc !{i32 11}
+  call void asm sideeffect "; clobber $0","~{v4}"(), !srcloc !{i32 11}
   ret void
 }
 
 attributes #10 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="12,59" }
 
 
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ8_12_20': desired occupancy was 8, final occupancy is 7
 ; WARN: warning: inline asm clobber list contains reserved registers: a12 at line 12
-; WARN: warning: inline asm clobber list contains reserved registers: v52 at line 12
+; WARN: warning: inline asm clobber list contains reserved registers: v44 at line 12
 define amdgpu_kernel void @min_num_agpr_occ8_12_20() #11 {
   call void asm sideeffect "; clobber $0","~{a11}"(), !srcloc !{i32 12}
   call void asm sideeffect "; clobber $0","~{a12}"(), !srcloc !{i32 12}
-  call void asm sideeffect "; clobber $0","~{v51}"(), !srcloc !{i32 12}
-  call void asm sideeffect "; clobber $0","~{v52}"(), !srcloc !{i32 12}
+  call void asm sideeffect "; clobber $0","~{v43}"(), !srcloc !{i32 12}
+  call void asm sideeffect "; clobber $0","~{v44}"(), !srcloc !{i32 12}
   ret void
 }
 
@@ -191,14 +188,14 @@ attributes #13 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ2_13_20': desired occupancy was 2, final occupancy is 1
 ; WARN: warning: inline asm clobber list contains reserved registers: a16 at line 15
 ; WARN: warning: inline asm clobber list contains reserved registers: a20 at line 15
-; WARN: warning: inline asm clobber list contains reserved registers: v240 at line 15
+; WARN: warning: inline asm clobber list contains reserved registers: v236 at line 15
 define amdgpu_kernel void @min_num_agpr_occ2_13_20() #14 {
   call void asm sideeffect "; clobber $0","~{a15}"(), !srcloc !{i32 15}
   call void asm sideeffect "; clobber $0","~{a16}"(), !srcloc !{i32 15}
   call void asm sideeffect "; clobber $0","~{a20}"(), !srcloc !{i32 15}
 
-  call void asm sideeffect "; clobber $0","~{v239}"(), !srcloc !{i32 15}
-  call void asm sideeffect "; clobber $0","~{v240}"(), !srcloc !{i32 15}
+  call void asm sideeffect "; clobber $0","~{v235}"(), !srcloc !{i32 15}
+  call void asm sideeffect "; clobber $0","~{v236}"(), !srcloc !{i32 15}
 
   ret void
 }
@@ -250,6 +247,8 @@ attributes #18 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64
 ; WARN: warning: inline asm clobber list contains reserved registers: a0 at line 20
 ; WARN: warning: inline asm clobber list contains reserved registers: a63 at line 20
 ; WARN: warning: inline asm clobber list contains reserved registers: a64 at line 20
+; WARN: warning: inline asm clobber list contains reserved registers: v64 at line 20
+; WARN: warning: inline asm clobber list contains reserved registers: v127 at line 20
 ; WARN: warning: inline asm clobber list contains reserved registers: v128 at line 20
 define amdgpu_kernel void @min_num_agpr_occ4_0_64() #19 {
   call void asm sideeffect "; clobber $0","~{a0}"(), !srcloc !{i32 20}
@@ -271,6 +270,8 @@ attributes #19 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64
 ; WARN: warning: inline asm clobber list contains reserved registers: a4 at line 21
 ; WARN: warning: inline asm clobber list contains reserved registers: a63 at line 21
 ; WARN: warning: inline asm clobber list contains reserved registers: a64 at line 21
+; WARN: warning: inline asm clobber list contains reserved registers: v64 at line 21
+; WARN: warning: inline asm clobber list contains reserved registers: v123 at line 21
 ; WARN: warning: inline asm clobber list contains reserved registers: v124 at line 21
 define amdgpu_kernel void @min_num_agpr_occ4_1_64() #20 {
   call void asm sideeffect "; clobber $0","~{a0}"(), !srcloc !{i32 21}
@@ -288,14 +289,13 @@ define amdgpu_kernel void @min_num_agpr_occ4_1_64() #20 {
 attributes #20 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,64" }
 
 ; 128 vector registers
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ4_32_64': desired occupancy was 4, final occupancy is 3
 ; WARN: warning: inline asm clobber list contains reserved registers: a32 at line 22
-; WARN: warning: inline asm clobber list contains reserved registers: v96 at line 22
+; WARN: warning: inline asm clobber list contains reserved registers: v64 at line 22
 define amdgpu_kernel void @min_num_agpr_occ4_32_64() #21 {
   call void asm sideeffect "; clobber $0","~{a31}"(), !srcloc !{i32 22}
   call void asm sideeffect "; clobber $0","~{a32}"(), !srcloc !{i32 22}
-  call void asm sideeffect "; clobber $0","~{v95}"(), !srcloc !{i32 22}
-  call void asm sideeffect "; clobber $0","~{v96}"(), !srcloc !{i32 22}
+  call void asm sideeffect "; clobber $0","~{v63}"(), !srcloc !{i32 22}
+  call void asm sideeffect "; clobber $0","~{v64}"(), !srcloc !{i32 22}
   ret void
 }
 
@@ -409,13 +409,10 @@ attributes #29 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1
 
 
 ; The total vector register budget is 96
-
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ5__min_agpr_8_256': desired occupancy was 5, final occupancy is 4
-; WARN: warning: inline asm clobber list contains reserved registers: v88 at line 31
+; WARN: warning: inline asm clobber list contains reserved registers: v0 at line 31
 ; WARN: warning: inline asm clobber list contains reserved registers: a8 at line 31
 define amdgpu_kernel void @min_num_agpr_occ5__min_agpr_8_256() #30 {
-  call void asm sideeffect "; clobber $0","~{v87}"(), !srcloc !{i32 31}
-  call void asm sideeffect "; clobber $0","~{v88}"(), !srcloc !{i32 31}
+  call void asm sideeffect "; clobber $0","~{v0}"(), !srcloc !{i32 31}
   call void asm sideeffect "; clobber $0","~{a7}"(), !srcloc !{i32 31}
   call void asm sideeffect "; clobber $0","~{a8}"(), !srcloc !{i32 31}
   ret void
@@ -424,22 +421,21 @@ define amdgpu_kernel void @min_num_agpr_occ5__min_agpr_8_256() #30 {
 attributes #30 = { "amdgpu-waves-per-eu"="5,5" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="8,256" }
 
 ; The total vector register budget is 96
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ5__min_agpr_8': desired occupancy was 5, final occupancy is 4
-; WARN: warning: inline asm clobber list contains reserved registers: v88 at line 32
+; WARN: warning: inline asm clobber list contains reserved registers: v48 at line 32
 ; WARN: warning: inline asm clobber list contains reserved registers: a8 at line 32
 define amdgpu_kernel void @min_num_agpr_occ5__min_agpr_8() #31 {
-  call void asm sideeffect "; clobber $0","~{v87}"(), !srcloc !{i32 32}
-  call void asm sideeffect "; clobber $0","~{v88}"(), !srcloc !{i32 32}
+  call void asm sideeffect "; clobber $0","~{v47}"(), !srcloc !{i32 32}
+  call void asm sideeffect "; clobber $0","~{v48}"(), !srcloc !{i32 32}
   call void asm sideeffect "; clobber $0","~{a7}"(), !srcloc !{i32 32}
   call void asm sideeffect "; clobber $0","~{a8}"(), !srcloc !{i32 32}
   ret void
 }
 
 ; budget is 96
-; WARN: warning: inline asm clobber list contains reserved registers: v88 at line 33
+; WARN: warning: inline asm clobber list contains reserved registers: v48 at line 33
 define amdgpu_kernel void @min_num_agpr_occ5__min_agpr_8_no_agpr_references() #31 {
-  call void asm sideeffect "; clobber $0","~{v87}"(), !srcloc !{i32 33}
-  call void asm sideeffect "; clobber $0","~{v88}"(), !srcloc !{i32 33}
+  call void asm sideeffect "; clobber $0","~{v47}"(), !srcloc !{i32 33}
+  call void asm sideeffect "; clobber $0","~{v48}"(), !srcloc !{i32 33}
   ret void
 }
 
@@ -447,12 +443,11 @@ attributes #31 = { "amdgpu-waves-per-eu"="5,5" "amdgpu-flat-work-group-size"="10
 
 
 ; register budget 256
-; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ2__min_agpr_93': desired occupancy was 2, final occupancy is 1
-; WARN: warning: inline asm clobber list contains reserved registers: v160 at line 34
+; WARN: warning: inline asm clobber list contains reserved registers: v128 at line 34
 ; WARN: warning: inline asm clobber list contains reserved registers: a96 at line 34
 define amdgpu_kernel void @min_num_agpr_occ2__min_agpr_93() #33 {
-  call void asm sideeffect "; clobber $0","~{v159}"(), !srcloc !{i32 34}
-  call void asm sideeffect "; clobber $0","~{v160}"(), !srcloc !{i32 34}
+  call void asm sideeffect "; clobber $0","~{v127}"(), !srcloc !{i32 34}
+  call void asm sideeffect "; clobber $0","~{v128}"(), !srcloc !{i32 34}
   call void asm sideeffect "; clobber $0","~{a95}"(), !srcloc !{i32 34}
   call void asm sideeffect "; clobber $0","~{a96}"(), !srcloc !{i32 34}
   ret void
@@ -506,3 +501,149 @@ define amdgpu_kernel void @occ1_min_agpr_no_attr() #38 {
 }
 
 attributes #38 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="256,256" }
+
+; register budget 128
+; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'num_agpr_occ4_min_4_max_4': desired occupancy was 4, final occupancy is 3
+; WARN: warning: inline asm clobber list contains reserved registers: v124 at line 40
+; WARN: warning: inline asm clobber list contains reserved registers: a4 at line 40
+define amdgpu_kernel void @num_agpr_occ4_min_4_max_4() #39 {
+  call void asm sideeffect "; clobber $0","~{v123}"(), !srcloc !{i32 40}
+  call void asm sideeffect "; clobber $0","~{v124}"(), !srcloc !{i32 40}
+  call void asm sideeffect "; clobber $0","~{a3}"(), !srcloc !{i32 40}
+  call void asm sideeffect "; clobber $0","~{a4}"(), !srcloc !{i32 40}
+  ret void
+}
+attributes #39 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-agpr-alloc"="4,4" }
+
+; register budget 512, fully allocated and no warnings
+define amdgpu_kernel void @num_agpr_occ1_min_0_max_312() #40 {
+  call void asm sideeffect "; clobber $0","~{v255}"(), !srcloc !{i32 41}
+  call void asm sideeffect "; clobber $0","~{a255}"(), !srcloc !{i32 41}
+  ret void
+}
+attributes #40 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0,312" }
+
+; Register budget 64, VGPR ceiling 48, AGPR ceiling 16.
+; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'split_48_16': desired occupancy was 8, final occupancy is 7
+; WARN: warning: inline asm clobber list contains reserved registers: v48 at line 42
+; WARN: warning: inline asm clobber list contains reserved registers: a16 at line 42
+define amdgpu_kernel void @split_48_16() #41 {
+  call void asm sideeffect "; clobber $0","~{v47}"(), !srcloc !{i32 42}
+  call void asm sideeffect "; clobber $0","~{v48}"(), !srcloc !{i32 42}
+  call void asm sideeffect "; clobber $0","~{a15}"(), !srcloc !{i32 42}
+  call void asm sideeffect "; clobber $0","~{a16}"(), !srcloc !{i32 42}
+  ret void
+}
+attributes #41 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="16,16" }
+
+; Register budget 64, VGPR ceiling 32, AGPR ceiling 16.
+; WARN: warning: inline asm clobber list contains reserved registers: v32 at line 43
+; WARN: warning: inline asm clobber list contains reserved registers: a16 at line 43
+define amdgpu_kernel void @split_32_16() #42 {
+  call void asm sideeffect "; clobber $0","~{v31}"(), !srcloc !{i32 43}
+  call void asm sideeffect "; clobber $0","~{v32}"(), !srcloc !{i32 43}
+  call void asm sideeffect "; clobber $0","~{a15}"(), !srcloc !{i32 43}
+  call void asm sideeffect "; clobber $0","~{a16}"(), !srcloc !{i32 43}
+  ret void
+}
+attributes #42 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="16,32" }
+
+; Register budget 64, VGPR ceiling 24, AGPR ceiling 8.
+; WARN: warning: inline asm clobber list contains reserved registers: v24 at line 44
+; WARN: warning: inline asm clobber list contains reserved registers: a8 at line 44
+define amdgpu_kernel void @split_24_8() #43 {
+  call void asm sideeffect "; clobber $0","~{v23}"(), !srcloc !{i32 44}
+  call void asm sideeffect "; clobber $0","~{v24}"(), !srcloc !{i32 44}
+  call void asm sideeffect "; clobber $0","~{a7}"(), !srcloc !{i32 44}
+  call void asm sideeffect "; clobber $0","~{a8}"(), !srcloc !{i32 44}
+  ret void
+}
+attributes #43 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="8,40" }
+
+; Register budget 64, VGPR ceiling 16, AGPR ceiling 4.
+; WARN: warning: inline asm clobber list contains reserved registers: v16 at line 45
+; WARN: warning: inline asm clobber list contains reserved registers: a4 at line 45
+define amdgpu_kernel void @split_16_4() #44 {
+  call void asm sideeffect "; clobber $0","~{v15}"(), !srcloc !{i32 45}
+  call void asm sideeffect "; clobber $0","~{v16}"(), !srcloc !{i32 45}
+  call void asm sideeffect "; clobber $0","~{a3}"(), !srcloc !{i32 45}
+  call void asm sideeffect "; clobber $0","~{a4}"(), !srcloc !{i32 45}
+  ret void
+}
+attributes #44 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="4,48" }
+
+; Register budget 128 with no amdgpu-agpr-alloc: pessimistic half split (64/64).
+; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'pessimistic_split_64_64': desired occupancy was 4, final occupancy is 3
+; WARN: warning: inline asm clobber list contains reserved registers: v64 at line 46
+; WARN: warning: inline asm clobber list contains reserved registers: a64 at line 46
+define amdgpu_kernel void @pessimistic_split_64_64() #45 {
+  call void asm sideeffect "; clobber $0","~{v63}"(), !srcloc !{i32 46}
+  call void asm sideeffect "; clobber $0","~{v64}"(), !srcloc !{i32 46}
+  call void asm sideeffect "; clobber $0","~{a63}"(), !srcloc !{i32 46}
+  call void asm sideeffect "; clobber $0","~{a64}"(), !srcloc !{i32 46}
+  ret void
+}
+attributes #45 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="256,256" }
+
+; Register budget 128, single-entry amdgpu-agpr-alloc=16: VGPR ceiling 64, AGPR ceiling 16.
+; WARN: warning: inline asm clobber list contains reserved registers: v64 at line 47
+; WARN: warning: inline asm clobber list contains reserved registers: a16 at line 47
+define amdgpu_kernel void @absent_accum_offset_64_16() #46 {
+  call void asm sideeffect "; clobber $0","~{v63}"(), !srcloc !{i32 47}
+  call void asm sideeffect "; clobber $0","~{v64}"(), !srcloc !{i32 47}
+  call void asm sideeffect "; clobber $0","~{a15}"(), !srcloc !{i32 47}
+  call void asm sideeffect "; clobber $0","~{a16}"(), !srcloc !{i32 47}
+  ret void
+}
+attributes #46 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="256,256" "amdgpu-agpr-alloc"="16" }
+
+; Register budget 128, single-entry amdgpu-agpr-alloc=32: VGPR ceiling 64, AGPR ceiling 32.
+; WARN: warning: inline asm clobber list contains reserved registers: v64 at line 48
+; WARN: warning: inline asm clobber list contains reserved registers: a32 at line 48
+define amdgpu_kernel void @agpr_alloc_64_32() #47 {
+  call void asm sideeffect "; clobber $0","~{v63}"(), !srcloc !{i32 48}
+  call void asm sideeffect "; clobber $0","~{v64}"(), !srcloc !{i32 48}
+  call void asm sideeffect "; clobber $0","~{a31}"(), !srcloc !{i32 48}
+  call void asm sideeffect "; clobber $0","~{a32}"(), !srcloc !{i32 48}
+  ret void
+}
+attributes #47 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="256,256" "amdgpu-agpr-alloc"="32" }
+
+; Register budget 128, single-entry amdgpu-agpr-alloc=72: VGPR ceiling 56, AGPR ceiling 72.
+; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'agpr_alloc_56_72': desired occupancy was 4, final occupancy is 3
+; WARN: warning: inline asm clobber list contains reserved registers: v56 at line 49
+; WARN: warning: inline asm clobber list contains reserved registers: a72 at line 49
+define amdgpu_kernel void @agpr_alloc_56_72() #48 {
+  call void asm sideeffect "; clobber $0","~{v55}"(), !srcloc !{i32 49}
+  call void asm sideeffect "; clobber $0","~{v56}"(), !srcloc !{i32 49}
+  call void asm sideeffect "; clobber $0","~{a61}"(), !srcloc !{i32 49}
+  call void asm sideeffect "; clobber $0","~{a72}"(), !srcloc !{i32 49}
+  ret void
+}
+attributes #48 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="256,256" "amdgpu-agpr-alloc"="72" }
+
+; Register budget 128, amdgpu-agpr-alloc=48,48: VGPR ceiling 80, AGPR ceiling 48.
+; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'agpr_alloc_48_80': desired occupancy was 4, final occupancy is 3
+; WARN: warning: inline asm clobber list contains reserved registers: v80 at line 50
+; WARN: warning: inline asm clobber list contains reserved registers: a48 at line 50
+define amdgpu_kernel void @agpr_alloc_48_80() #49 {
+  call void asm sideeffect "; clobber $0","~{v79}"(), !srcloc !{i32 50}
+  call void asm sideeffect "; clobber $0","~{v80}"(), !srcloc !{i32 50}
+  call void asm sideeffect "; clobber $0","~{a47}"(), !srcloc !{i32 50}
+  call void asm sideeffect "; clobber $0","~{a48}"(), !srcloc !{i32 50}
+  ret void
+}
+attributes #49 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="256,256" "amdgpu-agpr-alloc"="48,48" }
+
+; Register budget 128, amdgpu-agpr-alloc=24,28: VGPR ceiling 100, AGPR ceiling 24.
+; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'agpr_alloc_24_100': desired occupancy was 4, final occupancy is 3
+; WARN: warning: inline asm clobber list contains reserved registers: v100 at line 51
+; WARN: warning: inline asm clobber list contains reserved registers: a24 at line 51
+define amdgpu_kernel void @agpr_alloc_24_100() #50 {
+  call void asm sideeffect "; clobber $0","~{v99}"(), !srcloc !{i32 51}
+  call void asm sideeffect "; clobber $0","~{v100}"(), !srcloc !{i32 51}
+  call void asm sideeffect "; clobber $0","~{a23}"(), !srcloc !{i32 51}
+  call void asm sideeffect "; clobber $0","~{a24}"(), !srcloc !{i32 51}
+  ret void
+}
+attributes #50 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="256,256" "amdgpu-agpr-alloc"="24,28" }
