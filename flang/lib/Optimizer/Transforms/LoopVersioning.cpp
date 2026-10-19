@@ -8,8 +8,11 @@
 
 //===----------------------------------------------------------------------===//
 /// \file
-/// This pass looks for loops iterating over assumed-shape arrays, that can
-/// be optimized by "guessing" that the stride is element-sized.
+/// This pass looks for loops iterating over assumed-shape or POINTER arrays,
+/// that can be optimized by "guessing" that the stride is element-sized.
+/// POINTER array descriptors may come from dummy arguments, local variables,
+/// derived type components, module variables, etc. Their descriptors must be
+/// defined outside the loop, e.g. hoisted by LICM.
 ///
 /// This is done by creating two versions of the same loop: one which assumes
 /// that the elements are contiguous (stride == size of element), and one that
@@ -153,6 +156,11 @@ struct ArgsUsageInLoop {
 static fir::SequenceType getAsSequenceType(mlir::Value v) {
   mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v.getType()));
   return mlir::dyn_cast<fir::SequenceType>(argTy);
+}
+
+/// Return true iff \p v is a POINTER array descriptor or the address of one.
+static bool isPointerArray(mlir::Value v) {
+  return fir::isPointerType(v.getType()) && getAsSequenceType(v);
 }
 
 /// Return the rank and the element size (in bytes) of the given
@@ -441,11 +449,8 @@ void LoopVersioningPass::runOnOperation() {
       argsOfInterest.push_back({arg, typeSize, rank, {}});
   }
 
-  if (argsOfInterest.empty()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "No suitable arguments.\n=== End " DEBUG_TYPE " ===\n");
-    return;
-  }
+  // POINTER arrays that are not dummy arguments are found while walking
+  // the loops below, so do not give up if there are no suitable arguments.
 
   // A list of all loops in the function in post-order.
   mlir::SmallVector<fir::DoLoopOp> originalLoops;
@@ -470,6 +475,14 @@ void LoopVersioningPass::runOnOperation() {
         return;
       mlir::Value operand = op->getOperand(0);
       mlir::Value source = normaliseVal(operand);
+      // POINTER arrays are not known to be contiguous either. Their
+      // descriptors may come from local variables, derived type components,
+      // module variables, etc. Dummy arguments were collected above, so that
+      // the OPTIONAL check applies to them.
+      if (!mlir::isa<mlir::BlockArgument>(source) && isPointerArray(source) &&
+          llvm::none_of(argsOfInterest,
+                        [&](const ArgInfo &a) { return a.arg == source; }))
+        argsOfInterest.push_back({source, 0, 0, {}});
       for (auto a : argsOfInterest) {
         if (a.arg == source) {
           // Use the access descriptor, not its originating block argument.
