@@ -156,6 +156,7 @@ add_mlir_library(MLIRValueBoundsOpInterface
   MLIRAnalysisPresburger
   MLIRDestinationStyleOpInterface
   MLIRIR
+  MLIRViewLikeInterface
   )
 
 add_subdirectory(Utils)
