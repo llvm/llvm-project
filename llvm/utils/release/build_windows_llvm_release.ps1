@@ -466,11 +466,6 @@ try {
         "CPACK_GENERATOR=WIX"
     )
 
-    $commonLLDBFlags = @(
-        "LLDB_RELOCATABLE_PYTHON=1"
-        "LLDB_EMBED_PYTHON_HOME=OFF"
-    )
-
     # Build each requested architecture
     $buildParams = @{
         VsDevCmd            = $vsDevCmd
@@ -481,7 +476,6 @@ try {
         CommonCMakeFlags    = $commonCMakeFlags
         CommonCompilerFlags = $commonCompilerFlags
         Stage2CMakeFlags    = $stage2CMakeFlags
-        CommonLLDBFlags     = $commonLLDBFlags
         UseFastBuild        = $FastBuild
     }
 
