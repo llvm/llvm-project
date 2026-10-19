@@ -484,6 +484,9 @@ enum Kind {
   kw_versions,
   kw_memProf,
   kw_notcold,
+  // sectionInfo keywords.
+  kw_sectionInfo,
+  kw_outputSectionName,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.

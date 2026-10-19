@@ -678,10 +678,48 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // the module, if applicable.
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
+  // Set sections for LTO with linker scripts.  Do this after importing, before
+  // optimization and codegen.
+  auto setSections = [&] {
+    if (!CombinedIndex.sectionInfos().empty()) {
+      for (auto &GV : Mod.global_values()) {
+        auto GUID = GV.getGUIDIfAssigned();
+        if (!GUID)
+          continue;
+        auto Info = CombinedIndex.sectionInfos().find(*GUID);
+        if (Info == CombinedIndex.sectionInfos().end())
+          continue;
+        if (auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
+          // First, remove the old attribute if present
+          if (GVar->hasAttribute("linker_output_section")) {
+            AttrBuilder Attrs(GVar->getParent()->getContext(),
+                              GVar->getAttributes());
+            Attrs.removeAttribute("linker_output_section");
+            GVar->setAttributes(AttributeSet::get(GVar->getContext(), Attrs));
+          }
+          GVar->addAttribute("linker_output_section",
+                             Info->second.OutputSectionName);
+          if (GVar->hasSection())
+            GVar->setSection(
+                (GVar->getSection() + "^^" + Mod.getModuleIdentifier()).str());
+        } else if (auto *F = dyn_cast<Function>(&GV)) {
+          // First, remove the old attribute if present
+          if (F->hasFnAttribute("linker_output_section"))
+            F->removeFnAttr("linker_output_section");
+          F->addFnAttr("linker_output_section", Info->second.OutputSectionName);
+          if (F->hasSection())
+            F->setSection(
+                (F->getSection() + "^^" + Mod.getModuleIdentifier()).str());
+        }
+      }
+    }
+  };
+
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (CodeGenOnly) {
     // If CodeGenOnly is set, we only perform code generation and skip
     // optimization. This value may differ from Conf.CodeGenOnly.
+    setSections();
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
@@ -692,6 +730,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
+        setSections();
+
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,

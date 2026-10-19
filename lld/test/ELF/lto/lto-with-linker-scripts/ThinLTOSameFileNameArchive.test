@@ -17,6 +17,7 @@
 # CHECK-NOT: FUNC
 # CHECK-DAG: FUNC GLOBAL DEFAULT {{[0-9]+}} main
 # CHECK-DAG: FUNC GLOBAL DEFAULT {{[0-9]+}} myfun
+# CHECK-DAG: FUNC GLOBAL DEFAULT {{[0-9]+}} otherfun2
 # CHECK-NOT: FUNC
 
 #--- a/1.ll

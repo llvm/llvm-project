@@ -1283,6 +1283,11 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         }
       }
     }
+    if (!R.OutputSectionName.empty()) {
+      auto &Entry = ThinLTO.CombinedIndex.sectionInfos()[GUID];
+      Entry.OutputSectionName =
+          ThinLTO.CombinedIndex.saveString(R.OutputSectionName);
+    }
   }
 
   if (!ThinLTO.ModuleMap.insert({BMID, BM}).second)

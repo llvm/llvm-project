@@ -10,8 +10,9 @@
 # RUN: llvm-readelf -S -W %t/1.out | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-readelf -s -W %t/1.out | FileCheck %s
 
-# GARBAGE-DAG: removing unused section {{.*}}(.text.otherfun2)
-# GARBAGE-DAG: removing unused section {{.*}}(.text.otherfun)
+# GARBAGE-DAG: removing unused section{{.*}}1.3.o:(.text)
+# GARBAGE-DAG: removing unused section{{.*}}1.out.lto.1.1.o:(.text)
+# GARBAGE-DAG: removing unused section{{.*}}1.out.lto.1.2.o:(.text)
 
 # SECTIONS: .alltext
 # SECTIONS-NOT: .text
