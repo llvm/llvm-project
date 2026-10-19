@@ -6,6 +6,7 @@
 
 ; CHECK-LABEL: @arith(
 ; CHECK-NOT: {{fadd|fmul|fdiv|fpext|fptrunc|fcmp}} double
+; CHECK: call i64 @llvm.ctlz.i64
 ; CHECK: mul i128
 ; CHECK: call i128 @llvm.ctlz.i128
 ; CHECK: bitcast i64 {{.*}} to double
@@ -23,11 +24,13 @@ define agx_kernel void @arith(ptr addrspace(1) %out, double %a, float %b) {
   ret void
 }
 
-; The square root is a loop producing a bit of the root per iteration.
+; The square root is a loop producing a bit of the root per iteration, on
+; 64-bit values.
 ; CHECK-LABEL: @root(
-; CHECK: isqrt:
-; CHECK: phi i128
-; CHECK: br i1 {{.*}}, label %isqrt.end, label %isqrt
+; CHECK: soft.loop:
+; CHECK: phi i64
+; CHECK-NOT: i128
+; CHECK: br i1 {{.*}}, label %soft.loop.end, label %soft.loop
 define agx_kernel void @root(ptr addrspace(1) %out, double %a) {
   %r = call double @llvm.sqrt.f64(double %a)
   store double %r, ptr addrspace(1) %out

@@ -370,19 +370,20 @@ exact sign, 128-bit significand and exponent, the exact result (with a sticky
 bit for the bits dropped) is computed with integer operations, and a single
 rounding gives the result, so all operations are correctly rounded IEEE 754
 operations with denormals, in the four rounding directions (see `Rounding
-modes`_; the ``double`` rounding mode is the ``half`` field). Division uses an
-expanded 128-bit integer division and the square root a loop that produces a
-bit of the root per iteration. NaN results are ``0x7fffffffffffffff`` with
+modes`_; the ``double`` rounding mode is the ``half`` field). Significands are 64-bit, with 128-bit
+products in multiplications and fused multiply-adds; division is a restoring
+division and the square root a digit by digit root, each a loop of 55
+iterations of 64-bit operations. NaN results are ``0x7fffffffffffffff`` with
 ``canonical-nan``, and the first NaN operand, quieted, otherwise. Conversions
 to integers saturate, and NaN converts to 0.
 
 Values that are only moved (loads, stores, ``phi``, ``select``, arguments)
 stay ``double`` and become ``i64`` in type legalization. ``frem`` and vector
 arithmetic on ``double`` are diagnosed as unsupported. The code is large: in
-instructions per operation, about 590 for an addition, 350 for a
-multiplication, 690 for a fused multiply-add, 780 for a division (plus the
-iterations of the division loop), 460 for a square root (and 64 iterations),
-230 for a conversion and 20 for a comparison.
+instructions per operation, about 290 for an addition, 335 for a
+multiplication, 670 for a fused multiply-add, 280 for a division and 230 for
+a square root (plus their 55 loop iterations of about 10 instructions), 140
+for a conversion and 20 for a comparison.
 
 Vector floating point arithmetic is scalarized before the floating point
 lowerings (the Scalarizer pass), and constrained vector operations are rounded
