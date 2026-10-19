@@ -765,6 +765,7 @@
     descriptor::Clause(
       "initializer",
       {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
@@ -2138,7 +2139,7 @@
     descriptor::Directive(
       "declare_reduction",
       {
-        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {}, {}}},
+        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(50), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(51), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(52), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
