@@ -418,6 +418,117 @@ exit:
   ret void
 }
 
+
+; The combined wide integer load starts at the predecessor load.
+define i32 @bitcast_loads(ptr %src, i1 %c) {
+; CHECK-LABEL: define i32 @bitcast_loads(
+; CHECK-SAME: ptr [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[SRC]], align 1
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[SRC1]], align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[SRC2]], align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[SRC3]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[L0]] to i32
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[L1]] to i32
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i32
+; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i32
+; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[Z1]], 8
+; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[Z2]], 16
+; CHECK-NEXT:    [[S3:%.*]] = shl nuw i32 [[Z3]], 24
+; CHECK-NEXT:    [[O1:%.*]] = or disjoint i32 [[S1]], [[Z0]]
+; CHECK-NEXT:    [[O2:%.*]] = or disjoint i32 [[O1]], [[S2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[O2]], [[S3]]
+; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %l0 = load i8, ptr %src, align 1
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i8, ptr %src, i64 1
+  %src2 = getelementptr inbounds i8, ptr %src, i64 2
+  %src3 = getelementptr inbounds i8, ptr %src, i64 3
+  %l1 = load i8, ptr %src1, align 1
+  %l2 = load i8, ptr %src2, align 1
+  %l3 = load i8, ptr %src3, align 1
+  %z0 = zext i8 %l0 to i32
+  %z1 = zext i8 %l1 to i32
+  %z2 = zext i8 %l2 to i32
+  %z3 = zext i8 %l3 to i32
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+  %o1 = or disjoint i32 %s1, %z0
+  %o2 = or disjoint i32 %o1, %s2
+  %o3 = or disjoint i32 %o2, %s3
+  ret i32 %o3
+
+exit:
+  ret i32 0
+}
+
+; Same, with the byte swap.
+define i32 @bswap_loads(ptr %src, i1 %c) {
+; CHECK-LABEL: define i32 @bswap_loads(
+; CHECK-SAME: ptr [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[SRC]], align 1
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[SRC1]], align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[SRC2]], align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[SRC3]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[L0]] to i32
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[L1]] to i32
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i32
+; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i32
+; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[Z0]], 24
+; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[Z1]], 16
+; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[Z2]], 8
+; CHECK-NEXT:    [[O1:%.*]] = or disjoint i32 [[S0]], [[S1]]
+; CHECK-NEXT:    [[O2:%.*]] = or disjoint i32 [[O1]], [[S2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[O2]], [[Z3]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %l0 = load i8, ptr %src, align 1
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i8, ptr %src, i64 1
+  %src2 = getelementptr inbounds i8, ptr %src, i64 2
+  %src3 = getelementptr inbounds i8, ptr %src, i64 3
+  %l1 = load i8, ptr %src1, align 1
+  %l2 = load i8, ptr %src2, align 1
+  %l3 = load i8, ptr %src3, align 1
+  %z0 = zext i8 %l0 to i32
+  %z1 = zext i8 %l1 to i32
+  %z2 = zext i8 %l2 to i32
+  %z3 = zext i8 %l3 to i32
+  %s0 = shl nuw i32 %z0, 24
+  %s1 = shl nuw nsw i32 %z1, 16
+  %s2 = shl nuw nsw i32 %z2, 8
+  %o1 = or disjoint i32 %s0, %s1
+  %o2 = or disjoint i32 %o1, %s2
+  %o3 = or disjoint i32 %o2, %z3
+  ret i32 %o3
+
+exit:
+  ret i32 0
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !4, i64 0}

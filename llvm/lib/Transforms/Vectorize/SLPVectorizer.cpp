@@ -17742,6 +17742,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
         Align CommonAlignment = LI0->getAlign();
+        // For REVEC the emitted shuffle uses the compress mask expanded to the
+        // individual elements of the vector scalars.
+        SmallVector<int> CompressCostMask(CompressMask);
+        transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                               CompressCostMask);
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
               Instruction::Load, LoadVecTy, InterleaveFactor, {},
@@ -17754,7 +17759,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CostKind, CompressMask);
+                                      CostKind, CompressCostMask);
         } else {
           VecLdCost = TTI->getMemoryOpCost(
               Instruction::Load, LoadVecTy, CommonAlignment,
@@ -17762,7 +17767,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               TTI::getOperandInfo(LI0->getPointerOperand()));
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CostKind, CompressMask);
+                                      CostKind, CompressCostMask);
         }
         break;
       }
@@ -30845,12 +30850,21 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       getValueType(VL[0], Opts->slp_revec, /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
-  unsigned MaxVF = std::max<unsigned>(
-      isAllowedNonPowerOf2VF(VL.size(), Opts->slp_vectorize_non_power_of_2)
-          ? VL.size()
-          : getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size(),
-                                               Opts->slp_revec),
-      MinVF);
+  // The buildvector, not filling the whole registers, is vectorized as a whole,
+  // not as the power-of-2 part plus the scalar remainder.
+  auto *IE = dyn_cast<InsertElementInst>(I0);
+  const bool AllowNonPowerOf2 =
+      Opts->slp_vectorize_non_power_of_2 ||
+      (IE && getNumElements(IE->getType()) <
+                 getFullVectorNumberOfElements(
+                     *TTI, IE->getType()->getScalarType(),
+                     getNumElements(IE->getType()), Opts->slp_revec));
+  unsigned MaxVF =
+      std::max<unsigned>(isAllowedNonPowerOf2VF(VL.size(), AllowNonPowerOf2)
+                             ? VL.size()
+                             : getFloorFullVectorNumberOfElements(
+                                   *TTI, ScalarTy, VL.size(), Opts->slp_revec),
+                         MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   // Standalone seeds only need one register worth of lanes.
   if (StandaloneSeeds && Sz != 0)
@@ -30901,8 +30915,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF,
                                     Opts->slp_revec) &&
           (ActualVF != VL.size() ||
-           !isAllowedNonPowerOf2VF(ActualVF,
-                                   Opts->slp_vectorize_non_power_of_2)))
+           !isAllowedNonPowerOf2VF(ActualVF, AllowNonPowerOf2)))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
