@@ -1,4 +1,4 @@
-(libc-gpu-building)=
+(libc_gpu_building)=
 
 # Building libs for GPUs
 
@@ -189,7 +189,7 @@ targets. This section will briefly describe their purpose.
   be used to enable host services for anyone looking to interface with the
   {ref}`RPC client<libc_gpu_rpc>`.
 
-(gpu-cmake-options)=
+(gpu_cmake_options)=
 
 ## CMake options
 

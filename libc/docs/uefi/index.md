@@ -1,4 +1,4 @@
-(libc-uefi)=
+(libc_uefi)=
 
 # libc for UEFI
 

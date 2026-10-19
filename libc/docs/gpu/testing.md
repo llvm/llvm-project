@@ -1,4 +1,4 @@
-(libc-gpu-testing)=
+(libc_gpu_testing)=
 
 # Testing the GPU C library
 

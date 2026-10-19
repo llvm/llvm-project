@@ -1,4 +1,4 @@
-(libc-gpu-usage)=
+(libc_gpu_usage)=
 
 # Using libc for GPUs
 

@@ -1,4 +1,4 @@
-(libc-gpu-rpc)=
+(libc_gpu_rpc)=
 
 # Remote Procedure Calls
 
@@ -199,7 +199,7 @@ in the GPU executable as an indicator for whether or not the server can be
 checked. These details should ideally be handled by the GPU language runtime,
 but the following example shows how it can be used by a standard user.
 
-(libc-gpu-cuda-server)=
+(libc_gpu_cuda_server)=
 
 ```cuda
 #include <cstdio>

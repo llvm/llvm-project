@@ -1,4 +1,4 @@
-(libc-uefi-support)=
+(libc_uefi_support)=
 
 # Supported Functions
 

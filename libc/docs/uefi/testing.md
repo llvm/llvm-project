@@ -1,4 +1,4 @@
-(libc-uefi-testing)=
+(libc_uefi_testing)=
 
 # Testing the UEFI C library
 

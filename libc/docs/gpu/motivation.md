@@ -1,4 +1,4 @@
-(libc-gpu-motivation)=
+(libc_gpu_motivation)=
 
 # Motivation and Limitations
 
@@ -7,7 +7,7 @@
 This project aims to provide a large subset of the C standard library to users
 of GPU accelerators. We deliberately choose to only implement a subset of the C
 library as some features are not expressly useful or easily implemented on the
-GPU. This will be discussed further in [Limitations](libc_gpu_limitations).
+GPU. This will be discussed further in {ref}`Limitations <libc_gpu_limitations>`.
 The main motivation behind this project is to provide the well understood C
 library as a firm base for GPU development.
 
@@ -25,12 +25,12 @@ offloading in `Clang` so that we can treat the C library for the GPU as a
 standard static library.
 
 A valuable use for providing C library features on the GPU is for testing. For
-this reason we build [tests on the GPU](libc_gpu_testing) that can run a unit
+this reason we build {ref}`tests on the GPU <libc_gpu_testing>` that can run a unit
 test as if it were being run on the CPU. This also helps users port applications
 that traditionally were run on the CPU. With this support, we can expand test
 coverage for the GPU backend to the existing LLVM C library tests.
 
-(libc-gpu-limitations)=
+(libc_gpu_limitations)=
 
 ## Limitations
 

@@ -1,4 +1,4 @@
-(libc-gpu)=
+(libc_gpu)=
 
 # libc for GPUs
 

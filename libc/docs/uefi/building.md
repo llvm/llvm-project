@@ -1,4 +1,4 @@
-(libc-uefi-building)=
+(libc_uefi_building)=
 
 # Building libc for UEFI
 
