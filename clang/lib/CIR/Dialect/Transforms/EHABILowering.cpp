@@ -688,8 +688,10 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
         }
         if (changed) {
           builder.setInsertionPoint(op);
+          // We shouldn't get any hints here.
+          assert(!op.getLoopHintsAttr());
           cir::BrOp::create(builder, op.getLoc(), newOperands,
-                            op.getLoopHintsAttr(), op.getDest());
+                            /*loop_hints=*/nullptr, op.getDest());
           op.erase();
         }
       }
