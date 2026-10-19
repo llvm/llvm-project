@@ -3558,11 +3558,9 @@ defvar SuperH_DivCalls = [
 ];
 
 def isSuperH : RuntimeLibcallAvailability<(all_of IsSuperH)>;
-def SuperHSystemLibrary 
-      : SystemRuntimeLibrary<isSuperH,
-                            (add (sub DefaultLibcallImpls32, SuperH_DivCalls),
-                            LibcallImpls<(add SuperHRuntimeLibcalls)>)
->;
+
+def SuperHCompilerRt : LibcallLibrary<"compiler-rt",
+  (add LibcallImpls<(add SuperH_DivCalls), isSuperH>), isSuperH>;
 
 //===----------------------------------------------------------------------===//
 // SPIRV Runtime Libcalls
