@@ -17,8 +17,6 @@ def get_names_from_value_list(value_list):
 
 
 class TestGetVariables(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -39,7 +37,6 @@ class TestGetVariables(TestBase):
             % (description, copy_names, actual_names),
         )
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 

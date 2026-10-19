@@ -2630,12 +2630,12 @@ SymbolFileNativePDB::GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
   if (!block)
     return nullptr;
 
+  ModuleSP module_sp = GetObjectFile()->GetModule();
   CVSymbol sym = m_index->ReadSymbolRecord(var_id);
   TypeIndex ti;
   llvm::StringRef name;
-  uint16_t section = 0;
-  uint32_t offset = 0;
   ValueType scope = eValueTypeVariableStatic;
+  DWARFExpression location_expr;
   switch (sym.kind()) {
   case S_LDATA32: {
     DataSym ds(sym.kind());
@@ -2646,8 +2646,8 @@ SymbolFileNativePDB::GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
     }
     ti = ds.Type;
     name = ds.Name;
-    section = ds.Segment;
-    offset = ds.DataOffset;
+    location_expr =
+        MakeGlobalLocationExpression(ds.Segment, ds.DataOffset, module_sp);
     break;
   }
   case S_LTHREAD32: {
@@ -2660,9 +2660,9 @@ SymbolFileNativePDB::GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
     }
     ti = tlds.Type;
     name = tlds.Name;
-    section = tlds.Segment;
-    offset = tlds.DataOffset;
     scope = eValueTypeVariableThreadLocal;
+    location_expr =
+        MakeGlobalThreadLocalLocationExpression(tlds.DataOffset, module_sp);
     break;
   }
   default:
@@ -2675,10 +2675,7 @@ SymbolFileNativePDB::GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
   SymbolFileTypeSP sftype =
       std::make_shared<SymbolFileType>(*this, type_sp->GetID());
 
-  ModuleSP module_sp = GetObjectFile()->GetModule();
-  DWARFExpressionList location(
-      module_sp, MakeGlobalLocationExpression(section, offset, module_sp),
-      nullptr);
+  DWARFExpressionList location(module_sp, location_expr, nullptr);
   Declaration decl;
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.str().c_str(), /*mangled=*/nullptr, sftype,
