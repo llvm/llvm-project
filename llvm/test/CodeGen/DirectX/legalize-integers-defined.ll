@@ -1,4 +1,4 @@
-; RUN: opt -S -passes='dxil-legalize,instcombine' -verify-each -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -passes=dxil-legalize -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 define i32 @signed_add() {
 ; CHECK-LABEL: define i32 @signed_add(

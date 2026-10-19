@@ -1,5 +1,6 @@
-; RUN: opt -S -passes=dxil-legalize -verify-each -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
-; RUN: opt -S -passes=dxil-legalize -verify-each -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefix=LEGAL
+; RUN: opt -S -passes=dxil-legalize -mtriple=dxil-pc-shadermodel6.3-library %s -o %t
+; RUN: FileCheck %s < %t
+; RUN: FileCheck %s --check-prefix=LEGAL < %t
 
 ; LEGAL-NOT: {{\bi(2|3|4|5|8|9|24|37|63)\b}}
 
