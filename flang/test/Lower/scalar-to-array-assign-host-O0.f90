@@ -1,17 +1,19 @@
-! Regression test for the follow-up to PR llvm/llvm-project#197092.
-!
-! At -O0 on the host (no OpenMP target-device compilation), a scalar-to-array
-! broadcast assignment must lower to a Fortran runtime call
-! (_FortranAAssign), not to an inline assignment loop. Lowering it inline
-! at -O0 caused -g line breakpoints to hit once per array element instead
-! of once.
+! Scalar-to-array broadcast assignments are expanded inline even at -O0
+! on the host (no OpenMP target-device compilation).
 
-! RUN: %flang_fc1 -emit-fir -O0 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -O0 %s -o - | FileCheck %s --implicit-check-not=_FortranAAssign
 
 ! CHECK-LABEL: func @_QPhost_scalar_broadcast
 subroutine host_scalar_broadcast(arr)
   integer :: arr(4)
-  ! CHECK: fir.call @_FortranAAssign
-  ! CHECK-NOT: fir.do_loop
+  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : index
+  ! CHECK-DAG: %[[VALUE:.*]] = arith.constant 11 : i32
+  ! CHECK-DAG: %[[EXTENT:.*]] = arith.constant 4 : index
+  ! CHECK: %[[SHAPE:.*]] = fir.shape %[[EXTENT]]
+  ! CHECK: %[[ARR:.*]] = fir.declare %arg0(%[[SHAPE]])
+  ! CHECK: fir.do_loop %[[INDEX:.*]] = %[[ONE]] to %[[EXTENT]] step %[[ONE]] unordered {
+  ! CHECK-NEXT: %[[ELEMENT:.*]] = fir.array_coor %[[ARR]](%[[SHAPE]]) %[[INDEX]]
+  ! CHECK-NEXT: fir.store %[[VALUE]] to %[[ELEMENT]] : !fir.ref<i32>
+  ! CHECK-NEXT: }
   arr = 11
 end subroutine
