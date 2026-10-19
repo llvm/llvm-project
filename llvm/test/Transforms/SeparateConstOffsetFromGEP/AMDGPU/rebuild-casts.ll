@@ -30,3 +30,38 @@ define ptr @pr154116_nsw(ptr %p, i128 %i) {
   %arrayidx = getelementptr i32, ptr %p, i64 %idx.conv
   ret ptr %arrayidx
 }
+
+; FIXME: This is a miscompilation.
+; Verify that we drop nneg from zext.
+define ptr @zext_nneg_sub(ptr %p, i32 %a) {
+; CHECK-LABEL: define ptr @zext_nneg_sub(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -1
+; CHECK-NEXT:    ret ptr [[ARRAYIDX1]]
+;
+  %idx = sub nuw i32 %a, 1
+  %idx.conv = zext nneg i32 %idx to i64
+  %arrayidx = getelementptr i8, ptr %p, i64 %idx.conv
+  ret ptr %arrayidx
+}
+
+define ptr @zext_nneg_sub_tree(ptr %p, i32 %a, i32 %b) {
+; CHECK-LABEL: define ptr @zext_nneg_sub_tree(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RHS:%.*]] = add nuw i32 [[B]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[RHS]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    ret ptr [[ARRAYIDX1]]
+;
+  %lhs = add nuw i32 %a, 2
+  %rhs = add nuw i32 %b, 1
+  %idx = sub nuw i32 %lhs, %rhs
+  %idx.conv = zext nneg i32 %idx to i64
+  %arrayidx = getelementptr i8, ptr %p, i64 %idx.conv
+  ret ptr %arrayidx
+}
