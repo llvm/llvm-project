@@ -3081,6 +3081,9 @@ void AArch64TargetLowering::computeKnownBitsForTargetInstr(
     const APInt &DemandedElts, const MachineRegisterInfo &MRI,
     unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
+  if (!MI)
+    return;
+
   switch (MI->getOpcode()) {
   case AArch64::G_VASHR:
   case AArch64::G_VLSHR: {
