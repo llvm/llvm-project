@@ -1008,7 +1008,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
          "Opcode should reflect passed instruction.");
   const bool SCost =
       (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency);
-  const int CBrCost = SCost ? 5 : 7;
+  const InstructionCost CBrCost = SCost ? 5 : 7;
   switch (Opcode) {
   case Instruction::UncondBr:
     // Branch instruction takes about 4 slots on gfx900.
