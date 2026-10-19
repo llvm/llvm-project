@@ -776,13 +776,13 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
 
   MachineInstrBuilder Op0LOp1L =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
-  MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
+  MachineOperand &LoDstOp = Op0LOp1L->getOperand(0);
 
   LoDstOp.setIsUndef(DstOp.isUndef());
 
   MachineInstrBuilder Op0HOp1H =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
-  MachineOperand HiDstOp = Op0HOp1H->getOperand(0);
+  MachineOperand &HiDstOp = Op0HOp1H->getOperand(0);
 
   uint32_t IFlags = I.getFlags();
   Op0LOp1L->setFlags(IFlags);
