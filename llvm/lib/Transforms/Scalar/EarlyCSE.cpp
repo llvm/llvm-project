@@ -1432,6 +1432,35 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                 CI->getRoundingMode() != RoundingMode::Dynamic) &&
                "Unexpected dynamic rounding from SimpleValue::canHandle()");
       }
+      // If this is a boolean not of an integer comparison, check whether the
+      // inverse comparison is already available and reuse it.
+      Value *CmpOp;
+      if (match(&Inst, m_Not(m_Value(CmpOp)))) {
+        if (auto *Cmp = dyn_cast<ICmpInst>(CmpOp)) {
+          ICmpInst InvCmp(Cmp->getInversePredicate(), Cmp->getOperand(0),
+                          Cmp->getOperand(1));
+          if (Value *V = AvailableValues.lookup(&InvCmp)) {
+            // The available comparison must not introduce poison that the
+            // original comparison does not, e.g. through samesign.
+            if (Cmp->hasSameSign() || !cast<ICmpInst>(V)->hasSameSign()) {
+              LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
+                                << '\n');
+              if (!DebugCounter::shouldExecute(CSECounter)) {
+                LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+                continue;
+              }
+              Inst.replaceAllUsesWith(V);
+              salvageKnowledge(&Inst, &AC);
+              removeMSSA(Inst);
+              Inst.eraseFromParent();
+              Changed = true;
+              ++NumCSE;
+              continue;
+            }
+          }
+        }
+      }
+
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(&Inst)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
