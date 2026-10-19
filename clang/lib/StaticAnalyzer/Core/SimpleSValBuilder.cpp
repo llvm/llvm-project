@@ -306,13 +306,13 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     return std::nullopt;
 
   // We expect everything to be of the same type - this type.
-  QualType SingleTy = LSym->getType();
+  QualType CommonTy = LSym->getType();
 
   if (BinaryOperator::isComparisonOp(Op)) {
     if (ResultTy != SVB.getConditionType())
       return std::nullopt;
   } else if (BinaryOperator::isAdditiveOp(Op)) {
-    if (ResultTy != SingleTy)
+    if (ResultTy != CommonTy)
       return std::nullopt;
   } else {
     // Don't rearrange other operations.
@@ -321,11 +321,11 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
 
   // Rearrange signed symbolic expressions only
   // FIXME: This should also handle unsigned, at least for additive operations.
-  if (!SingleTy->isSignedIntegerOrEnumerationType())
+  if (!CommonTy->isSignedIntegerOrEnumerationType())
     return std::nullopt;
 
   SymbolRef RSym = Rhs.getAsSymbol();
-  if (!RSym || RSym->getType() != SingleTy)
+  if (!RSym || RSym->getType() != CommonTy)
     return std::nullopt;
 
   BasicValueFactory &BV = State->getBasicVals();
@@ -333,7 +333,7 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   std::tie(LSym, LInt) = decomposeSymbol(LSym, BV);
   std::tie(RSym, RInt) = decomposeSymbol(RSym, BV);
 
-  if (LSym->getType() != SingleTy || RSym->getType() != SingleTy)
+  if (LSym->getType() != CommonTy || RSym->getType() != CommonTy)
     return std::nullopt;
 
   auto InBounds = [State](auto... X) {
@@ -342,7 +342,7 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
 
-  QualType SymTy = SingleTy; // TODO eliminate this
+  QualType SymTy = CommonTy; // TODO eliminate this
 
   // FIXME: Why can we assert these?
   assert(APSIntType(LInt) == BV.getAPSIntType(SymTy) &&
