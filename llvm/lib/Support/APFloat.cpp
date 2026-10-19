@@ -70,38 +70,229 @@ static_assert(APFloatBase::integerPartWidth % 4 == 0, "Part width must be divisi
 
 namespace llvm {
 
-constexpr fltSemantics APFloatBase::semIEEEhalf = {15, -14, 11, 16,         fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semBFloat = {127, -126, 8, 16,          fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semIEEEsingle = {127, -126, 24, 32,     fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semIEEEdouble = {1023, -1022, 53, 64,   fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semIEEEquad = {16383, -16382, 113, 128, fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
+constexpr fltSemantics APFloatBase::semIEEEhalf = {
+  15,
+  -14,
+  11,
+  16,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semBFloat = {127,
+                                                 -126,
+                                                 8,
+                                                 16,
+                                                 fltNonfiniteBehavior::IEEE754,
+                                                 fltNanEncoding::IEEE,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 true,
+                                                 false,
+                                                 nullptr,
+                                                 nullptr};
+constexpr fltSemantics APFloatBase::semIEEEsingle = {
+  127,
+  -126,
+  24,
+  32,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semIEEEdouble = {
+  1023,
+  -1022,
+  53,
+  64,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semIEEEquad = {
+  16383,
+  -16382,
+  113,
+  128,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
 constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
-    16383,
-    -16382,
-    64,
-    80,
+  16383,
+  -16382,
+  64,
+  80,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  true,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {
+  -1,
+  0,
+  0,
+  128,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
+  1023,
+  -1022 + 53,
+  53 + 53,
+  128,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semFloat8E5M2 = {
+  15,
+  -14,
+  3,
+  8,
+  fltNonfiniteBehavior::IEEE754,
+  fltNanEncoding::IEEE,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
+  15,
+  -15,
+  3,
+  8,
+  fltNonfiniteBehavior::NanOnly,
+  fltNanEncoding::NegativeZero,
+  true,
+  true,
+  true,
+  true,
+  false,
+  nullptr,
+  nullptr};
+constexpr fltSemantics APFloatBase::semFloat8E4M3 = {
+    7,
+    -6,
+    4,
+    8,
     fltNonfiniteBehavior::IEEE754,
     fltNanEncoding::IEEE,
     true,
     true,
     true,
     true,
-    true, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {-1, 0, 0, 128, fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
-    1023, -1022 + 53, 53 + 53, 128,                                      fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semFloat8E5M2 = {15, -14, 3, 8,      fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
-    15, -15, 3, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero,                                               true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semFloat8E4M3 = {7, -6, 4, 8,        fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semFloat8E4M3FN = {
-    8, -6, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::AllOnes, true, true, true, true, false, nullptr, nullptr};
+    8,
+    -6,
+    4,
+    8,
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::AllOnes,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semFloat8E4M3FNUZ = {
-    7, -7, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero, true, true, true, true, false, nullptr, nullptr};
+    7,
+    -7,
+    4,
+    8,
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::NegativeZero,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semFloat8E4M3B11FNUZ = {
-    4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semFloat8E3M4 = {3, -2, 5, 8,        fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semFloatTF32 = {127, -126, 11, 19,   fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
+    4,
+    -10,
+    4,
+    8,
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::NegativeZero,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
+constexpr fltSemantics APFloatBase::semFloat8E3M4 = {
+    3,
+    -2,
+    5,
+    8,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
+constexpr fltSemantics APFloatBase::semFloatTF32 = {
+    127,
+    -126,
+    11,
+    19,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     127,
     -127,
@@ -112,7 +303,10 @@ constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     false,
     false,
     false,
-    false, false, nullptr, nullptr};
+    false,
+    false,
+    nullptr,
+    nullptr};
 
 constexpr fltSemantics APFloatBase::semFloat8E5M3FNU = {
     16,
@@ -123,15 +317,67 @@ constexpr fltSemantics APFloatBase::semFloat8E5M3FNU = {
     fltNanEncoding::AllOnes,
     true,
     false,
-    false, true, false, nullptr, nullptr};
+    false,
+    true,
+    false,
+    nullptr,
+    nullptr};
 
 constexpr fltSemantics APFloatBase::semFloat6E3M2FN = {
-    4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
+    4,
+    -2,
+    3,
+    6,
+    fltNonfiniteBehavior::FiniteOnly,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
-    2, 0, 4, 6, fltNonfiniteBehavior::FiniteOnly, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
+    2,
+    0,
+    4,
+    6,
+    fltNonfiniteBehavior::FiniteOnly,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semFloat4E2M1FN = {
-    2, 0, 2, 4, fltNonfiniteBehavior::FiniteOnly, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
-constexpr fltSemantics APFloatBase::semBogus = {0, 0, 0, 0,              fltNonfiniteBehavior::IEEE754, fltNanEncoding::IEEE, true, true, true, true, false, nullptr, nullptr};
+    2,
+    0,
+    2,
+    4,
+    fltNonfiniteBehavior::FiniteOnly,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
+constexpr fltSemantics APFloatBase::semBogus = {0,
+                                                0,
+                                                0,
+                                                0,
+                                                fltNonfiniteBehavior::IEEE754,
+                                                fltNanEncoding::IEEE,
+                                                true,
+                                                true,
+                                                true,
+                                                true,
+                                                false,
+                                                nullptr,
+                                                nullptr};
 
 const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
   switch (S) {
