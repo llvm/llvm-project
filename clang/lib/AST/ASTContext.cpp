@@ -1558,14 +1558,6 @@ void ASTContext::addExplicitInstantiationDecl(const NamedDecl *Spec,
       EID);
 }
 
-// FIXME: Remove ?
-MemberSpecializationInfo *
-ASTContext::getInstantiatedFromStaticDataMember(const VarDecl *Var) {
-  assert(Var->isStaticDataMember() && "Not a static data member");
-  return getTemplateOrSpecializationInfo(Var)
-      .dyn_cast<MemberSpecializationInfo *>();
-}
-
 ASTContext::TemplateOrSpecializationInfo
 ASTContext::getTemplateOrSpecializationInfo(const VarDecl *Var) {
   llvm::DenseMap<const VarDecl *, TemplateOrSpecializationInfo>::iterator Pos =
@@ -13865,6 +13857,9 @@ void ASTContext::setClassMaybeNeedsVectorDeletingDestructor(
 MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.
+  // Reopened namespaces share a mangling context so that declarations in
+  // different namespace blocks do not receive duplicate mangling numbers.
+  DC = DC->getPrimaryContext();
   std::unique_ptr<MangleNumberingContext> &MCtx = MangleNumberingContexts[DC];
   if (!MCtx)
     MCtx = createMangleNumberingContext();

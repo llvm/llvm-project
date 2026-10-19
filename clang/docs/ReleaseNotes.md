@@ -64,6 +64,11 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now correctly mangles C++20 parenthesized aggregate initialization
+  expressions. Previously, initializer arguments could be omitted from the
+  mangled name, causing distinct entities to receive the same name.
+  (#GH231953)
+
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
 for 256- and 512-bit vector arguments and returns from effective per-function
 target features. Features and `arch=` CPUs that imply AVX or AVX512F are
@@ -415,6 +420,10 @@ features cannot lower the translation-unit ABI level;
 - `-Wfortify-source` now diagnoses when `poll`, `ppoll`, or `ppoll64` is called
   with a descriptor count whose total size exceeds the `fds` array size.
 
+- `-Wfortify-source` now diagnoses when `vsprintf`, `__builtin_vsprintf`,
+  `__builtin___vsprintf_chk`, or `__builtin_sprintf` is called with a format
+  string whose output exceeds the destination buffer size.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -715,6 +724,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
+- Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
+  such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
+  Such declarations are now rejected, matching GCC. (#GH225033)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -1003,6 +1015,21 @@ features cannot lower the translation-unit ABI level;
   constrained placeholder type (such as `C auto`) whose default argument
   contains a lambda. (#GH230539)
 
+- Fixed a bug where Clang failed to resolve a reference to an overloaded
+  conversion function when one of the overloads was non-template. (#GH230682)
+
+- Fixed a crash when classifying a dependent call whose callee has already
+  been substituted to a value of non-callable type. (#GH218323)
+
+- Fixed an issue where Clang would allow invoking consteval functions outside
+  of a manifestly constant evaluated context. (#GH183415, #GH169139)
+
+- A pack-index-specifier (`T...[N]`) is now treated as a non-deduced context,
+  per C++26 [temp.deduct.type]. This fixes a crash when matching an explicit
+  instantiation, explicit specialization, or call against a function template
+  whose parameter type uses pack indexing, and makes such valid matches
+  succeed instead of being rejected. (#GH232220)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1161,6 +1188,12 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA Support
 
+- Fixed missing diagnostics for wrong-side functions reached through constructor
+  and member initializers, as well as inherited constructors. (#GH118415)
+
+- Fixed a CUDA miscompile caused by lambdas in reopened namespaces receiving
+  the same mangled name. (#GH231096)
+
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
@@ -1280,6 +1313,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
   `depth` clause. Flatten combines perfectly nested canonical loops into one
   loop. `depth(k)` selects how many outermost loops to combine (default 2).
+- Fixed a crash when the statement of an OpenMP `atomic` directive contains an
+  invalid expression, such as `0--;`. (#GH107979)
 - Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
   min-bounded inner loop, which vectorizes well. When a parent directive such as
   `for collapse(n)` needs a constant per-tile trip count, Clang rereads a

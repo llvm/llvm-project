@@ -899,7 +899,7 @@ class Base(unittest.TestCase):
             # pass just because Clang thinks it has a fix-it.
             "settings set target.auto-apply-fixits false",
             # Testsuite runs in parallel and the host can have also other load.
-            "settings set plugin.process.gdb-remote.packet-timeout 60",
+            "settings set plugin.process.gdb-remote.packet-timeout 600",
             # LLDB-internal utility expressions can take very long when the
             # host is under heavy load.
             "settings set target.process.utility-expression-timeout 600",

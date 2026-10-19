@@ -222,9 +222,9 @@ public:
 // cases reduce critical path (by exposing more ILP).
 class GVNHoist {
 public:
-  GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
-           MemorySSA *MSSA)
-      : Opts(ScalarOptions::Global), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
+  GVNHoist(const ScalarOptions &Opts, DominatorTree *DT, PostDominatorTree *PDT,
+           AliasAnalysis *AA, MemorySSA *MSSA)
+      : Opts(Opts), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
     MSSA->ensureOptimizedUses();
   }
@@ -1187,7 +1187,9 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  GVNHoist G(&DT, &PDT, &AA, &MSSA);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  GVNHoist G(Opts, &DT, &PDT, &AA, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
 

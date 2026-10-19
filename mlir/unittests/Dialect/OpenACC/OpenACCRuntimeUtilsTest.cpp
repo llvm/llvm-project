@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
 
 #include <optional>
@@ -67,6 +69,26 @@ TEST(OpenACCRuntimeCallConfigTest, FormatsConfiguredMapFlags) {
             "to,from (320 / 0x140)");
 }
 
+TEST(OpenACCRuntimeCallConfigTest, CreatesTheKernelBinaryDescriptor) {
+  MLIRContext ctx;
+  ctx.loadDialect<LLVM::LLVMDialect>();
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&ctx));
+  OpBuilder builder = OpBuilder::atBlockBegin(module->getBody());
+  Location loc = builder.getUnknownLoc();
+
+  ACCRuntimeCallConfig config;
+  EXPECT_TRUE(isa<LLVM::ZeroOp>(
+      config.createKernelBinaryDescriptor(loc, builder).getDefiningOp()));
+
+  config.setKernelBinaryDescriptorFn([](Location loc, OpBuilder &builder) {
+    return LLVM::UndefOp::create(
+               builder, loc, LLVM::LLVMPointerType::get(builder.getContext()))
+        .getResult();
+  });
+  EXPECT_TRUE(isa<LLVM::UndefOp>(
+      config.createKernelBinaryDescriptor(loc, builder).getDefiningOp()));
+}
+
 TEST(OpenACCDataDescriptorTest, StatesTheKindOfEveryDescriptor) {
   EXPECT_EQ(getDataDescriptorKind(DataDescriptor::AccDataDescGeneric),
             DataDescKind::none);
@@ -103,6 +125,32 @@ TEST(OpenACCDataDescriptorTest, BuildsTheDeclaredLayouts) {
       getDataDescriptorType(&ctx, DataDescriptor::AccDataDescOpenACC, baseTy)
           .getBody(),
       ArrayRef<Type>({baseTy, i8Ty, i64Ty, ptrTy, ptrTy, ptrTy, ptrTy, ptrTy}));
+}
+
+TEST(OpenACCRuntimeResultTest, MatchesTheRuntimeEncoding) {
+  EXPECT_EQ(static_cast<int32_t>(RuntimeResult::Success), 0);
+  EXPECT_EQ(static_cast<int32_t>(RuntimeResult::Error), 1);
+}
+
+TEST(OpenACCKernelArgumentTest, NumbersFieldsInDeclarationOrder) {
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::Version), 0);
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::ArgNum), 1);
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::ArgBasePtrs), 2);
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::NumGangs), 10);
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::NumWorkers), 11);
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::VectorLength), 12);
+  EXPECT_EQ(getKernelArgumentFieldIndex(KernelArgumentField::SmemSize), 13);
+
+  MLIRContext ctx;
+  ctx.loadDialect<LLVM::LLVMDialect>();
+  Type i32Ty = IntegerType::get(&ctx, 32);
+  Type i64Ty = IntegerType::get(&ctx, 64);
+  Type ptrTy = LLVM::LLVMPointerType::get(&ctx);
+  Type gangsTy = LLVM::LLVMArrayType::get(i64Ty, 3);
+  EXPECT_EQ(
+      getKernelArgumentType(&ctx).getBody(),
+      ArrayRef<Type>({i32Ty, i32Ty, ptrTy, ptrTy, ptrTy, ptrTy, ptrTy, ptrTy,
+                      ptrTy, i64Ty, gangsTy, i64Ty, i64Ty, i64Ty}));
 }
 
 TEST(OpenACCDataDescriptorTest, NumbersFieldsInDeclarationOrder) {
