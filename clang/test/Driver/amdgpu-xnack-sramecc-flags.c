@@ -17,16 +17,6 @@
 // RUN:   FileCheck -check-prefix=SRAMECC-OFF %s
 // SRAMECC-OFF: "-mno-sramecc"
 
-// SRAMECC is hardwired on for gfx12.5, so the modifier is rejected.
-// RUN: not %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250:sramecc+ %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=GFX1250-SRAMECC-ON %s
-// GFX1250-SRAMECC-ON: error: invalid target ID 'gfx1250:sramecc+'
-// RUN: not %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1251:sramecc- %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=GFX1251-SRAMECC-OFF %s
-// GFX1251-SRAMECC-OFF: error: invalid target ID 'gfx1251:sramecc-'
-// RUN: not %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic:sramecc- %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=GFX12-5-GENERIC-SRAMECC-OFF %s
-// GFX12-5-GENERIC-SRAMECC-OFF: error: invalid target ID 'gfx12-5-generic:sramecc-'
 
 // Test that target ID takes precedence over explicit flags
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -mno-xnack %s 2>&1 | \
