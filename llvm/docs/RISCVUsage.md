@@ -94,7 +94,7 @@ must be requested explicitly, for example
 
 (riscv-extensions)=
 
-## Extensions
+## Ratified Extensions
 
 The following table provides a status summary for extensions which have been
 ratified and thus have finalized specifications. When relevant, detailed notes

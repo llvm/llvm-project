@@ -535,9 +535,11 @@ void GlobalMergeFunc::initializeMergerMode(const Module &M) {
   if (Index && !Index->hasExportedFunctions(M))
     return;
 
-  if (cgdata::emitCGData())
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M.getContext().getLibraryOptions();
+  if (cgdata::emitCGData(LibraryOptions))
     MergerMode = HashFunctionMode::BuildingHashFuncion;
-  else if (cgdata::hasStableFunctionMap())
+  else if (cgdata::hasStableFunctionMap(LibraryOptions))
     MergerMode = HashFunctionMode::UsingHashFunction;
 }
 
@@ -566,18 +568,20 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
 
 bool GlobalMergeFunc::run(Module &M) {
   initializeMergerMode(M);
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M.getContext().getLibraryOptions();
 
   const StableFunctionMap *FuncMap;
   if (MergerMode == HashFunctionMode::UsingHashFunction) {
     // Use the prior CG data to optimistically create global merge candidates.
-    FuncMap = cgdata::getStableFunctionMap();
+    FuncMap = cgdata::getStableFunctionMap(LibraryOptions);
   } else {
     analyze(M);
     // Emit the local function map to the custom section, __llvm_merge before
     // finalizing it.
     if (MergerMode == HashFunctionMode::BuildingHashFuncion)
       emitFunctionMap(M);
-    LocalFunctionMap->finalize();
+    LocalFunctionMap->finalize(LibraryOptions);
     FuncMap = LocalFunctionMap.get();
   }
 
