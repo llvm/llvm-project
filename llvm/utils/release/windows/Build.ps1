@@ -33,17 +33,17 @@ function New-PGOProfile {
         # The instrumented build only needs to produce an instrumented clang;
         # strip runtimes/projects that are unnecessary and would themselves be
         # compiled with -fprofile-generate (requiring the profile runtime to link).
-        $instrumentFlags = $CMakeFlags + @(
+        $InstrumentFlags = $CMakeFlags + @(
             "LLVM_TARGETS_TO_BUILD=Native"
             "LLVM_BUILD_INSTRUMENTED=IR"
             'LLVM_ENABLE_RUNTIMES=""'
             'LLVM_ENABLE_PROJECTS="clang;lld"'
         )
-        $cache = Write-CMakeCacheFile -Flags $instrumentFlags -FileName 'instrument_cache.cmake'
-        $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
+        $Cache = Write-CMakeCacheFile -Flags $InstrumentFlags -FileName 'instrument_cache.cmake'
+        $OtherFlags = $Cache.OtherFlags
+        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags "$LLVMSrc/llvm"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs clang
-        $instrumentedClang = ConvertTo-UnixPath (Join-Path $PWD 'bin' 'clang-cl.exe')
+        $InstrumentedClang = ConvertTo-UnixPath (Join-Path $PWD 'bin' 'clang-cl.exe')
     } finally {
         Pop-Location
     }
@@ -53,16 +53,16 @@ function New-PGOProfile {
     New-Item -ItemType Directory -Path $TrainDir -Force | Out-Null
     Push-Location $TrainDir
     try {
-        $trainFlags = $CMakeFlags + @(
-            "CMAKE_C_COMPILER=$instrumentedClang"
-            "CMAKE_CXX_COMPILER=$instrumentedClang"
+        $TrainFlags = $CMakeFlags + @(
+            "CMAKE_C_COMPILER=$InstrumentedClang"
+            "CMAKE_CXX_COMPILER=$InstrumentedClang"
             "LLVM_ENABLE_PROJECTS=clang"
             'LLVM_ENABLE_RUNTIMES=""'
             "LLVM_TARGETS_TO_BUILD=Native"
         )
-        $cache = Write-CMakeCacheFile -Flags $trainFlags -FileName 'train_cache.cmake'
-        $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
+        $Cache = Write-CMakeCacheFile -Flags $TrainFlags -FileName 'train_cache.cmake'
+        $OtherFlags = $Cache.OtherFlags
+        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile @OtherFlags "$LLVMSrc/llvm"
 
         # Drop profiles generated from running cmake; those are not representative.
         Remove-Item -Path "$InstrumentDir/profiles/*.profraw" -Force -ErrorAction SilentlyContinue
@@ -72,12 +72,12 @@ function New-PGOProfile {
     }
 
     # Merge profiles
-    $resolvedProfilePath = ConvertTo-UnixPath $ProfilePath
+    $ResolvedProfilePath = ConvertTo-UnixPath $ProfilePath
     Invoke-NativeCommand "$Stage1BinDir/llvm-profdata" merge `
-        -output="$resolvedProfilePath" "$InstrumentDir/profiles/*.profraw"
+        -output="$ResolvedProfilePath" "$InstrumentDir/profiles/*.profraw"
 
-    Write-SubStep "PGO profile generated: $resolvedProfilePath"
-    $script:PGOProfilePath = $resolvedProfilePath
+    Write-SubStep "PGO profile generated: $ResolvedProfilePath"
+    $script:PGOProfilePath = $ResolvedProfilePath
 }
 
 function Invoke-Tests {
@@ -90,8 +90,8 @@ function Invoke-Tests {
     param(
         [string[]]$Targets
     )
-    foreach ($target in $Targets) {
-        Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs $target
+    foreach ($Target in $Targets) {
+        Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs $Target
     }
 }
 
@@ -125,11 +125,11 @@ function Build-Stage {
     New-Item -ItemType Directory -Path $Name -Force | Out-Null
     Push-Location $Name
     try {
-        $allFlags = $CMakeFlags + $ExtraCMakeFlags
-        $cache = Write-CMakeCacheFile -Flags $allFlags
-        $otherFlags = $cache.OtherFlags
+        $AllFlags = $CMakeFlags + $ExtraCMakeFlags
+        $Cache = Write-CMakeCacheFile -Flags $AllFlags
+        $OtherFlags = $Cache.OtherFlags
         # The static cache is last so its fixed settings override the shared flags.
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile -C $StaticCache @otherFlags "$LLVMSrc/llvm"
+        Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile -C $StaticCache @OtherFlags "$LLVMSrc/llvm"
         if ($InitialBuildTargets.Count -gt 0) {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs @InitialBuildTargets
         }
@@ -177,30 +177,30 @@ function Build-Architecture {
 
     # Restore clean PATH and setup environment
     $env:PATH = $script:OriginalPath
-    $pythonHome = Find-Python -Arch $Arch
-    $pythonExecutable = Join-Path $pythonHome 'python.exe'
-    if (-not (Test-PythonPsutil -PythonExecutable $pythonExecutable)) {
-        throw "Python psutil is missing from $pythonExecutable. Run with -InstallPrerequisites to enable lit test timeouts."
+    $PythonHome = Find-Python -Arch $Arch
+    $PythonExecutable = Join-Path $PythonHome 'python.exe'
+    if (-not (Test-PythonPsutil -PythonExecutable $PythonExecutable)) {
+        throw "Python psutil is missing from $PythonExecutable. Run with -InstallPrerequisites to enable lit test timeouts."
     }
     Enter-VsDevEnvironment -VsDevCmd $VsDevCmd -Arch $Arch
     Use-DiaSdkRuntime -Arch $Arch
 
     # Stage 0 uses the official LLVM release unless MSVC was requested.
-    $hostClangCl = $null
-    $hostLldLink = $null
+    $HostClangCl = $null
+    $HostLldLink = $null
     if (-not $ForceMSVC) {
-        $llvmBin = Find-OfficialLlvmBin
-        if (-not $llvmBin) {
+        $LLVMBin = Find-OfficialLlvmBin
+        if (-not $LLVMBin) {
             throw 'Official LLVM clang-cl.exe and lld-link.exe are missing. Run with -InstallPrerequisites, or use -ForceMSVC.'
         }
-        $env:PATH = "$llvmBin;$env:PATH"
-        $hostClangCl = Join-Path $llvmBin 'clang-cl.exe'
-        $hostLldLink = Join-Path $llvmBin 'lld-link.exe'
+        $env:PATH = "$LLVMBin;$env:PATH"
+        $HostClangCl = Join-Path $LLVMBin 'clang-cl.exe'
+        $HostLldLink = Join-Path $LLVMBin 'lld-link.exe'
     }
 
-    if ($hostClangCl) {
-        $hostCompiler = $hostClangCl
-        $hostLinker = $hostLldLink
+    if ($HostClangCl) {
+        $HostCompiler = $HostClangCl
+        $HostLinker = $HostLldLink
         $CommonCompilerFlags += ' -fuse-ld=lld'
         $CommonCMakeFlags += @(
             "LLVM_ENABLE_LLD=ON"
@@ -209,73 +209,73 @@ function Build-Architecture {
         )
     } else {
         # Pin the MSVC driver so bcrypt.lib is interpreted as a library.
-        $hostCompiler = 'cl.exe'
-        $hostLinker = 'link.exe'
+        $HostCompiler = 'cl.exe'
+        $HostLinker = 'link.exe'
     }
-    Write-SubStep "Stage 0 host compiler: $hostCompiler (linker: $hostLinker)"
+    Write-SubStep "Stage 0 host compiler: $HostCompiler (linker: $HostLinker)"
 
-    $hostToolchainFlags = @(
-        "CMAKE_C_COMPILER=$hostCompiler"
-        "CMAKE_CXX_COMPILER=$hostCompiler"
-        "CMAKE_LINKER=$hostLinker"
+    $HostToolchainFlags = @(
+        "CMAKE_C_COMPILER=$HostCompiler"
+        "CMAKE_CXX_COMPILER=$HostCompiler"
+        "CMAKE_LINKER=$HostLinker"
     )
-    $CommonCMakeFlags += $hostToolchainFlags
+    $CommonCMakeFlags += $HostToolchainFlags
 
     $env:VSCMD_START_DIR = $BuildDir
-    $swigConfig = Find-Swig
+    $SwigConfig = Find-Swig
     # CMake and Ninja subprocesses need the library when invoking SWIG.
-    $env:SWIG_LIB = $swigConfig.LibraryDirectory
+    $env:SWIG_LIB = $SwigConfig.LibraryDirectory
 
-    $releaseWindowsDir = Join-Path $script:ReleaseScriptRoot 'windows'
-    $stage1Cache = Join-Path $releaseWindowsDir 'stage1-cache.cmake'
-    $stage2Cache = Join-Path $releaseWindowsDir 'stage2-cache.cmake'
+    $ReleaseWindowsDir = Join-Path $script:ReleaseScriptRoot 'windows'
+    $Stage1Cache = Join-Path $ReleaseWindowsDir 'stage1-cache.cmake'
+    $Stage2Cache = Join-Path $ReleaseWindowsDir 'stage2-cache.cmake'
 
     # Directory names (always computed, used by multiple steps)
-    $stage1Name = "build_${Arch}_stage1"
-    $stage2Name = "build_${Arch}_stage2"
-    $instrumentDir = Join-Path $BuildDir "instrument_${Arch}_stage2"
-    $trainDir      = Join-Path $BuildDir "train_${Arch}_stage2"
-    $profileFile   = Join-Path $BuildDir "profile_${Arch}_stage2.profdata"
+    $Stage1Name = "build_${Arch}_stage1"
+    $Stage2Name = "build_${Arch}_stage2"
+    $InstrumentDir = Join-Path $BuildDir "instrument_${Arch}_stage2"
+    $TrainDir      = Join-Path $BuildDir "train_${Arch}_stage2"
+    $ProfileFile   = Join-Path $BuildDir "profile_${Arch}_stage2.profdata"
 
     #-------------------------------------------------------------------
     # Step: dependencies (libxml2, zlib, and zstd)
     # Each dependency returns immediately when this step is skipped.
     #-------------------------------------------------------------------
-    $libXml2 = Get-ThirdPartyLibrary -Name 'libxml2'
-    $zlib = Get-ThirdPartyLibrary -Name 'zlib'
-    $zstd = Get-ThirdPartyLibrary -Name 'zstd'
-    Build-LibXml2 -SourceDir (Join-Path $ThirdPartyDir $libXml2.SourceDirectory) `
-        -BuildDirectory (Join-Path $BuildDir $stage1Name $libXml2.BuildDirectory) `
-        -ToolchainFlags $hostToolchainFlags
-    Build-Zlib -SourceDir (Join-Path $ThirdPartyDir $zlib.SourceDirectory) `
-        -BuildDirectory (Join-Path $BuildDir $stage1Name $zlib.BuildDirectory) `
-        -ToolchainFlags $hostToolchainFlags
-    Build-Zstd -SourceDir (Join-Path $ThirdPartyDir $zstd.SourceDirectory) `
-        -BuildDirectory (Join-Path $BuildDir $stage1Name $zstd.BuildDirectory) `
-        -ToolchainFlags $hostToolchainFlags
-    $libxmlDir = $script:LibXmlInstallDir
-    $zlibDir = $script:ZlibInstallDir
-    $zstdDir = $script:ZstdInstallDir
+    $LibXml2 = Get-ThirdPartyLibrary -Name 'libxml2'
+    $Zlib = Get-ThirdPartyLibrary -Name 'zlib'
+    $Zstd = Get-ThirdPartyLibrary -Name 'zstd'
+    Build-LibXml2 -SourceDir (Join-Path $ThirdPartyDir $LibXml2.SourceDirectory) `
+        -BuildDirectory (Join-Path $BuildDir $Stage1Name $LibXml2.BuildDirectory) `
+        -ToolchainFlags $HostToolchainFlags
+    Build-Zlib -SourceDir (Join-Path $ThirdPartyDir $Zlib.SourceDirectory) `
+        -BuildDirectory (Join-Path $BuildDir $Stage1Name $Zlib.BuildDirectory) `
+        -ToolchainFlags $HostToolchainFlags
+    Build-Zstd -SourceDir (Join-Path $ThirdPartyDir $Zstd.SourceDirectory) `
+        -BuildDirectory (Join-Path $BuildDir $Stage1Name $Zstd.BuildDirectory) `
+        -ToolchainFlags $HostToolchainFlags
+    $LibXmlDir = $script:LibXmlInstallDir
+    $ZlibDir = $script:ZlibInstallDir
+    $ZstdDir = $script:ZstdInstallDir
 
     # The stage 1 bootstrap tools are needed by PGO and stage 2.
-    $stage1BinDir = ConvertTo-UnixPath (Join-Path $BuildDir $stage1Name 'bin')
+    $Stage1BinDir = ConvertTo-UnixPath (Join-Path $BuildDir $Stage1Name 'bin')
 
     # Compute cmakeFlags (always needed, cheap -- derived from parameters)
-    $cmakeFlags = $CommonCMakeFlags + @(
+    $CMakeFlags = $CommonCMakeFlags + @(
         "Python3_ROOT_DIR=$env:PYTHONHOME"
-        "LIBXML2_INCLUDE_DIR=$libxmlDir/include/libxml2"
-        "LIBXML2_LIBRARY=$libxmlDir/lib/libxml2s.lib"
-        "LIBXML2_LIBRARIES=$libxmlDir/lib/libxml2s.lib;ws2_32.lib"
-        "ZLIB_INCLUDE_DIR=$zlibDir/include"
-        "ZLIB_LIBRARY=$zlibDir/lib/zs.lib"
-        "ZLIB_LIBRARY_RELEASE=$zlibDir/lib/zs.lib"
-        "zstd_INCLUDE_DIR=$zstdDir/include"
-        "zstd_LIBRARY=$zstdDir/lib/zstd_static.lib"
+        "LIBXML2_INCLUDE_DIR=$LibXmlDir/include/libxml2"
+        "LIBXML2_LIBRARY=$LibXmlDir/lib/libxml2s.lib"
+        "LIBXML2_LIBRARIES=$LibXmlDir/lib/libxml2s.lib;ws2_32.lib"
+        "ZLIB_INCLUDE_DIR=$ZlibDir/include"
+        "ZLIB_LIBRARY=$ZlibDir/lib/zs.lib"
+        "ZLIB_LIBRARY_RELEASE=$ZlibDir/lib/zs.lib"
+        "zstd_INCLUDE_DIR=$ZstdDir/include"
+        "zstd_LIBRARY=$ZstdDir/lib/zstd_static.lib"
     )
 
-    $cmakeFlags += "CLANG_DEFAULT_LINKER=lld"
+    $CMakeFlags += "CLANG_DEFAULT_LINKER=lld"
     if ($Arch -eq 'arm64') {
-        $cmakeFlags += "COMPILER_RT_BUILD_SANITIZERS=OFF"
+        $CMakeFlags += "COMPILER_RT_BUILD_SANITIZERS=OFF"
     }
 
     #-------------------------------------------------------------------
@@ -283,15 +283,15 @@ function Build-Architecture {
     #-------------------------------------------------------------------
     if (Test-ShouldRun 'stage1') {
         # Preserve the dependency installs needed by stage 1.
-        $stage1Dir = Join-Path $BuildDir $stage1Name
-        if (Test-Path $stage1Dir) {
+        $Stage1Dir = Join-Path $BuildDir $Stage1Name
+        if (Test-Path $Stage1Dir) {
             Write-SubStep "Cleaning stage 1 bootstrap build artifacts (preserving dependency installs)..."
-            $preservedBuilds = @(
-                $libXml2.BuildDirectory
-                $zlib.BuildDirectory
-                $zstd.BuildDirectory
+            $PreservedBuilds = @(
+                $LibXml2.BuildDirectory
+                $Zlib.BuildDirectory
+                $Zstd.BuildDirectory
             )
-            Get-ChildItem -Path $stage1Dir -Exclude $preservedBuilds |
+            Get-ChildItem -Path $Stage1Dir -Exclude $PreservedBuilds |
                 ForEach-Object {
                     Remove-ItemWithoutProgress -LiteralPath $_.FullName -Recurse -Force
                 }
@@ -299,78 +299,78 @@ function Build-Architecture {
 
         # Stage 2 needs these tools even when the fast build skips the rest
         # of the stage 1 bootstrap build and its tests.
-        $stage1InitialTargets = @('clang', 'lld', 'llvm-lib', 'llvm-rc', 'runtimes')
+        $Stage1InitialTargets = @('clang', 'lld', 'llvm-lib', 'llvm-rc', 'runtimes')
         if ($Arch -eq 'amd64') {
-            $stage1InitialTargets += 'llvm-ml64'
+            $Stage1InitialTargets += 'llvm-ml64'
         }
-        $skipStage1FullBuild = $UseFastBuild
-        $stage1Tests = @('check-llvm', 'check-clang', 'check-lld', 'check-runtimes')
+        $SkipStage1FullBuild = $UseFastBuild
+        $Stage1Tests = @('check-llvm', 'check-clang', 'check-lld', 'check-runtimes')
 
-        Build-Stage -Name $stage1Name -Description 'stage 1 bootstrap compiler' `
-            -CMakeFlags $cmakeFlags `
+        Build-Stage -Name $Stage1Name -Description 'stage 1 bootstrap compiler' `
+            -CMakeFlags $CMakeFlags `
             -LLVMSrc $LLVMSrc `
-            -StaticCache $stage1Cache `
-            -InitialBuildTargets $stage1InitialTargets `
-            -SkipFullBuild:$skipStage1FullBuild `
-            -TestTargets $stage1Tests
+            -StaticCache $Stage1Cache `
+            -InitialBuildTargets $Stage1InitialTargets `
+            -SkipFullBuild:$SkipStage1FullBuild `
+            -TestTargets $Stage1Tests
     } else {
         Write-Step "Skipping stage 1 bootstrap compiler (-StartAt $($script:StartAtStep))"
-        Assert-PathExists -Path "$stage1BinDir/clang-cl.exe" -Description 'stage 1 bootstrap clang-cl.exe'
-        Assert-PathExists -Path "$stage1BinDir/lld-link.exe" -Description 'stage 1 bootstrap lld-link.exe'
-        Assert-PathExists -Path "$stage1BinDir/llvm-lib.exe" -Description 'stage 1 bootstrap llvm-lib.exe'
-        Assert-PathExists -Path "$stage1BinDir/llvm-rc.exe" -Description 'stage 1 bootstrap llvm-rc.exe'
+        Assert-PathExists -Path "$Stage1BinDir/clang-cl.exe" -Description 'stage 1 bootstrap clang-cl.exe'
+        Assert-PathExists -Path "$Stage1BinDir/lld-link.exe" -Description 'stage 1 bootstrap lld-link.exe'
+        Assert-PathExists -Path "$Stage1BinDir/llvm-lib.exe" -Description 'stage 1 bootstrap llvm-lib.exe'
+        Assert-PathExists -Path "$Stage1BinDir/llvm-rc.exe" -Description 'stage 1 bootstrap llvm-rc.exe'
         if ($Arch -eq 'amd64') {
-            Assert-PathExists -Path "$stage1BinDir/llvm-ml64.exe" -Description 'stage 1 bootstrap llvm-ml64.exe'
+            Assert-PathExists -Path "$Stage1BinDir/llvm-ml64.exe" -Description 'stage 1 bootstrap llvm-ml64.exe'
         }
         # -FastBuild does not build llvm-profdata, which the PGO merge needs.
         if (-not $UseFastBuild -and (Test-ShouldRun 'pgo')) {
-            Assert-PathExists -Path "$stage1BinDir/llvm-profdata.exe" -Description 'stage 1 bootstrap llvm-profdata.exe (not built by -FastBuild)'
+            Assert-PathExists -Path "$Stage1BinDir/llvm-profdata.exe" -Description 'stage 1 bootstrap llvm-profdata.exe (not built by -FastBuild)'
         }
     }
 
     # Stage 2 is built with the stage 1 bootstrap toolchain.
-    $stage2CompilerFlags = @(
-        "CMAKE_C_COMPILER=$stage1BinDir/clang-cl.exe"
-        "CMAKE_CXX_COMPILER=$stage1BinDir/clang-cl.exe"
-        "CMAKE_LINKER=$stage1BinDir/lld-link.exe"
-        "CMAKE_AR=$stage1BinDir/llvm-lib.exe"
-        "CMAKE_RC_COMPILER=$stage1BinDir/llvm-rc.exe"
+    $Stage2CompilerFlags = @(
+        "CMAKE_C_COMPILER=$Stage1BinDir/clang-cl.exe"
+        "CMAKE_CXX_COMPILER=$Stage1BinDir/clang-cl.exe"
+        "CMAKE_LINKER=$Stage1BinDir/lld-link.exe"
+        "CMAKE_AR=$Stage1BinDir/llvm-lib.exe"
+        "CMAKE_RC_COMPILER=$Stage1BinDir/llvm-rc.exe"
     )
 
     if ($Arch -eq 'amd64') {
-        $stage2CompilerFlags += "CMAKE_ASM_MASM_COMPILER=$stage1BinDir/llvm-ml64.exe"
+        $Stage2CompilerFlags += "CMAKE_ASM_MASM_COMPILER=$Stage1BinDir/llvm-ml64.exe"
     } else {
-        $stage2CompilerFlags += "CPACK_SYSTEM_NAME=woa64"
+        $Stage2CompilerFlags += "CPACK_SYSTEM_NAME=woa64"
     }
 
-    $stage2Flags = $cmakeFlags + $stage2CompilerFlags
+    $Stage2Flags = $CMakeFlags + $Stage2CompilerFlags
 
     #-------------------------------------------------------------------
     # Step: pgo
     #-------------------------------------------------------------------
-    $profileFlags = @()
+    $ProfileFlags = @()
     if (-not $UseFastBuild) {
         if (Test-ShouldRun 'pgo') {
-            Remove-StepDirectory $instrumentDir
-            Remove-StepDirectory $trainDir
-            Remove-StepDirectory $profileFile
-            New-PGOProfile -CMakeFlags $stage2Flags `
-                -Stage1BinDir $stage1BinDir -LLVMSrc $LLVMSrc `
-                -InstrumentDir $instrumentDir `
-                -TrainDir $trainDir `
-                -ProfilePath $profileFile
+            Remove-StepDirectory $InstrumentDir
+            Remove-StepDirectory $TrainDir
+            Remove-StepDirectory $ProfileFile
+            New-PGOProfile -CMakeFlags $Stage2Flags `
+                -Stage1BinDir $Stage1BinDir -LLVMSrc $LLVMSrc `
+                -InstrumentDir $InstrumentDir `
+                -TrainDir $TrainDir `
+                -ProfilePath $ProfileFile
         } else {
             Write-Step "Skipping PGO (-StartAt $($script:StartAtStep))"
-            Assert-PathExists -Path $profileFile -Description 'PGO profile data'
-            $script:PGOProfilePath = ConvertTo-UnixPath $profileFile
+            Assert-PathExists -Path $ProfileFile -Description 'PGO profile data'
+            $script:PGOProfilePath = ConvertTo-UnixPath $ProfileFile
         }
-        $profilePath = $script:PGOProfilePath
+        $ProfilePath = $script:PGOProfilePath
 
-        $pgoCFlags = "$CommonCompilerFlags -Wno-backend-plugin"
-        $profileFlags = @(
-            "LLVM_PROFDATA_FILE=$profilePath"
-            "CMAKE_C_FLAGS=`"$pgoCFlags`""
-            "CMAKE_CXX_FLAGS=`"$pgoCFlags`""
+        $PgoCFlags = "$CommonCompilerFlags -Wno-backend-plugin"
+        $ProfileFlags = @(
+            "LLVM_PROFDATA_FILE=$ProfilePath"
+            "CMAKE_C_FLAGS=`"$PgoCFlags`""
+            "CMAKE_CXX_FLAGS=`"$PgoCFlags`""
         )
     }
 
@@ -378,51 +378,51 @@ function Build-Architecture {
     # Step: stage 2 self-hosted compiler
     # Fixed project, runtime, and LLDB settings are in stage2-cache.cmake.
     #-------------------------------------------------------------------
-    $stage2Extra = @(
+    $Stage2Extra = @(
         "PYTHON_HOME=$env:PYTHONHOME"
     ) + $Stage2CMakeFlags + @(
-        "SWIG_EXECUTABLE=$($swigConfig.Executable)"
-        "SWIG_DIR=$($swigConfig.LibraryDirectory)"
-    ) + $profileFlags
+        "SWIG_EXECUTABLE=$($SwigConfig.Executable)"
+        "SWIG_DIR=$($SwigConfig.LibraryDirectory)"
+    ) + $ProfileFlags
 
     if (Test-ShouldRun 'stage2') {
         # Also discards the settings the tarball step left in the CMake cache.
-        Remove-StepDirectory (Join-Path $BuildDir $stage2Name)
+        Remove-StepDirectory (Join-Path $BuildDir $Stage2Name)
 
-        $stage2Tests = @('check-llvm', 'check-clang', 'check-lld', 'check-runtimes',
+        $Stage2Tests = @('check-llvm', 'check-clang', 'check-lld', 'check-runtimes',
                          'check-clang-tools', 'check-clangd')
 
-        Build-Stage -Name $stage2Name -Description 'stage 2 self-hosted compiler' `
-            -CMakeFlags $stage2Flags `
+        Build-Stage -Name $Stage2Name -Description 'stage 2 self-hosted compiler' `
+            -CMakeFlags $Stage2Flags `
             -LLVMSrc $LLVMSrc `
-            -StaticCache $stage2Cache `
-            -ExtraCMakeFlags $stage2Extra `
-            -TestTargets $stage2Tests
+            -StaticCache $Stage2Cache `
+            -ExtraCMakeFlags $Stage2Extra `
+            -TestTargets $Stage2Tests
     } else {
         Write-Step "Skipping stage 2 self-hosted compiler (-StartAt $($script:StartAtStep))"
-        Assert-PathExists -Path (Join-Path $BuildDir $stage2Name) -Description 'stage 2 build directory'
+        Assert-PathExists -Path (Join-Path $BuildDir $Stage2Name) -Description 'stage 2 build directory'
     }
 
-    $tripleArch = if ($Arch -eq 'amd64') { 'x86_64' } else { 'aarch64' }
-    $filename = "clang+llvm-${PackageVersion}-${tripleArch}-pc-windows-msvc"
-    $tarballInstallDirectory = Join-Path $BuildDir $filename
+    $TripleArch = if ($Arch -eq 'amd64') { 'x86_64' } else { 'aarch64' }
+    $Filename = "clang+llvm-${PackageVersion}-${TripleArch}-pc-windows-msvc"
+    $TarballInstallDirectory = Join-Path $BuildDir $Filename
 
     #-------------------------------------------------------------------
     # Step: package (WiX MSI installer)
     #-------------------------------------------------------------------
     if (Test-ShouldRun 'package') {
         Write-Step "Creating WiX MSI installer package"
-        Push-Location $stage2Name
+        Push-Location $Stage2Name
         try {
-            $tarballConfigMarker = Join-Path $PWD '.llvm_release_tarball_configured'
+            $TarballConfigMarker = Join-Path $PWD '.llvm_release_tarball_configured'
             if (Test-TarballConfigurationApplied -BuildDirectory $PWD.Path `
-                    -TarballInstallDirectory $tarballInstallDirectory) {
+                    -TarballInstallDirectory $TarballInstallDirectory) {
                 Write-SubStep 'The stage2 cache has tarball settings; restoring the MSI build configuration.'
-                $packageFlags = $stage2Flags + $stage2Extra
-                $cache = Write-CMakeCacheFile -Flags $packageFlags -FileName 'package_cache.cmake'
-                $otherFlags = $cache.OtherFlags
-                Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile -C $stage2Cache @otherFlags "$LLVMSrc/llvm"
-                Remove-Item -LiteralPath $tarballConfigMarker -Force -ErrorAction SilentlyContinue
+                $PackageFlags = $Stage2Flags + $Stage2Extra
+                $Cache = Write-CMakeCacheFile -Flags $PackageFlags -FileName 'package_cache.cmake'
+                $OtherFlags = $Cache.OtherFlags
+                Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile -C $Stage2Cache @OtherFlags "$LLVMSrc/llvm"
+                Remove-Item -LiteralPath $TarballConfigMarker -Force -ErrorAction SilentlyContinue
             } else {
                 Write-SubStep 'Stage2 is already configured for packaging; skipping CMake reconfigure.'
             }
@@ -434,8 +434,8 @@ function Build-Architecture {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs package
             # Downloaded release tags can predate these MSI settings. Check
             # each invariant only when the source being packaged defines it.
-            $llvmCMakeLists = Join-Path $LLVMSrc 'llvm/CMakeLists.txt'
-            if (Select-String -LiteralPath $llvmCMakeLists -Pattern 'set\(CPACK_WIX_UPGRADE_GUID' -Quiet) {
+            $LLVMCMakeLists = Join-Path $LLVMSrc 'llvm/CMakeLists.txt'
+            if (Select-String -LiteralPath $LLVMCMakeLists -Pattern 'set\(CPACK_WIX_UPGRADE_GUID' -Quiet) {
                 Assert-MsiUpgradeCode -BuildDirectory $PWD.Path
             }
         } finally {
@@ -449,36 +449,36 @@ function Build-Architecture {
     # Step: tarball
     #-------------------------------------------------------------------
     if (Test-ShouldRun 'tarball') {
-        Remove-StepDirectory (Join-Path $BuildDir $filename)
-        Remove-StepDirectory (Join-Path $BuildDir "$filename.tar")
-        Remove-StepDirectory (Join-Path $BuildDir "$filename.tar.xz")
+        Remove-StepDirectory (Join-Path $BuildDir $Filename)
+        Remove-StepDirectory (Join-Path $BuildDir "$Filename.tar")
+        Remove-StepDirectory (Join-Path $BuildDir "$Filename.tar.xz")
 
-        Push-Location $stage2Name
+        Push-Location $Stage2Name
         try {
-            $tarballFlags = $stage2Flags + $stage2Extra + @(
+            $TarballFlags = $Stage2Flags + $Stage2Extra + @(
                 "LLVM_INSTALL_TOOLCHAIN_ONLY=OFF"
-                "CMAKE_INSTALL_PREFIX=$BuildDir/$filename"
+                "CMAKE_INSTALL_PREFIX=$BuildDir/$Filename"
                 "LLVM_INCLUDE_TESTS=OFF"
             )
-            $cache = Write-CMakeCacheFile -Flags $tarballFlags -FileName 'tarball_cache.cmake'
-            $otherFlags = $cache.OtherFlags
+            $Cache = Write-CMakeCacheFile -Flags $TarballFlags -FileName 'tarball_cache.cmake'
+            $OtherFlags = $Cache.OtherFlags
             # Leave a durable marker so a later -StartAt package invocation
             # restores the stage2 settings before invoking CPack.
             Set-Content -LiteralPath '.llvm_release_tarball_configured' `
                 -Value 'LLVM_INSTALL_TOOLCHAIN_ONLY=OFF' -Encoding ASCII
-            Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile -C $stage2Cache @otherFlags "$LLVMSrc/llvm"
+            Invoke-NativeCommand cmake -G Ninja -C $Cache.CacheFile -C $Stage2Cache @OtherFlags "$LLVMSrc/llvm"
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
 
             # Verify llvm-config works
-            Invoke-NativeCommand "$BuildDir/$filename/bin/llvm-config.exe" --bindir
+            Invoke-NativeCommand "$BuildDir/$Filename/bin/llvm-config.exe" --bindir
         } finally {
             Pop-Location
         }
 
         # Create the portable archive without changing executable layout.
-        Invoke-NativeCommand 7z a -ttar "$filename.tar" $filename
-        Invoke-NativeCommand 7z a -txz "$filename.tar.xz" "$filename.tar"
-        Remove-Item -LiteralPath "$filename.tar"
+        Invoke-NativeCommand 7z a -ttar "$Filename.tar" $Filename
+        Invoke-NativeCommand 7z a -txz "$Filename.tar.xz" "$Filename.tar"
+        Remove-Item -LiteralPath "$Filename.tar"
     } else {
         Write-Step "Skipping tarball (-StartAt $($script:StartAtStep))"
     }
