@@ -13,50 +13,39 @@
 #ifndef ASAN_MAPPING_AIX64_H
 #define ASAN_MAPPING_AIX64_H
 
+// 64-bit AIX process address space (AIX 7.1 and later):
+//
+// | Range                                   | Contents                     |
+// |-----------------------------------------|------------------------------|
+// | 0x0000000100000000 - 0x07ffffffffffffff | Program text, data and heap  |
+// | 0x0800000000000000 - 0x08ffffffffffffff | Privately loaded objects     |
+// | 0x0900000000000000 - 0x09ffffffffffffff | Shared library text and data |
+// | 0x0a00000000000000 - 0x0affffffffffffff | mmap and shmat               |
+// | 0x0f00000000000000 - 0x0fffffffffffffff | Initial stack                |
+//
+// Since AIX 7.1, the default address space allocator (esid_allocator=1)
+// places mmap and shmat attachments without a fixed address in the
+// 0x0a00000000000000 range; fixed-address attachments use 0x0700000000000000 -
+// 0x07ffffffffffffff. See
 // https://www.ibm.com/docs/en/aix/7.3?topic=concepts-system-memory-allocation-using-malloc-subsystem
+// and section 1.2 of https://www.redbooks.ibm.com/redbooks/pdfs/sg247910.pdf.
 //
-// For 64-bit on AIX,
-// - Data, heap, bss region is from 0x0000 0001 0000 0000 to
-//   0x07ff ffff ffff ffff (1ULL << 59).
-// - Shared library regions is from:
-//      0x0900 0000 0000 0000 to 0x09ff ffff ffff ffff
-//   or 0x0800 0000 0000 0000 to 0x08ff ffff ffff ffff ((1ULL << 52) * 2)
-// - mmap region is from 0x0a00 0000 0000 0000 to 0x0aff ffff ffff ffff
-//   (1ULL << 52).
-// - Initial stack region is from 0x0f00 0000 0000 0000 to
-//   0x0fff ffff ffff ffff (1ULL << 56).
+// These ranges are spread over most of the 60-bit address space, so shadowing
+// all of them would need a shadow too large to map, and reserving it would make
+// startup slow. Programs only use a small part of each range in practice. On
+// AIX 7.2, the largest observed sizes were:
+// - heap: 1ULL << 47,
+// - global variables: 1ULL << 29. These can be in shared library data, at
+//   0x0900100000000000 - 0x0900100100000000, or at 0x0800100000000000 -
+//   0x0800100100000000 when the first range is used by system libraries,
+// - mmap: 1ULL << 46,
+// - stack: 1ULL << 32.
 //
-// All above ranges are too big. And after verifying on AIX,(these datas are
-// from experiments on AIX72, AIX OS may change this layout in future)
-// - the biggest heap size is 1ULL << 47.
-// - the biggest global variable size is 1ULL << 29. (Which may be put in shared
-//   library data regions because global variables may be compiled to shared
-//   libraries.)
-//     the related address range for shared library data regions is:
-//          0x0900 1000 0000 0000 to 0x0900 1001 0000 0000
-//       or 0x0800 1000 0000 0000 to 0x0800 1001 0000 0000 (when above range is
-//          used by system libraries.)
-// - the biggest mmap size is 1ULL << 46.
-// - the biggest stack size is 1ULL << 32.
-//
-// We don't need so big heap and mmap, calling mmap for shadow memory for such
-// big heap and mmap is quite slow on AIX, so to balance runtime and examinable
-// memory size, we use 1ULL << 39(512GB) as size for each region except mmap
-// region. For mmap region, aix system mmap function may return a big range
-// address, we allocate 1ULL << 41(2TB).
-//
-// So the reasonable user space region size is:
-// - Data, heap, bss is from 0x0 to 0x0000 007f ffff ffff
-// - Shared library data is from:
-//        0x0900 1000 0000 0000 to 0x0900 107f ffff ffff
-//     or 0x0800 1000 0000 0000 to 0x0800 107f ffff ffff
-// - mmap is from 0x0a00 0000 0000 0000 to 0x0a00 01ff ffff ffff
-// - Stack is from 0x0fff ff80 0000 0000 to 0x0fff ffff ffff ffff
-//
-// AIX64 set ASAN_SHADOW_OFFSET_CONST at 0x0a01000000000000 because mmap
-// memory starts at 0x0a00000000000000 and shadow memory should be allocated
-// there. And we keep 0x0a00000000000000 to 0x0a01000000000000 For user mmap
-// usage.
+// To balance runtime cost and coverage, ASan shadows 512GB (1ULL << 39) of
+// each region, except mmap, which gets 2TB (1ULL << 41) because mmap can
+// return large ranges. This gives the mapping below. The shadow itself is
+// placed at 0x0a01000000000000 (ASAN_SHADOW_OFFSET_CONST), in the mmap region;
+// 0x0a00000000000000 - 0x0a00ffffffffffff stays available for user mmap.
 
 // NOTE: Users are not expected to use `mmap` specifying fixed address which is
 // inside the shadow memory ranges.
