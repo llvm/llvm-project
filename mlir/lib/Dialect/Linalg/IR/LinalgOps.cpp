@@ -2137,6 +2137,9 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
     return value.isAllOnes();
   case BroadcastReduceKind::OrI:
     return value.isZero();
+  case BroadcastReduceKind::MaximumF:
+  case BroadcastReduceKind::MinimumF:
+    llvm_unreachable("float kinds handled by the branch above");
   }
   llvm_unreachable("unknown broadcast reduction kind");
 }
