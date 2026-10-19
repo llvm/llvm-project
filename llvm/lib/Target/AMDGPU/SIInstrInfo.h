@@ -307,6 +307,15 @@ public:
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
 
+  /// Return true if the memory operations described by \p BaseOps1 and
+  /// \p BaseOps2 (as returned by getMemOperandsWithOffsetWidth) address the
+  /// same base. Unlike shouldClusterMemOps, this does not apply the
+  /// MaxMemoryClusterDWords budget, which only bounds pre-RA register pressure.
+  /// Only the first base operand is compared, unlike
+  /// memOpsHaveSameBaseOperands which requires all of them to match.
+  bool memOpsHaveSameBase(ArrayRef<const MachineOperand *> BaseOps1,
+                          ArrayRef<const MachineOperand *> BaseOps2) const;
+
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
                                int64_t Offset1, unsigned NumLoads) const override;
 
@@ -1559,6 +1568,13 @@ public:
   isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
                                    const MachineInstr &MI, unsigned SrcN,
                                    const MachineOperand *MO = nullptr) const;
+
+  /// Check if \p MI has legal GFX950 v_pk_fma op_sel.
+  bool isLegalPkFMAF32OpSel(const MachineInstr &MI) const;
+
+  /// Decompose a GFX950 v_pk_fma_f32 with invalid op_sel into two independent
+  /// scalar V_FMA_F32_e64 instructions, replacing \p MI.
+  void decomposePkFMAF32(MachineInstr &MI, MachineRegisterInfo &MRI) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.

@@ -128,10 +128,8 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
   bool IsSingleWaveWG = false;
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    unsigned WGMaxSize = ST.getFlatWorkGroupSizes(*I.getFunction()).second;
-    IsSingleWaveWG = WGMaxSize <= ST.getWavefrontSize();
-  }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    IsSingleWaveWG = ST.isSingleWavefrontWorkgroup(*I.getFunction());
 
   IRBuilder<> B(&I);
 
@@ -258,7 +256,7 @@ bool AMDGPULowerIntrinsicsImpl::visitMonitorSleep(IntrinsicInst &I) {
     return false;
 
   IRBuilder<> B(&I);
-  Value *NewSleep = B.getInt16(0x2000); // Maximum
+  Value *NewSleep = B.getInt16(127); // Maximum
   I.setArgOperand(0, NewSleep);
 
   return true;

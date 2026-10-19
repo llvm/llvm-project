@@ -158,8 +158,8 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %A2 = ptrtoaddr ptr %A to i64
-; CHECK-NEXT:    IR   %B1 = ptrtoaddr ptr %B to i64
+; CHECK-NEXT:    IR   %B4 = ptrtoaddr ptr %B to i64
+; CHECK-NEXT:    IR   %A3 = ptrtoaddr ptr %A to i64
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
@@ -168,13 +168,13 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:    IR   %0 = add i32 %n, -1
 ; CHECK-NEXT:    IR   %1 = icmp slt i32 %0, 0
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%1>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:    IR   %2 = sub i64 %B1, %A2
-; CHECK-NEXT:    IR   %3 = sub i64 %2, 1
-; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %3, 63
-; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = sub ir<%B4>, ir<%A3>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = sub vp<[[VP9]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP15]]>, ir<63>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
@@ -204,15 +204,15 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP10]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP6]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ] (extra operand: vp<[[VP10]]> from middle.block)
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ] (extra operand: vp<[[VP6]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
@@ -237,8 +237,8 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %A2 = ptrtoaddr ptr %A to i64
-; CHECK-NEXT:    IR   %B1 = ptrtoaddr ptr %B to i64
+; CHECK-NEXT:    IR   %B4 = ptrtoaddr ptr %B to i64
+; CHECK-NEXT:    IR   %A3 = ptrtoaddr ptr %A to i64
 ; CHECK-NEXT:    IR   %min.iters.check = icmp ult i32 %n, 4
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
@@ -346,16 +346,16 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Live-in ir<16> = vector-trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %src2 = ptrtoaddr ptr %src to i64
-; CHECK-NEXT:    IR   %dst1 = ptrtoaddr ptr %dst to i64
+; CHECK-NEXT:    IR   %dst4 = ptrtoaddr ptr %dst to i64
+; CHECK-NEXT:    IR   %src3 = ptrtoaddr ptr %src to i64
 ; CHECK-NEXT:    EMIT branch-on-cond ir<false>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:    IR   %0 = sub i64 %dst1, %src2
-; CHECK-NEXT:    IR   %1 = sub i64 %0, 1
-; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %1, 31
-; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub ir<%dst4>, ir<%src3>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP5]]>, ir<31>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
@@ -407,8 +407,8 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Live-in ir<16> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %src2 = ptrtoaddr ptr %src to i64
-; CHECK-NEXT:    IR   %dst1 = ptrtoaddr ptr %dst to i64
+; CHECK-NEXT:    IR   %dst4 = ptrtoaddr ptr %dst to i64
+; CHECK-NEXT:    IR   %src3 = ptrtoaddr ptr %src to i64
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:

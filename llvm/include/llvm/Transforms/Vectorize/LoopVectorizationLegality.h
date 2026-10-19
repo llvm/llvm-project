@@ -48,6 +48,7 @@ class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
+struct VectorizeOptions;
 
 /// Utility class for getting and setting loop vectorizer hints in the form
 /// of loop metadata.
@@ -72,6 +73,8 @@ class LoopVectorizeHints {
 
     LLVM_ABI bool validate(unsigned Val);
   };
+
+  const VectorizeOptions &Opts;
 
   /// Vectorization width.
   Hint Width;
@@ -121,7 +124,8 @@ public:
     SK_AlwaysScalable = 2
   };
 
-  LLVM_ABI LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
+  LLVM_ABI LoopVectorizeHints(const VectorizeOptions &Opts, const Loop *L,
+                              bool InterleaveOnlyWhenForced,
                               OptimizationRemarkEmitter &ORE,
                               const TargetTransformInfo *TTI = nullptr);
 
@@ -273,14 +277,17 @@ enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(
-      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
-      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
-      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
-      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
-      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+  LoopVectorizationLegality(const VectorizeOptions &Opts, Loop *L,
+                            PredicatedScalarEvolution &PSE, DominatorTree *DT,
+                            TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                            Function *F, LoopAccessInfoManager &LAIs,
+                            LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+                            LoopVectorizationRequirements *R,
+                            LoopVectorizeHints *H, DemandedBits *DB,
+                            AssumptionCache *AC, bool AllowRuntimeSCEVChecks,
+                            AAResults *AA)
+      : Opts(Opts), TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT),
+        LAIs(LAIs), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
         AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
@@ -640,6 +647,8 @@ private:
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
+
+  const VectorizeOptions &Opts;
 
   /// The loop that we evaluate.
   Loop *TheLoop;

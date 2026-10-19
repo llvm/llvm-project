@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class TargetMachine;
+
 enum class RunOutliner {
   TargetDefault,
   AlwaysOutline,
@@ -56,6 +58,9 @@ struct CGPassBuilderOption {
   bool EnableBlockPlacementStats = false;
   bool EnableGlobalMergeFunc = false;
   bool EnableSinkAndFold = false;
+  /// Run the machine scheduler while still in SSA, just before PHI
+  /// elimination.
+  bool EnableSSAMachineScheduler = false;
   bool EnableTailMerge = true;
   /// Enable LoopTermFold immediately after LSR.
   bool EnableLoopTermFold = false;
@@ -91,7 +96,7 @@ struct CGPassBuilderOption {
   cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
 };
 
-LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption(const TargetMachine &TM);
 
 } // namespace llvm
 

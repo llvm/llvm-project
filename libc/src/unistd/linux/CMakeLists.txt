@@ -265,6 +265,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fexecve
+  SRCS
+    fexecve.cpp
+  HDRS
+    ../fexecve.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execveat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fsync
   SRCS
     fsync.cpp
@@ -495,6 +510,26 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  lockf
+  SRCS
+    lockf.cpp
+  HDRS
+    ../lockf.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.struct_flock
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(

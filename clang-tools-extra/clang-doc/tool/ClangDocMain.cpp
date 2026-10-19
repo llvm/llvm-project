@@ -278,7 +278,7 @@ Example usage for a project using a compile commands database:
   if (FTimeTrace)
     llvm::timeTraceProfilerInitialize(200, "clang-doc");
   {
-    llvm::TimeTraceScope("main");
+    llvm::TimeTraceScope TimeTrace("main");
 
     // Fail early if an invalid format was provided.
     llvm::StringRef Format = getFormatString();
