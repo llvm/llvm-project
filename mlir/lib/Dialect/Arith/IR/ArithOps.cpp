@@ -2077,9 +2077,11 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
       return src;
   }
 
-  // trunci(trunci(a)) -> trunci(a))
-  if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
-    setOperand(getOperand().getDefiningOp()->getOperand(0));
+  // trunci(trunci(a)) -> trunci(a)
+  if (auto truncOp = getOperand().getDefiningOp<arith::TruncIOp>()) {
+    // Preserve a flag only if both truncations are lossless in that signedness.
+    setOverflowFlags(getOverflowFlags() & truncOp.getOverflowFlags());
+    setOperand(truncOp.getIn());
     return getResult();
   }
 
