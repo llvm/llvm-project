@@ -1554,15 +1554,6 @@ public:
     VPUser::addOperand(Mask);
   }
 
-  /// Updates mask \p Mask to a VPInstruction.
-  void updateMask(VPValue *Mask) {
-    if (alwaysUnmasked())
-      return;
-    assert(Mask->getScalarType()->isIntegerTy(1) &&
-           "Mask must be an i1 (vector)");
-    VPUser::addOperand(Mask);
-  }
-
   /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
   /// VPInstructions.
   VPValue *getMask() const {
@@ -3923,11 +3914,10 @@ struct LLVM_ABI_FOR_TEST VPWidenFirstFaultingLoadRecipe final
   VPValue *getResult() const { return Result; }
   VPValue *getCount() const { return Count; }
 
-  /// TODO: Check its cost computation
+  /// Return the cost of the vp.load.ff intrinsic. This will be invalid for
+  /// unsupported targets
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
-  }
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -4962,9 +4952,6 @@ class VPlan {
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPSymbolicValue VFxUF;
 
-  /// Value of a non constant step
-  VPValue *VariableIVIncrement = nullptr;
-
   /// Contains all the external definitions created for this VPlan, as a mapping
   /// from IR Values to VPIRValues.
   SmallMapVector<Value *, VPIRValue *, 16> LiveIns;
@@ -5130,12 +5117,6 @@ public:
   /// Returns VF * UF of the vector loop region.
   VPSymbolicValue &getVFxUF() { return VFxUF; }
 
-  /// Sets the step to a non constant value
-  void setVariableIVIncrement(VPValue *IVInc) { VariableIVIncrement = IVInc; }
-
-  // Returns the value defining the step
-  VPValue *getVariableIVIncrement() const { return VariableIVIncrement; }
-
   // Add a Load into potentially faulting load set
   void addPotentiallyFaultingLoad(LoadInst *L) {
     PotentiallyFaultingLoads.insert(L);
@@ -5298,9 +5279,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Find the equivalent Variable Step on a duplicated VPlan
-  LLVM_ABI_FOR_TEST VPValue *findDuplicatedVariableIVIncrement(VPlan *newVPlan);
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.

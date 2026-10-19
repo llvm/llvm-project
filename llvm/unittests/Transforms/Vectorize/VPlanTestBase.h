@@ -47,7 +47,6 @@ protected:
   std::unique_ptr<TargetLibraryInfo> TLI;
   std::unique_ptr<CycleInfo> CI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
-  std::unique_ptr<TargetTransformInfo> TTI;
 
   MapVector<PHINode *, InductionDescriptor> Inductions;
 
@@ -63,7 +62,6 @@ protected:
     EXPECT_TRUE(M);
     TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
     TLI = std::make_unique<TargetLibraryInfo>(*TLII);
-    TTI = std::make_unique<TargetTransformInfo>(M->getDataLayout());
     return *M;
   }
 
@@ -111,7 +109,7 @@ protected:
       OptimizationRemarkEmitter ORE(&F);
       VPlanTransforms::handleUncountableEarlyExits(
           *Plan, &ORE, L, PSE, *DT, AC.get(), *Style,
-          TTI->supportsFirstOnlyFaultLoads());
+          /*AllowFirstFaultingLoads=*/false);
     } else
       VPlanTransforms::handleCountableEarlyExits(*Plan);
     VPlanTransforms::addMiddleCheck(*Plan);

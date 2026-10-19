@@ -253,7 +253,7 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
 
 /// Enable using first-only-fault loads.
 static cl::opt<bool> EnableFirstFaultingLoad(
-    "enable-first-faulting-load", cl::init(true), cl::Hidden,
+    "enable-first-faulting-load", cl::init(false), cl::Hidden,
     cl::desc("Enables using first faulting load widening on those "
              "that are not safely dereferenceable otherwise"));
 
@@ -261,17 +261,11 @@ static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
 
-static cl::opt<bool> ForceTargetSupportsFirstOnlyFaultLoads(
-    "force-target-supports-first-only-fault-load", cl::init(false), cl::Hidden,
-    cl::desc("Flag that overrides target first only fault load support for"
-             "testing"));
-
 /// An interleave-group may need masking if it resides in a block that needs
 /// predication, or in order to mask away gaps.
 static cl::opt<bool> EnableMaskedInterleavedMemAccesses(
     "enable-masked-interleaved-mem-accesses", cl::init(false), cl::Hidden,
-    cl::desc("Enable vectorization on masked interleaved memory accesses in a "
-             "loop"));
+    cl::desc("Enable vectorization on masked interleaved memory accesses in a loop"));
 
 static cl::opt<unsigned> ForceTargetNumScalarRegs(
     "force-target-num-scalar-regs", cl::init(0), cl::Hidden,
@@ -523,11 +517,6 @@ static std::optional<ElementCount> getSmallBestKnownTC(
       return ElementCount::getFixed(RefinedTC);
 
   return std::nullopt;
-}
-
-static bool isFirstFaultingLoadsAllowed(const TargetTransformInfo &TTI) {
-  return (EnableFirstFaultingLoad && TTI.supportsFirstOnlyFaultLoads()) ||
-         ForceTargetSupportsFirstOnlyFaultLoads;
 }
 
 namespace {
@@ -3212,7 +3201,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
             .Case(
                 [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
-            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
+            .Case<VPWidenLoadRecipe, VPWidenFirstFaultingLoadRecipe>(
+                [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
@@ -6498,7 +6488,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
             : UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle, isFirstFaultingLoadsAllowed(TTI))) {
+                        EEStyle, EnableFirstFaultingLoad)) {
       return nullptr;
     }
   } else {

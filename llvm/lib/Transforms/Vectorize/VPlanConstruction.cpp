@@ -1238,11 +1238,11 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
 /// Check if all loads in the loop are dereferenceable. Iterates over the
 /// loop body blocks reachable from \p HeaderVPBB. Returns false if any
-/// non-dereferenceable load is found.
+/// non-dereferenceable load is found if first only fault is not allowed.
 bool VPlanTransforms::areAllLoadsDereferenceable(
     VPlan &Plan, VPBasicBlock *HeaderVPBB, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
-    bool supportsFirstOnlyFaultLoads) {
+    bool AllowFirstFaultingLoads) {
   ScalarEvolution &SE = *PSE.getSE();
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
@@ -1271,7 +1271,7 @@ bool VPlanTransforms::areAllLoadsDereferenceable(
       if (!isDereferenceableAndAlignedInLoop(PtrSCEV, Load->getAlign(),
                                              SizeSCEV, TheLoop, SE, DT, AC,
                                              &Preds)) {
-        if (supportsFirstOnlyFaultLoads) {
+        if (AllowFirstFaultingLoads) {
           // Tag this load so it is widened as first faulting
           Plan.addPotentiallyFaultingLoad(Load);
           LLVM_DEBUG(dbgs() << "LV: Load may fault. Using first-fault load.\n");

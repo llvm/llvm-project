@@ -862,19 +862,12 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   VPRegionValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
 
-  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  if (auto Step = getPlan()->getVariableIVIncrement()) {
-    return VPBuilder(ExitingLatch->getTerminator())
-        .createOverflowingOp(Instruction::Add, {CanIV, Step},
-                             {hasCanonicalIVNUW(), /* HasNSW */ false},
-                             CanIV->getDebugLoc(), "index.next");
-  }
-
   if (auto *Inc = vputils::findCanonicalIVIncrement(*getPlan()))
     return Inc;
 
   assert(!getPlan()->getVFxUF().isMaterialized() &&
          "VFxUF can be used only before it is materialized.");
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   return VPBuilder(ExitingLatch->getTerminator())
       .createOverflowingOp(Instruction::Add, {CanIV, &getPlan()->getVFxUF()},
                            {hasCanonicalIVNUW(), /* HasNSW */ false},
@@ -1211,59 +1204,6 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
   }
 }
 
-VPValue *VPlan::findDuplicatedVariableIVIncrement(VPlan *newPlan) {
-  // This function tries to find the VaraibleStep on the premise that this
-  // VPlan is a duplicate of oldVPlan and so it preserves the same order.
-  VPValue *OrigIVInc = getVariableIVIncrement();
-  if (!OrigIVInc)
-    return nullptr;
-  VPRecipeBase *OrigRecipe = OrigIVInc->getDefiningRecipe();
-  VPBlockBase *OrigBlock = OrigRecipe->getParent();
-
-  VPRegionBlock *OrigRegion = getVectorLoopRegion();
-  VPRegionBlock *NewRegion = newPlan->getVectorLoopRegion();
-  assert(OrigRegion && NewRegion &&
-         "Both plans must have a vector loop region");
-
-  // Find location of recipe in original VPlan
-  unsigned OrigBlockIndex = 0;
-  unsigned OrigRecipeIndex = 0;
-  bool FoundRecipe = false;
-  for (VPBasicBlock *BB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(OrigRegion->getEntry()))) {
-    if (BB == OrigBlock) {
-      for (VPRecipeBase &R : *BB) {
-        if (&R == OrigRecipe) {
-          FoundRecipe = true;
-          break;
-        }
-        OrigRecipeIndex++;
-      }
-      break;
-    }
-    OrigBlockIndex++;
-  }
-  assert(FoundRecipe && "Original recipe found");
-
-  // Look for the corresponding recipe
-  unsigned BlockIndex = 0;
-  unsigned RecipeIndex = 0;
-  for (VPBasicBlock *BB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(NewRegion->getEntry()))) {
-    if (BlockIndex == OrigBlockIndex) {
-      for (VPRecipeBase &R : *BB) {
-        if (RecipeIndex == OrigRecipeIndex) {
-          return R.getVPValue(0);
-        }
-        RecipeIndex++;
-      }
-      break;
-    }
-    BlockIndex++;
-  }
-  llvm_unreachable("Cloned VPlan should also have the equivalent recipe!");
-}
-
 VPlan *VPlan::duplicate() {
   unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
@@ -1357,7 +1297,6 @@ VPlan *VPlan::duplicate() {
       NewPlan->ExitBlocks.push_back(cast<VPIRBasicBlock>(VPB));
   }
 
-  NewPlan->setVariableIVIncrement(findDuplicatedVariableIVIncrement(NewPlan));
   return NewPlan;
 }
 
