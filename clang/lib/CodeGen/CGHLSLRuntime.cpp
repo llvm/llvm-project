@@ -1302,7 +1302,7 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
     Shape.IsMatrix = true;
     Shape.IsRowMajor = isMatrixRowMajor(Ctx.getLangOpts(), Shape.RowType);
     Shape.Dimensions.push_back(Shape.IsRowMajor ? MT->getNumRows()
-                                              : MT->getNumColumns());
+                                                : MT->getNumColumns());
     Shape.Cols = Shape.IsRowMajor ? MT->getNumColumns() : MT->getNumRows();
     Shape.RowType = Ctx.getExtVectorType(MT->getElementType(), Shape.Cols);
   }
@@ -1390,9 +1390,9 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
 
     if (IsMatrixValue) {
       for (unsigned Col = 0; Col < Shape.Cols; ++Col)
-        Result = B.CreateInsertElement(
-            Result, B.CreateExtractElement(Value, Col),
-            Shape.getMatrixElementIndex(Row, Col));
+        Result =
+            B.CreateInsertElement(Result, B.CreateExtractElement(Value, Col),
+                                  Shape.getMatrixElementIndex(Row, Col));
     } else {
       SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
       Result =
