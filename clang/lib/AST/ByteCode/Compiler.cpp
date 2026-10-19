@@ -2786,17 +2786,25 @@ bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
   if (!E->hasAPValueResult())
     return this->delegate(E->getSubExpr());
 
+  // Emitting an APValue never has side effects.
+  if (DiscardResult)
+    return true;
+
   if (OptPrimType T = classify(E)) {
     // Try to emit the APValue directly, without visiting the subexpr.
     // This will only fail if we can't emit the APValue, so won't emit any
     // diagnostics or any double values.
-    if (DiscardResult)
-      return true;
     return this->visitAPValue(E->getAPValueResult(), *T, E);
   }
 
-  // Fall back to the subexpr for non-primitive APValues.
-  return this->delegate(E->getSubExpr());
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+  return this->visitAPValueInitializer(E->getAPValueResult(), E, E->getType());
 }
 
 template <class Emitter>
@@ -2805,11 +2813,8 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
   return this->visit(*It);
 }
 
-static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
+static CharUnits alignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
-  bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
-
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -2819,6 +2824,8 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   if (T.getQualifiers().hasUnaligned())
     return CharUnits::One();
 
+  bool AlignOfReturnsPreferred =
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
   // _Alignof as well.
@@ -2901,7 +2908,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     if (E->isArgumentType()) {
       QualType ArgType = E->getTypeOfArgument();
 
-      Size = AlignOfType(ArgType, ASTCtx, Kind);
+      Size = alignOfType(ArgType, ASTCtx, Kind);
     } else {
       // Argument is an expression, not a type.
       const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
@@ -2917,12 +2924,12 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       // default to 1 in those cases.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
         Size = ASTCtx.getDeclAlign(DRE->getDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else if (const auto *ME = dyn_cast<MemberExpr>(Arg))
         Size = ASTCtx.getDeclAlign(ME->getMemberDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else
-        Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
+        Size = alignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
     if (DiscardResult)
@@ -6234,8 +6241,47 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     }
     return true;
   }
-  // TODO: Other types.
+  if (Val.isComplexFloat()) {
+    assert(T->isComplexType());
+    if (!this->emitFloat(Val.getComplexFloatReal(), Info))
+      return false;
+    if (!this->emitInitElemFloat(0, Info))
+      return false;
+    if (!this->emitFloat(Val.getComplexFloatImag(), Info))
+      return false;
+    if (!this->emitInitElemFloat(1, Info))
+      return false;
+    return true;
+  }
+  if (Val.isComplexInt()) {
+    assert(T->isComplexIntegerType());
+    PrimType IntT = classifyPrim(T->castAs<ComplexType>()->getElementType());
+    if (!this->emitConst(Val.getComplexIntReal(), IntT, Info))
+      return false;
+    if (!this->emitInitElem(IntT, 0, Info))
+      return false;
+    if (!this->emitConst(Val.getComplexIntImag(), IntT, Info))
+      return false;
+    if (!this->emitInitElem(IntT, 1, Info))
+      return false;
+    return true;
+  }
+  if (Val.isVector()) {
+    assert(T->isVectorType());
+    PrimType ElemT = classifyPrim(T->castAs<VectorType>()->getElementType());
+    for (unsigned I = 0, N = Val.getVectorLength(); I != N; ++I) {
+      const APValue &Elem = Val.getVectorElt(I);
+      if (Elem.isIndeterminate())
+        continue;
+      if (!this->visitAPValue(Elem, ElemT, Info))
+        return false;
+      if (!this->emitInitElem(ElemT, I, Info))
+        return false;
+    }
+    return true;
+  }
 
+  // TODO: Other types.
   return false;
 }
 

@@ -273,10 +273,7 @@ public:
     ZS,
     ZT,
 
-    // AMDGPU-specific constraints
-    RF,
-
-    Max = RF,
+    Max = ZT,
   };
 
   // This class is intentionally packed into a 32b value as it is used as a
@@ -435,14 +432,21 @@ public:
     /// ("rm") vs ones it does not ("r"). This is because the inline asm may use
     /// instructions which don't support memory addressing modes for that
     /// operand.
+    ///
+    /// A tied use can't be foldable: it stores its matched operand number in
+    /// the bits that otherwise hold RegMayBeFolded.
     void setRegMayBeFolded(bool B) {
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
+      assert(!isMatched() && "Tied operand cannot be marked foldable");
       Bitfield::set<RegMayBeFolded>(Storage, B);
     }
     bool getRegMayBeFolded() const {
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
+      // Bit 30 of a tied use is part of its matched operand number.
+      if (isMatched())
+        return false;
       return Bitfield::get<RegMayBeFolded>(Storage);
     }
   };
@@ -533,8 +537,6 @@ public:
       return "ZS";
     case ConstraintCode::ZT:
       return "ZT";
-    case ConstraintCode::RF:
-      return "RF";
     default:
       llvm_unreachable("Unknown memory constraint");
     }

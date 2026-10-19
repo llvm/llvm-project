@@ -13,8 +13,12 @@ define void @widened_strided_load(ptr %in0, ptr %out0) {
 ;
 ; ZVL4096-LABEL: @widened_strided_load(
 ; ZVL4096-NEXT:  entry:
-; ZVL4096-NEXT:    [[TMP0:%.*]] = call <24 x i8> @llvm.masked.load.v24i8.p0(ptr align 2 [[IN0:%.*]], <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <24 x i8> poison)
-; ZVL4096-NEXT:    [[TMP1:%.*]] = shufflevector <24 x i8> [[TMP0]], <24 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; ZVL4096-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0:%.*]], i64 0
+; ZVL4096-NEXT:    [[TMP5:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; ZVL4096-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP5]], <2 x i64> <i64 0, i64 16>
+; ZVL4096-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; ZVL4096-NEXT:    [[TMP4:%.*]] = getelementptr i8, <16 x ptr> [[TMP3]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; ZVL4096-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 2 [[TMP4]], <16 x i1> splat (i1 true), <16 x i8> poison)
 ; ZVL4096-NEXT:    store <16 x i8> [[TMP1]], ptr [[OUT0:%.*]], align 2
 ; ZVL4096-NEXT:    ret void
 ;
@@ -160,23 +164,16 @@ entry:
 
 ; The resulting widened type isn't legal
 define void @too_wide(ptr %in0, ptr %out0) {
-; SIFIVEP870-LABEL: @too_wide(
-; SIFIVEP870-NEXT:  entry:
-; SIFIVEP870-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0:%.*]], i64 0
-; SIFIVEP870-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; SIFIVEP870-NEXT:    [[TMP2:%.*]] = getelementptr i16, <2 x ptr> [[TMP1]], <2 x i64> <i64 0, i64 16>
-; SIFIVEP870-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; SIFIVEP870-NEXT:    [[TMP4:%.*]] = getelementptr i16, <16 x ptr> [[TMP3]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; SIFIVEP870-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> align 2 [[TMP4]], <16 x i1> splat (i1 true), <16 x i16> poison)
-; SIFIVEP870-NEXT:    store <16 x i16> [[TMP5]], ptr [[OUT0:%.*]], align 2
-; SIFIVEP870-NEXT:    ret void
-;
-; ZVL4096-LABEL: @too_wide(
-; ZVL4096-NEXT:  entry:
-; ZVL4096-NEXT:    [[TMP0:%.*]] = call <24 x i16> @llvm.masked.load.v24i16.p0(ptr align 2 [[IN0:%.*]], <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <24 x i16> poison)
-; ZVL4096-NEXT:    [[TMP1:%.*]] = shufflevector <24 x i16> [[TMP0]], <24 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; ZVL4096-NEXT:    store <16 x i16> [[TMP1]], ptr [[OUT0:%.*]], align 2
-; ZVL4096-NEXT:    ret void
+; CHECK-LABEL: @too_wide(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x ptr> [[TMP4]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, <2 x ptr> [[TMP5]], <2 x i64> <i64 0, i64 16>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, <16 x ptr> [[TMP2]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> align 2 [[TMP3]], <16 x i1> splat (i1 true), <16 x i16> poison)
+; CHECK-NEXT:    store <16 x i16> [[TMP0]], ptr [[OUT0:%.*]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
   %in1 = getelementptr i16, ptr %in0, i64 16

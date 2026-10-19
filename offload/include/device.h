@@ -87,6 +87,21 @@ struct KernelLaunchInfoTy {
   }
 };
 
+/// Device properties that drive the computation of the launch geometry of a
+/// kernel.
+struct DeviceGeometryPropsTy {
+  /// Number of threads in a warp/wavefront.
+  uint32_t WarpSize = 0;
+  /// Maximum number of threads a block can be launched with.
+  uint32_t ThreadLimit = 0;
+  /// Number of threads per block to use when the user does not request one.
+  uint32_t DefaultNumThreads = 0;
+  /// Number of blocks to use when the user does not request one.
+  uint32_t DefaultNumBlocks = 0;
+  /// Maximum amount of shared memory, in bytes, a block can use in a kernel.
+  uint64_t MaxBlockSharedMemSize = 0;
+};
+
 struct PluginManager;
 
 struct DeviceTy {
@@ -113,6 +128,9 @@ struct DeviceTy {
 
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
+
+  /// Whether this device executes kernels on the host CPU.
+  bool isHostDevice() const { return IsHostDevice; }
 
   llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
 
@@ -147,13 +165,15 @@ struct DeviceTy {
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
-                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                     const ident_t *Loc = nullptr, const char *Name = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
-                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                       const ident_t *Loc = nullptr);
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -247,6 +267,42 @@ struct DeviceTy {
     return Value;
   }
 
+  /// Get string information from the device into \p Out, which is left empty
+  /// if the information cannot be obtained. \p Out is always null terminated.
+  template <unsigned N>
+  void getInfoString(DeviceInfo Info, llvm::SmallString<N> &Out) const {
+    auto Prop = static_cast<ol_device_info_t>(Info);
+    size_t Size = 0;
+    if (!olGetDeviceInfoSize(DeviceHandle, Prop, &Size) && Size > 0) {
+      Out.resize(Size);
+      if (olGetDeviceInfo(DeviceHandle, Prop, Size, Out.data()))
+        Out.clear();
+      else
+        // Drop the null terminator from the length, c_str() puts it back.
+        Out.pop_back();
+    } else {
+      Out.clear();
+    }
+    // Make sure the data can be handed out as a C string.
+    Out.c_str();
+  }
+
+  /// Return the maximum number of threads per team this device supports,
+  /// further limited by OMP_TEAMS_THREAD_LIMIT if the user set it.
+  uint32_t getThreadLimit() const;
+
+  /// Return the number of threads per team to use when the user does not
+  /// request one.
+  uint32_t getDefaultNumThreads() const {
+    return GeometryProps.DefaultNumThreads;
+  }
+
+  /// Return the maximum amount of shared memory, in bytes, a team can use in
+  /// any kernel.
+  uint64_t getMaxBlockSharedMemSize() const {
+    return GeometryProps.MaxBlockSharedMemSize;
+  }
+
   /// Record the launch-geometry properties for the kernel at \p KernelPtr,
   /// read once at registration time from its "<name>_kernel_environment"
   /// device global.
@@ -262,8 +318,14 @@ struct DeviceTy {
   }
 
 private:
+  /// Query the properties used to compute the launch geometry of a kernel.
+  llvm::Error initGeometryProps();
+
   /// Unique identifier of the device.
   llvm::SmallString<32> Uid;
+
+  /// Properties used to compute the launch geometry of a kernel.
+  DeviceGeometryPropsTy GeometryProps;
 
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
@@ -273,6 +335,9 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Whether this is a host device.
+  bool IsHostDevice = false;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;

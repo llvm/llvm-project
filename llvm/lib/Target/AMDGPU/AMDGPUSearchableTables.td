@@ -429,3 +429,12 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
 }
+
+def LDSDMAIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPULDSDMAIntrinsic";
+  let CppTypeName = "LDSDMAIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupLDSDMAIntrinsic";
+}

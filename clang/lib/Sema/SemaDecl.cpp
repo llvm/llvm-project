@@ -7814,9 +7814,15 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
       break;
     case SC_Register:
       // Local Named register
-      if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
-          DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
-        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      if (DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl())) {
+        const auto &TI = Context.getTargetInfo();
+        if (!TI.isValidGCCRegisterName(Label))
+          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+        else if (!TI.validateLocalRegisterVariable(
+                     TI.getNormalizedGCCRegisterName(Label,
+                                                     /*ReturnCanonical=*/true)))
+          Diag(E->getExprLoc(), diag::err_asm_invalid_local_var_reg) << Label;
+      }
       break;
     case SC_Static:
     case SC_Extern:
@@ -19154,6 +19160,12 @@ CreateNewDecl:
       AddAlignmentAttributesForRecord(RD);
       AddMsStructLayoutForRecord(RD);
     }
+
+    // The __interface tag implies __declspec(novtable) according to MSDN:
+    // https://learn.microsoft.com/en-us/cpp/cpp/interface?view=msvc-170
+    // so add the implicit attribute now.
+    if (Kind == TagTypeKind::Interface)
+      RD->addAttr(MSNoVTableAttr::CreateImplicit(Context));
   }
 
   if (ModulePrivateLoc.isValid()) {
