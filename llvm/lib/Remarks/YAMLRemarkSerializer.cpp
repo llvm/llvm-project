@@ -13,7 +13,6 @@
 
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
 #include "llvm/Remarks/Remark.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <optional>
 
