@@ -342,12 +342,10 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
 
-  QualType SymTy = CommonTy; // TODO eliminate this
-
   // FIXME: Why can we assert these?
-  assert(APSIntType(LInt) == BV.getAPSIntType(SymTy) &&
+  assert(APSIntType(LInt) == BV.getAPSIntType(CommonTy) &&
          "Integers are not of the same type as symbols!");
-  assert(APSIntType(RInt) == BV.getAPSIntType(SymTy) &&
+  assert(APSIntType(RInt) == BV.getAPSIntType(CommonTy) &&
          "Integers are not of the same type as symbols!");
 
   if (LSym == RSym)
@@ -356,10 +354,10 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .getAs<NonLoc>();
 
-  auto MakeSymExprVal = [&SVB, SymTy](SymbolRef Lhs, BinaryOperatorKind Op,
-                                      SymbolRef Rhs) {
+  auto MakeSymExprVal = [&SVB, CommonTy](SymbolRef Lhs, BinaryOperatorKind Op,
+                                         SymbolRef Rhs) {
     return SVB.makeSymExprValNN(Op, nonloc::SymbolVal(Lhs),
-                                nonloc::SymbolVal(Rhs), SymTy);
+                                nonloc::SymbolVal(Rhs), CommonTy);
   };
 
   SVal ResultSV = UnknownVal();
