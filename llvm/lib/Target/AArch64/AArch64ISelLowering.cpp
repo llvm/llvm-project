@@ -31243,6 +31243,21 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       return SDValue(LN, 0);
   }
 
+  // Perform the following optimization:
+  // t17: nxv2i64 = ...
+  // t18: i64 = extract_vector_elt t17, Constant:i64<0>
+  // t19: v1i64 = scalar_to_vector t18
+  // ==>
+  // t17: nxv2i64 = ...
+  // t20: v1i64 = extract_subvector t17, Constant:i64<0>
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 1 &&
+      N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      isNullConstant(N0.getOperand(1))) {
+    SDValue Src = N0.getOperand(0);
+    if (Src.getValueType().getVectorElementType() == VT.getVectorElementType())
+      return DAG.getExtractSubvector(DL, VT, Src, 0);
+  }
+
   if (VT.isFixedLengthVector() && VT.getVectorNumElements() > 1 &&
       isIntOrFPConstant(N0)) {
     SDValue Undef = DAG.getPOISON(N0.getValueType());

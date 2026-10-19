@@ -6,7 +6,7 @@
 define <1 x i64> @extract_lane0_i64(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: extract_lane0_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d0, v0.d[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 2 x i64> %v, i64 0
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -16,7 +16,7 @@ define <1 x i64> @extract_lane0_i64(<vscale x 2 x i64> %v) {
 define <1 x double> @extract_lane0_f64(<vscale x 2 x double> %v) {
 ; CHECK-LABEL: extract_lane0_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d0, v0.d[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 2 x double> %v, i64 0
   %r = insertelement <1 x double> poison, double %x, i64 0
@@ -30,7 +30,7 @@ define <1 x i64> @reduce_smin_v2i64(<2 x i64> %v) {
 ; LE-NEXT:    ptrue p0.d, vl2
 ; LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; LE-NEXT:    sminp z0.d, p0/m, z0.d, z0.d
-; LE-NEXT:    mov d0, v0.d[0]
+; LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: reduce_smin_v2i64:
@@ -38,7 +38,7 @@ define <1 x i64> @reduce_smin_v2i64(<2 x i64> %v) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ptrue p0.d, vl2
 ; BE-NEXT:    sminp z0.d, p0/m, z0.d, z0.d
-; BE-NEXT:    mov d0, v0.d[0]
+; BE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; BE-NEXT:    ret
   %x = call i64 @llvm.vector.reduce.smin.v2i64(<2 x i64> %v)
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -51,7 +51,7 @@ define <1 x i64> @reduce_smax_v2i64(<2 x i64> %v) {
 ; LE-NEXT:    ptrue p0.d, vl2
 ; LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; LE-NEXT:    smaxp z0.d, p0/m, z0.d, z0.d
-; LE-NEXT:    mov d0, v0.d[0]
+; LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: reduce_smax_v2i64:
@@ -59,7 +59,7 @@ define <1 x i64> @reduce_smax_v2i64(<2 x i64> %v) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ptrue p0.d, vl2
 ; BE-NEXT:    smaxp z0.d, p0/m, z0.d, z0.d
-; BE-NEXT:    mov d0, v0.d[0]
+; BE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; BE-NEXT:    ret
   %x = call i64 @llvm.vector.reduce.smax.v2i64(<2 x i64> %v)
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -72,7 +72,7 @@ define <1 x i64> @reduce_umin_v2i64(<2 x i64> %v) {
 ; LE-NEXT:    ptrue p0.d, vl2
 ; LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; LE-NEXT:    uminp z0.d, p0/m, z0.d, z0.d
-; LE-NEXT:    mov d0, v0.d[0]
+; LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: reduce_umin_v2i64:
@@ -80,7 +80,7 @@ define <1 x i64> @reduce_umin_v2i64(<2 x i64> %v) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ptrue p0.d, vl2
 ; BE-NEXT:    uminp z0.d, p0/m, z0.d, z0.d
-; BE-NEXT:    mov d0, v0.d[0]
+; BE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; BE-NEXT:    ret
   %x = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> %v)
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -93,7 +93,7 @@ define <1 x i64> @reduce_umax_v2i64(<2 x i64> %v) {
 ; LE-NEXT:    ptrue p0.d, vl2
 ; LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; LE-NEXT:    umaxp z0.d, p0/m, z0.d, z0.d
-; LE-NEXT:    mov d0, v0.d[0]
+; LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: reduce_umax_v2i64:
@@ -101,7 +101,7 @@ define <1 x i64> @reduce_umax_v2i64(<2 x i64> %v) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ptrue p0.d, vl2
 ; BE-NEXT:    umaxp z0.d, p0/m, z0.d, z0.d
-; BE-NEXT:    mov d0, v0.d[0]
+; BE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; BE-NEXT:    ret
   %x = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> %v)
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -114,7 +114,7 @@ define <1 x i64> @reduce_and_v2i64(<2 x i64> %v) {
 ; LE-NEXT:    ptrue p0.d, vl2
 ; LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; LE-NEXT:    andv d0, p0, z0.d
-; LE-NEXT:    mov d0, v0.d[0]
+; LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: reduce_and_v2i64:
@@ -122,7 +122,7 @@ define <1 x i64> @reduce_and_v2i64(<2 x i64> %v) {
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ptrue p0.d, vl2
 ; BE-NEXT:    andv d0, p0, z0.d
-; BE-NEXT:    mov d0, v0.d[0]
+; BE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; BE-NEXT:    ret
   %x = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> %v)
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -134,7 +134,7 @@ define <1 x i64> @reduce_add_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
-; CHECK-NEXT:    mov d0, v0.d[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %x = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> %v)
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
@@ -146,7 +146,7 @@ define <1 x double> @reduce_fmin_nxv2f64(<vscale x 2 x double> %v) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fminnmv d0, p0, z0.d
-; CHECK-NEXT:    mov d0, v0.d[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %x = call double @llvm.vector.reduce.fmin.nxv2f64(<vscale x 2 x double> %v)
   %r = insertelement <1 x double> poison, double %x, i64 0
