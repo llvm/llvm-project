@@ -1000,13 +1000,21 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(I1))
+    return LP->isCleanup() == cast<LandingPadInst>(I2)->isCleanup();
 
   return true;
 }
 
 bool Instruction::isIdenticalTo(const Instruction *I) const {
-  return isIdenticalToWhenDefined(I) &&
-         SubclassOptionalData == I->SubclassOptionalData;
+  if (!isIdenticalToWhenDefined(I) ||
+      SubclassOptionalData != I->SubclassOptionalData)
+    return false;
+
+  if (isa<FPMathOperator>(this))
+    return getFastMathFlags() == I->getFastMathFlags();
+
+  return true;
 }
 
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I,

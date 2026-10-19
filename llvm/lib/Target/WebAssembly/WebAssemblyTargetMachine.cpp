@@ -131,6 +131,7 @@ using WebAssembly::WasmEnableSjLj;
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
   bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
+  bool EnableWasmEH = TM->Options.ExceptionModel == ExceptionHandling::Wasm;
 
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
@@ -140,6 +141,10 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   if (EnableEmEH && WasmEnableSjLj)
     report_fatal_error(
         "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
+  // You can't mix Wasm EH with Emscripten SjLj.
+  if (EnableWasmEH && WasmEnableEmSjLj)
+    report_fatal_error(
+        "-exception-model=wasm not allowed with -enable-emscripten-sjlj");
 
   if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
     // FIXME: This flag should be removed in favor of directly using the
@@ -158,10 +163,6 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
     report_fatal_error(
         "-wasm-enable-sjlj only allowed with -exception-model=wasm");
-
-  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
-  // measure, but some code will error out at compile time in this combination.
-  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
 }
 
 /// Create an WebAssembly architecture model.
