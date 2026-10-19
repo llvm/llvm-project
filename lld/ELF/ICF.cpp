@@ -263,11 +263,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
 
     Symbol &sa = secA->file->getRelocTargetSym(*rai);
     Symbol &sb = secB->file->getRelocTargetSym(*rbi);
-    if (&sa == &sb) {
-      if (addA == addB)
-        continue;
-      return false;
-    }
+    if (&sa == &sb && addA == addB)
+      continue;
 
     auto *da = dyn_cast<Defined>(&sa);
     auto *db = dyn_cast<Defined>(&sb);
