@@ -95,6 +95,24 @@ define amdgpu_ps double @inreg_double_ret(double inreg %a) {
   ret double %a
 }
 
+define amdgpu_ps fp128 @inreg_fp128_ret(fp128 inreg %a) {
+; GFX11-LABEL: inreg_fp128_ret:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    ; return to shader part epilog
+  ret fp128 %a
+}
+
+define amdgpu_ps fp128 @divergent_fp128_ret(fp128 %a) {
+; GFX11-LABEL: divergent_fp128_ret:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX11-NEXT:    ; return to shader part epilog
+  %neg = fneg fp128 %a
+  ret fp128 %neg
+}
+
 define amdgpu_ps <2 x double> @uniform_v_to_s_2_double(<2 x double> inreg %a, <2 x double> inreg %b) {
 ; GFX11-LABEL: uniform_v_to_s_2_double:
 ; GFX11:       ; %bb.0:
