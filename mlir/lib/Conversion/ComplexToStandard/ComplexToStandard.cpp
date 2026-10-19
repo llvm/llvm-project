@@ -317,6 +317,9 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   // Handle special cases as StableHLO implementation does:
   // 1. When b == 0, set imag(exp(z)) = 0
   // 2. When exp(x) == inf, use exp(x/2)*(cos(y)+I*sin(y))*exp(x/2)
+  // Handle non-finite inputs according to C99 annex G:
+  // 3. When x == -inf and y is non-finite, return 0 + I*0.
+  // 4. When x == +inf and y is non-finite, return inf + I*NaN.
   LogicalResult
   matchAndRewrite(complex::ExpOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
