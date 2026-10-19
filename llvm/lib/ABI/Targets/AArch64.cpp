@@ -351,8 +351,6 @@ bool AArch64TargetInfo::containsOnlyPointers(const Type *Ty) const {
   for (const FieldInfo &Field : RT->getFields()) {
     const Type *FT = Field.FieldType;
     while (const auto *AT = dyn_cast<ArrayType>(FT)) {
-      // TODO: Consider whether this should accept matrix types. Clang
-      // doesn't, but that's probably an error.
       if (AT->isMatrixType())
         break;
       FT = AT->getElementType();
