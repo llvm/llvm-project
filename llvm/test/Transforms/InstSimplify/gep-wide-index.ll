@@ -7,10 +7,42 @@ target datalayout = "p:128:128-i128:128"
 
 @g = global [4 x i128] zeroinitializer
 
+define ptr @index() {
+; CHECK-LABEL: define ptr @index() {
+; CHECK-NEXT:    ret ptr inttoptr (i128 18446744073709551621 to ptr)
+;
+  %r = getelementptr i8, ptr null, i128 18446744073709551621
+  ret ptr %r
+}
+
+define ptr @stride() {
+; CHECK-LABEL: define ptr @stride() {
+; CHECK-NEXT:    ret ptr inttoptr (i128 18446744073709551616 to ptr)
+;
+  %r = getelementptr [4 x i128], ptr null, i128 0, i128 1152921504606846976
+  ret ptr %r
+}
+
+define ptr @nested() {
+; CHECK-LABEL: define ptr @nested() {
+; CHECK-NEXT:    ret ptr inttoptr (i128 18446744073709551622 to ptr)
+;
+  %r = getelementptr i8, ptr getelementptr (i8, ptr null, i128 18446744073709551621), i128 1
+  ret ptr %r
+}
+
 define ptr @nested_global() {
 ; CHECK-LABEL: define ptr @nested_global() {
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i128 -9223372036854775776)
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i128 9223372036854775840)
 ;
   %r = getelementptr i128, ptr getelementptr (i128, ptr @g, i128 576460752303423489), i128 1
+  ret ptr %r
+}
+
+define ptr @nested_struct() {
+; CHECK-LABEL: define ptr @nested_struct() {
+; CHECK-NEXT:    ret ptr inttoptr (i128 18446744073709551632 to ptr)
+;
+  %r = getelementptr {i8, i128}, ptr getelementptr (i8, ptr null, i128 18446744073709551616), i128 0, i32 1
   ret ptr %r
 }
