@@ -90,3 +90,23 @@ gpu.module @materializecast [#xevm.target<chip = "pvc">]{
     gpu.return
   }
 }
+
+// -----
+gpu.module @materializecast {
+  // The memref offset counts i4 elements, two per byte.
+  // CHECK-LABEL: gpu.func @materialize_subbyte_memref_offset
+  // CHECK: %[[BASE:.*]], %[[OFF:.*]], %{{.*}}:2, %{{.*}}:2 = memref.extract_strided_metadata
+  // CHECK: %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]]
+  // CHECK: %[[PTR64:.*]] = arith.index_castui %[[PTR]] : index to i64
+  // CHECK: %[[OFF64:.*]] = arith.index_castui %[[OFF]] : index to i64
+  // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : i64
+  // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i64
+  // CHECK: %[[BITS:.*]] = arith.muli %[[OFF64]], %[[C4]] : i64
+  // CHECK: %[[BYTES:.*]] = arith.divui %[[BITS]], %[[C8]] : i64
+  // CHECK: arith.addi %[[PTR64]], %[[BYTES]] : i64
+  gpu.func @materialize_subbyte_memref_offset(%src: memref<32x512xi4, strided<[512, 1], offset: ?>>) kernel {
+    %t = xegpu.create_nd_tdesc %src : memref<32x512xi4, strided<[512, 1], offset: ?>> -> !xegpu.tensor_desc<1x64xi4>
+    %v = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<1x64xi4> -> vector<4xi4>
+    gpu.return
+  }
+}
