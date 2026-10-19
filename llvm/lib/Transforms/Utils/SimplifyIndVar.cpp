@@ -2078,12 +2078,16 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
 
   // The step is expanded in the loop header. If it contains a division that
   // may trap, this is only safe if the narrow step is computed before the
-  // loop. Otherwise the division may be guarded by a condition in the loop.
+  // loop or on every iteration of it. Otherwise the division may be guarded
+  // by a condition in the loop.
   if (!Rewriter.isSafeToExpand(AddRec->getStepRecurrence(*SE))) {
     BinaryOperator *BO;
     Value *Start, *Step;
-    if (!matchSimpleRecurrence(OrigPhi, BO, Start, Step) ||
-        !L->isLoopInvariant(Step))
+    if (!matchSimpleRecurrence(OrigPhi, BO, Start, Step))
+      return nullptr;
+    auto *StepInst = dyn_cast<Instruction>(Step);
+    if (!L->isLoopInvariant(Step) &&
+        !(StepInst && isGuaranteedToExecuteForEveryIteration(StepInst, L)))
       return nullptr;
   }
 
