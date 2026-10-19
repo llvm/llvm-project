@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: cir-opt --cir-flatten-cfg %t.cir -o %t-flat.cir
+// RUN: FileCheck --input-file=%t-flat.cir %s --check-prefix=CIR-FLAT
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -O2 -fno-unroll-loops -falign-loops=32 -emit-cir %s -o %t-opts.cir
 // RUN: FileCheck --input-file=%t-opts.cir %s --check-prefix=OPTS
 
@@ -10,33 +12,79 @@ int arr[3];
 // loops.
 void must_progress(int n) {
 // CIR-LABEL: cir.func {{.*}} @_Z13must_progressi
+// CIR-FLAT-LABEL: cir.func {{.*}} @_Z13must_progressi
   // CIR: cir.for
   for (int i = 0; i < n; ++i)
     use(i);
   // CIR: } loop_hints < must_progress>
+  // CIR-FLAT: cir.br ^{{.*}} loop_hints < must_progress>
 
   // CIR: cir.while
   while (n--)
     use(n);
   // CIR: } loop_hints < must_progress>
+  // CIR-FLAT: cir.br ^{{.*}} loop_hints < must_progress>
 
   // CIR: cir.do
   do {
     use(n);
   } while (n > 0);
   // CIR: } loop_hints < must_progress>
+  // CIR-FLAT: cir.brcond %{{.*}} ^{{.*}}, ^{{.*}} loop_hints < must_progress>
 
   // Like classic codegen, range-for loops are not 'mustprogress'.
   // CIR: cir.for
   for (int x : arr)
     use(x);
   // CIR-NOT: loop_hints
+  // CIR-FLAT-NOT: loop_hints
 
   // CIR: cir.for
   for (;;) {
   }
   // CIR-NOT: loop_hints
+  // CIR-FLAT-NOT: loop_hints
   // CIR: cir.return
+}
+
+// A 'continue' that branches to the loop header is a back edge and carries the
+// hints, while one that branches to a 'for' step does not.
+void continue_break(int n) {
+// CIR-LABEL: cir.func {{.*}} @_Z14continue_breaki
+// CIR-FLAT-LABEL: cir.func {{.*}} @_Z14continue_breaki
+  for (int i = 0; i < n; ++i) {
+    if (i & 1)
+      continue;
+    if (i > 8)
+      break;
+    use(i);
+  }
+  // CIR: } loop_hints < must_progress>
+  // CIR-FLAT-NOT: loop_hints
+  // CIR-FLAT: cir.br ^{{.*}} loop_hints < must_progress>
+  while (n--) {
+    if (n & 1)
+      continue;
+    use(n);
+  }
+  // CIR: } loop_hints < must_progress>
+  // Nothing between the 'for' step and the 'while' back edges has hints, and
+  // both the 'continue' and the end of the body target the same header.
+  // CIR-FLAT-NOT: loop_hints
+  // CIR-FLAT: cir.br ^[[WHDR:bb[0-9]+]] loop_hints < must_progress>
+  // CIR-FLAT: cir.br ^[[WHDR]] loop_hints < must_progress>
+  do {
+    if (n & 1)
+      continue;
+    use(n);
+  } while (--n);
+  // CIR: } loop_hints < must_progress>
+  // The 'continue' and end of the body of a do-while branch forward to the
+  // condition, so only the latch, back to the body, has the hints.
+  // CIR-FLAT-NOT: loop_hints
+  // CIR-FLAT: cir.brcond %{{.*}} ^{{.*}}, ^{{.*}} loop_hints < must_progress>
+  // CIR-FLAT-NOT: loop_hints
+  // CIR-FLAT: cir.return
 }
 
 

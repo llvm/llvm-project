@@ -1,40 +1,123 @@
-// RUN: cir-opt %s | cir-opt | FileCheck %s
+// RUN: cir-opt %s | cir-opt | FileCheck %s --check-prefix=BOTH,BEFORE
+// RUN: cir-opt %s -cir-flatten-cfg | FileCheck %s --check-prefix=BOTH,AFTER
 
+// BOTH-LABEL: cir.func @loops
 cir.func @loops(%c: !cir.bool) {
-  // CHECK: cir.while {
+
+  // BEFORE: cir.while {
   cir.while {
     cir.condition(%c)
   } do {
     cir.yield
-  // CHECK: } loop_hints < must_progress>
   } loop_hints < must_progress>
+  // BEFORE:                  } loop_hints < must_progress>
+  // AFTER: cir.brcond %{{.*}} ^[[EXIT_BR:.*]], ^
+  // AFTER: ^[[EXIT_BR]]:
+  // AFTER-NEXT: cir.br ^{{.*}} loop_hints < must_progress>
 
-  // CHECK: cir.do {
+  // BEFORE: cir.do {
   cir.do {
     cir.yield
   } while {
+  // BEFORE: } while {
     cir.condition(%c)
-  // CHECK: } loop_hints <>
   } loop_hints <>
+  // BEFORE:                 } loop_hints <>
+  // AFTER: cir.brcond %{{.*}} loop_hints <>
 
-  // CHECK: cir.for : cond {
+  // BEFORE: cir.for : cond {
   cir.for : cond {
     cir.condition(%c)
   } body {
     cir.yield
   } step {
     cir.yield
-  // CHECK: } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
   } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  // BEFORE: } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  // AFTER: cir.brcond %{{.*}} ^[[BETWEEN_BR:.*]], ^
+  // AFTER: ^[[BETWEEN_BR]]:
+  // AFTER-NEXT: cir.br ^[[EXIT_BR:.*]]
+  // AFTER: ^[[EXIT_BR]]:
+  // AFTER-NEXT: cir.br ^{{.*}} loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
 
-  // CHECK: cir.for : cond {
+  // BEFORE: cir.for : cond {
   cir.for : cond {
     cir.condition(%c)
   } body {
     cir.yield
   } step {
     cir.yield
-  // CHECK: } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
   } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+  // BEFORE:                  } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+  // AFTER: cir.brcond %{{.*}} ^[[BETWEEN_BR:.*]], ^
+  // AFTER: ^[[BETWEEN_BR]]:
+  // AFTER-NEXT: cir.br ^[[EXIT_BR:.*]]
+  // AFTER: ^[[EXIT_BR]]:
+  // AFTER-NEXT: cir.br ^{{.*}} loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
   cir.return
 }
+
+// BOTH-LABEL: cir.func @continue_and_break
+cir.func @continue_and_break(%c: !cir.bool) {
+  // BEFORE: cir.while {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    // BEFORE: cir.if
+    cir.if %c {
+    // BEFORE: cir.continue
+      cir.continue
+    }
+    // BEFORE: cir.if
+    cir.if %c {
+    // BEFORE: cir.break
+      cir.break
+    }
+    cir.yield
+  } loop_hints < must_progress>
+  // BEFORE:                  } loop_hints < must_progress>
+  // AFTER: cir.brcond %{{.*}}
+  // AFTER: cir.brcond %{{.*}} ^[[EXIT_BR:.*]], ^
+  // AFTER: ^[[EXIT_BR]]:
+  // AFTER-NEXT: cir.br ^{{.*}} loop_hints < must_progress>
+
+  // We get a 2nd exit here, so make sure it is marked too.
+  // AFTER: cir.brcond %{{.*}} ^{{.*}}, ^[[EXIT_BR:.*]]
+  // AFTER: ^[[EXIT_BR]]:
+  // AFTER-NEXT: cir.br ^{{.*}} loop_hints < must_progress>
+
+  // BEFORE: cir.for : cond {
+  cir.for : cond {
+    cir.condition(%c)
+  } body {
+    // BEFORE: cir.if
+    cir.if %c {
+      // BEFORE: cir.continue
+      cir.continue
+    }
+    cir.yield
+  } step {
+    cir.yield
+  } loop_hints < unroll = enable>
+  // BEFORE: } loop_hints < unroll = enable>
+  // AFTER: cir.br ^{{.*}} loop_hints < unroll = enable>
+
+  // BEFORE: cir.do {
+  cir.do {
+    // BEFORE: cir.if
+    cir.if %c {
+      // BEFORE: cir.continue
+      cir.continue
+    }
+    cir.yield
+  } while {
+    cir.condition(%c)
+  } loop_hints < vectorize_enable>
+  // BEFORE: } loop_hints < vectorize_enable>
+  // A do-while's 'continue' and end of body branch forward to the condition, so
+  // they are not back edges. Only the latch, back to the body, has the hints.
+  // AFTER-NOT: loop_hints
+  // AFTER: cir.brcond %{{.*}} ^{{.*}}, ^{{.*}} loop_hints < vectorize_enable>
+  cir.return
+}
+
