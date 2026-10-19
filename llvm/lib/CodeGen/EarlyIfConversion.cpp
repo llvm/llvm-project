@@ -532,6 +532,15 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
     return false;
   }
 
+  // Conversion erases the conditional blocks. If a conditional block's address
+  // is taken, prevent the conversion. Otherwise, its references would be
+  // dangling.
+  if ((TBB != Tail && TBB->hasAddressTaken()) ||
+      (FBB != Tail && FBB->hasAddressTaken())) {
+    LLVM_DEBUG(dbgs() << "Conditional block has its address taken.\n");
+    return false;
+  }
+
   // This is a triangle or a diamond.
   // Skip if we cannot predicate and there are no phis skip as there must be
   // side effects that can only be handled with predication.
@@ -801,7 +810,9 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
   }
 
   assert(Head->succ_empty() && "Additional head successors?");
-  if (!ExtraPreds && Head->isLayoutSuccessor(Tail)) {
+  // Joining erases Tail, so an address-taken Tail must stay a separate block.
+  if (!ExtraPreds && Head->isLayoutSuccessor(Tail) &&
+      !Tail->hasAddressTaken()) {
     // Splice Tail onto the end of Head.
     LLVM_DEBUG(dbgs() << "Joining tail " << printMBBReference(*Tail)
                       << " into head " << printMBBReference(*Head) << '\n');
