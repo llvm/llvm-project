@@ -1180,28 +1180,40 @@ static bool isMDTuple(const Metadata *MD) { return !MD || isa<MDTuple>(MD); }
 
 void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
   bool IsNonDebugFLContext = N.isNonDebug();
-  CheckDI(IsNonDebugFLContext || isa<DISubprogram>(N.getScopes()[0].get()),
-          "The first scope in an MDFunctionLocalContext with debug info must "
-          "be the function DISubprogram",
-          &N, N.getScopes()[0].get());
-  DISubprogram *FnSP = cast<DISubprogram>(N.getScope(0).get());
+  if (IsNonDebugFLContext) {
+    CheckDI(N.getScopes().empty(),
+            "MDFunctionLocalContext that is NonDebug must contain no scopes",
+            &N);
+    CheckDI(N.getSrcLocs().empty(),
+            "MDFunctionLocalContext that is NonDebug must contain no srcLocs",
+            &N);
+  } else {
+    CheckDI(!N.getScopes().empty(),
+            "An MDFunctionLocalContext that is not NonDebug must contain its "
+            "function's subprogram as the first scope", &N);
+    CheckDI(isa<DISubprogram>(N.getScopes()[0].get()),
+            "The first scope in an MDFunctionLocalContext with debug info must "
+            "be the function DISubprogram",
+            &N, N.getScopes()[0].get());
 
-  // Validate scopes.
-  for (FLScope Scope : drop_begin(N.getScopes())) {
-    CheckDI(!isa<DISubprogram>(Scope.get()),
-            "DISubprogram should only appear as the first scope in a "
-            "function-local context",
-            Scope, FnSP, &N);
-    CheckDI(Scope.get()->getSubprogram() == FnSP,
-            "scope in function-local context points at wrong subprogram for "
-            "function",
-            Scope, FnSP, &N);
+    DISubprogram *FnSP = cast<DISubprogram>(N.getScope(0).get());
+    // Validate scopes.
+    for (FLScope Scope : drop_begin(N.getScopes())) {
+      CheckDI(!isa<DISubprogram>(Scope.get()),
+              "DISubprogram should only appear as the first scope in a "
+              "function-local context",
+              Scope, FnSP, &N);
+      CheckDI(Scope.get()->getSubprogram() == FnSP,
+              "scope in function-local context points at wrong subprogram for "
+              "function",
+              Scope, FnSP, &N);
+    }
+
+    // Validate indexes for SrcLocs and InlinedCalls.
+    for (FLSrcLoc SrcLoc : N.getSrcLocs())
+      CheckDI(SrcLoc.ScopeIdx.get() < N.getScopes().size(),
+              "FLSrcLoc has invalid ScopeIdx", SrcLoc.ScopeIdx.get(), &N);
   }
-
-  // Validate indexes for SrcLocs and InlinedCalls.
-  for (FLSrcLoc SrcLoc : N.getSrcLocs())
-    CheckDI(SrcLoc.ScopeIdx.get() < N.getScopes().size(),
-            "FLSrcLoc has invalid ScopeIdx", SrcLoc.ScopeIdx.get(), &N);
   for (auto [Idx, InlinedCall] : enumerate(N.getInlinedCalls())) {
     if (!InlinedCall.SrcLocIdx) {
       CheckDI(IsNonDebugFLContext && !InlinedCall.isInlined(),

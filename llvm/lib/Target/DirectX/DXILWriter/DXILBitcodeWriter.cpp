@@ -322,6 +322,11 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
+  void writeMDFunctionLocalContext(
+      const MDFunctionLocalContext *N, SmallVectorImpl<uint64_t> &Record,
+      unsigned &Abbrev) {
+    llvm_unreachable("DXIL cannot contain MDFunctionLocalContext Nodes");
+  }
   unsigned createMetadataStringsAbbrev();
   void writeMetadataStrings(ArrayRef<const Metadata *> Strings,
                             SmallVectorImpl<uint64_t> &Record);
