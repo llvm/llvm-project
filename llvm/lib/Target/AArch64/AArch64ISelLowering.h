@@ -988,7 +988,8 @@ FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
 
 // Determine the effective TLS model for an ELF global, applying
 // AArch64-specific restrictions and configuration.
-TLSModel::Model getELFTLSModel(const GlobalValue *GV, const TargetMachine &TM,
+TLSModel::Model getELFTLSModel(const GlobalValue *GV,
+                               const AArch64TargetMachine &TM,
                                bool HasELFSignedGOT);
 } // end namespace AArch64
 

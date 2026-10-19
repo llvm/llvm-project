@@ -43,6 +43,7 @@
 #include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
+#include "mlir/Dialect/Math/TransformOps/MathTransformOps.h"
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
@@ -104,6 +105,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   func::registerTransformDialectExtension(registry);
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
+  math::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
   nvgpu::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);

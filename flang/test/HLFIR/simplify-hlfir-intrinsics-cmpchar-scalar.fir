@@ -12,18 +12,18 @@
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "y"}) -> !fir.logical<4> {
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test_eq", uniq_name = "_QFtest_eqEtest_eq"}>
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtest_eqEtest_eq"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFtest_eqEtest_eq") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest_eqEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_5]] uniq_name("_QFtest_eqEx") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_10:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]]#0 typeparams %[[VAL_10]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest_eqEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]]#0 typeparams %[[VAL_10]]#1 dummy_scope %[[VAL_5]] uniq_name("_QFtest_eqEy") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %0 = fir.dummy_scope : !fir.dscope
     %1 = fir.alloca !fir.logical<4> {bindc_name = "test_eq", uniq_name = "_QFtest_eqEtest_eq"}
-    %2:2 = hlfir.declare %1 {uniq_name = "_QFtest_eqEtest_eq"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %2:2 = hlfir.declare %1 uniq_name("_QFtest_eqEtest_eq") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %4:2 = hlfir.declare %3#0 typeparams %3#1 dummy_scope %0 {uniq_name = "_QFtest_eqEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %4:2 = hlfir.declare %3#0 typeparams %3#1 dummy_scope %0 uniq_name("_QFtest_eqEx") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %5:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %6:2 = hlfir.declare %5#0 typeparams %5#1 dummy_scope %0 {uniq_name = "_QFtest_eqEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %6:2 = hlfir.declare %5#0 typeparams %5#1 dummy_scope %0 uniq_name("_QFtest_eqEy") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %7 = hlfir.cmpchar eq %4#0 %6#0 : (!fir.boxchar<1>, !fir.boxchar<1>) -> i1
 // CHECK:           %[[VAL_12:.*]] = arith.cmpi slt, %[[VAL_8]]#1, %[[VAL_10]]#1 : index
 // CHECK:           %[[VAL_13:.*]] = arith.select %[[VAL_12]], %[[VAL_8]]#1, %[[VAL_10]]#1 : index
@@ -108,23 +108,23 @@
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2>>
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 dummy_scope %[[VAL_7]] {uniq_name = "_QFtest_neEc1"} : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 dummy_scope %[[VAL_7]] uniq_name("_QFtest_neEc1") : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
 // CHECK:           %[[VAL_11:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2>>
-// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] typeparams %c1 dummy_scope %[[VAL_7]] {uniq_name = "_QFtest_neEc2"} : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
+// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] typeparams %c1 dummy_scope %[[VAL_7]] uniq_name("_QFtest_neEc2") : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
 // CHECK:           %[[VAL_14:.*]] = fir.alloca i32 <{bindc_name = "test_ne", uniq_name = "_QFtest_neEtest_ne"}>
-// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFtest_neEtest_ne"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] uniq_name("_QFtest_neEtest_ne") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %0 = fir.dummy_scope : !fir.dscope
     %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
     %2 = fir.convert %1#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2>>
     %c1 = arith.constant 1 : index
-    %3:2 = hlfir.declare %2 typeparams %c1 dummy_scope %0 {uniq_name = "_QFtest_neEc1"} : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
+    %3:2 = hlfir.declare %2 typeparams %c1 dummy_scope %0 uniq_name("_QFtest_neEc1") : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
     %4:2 = fir.unboxchar %arg1 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
     %5 = fir.convert %4#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2>>
     %c1_0 = arith.constant 1 : index
-    %6:2 = hlfir.declare %5 typeparams %c1_0 dummy_scope %0 {uniq_name = "_QFtest_neEc2"} : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
+    %6:2 = hlfir.declare %5 typeparams %c1_0 dummy_scope %0 uniq_name("_QFtest_neEc2") : (!fir.ref<!fir.char<2>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>)
     %7 = fir.alloca i32 {bindc_name = "test_ne", uniq_name = "_QFtest_neEtest_ne"}
-    %8:2 = hlfir.declare %7 {uniq_name = "_QFtest_neEtest_ne"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %8:2 = hlfir.declare %7 uniq_name("_QFtest_neEtest_ne") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %9 = hlfir.cmpchar ne %3#0 %6#0 : (!fir.ref<!fir.char<2>>, !fir.ref<!fir.char<2>>) -> i1
 // CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %c1 to %c1 step %c1 iter_args(%[[VAL_18:.*]] = %c0_i16) -> (i16) {
 // CHECK:             %[[VAL_19:.*]] = arith.cmpi eq, %[[VAL_18]], %c0_i16 : i16
@@ -203,33 +203,33 @@
 // CHECK-LABEL:   func.func @_QPtest1() -> !fir.logical<4> {
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c1", uniq_name = "_QFtest1Ec1"}>
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %c1 {uniq_name = "_QFtest1Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %c1 uniq_name("_QFtest1Ec1") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c2", uniq_name = "_QFtest1Ec2"}>
-// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %c1 {uniq_name = "_QFtest1Ec2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %c1 uniq_name("_QFtest1Ec2") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test1", uniq_name = "_QFtest1Etest1"}>
-// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFtest1Etest1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] uniq_name("_QFtest1Etest1") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QQclX) : !fir.ref<!fir.char<1,0>>
-// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] typeparams %c0 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX"} : (!fir.ref<!fir.char<1,0>>, index) -> (!fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1,0>>)
+// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] typeparams %c0 uniq_name("_QQclX") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,0>>, index) -> (!fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1,0>>)
 // CHECK:           hlfir.assign %[[VAL_15]]#0 to %[[VAL_9]]#0 : !fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_16:.*]] = fir.address_of(@_QQclXFF) : !fir.ref<!fir.char<1>>
-// CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclXFF"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %c1 uniq_name("_QQclXFF") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           hlfir.assign %[[VAL_17]]#0 to %[[VAL_11]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
     %0 = fir.dummy_scope : !fir.dscope
     %c1 = arith.constant 1 : index
     %1 = fir.alloca !fir.char<1> {bindc_name = "c1", uniq_name = "_QFtest1Ec1"}
-    %2:2 = hlfir.declare %1 typeparams %c1 {uniq_name = "_QFtest1Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %2:2 = hlfir.declare %1 typeparams %c1 uniq_name("_QFtest1Ec1") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     %c1_0 = arith.constant 1 : index
     %3 = fir.alloca !fir.char<1> {bindc_name = "c2", uniq_name = "_QFtest1Ec2"}
-    %4:2 = hlfir.declare %3 typeparams %c1_0 {uniq_name = "_QFtest1Ec2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %4:2 = hlfir.declare %3 typeparams %c1_0 uniq_name("_QFtest1Ec2") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     %5 = fir.alloca !fir.logical<4> {bindc_name = "test1", uniq_name = "_QFtest1Etest1"}
-    %6:2 = hlfir.declare %5 {uniq_name = "_QFtest1Etest1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %6:2 = hlfir.declare %5 uniq_name("_QFtest1Etest1") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %7 = fir.address_of(@_QQclX) : !fir.ref<!fir.char<1,0>>
     %c0 = arith.constant 0 : index
-    %8:2 = hlfir.declare %7 typeparams %c0 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX"} : (!fir.ref<!fir.char<1,0>>, index) -> (!fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1,0>>)
+    %8:2 = hlfir.declare %7 typeparams %c0 uniq_name("_QQclX") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,0>>, index) -> (!fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1,0>>)
     hlfir.assign %8#0 to %2#0 : !fir.ref<!fir.char<1,0>>, !fir.ref<!fir.char<1>>
     %9 = fir.address_of(@_QQclXFF) : !fir.ref<!fir.char<1>>
     %c1_1 = arith.constant 1 : index
-    %10:2 = hlfir.declare %9 typeparams %c1_1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclXFF"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %10:2 = hlfir.declare %9 typeparams %c1_1 uniq_name("_QQclXFF") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     hlfir.assign %10#0 to %4#0 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
     %11 = hlfir.cmpchar sgt %2#0 %4#0 : (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>) -> i1
 // CHECK:           %[[VAL_18:.*]] = fir.do_loop %[[VAL_19:.*]] = %c1 to %c1 step %c1 iter_args(%[[VAL_20:.*]] = %c0_i8) -> (i8) {
@@ -308,27 +308,27 @@
 // CHECK-LABEL:   func.func @_QPtest2() -> !fir.logical<4> {
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c1", uniq_name = "_QFtest2Ec1"}>
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 {uniq_name = "_QFtest2Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 uniq_name("_QFtest2Ec1") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test2", uniq_name = "_QFtest2Etest2"}>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFtest2Etest2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFtest2Etest2") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_13:.*]] = fir.address_of(@_QQclX20) : !fir.ref<!fir.char<1>>
-// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX20"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %c1 uniq_name("_QQclX20") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_10]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQclX20FF) : !fir.ref<!fir.char<1,2>>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] typeparams %c2 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX20FF"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] typeparams %c2 uniq_name("_QQclX20FF") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
     %0 = fir.dummy_scope : !fir.dscope
     %c1 = arith.constant 1 : index
     %1 = fir.alloca !fir.char<1> {bindc_name = "c1", uniq_name = "_QFtest2Ec1"}
-    %2:2 = hlfir.declare %1 typeparams %c1 {uniq_name = "_QFtest2Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %2:2 = hlfir.declare %1 typeparams %c1 uniq_name("_QFtest2Ec1") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     %3 = fir.alloca !fir.logical<4> {bindc_name = "test2", uniq_name = "_QFtest2Etest2"}
-    %4:2 = hlfir.declare %3 {uniq_name = "_QFtest2Etest2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %4:2 = hlfir.declare %3 uniq_name("_QFtest2Etest2") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %5 = fir.address_of(@_QQclX20) : !fir.ref<!fir.char<1>>
     %c1_0 = arith.constant 1 : index
-    %6:2 = hlfir.declare %5 typeparams %c1_0 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX20"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %6:2 = hlfir.declare %5 typeparams %c1_0 uniq_name("_QQclX20") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     hlfir.assign %6#0 to %2#0 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
     %7 = fir.address_of(@_QQclX20FF) : !fir.ref<!fir.char<1,2>>
     %c2 = arith.constant 2 : index
-    %8:2 = hlfir.declare %7 typeparams %c2 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX20FF"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+    %8:2 = hlfir.declare %7 typeparams %c2 uniq_name("_QQclX20FF") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
     %9 = hlfir.cmpchar slt %2#0 %8#0 : (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1,2>>) -> i1
 // CHECK:           %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %c1 to %c1 step %c1 iter_args(%[[VAL_19:.*]] = %c0_i8) -> (i8) {
 // CHECK:             %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_19]], %c0_i8 : i8
@@ -407,33 +407,33 @@
 // CHECK-LABEL:   func.func @_QPtest3() -> !fir.logical<4> {
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c1", uniq_name = "_QFtest3Ec1"}>
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 {uniq_name = "_QFtest3Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %c1 uniq_name("_QFtest3Ec1") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.char<1> <{bindc_name = "c2", uniq_name = "_QFtest3Ec2"}>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] typeparams %c1 {uniq_name = "_QFtest3Ec2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] typeparams %c1 uniq_name("_QFtest3Ec2") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           %[[VAL_13:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test3", uniq_name = "_QFtest3Etest3"}>
-// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFtest3Etest3"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] uniq_name("_QFtest3Etest3") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQclX6162) : !fir.ref<!fir.char<1,2>>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] typeparams %c2 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX6162"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] typeparams %c2 uniq_name("_QQclX6162") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
 // CHECK:           hlfir.assign %[[VAL_16]]#0 to %[[VAL_12]]#0 : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_17:.*]] = fir.address_of(@_QQclX61) : !fir.ref<!fir.char<1>>
-// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX61"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] typeparams %c1 uniq_name("_QQclX61") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:           hlfir.assign %[[VAL_18]]#0 to %[[VAL_10]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
     %0 = fir.dummy_scope : !fir.dscope
     %c1 = arith.constant 1 : index
     %1 = fir.alloca !fir.char<1> {bindc_name = "c1", uniq_name = "_QFtest3Ec1"}
-    %2:2 = hlfir.declare %1 typeparams %c1 {uniq_name = "_QFtest3Ec1"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %2:2 = hlfir.declare %1 typeparams %c1 uniq_name("_QFtest3Ec1") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     %c1_0 = arith.constant 1 : index
     %3 = fir.alloca !fir.char<1> {bindc_name = "c2", uniq_name = "_QFtest3Ec2"}
-    %4:2 = hlfir.declare %3 typeparams %c1_0 {uniq_name = "_QFtest3Ec2"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %4:2 = hlfir.declare %3 typeparams %c1_0 uniq_name("_QFtest3Ec2") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     %5 = fir.alloca !fir.logical<4> {bindc_name = "test3", uniq_name = "_QFtest3Etest3"}
-    %6:2 = hlfir.declare %5 {uniq_name = "_QFtest3Etest3"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %6:2 = hlfir.declare %5 uniq_name("_QFtest3Etest3") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %7 = fir.address_of(@_QQclX6162) : !fir.ref<!fir.char<1,2>>
     %c2 = arith.constant 2 : index
-    %8:2 = hlfir.declare %7 typeparams %c2 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX6162"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+    %8:2 = hlfir.declare %7 typeparams %c2 uniq_name("_QQclX6162") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
     hlfir.assign %8#0 to %4#0 : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1>>
     %9 = fir.address_of(@_QQclX61) : !fir.ref<!fir.char<1>>
     %c1_1 = arith.constant 1 : index
-    %10:2 = hlfir.declare %9 typeparams %c1_1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX61"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+    %10:2 = hlfir.declare %9 typeparams %c1_1 uniq_name("_QQclX61") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     hlfir.assign %10#0 to %2#0 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
     %11 = hlfir.cmpchar sgt %4#0 %2#0 : (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>) -> i1
 // CHECK:           %[[VAL_19:.*]] = fir.do_loop %[[VAL_20:.*]] = %c1 to %c1 step %c1 iter_args(%[[VAL_21:.*]] = %c0_i8) -> (i8) {
@@ -515,22 +515,22 @@
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}) -> !fir.logical<4> {
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest4Ec1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 dummy_scope %[[VAL_5]] uniq_name("_QFtest4Ec1") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest4Ec2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_5]] uniq_name("_QFtest4Ec2") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_10:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]]#0 typeparams %[[VAL_10]]#1 dummy_scope %[[VAL_5]] {uniq_name = "_QFtest4Ec3"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]]#0 typeparams %[[VAL_10]]#1 dummy_scope %[[VAL_5]] uniq_name("_QFtest4Ec3") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "test4", uniq_name = "_QFtest4Etest4"}>
-// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFtest4Etest4"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] uniq_name("_QFtest4Etest4") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %0 = fir.dummy_scope : !fir.dscope
     %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %2:2 = hlfir.declare %1#0 typeparams %1#1 dummy_scope %0 {uniq_name = "_QFtest4Ec1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %2:2 = hlfir.declare %1#0 typeparams %1#1 dummy_scope %0 uniq_name("_QFtest4Ec1") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %3:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %4:2 = hlfir.declare %3#0 typeparams %3#1 dummy_scope %0 {uniq_name = "_QFtest4Ec2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %4:2 = hlfir.declare %3#0 typeparams %3#1 dummy_scope %0 uniq_name("_QFtest4Ec2") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %5:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %6:2 = hlfir.declare %5#0 typeparams %5#1 dummy_scope %0 {uniq_name = "_QFtest4Ec3"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %6:2 = hlfir.declare %5#0 typeparams %5#1 dummy_scope %0 uniq_name("_QFtest4Ec3") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %7 = fir.alloca !fir.logical<4> {bindc_name = "test4", uniq_name = "_QFtest4Etest4"}
-    %8:2 = hlfir.declare %7 {uniq_name = "_QFtest4Etest4"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %8:2 = hlfir.declare %7 uniq_name("_QFtest4Etest4") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %9 = arith.addi %1#1, %3#1 : index
     %10 = hlfir.concat %2#0, %4#0 len %9 : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
     %11 = hlfir.cmpchar sgt %10 %6#0 : (!hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>) -> i1

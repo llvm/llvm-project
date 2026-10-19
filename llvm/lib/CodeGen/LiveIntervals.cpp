@@ -104,7 +104,7 @@ static cl::opt<bool> EnablePrecomputePhysRegs(
 static bool EnablePrecomputePhysRegs = false;
 #endif // NDEBUG
 
-cl::opt<bool> llvm::UseSegmentSetForPhysRegs(
+static cl::opt<bool> UseSegmentSetForPhysRegs(
     "use-segment-set-for-physregs", cl::Hidden, cl::init(true),
     cl::desc(
         "Use segment set for the computation of the live ranges of physregs."));
@@ -222,6 +222,11 @@ LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 LiveInterval *LiveIntervals::createInterval(Register reg) {
   float Weight = reg.isPhysical() ? huge_valf : 0.0F;
   return new LiveInterval(reg, Weight);
+}
+
+LiveRange *LiveIntervals::createRegUnitRange() {
+  // Use segment set to speed-up initial computation of the live range.
+  return new LiveRange(UseSegmentSetForPhysRegs);
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
@@ -411,9 +416,8 @@ void LiveIntervals::computeLiveInRegUnits() {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
         if (!LR) {
-          // Use segment set to speed-up initial computation of the live range.
           LR = RegUnitRanges[static_cast<unsigned>(Unit)] =
-              new LiveRange(UseSegmentSetForPhysRegs);
+              createRegUnitRange();
           NewRanges.push_back(Unit);
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());

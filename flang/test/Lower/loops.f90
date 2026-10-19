@@ -114,7 +114,7 @@ subroutine lis(n)
   ! CHECK:       fir.do_concurrent.loop (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) {
   ! CHECK:         fir.if %{{.*}} {
   ! CHECK:           %[[V_T_ALLOC:[0-9]+]] = fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} <{bindc_name = "t", pinned, uniq_name = "_QFlisEt"}>
-  ! CHECK:           %[[V_T_DECL:.*]]:2 = hlfir.declare %[[V_T_ALLOC]]({{.*}}) {uniq_name = "_QFlisEt"}
+  ! CHECK:           %[[V_T_DECL:.*]]:2 = hlfir.declare %[[V_T_ALLOC]]({{.*}}) uniq_name("_QFlisEt")
   ! CHECK:           %[[V_P_ALLOC:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x?xi32>>> <{bindc_name = "p", pinned, uniq_name = "_QFlisEp"}>
   ! CHECK:           fir.store %{{.*}} to %[[V_P_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
   ! CHECK:           %[[V_P_DECL:.*]]:2 = hlfir.declare %[[V_P_ALLOC]]

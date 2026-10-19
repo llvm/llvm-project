@@ -38,7 +38,7 @@ end
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^:]+}} :
 ! DEVICE-SAME:   {{.*}}) {
 
-! DEVICE: %[[TARGET_J_DECL:.*]]:2 = hlfir.declare %[[J_ARG]] {uniq_name = "_QFEj"}
+! DEVICE: %[[TARGET_J_DECL:.*]]:2 = hlfir.declare %[[J_ARG]] uniq_name("_QFEj")
 
 ! DEVICE: omp.teams
 

@@ -694,6 +694,7 @@ using MaskVec = SmallVector<LaneBitmask, 4>;
 // Fills V with differentials between every two consecutive elements of List.
 static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
   assert(V.empty() && "Clear DiffVec before diffEncode.");
+  V.reserve(List.count());
   SparseBitVector<>::iterator I = List.begin(), E = List.end();
   unsigned Val = *I;
   while (++I != E) {
@@ -707,6 +708,7 @@ static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
 template <typename Iter>
 static DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
   assert(V.empty() && "Clear DiffVec before diffEncode.");
+  V.reserve(std::distance(Begin, End));
   unsigned Val = InitVal;
   for (Iter I = Begin; I != End; ++I) {
     unsigned Cur = (*I)->EnumValue;
@@ -1005,12 +1007,14 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister *> SR;
+    SR.reserve(Reg.getSubRegs().size());
     Reg.addSubRegsPreOrder(SR, RegBank);
     diffEncode(SubRegLists[i], Reg.EnumValue, SR.begin(), SR.end());
     DiffSeqs.add(SubRegLists[i]);
 
     // Compute the corresponding sub-register indexes.
     SubRegIdxVec &SRIs = SubRegIdxLists[i];
+    SRIs.reserve(SR.size());
     for (const CodeGenRegister *S : SR)
       SRIs.push_back(Reg.getSubRegIndex(S));
     SubRegIdxSeqs.add(SRIs);
@@ -1240,7 +1244,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       << SuperRegIdxSeqs.size() << ", " << Totals.SuperClassIdx << ">";
   OS << "using " << TargetName
      << "RegisterClassStorage = " << MCRegisterClassStorageType << ";\n";
-  OS << "extern const " << MCRegisterClassStorageType << " " << TargetName
+  OS << "inline constexpr " << MCRegisterClassStorageType << " " << TargetName
      << "MCRegisterClassStorage = {\n"
      << "  {\n";
 

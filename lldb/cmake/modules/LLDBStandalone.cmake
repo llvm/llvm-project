@@ -71,6 +71,41 @@ else()
   endif()
 endif()
 
+# If llvm-nm is built but the target is not exported, we need to find it to
+# build the dynamic script interpreters.
+if (NOT TARGET llvm-nm AND NOT LLVM_NM)
+  if (CMAKE_CROSSCOMPILING)
+    set(LLVM_NATIVE_BUILD "${LLVM_BINARY_DIR}/NATIVE")
+    if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
+      message(FATAL_ERROR "Attempting to cross-compile LLDB standalone but no native LLVM build found. Please cross-compile LLVM as well.")
+    endif()
+
+    if (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
+      set(HOST_EXECUTABLE_SUFFIX ".exe")
+    endif()
+
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      set(native_LLVM_NM "${LLVM_NATIVE_BUILD}/bin/llvm-nm${HOST_EXECUTABLE_SUFFIX}")
+    else()
+      # NOTE: LLVM NATIVE build is always built Release, as is specified in
+      # CrossCompile.cmake
+      set(native_LLVM_NM
+        "${LLVM_NATIVE_BUILD}/Release/bin/llvm-nm${HOST_EXECUTABLE_SUFFIX}")
+    endif()
+
+    if (NOT EXISTS "${native_LLVM_NM}")
+      message(FATAL_ERROR
+        "Attempting to cross-compile LLDB standalone but no native llvm-nm
+        found. Please cross-compile llvm-nm as well.")
+    endif()
+    set(LLVM_NM "${native_LLVM_NM}" CACHE PATH "Path to llvm-nm")
+  else()
+    set(nm_file_name "llvm-nm${CMAKE_EXECUTABLE_SUFFIX}")
+    append_configuration_directories(${LLVM_TOOLS_BINARY_DIR} config_dirs)
+    find_program(LLVM_NM ${nm_file_name} ${config_dirs} NO_DEFAULT_PATH)
+  endif()
+endif()
+
 # They are used as destination of target generators.
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
-#include <stdint.h>
-
 #ifndef lldb_RegisterInfos_x86_64_with_base_shared_h
 #define lldb_RegisterInfos_x86_64_with_base_shared_h
+
+#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include <stdint.h>
 
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 

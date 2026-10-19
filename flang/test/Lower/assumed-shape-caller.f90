@@ -17,7 +17,7 @@ subroutine foo()
   ! CHECK-DAG: %[[c12:.*]] = arith.constant 12 : index
   ! CHECK-DAG: %[[addr:.*]] = fir.alloca !fir.array<42x55x12xf32> <{{{.*}}uniq_name = "_QFfooEx"}>
   ! CHECK: %[[shape:.*]] = fir.shape %[[c42]], %[[c55]], %[[c12]] : (index, index, index) -> !fir.shape<3>
-  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[addr]](%[[shape]]) {uniq_name = "_QFfooEx"}
+  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[addr]](%[[shape]]) uniq_name("_QFfooEx")
 
   call bar(x)
   ! CHECK: %[[embox:.*]] = fir.embox %[[x]]#0(%[[shape]]) : (!fir.ref<!fir.array<42x55x12xf32>>, !fir.shape<3>) -> !fir.box<!fir.array<42x55x12xf32>>
@@ -41,7 +41,7 @@ subroutine foo_char(x)
   ! CHECK-DAG: %[[c55:.*]] = arith.constant 55 : index
   ! CHECK-DAG: %[[c12:.*]] = arith.constant 12 : index
   ! CHECK: %[[shape:.*]] = fir.shape %[[c42]], %[[c55]], %[[c12]] : (index, index, index) -> !fir.shape<3>
-  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[addr]](%[[shape]]) typeparams %[[unb]]#1{{.*}} {uniq_name = "_QFfoo_charEx"}{{.*}} -> (!fir.box<!fir.array<42x55x12x!fir.char<1,?>>>, !fir.ref<!fir.array<42x55x12x!fir.char<1,?>>>)
+  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[addr]](%[[shape]]) typeparams %[[unb]]#1{{.*}} uniq_name("_QFfoo_charEx"){{.*}} -> (!fir.box<!fir.array<42x55x12x!fir.char<1,?>>>, !fir.ref<!fir.array<42x55x12x!fir.char<1,?>>>)
 
   call bar_char(x)
   ! CHECK: %[[castedBox:.*]] = fir.convert %[[x]]#0 : (!fir.box<!fir.array<42x55x12x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x?x?x!fir.char<1,?>>>
@@ -62,8 +62,8 @@ subroutine test_vector_subcripted_section_to_box(v, x)
   integer :: v(:)
   real :: x(:)
   call takes_box(x(v))
-! CHECK:  %[[V:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_vector_subcripted_section_to_boxEv"}
-! CHECK:  %[[X:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {uniq_name = "_QFtest_vector_subcripted_section_to_boxEx"}
+! CHECK:  %[[V:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QFtest_vector_subcripted_section_to_boxEv")
+! CHECK:  %[[X:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} uniq_name("_QFtest_vector_subcripted_section_to_boxEx")
 ! CHECK:  %[[c0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VDIMS:.*]]:3 = fir.box_dims %[[V]]#0, %[[c0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:  %[[SHAPE_V:.*]] = fir.shape %[[VDIMS]]#1 : (index) -> !fir.shape<1>

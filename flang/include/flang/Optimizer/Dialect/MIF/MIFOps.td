@@ -571,6 +571,7 @@ def mif_AllocCoarrayOp
     `lcobounds` $lcobounds `ucobounds` $ucobounds 
     (`stat` $stat^ )?
     (`errmsg` $errmsg^ )? 
+    `uniq_name` `(` $uniq_name `)`
     attr-dict `:` functional-type(operands, results)
   }];
 }

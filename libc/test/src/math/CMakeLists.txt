@@ -12,22 +12,12 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.cosf
+    libc.src.__support.math.cosf_double_eval
+    libc.src.__support.math.cosf_float_eval
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  cosf_float_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    cosf_float_test.cpp
-  DEPENDS
-    libc.src.__support.math.sincosf_utils
-    libc.src.__support.FPUtil.fp_bits
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -105,22 +95,12 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.sinf
+    libc.src.__support.math.sinf_double_eval
+    libc.src.__support.math.sinf_float_eval
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  sinf_float_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    sinf_float_test.cpp
-  DEPENDS
-    libc.src.__support.math.sincosf_utils
-    libc.src.__support.FPUtil.fp_bits
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -226,6 +206,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.tanf
+    libc.src.__support.math.tanf_double_eval
+    libc.src.__support.math.tanf_float_eval
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1367,7 +1350,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-
 add_fp_unittest(
   expf16_test
   NEED_MPFR
@@ -1399,8 +1381,12 @@ add_fp_unittest(
   SRCS
     exp2_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.exp2
+    libc.src.__support.math.exp2_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
@@ -1418,6 +1404,18 @@ add_fp_unittest(
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2bf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp2bf16_test.cpp
+  DEPENDS
+    libc.src.math.exp2bf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -3075,6 +3073,8 @@ add_fp_unittest(
     powf_test.cpp
   DEPENDS
     libc.src.math.powf
+    libc.src.__support.math.powf_double_eval
+    libc.src.__support.math.powf_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 

@@ -21,11 +21,18 @@ tablegen("SparcGenSDNodeInfo") {
   td_file = "Sparc.td"
 }
 
+tablegen("SparcOptions") {
+  visibility = [ ":LLVMSparcCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "SparcOptions.td"
+}
+
 static_library("LLVMSparcCodeGen") {
   deps = [
     ":SparcGenCallingConv",
     ":SparcGenDAGISel",
     ":SparcGenSDNodeInfo",
+    ":SparcOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -34,6 +41,7 @@ static_library("LLVMSparcCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",

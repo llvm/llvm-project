@@ -1799,10 +1799,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
-                         CGF.AllocaInsertPt->getIterator());
-  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
-                          CGF.Builder.GetInsertPoint());
+  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getIterator());
+  InsertPointTy CodeGenIP(CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(
       CodeGenIP, CGF.SourceLocToDebugLoc(Loc));
   llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> ReductionInfos;
@@ -1862,8 +1860,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
       CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
       CGF.CurFn = CurFn;
 
-      return InsertPointTy(CGF.Builder.GetInsertBlock(),
-                           CGF.Builder.GetInsertPoint());
+      return CGF.Builder.GetInsertPoint();
     };
 
     // For the atomic fast path, hand this reduction an atomic combiner if it is
@@ -1894,12 +1891,11 @@ void CGOpenMPRuntimeGPU::emitReduction(
                               SSID](InsertPointTy IP, llvm::Type *EltTy,
                                     llvm::Value *LHS, llvm::Value *RHS)
             -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
-          llvm::IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
+          llvm::IRBuilder<> Builder(IP);
           llvm::Value *Val = Builder.CreateLoad(EltTy, RHS);
           Builder.CreateAtomicRMW(Op, LHS, Val, Alignment,
                                   llvm::AtomicOrdering::Monotonic, SSID);
-          return InsertPointTy(Builder.GetInsertBlock(),
-                               Builder.GetInsertPoint());
+          return Builder.GetInsertPoint();
         };
       }
     }

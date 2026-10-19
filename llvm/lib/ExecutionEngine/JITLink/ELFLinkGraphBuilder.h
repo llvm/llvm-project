@@ -194,8 +194,8 @@ ELFLinkGraphBuilder<ELFT>::ELFLinkGraphBuilder(
     SubtargetFeatures Features, StringRef FileName,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : ELFLinkGraphBuilderBase(std::make_unique<LinkGraph>(
-          FileName.str(), std::move(SSP), std::move(TT), std::move(Features),
-          std::move(GetEdgeKindName))),
+          FileName.str(), std::move(SSP), std::move(TT), ELFT::Is64Bits ? 8 : 4,
+          std::move(Features), std::move(GetEdgeKindName))),
       Obj(Obj) {
   LLVM_DEBUG(
       { dbgs() << "Created ELFLinkGraphBuilder for \"" << FileName << "\""; });

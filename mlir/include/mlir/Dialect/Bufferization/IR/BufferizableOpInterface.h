@@ -312,10 +312,11 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
-  // Specifies whether to account for parallel regions in RaW analysis. If true,
-  // then writes inside of parallel regions that write to buffers defined
-  // outside of the parallel region will be given a new buffer.
-  bool checkParallelRegions = true;
+  /// Whether the IR may contain a parallel region. When unset, the analysis
+  /// walks the IR to compute it.
+  /// Note: If the IR contains a parallel region, but this flag is set to
+  /// "false", the bufferization may produce incorrect IR.
+  std::optional<bool> mayHaveParallelRegions = std::nullopt;
 
   /// This function controls buffer types on function signatures. Sets
   /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
