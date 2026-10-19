@@ -294,14 +294,14 @@ public:
   /// dependency between two distinct, range-checkable base objects, i.e. a
   /// dependency that could be turned into a runtime alias check.
   bool hasRuntimeCheckableBlockers() const {
-    return Candidate.HasRuntimeCheckableBlockers;
+    return Shared.HasRuntimeCheckableBlockers;
   }
 
   /// Records whether a may-alias dependency between distinct, range-checkable
   /// base objects has been observed, so the caller can decide to retry with
   /// runtime alias checks enabled.
   void setHasRuntimeCheckableBlockers(bool V) {
-    Candidate.HasRuntimeCheckableBlockers = V;
+    Shared.HasRuntimeCheckableBlockers = V;
   }
 
   /// Returns true if the last buildTree() kept a may-alias memory dependency
@@ -309,12 +309,12 @@ public:
   /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
   /// region and would be pure overhead.
   bool hasNonCheckableMemBlocker() const {
-    return Candidate.HasNonCheckableMemBlocker;
+    return Shared.HasNonCheckableMemBlocker;
   }
 
   /// Records that a non-runtime-checkable may-alias dependency was kept.
   void setHasNonCheckableMemBlocker(bool V) {
-    Candidate.HasNonCheckableMemBlocker = V;
+    Shared.HasNonCheckableMemBlocker = V;
   }
 
   /// Returns true if the current vectorization attempt may drop
@@ -2098,7 +2098,7 @@ public:
         if (auto *OpI = dyn_cast<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
-            !Candidate.ExternalUseReplacements.contains(OpI) &&
+            !Shared.ExternalUseReplacements.contains(OpI) &&
             (Entries.empty() || none_of(Entries, [&](const TreeEntry *Entry) {
                return Entry->VectorizedValue == OpI;
              })))
@@ -2148,7 +2148,7 @@ public:
         // loop iteration.
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
-              !Candidate.ExternalUseReplacements.contains(OpI) &&
+              !Shared.ExternalUseReplacements.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
                none_of(VectorValuesAndScales,
                        [&](const ReductionVectorPart &V) {
@@ -3496,6 +3496,38 @@ private:
     /// Runtime checks are validated and bounded the collected checks.
     bool RTChecksFinalized = false;
 
+    /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
+    /// source order.
+    SmallVector<Instruction *> RTOrigBodyOrder;
+
+    /// True, if a may-alias dependency between distinct, range-checkable base
+    /// objects is observed (whether or not it was dropped).
+    bool HasRuntimeCheckableBlockers = false;
+
+    /// True, if a kept may-alias dependency is not runtime-checkable (call or a
+    /// non-simple memaccess).
+    bool HasNonCheckableMemBlocker = false;
+
+    /// A list of values that need to extracted out of the tree.
+    /// This list holds pairs of (Internal Scalar : External User). External
+    /// User can be nullptr, it means that this Internal Scalar will be used
+    /// later, after vectorization.
+    using UserList = SmallVector<ExternalUser, 16>;
+    UserList ExternalUses;
+
+    /// A list of GEPs which can be reaplced by scalar GEPs instead of
+    /// extractelement instructions.
+    SmallPtrSet<Value *, 4> ExternalUsesAsOriginalScalar;
+
+    /// A list of scalar to be extracted without specific user necause of too
+    /// many uses.
+    SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
+
+    /// Externally used values and replacements emitted for the external uses
+    /// without users, consumed after the tree vectorization; must not be
+    /// collected as dead operands of the erased scalars.
+    SmallPtrSet<Value *, 4> ExternalUseReplacements;
+
     /// Clear shared observers before destroying the current candidate.
     void clear() {
       ScalarToTreeEntries.clear();
@@ -3512,6 +3544,12 @@ private:
       RTChecks.clear();
       RTChecksFinalized = false;
       ValueToGatherNodes.clear();
+      ExternalUses.clear();
+      ExternalUsesAsOriginalScalar.clear();
+      ExternalUsesWithNonUsers.clear();
+      ExternalUseReplacements.clear();
+      HasRuntimeCheckableBlockers = false;
+      HasNonCheckableMemBlocker = false;
     }
   };
 
@@ -3586,38 +3624,6 @@ private:
                   std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
         CompressEntryToData;
 
-    /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
-    /// source order.
-    SmallVector<Instruction *> RTOrigBodyOrder;
-
-    /// True, if a may-alias dependency between distinct, range-checkable base
-    /// objects is observed (whether or not it was dropped).
-    bool HasRuntimeCheckableBlockers = false;
-
-    /// True, if a kept may-alias dependency is not runtime-checkable (call or a
-    /// non-simple memaccess).
-    bool HasNonCheckableMemBlocker = false;
-
-    /// A list of values that need to extracted out of the tree.
-    /// This list holds pairs of (Internal Scalar : External User). External
-    /// User can be nullptr, it means that this Internal Scalar will be used
-    /// later, after vectorization.
-    using UserList = SmallVector<ExternalUser, 16>;
-    UserList ExternalUses;
-
-    /// A list of GEPs which can be reaplced by scalar GEPs instead of
-    /// extractelement instructions.
-    SmallPtrSet<Value *, 4> ExternalUsesAsOriginalScalar;
-
-    /// A list of scalar to be extracted without specific user necause of too
-    /// many uses.
-    SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
-
-    /// Externally used values and replacements emitted for the external uses
-    /// without users, consumed after the tree vectorization; must not be
-    /// collected as dead operands of the erased scalars.
-    SmallPtrSet<Value *, 4> ExternalUseReplacements;
-
     /// List of users to ignore during scheduling and that don't need
     /// extracting.
     const SmallDenseSet<Value *> *UserIgnoreList = nullptr;
@@ -3631,7 +3637,7 @@ private:
     /// where "width" indicates the minimum bit width and "signed" is True if
     /// the value must be signed-extended, rather than zero-extended, back to
     /// its original width.
-    DenseMap<const TreeEntry *, std::pair<uint64_t, bool>> MinBWs;
+    SmallDenseMap<const TreeEntry *, std::pair<uint64_t, bool>> MinBWs;
 
     /// Final size of the reduced vector, if the current graph represents the
     /// input for the reduction and it was possible to narrow the size of the
@@ -3742,12 +3748,6 @@ private:
       SplatGatheredScalarsRoots.clear();
       NumCanonicalSplatSubtreeEntries = 0;
       CompressEntryToData.clear();
-      ExternalUses.clear();
-      ExternalUsesAsOriginalScalar.clear();
-      ExternalUsesWithNonUsers.clear();
-      ExternalUseReplacements.clear();
-      HasRuntimeCheckableBlockers = false;
-      HasNonCheckableMemBlocker = false;
       MinBWs.clear();
       ReductionBitWidth = 0;
       BaseGraphSize = 1;
@@ -3769,9 +3769,7 @@ private:
   ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
     return Candidate.VectorizableTree;
   }
-  ArrayRef<ExternalUser> getExternalUses() const {
-    return Candidate.ExternalUses;
-  }
+  ArrayRef<ExternalUser> getExternalUses() const { return Shared.ExternalUses; }
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
   /// checks instead.
@@ -8160,18 +8158,17 @@ void BoUpSLP::buildExternalUses(
 
       // All uses must be replaced already? No need to do it again.
       auto It = ScalarToExtUses.find(Scalar);
-      if (It != ScalarToExtUses.end() &&
-          !Candidate.ExternalUses[It->second].User)
+      if (It != ScalarToExtUses.end() && !Shared.ExternalUses[It->second].User)
         continue;
 
       if (!IsStructScalar && Scalar->hasNUsesOrMore(NumVectScalars)) {
         unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract from lane " << FoundLane
                           << " from " << *Scalar << "for many users.\n");
-        It = ScalarToExtUses.try_emplace(Scalar, Candidate.ExternalUses.size())
+        It = ScalarToExtUses.try_emplace(Scalar, Shared.ExternalUses.size())
                  .first;
-        Candidate.ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
-        Candidate.ExternalUsesWithNonUsers.insert(Scalar);
+        Shared.ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+        Shared.ExternalUsesWithNonUsers.insert(Scalar);
         continue;
       }
 
@@ -8181,8 +8178,8 @@ void BoUpSLP::buildExternalUses(
         unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
                           << FoundLane << " from " << *Scalar << ".\n");
-        ScalarToExtUses.try_emplace(Scalar, Candidate.ExternalUses.size());
-        Candidate.ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+        ScalarToExtUses.try_emplace(Scalar, Shared.ExternalUses.size());
+        Shared.ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
         continue;
       }
       for (User *U : Scalar->users()) {
@@ -8241,7 +8238,7 @@ void BoUpSLP::buildExternalUses(
           if (!IsStructScalar) {
             U = nullptr;
             if (It != ScalarToExtUses.end()) {
-              Candidate.ExternalUses[It->second].User = nullptr;
+              Shared.ExternalUses[It->second].User = nullptr;
               break;
             }
           }
@@ -8253,10 +8250,10 @@ void BoUpSLP::buildExternalUses(
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
                           << ".\n");
-        It = ScalarToExtUses.try_emplace(Scalar, Candidate.ExternalUses.size())
+        It = ScalarToExtUses.try_emplace(Scalar, Shared.ExternalUses.size())
                  .first;
-        Candidate.ExternalUses.emplace_back(Scalar, U, *Entry, FoundLane);
-        Candidate.ExternalUsesWithNonUsers.insert(Scalar);
+        Shared.ExternalUses.emplace_back(Scalar, U, *Entry, FoundLane);
+        Shared.ExternalUsesWithNonUsers.insert(Scalar);
         if (!U)
           break;
       }
@@ -8299,16 +8296,16 @@ void BoUpSLP::buildExternalUses(
       if (It != ScalarToExtUses.end()) {
         // Replace all uses: the stride operand is emitted later, during the
         // codegen.
-        Candidate.ExternalUses[It->second].User = nullptr;
+        Shared.ExternalUses[It->second].User = nullptr;
         continue;
       }
       unsigned FoundLane = Entry->findLaneForValue(Scalar);
       LLVM_DEBUG(dbgs() << "SLP: Need to extract: strided load stride from "
                            "lane "
                         << FoundLane << " from " << *Scalar << ".\n");
-      ScalarToExtUses.try_emplace(Scalar, Candidate.ExternalUses.size());
-      Candidate.ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
-      Candidate.ExternalUsesWithNonUsers.insert(Scalar);
+      ScalarToExtUses.try_emplace(Scalar, Shared.ExternalUses.size());
+      Shared.ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+      Shared.ExternalUsesWithNonUsers.insert(Scalar);
     }
   }
 }
@@ -8508,7 +8505,7 @@ void BoUpSLP::verifyCandidateOwnership() const {
     VerifyEntry(TE);
   for (const auto &P : Candidate.CompressEntryToData)
     VerifyEntry(P.first);
-  for (const ExternalUser &EU : Candidate.ExternalUses)
+  for (const ExternalUser &EU : Shared.ExternalUses)
     VerifyEntry(&EU.E);
   for (const auto &P : Candidate.MinBWs)
     VerifyEntry(P.first);
@@ -13903,7 +13900,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   // (those get folded into shuffles, not real extracts).
   SmallPtrSet<Value *, 8> CountedExtracts;
   for (const ExternalUser &EU :
-       make_filter_range(Candidate.ExternalUses, [](const ExternalUser &EU) {
+       make_filter_range(Shared.ExternalUses, [](const ExternalUser &EU) {
          return !isa_and_nonnull<InsertElementInst>(EU.User);
        })) {
     if (EU.User && EphValues.count(EU.User))
@@ -13914,7 +13911,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
         (!Opts.slp_revec ||
          (EU.E.hasState() && EU.E.getOpcode() == Instruction::InsertElement)))
       continue;
-    if (Candidate.ExternalUsesAsOriginalScalar.contains(EU.Scalar))
+    if (Shared.ExternalUsesAsOriginalScalar.contains(EU.Scalar))
       continue;
     if (!CountedExtracts.insert(EU.Scalar).second)
       continue;
@@ -15397,7 +15394,7 @@ void BoUpSLP::transformNodes() {
   // The nodes, built for the slices of the gathered nodes, are fused with their
   // fmul operands in the vector code too.
   for (std::unique_ptr<TreeEntry> &TE :
-       drop_begin(VectorizableTree, BaseGraphSize))
+       drop_begin(Candidate.VectorizableTree, Candidate.BaseGraphSize))
     if (TE->hasState() &&
         is_contained({Instruction::FAdd, Instruction::FSub}, TE->getOpcode()))
       CombineFMulAdd(*TE);
@@ -17863,8 +17860,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (DstScalarTy != OrigScalarTy) {
         auto It = Candidate.MinBWs.find(E);
         PackCost += TTI.getCastInstrCost(
-            It != Candidate.MinBWs.end() && It->second.second ? Instruction::SExt
-                                                    : Instruction::ZExt,
+            It != Candidate.MinBWs.end() && It->second.second
+                ? Instruction::SExt
+                : Instruction::ZExt,
             OrigScalarTy, DstScalarTy, getCastContextHint(*LhsTE), CostKind);
       }
       // The copyable lanes are not the scalars of the node, but their scalars
@@ -18579,7 +18577,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   // Graph is empty - do nothing.
   if (Candidate.VectorizableTree.empty()) {
-    assert(Candidate.ExternalUses.empty() &&
+    assert(Shared.ExternalUses.empty() &&
            "We shouldn't have any external users");
 
     return true;
@@ -20715,7 +20713,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // In loops, the extracts are not scaled by the trip count and just break
     // the ties of the scaled counts. Ignore them under the high register
     // pressure: the vector code holds several lanes per register.
-    if (NumVector > NumScalar && TreeLoop && !Candidate.ExternalUses.empty()) {
+    if (NumVector > NumScalar && TreeLoop && !Shared.ExternalUses.empty()) {
       const uint64_t NumNoExtracts =
           getNumVectorInsts(TreeLoop, /*CountExtracts=*/false);
       Instruction *Root = Candidate.getRootNode().getMainOp();
@@ -20759,7 +20757,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // Add the cost for reduction.
   Cost += ReductionCost;
 
-  if (any_of(Candidate.ExternalUses, [](const ExternalUser &EU) {
+  if (any_of(Shared.ExternalUses, [](const ExternalUser &EU) {
         return isa<StructType>(EU.Scalar->getType()) &&
                (EU.E.Idx != 0 || EU.E.State != TreeEntry::Vectorize ||
                 EU.E.getOpcode() != Instruction::InsertValue) &&
@@ -20777,7 +20775,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     return Cost;
 
   if (Cost >= -getCostThreshold() &&
-      none_of(Candidate.ExternalUses, [](const ExternalUser &EU) {
+      none_of(Shared.ExternalUses, [](const ExternalUser &EU) {
         return isa_and_nonnull<InsertElementInst>(EU.User);
       }))
     return Cost;
@@ -20798,14 +20796,14 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
   // Record every external use: a missing entry is indistinguishable from
   // lane 0 and is priced as a free extract by the extract-fusion cost model.
-  for (ExternalUser &EU : Candidate.ExternalUses)
+  for (ExternalUser &EU : Shared.ExternalUses)
     ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
   // Detect external uses that drive address computations: the scalar (through
   // an optional single-use index-promotion cast) is used as a GEP index.
   bool AllUsersGEPSWithStoresLoads = true;
   SmallVector<const Value *> Pointers;
   Type *UserScalarTy = nullptr;
-  for (ExternalUser &EU : Candidate.ExternalUses) {
+  for (ExternalUser &EU : Shared.ExternalUses) {
     Value *Usr = EU.User;
     if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
       Usr = cast<Instruction>(Usr)->user_back();
@@ -20837,7 +20835,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // even when users live in different loop nests.
   SmallDenseMap<Value *, BasicBlock *> ScalarToExtractBlock;
   for (const ExternalUser &EU :
-       make_filter_range(Candidate.ExternalUses, [](const ExternalUser &EU) {
+       make_filter_range(Shared.ExternalUses, [](const ExternalUser &EU) {
          return EU.User && !isa<InsertElementInst>(EU.User);
        })) {
     if (EphValues.count(EU.User))
@@ -20876,7 +20874,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   }
 
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
-  for (ExternalUser &EU : Candidate.ExternalUses) {
+  for (ExternalUser &EU : Shared.ExternalUses) {
     LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
                       << EU.E.Idx << " in lane " << EU.Lane << "\n");
     LLVM_DEBUG(if (EU.User) dbgs() << "  User:" << *EU.User << "\n";
@@ -21045,7 +21043,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         ValueToExtUses.emplace();
         // Ignore phis in loops.
         for (const auto &P : make_filter_range(
-                 enumerate(Candidate.ExternalUses),
+                 enumerate(Shared.ExternalUses),
                  [&](const auto &P) { return !IsPhiInLoop(P.value()); }))
           ValueToExtUses->try_emplace(P.value().Scalar, P.index());
       }
@@ -21126,7 +21124,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           KeepScalar = ScalarUsesCount <= 1 || !has_single_bit(ScalarUsesCount);
         }
         if (KeepScalar) {
-          Candidate.ExternalUsesAsOriginalScalar.insert(EU.Scalar);
+          Shared.ExternalUsesAsOriginalScalar.insert(EU.Scalar);
           // Struct operands cannot be rebuilt by the !User extraction
           // path (it has no insertvalue chain), so leave their existing
           // ExtractValueInst user in place.
@@ -21136,7 +21134,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             auto It = ValueToExtUses->find(V);
             if (It != ValueToExtUses->end()) {
               // Replace all uses to avoid compiler crash.
-              Candidate.ExternalUses[It->second].User = nullptr;
+              Shared.ExternalUses[It->second].User = nullptr;
             }
           }
           ExtraCost = ScalarCost;
@@ -21153,7 +21151,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                 auto It = ValueToExtUses->find(V);
                 if (It != ValueToExtUses->end()) {
                   // Replace all uses to avoid compiler crash.
-                  Candidate.ExternalUses[It->second].User = nullptr;
+                  Shared.ExternalUses[It->second].User = nullptr;
                 }
               }
             }
@@ -21168,7 +21166,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // above), which is order-independent. For scalars kept as originals the
     // existing ScaleCost path (user-block based) remains correct, since the
     // scalar instruction executes at its definition site's frequency.
-    if (!Candidate.ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
+    if (!Shared.ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
       if (ExtraCost.isValid() && ExtraCost != 0) {
         if (!EU.User) {
           // No external user instruction is recorded (User == nullptr): the
@@ -21224,7 +21222,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // Insert externals for extract of operands of casts to be emitted as scalars
   // instead of extractelement.
   for (Value *V : ScalarOpsFromCasts) {
-    Candidate.ExternalUsesAsOriginalScalar.insert(V);
+    Shared.ExternalUsesAsOriginalScalar.insert(V);
     if (ArrayRef<TreeEntry *> TEs = getTreeEntries(V); !TEs.empty()) {
       const auto *It = find_if_not(TEs, [&](TreeEntry *TE) {
         return Shared.TransformedToGatherNodes.contains(TE) ||
@@ -21232,8 +21230,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       });
       if (It != TEs.end()) {
         const TreeEntry *UserTE = *It;
-        Candidate.ExternalUses.emplace_back(V, nullptr, *UserTE,
-                                            UserTE->findLaneForValue(V));
+        Shared.ExternalUses.emplace_back(V, nullptr, *UserTE,
+                                         UserTE->findLaneForValue(V));
       }
     }
   }
@@ -21271,7 +21269,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       Candidate.VectorizableTree[1]->hasState() &&
       Candidate.VectorizableTree[1]->State == TreeEntry::Vectorize &&
       all_of(Candidate.VectorizableTree[1]->Scalars, [&](Value *V) {
-        return Candidate.ExternalUsesAsOriginalScalar.contains(V);
+        return Shared.ExternalUsesAsOriginalScalar.contains(V);
       }))
     return InstructionCost::getInvalid();
 
@@ -22881,15 +22879,15 @@ Value *BoUpSLP::gather(
               // and track V in ExternalUsesWithNonUsers to match the
               // bookkeeping done by buildExternalUses.
               unsigned FoundLane = (*It)->findLaneForValue(V);
-              Candidate.ExternalUses.emplace_back(V, nullptr, **It, FoundLane);
-              Candidate.ExternalUsesWithNonUsers.insert(V);
+              Shared.ExternalUses.emplace_back(V, nullptr, **It, FoundLane);
+              Shared.ExternalUsesWithNonUsers.insert(V);
             }
           }
           UserOp = InsElt;
         }
         if (UserOp) {
           unsigned FoundLane = (*It)->findLaneForValue(V);
-          Candidate.ExternalUses.emplace_back(V, UserOp, **It, FoundLane);
+          Shared.ExternalUses.emplace_back(V, UserOp, **It, FoundLane);
         }
       }
     }
@@ -23143,7 +23141,7 @@ public:
       // If the only one use is vectorized - can delete the extractelement
       // itself.
       if (!EI->hasOneUse() ||
-          R.Candidate.ExternalUsesAsOriginalScalar.contains(EI) ||
+          R.Shared.ExternalUsesAsOriginalScalar.contains(EI) ||
           (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
            !R.isVectorized(EI) &&
            count_if(E->Scalars, [&](Value *V) { return V == EI; }) !=
@@ -23424,8 +23422,8 @@ public:
                R.Shared.DeletedNodes.contains(TE);
       });
       if (It != TEs.end())
-        R.Candidate.ExternalUses.emplace_back(Src, I, **It,
-                                              (*It)->findLaneForValue(Src));
+        R.Shared.ExternalUses.emplace_back(Src, I, **It,
+                                           (*It)->findLaneForValue(Src));
     }
     Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
     // The extracted fields are unsigned.
@@ -26169,14 +26167,14 @@ static bool blockBodyHasVectorInstructions(const VectorizeOptions &Opts,
 }
 
 void BoUpSLP::captureRuntimeCheckBodySnapshot() {
-  Candidate.RTOrigBodyOrder.clear();
+  Shared.RTOrigBodyOrder.clear();
   if (!TryRuntimeAliasChecks || !Shared.RTChecks.BB)
     return;
   BasicBlock *BB = Shared.RTChecks.BB;
   // Allocas are not duplicated, keep them in the header block.
   for (Instruction &I : *BB)
     if (!isa<PHINode, AllocaInst>(&I) && !I.isTerminator())
-      Candidate.RTOrigBodyOrder.push_back(&I);
+      Shared.RTOrigBodyOrder.push_back(&I);
 }
 
 bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
@@ -26463,7 +26461,7 @@ Value *BoUpSLP::emitRuntimeAliasCheck(IRBuilderBase &Builder,
 void BoUpSLP::versionBlocksForRuntimeChecks() {
   // Only version when this is the optimistic attempt that collected the checks.
   if (!TryRuntimeAliasChecks || Shared.RTChecks.BasePairs.empty() ||
-      !Shared.RTChecks.BB || Candidate.RTOrigBodyOrder.empty())
+      !Shared.RTChecks.BB || Shared.RTOrigBodyOrder.empty())
     return;
   BasicBlock *BB = Shared.RTChecks.BB;
   Function *Fn = BB->getParent();
@@ -26490,7 +26488,7 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // Clone the body into the scalar fallback block, in the original program
   // order (RTOrigBodyOrder).
   SmallDenseMap<Value *, Value *, 16> VMap;
-  for (Instruction *I : Candidate.RTOrigBodyOrder) {
+  for (Instruction *I : Shared.RTOrigBodyOrder) {
     assert(I->getParent() == BB &&
            "RTOrigBodyOrder entry no longer in the versioned block");
     Instruction *C = I->clone();
@@ -26509,7 +26507,7 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // Move the original body into the vector block in the current (scheduled)
   // order, keeping the emitted check instructions in the header block.
   SmallPtrSet<Instruction *, 16> BodyInsts(llvm::from_range,
-                                           Candidate.RTOrigBodyOrder);
+                                           Shared.RTOrigBodyOrder);
   for (Instruction &I : make_early_inc_range(*BB))
     if (BodyInsts.contains(&I))
       I.moveBefore(*VecBB, VecBB->end());
@@ -26539,7 +26537,7 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // terminator, across the loop latch or in other blocks) from both paths. The
   // SCEVs cached for the outside users refer to the body values, which no
   // longer dominate them.
-  for (Instruction *I : Candidate.RTOrigBodyOrder) {
+  for (Instruction *I : Shared.RTOrigBodyOrder) {
     if (!I->isUsedOutsideOfBlock(VecBB))
       continue;
     SE->forgetValue(I);
@@ -26592,7 +26590,7 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // same attempt does not version again.
   Shared.RTChecks.clear();
   Shared.RTChecksFinalized = false;
-  Candidate.RTOrigBodyOrder.clear();
+  Shared.RTOrigBodyOrder.clear();
   // The CFG was modified; CFG analyses can no longer be preserved.
   CFGChanged = true;
 }
@@ -26810,7 +26808,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     eraseInstruction(PrevVec);
   }
 
-  LLVM_DEBUG(dbgs() << "SLP: Extracting " << Candidate.ExternalUses.size()
+  LLVM_DEBUG(dbgs() << "SLP: Extracting " << Shared.ExternalUses.size()
                     << " values .\n");
 
   SmallVector<ShuffledInsertData<Value *>> ShuffledInserts;
@@ -26836,7 +26834,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   SmallDenseSet<ExtractElementInst *, 4> IgnoredExtracts;
   // Extract all of the elements with the external uses.
-  for (const auto &ExternalUse : Candidate.ExternalUses) {
+  for (const auto &ExternalUse : Shared.ExternalUses) {
     Value *Scalar = ExternalUse.Scalar;
     llvm::User *User = ExternalUse.User;
 
@@ -26863,7 +26861,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         Value *ExV = nullptr;
         auto *Inst = dyn_cast<Instruction>(Scalar);
         bool ReplaceInst =
-            Inst && Candidate.ExternalUsesAsOriginalScalar.contains(Inst);
+            Inst && Shared.ExternalUsesAsOriginalScalar.contains(Inst);
         // For struct-typed scalars, the User must be an ExtractValueInst that
         // describes which struct field is being extracted. Copy its indices
         // into an owning SmallVector so the cache key survives erasure of the
@@ -27025,12 +27023,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         continue;
       assert(
           (ExternallyUsedValues.count(Scalar) ||
-           Candidate.ExternalUsesWithNonUsers.count(Scalar) ||
-           Candidate.ExternalUsesAsOriginalScalar.contains(Scalar) ||
+           Shared.ExternalUsesWithNonUsers.count(Scalar) ||
+           Shared.ExternalUsesAsOriginalScalar.contains(Scalar) ||
            any_of(
                Scalar->users(),
                [&, TTI = TTI](llvm::User *U) {
-                 if (Candidate.ExternalUsesAsOriginalScalar.contains(U))
+                 if (Shared.ExternalUsesAsOriginalScalar.contains(U))
                    return true;
                  ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
                  return !UseEntries.empty() &&
@@ -27086,7 +27084,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         Scalar->replaceAllUsesWith(NewInst);
         if (NeedsProtection)
           if (auto *I = dyn_cast<Instruction>(NewInst))
-            Candidate.ExternalUseReplacements.insert(I);
+            Shared.ExternalUseReplacements.insert(I);
       }
       continue;
     }
@@ -27501,7 +27499,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (I->hasNUsesOrMore(UsesLimit) || none_of(I->users(), [&](User *U) {
             return Candidate.UserIgnoreList->contains(U);
           }))
-        Candidate.ExternalUseReplacements.insert(I);
+        Shared.ExternalUseReplacements.insert(I);
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
   // cache correctness.
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
@@ -29848,8 +29846,8 @@ void BoUpSLP::computeMinimumValueSizes() {
             DL->getTypeSizeInBits(getRootNodeScalars().front()->getType()))
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
-        *Candidate.VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
-        IsTruncRoot, IsSignedCmp);
+        *Candidate.VectorizableTree[NodeIdx], IsTopRoot,
+        IsProfitableToDemoteRoot, Limit, IsTruncRoot, IsSignedCmp);
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
     // scalar users may depend on the other bits via poison-generating
@@ -29873,7 +29871,8 @@ void BoUpSLP::computeMinimumValueSizes() {
             return true;
           auto *UI = cast<Instruction>(U);
           if (isVectorized(UI) ||
-              (Candidate.UserIgnoreList && Candidate.UserIgnoreList->contains(UI)) ||
+              (Candidate.UserIgnoreList &&
+               Candidate.UserIgnoreList->contains(UI)) ||
               !UI->getType()->isIntOrIntVectorTy() ||
               !Visited.insert(UI).second)
             continue;
@@ -29891,7 +29890,8 @@ void BoUpSLP::computeMinimumValueSizes() {
                  any_of(TE.Scalars, HasUnsafeScalarUsers);
         }))
       MaxBitWidth = 0;
-    if (Candidate.ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
+    if (Candidate.ReductionBitWidth != 0 &&
+        (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && Candidate.ReductionBitWidth < MaxBitWidth)
         Candidate.ReductionBitWidth = bit_ceil(MaxBitWidth);
       else if (MaxBitWidth == 0)
