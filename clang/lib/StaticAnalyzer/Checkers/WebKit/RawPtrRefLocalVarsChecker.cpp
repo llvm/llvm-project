@@ -646,8 +646,8 @@ public:
 class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
 public:
   UnborrowedLocalVarsChecker()
-      : RawPtrRefLocalVarsChecker("Loan on a CanBorrow object not guarded by "
-                                  "const or a Borrow",
+      : RawPtrRefLocalVarsChecker("Unborrowed raw pointer or reference not "
+                                  "provably backed by a Borrow",
                                   makeBorrowSafetyModel()) {}
 };
 

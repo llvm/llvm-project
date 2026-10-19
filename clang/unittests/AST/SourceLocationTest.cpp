@@ -1111,6 +1111,26 @@ TEST(PackIndexingTypeLoc, PatternAndEllipsisLoc) {
       typeLoc(hasParent(varDecl(hasName("x")))), Lang_CXX26));
 }
 
+TEST(PackIndexingTypeLoc, PatternIsTraversed) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(2, 8, 2, 8);
+  EXPECT_TRUE(Verifier.match(
+      R"cpp(template <class... T> void foo() {
+       T...[0] x;
+  })cpp",
+      typeLoc(loc(templateTypeParmType())), Lang_CXX26));
+}
+
+TEST(PackIndexingTypeLoc, PatternIsTraversedInAlias) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(2, 18, 2, 18);
+  EXPECT_TRUE(Verifier.match(
+      R"cpp(template <class... T> void foo() {
+       using U = T...[0];
+  })cpp",
+      typeLoc(loc(templateTypeParmType())), Lang_CXX26));
+}
+
 class ConceptSpecializationExprConceptReferenceRangeVerifier
     : public RangeVerifier<VarTemplateDecl> {
 protected:
