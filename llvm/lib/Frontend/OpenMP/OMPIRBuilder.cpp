@@ -11632,8 +11632,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic capture expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',

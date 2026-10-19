@@ -1673,6 +1673,21 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 
 // -----
 
+// Check a double precision atomic uptade that uses atomicrmw.
+// CHECK-LABEL: @omp_atomic_update
+// CHECK-SAME: (ptr %[[x:.*]], double %[[expr:.*]])
+llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: f64) {
+  // CHECK: atomicrmw fadd ptr %[[x]], double %[[expr]] monotonic
+  omp.atomic.update %x : !llvm.ptr {
+  ^bb0(%xval: f64):
+    %newval = llvm.fadd %xval, %expr : f64
+    omp.yield(%newval : f64)
+  }
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_atomic_write
 llvm.func @omp_atomic_write() {
 // CHECK: %[[ALLOCA0:.*]] = alloca { float, float }, align 8

@@ -3995,7 +3995,8 @@ private:
   ///                   instructions.
   /// \param RMWOp		  The binary operation used for update. If
   ///                   operation is not supported by atomicRMW,
-  ///                   or belong to {FADD, FSUB, BAD_BINOP}.
+  ///                   or belong to {FMaximumNum, FMinimumNum, UDecWrap,
+  ///                   UIncWrap, USubCond, USubSat, Xchg, BAD_BINOP}.
   ///                   Then a `cmpExch` based	atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
@@ -4072,8 +4073,9 @@ public:
   /// \param AO       Atomic ordering of the generated atomic instructions.
   /// \param RMWOp    The binary operation used for update. If operation
   ///                 is	not supported by atomicRMW, or belong to
-  ///	                {FADD, FSUB, BAD_BINOP}. Then a `cmpExch` based
-  ///                 atomic will be generated.
+  ///                 {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
+  ///                 USubCond, USubSat, Xchg, BAD_BINOP}. Then a
+  ///                 `cmpExch` based atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
   /// \param IsXBinopExpr true if \a X is Left H.S. in Right H.S. part of the
@@ -4104,8 +4106,9 @@ public:
   /// \param AO         Atomic ordering of the generated atomic instructions
   /// \param RMWOp      The binary operation used for update. If
   ///                   operation is not supported by atomicRMW, or belong to
-  ///	                  {FADD, FSUB, BAD_BINOP}. Then a cmpExch based
-  ///                   atomic will be generated.
+  ///                   {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
+  ///                   USubCond, USubSat, Xchg, BAD_BINOP}. Then a
+  ///                   `cmpExch` based atomic will be generated.
   /// \param UpdateOp   Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
   /// \param UpdateExpr true if X is an in place update of the form
