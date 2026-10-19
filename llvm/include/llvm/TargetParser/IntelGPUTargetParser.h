@@ -39,8 +39,7 @@ enum GPUKind : uint8_t {
 /// \return the device name that \p GPUIPVersion identifies, as reported by the
 /// driver, e.g. "xe-pvc". If the table lists no such device, return an empty
 /// string. Only the major and minor versions are looked at, so every revision
-/// of a device resolves to the same name. Only xe-pvc and xe-pvc-sdv share a
-/// version; xe-pvc is returned.
+/// of a device resolves to the same name.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 
 /// \return the human-friendly name of \p Kind, e.g. "xe-pvc", or an empty
