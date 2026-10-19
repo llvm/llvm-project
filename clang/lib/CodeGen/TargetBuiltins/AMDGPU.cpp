@@ -706,7 +706,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     emitBuiltinCheck(*this, E, BCK_NonUniformLane, [&] {
       Value *First = Builder.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane,
                                              {Lane->getType()}, {Lane});
-      return Builder.CreateICmpEQ(Lane, First);
+      Value *Diff = Builder.CreateICmpNE(Lane, First);
+      Value *Mask =
+          Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot, {Int64Ty}, {Diff});
+      return Builder.CreateICmpEQ(Mask, Builder.getInt64(0));
     });
     return Builder.CreateIntrinsic(Intrinsic::amdgcn_readlane, {Src->getType()},
                                    {Src, Lane});
