@@ -14,6 +14,7 @@ add_fp_unittest(
     libc.src.math.cosf
     libc.src.__support.math.cosf_double_eval
     libc.src.__support.math.cosf_float_eval
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -96,6 +97,7 @@ add_fp_unittest(
     libc.src.math.sinf
     libc.src.__support.math.sinf_double_eval
     libc.src.__support.math.sinf_float_eval
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -204,6 +206,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.tanf
+    libc.src.__support.math.tanf_double_eval
+    libc.src.__support.math.tanf_float_eval
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1376,8 +1381,12 @@ add_fp_unittest(
   SRCS
     exp2_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.exp2
+    libc.src.__support.math.exp2_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
