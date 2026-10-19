@@ -6910,12 +6910,12 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static bool arebothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
+static bool areBothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
                                    SelectionDAG &DAG) {
   return DAG.isKnownNeverSNaN(Operand2) && DAG.isKnownNeverSNaN(Operand1);
 }
 
-static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
+static bool areBothOperandsNotNan(SDValue Operand1, SDValue Operand2,
                                   SelectionDAG &DAG) {
   return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
 }
@@ -6927,7 +6927,7 @@ static unsigned getMinMaxOpcodeForClamp(bool IsMin, SDValue Operand1,
   EVT VT = Operand1.getValueType();
   unsigned IEEEOp = IsMin ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
   if (TLI.isOperationLegalOrCustom(IEEEOp, VT) &&
-      arebothOperandsNotNan(Operand1, Operand2, DAG))
+      areBothOperandsNotNan(Operand1, Operand2, DAG))
     return IEEEOp;
   unsigned PreferredOp = IsMin ? ISD::FMINNUM : ISD::FMAXNUM;
   if (TLI.isOperationLegalOrCustom(PreferredOp, VT))
@@ -6947,7 +6947,7 @@ static unsigned getMinMaxOpcodeForCompareFold(
   // FMINNUM_IEEE/FMAXNUM_IEEE if all the operands are non NaN values.
   if (((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::AND))) {
-    if (!SetCCNoNaNs && !arebothOperandsNotNan(Operand1, Operand2, DAG))
+    if (!SetCCNoNaNs && !areBothOperandsNotNan(Operand1, Operand2, DAG))
       return ISD::DELETED_NODE;
     return isPSEUDOFMAXFMIN           ? ISD::PSEUDO_FMIN
            : isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMINIMUMNUM
@@ -6957,7 +6957,7 @@ static unsigned getMinMaxOpcodeForCompareFold(
 
   if (((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::AND))) {
-    if (!SetCCNoNaNs && !arebothOperandsNotNan(Operand1, Operand2, DAG))
+    if (!SetCCNoNaNs && !areBothOperandsNotNan(Operand1, Operand2, DAG))
       return ISD::DELETED_NODE;
     return isPSEUDOFMAXFMIN           ? ISD::PSEUDO_FMAX
            : isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMAXIMUMNUM
@@ -6986,7 +6986,7 @@ static unsigned getMinMaxOpcodeForCompareFold(
     return IsMin ? ISD::PSEUDO_FMIN : ISD::PSEUDO_FMAX;
   if (isFMAXIMUMNUMFMINIMUMNUM)
     return IsMin ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
-  if (!arebothOperandsNotSNan(Operand1, Operand2, DAG))
+  if (!areBothOperandsNotSNan(Operand1, Operand2, DAG))
     return ISD::DELETED_NODE;
   if (isFMAXNUMFMINNUM)
     return IsMin ? ISD::FMINNUM : ISD::FMAXNUM;
