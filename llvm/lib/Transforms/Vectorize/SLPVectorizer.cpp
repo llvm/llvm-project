@@ -17742,6 +17742,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
         Align CommonAlignment = LI0->getAlign();
+        // For REVEC the emitted shuffle uses the compress mask expanded to the
+        // individual elements of the vector scalars.
+        SmallVector<int> CompressCostMask(CompressMask);
+        transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                               CompressCostMask);
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
               Instruction::Load, LoadVecTy, InterleaveFactor, {},
@@ -17754,7 +17759,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CostKind, CompressMask);
+                                      CostKind, CompressCostMask);
         } else {
           VecLdCost = TTI->getMemoryOpCost(
               Instruction::Load, LoadVecTy, CommonAlignment,
@@ -17762,7 +17767,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               TTI::getOperandInfo(LI0->getPointerOperand()));
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
-                                      CostKind, CompressMask);
+                                      CostKind, CompressCostMask);
         }
         break;
       }
