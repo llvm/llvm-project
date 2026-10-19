@@ -27,6 +27,7 @@
 #include "Shared/Profile.h"
 #include "Shared/TaskGraph.h"
 #include "Shared/TaskGraphBuilder.h"
+#include "Shared/TaskGraphDebugDump.h"
 
 #include "Utils/ExponentialBackoff.h"
 
@@ -704,6 +705,7 @@ using llvm::omp::target::commitTaskGraphUpdates;
 using llvm::omp::target::releaseTaskGraphPlan;
 using llvm::omp::target::TaskGraphArgUpdateTy;
 using llvm::omp::target::TaskGraphBuilder;
+using llvm::omp::target::TaskGraphDebugDump;
 using llvm::omp::target::TaskGraphEdge;
 using llvm::omp::target::TaskGraphElement;
 using llvm::omp::target::TaskGraphExclRegion;
@@ -963,6 +965,11 @@ EXTERN void __tgt_taskgraph_begin_replay(void *Graph) {
   beginTaskGraphReplay(*G);
 }
 
+static bool dumpTaskGraphPlans() {
+  static BoolEnvar Dump("LIBOMPTARGET_TASKGRAPH_TRACE", false);
+  return Dump;
+}
+
 EXTERN int __tgt_taskgraph_replay(void *Graph) {
   auto *G = static_cast<TaskGraphTy *>(Graph);
   assert(G->PluginGraph && "replaying a graph no plugin claimed");
@@ -993,6 +1000,14 @@ EXTERN int __tgt_taskgraph_replay(void *Graph) {
                        ? nullptr
                        : "it cannot be replayed against the current mapping "
                          "state");
+
+  if (dumpTaskGraphPlans()) {
+    llvm::errs() << "Target graph pre-replay:\n";
+    TaskGraphDebugDump TGD(*G, llvm::errs());
+    TGD.dumpDataPlan();
+    TGD.dumpUpdates(Updates, Resync);
+  }
+
   // Pinned every replay, since the ranges' host memory is only known to be the
   // program's while the graph runs.  A failed pin holds nothing.
   if (Device.RTL->pin_taskgraph(Device.RTLDeviceID, G) != OFFLOAD_SUCCESS)

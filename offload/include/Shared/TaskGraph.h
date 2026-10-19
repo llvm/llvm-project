@@ -193,6 +193,7 @@ protected:
 private:
   friend class TaskGraphPlanner;
   friend class TaskGraphDataPlanTy;
+  friend class TaskGraphDebugDump;
 
   KindTy Kind = KindTy::None;
 };
@@ -745,6 +746,7 @@ public:
 
 private:
   friend class TaskGraphPlanner;
+  friend class TaskGraphDebugDump;
 
   const char *attachStagingFor(const TaskGraphAttachArgTy &A) const {
     return AttachStaging.data() + A.StagingOffset;
@@ -903,6 +905,7 @@ TaskGraphDataPlanTy::paramValue(const TaskGraphTargetNode &Leaf,
 //===----------------------------------------------------------------------===//
 
 class TaskGraphBuilder;
+class TaskGraphDebugDump;
 
 /// Where the build pass links the next streamed element.
 struct BuildCursor {
@@ -953,6 +956,7 @@ public:
 
 private:
   friend class TaskGraphBuilder;
+  friend class TaskGraphDebugDump;
 
   TaskGraphElement *Root = nullptr;
   std::vector<TaskGraphNode *> Leaves;
