@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -82,7 +83,11 @@ static const MachineOperand &getNamedOp(const MachineInstr &MI,
 // Check if MI is a VOP3P instruction with operands that satisfy the constraints
 // for mapping it to a VOP2/VOPD opcode: no modifiers, no clamp, src1 and src2
 // are registers (src0 can be register or literal), and src2 is same as dst.
-static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
+// An immediate in src1 is accepted if src0 is a register and the operands can
+// be commuted. \p Commute is set if that is needed.
+static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
+                              bool &Commute) {
+  Commute = false;
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_DOT2_F32_F16 && Opc != AMDGPU::V_DOT2_F32_BF16)
     return false;
@@ -93,8 +98,18 @@ static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
   if (getNamedOp(MI, AMDGPU::OpName::src1_modifiers).getImm() !=
       SISrcMods::OP_SEL_1)
     return false;
-  if (!getNamedOp(MI, AMDGPU::OpName::src1).isReg())
-    return false;
+  int Src0Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  int Src1Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+  const MachineOperand &Src0 = MI.getOperand(Src0Idx);
+  const MachineOperand &Src1 = MI.getOperand(Src1Idx);
+  // VOPD needs a register in src1. If src1 is an immediate, the dot2 can still
+  // be used once src0 and src1 are swapped.
+  if (!Src1.isReg()) {
+    if (!Src0.isReg() || !Src1.isImm() ||
+        !TII.isLegalToSwap(MI, Src0Idx, Src1Idx))
+      return false;
+    Commute = true;
+  }
   if (getNamedOp(MI, AMDGPU::OpName::src2_modifiers).getImm() !=
       SISrcMods::OP_SEL_1)
     return false;
@@ -156,11 +171,10 @@ static bool canMaterializeVOPDLiterals(const MachineFunction &MF) {
          !MF.getFunction().hasOptSize();
 }
 
-static bool
-checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
-                        const MachineInstr &MIY, bool IsVOPD3,
-                        bool AllowSameVGPR,
-                        SmallVectorImpl<VOPDLiteralFixup> &LiteralFixups) {
+static bool checkVOPDRegConstraints(
+    const SIInstrInfo &TII, const MachineInstr &MIX, const MachineInstr &MIY,
+    bool IsVOPD3, bool AllowSameVGPR,
+    SmallVectorImpl<VOPDLiteralFixup> &LiteralFixups, bool (&CommuteXY)[2]) {
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = MIX.getMF();
@@ -170,8 +184,12 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
     return false;
   if (IsVOPD3 && isVOPD3F64OPYSrcHazard(TII, MIX, MIY))
     return false;
-  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
-                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
+  // Components which only map once src0 and src1 are commuted. The checks
+  // below look at their operands as they will be after the commute.
+  bool Commute[2] = {false, false};
+  if (!IsVOPD3 &&
+      ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(TII, MIX, Commute[VOPD::X])) ||
+       (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(TII, MIY, Commute[VOPD::Y]))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
@@ -206,8 +224,12 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
 
   for (auto CompIdx : VOPD::COMPONENTS) {
     const MachineInstr &MI = (CompIdx == VOPD::X) ? MIX : MIY;
+    const AMDGPU::OpName Src0Name =
+        Commute[CompIdx] ? AMDGPU::OpName::src1 : AMDGPU::OpName::src0;
+    const AMDGPU::OpName Src1Name =
+        Commute[CompIdx] ? AMDGPU::OpName::src0 : AMDGPU::OpName::src1;
 
-    const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand &Src0 = *TII.getNamedOperand(MI, Src0Name);
     if (Src0.isReg()) {
       if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 0, Src0.getReg()))
         return false;
@@ -224,7 +246,7 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
           return false;
         // Only a 32-bit slot is handled, because the caller produces the value
         // with a single S_MOV_B32.
-        int OpIdx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+        int OpIdx = getNamedOperandIdx(MI.getOpcode(), Src0Name);
         if (TII.getOpSize(MI, OpIdx) != 4)
           return false;
         const TargetRegisterClass *SlotRC =
@@ -251,8 +273,7 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.insert(AMDGPU::VCC_LO);
 
-    if (const MachineOperand *Src1 =
-            TII.getNamedOperand(MI, AMDGPU::OpName::src1)) {
+    if (const MachineOperand *Src1 = TII.getNamedOperand(MI, Src1Name)) {
       if (Src1->isReg()) {
         if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 1, Src1->getReg()))
           return false;
@@ -310,6 +331,14 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
 
   auto GetVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
     const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
+    if (Commute[OpcodeIdx]) {
+      int Src0Idx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+      int Src1Idx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+      if ((int)OperandIdx == Src0Idx)
+        OperandIdx = Src1Idx;
+      else if ((int)OperandIdx == Src1Idx)
+        OperandIdx = Src0Idx;
+    }
     const MachineOperand &Operand = MI.getOperand(OperandIdx);
     if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
       return Operand.getReg();
@@ -330,6 +359,8 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX
                     << "\n\tY: " << MIY << "\n");
   LiteralFixups.assign(Fixups);
+  CommuteXY[VOPD::X] = Commute[VOPD::X];
+  CommuteXY[VOPD::Y] = Commute[VOPD::Y];
   return true;
 }
 
@@ -358,14 +389,19 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   bool AllowSameVGPR = ST.hasGFX12Insts();
 
   // Only a VOPD3 component can need a fixup; a plain one may hold a literal.
-  // checkVOPDRegConstraints() only writes this when it succeeds.
+  // checkVOPDRegConstraints() only writes these when it succeeds.
   SmallVector<VOPDLiteralFixup, 2> Fixups;
+  bool CommuteXY[2] = {false, false};
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
     if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR,
-                                Fixups))
+                                Fixups, CommuteXY))
       return VOPDMatchInfo{
-          {&FirstMI, &SecondMI}, 0, IsVOPD3, std::move(Fixups)};
+          {&FirstMI, &SecondMI},
+          0,
+          IsVOPD3,
+          std::move(Fixups),
+          {CommuteXY[AMDGPU::VOPD::X], CommuteXY[AMDGPU::VOPD::Y]}};
   }
 
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
@@ -376,9 +412,13 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
     if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR,
-                                Fixups))
+                                Fixups, CommuteXY))
       return VOPDMatchInfo{
-          {&FirstMI, &SecondMI}, 1, IsVOPD3, std::move(Fixups)};
+          {&FirstMI, &SecondMI},
+          1,
+          IsVOPD3,
+          std::move(Fixups),
+          {CommuteXY[AMDGPU::VOPD::Y], CommuteXY[AMDGPU::VOPD::X]}};
   }
 
   return std::nullopt;
@@ -441,7 +481,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 /// to the \p Head SU.
 /// \p Visited should allocate enough bits for the number of SUnits, but its
 /// value can otherwise be uninitialized.
-static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
+static void collectLoads(SmallSetVector<SUnit *, 8> &Loads, BitVector &Visited,
                          SUnit &Head, bool Forward, bool StopAtLoads) {
   if (Head.isBoundaryNode())
     return;
@@ -479,15 +519,17 @@ static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
 /// the corresponding set in \p LoadPredsCache should hold all transitive load
 /// dependencies (via collectLoads with StopAtLoads=false). The \p Scratch
 /// bitvector should allocate enough bits for the number of SUnits.
-static bool loadsMayOverlap(
-    [[maybe_unused]] SUnit &I, const SmallPtrSet<SUnit *, 8> &ILoadSuccs,
-    SUnit &J, BitVector &LoadPredsComputed,
-    SmallVector<SmallPtrSet<SUnit *, 8>> &LoadPredsCache, BitVector &Scratch) {
+static bool
+loadsMayOverlap([[maybe_unused]] SUnit &I,
+                const SmallSetVector<SUnit *, 8> &ILoadSuccs, SUnit &J,
+                BitVector &LoadPredsComputed,
+                SmallVector<SmallSetVector<SUnit *, 8>> &LoadPredsCache,
+                BitVector &Scratch) {
 
   if (ILoadSuccs.empty())
     return false;
 
-  SmallPtrSet<SUnit *, 8> &JLoadPreds = LoadPredsCache[J.NodeNum];
+  SmallSetVector<SUnit *, 8> &JLoadPreds = LoadPredsCache[J.NodeNum];
   if (!LoadPredsComputed.test(J.NodeNum)) {
     collectLoads(JLoadPreds, Scratch, J, /*Forward=*/false,
                  /*StopAtLoads=*/true);
@@ -497,7 +539,7 @@ static bool loadsMayOverlap(
     return false;
 
   for (SUnit *ILoad : ILoadSuccs) {
-    SmallPtrSet<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
+    SmallSetVector<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
     if (!LoadPredsComputed.test(ILoad->NodeNum)) {
       collectLoads(ILoadDeps, Scratch, *ILoad, /*Forward=*/false,
                    /*StopAtLoads=*/false);
@@ -557,13 +599,13 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     }
 
     IIdx = 0;
-    SmallPtrSet<SUnit *, 8> ILoadSuccs;
+    SmallSetVector<SUnit *, 8> ILoadSuccs;
 
     // Cache collected load predecessors.
     // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
     // For loads, this caches collectLoads with StopAtLoads=false
     BitVector LoadPredsComputed(DAG->SUnits.size());
-    SmallVector<SmallPtrSet<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
+    SmallVector<SmallSetVector<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
 
     BitVector Scratch(DAG->SUnits.size());
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;

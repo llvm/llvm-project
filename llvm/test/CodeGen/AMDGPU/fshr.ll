@@ -2424,7 +2424,7 @@ define i24 @v_fshr_i24(i24 %src0, i24 %src1, i24 %src2) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v3, 0xffffff, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX10-NEXT:    v_mul_hi_u32 v3, 0xaaaaaab, v3
+; GFX10-NEXT:    v_mul_hi_u32 v3, v3, 0xaaaaaab
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v3, 24, v3
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v2, v2, v3
 ; GFX10-NEXT:    v_add_nc_u32_e32 v2, 8, v2
@@ -2437,7 +2437,7 @@ define i24 @v_fshr_i24(i24 %src0, i24 %src1, i24 %src2) {
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffffff, v2
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mul_hi_u32 v3, 0xaaaaaab, v3
+; GFX11-TRUE16-NEXT:    v_mul_hi_u32 v3, v3, 0xaaaaaab
 ; GFX11-TRUE16-NEXT:    v_mul_u32_u24_e32 v3, 24, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_sub_nc_u32_e32 v2, v2, v3
@@ -2452,7 +2452,7 @@ define i24 @v_fshr_i24(i24 %src0, i24 %src1, i24 %src2) {
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffffff, v2
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_mul_hi_u32 v3, 0xaaaaaab, v3
+; GFX11-FAKE16-NEXT:    v_mul_hi_u32 v3, v3, 0xaaaaaab
 ; GFX11-FAKE16-NEXT:    v_mul_u32_u24_e32 v3, 24, v3
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_sub_nc_u32_e32 v2, v2, v3
@@ -2471,7 +2471,7 @@ define i24 @v_fshr_i24(i24 %src0, i24 %src1, i24 %src2) {
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffffff, v2
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_mul_hi_u32 v3, 0xaaaaaab, v3
+; GFX12-TRUE16-NEXT:    v_mul_hi_u32 v3, v3, 0xaaaaaab
 ; GFX12-TRUE16-NEXT:    v_mul_u32_u24_e32 v3, 24, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_sub_nc_u32_e32 v2, v2, v3
@@ -2490,7 +2490,7 @@ define i24 @v_fshr_i24(i24 %src0, i24 %src1, i24 %src2) {
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffffff, v2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_mul_hi_u32 v3, 0xaaaaaab, v3
+; GFX12-FAKE16-NEXT:    v_mul_hi_u32 v3, v3, 0xaaaaaab
 ; GFX12-FAKE16-NEXT:    v_mul_u32_u24_e32 v3, 24, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_sub_nc_u32_e32 v2, v2, v3
@@ -2575,8 +2575,8 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX10-NEXT:    v_and_b32_e32 v5, 0xffffff, v5
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
-; GFX10-NEXT:    v_mul_hi_u32 v6, 0xaaaaaab, v4
-; GFX10-NEXT:    v_mul_hi_u32 v7, 0xaaaaaab, v5
+; GFX10-NEXT:    v_mul_hi_u32 v6, v4, 0xaaaaaab
+; GFX10-NEXT:    v_mul_hi_u32 v7, v5, 0xaaaaaab
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v6, 24, v6
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v7, 24, v7
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v4, v4, v6
@@ -2595,8 +2595,8 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_mul_hi_u32 v6, 0xaaaaaab, v4
-; GFX11-TRUE16-NEXT:    v_mul_hi_u32 v7, 0xaaaaaab, v5
+; GFX11-TRUE16-NEXT:    v_mul_hi_u32 v6, v4, 0xaaaaaab
+; GFX11-TRUE16-NEXT:    v_mul_hi_u32 v7, v5, 0xaaaaaab
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_mul_u32_u24_e32 v6, 24, v6
 ; GFX11-TRUE16-NEXT:    v_mul_u32_u24_e32 v7, 24, v7
@@ -2619,8 +2619,8 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FAKE16-NEXT:    v_mul_hi_u32 v6, 0xaaaaaab, v4
-; GFX11-FAKE16-NEXT:    v_mul_hi_u32 v7, 0xaaaaaab, v5
+; GFX11-FAKE16-NEXT:    v_mul_hi_u32 v6, v4, 0xaaaaaab
+; GFX11-FAKE16-NEXT:    v_mul_hi_u32 v7, v5, 0xaaaaaab
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_mul_u32_u24_e32 v6, 24, v6
 ; GFX11-FAKE16-NEXT:    v_mul_u32_u24_e32 v7, 24, v7
@@ -2647,8 +2647,8 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-TRUE16-NEXT:    v_mul_hi_u32 v6, 0xaaaaaab, v4
-; GFX12-TRUE16-NEXT:    v_mul_hi_u32 v7, 0xaaaaaab, v5
+; GFX12-TRUE16-NEXT:    v_mul_hi_u32 v6, v4, 0xaaaaaab
+; GFX12-TRUE16-NEXT:    v_mul_hi_u32 v7, v5, 0xaaaaaab
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_mul_u32_u24_e32 v6, 24, v6
 ; GFX12-TRUE16-NEXT:    v_mul_u32_u24_e32 v7, 24, v7
@@ -2675,8 +2675,8 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-FAKE16-NEXT:    v_mul_hi_u32 v6, 0xaaaaaab, v4
-; GFX12-FAKE16-NEXT:    v_mul_hi_u32 v7, 0xaaaaaab, v5
+; GFX12-FAKE16-NEXT:    v_mul_hi_u32 v6, v4, 0xaaaaaab
+; GFX12-FAKE16-NEXT:    v_mul_hi_u32 v7, v5, 0xaaaaaab
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_mul_u32_u24_e32 v6, 24, v6
 ; GFX12-FAKE16-NEXT:    v_mul_u32_u24_e32 v7, 24, v7

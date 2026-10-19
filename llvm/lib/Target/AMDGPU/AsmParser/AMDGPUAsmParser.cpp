@@ -3243,6 +3243,7 @@ bool AMDGPUAsmParser::isRegOrOperandModifier(const AsmToken &Token,
 //   -|...|
 //   -abs(...)
 //   name:...
+// "name ::" is the VOPD separator, not an opcode modifier.
 //
 bool AMDGPUAsmParser::isModifier() {
 
@@ -3250,10 +3251,15 @@ bool AMDGPUAsmParser::isModifier() {
   AsmToken NextToken[2];
   peekTokens(NextToken);
 
+  // "name:value" is an opcode modifier. The second colon of "::" is the
+  // VOPD separator, so a symbol written immediately before "::" is a literal.
+  bool IsOpcodeModifier = isOpcodeModifierWithVal(Tok, NextToken[0]) &&
+                          !NextToken[1].is(AsmToken::Colon);
+
   return isOperandModifier(Tok, NextToken[0]) ||
          (Tok.is(AsmToken::Minus) &&
           isRegOrOperandModifier(NextToken[0], NextToken[1])) ||
-         isOpcodeModifierWithVal(Tok, NextToken[0]);
+         IsOpcodeModifier;
 }
 
 // Check if the current token is an SP3 'neg' modifier.
@@ -4809,6 +4815,22 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
       return false;
   }
 
+  // gfx950 v_pk_add/mul/fma_f32 have several invalid op_sel encodings
+  if (getFeatureBits()[AMDGPU::FeatureGFX950Insts] &&
+      (Opc == AMDGPU::V_PK_ADD_F32_vi || Opc == AMDGPU::V_PK_MUL_F32_vi ||
+       Opc == AMDGPU::V_PK_FMA_F32_vi)) {
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+
+    // op_sel[2:1] == 2'b01, 2'b10, or 2'b11 for v_pk_fma.
+    if (Opc == AMDGPU::V_PK_FMA_F32_vi &&
+        (((OpSel >> 1) & 1) || ((OpSel >> 2) & 1)))
+      return false;
+    // op_sel[1:0] == 2'b10 for v_pk_add/mul_f32.
+    else if ((OpSel & 3) == 2)
+      return false;
+  }
+
   // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
   // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
   // the first SGPR and use it for both the low and high operations.
@@ -6216,11 +6238,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
-      if (!(getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
-            getFeatureBits().test(AMDGPU::FeatureSupportsWave64))) {
-        return Error(IDRange.Start,
-                     "directive unsupported on " + getSTI().getCPU(), IDRange);
-      }
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, ExprVal,
@@ -10064,7 +10081,7 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
       Op.addRegOperands(Inst, 1);
       return;
     }
-    if (Op.isImm()) {
+    if (Op.isImm() || Op.isExpr()) {
       Op.addImmOperands(Inst, 1);
       return;
     }
