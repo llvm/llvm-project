@@ -192,7 +192,6 @@ TypeSystemFortran::GetBitSize(opaque_compiler_type_t type,
                               ExecutionContextScope *exe_scope) {
   if (!type)
     return 0;
-
   return static_cast<FortranType *>(type)->GetBitSize();
 }
 
