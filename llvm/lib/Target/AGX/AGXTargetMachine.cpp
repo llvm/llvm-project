@@ -38,6 +38,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXCodeGenPreparePass(PR);
   initializeAGXStrictFPPass(PR);
   initializeAGXLowerFPEnvPass(PR);
+  initializeAGXSoftF64Pass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
@@ -153,6 +154,7 @@ void AGXPassConfig::addIRPasses() {
   // The floating point mode register and constrained floating point
   // intrinsics (directed rounding in software).
   addPass(createAGXLowerFPEnvPass());
+  addPass(createAGXSoftF64Pass());
   addPass(createAGXCodeGenPreparePass());
   // Software IEEE binary32 arithmetic and canonical NaNs, when enabled.
   addPass(createAGXStrictFPPass());

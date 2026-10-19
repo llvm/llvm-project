@@ -8,7 +8,8 @@
 //
 // Lowering of LLVM IR to the AGX selection DAG.
 //
-// Legal types are i16, i32, i64, f16 and f32. There is no f64 support and no
+// Legal types are i16, i32, i64, f16 and f32. f64 values are softened to i64
+// (their arithmetic is integer code from AGXSoftF64), and there are no
 // vector types: vectors are scalarized. Booleans are 0/1 in 32-bit registers.
 // 64-bit integers are native for add, sub, multiply and bitwise operations;
 // shifts, compares and bit counts are split into 32-bit halves here.

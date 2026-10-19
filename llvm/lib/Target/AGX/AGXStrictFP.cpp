@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXSoftF64.h"
 #include "AGXSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1355,10 +1356,19 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
 
     bool Nearest = isa<ConstantInt>(Rounding) &&
                    cast<ConstantInt>(Rounding)->getZExtValue() == RoundNearestEven;
-    Value *R = Nearest ? nullptr : lowerRounded(CI, Rounding, ST.hasCanonicalNaN());
+    bool Double = ResTy->isDoubleTy() || OpTy->isDoubleTy();
+    Value *R = Nearest || Double
+                   ? nullptr
+                   : lowerRounded(CI, Rounding, ST.hasCanonicalNaN());
     if (!R) {
       B.SetInsertPoint(CI);
       R = lowerToPlain(CI, B);
+      // Double precision is computed in software in any rounding direction.
+      if (Double && !Nearest)
+        if (auto *RI = dyn_cast_or_null<Instruction>(R))
+          if (Value *D = AGX::lowerDoubleArithmetic(*RI, Rounding,
+                                                    ST.hasCanonicalNaN()))
+            R = D;
     }
     if (!R)
       continue;

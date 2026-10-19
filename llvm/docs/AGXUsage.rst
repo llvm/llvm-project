@@ -251,7 +251,8 @@ in functions whose ``denormal_fpenv`` flushes ``half`` denormals, the
 operands and results of ``half`` arithmetic, comparisons and conversions are
 flushed explicitly.
 
-Not supported: ``double`` (diagnosed as unsupported), vector memory
+Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
+precision`_; diagnosed as unsupported), vector memory
 operations (vectors are scalarized), textures and graphics shaders, calls
 and recursion.
 
@@ -331,6 +332,36 @@ Measured on the functional simulator, per SIMD-group and operation with
 normal operands, ``ieee-fp32`` adds about 8 instructions to an addition, 12
 to a multiplication, 22 to a fused multiply-add, 13 to a comparison, 65 to a
 division and 39 to a square root.
+
+Double precision
+----------------
+
+The hardware has no double precision arithmetic. The ``agx-soft-f64`` pass
+replaces the ``double`` operations with integer arithmetic on their bits:
+``fadd``, ``fsub``, ``fmul``, ``fdiv``, ``fneg``, ``fcmp``, ``fpext`` and
+``fptrunc`` (from and to ``float``, ``half`` and ``bfloat``), ``sitofp``,
+``uitofp``, ``fptosi``, ``fptoui``, and ``llvm.fma``, ``llvm.fmuladd``,
+``llvm.sqrt``, ``llvm.fabs``, ``llvm.copysign``, the minimum and maximum
+intrinsics, the rounding intrinsics (``floor``, ``ceil``, ``trunc``,
+``rint``, ``nearbyint``, ``roundeven``, ``round``), ``llvm.canonicalize``,
+``llvm.is.fpclass`` and the saturating conversions. Each operand becomes an
+exact sign, 128-bit significand and exponent, the exact result (with a sticky
+bit for the bits dropped) is computed with integer operations, and a single
+rounding gives the result, so all operations are correctly rounded IEEE 754
+operations with denormals, in the four rounding directions (see `Rounding
+modes`_; the ``double`` rounding mode is the ``half`` field). Division uses an
+expanded 128-bit integer division and the square root a loop that produces a
+bit of the root per iteration. NaN results are ``0x7fffffffffffffff`` with
+``canonical-nan``, and the first NaN operand, quieted, otherwise. Conversions
+to integers saturate, and NaN converts to 0.
+
+Values that are only moved (loads, stores, ``phi``, ``select``, arguments)
+stay ``double`` and become ``i64`` in type legalization. ``frem`` and vector
+arithmetic on ``double`` are diagnosed as unsupported. The code is large: in
+instructions per operation, about 590 for an addition, 350 for a
+multiplication, 690 for a fused multiply-add, 780 for a division (plus the
+iterations of the division loop), 460 for a square root (and 64 iterations),
+230 for a conversion and 20 for a comparison.
 
 Rounding modes
 --------------

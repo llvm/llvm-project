@@ -24,8 +24,8 @@
 //  * The hardware flushes 32-bit denormals but keeps 16-bit ones. Functions
 //    whose denormal mode for half asks for flushing get explicit flushes of
 //    the operands and results of their half operations.
-//  * There is no double precision hardware: double precision arithmetic is
-//    diagnosed as unsupported.
+//  * There is no double precision hardware: the double precision arithmetic
+//    that AGXSoftF64 does not implement is diagnosed as unsupported.
 //
 //===----------------------------------------------------------------------===//
 
