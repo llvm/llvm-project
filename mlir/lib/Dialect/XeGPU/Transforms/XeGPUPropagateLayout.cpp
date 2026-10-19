@@ -1812,7 +1812,7 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
   return success();
 }
 
-/// Recompute eligible producer chains in the conversion's target layout.
+/// Replace layout conversions of cheap producer chains by recomputation.
 ///
 ///   %step = vector.step                       {L1}
 ///   %cast = arith.index_castui %step           {L1}
@@ -1823,15 +1823,17 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
 /// becomes
 ///
 ///   %step  = vector.step                      {L1}
-///   %step' = vector.step                      {L2}
+///   %step' = vector.step
 ///   %cast  = arith.index_castui %step          {L1}
-///   %cast' = arith.index_castui %step'         {L2}
+///   %cast' = arith.index_castui %step'
 ///   use(%cast)                                {L1}
 ///   use(%cast')                               {L2}
 ///
 /// Clone the whole vector producer chain so the original and rematerialized
-/// values can carry independent layouts. For small, layout-preserving chains,
-/// recomputation can avoid cross-subgroup data movement through SLM.
+/// values can serve consumers with different layouts. Clones carry no layout
+/// attributes; layout-dependent passes recover them from the use points. For
+/// small, layout-preserving chains, recomputation can avoid cross-subgroup data
+/// movement through SLM.
 void xegpu::rematerializeConversionSources(OpBuilder &builder,
                                            Operation *parentOp) {
   SmallVector<xegpu::ConvertLayoutOp> conversions;
@@ -1888,7 +1890,7 @@ void xegpu::sinkElementwiseConversions(OpBuilder &builder,
       // another layout.
       if (!operandConversionOp) {
         Operation *definingOp = operandValue.getDefiningOp();
-        if (!definingOp || !xegpu::isTriviallyRematerializable(definingOp))
+        if (!definingOp || !xegpu::isCheaplyRematerializable(definingOp))
           return;
         continue;
       }
@@ -1930,9 +1932,17 @@ void xegpu::sinkElementwiseConversions(OpBuilder &builder,
         continue;
       if (rewiredOpIdxs.contains(operand.getOperandNumber()))
         continue;
-      Value clone = xegpu::rematerialize(builder, operandValue);
-      assert(clone && "operand should have been rejected above");
-      operand.set(clone);
+      Operation *definingOp = operandValue.getDefiningOp();
+      assert(definingOp && xegpu::isCheaplyRematerializable(definingOp) &&
+             "operand should have been rejected above");
+      // Rematerialize with uniform source layout.
+      builder.setInsertionPointAfter(definingOp);
+      Operation *clone = builder.clone(*definingOp);
+      OpResult cloneResult =
+          clone->getResult(cast<OpResult>(operandValue).getResultNumber());
+      xegpu::removeLayoutAttr(cloneResult);
+      xegpu::setDistributeLayoutAttr(cloneResult, uniformConvSrcLayout);
+      operand.set(cloneResult);
     }
 
     // Run the op in the source layout and bridge its result back, so that

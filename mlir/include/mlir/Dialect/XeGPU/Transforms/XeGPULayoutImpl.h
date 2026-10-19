@@ -39,7 +39,7 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
-/// Replace layout conversions by recomputing eligible producer chains.
+/// Replace layout conversions of cheap producer chains by recomputation.
 void rematerializeConversionSources(OpBuilder &builder, Operation *target);
 
 /// Sink `xegpu.convert_layout` ops past the elementwise operations they feed,
@@ -466,11 +466,11 @@ completeDpasMxLaneLayoutFromInstData(DistributeLayoutAttr aLayout,
 /// users and determine the expected layout accordingly.
 DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 
-/// Returns true if the vector produced by `op` can be recomputed in any layout
-/// by cloning a bounded chain of pure vector generators (`vector.step`, splat
-/// `arith.constant`, `vector.create_mask`, scalar `vector.broadcast`) and
-/// layout-preserving elementwise ops.
-bool isTriviallyRematerializable(Operation *op);
+/// Returns true if the vector produced by `op` is cheap to recompute in any
+/// layout, i.e. `rematerialize` would succeed: a bounded chain of pure vector
+/// generators (`vector.step`, splat `arith.constant`, `vector.create_mask`,
+/// scalar `vector.broadcast`) and layout-preserving elementwise ops.
+bool isCheaplyRematerializable(Operation *op);
 
 /// Clone a bounded chain of pure vector generators and layout-preserving
 /// elementwise ops without layout attributes. Each producer is cloned once,

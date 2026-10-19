@@ -189,7 +189,7 @@ static bool collectRematerializableChain(Operation *root,
   return true;
 }
 
-bool xegpu::isTriviallyRematerializable(Operation *op) {
+bool xegpu::isCheaplyRematerializable(Operation *op) {
   if (!op)
     return false;
   SmallVector<Operation *> chain;

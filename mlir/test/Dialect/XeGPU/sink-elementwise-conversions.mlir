@@ -23,7 +23,7 @@ func.func @convert_layout_bridge_input_mismatch() {
 // CHECK-LABEL: func.func @sink_conversion_out_of_elementwise
 // CHECK-DAG:     %[[MASK:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<16x64xi1>
 // CHECK-DAG:     %[[DATA:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<16x64xf32>
-// CHECK-DAG:     %[[PAD:.*]] = arith.constant dense<0xFF800000> : vector<16x64xf32>
+// CHECK-DAG:     %[[PAD:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<0xFF800000> : vector<16x64xf32>
 // CHECK:         %[[SEL:.*]] = arith.select %[[MASK]], %[[DATA]], %[[PAD]]
 // CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : vector<16x64xi1>, vector<16x64xf32>
 // CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[SEL]]
