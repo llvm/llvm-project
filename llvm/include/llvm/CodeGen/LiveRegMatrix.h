@@ -24,6 +24,8 @@
 #define LLVM_CODEGEN_LIVEREGMATRIX_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <memory>
@@ -54,8 +56,13 @@ private:
   // UserTag changes whenever virtual registers have been modified.
   unsigned UserTag = 0;
 
-  UnassignListenerFn UnassignListener = nullptr;
-  void *UnassignListenerCtx = nullptr;
+  struct UnassignListener {
+    UnassignListenerFn Fn = nullptr;
+    void *Ctx = nullptr;
+  };
+  /// Every live advisor registers one. MLEvictAdvisor embeds a
+  /// DefaultEvictionAdvisor, so more than one cache must observe unassigns.
+  SmallVector<UnassignListener, 2> UnassignListeners;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
   std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
@@ -103,19 +110,23 @@ public:
   /// caches are invalidated.
   void invalidateVirtRegs() { ++UserTag; }
 
-  /// Called at the end of every unassign. \p Ctx is the pointer passed to
-  /// setUnassignListener. Only one listener is active.
+  /// Called at the end of every unassign. \p Ctx identifies the registration.
+  /// Adds a listener, or replaces the one already registered with \p Ctx.
+  /// Several may be active: a nested advisor must not drop the outer cache.
   void setUnassignListener(UnassignListenerFn Fn, void *Ctx) {
-    UnassignListener = Fn;
-    UnassignListenerCtx = Ctx;
+    for (UnassignListener &L : UnassignListeners) {
+      if (L.Ctx == Ctx) {
+        L.Fn = Fn;
+        return;
+      }
+    }
+    UnassignListeners.push_back({Fn, Ctx});
   }
 
-  /// Clear the listener if it was registered with \p Ctx.
+  /// Remove the listener registered with \p Ctx.
   void clearUnassignListener(void *Ctx) {
-    if (UnassignListenerCtx == Ctx) {
-      UnassignListener = nullptr;
-      UnassignListenerCtx = nullptr;
-    }
+    llvm::erase_if(UnassignListeners,
+                   [Ctx](const UnassignListener &L) { return L.Ctx == Ctx; });
   }
 
   enum InterferenceKind {

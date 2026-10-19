@@ -107,7 +107,7 @@ class RegAllocEvictionAdvisor {
 public:
   RegAllocEvictionAdvisor(const RegAllocEvictionAdvisor &) = delete;
   RegAllocEvictionAdvisor(RegAllocEvictionAdvisor &&) = delete;
-  LLVM_ABI virtual ~RegAllocEvictionAdvisor();
+  virtual ~RegAllocEvictionAdvisor();
 
   /// Find a physical register that can be freed by evicting the FixedRegisters,
   /// or return NoRegister. The eviction decision is assumed to be correct (i.e.

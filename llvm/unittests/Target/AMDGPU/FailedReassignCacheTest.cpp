@@ -377,6 +377,43 @@ TEST_F(FailedReassignCacheTest, RenumberDropsCache) {
   });
 }
 
+TEST_F(FailedReassignCacheTest, NestedAdvisorsBothSeeUnassign) {
+  runWithFixture(64, [&](Fixture &F) {
+    // MLEvictAdvisor constructs the base advisor, which registers a listener,
+    // then an embedded DefaultEvictionAdvisor, which registers another. The
+    // outer cache must still observe unassigns.
+    const TargetRegisterInfo &TRI = *F.MF.getSubtarget().getRegisterInfo();
+    reassign::Cache Outer(F.LIS, F.Matrix, F.MF.getRegInfo(), TRI, F.RCI);
+    reassign::Cache Inner(F.LIS, F.Matrix, F.MF.getRegInfo(), TRI, F.RCI);
+    auto Listen = [](void *Ctx, const LiveInterval &Unassigned,
+                     MCRegister PhysReg, bool ClearAll) {
+      static_cast<reassign::Cache *>(Ctx)->noteUnassign(Unassigned, PhysReg,
+                                                        ClearAll);
+    };
+    F.Matrix.setUnassignListener(Listen, &Outer);
+    F.Matrix.setUnassignListener(Listen, &Inner);
+
+    for (unsigned I = 1; I < NumKeepVGPRs; ++I)
+      F.assign(I, I);
+
+    const LiveInterval &LI = F.LI(0);
+    Outer.remember(LI, /*HintOnly=*/false);
+    Inner.remember(LI, /*HintOnly=*/false);
+    F.unassign(1);
+
+    EXPECT_EQ(Outer.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
+    EXPECT_EQ(Inner.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
+
+    // Dropping the embedded advisor must leave the outer listener in place.
+    F.Matrix.clearUnassignListener(&Inner);
+    Outer.remember(LI, /*HintOnly=*/false);
+    F.unassign(2);
+    EXPECT_EQ(Outer.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
+
+    F.Matrix.clearUnassignListener(&Outer);
+  });
+}
+
 TEST_F(FailedReassignCacheTest, ClearEmptiesEntriesAndBuckets) {
   runWithFixture(64, [&](Fixture &F) {
     F.Cache.remember(F.LI(0), false);
