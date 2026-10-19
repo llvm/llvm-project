@@ -704,8 +704,7 @@ private:
   /// else to its callers. Also updates OrigNode's edges to remove any context
   /// ids moved to the newly created edge.
   void connectNewNode(ContextNode *NewNode, ContextNode *OrigNode,
-                      bool TowardsCallee,
-                      DenseSet<uint32_t> RemainingContextIds);
+                      bool TowardsCallee, const DenseSet<uint32_t> &ContextIds);
 
   /// Get the stack id corresponding to the given Id or Index (for IR this will
   /// return itself, for a summary index this will return the id recorded in the
@@ -1566,52 +1565,20 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
     ContextNode *NewNode, ContextNode *OrigNode, bool TowardsCallee,
-    // This must be passed by value to make a copy since it will be adjusted
-    // as ids are moved.
-    DenseSet<uint32_t> RemainingContextIds) {
+    const DenseSet<uint32_t> &ContextIds) {
   auto &OrigEdges =
       TowardsCallee ? OrigNode->CalleeEdges : OrigNode->CallerEdges;
-  DenseSet<uint32_t> RecursiveContextIds;
-  DenseSet<uint32_t> AllCallerContextIds;
-  if (AllowRecursiveCallsites) {
-    // Identify which context ids are recursive which is needed to properly
-    // update the RemainingContextIds set. The relevant recursive context ids
-    // are those that are in multiple edges.
-    for (auto &CE : OrigEdges) {
-      AllCallerContextIds.reserve(CE->getContextIds().size());
-      for (auto Id : CE->getContextIds())
-        if (!AllCallerContextIds.insert(Id).second)
-          RecursiveContextIds.insert(Id);
-    }
-  }
   // Increment iterator in loop so that we can remove edges as needed.
   for (auto EI = OrigEdges.begin(); EI != OrigEdges.end();) {
     auto Edge = *EI;
     DenseSet<uint32_t> NewEdgeContextIds;
     // Remove any matching context ids from Edge, return set that were found and
     // removed, these are the new edge's context ids.
-    set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds);
+    set_subtract(Edge->getContextIds(), ContextIds, NewEdgeContextIds);
     // If no matching context ids for this edge, skip it.
     if (NewEdgeContextIds.empty()) {
       ++EI;
       continue;
-    }
-    // Update the remaining context ids set for the later edges. This is a
-    // compile time optimization.
-    if (RecursiveContextIds.empty()) {
-      set_subtract(RemainingContextIds, NewEdgeContextIds);
-    } else {
-      // Keep the recursive ids in the remaining set as we expect to see those
-      // on another edge. We can remove the non-recursive remaining ids that
-      // were seen on this edge, however. We already have the set of remaining
-      // ids that were on this edge (in NewEdgeContextIds). Figure out which are
-      // non-recursive and only remove those. Note that despite the higher
-      // overhead of updating the remaining context ids set when recursion
-      // handling is enabled, it was found to be at worst performance neutral
-      // and in one case a clear win.
-      DenseSet<uint32_t> NonRecursiveRemainingCurEdgeIds =
-          set_difference(NewEdgeContextIds, RecursiveContextIds);
-      set_subtract(RemainingContextIds, NonRecursiveRemainingCurEdgeIds);
     }
     if (TowardsCallee) {
       uint8_t NewAllocType = computeAllocType(NewEdgeContextIds);

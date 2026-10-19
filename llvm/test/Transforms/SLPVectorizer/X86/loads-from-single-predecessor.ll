@@ -296,6 +296,239 @@ exit:
   ret void
 }
 
+; The strided operands are gathered from the single wide load, which covers
+; the predecessor load too.
+define void @gathered_loads(ptr noalias %dst, ptr noalias %src, i1 %c) {
+; CHECK-LABEL: define void @gathered_loads(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[SRC5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <3 x i32>, ptr [[SRC5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <3 x i32> [[TMP5]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP6]], <4 x i32> <i32 poison, i32 1, i32 3, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l0 = load i32, ptr %src, align 4
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i32, ptr %src, i64 1
+  %src2 = getelementptr inbounds i32, ptr %src, i64 2
+  %src3 = getelementptr inbounds i32, ptr %src, i64 3
+  %src4 = getelementptr inbounds i32, ptr %src, i64 4
+  %src5 = getelementptr inbounds i32, ptr %src, i64 5
+  %src6 = getelementptr inbounds i32, ptr %src, i64 6
+  %src7 = getelementptr inbounds i32, ptr %src, i64 7
+  %l1 = load i32, ptr %src1, align 4
+  %l2 = load i32, ptr %src2, align 4
+  %l3 = load i32, ptr %src3, align 4
+  %l4 = load i32, ptr %src4, align 4
+  %l5 = load i32, ptr %src5, align 4
+  %l6 = load i32, ptr %src6, align 4
+  %l7 = load i32, ptr %src7, align 4
+  %s0 = add i32 %l0, %l1
+  %s1 = add i32 %l2, %l3
+  %s2 = add i32 %l4, %l5
+  %s3 = add i32 %l6, %l7
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %s0, ptr %dst, align 4
+  store i32 %s1, ptr %dst1, align 4
+  store i32 %s2, ptr %dst2, align 4
+  store i32 %s3, ptr %dst3, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Same, but the successor block may write to the memory of the predecessor
+; load.
+define void @gathered_loads_clobber(ptr noalias %dst, ptr %src, ptr %p, i1 %c) {
+; CHECK-LABEL: define void @gathered_loads_clobber(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr [[SRC:%.*]], ptr [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[SRC5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[SRC5]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP2]], <4 x i32> <i32 poison, i32 1, i32 3, i32 5>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l0 = load i32, ptr %src, align 4
+  br i1 %c, label %bb, label %exit
+
+bb:
+  store i32 0, ptr %p, align 4
+  %src1 = getelementptr inbounds i32, ptr %src, i64 1
+  %src2 = getelementptr inbounds i32, ptr %src, i64 2
+  %src3 = getelementptr inbounds i32, ptr %src, i64 3
+  %src4 = getelementptr inbounds i32, ptr %src, i64 4
+  %src5 = getelementptr inbounds i32, ptr %src, i64 5
+  %src6 = getelementptr inbounds i32, ptr %src, i64 6
+  %src7 = getelementptr inbounds i32, ptr %src, i64 7
+  %l1 = load i32, ptr %src1, align 4
+  %l2 = load i32, ptr %src2, align 4
+  %l3 = load i32, ptr %src3, align 4
+  %l4 = load i32, ptr %src4, align 4
+  %l5 = load i32, ptr %src5, align 4
+  %l6 = load i32, ptr %src6, align 4
+  %l7 = load i32, ptr %src7, align 4
+  %s0 = add i32 %l0, %l1
+  %s1 = add i32 %l2, %l3
+  %s2 = add i32 %l4, %l5
+  %s3 = add i32 %l6, %l7
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %s0, ptr %dst, align 4
+  store i32 %s1, ptr %dst1, align 4
+  store i32 %s2, ptr %dst2, align 4
+  store i32 %s3, ptr %dst3, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+
+; The combined wide integer load starts at the predecessor load.
+define i32 @bitcast_loads(ptr %src, i1 %c) {
+; CHECK-LABEL: define i32 @bitcast_loads(
+; CHECK-SAME: ptr [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[SRC]], align 1
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[SRC1]], align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[SRC2]], align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[SRC3]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[L0]] to i32
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[L1]] to i32
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i32
+; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i32
+; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[Z1]], 8
+; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[Z2]], 16
+; CHECK-NEXT:    [[S3:%.*]] = shl nuw i32 [[Z3]], 24
+; CHECK-NEXT:    [[O1:%.*]] = or disjoint i32 [[S1]], [[Z0]]
+; CHECK-NEXT:    [[O2:%.*]] = or disjoint i32 [[O1]], [[S2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[O2]], [[S3]]
+; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %l0 = load i8, ptr %src, align 1
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i8, ptr %src, i64 1
+  %src2 = getelementptr inbounds i8, ptr %src, i64 2
+  %src3 = getelementptr inbounds i8, ptr %src, i64 3
+  %l1 = load i8, ptr %src1, align 1
+  %l2 = load i8, ptr %src2, align 1
+  %l3 = load i8, ptr %src3, align 1
+  %z0 = zext i8 %l0 to i32
+  %z1 = zext i8 %l1 to i32
+  %z2 = zext i8 %l2 to i32
+  %z3 = zext i8 %l3 to i32
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+  %o1 = or disjoint i32 %s1, %z0
+  %o2 = or disjoint i32 %o1, %s2
+  %o3 = or disjoint i32 %o2, %s3
+  ret i32 %o3
+
+exit:
+  ret i32 0
+}
+
+; Same, with the byte swap.
+define i32 @bswap_loads(ptr %src, i1 %c) {
+; CHECK-LABEL: define i32 @bswap_loads(
+; CHECK-SAME: ptr [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[SRC]], align 1
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[SRC1]], align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[SRC2]], align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[SRC3]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[L0]] to i32
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[L1]] to i32
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i32
+; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i32
+; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[Z0]], 24
+; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[Z1]], 16
+; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[Z2]], 8
+; CHECK-NEXT:    [[O1:%.*]] = or disjoint i32 [[S0]], [[S1]]
+; CHECK-NEXT:    [[O2:%.*]] = or disjoint i32 [[O1]], [[S2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[O2]], [[Z3]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %l0 = load i8, ptr %src, align 1
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i8, ptr %src, i64 1
+  %src2 = getelementptr inbounds i8, ptr %src, i64 2
+  %src3 = getelementptr inbounds i8, ptr %src, i64 3
+  %l1 = load i8, ptr %src1, align 1
+  %l2 = load i8, ptr %src2, align 1
+  %l3 = load i8, ptr %src3, align 1
+  %z0 = zext i8 %l0 to i32
+  %z1 = zext i8 %l1 to i32
+  %z2 = zext i8 %l2 to i32
+  %z3 = zext i8 %l3 to i32
+  %s0 = shl nuw i32 %z0, 24
+  %s1 = shl nuw nsw i32 %z1, 16
+  %s2 = shl nuw nsw i32 %z2, 8
+  %o1 = or disjoint i32 %s0, %s1
+  %o2 = or disjoint i32 %o1, %s2
+  %o3 = or disjoint i32 %o2, %z3
+  ret i32 %o3
+
+exit:
+  ret i32 0
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !4, i64 0}
