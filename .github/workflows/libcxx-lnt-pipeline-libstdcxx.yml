@@ -65,3 +65,5 @@ jobs:
     with:
       artifact-name: lnt-report
       test-suite: libstdcxx
+    secrets:
+      LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

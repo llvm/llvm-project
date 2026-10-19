@@ -2759,8 +2759,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   // Either both `invoke`s must not have a normal destination,
   // or     both `invoke`s must     have a normal destination,
   auto HasNormalDest = [](InvokeInst *II) {
-    return !isa<UnreachableInst>(
-        II->getNormalDest()->getFirstNonPHIOrPseudoProbe());
+    return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIIt());
   };
   if (any_of(Invokes, HasNormalDest)) {
     // Do not merge `invoke` that does not have a normal destination with one
@@ -2845,8 +2844,8 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
   if (DTU)
     Updates.reserve(2 + 3 * Invokes.size());
 
-  bool HasNormalDest = !isa<UnreachableInst>(
-      Invokes[0]->getNormalDest()->getFirstNonPHIOrPseudoProbe());
+  bool HasNormalDest =
+      !isa<UnreachableInst>(Invokes[0]->getNormalDest()->getFirstNonPHIIt());
 
   // Clone one of the invokes into a new basic block.
   // Since they are all compatible, it doesn't matter which invoke is cloned.
@@ -8753,17 +8752,13 @@ bool SimplifyCFGOpt::simplifyIndirectBr(IndirectBrInst *IBI) {
 /// values are flowing through both blocks, we don't lose any ability to
 /// specialize.  If anything, we make such specialization more likely.
 ///
-/// TODO - This transformation could remove entries from a phi in the target
-/// block when the inputs in the phi are the same for the two blocks being
-/// merged.  In some cases, this could result in removal of the PHI entirely.
+/// Phis in the successor are allowed if both blocks pass the same value, or
+/// each passes its own landing pad value and that is its only use: the merged
+/// block's landing pad then carries the value for both edges.
 static bool tryToMergeLandingPad(LandingPadInst *LPad, UncondBrInst *BI,
                                  BasicBlock *BB, DomTreeUpdater *DTU) {
   auto Succ = BB->getUniqueSuccessor();
   assert(Succ);
-  // If there's a phi in the successor block, we'd likely have to introduce
-  // a phi into the merged landing pad block.
-  if (isa<PHINode>(*Succ->begin()))
-    return false;
 
   for (BasicBlock *OtherPred : predecessors(Succ)) {
     if (BB == OtherPred)
@@ -8775,6 +8770,23 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, UncondBrInst *BI,
     ++I;
     UncondBrInst *BI2 = dyn_cast<UncondBrInst>(I);
     if (!BI2 || !BI2->isIdenticalTo(BI))
+      continue;
+
+    // Merging must not require a new phi in the merged landing pad block.
+    if (!all_of(Succ->phis(), [&](PHINode &PN) {
+          Value *V = PN.getIncomingValueForBlock(BB);
+          Value *V2 = PN.getIncomingValueForBlock(OtherPred);
+          return V == V2 || (V == LPad && V2 == LPad2);
+        }))
+      continue;
+
+    // Those phis must be the only uses of the landing pads. Otherwise, with a
+    // loop through Succ, a use would be clobbered when the merged pad is
+    // re-entered.
+    unsigned NumLPadPhis = count_if(Succ->phis(), [&](PHINode &PN) {
+      return PN.getIncomingValueForBlock(BB) == LPad;
+    });
+    if (!LPad->hasNUses(NumLPadPhis) || !LPad2->hasNUses(NumLPadPhis))
       continue;
 
     std::vector<DominatorTree::UpdateType> Updates;

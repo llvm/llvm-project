@@ -1153,28 +1153,6 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
     });
   }
 
-  if (!LAI->canVectorizeMemory()) {
-    if (hasUncountableExitWithSideEffects()) {
-      reportVectorizationFailure(
-          "Cannot vectorize unsafe dependencies in uncountable exit loop with "
-          "side effects",
-          "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE,
-          TheLoop);
-      return false;
-    }
-
-    return canVectorizeIndirectUnsafeDependences();
-  }
-
-  if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
-    reportVectorizationFailure("We don't allow storing to uniform addresses",
-                               "write to a loop invariant address could not "
-                               "be vectorized",
-                               "CantVectorizeStoreToLoopInvariantAddress", ORE,
-                               TheLoop);
-    return false;
-  }
-
   // We can vectorize stores to invariant address when final reduction value is
   // guaranteed to be stored at the end of the loop. Also, if decision to
   // vectorize loop is made, runtime checks are added so as to make sure that
@@ -1251,6 +1229,28 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
         return false;
       }
     }
+  }
+
+  if (!LAI->canVectorizeMemory()) {
+    if (hasUncountableExitWithSideEffects()) {
+      reportVectorizationFailure(
+          "Cannot vectorize unsafe dependencies in uncountable exit loop with "
+          "side effects",
+          "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE,
+          TheLoop);
+      return false;
+    }
+
+    return canVectorizeIndirectUnsafeDependences();
+  }
+
+  if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
+    reportVectorizationFailure("We don't allow storing to uniform addresses",
+                               "write to a loop invariant address could not "
+                               "be vectorized",
+                               "CantVectorizeStoreToLoopInvariantAddress", ORE,
+                               TheLoop);
+    return false;
   }
 
   PSE.addPredicate(LAI->getPSE().getPredicate());
@@ -1750,6 +1750,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   bool HasSideEffects = false;
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
+      if (isa<PseudoProbeInst>(I))
+        continue;
       if (I.mayWriteToMemory()) {
         if (isa<StoreInst>(&I) && cast<StoreInst>(&I)->isSimple()) {
           HasSideEffects = true;
@@ -1891,6 +1893,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   for (auto *BB : TheLoop->blocks()) {
     for (auto &I : *BB) {
       if (&I == Load)
+        continue;
+
+      // Pseudo-probes are placeholders with no real memory
+      // access, so they cannot alias the exit condition load and do not need
+      // to be masked.
+      if (isa<PseudoProbeInst>(I))
         continue;
 
       if (I.mayReadOrWriteMemory()) {
