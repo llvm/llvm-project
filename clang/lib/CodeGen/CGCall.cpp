@@ -1148,7 +1148,19 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     //
     // For CPU targets, this currently only works for OpenCL.
     assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
-    computeSPIRKernelABIInfo(CGM, *FI);
+    // SPIR-V lowers OpenCL types to target extension types, which the ABI
+    // library cannot tell apart from the kernel pointers it coerces yet, so
+    // such kernels keep Clang's own lowering.
+    auto IsSPIRVOpenCLType = [&](const CGFunctionInfoArgInfo &Arg) {
+      return CGM.getTriple().isSPIRV() &&
+             Arg.type.getTypePtr()->isOpenCLSpecificType();
+    };
+    if (CC == llvm::CallingConv::SPIR_KERNEL &&
+        CGM.shouldUseLLVMABILowering(CC) &&
+        llvm::none_of(FI->arguments(), IsSPIRVOpenCLType))
+      CGM.computeABIInfoUsingLib(*FI);
+    else
+      computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else if (CGM.shouldUseLLVMABILowering(CC)) {

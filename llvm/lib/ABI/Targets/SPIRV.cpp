@@ -11,24 +11,41 @@
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Casting.h"
 
 namespace llvm::abi {
 
-// Mirrors Clang's SPIRVABIInfo: the default classification applies, except
-// for SPIR_KERNEL arguments.
-class SPIRVTargetInfo : public DefaultTargetInfo {
+// The LLVM address space of the SPIR-V CrossWorkgroup storage class.
+static constexpr unsigned CrossWorkgroupAddrSpace = 1;
+
+// The default classification applies, except for SPIR_KERNEL arguments, which
+// SPIR-V restricts in which address spaces they may point to and requires to be
+// copied when they are aggregates.
+class SPIRVTargetInfo final : public DefaultTargetInfo {
 private:
   ABICompatInfo CompatInfo;
-
-  // When set, SPIR_KERNEL aggregate arguments are passed indirectly (byval)
-  // so the callee gets its own copy. The consumer sets this for device
-  // compilations, matching classic CodeGen's isTargetDevice() gate.
+  unsigned DefaultAddrSpace;
+  bool CoerceDefaultPtrKernelArgs;
   bool KernelPassAggregatesIndirect;
 
   ArgInfo classifyKernelArgumentType(const Type *ArgTy) const {
-    // TODO: Clang also coerces default address space pointer arguments to
-    // CrossWorkGroup pointers, which needs the target's language address space
-    // mapping.
+    // Kernel arguments may not be default address space pointers, so pass them
+    // as CrossWorkgroup pointers. An atomic pointer of the same size is passed
+    // as the pointer itself.
+    if (CoerceDefaultPtrKernelArgs) {
+      const Type *Ty = ArgTy;
+      if (const auto *AT = dyn_cast<AtomicType>(Ty);
+          AT && AT->getSizeInBits() == AT->getValueType()->getSizeInBits())
+        Ty = AT->getValueType();
+      if (const auto *PtrTy = dyn_cast<PointerType>(Ty);
+          PtrTy && PtrTy->getAddrSpace() == DefaultAddrSpace) {
+        const Type *Coerced = TB.getPointerType(
+            PtrTy->getSizeInBits().getFixedValue(), PtrTy->getAlignment(),
+            CrossWorkgroupAddrSpace, /*HasAddressSpaceQualifier=*/true);
+        return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
+                                  /*CanBeFlattened=*/false);
+      }
+    }
 
     // Force copying aggregate type in kernel arguments by value. This is
     // required for the object copied to be valid on the device. TODO:
@@ -41,12 +58,20 @@ private:
   }
 
 public:
-  SPIRVTargetInfo(TypeBuilder &Builder, const ABICompatInfo &Info,
+  SPIRVTargetInfo(TypeBuilder &Builder, unsigned DefaultAddrSpace,
+                  bool CoerceDefaultPtrKernelArgs,
                   bool KernelPassAggregatesIndirect)
-      : DefaultTargetInfo(Builder), CompatInfo(Info),
+      : DefaultTargetInfo(Builder), DefaultAddrSpace(DefaultAddrSpace),
+        CoerceDefaultPtrKernelArgs(CoerceDefaultPtrKernelArgs),
         KernelPassAggregatesIndirect(KernelPassAggregatesIndirect) {}
 
   const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
+
+  bool hasInt128Type() const override { return false; }
+
+  // A record that cannot be copied is constructed in place, so its sret
+  // pointer follows the default address space like a "this" pointer.
+  unsigned getSRetAddrSpace() const override { return DefaultAddrSpace; }
 
   void computeInfo(FunctionInfo &FI) const override {
     // The logic is the same as in DefaultTargetInfo, except for kernel
@@ -62,9 +87,11 @@ public:
 };
 
 std::unique_ptr<TargetInfo>
-createSPIRVTargetInfo(TypeBuilder &TB, const ABICompatInfo &Compat,
+createSPIRVTargetInfo(TypeBuilder &TB, unsigned DefaultAddrSpace,
+                      bool CoerceDefaultPtrKernelArgs,
                       bool KernelPassAggregatesIndirect) {
-  return std::make_unique<SPIRVTargetInfo>(TB, Compat,
+  return std::make_unique<SPIRVTargetInfo>(TB, DefaultAddrSpace,
+                                           CoerceDefaultPtrKernelArgs,
                                            KernelPassAggregatesIndirect);
 }
 

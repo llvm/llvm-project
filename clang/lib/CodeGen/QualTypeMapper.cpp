@@ -146,14 +146,15 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   }
   case Type::ObjCObject:
   case Type::ObjCInterface:
-  case Type::ObjCObjectPointer:
+  case Type::ObjCObjectPointer: {
     // Objective-C objects are represented as pointers in the ABI.
+    const TargetInfo &TI = ASTCtx.getTargetInfo();
+    unsigned TargetAddrSpace = TI.getTargetAddressSpace(QT.getAddressSpace());
     return Builder.getPointerType(
-        ASTCtx.getTargetInfo().getPointerWidth(QT.getAddressSpace()),
-        llvm::Align(
-            ASTCtx.getTargetInfo().getPointerAlign(QT.getAddressSpace()) / 8),
-        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()),
-        QT.hasAddressSpace());
+        TI.getPointerWidth(QT.getAddressSpace()),
+        llvm::Align(TI.getPointerAlign(QT.getAddressSpace()) / 8),
+        TargetAddrSpace, QT.hasAddressSpace() || TargetAddrSpace != 0);
+  }
   case Type::OverflowBehavior:
     return convertType(cast<OverflowBehaviorType>(QT)->getUnderlyingType());
   case Type::Auto:
@@ -179,7 +180,11 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getVoidType();
 
   case BuiltinType::NullPtr:
-    return createPointerTypeForPointee(QT);
+    // Clang lowers std::nullptr_t to a pointer in address space 0.
+    return Builder.getPointerType(
+        ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default),
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default) /
+                    8));
 
   case BuiltinType::Bool:
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
@@ -633,8 +638,11 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
-                                TargetAddrSpace, PointeeType.hasAddressSpace());
+  // The default address space may map to a non-zero target address space
+  // (e.g. the SPIR-V generic one), which still makes the pointer qualified.
+  return Builder.getPointerType(
+      PointerSize, llvm::Align(Alignment.value() / 8), TargetAddrSpace,
+      PointeeType.hasAddressSpace() || TargetAddrSpace != 0);
 }
 
 /// Processes the fields of a record (struct/class/union) and populates
