@@ -463,8 +463,7 @@ static void buildCommonPollyPipeline(LLVMContext &Context,
                                      OptimizationLevel Level,
                                      IntrusiveRefCntPtr<vfs::FileSystem> FS,
                                      bool EnableForOpt) {
-  PassBuilder PB(Context, /*TM=*/nullptr,
-                 PipelineTuningOptions(&Context.getLibraryOptions()),
+  PassBuilder PB(Context, /*TM=*/nullptr, /*PTO=*/std::nullopt,
                  /*PGOOpt=*/{},
                  /*PIC=*/nullptr, std::move(FS));
 

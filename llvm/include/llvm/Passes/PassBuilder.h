@@ -151,10 +151,11 @@ public:
   };
 
   /// The pipelines read the library options of \p Context, which must outlive
-  /// the PassBuilder.
+  /// the PassBuilder. If \p PTO is not given, it reads its defaults from
+  /// \p Context.
   LLVM_ABI explicit PassBuilder(
       LLVMContext &Context, TargetMachine *TM = nullptr,
-      PipelineTuningOptions PTO = PipelineTuningOptions(),
+      std::optional<PipelineTuningOptions> PTO = std::nullopt,
       std::optional<PGOOptions> PGOOpt = std::nullopt,
       PassInstrumentationCallbacks *PIC = nullptr,
       IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());

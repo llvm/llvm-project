@@ -460,8 +460,8 @@ protected:
                   "exit:\n"
                   "  ret void\n"
                   "}\n")),
-        CallbacksHandle(), PB(Context, nullptr, PipelineTuningOptions(),
-                              std::nullopt, &CallbacksHandle.Callbacks),
+        CallbacksHandle(), PB(Context, nullptr, std::nullopt, std::nullopt,
+                              &CallbacksHandle.Callbacks),
         PM(), LAM(), FAM(), CGAM(), AM() {
 
     EXPECT_TRUE(&CallbacksHandle.Callbacks ==

@@ -52,7 +52,7 @@ bool runScopInlinerImpl(Function *F, SCC_t &SCC,
     return false;
   }
 
-  PassBuilder PB(F->getContext(), /*TM=*/nullptr, PipelineTuningOptions(),
+  PassBuilder PB(F->getContext(), /*TM=*/nullptr, /*PTO=*/std::nullopt,
                  /*PGOOpt=*/{},
                  /*PIC=*/nullptr, std::move(FS));
   // Populate analysis managers and register Polly-specific analyses.

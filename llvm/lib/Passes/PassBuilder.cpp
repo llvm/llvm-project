@@ -567,12 +567,14 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
 }
 
 PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
-                         PipelineTuningOptions PTO,
+                         std::optional<PipelineTuningOptions> PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
     : Context(Context), Opts(Context.getLibraryOptions().get<PassesOptions>()),
-      TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
+      TM(TM),
+      PTO(PTO ? *PTO : PipelineTuningOptions(&Context.getLibraryOptions())),
+      PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {
