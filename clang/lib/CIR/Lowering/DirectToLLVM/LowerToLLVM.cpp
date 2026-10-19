@@ -3090,7 +3090,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
     fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
 
-  if (op->hasAttr(CIRDialect::getNoUnwindAttrName()))
+  // As for calls, either cannot-unwind fact maps to LLVM's nounwind.
+  if (op->hasAttr(CIRDialect::getNoUnwindAttrName()) ||
+      op->hasAttr(CIRDialect::getNoThrowAttrName()))
     fn.setNoUnwind(true);
   if (op->hasAttr(CIRDialect::getWillReturnAttrName()))
     fn.setWillReturn(true);

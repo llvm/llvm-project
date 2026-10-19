@@ -1730,7 +1730,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
     return false;
   switch (getOpcode()) {
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
   case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::InsertElement:
@@ -4264,7 +4263,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
   }
 

@@ -520,7 +520,7 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
 
     // Get the first instruction in the entry block.
     BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
-    BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
+    BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrPseudoProbe();
     if (&*FirstInst != &AI) {
       // If the entry block doesn't start with a zero-size alloca then move
       // this one to the start of the entry block.  There is no problem with
