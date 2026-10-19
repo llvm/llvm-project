@@ -500,7 +500,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator_buffer(_OutIt __out_it)
       : __allocating_buffer<_CharT>{}, __out_it_{std::move(__out_it)} {}
 
-  [[nodiscard]] 
+  [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
       : __allocating_buffer<_CharT>{__max_output_size}, __out_it_{std::move(__out_it)} {}
 
