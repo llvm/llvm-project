@@ -17,4 +17,4 @@ if (PROJECT_IS_TOP_LEVEL)
   include(AddLLDB)
 endif()
 
-add_subdirectory(source)
+add_subdirectory(Sources)
