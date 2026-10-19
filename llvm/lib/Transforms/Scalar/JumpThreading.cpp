@@ -2528,9 +2528,75 @@ bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
   return hasValidBranchWeightMD(*TI);
 }
 
+/// Take \p ThreadedFreq out of \p EdgesToSucc and split what remains
+/// in proportion to their values.
+static void redistributeAcrossEdges(MutableArrayRef<uint64_t> EdgeValues,
+                                    ArrayRef<unsigned> EdgesToSucc,
+                                    uint64_t ThreadedFreq) {
+  // [entry] runs 1000 times. The edges of 300 and 400 both go to [L2].
+  //
+  //    +---420--------------+
+  //    |                    |
+  // [entry]                 |
+  //    |                    v
+  //    +---580--> [L4] --> [L0] --100--> [L3]
+  //                         |
+  //                         +--200--> [L1]
+  //                         |
+  //                         +--300--+
+  //                         |       |
+  //                         +--400--+--> [L2]
+  //
+  // Threading sends 420 straight to [L2]. That 420 comes out of the 300 and
+  // 400 edges in their 300:400 ratio, so they become 120 and 160. [L4] folds
+  // into [L0].
+  //
+  //    +---420--> [L2]
+  //    |
+  // [entry]
+  //    |
+  //    +------580--> [L0] --100--> [L3]
+  //                    |
+  //                    +--200--> [L1]
+  //                    |
+  //                    +---120--+
+  //                    |        |
+  //                    +--160---+--> [L2]
+  assert(!EdgesToSucc.empty() && "Expected edges to the threaded successor");
+
+  // Sum the edges that carry weight.
+  uint64_t TotalBefore = 0;
+  SmallVector<unsigned, 4> NonZeroEdges;
+  for (unsigned Edge : EdgesToSucc) {
+    uint64_t Value = EdgeValues[Edge];
+    if (Value == 0)
+      continue;
+    TotalBefore += Value;
+    NonZeroEdges.push_back(Edge);
+  }
+
+  // All edges to the successor are zero, nothing to redistribute.
+  if (TotalBefore == 0)
+    return;
+
+  uint64_t TotalAfter =
+      TotalBefore > ThreadedFreq ? TotalBefore - ThreadedFreq : 0;
+
+  // Subtract each share. The last non-zero edge gets the rest.
+  uint64_t Remaining = TotalAfter;
+  for (unsigned Edge : ArrayRef<unsigned>(NonZeroEdges).drop_back()) {
+    uint64_t Share =
+        BranchProbability::getBranchProbability(EdgeValues[Edge], TotalBefore)
+            .scale(TotalAfter);
+    EdgeValues[Edge] = Share;
+    Remaining = Share < Remaining ? Remaining - Share : 0;
+  }
+  EdgeValues[NonZeroEdges.back()] = Remaining;
+}
+
 /// Update the block frequency of BB and branch weight and the metadata on the
 /// edge BB->SuccBB. This is done by scaling the weight of BB->SuccBB by 1 -
-/// Freq(PredBB->BB) / Freq(BB->SuccBB).
+/// Freq(PredBB->BB) / Freq(BB->SuccBB). Duplicate edges share the deduction.
 void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
                                                      BasicBlock *BB,
                                                      BasicBlock *NewBB,
@@ -2557,12 +2623,17 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   // Collect updated outgoing edges' frequencies from BB and use them to update
   // edge probabilities.
   SmallVector<uint64_t, 4> BBSuccFreq;
+  SmallVector<unsigned, 4> EdgesToSucc;
   for (auto It : enumerate(successors(BB))) {
     auto BB2SuccBBFreq = BBOrigFreq * BPI->getEdgeProbability(BB, It.index());
-    auto SuccFreq =
-        (It.value() == SuccBB) ? BB2SuccBBFreq - NewBBFreq : BB2SuccBBFreq;
-    BBSuccFreq.push_back(SuccFreq.getFrequency());
+    if (It.value() == SuccBB)
+      EdgesToSucc.push_back(It.index());
+    BBSuccFreq.push_back(BB2SuccBBFreq.getFrequency());
   }
+  // Deduct the threaded frequency once from the combined frequency of all edges
+  // to SuccBB.
+  if (!EdgesToSucc.empty())
+    redistributeAcrossEdges(BBSuccFreq, EdgesToSucc, NewBBFreq.getFrequency());
 
   uint64_t MaxBBSuccFreq = *llvm::max_element(BBSuccFreq);
 
