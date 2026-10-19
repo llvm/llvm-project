@@ -1453,7 +1453,8 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     SemanticSignatures &Signature,
     llvm::dxbc::PSV::InterpolationMode InterpMode) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index, InterpMode);
+    return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                     InterpMode);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index, Signature);
@@ -1584,9 +1585,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::InstanceIndex */ 43, InterpMode);
+      return createSPIRVBuiltinLoad(
+          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+          /* BuiltIn::InstanceIndex */ 43, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1648,7 +1649,8 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     assert(Stage == llvm::Triple::Pixel &&
            "SV_Target is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature, InterpMode);
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
+                          InterpMode);
     return;
   default:
     break;
