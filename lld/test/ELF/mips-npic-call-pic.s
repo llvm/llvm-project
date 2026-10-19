@@ -28,7 +28,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 \
 # RUN:   %p/Inputs/mips-pic.s -o %t-pic-r6.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 \
-# RUN:   %s --defsym MIPSR6=1 --defsym MIPSR6=1 -o %t-npic-r6.o
+# RUN:   %s --defsym MIPSR6=1 -o %t-npic-r6.o
 # RUN: ld.lld %t-npic-r6.o %t-pic-r6.o %t-sto-pic-r6.o \
 # RUN:        -script %t.script -o %t-r6.exe
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t-r6.exe \
