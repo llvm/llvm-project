@@ -99,7 +99,9 @@ function(llvm_ExternalProject_Add name source_dir)
   is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
-    set(ARG_TOOLCHAIN_TOOLS clang)
+    # Targets using C++20 or newer may need module dependency scanning. Build
+    # the scanner before CMake looks for it during compiler detection.
+    set(ARG_TOOLCHAIN_TOOLS clang clang-scan-deps)
     if (ARG_ENABLE_FORTRAN)
       list(APPEND ARG_TOOLCHAIN_TOOLS flang-lazy)
     endif ()
