@@ -219,7 +219,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
       SampleThreshold *= CSPreinlMultiplierForPrevInl;
   }
 
-  return (Candidate.SizeCost < SampleThreshold);
+  return (Candidate.SizeCost <= SampleThreshold);
 }
 
 void CSPreInliner::processFunction(const FunctionId Name) {
@@ -246,8 +246,8 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   while (!CQueue.empty()) {
     ProfiledInlineCandidate Candidate = CQueue.top();
     CQueue.pop();
-    // Inlines always_inline callees regardless of the budget.
-    if (FuncFinalSize >= SizeLimit &&
+    // Inlines zero-size and always_inline callees regardless of the budget.
+    if (Candidate.SizeCost > 0 && FuncFinalSize >= SizeLimit &&
         !Candidate.CalleeSamples->getContext().hasAttribute(
             ContextAlwaysInline)) {
       OverBudget.push_back(Candidate);

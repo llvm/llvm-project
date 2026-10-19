@@ -120,6 +120,13 @@ cl::opt<bool> InferMissingFrames(
         "Infer missing call frames due to compiler tail call elimination."),
     cl::cat(ProfGenCategory));
 
+static cl::opt<bool> InferCallsiteSamples(
+    "infer-callsite-samples", cl::init(true),
+    cl::desc(
+        "Create FunctionSamples for context trie nodes without samples by "
+        "inferring callsite body samples from callee entry (head) samples."),
+    cl::cat(ProfGenCategory));
+
 namespace sampleprof {
 
 // Initialize the MaxCompressionSize to -1 which means no size limit
@@ -941,6 +948,8 @@ void CSProfileGenerator::generateProfile() {
   if (SampleCounters) {
     if (Binary->usePseudoProbes()) {
       generateProbeBasedProfile();
+      if (InferCallsiteSamples)
+        inferCallsiteSamples();
     } else {
       generateLineNumBasedProfile();
     }
@@ -1374,6 +1383,96 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
     FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(),
                                            CallProbe->getDiscriminator(),
                                            FunctionId(CalleeName), Count);
+  }
+}
+
+void CSProfileGenerator::inferCallsiteSamples() {
+  // Walk the context trie bottom-up (children before parents) and for each
+  // node, ensure that callsite body samples are at least as large as callee
+  // entry (head) samples. This serves two purposes:
+  // 1. Create FunctionSamples for nodes without samples and infer called
+  //    target samples using children's head samples.
+  // 2. Fix under-counted callsites for nodes that have callsite counts
+  //    lower than callee entry counts.
+  SmallVector<ContextTrieNode *, 256> AllNodes;
+  for (auto *Node : ContextTracker)
+    AllNodes.push_back(Node);
+
+  for (auto It = AllNodes.rbegin(), End = AllNodes.rend(); It != End; ++It) {
+    ContextTrieNode *Node = *It;
+
+    if (Node == &getRootContext())
+      continue;
+
+    bool HasChildWithSamples = false;
+    for (auto &Child : Node->getAllChildContext()) {
+      if (Child.second.getFunctionSamples()) {
+        HasChildWithSamples = true;
+        break;
+      }
+    }
+    if (!HasChildWithSamples)
+      continue;
+
+    FunctionSamples *FSamples = Node->getFunctionSamples();
+    if (!FSamples) {
+      FSamples = getOrCreateFunctionSamples(Node);
+      const auto *FuncDesc =
+          Binary->getFuncDescForGUID(Node->getFuncName().getHashCode());
+      FSamples->setFunctionHash(FuncDesc->FuncHash);
+    }
+
+    // Sum the children's samples per callsite: each child's head samples, or
+    // its recorded called target if that is larger.
+    std::map<LineLocation, uint64_t> CallsiteHeadSum;
+    for (auto &Child : Node->getAllChildContext()) {
+      FunctionSamples *ChildSamples = Child.second.getFunctionSamples();
+      if (!ChildSamples)
+        continue;
+      uint64_t ChildHeadSamples = ChildSamples->getHeadSamplesEstimate();
+      if (ChildHeadSamples == 0)
+        continue;
+      LineLocation ChildCallsite = Child.second.getCallSiteLoc();
+
+      uint64_t ExistingTargetSamples = 0;
+      auto ExistingTargets = FSamples->findCallTargetMapAt(
+          ChildCallsite.LineOffset, ChildCallsite.Discriminator);
+      if (ExistingTargets) {
+        auto TargetIt = ExistingTargets->find(Child.second.getFuncName());
+        if (TargetIt != ExistingTargets->end())
+          ExistingTargetSamples = TargetIt->second;
+      }
+      CallsiteHeadSum[ChildCallsite] +=
+          std::max(ChildHeadSamples, ExistingTargetSamples);
+      // Raise the child's called target to its head samples only if the
+      // callsite is known to call it:
+      //   - the target was already recorded,
+      //   - or the child was inlined here in the binary.
+      //
+      // A trie edge alone does not show the call: the unwound call stack can
+      // miss a frame and put a callee under a callsite that does not call it.
+      if (ChildHeadSamples > ExistingTargetSamples &&
+          (ExistingTargetSamples ||
+           ChildSamples->getContext().hasAttribute(ContextWasInlined)))
+        FSamples->addCalledTargetSamples(
+            ChildCallsite.LineOffset, ChildCallsite.Discriminator,
+            Child.second.getFuncName(),
+            ChildHeadSamples - ExistingTargetSamples);
+    }
+
+    // Ensure callsite body samples >= sum of callee head samples.
+    for (auto &[Loc, HeadSum] : CallsiteHeadSum) {
+      uint64_t ExistingSamples = 0;
+      auto Existing =
+          FSamples->findSamplesAt(Loc.LineOffset, Loc.Discriminator);
+      if (Existing)
+        ExistingSamples = *Existing;
+      if (HeadSum > ExistingSamples) {
+        uint64_t Delta = HeadSum - ExistingSamples;
+        FSamples->addBodySamples(Loc.LineOffset, Loc.Discriminator, Delta);
+        FSamples->addTotalSamples(Delta);
+      }
+    }
   }
 }
 

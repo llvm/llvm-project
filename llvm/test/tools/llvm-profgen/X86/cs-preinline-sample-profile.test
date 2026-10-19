@@ -6,7 +6,7 @@
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-PREINL
 
 ; Test default llvm-profgen with preinline off
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t3
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t3 --infer-callsite-samples=false
 
 ; Test llvm-profgen with preinliner on will merge not inlinable profile into base profile.
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%t3 --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=45 --output=%t4
