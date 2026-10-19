@@ -2639,6 +2639,8 @@ TEST(APFloatTest, getLargest) {
   EXPECT_EQ(7.5,
             APFloat::getLargest(APFloat::Float6E2M3FN()).convertToDouble());
   EXPECT_EQ(6, APFloat::getLargest(APFloat::Float4E2M1FN()).convertToDouble());
+  EXPECT_EQ(APInt(128, "7ffeffffffffffffffffffffffffffff", 16),
+            APFloat::getLargest(APFloat::IEEEquad()).bitcastToAPInt());
 }
 
 TEST(APFloatTest, getSmallest) {
