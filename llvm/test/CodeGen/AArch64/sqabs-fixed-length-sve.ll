@@ -18,9 +18,7 @@ define <8 x i16> @sqabs_v8i16(<8 x i16> %x) {
 ; SME-LABEL: sqabs_v8i16:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.h, vl8
-; SME-NEXT:    mov z1.h, #32767 // =0x7fff
-; SME-NEXT:    abs z0.h, p0/m, z0.h
-; SME-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SME-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SME-NEXT:    ret
   %a = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %x, i1 false)
   %r = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 32767))
@@ -42,8 +40,7 @@ define <32 x i8> @sqabs_v32i8(<32 x i8> %x) {
 ; SVE256-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; SVE256-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; SVE256-NEXT:    ptrue p0.b, vl32
-; SVE256-NEXT:    abs z0.b, p0/m, z0.b
-; SVE256-NEXT:    umin z0.b, z0.b, #127
+; SVE256-NEXT:    sqabs z0.b, p0/m, z0.b
 ; SVE256-NEXT:    movprfx z1, z0
 ; SVE256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE256-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -53,10 +50,8 @@ define <32 x i8> @sqabs_v32i8(<32 x i8> %x) {
 ; SME-LABEL: sqabs_v32i8:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.b, vl16
-; SME-NEXT:    abs z1.b, p0/m, z1.b
-; SME-NEXT:    abs z0.b, p0/m, z0.b
-; SME-NEXT:    umin z0.b, z0.b, #127
-; SME-NEXT:    umin z1.b, z1.b, #127
+; SME-NEXT:    sqabs z0.b, p0/m, z0.b
+; SME-NEXT:    sqabs z1.b, p0/m, z1.b
 ; SME-NEXT:    ret
   %a = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %x, i1 false)
   %r = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %a, <32 x i8> splat (i8 127))

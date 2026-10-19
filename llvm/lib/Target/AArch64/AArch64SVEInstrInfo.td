@@ -730,6 +730,20 @@ def partial_reduce_smls : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
 def partial_reduce_fmls : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
                                   (partial_reduce_fmla node:$Op1, node:$Op2, (AArch64fneg node:$Op3))>;
 
+// Fixed-length 64-bit UMIN uses SVE when available, even when ABS uses Neon.
+// Only the inserted lanes are active and extracted, so this is a Neon SQABS.
+let Predicates = [HasNEON, HasSVE_or_SME] in {
+  class SVEFixedSQABS64Pat<ValueType VT, int Pg> :
+    Pat<(VT (extract_subvector
+               (nxv2i64 (AArch64umin_p (nxv2i1 (AArch64ptrue (i32 Pg))),
+                  (insert_subvector undef, (abs VT:$src), (i64 0)),
+                  (splat_vector (i64 9223372036854775807)))), (i64 0))),
+        (!cast<Instruction>("SQABS" # VT) $src)>;
+
+  def : SVEFixedSQABS64Pat<v1i64, 1>;
+  def : SVEFixedSQABS64Pat<v2i64, 2>;
+}
+
 let Predicates = [HasSVE] in {
   def RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
   def RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
@@ -4125,6 +4139,21 @@ let Predicates = [HasSVE2_or_SME] in {
   defm URSQRTE_ZPmZ : sve2_int_un_pred_arit_s<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
   defm SQABS_ZPmZ   : sve2_int_un_pred_arit<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
   defm SQNEG_ZPmZ   : sve2_int_un_pred_arit<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
+
+  // umin(abs(X), signed_max) is SQABS when both operations use the same
+  // predicate. Inactive lanes of UMIN_PRED are unspecified.
+  class SVE2SQABSPat<ValueType VT, ValueType PT, ValueType IT, int Max,
+                    Instruction Inst> :
+    Pat<(VT (AArch64umin_p PT:$Pg,
+               (AArch64abs_mt PT:$Pg, VT:$src, undef),
+               (splat_vector (IT Max)))),
+        (Inst (IMPLICIT_DEF), $Pg, $src)>;
+
+  def : SVE2SQABSPat<nxv16i8, nxv16i1, i32, 127, SQABS_ZPmZ_B_UNDEF>;
+  def : SVE2SQABSPat<nxv8i16, nxv8i1, i32, 32767, SQABS_ZPmZ_H_UNDEF>;
+  def : SVE2SQABSPat<nxv4i32, nxv4i1, i32, 2147483647, SQABS_ZPmZ_S_UNDEF>;
+  def : SVE2SQABSPat<nxv2i64, nxv2i1, i64, 9223372036854775807,
+                    SQABS_ZPmZ_D_UNDEF>;
 
   // SVE2 saturating add/subtract
   defm SQADD_ZPmZ  : sve2_int_arith_pred<0b110000, "sqadd",  int_aarch64_sve_sqadd>;

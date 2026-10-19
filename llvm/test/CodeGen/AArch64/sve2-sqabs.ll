@@ -214,16 +214,12 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_multiuse(<vscale x 8 x i16> %x) {
 define <vscale x 8 x i16> @sqabs_same_predicate(<vscale x 8 x i16> %x, <vscale x 8 x i1> %pg) {
 ; SVE2-LABEL: sqabs_same_predicate:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    mov z1.h, #32767 // =0x7fff
-; SVE2-NEXT:    abs z0.h, p0/m, z0.h
-; SVE2-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SVE2-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SVE2-NEXT:    ret
 ;
 ; SME-LABEL: sqabs_same_predicate:
 ; SME:       // %bb.0:
-; SME-NEXT:    mov z1.h, #32767 // =0x7fff
-; SME-NEXT:    abs z0.h, p0/m, z0.h
-; SME-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SME-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SME-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %x)
   %r = call <vscale x 8 x i16> @llvm.aarch64.sve.umin.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 32767))

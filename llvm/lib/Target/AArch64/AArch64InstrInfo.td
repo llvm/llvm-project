@@ -1069,12 +1069,7 @@ def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
-// Scalar integer operations use FP types; vectors retain their integer types.
-def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",
-                          SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>>;
-def AArch64sqabsv : PatFrags<(ops node:$Rn),
-                            [(int_aarch64_neon_sqabs node:$Rn),
-                             (AArch64sqabs node:$Rn)]>;
+def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",   SDTFPUnaryOp>;
 def AArch64sqneg:   SDNode<"AArch64ISD::SQNEG",   SDTFPUnaryOp>;
 def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
@@ -6354,7 +6349,7 @@ defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
 defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", AArch64saddlp>;
 defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", any_sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
-defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", AArch64sqabsv>;
+defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
 defm SQNEG  : SIMDTwoVectorBHSD<1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", truncssat_s>;
 defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", truncssat_u>;
@@ -7052,10 +7047,6 @@ defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
 
-let Predicates = [HasNEON] in
-def : Pat<(v1i64 (AArch64sqabs (v1i64 FPR64:$Rn))),
-          (SQABSv1i64 FPR64:$Rn)>;
-
 // Scalar i32 -> i64 extend
 def : Pat<(i32 (int_aarch64_neon_scalar_uqxtn (i64 FPR64:$Rn))),
           (i32 (UQXTNv1i32 FPR64:$Rn))>;
@@ -7063,6 +7054,36 @@ def : Pat<(i32 (int_aarch64_neon_scalar_sqxtn (i64 FPR64:$Rn))),
           (i32 (SQXTNv1i32 FPR64:$Rn))>;
 def : Pat<(i32 (int_aarch64_neon_scalar_sqxtun (i64 FPR64:$Rn))),
           (i32 (SQXTUNv1i32 FPR64:$Rn))>;
+
+let Predicates = [HasNEON] in {
+// umin(abs(X), signed_max) is a saturating absolute value. Match the
+// materialised clamp after legalisation.
+class NeonSQABSPat<ValueType VT, dag Max> :
+  Pat<(VT (umin (abs VT:$src), Max)),
+      (!cast<Instruction>("SQABS" # VT) $src)>;
+
+def : NeonSQABSPat<v8i8, (AArch64movi (i32 127))>;
+def : NeonSQABSPat<v16i8, (AArch64movi (i32 127))>;
+def : NeonSQABSPat<v4i16, (AArch64mvni_shift (i32 128), (i32 8))>;
+def : NeonSQABSPat<v8i16, (AArch64mvni_shift (i32 128), (i32 8))>;
+def : NeonSQABSPat<v2i32, (AArch64mvni_shift (i32 128), (i32 24))>;
+def : NeonSQABSPat<v4i32, (AArch64mvni_shift (i32 128), (i32 24))>;
+
+// Neon has no 64-bit UMIN. Legalisation expands it to a compare and bitselect.
+class NeonSQABS64Pat<ValueType VT, dag Max> :
+  Pat<(VT (or (and (abs VT:$src), (setugt Max, (abs VT:$src))),
+              (and (vnot (setugt Max, (abs VT:$src))), Max))),
+      (!cast<Instruction>("SQABS" # VT) $src)>;
+
+// FNEG clears the sign bit of the all-ones MOVI to form INT64_MAX.
+// Big-endian lowering retains NVCASTs to preserve the lane order.
+foreach Cast = [bitconvert, AArch64NvCast] in {
+  def : NeonSQABS64Pat<v1i64,
+    (Cast (f64 (fneg (AArch64movi_edit (i32 255)))))>;
+  def : NeonSQABS64Pat<v2i64,
+    (Cast (v2f64 (fneg (Cast (v2i64 (AArch64movi_edit (i32 255)))))))>;
+}
+} // Predicates = [HasNEON]
 
 // ssub_sat(0, R) -> sqneg(R)
 def : Pat<(v16i8 (ssubsat immAllZerosV, V128:$reg)),
