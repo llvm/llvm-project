@@ -34,6 +34,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1681,6 +1682,10 @@ void llvm::SplitBlockAndInsertIfThenElse(
   Instruction *HeadOldTerm = Head->getTerminator();
   CondBrInst *HeadNewTerm = CondBrInst::Create(Cond, TrueBlock, FalseBlock);
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
+  if (!BranchWeights)
+    setExplicitlyUnknownBranchWeightsIfProfiled(
+        *HeadNewTerm, DEBUG_TYPE,
+        ThenBlock ? (*ThenBlock)->getParent() : (*ElseBlock)->getParent());
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
 
   if (DTU) {
