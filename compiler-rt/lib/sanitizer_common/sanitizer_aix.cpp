@@ -19,7 +19,6 @@
 #  include <pthread.h>
 #  include <sched.h>
 #  include <signal.h>
-#  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>
 #  include <sys/errno.h>
@@ -96,17 +95,6 @@ uptr internal_open(const char* filename, int flags) {
 uptr internal_open(const char* filename, int flags, u32 mode) {
   DEFINE__REAL(uptr, open, const char* filename, int flags, u32 mode);
   return _REAL(open, filename, flags, mode);
-}
-
-__sanitizer_FILE* internal_popen(const char* command, const char* type) {
-  DEFINE__REAL(__sanitizer_FILE*, popen, const char* command, const char* type);
-  return _REAL(popen, command, type);
-}
-
-int internal_pclose(__sanitizer_FILE* file) {
-  FILE* rfile = reinterpret_cast<FILE*>(file);
-  DEFINE__REAL(int, pclose, FILE* file);
-  return _REAL(pclose, rfile);
 }
 
 uptr internal_read(fd_t fd, void* buf, uptr count) {
