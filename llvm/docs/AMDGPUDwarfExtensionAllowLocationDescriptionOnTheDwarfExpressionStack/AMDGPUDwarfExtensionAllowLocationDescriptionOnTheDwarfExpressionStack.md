@@ -4016,4 +4016,4 @@ examples. It also covers other extensions needed for heterogeneous devices.
 - DWARF extensions for optimized SIMT/SIMD (GPU) debugging - Linux Plumbers Conference 2021
   - [Video](https://www.youtube.com/watch?v=QiR0ra0ymEY&t=10015s)
   - [Slides](https://linuxplumbersconf.org/event/11/contributions/1012/attachments/798/1505/DWARF_Extensions_for_Optimized_SIMT-SIMD_GPU_Debugging-LPC2021.pdf)
-- [DWARF Extensions For Heterogeneous Debugging](../AMDGPUDwarfExtensionsForHeterogeneousDebugging.rst)
+- [DWARF Extensions For Heterogeneous Debugging](../AMDGPUDwarfExtensionsForHeterogeneousDebugging.md)
