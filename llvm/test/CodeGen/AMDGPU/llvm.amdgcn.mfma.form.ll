@@ -272,6 +272,6 @@ define <16 x float> @mfma_scale_respect_flag(<8 x i32> %arg0, <8 x i32> %arg1, <
   ret <16 x float> %result
 }
 
-attributes #0 = { "amdgpu-agpr-alloc"="32,256" }
+attributes #0 = { "amdgpu-agpr-alloc"="32,32" }
 attributes #1 = { "amdgpu-agpr-alloc"="0,0" }
 attributes #2 = { nounwind "amdgpu-agpr-alloc"="20" }

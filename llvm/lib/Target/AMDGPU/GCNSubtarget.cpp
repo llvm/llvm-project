@@ -693,15 +693,27 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
 
       MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
+      if (MaxNumAGPRs == DefaultNumAGPR.second) {
+        MaxNumAGPRs = MaxVectorRegs / 2;
+      } else {
+        MaxNumAGPRs = alignTo(MaxNumAGPRs, 4);
+        MaxNumAGPRs = std::min(MaxNumAGPRs, TotalNumAGPRs);
+      }
     }
-
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
-    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
-    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+    // We need to account for the fact that in this situation the AGPRs are not
+    // transferable so there is no reason to limit them
+    if (MaxVectorRegs > TotalNumAGPRs) {
+      MinNumAGPRs = std::max(MinNumAGPRs, MaxVectorRegs - TotalNumAGPRs);
+    }
+
+    MaxNumVGPRs = std::min(MaxVectorRegs - MaxNumAGPRs, NumArchVGPRs);
+    MaxNumAGPRs =
+        std::min({MaxVectorRegs - MaxNumVGPRs, MinNumAGPRs, MaxNumAGPRs});
 
     assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
            MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
