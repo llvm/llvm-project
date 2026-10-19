@@ -815,6 +815,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     }
   }
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(L))
+    return cmpNumbers(LP->isCleanup(), cast<LandingPadInst>(R)->isCleanup());
   if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
     const PHINode *PNR = cast<PHINode>(R);
     // Ensure that in addition to the incoming values being identical

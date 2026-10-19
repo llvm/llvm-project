@@ -2713,6 +2713,36 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getcpu",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getcpu.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sched_get_priority_min",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_get_priority_min.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_sched_getparam",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"],
     target_compatible_with = select({
@@ -11475,8 +11505,13 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_math_tanf",
-    hdrs = ["src/__support/math/tanf.h"],
+    hdrs = [
+        "src/__support/math/tanf.h",
+        "src/__support/math/tanf_double_eval.h",
+        "src/__support/math/tanf_float_eval.h",
+    ],
     deps = [
+        ":__support_common",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
@@ -17043,6 +17078,32 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_fchdir",
         ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "sched_getcpu",
+    srcs = ["src/sched/linux/sched_getcpu.cpp"],
+    hdrs = ["src/sched/sched_getcpu.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getcpu",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "sched_get_priority_min",
+    srcs = ["src/sched/linux/sched_get_priority_min.cpp"],
+    hdrs = ["src/sched/sched_get_priority_min.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_get_priority_min",
         ":errno",
     ],
 )
