@@ -287,7 +287,7 @@ bool AGXDAGToDAGISel::SelectDeviceAddr(SDValue Addr, unsigned ElemLog2,
         if (Off % (int64_t(1) << ElemLog2) == 0 &&
             isInt<16>(Off >> ElemLog2)) {
           Base = B;
-          Index = CurDAG->getTargetConstant(Off >> ElemLog2, DL, MVT::i32);
+          Index = CurDAG->getSignedTargetConstant(Off >> ElemLog2, DL, MVT::i32);
           return true;
         }
         continue;
