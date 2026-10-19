@@ -83,13 +83,31 @@ void array_attr_after(int count,
 void array_attr_after(int count, int *__counted_by(count) arr);
 
 //==============================================================================
-// Not supported yet
+// Indirect parameters
 //==============================================================================
 
+// A parameter may point to a counted pointer, as an out parameter does, and a
+// parameter's count may dereference a parameter.
+void out(int *len, int *__counted_by(*len) *buf);
+void out_count(int count, int *__counted_by(count) *buf);
+void out_array(int count, int *__counted_by(count) buf[]);
+void own_deref(int *count, int *__counted_by(*count) buf);
+
+// Only one level down, and not below a pointer that has a count itself.
 // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
-void out(int count, int *__counted_by(count) *buf);
-// expected-error@+1{{'counted_by' argument must be a simple declaration reference}}
-void deref(int *count, int *__counted_by(*count) buf);
+void two_levels(int count, int *__counted_by(count) **buf);
+// expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
+void both_counted(int n, int m, int *__counted_by(n) *__counted_by(m) buf);
 
 // expected-error@+1{{'counted_by' attribute cannot be applied to a function return type}}
 void cb_return(int len, int *__counted_by(len) (*cb)(void));
+
+// A count that comes with another declaration's type, through '__typeof__', was
+// checked where it was written, so it is not nested here.
+void typeof_param(int count, int *__counted_by(count) buf,
+                  __typeof__(buf) **out, __typeof__(buf) (**out_paren));
+struct with_count { int n; int *__counted_by(n) p; };
+void typeof_field(struct with_count *s) {
+  __typeof__(s->p) (**x);
+  (void)x;
+}

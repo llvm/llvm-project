@@ -2534,6 +2534,12 @@ public:
   static BoundsAttributedType::BoundsAttrKind
   getBoundsAttrKind(const BoundsAttrFlags &);
 
+  /// The reference that the count \p E of a counted_by-family attribute is
+  /// made of: \p E itself, or the operand of `*` in \p E, which sets \p IsDeref
+  /// (a parameter's count may be a dereferenced parameter, `*len`). Null if
+  /// \p E is neither.
+  static DeclRefExpr *getCountDeclRef(Expr *E, bool &IsDeref);
+
   /// Check the type shape for counted_by, sized_by and their _or_null variants.
   /// The caller checks declaration context, count expressions, flexible array
   /// member eligibility and nesting.
@@ -2639,7 +2645,7 @@ public:
                                        FieldDecl *FD, Expr *Arg);
 
   /// Check that \p E is a valid count for a counted_by-family attribute on
-  /// \p ParamTy, the type of a parameter.
+  /// \p ParamTy, the type of a parameter or of the pointer it points to.
   ///
   /// \returns false iff semantically valid.
   bool CheckCountedByAttrOnParam(QualType ParamTy, Expr *E, bool CountInBytes,

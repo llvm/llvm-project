@@ -52,10 +52,20 @@ void typeof_fam(__typeof__(((struct fam *)0)->arr) arr);
 // expected-error@+1{{'counted_by' attribute cannot be applied to a pointer that already has a 'counted_by' attribute}}
 void repeated_array(int n, int m, int arr[] __counted_by(n) __counted_by(m));
 
+// An out parameter's count, here a dereferenced parameter, is on the pointer
+// that the parameter points to.
+// CHECK: FunctionDecl {{.*}} out 'void (int *, int * __counted_by(*len)*)'
+void out(int *len, int *__counted_by(*len) *buf);
+
 // A rejected count is not applied, and the function stays valid.
 // CHECK: FunctionDecl {{.*}} not_a_param 'void (int *)'
 // expected-error@+1{{count expression in function declaration may only reference function parameters}}
 void not_a_param(int *__counted_by(global_count) buf);
+
+// A nested count is dropped; the parameter's own count stays.
+// CHECK: FunctionDecl {{.*}} both_counted 'void (int, int, int ** __counted_by(m))'
+// expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
+void both_counted(int n, int m, int *__counted_by(n) *__counted_by(m) buf);
 
 // A count on a K&R parameter declaration is dropped.
 // CHECK: FunctionDecl {{.*}} knr 'void (int, int *)'

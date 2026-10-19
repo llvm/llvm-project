@@ -54,6 +54,16 @@ Sema::BoundsAttrFlags Sema::BoundsAttrFlags::get(AttributeCommonInfo::Kind K) {
   return Flags;
 }
 
+DeclRefExpr *Sema::getCountDeclRef(Expr *E, bool &IsDeref) {
+  IsDeref = false;
+  if (auto *UO = dyn_cast<UnaryOperator>(E);
+      UO && UO->getOpcode() == UO_Deref) {
+    E = UO->getSubExpr()->IgnoreImpCasts();
+    IsDeref = true;
+  }
+  return dyn_cast<DeclRefExpr>(E);
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is treated as anonymous struct at this point.
@@ -227,11 +237,8 @@ bool Sema::ValidateBoundsAttrPosition(BoundsAttributedType::BoundsAttrKind Kind,
   }
 
   // Currently, only attributes at the outermost level of the declared type
-  // are supported.
-  //
-  // FIXME: Support indirect parameters such as:
-  //   void f(int *__counted_by(*len) *buf, int *len);
-  // See https://github.com/llvm/llvm-project/issues/166411.
+  // are supported. The caller passes zero for the pointer that a parameter
+  // points to, as for an out parameter: `int *__counted_by(*len) *buf`.
   if (PointerNestLevel > 0) {
     Diag(AttrLoc, diag::err_counted_by_on_nested_pointer) << Kind;
     return false;
@@ -278,17 +285,20 @@ bool Sema::ValidateBoundsAttrTypeForTypePosition(
 }
 
 /// The checks shared by the counts of fields and parameters: \p E must be a
-/// non-boolean integer and a plain reference to a declaration. Returns that
-/// declaration, or null after diagnosing.
-static ValueDecl *checkCountRefersToDecl(Sema &S, Expr *E, unsigned Kind) {
+/// non-boolean integer and a plain reference to a declaration, or if
+/// \p AllowDeref, a dereference of one. Returns that declaration, or null after
+/// diagnosing.
+static ValueDecl *checkCountRefersToDecl(Sema &S, Expr *E, unsigned Kind,
+                                         bool AllowDeref) {
   if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
     S.Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
         << Kind << E->getSourceRange();
     return nullptr;
   }
 
-  auto *DRE = dyn_cast<DeclRefExpr>(E);
-  if (!DRE) {
+  bool IsDeref;
+  auto *DRE = Sema::getCountDeclRef(E, IsDeref);
+  if (!DRE || (IsDeref && !AllowDeref)) {
     S.Diag(E->getBeginLoc(),
            diag::err_count_attr_only_support_simple_decl_reference)
         << Kind << E->getSourceRange();
@@ -321,7 +331,8 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  ValueDecl *CountDecl = checkCountRefersToDecl(*this, E, Kind);
+  ValueDecl *CountDecl =
+      checkCountRefersToDecl(*this, E, Kind, /*AllowDeref=*/false);
   if (!CountDecl)
     return true;
 
@@ -379,7 +390,8 @@ bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
     return true;
   }
 
-  ValueDecl *CountDecl = checkCountRefersToDecl(*this, E, Kind);
+  ValueDecl *CountDecl =
+      checkCountRefersToDecl(*this, E, Kind, /*AllowDeref=*/true);
   if (!CountDecl)
     return true;
 
