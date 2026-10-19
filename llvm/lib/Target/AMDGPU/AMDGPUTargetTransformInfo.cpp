@@ -1264,9 +1264,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
-    uint64_t EltSize =
-        DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType())
-            .getFixedValue();
+    TypeSize EltSize =
+        DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
     // Dynamic indexing isn't free and is best avoided.
     if (Index == ~0u)
       return 2;
