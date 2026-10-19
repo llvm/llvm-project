@@ -119,9 +119,7 @@ struct FLInlinedCall {
         InlineeContext(InlineeContext) {
     assert(MaxAtomGroup <= MaxAllowedAtomGroup && "Max Atom group too large!");
   }
-  MDFunctionLocalContext *getInlinee() const {
-    return InlineeContext;
-  }
+  MDFunctionLocalContext *getInlinee() const { return InlineeContext; }
   uint16_t getNewAtomGroup() {
     // TODO: This assert exists more for testing purposes, to determine whether
     // this is a limit we actually hit or not. If we hit this frequently, we may
@@ -150,8 +148,8 @@ struct FLInlinedCall {
   // Ignores MaxAtomGroup - as a transient field, we do not want to use it as
   // part of a map key.
   friend inline hash_code hash_value(const FLInlinedCall &IC) {
-    return hash_combine(IC.SrcLocIdx, IC.InlinedAtIdx,
-                        IC.Uniquable, IC.InlineeContext);
+    return hash_combine(IC.SrcLocIdx, IC.InlinedAtIdx, IC.Uniquable,
+                        IC.InlineeContext);
   }
 };
 template <> struct DenseMapInfo<FLInlinedCall> {
@@ -248,9 +246,9 @@ public:
   }
 
   // Populates \p Nodes with the complete set of MDNodes used by this.
-  void getUsedMDNodes(SmallVectorImpl<MDNode*> &Nodes) const;
+  LLVM_ABI void getUsedMDNodes(SmallVectorImpl<MDNode *> &Nodes) const;
 
-  static MDFunctionLocalContext *getDistinct(LLVMContext &Context,
+  LLVM_ABI static MDFunctionLocalContext *getDistinct(LLVMContext &Context,
                                              bool NonDebug = false);
   TempMDFunctionLocalContext clone() const { return cloneImpl(); }
   TempMDFunctionLocalContext cloneImpl() const {
@@ -450,7 +448,7 @@ public:
     return getSrcLoc(Line, Column, ScopeIdx);
   }
 
-  FLMDBuilder(MDFunctionLocalContext *FLContext, const DISubprogram *SP);
+  LLVM_ABI FLMDBuilder(MDFunctionLocalContext *FLContext, const DISubprogram *SP);
 };
 
 } // end namespace llvm
