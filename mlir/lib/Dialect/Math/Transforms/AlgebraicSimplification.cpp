@@ -32,7 +32,7 @@ using namespace mlir;
 namespace {
 struct PowFStrengthReduction : public OpRewritePattern<math::PowFOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::PowFOp op,
                                 PatternRewriter &rewriter) const final;
@@ -267,7 +267,7 @@ namespace {
 template <typename ExpOpTy>
 struct ExpQuotientStrengthReduction : public OpRewritePattern<arith::DivFOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::DivFOp op,
                                 PatternRewriter &rewriter) const final {

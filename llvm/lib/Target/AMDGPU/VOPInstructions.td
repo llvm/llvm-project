@@ -166,6 +166,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   VOP3_Pseudo<opName, P, pattern, 1> {
   let VOP3P = 1;
   let IsDOT = P.IsDOT;
+  let HasNoOpSelHi = P.HasNoOpSelHi;
 }
 
 class VOP_Real<VOP_Pseudo ps> {
@@ -202,6 +203,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
+  let HasNoOpSelHi         = ps.HasNoOpSelHi;
 
   VOPProfile Pfl = ps.Pfl;
 
@@ -2422,6 +2424,11 @@ class ClassPat<Instruction inst, ValueType vt> : GCNPat <
 
 class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
   (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
+  (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (vgpr32_lo16 (V_MOV_B32_e32 timm:$mask)))
+>;
+
+class ClassPat_fake16<Instruction inst, ValueType vt> : GCNPat <
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
   (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
 >;
 
@@ -2434,7 +2441,7 @@ def : ClassPat_t16<V_CMP_CLASS_F16_t16_e64, f16> {
   let True16Predicate = UseRealTrue16Insts;
 }
 
-def : ClassPat_t16<V_CMP_CLASS_F16_fake16_e64, f16> {
+def : ClassPat_fake16<V_CMP_CLASS_F16_fake16_e64, f16> {
   let True16Predicate = UseFakeTrue16Insts;
 }
 
@@ -2497,6 +2504,16 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "isDPMACCInstructionHelper";
+}
+
+def VOP3PHasNoOpSelHiTable : GenericTable {
+  let FilterClass = "VOP3P_Real";
+  let FilterClassField = "HasNoOpSelHi";
+  let CppTypeName = "VOP3PHasNoOpSelHiInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVOP3PHasNoOpSelHiHelper";
 }
 
 // BlockingCycles indicates how many cycles until a new instruction can acquire

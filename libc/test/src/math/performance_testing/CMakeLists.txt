@@ -156,6 +156,17 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  exp10f_perf
+  SRCS
+    exp10f_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.exp10f
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   exp2f_perf
   SRCS
     exp2f_perf.cpp

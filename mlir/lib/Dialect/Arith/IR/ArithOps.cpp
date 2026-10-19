@@ -83,12 +83,48 @@ static IntegerAttr xorIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_xor<APInt>());
 }
 
-// Merge overflow flags from 2 ops, selecting the most conservative combination.
+// Intersect overflow flags. Callers must ensure the common flags remain valid
+// after rewriting.
 static IntegerOverflowFlagsAttr
 mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
                    IntegerOverflowFlagsAttr val2) {
   return IntegerOverflowFlagsAttr::get(val1.getContext(),
                                        val1.getValue() & val2.getValue());
+}
+
+using OverflowCheckedBinaryOp = APInt (APInt::*)(const APInt &, bool &) const;
+
+// For fixed-width integers, if combining the constants does not overflow, the
+// reassociated expression has the same mathematical result as the original
+// expression. Common source flags then rule out overflow in the new operation.
+static IntegerOverflowFlagsAttr mergeOverflowFlagsForReassociation(
+    IntegerOverflowFlagsAttr val1, IntegerOverflowFlagsAttr val2, Attribute lhs,
+    Attribute rhs, OverflowCheckedBinaryOp signedOp,
+    OverflowCheckedBinaryOp unsignedOp) {
+  IntegerOverflowFlags flags = val1.getValue() & val2.getValue();
+  if (flags == IntegerOverflowFlags::none)
+    return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
+
+  auto lhsAttr = llvm::cast<IntegerAttr>(lhs);
+  auto rhsAttr = llvm::cast<IntegerAttr>(rhs);
+  // TODO: Handle index separately; its storage width is not its target width.
+  if (isa<IndexType>(lhsAttr.getType()))
+    return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
+
+  const APInt &lhsValue = lhsAttr.getValue();
+  const APInt &rhsValue = rhsAttr.getValue();
+  bool overflow;
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw)) {
+    (void)(lhsValue.*signedOp)(rhsValue, overflow);
+    if (overflow)
+      flags = bitEnumClear(flags, IntegerOverflowFlags::nsw);
+  }
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw)) {
+    (void)(lhsValue.*unsignedOp)(rhsValue, overflow);
+    if (overflow)
+      flags = bitEnumClear(flags, IntegerOverflowFlags::nuw);
+  }
+  return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
 }
 
 /// Invert an integer comparison predicate.
@@ -1267,8 +1303,12 @@ OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
   /// negf(negf(x)) -> x
   if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
     return op.getOperand();
-  return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
-                                     [](const APFloat &a) { return -a; });
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        if (!APFloat::semanticsHasSignedRepr(a.getSemantics()))
+          return std::nullopt;
+        return -a;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1332,8 +1372,14 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   auto rm = getRoundingmode();
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+  return constFoldBinaryOpConditional<FloatAttr>(
+      adaptor.getOperands(),
+      [rm](const APFloat &a, const APFloat &b) -> std::optional<APFloat> {
+        // A negative difference is not representable in types such as
+        // f8E8M0FNU, and APFloat::subtract does not support computing it.
+        if (!APFloat::semanticsHasSignedRepr(a.getSemantics()) &&
+            a.compare(b) == APFloat::cmpLessThan)
+          return std::nullopt;
         APFloat result(a);
         result.subtract(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
@@ -2031,9 +2077,11 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
       return src;
   }
 
-  // trunci(trunci(a)) -> trunci(a))
-  if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
-    setOperand(getOperand().getDefiningOp()->getOperand(0));
+  // trunci(trunci(a)) -> trunci(a)
+  if (auto truncOp = getOperand().getDefiningOp<arith::TruncIOp>()) {
+    // Preserve a flag only if both truncations are lossless in that signedness.
+    setOverflowFlags(getOverflowFlags() & truncOp.getOverflowFlags());
+    setOperand(truncOp.getIn());
     return getResult();
   }
 
@@ -2293,6 +2341,11 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
         FloatType floatTy = llvm::cast<FloatType>(resEleType);
         APFloat apf(floatTy.getFloatSemantics(),
                     APInt::getZero(floatTy.getWidth()));
+        if (a.isNegative() &&
+            !APFloat::semanticsHasSignedRepr(floatTy.getFloatSemantics())) {
+          castStatus = false;
+          return apf;
+        }
         apf.convertFromAPInt(a, /*IsSigned=*/true,
                              APFloat::rmNearestTiesToEven);
         return apf;

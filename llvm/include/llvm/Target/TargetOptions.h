@@ -45,7 +45,7 @@ enum class BasicBlockSection {
           // basic block sections for a subset of basic blocks which can be
           // used to control object size bloats from creating sections.
   Preset, // Similar to list but the blocks are identified by passes which
-          // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
+          // seek to use Basic Block Sections, e.g. -function-splitting=all.
           // This option cannot be set via the command line.
   None    // Do not use Basic Block Sections.
 };
@@ -57,7 +57,6 @@ enum class FunctionSplittingMode {
                   // which have a basic block sections profile. Such functions
                   // are still laid out using the profile, but are emitted as a
                   // single contiguous section.
-                  // NOTE: Not implemented yet.
   BBSectionsOnly, // Split only functions that have a basic block sections
                   // profile. Functions without one are not split, even if
                   // they have PGO/SamplePGO data. This is the default, and
