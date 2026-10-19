@@ -1479,13 +1479,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Src);
     }
 
-    unsigned Width;
+    uint64_t Width;
     Type *Ty = II.getType();
     unsigned IntSize = Ty->getIntegerBitWidth();
 
     ConstantInt *CWidth = dyn_cast<ConstantInt>(II.getArgOperand(2));
     if (CWidth) {
-      Width = static_cast<unsigned>(CWidth->getZExtValue());
+      Width = CWidth->getZExtValue();
       if ((Width & (IntSize - 1)) == 0) {
         return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(Ty));
       }
@@ -1497,10 +1497,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     }
 
-    unsigned Offset;
+    uint64_t Offset;
     ConstantInt *COffset = dyn_cast<ConstantInt>(II.getArgOperand(1));
     if (COffset) {
-      Offset = static_cast<unsigned>(COffset->getZExtValue());
+      Offset = COffset->getZExtValue();
       if (Offset >= IntSize) {
         return IC.replaceOperand(
             II, 1,
