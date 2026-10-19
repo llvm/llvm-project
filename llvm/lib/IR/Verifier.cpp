@@ -1190,7 +1190,8 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
   } else {
     CheckDI(!N.getScopes().empty(),
             "An MDFunctionLocalContext that is not NonDebug must contain its "
-            "function's subprogram as the first scope", &N);
+            "function's subprogram as the first scope",
+            &N);
     CheckDI(isa<DISubprogram>(N.getScopes()[0].get()),
             "The first scope in an MDFunctionLocalContext with debug info must "
             "be the function DISubprogram",
