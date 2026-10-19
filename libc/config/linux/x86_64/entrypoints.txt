@@ -66,9 +66,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.grp.getgrouplist
     libc.src.grp.getgrnam
     libc.src.grp.getgrnam_r
-    libc.src.grp.initgroups
     libc.src.grp.setgrent
-    libc.src.grp.setgroups
 
     # net/if.h entrypoints
     libc.src.net.if_indextoname
@@ -541,12 +539,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
-    libc.src.unistd.setgid
     libc.src.unistd.setpgid
-    libc.src.unistd.setregid
-    libc.src.unistd.setreuid
     libc.src.unistd.setsid
-    libc.src.unistd.setuid
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
@@ -1680,6 +1674,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.environ
     libc.src.unistd.execl
     libc.src.unistd.execv
+    libc.src.unistd.execvp
     libc.src.unistd.fork
     libc.src.unistd.getopt
     libc.src.unistd.optarg
@@ -1734,7 +1729,13 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.glob.glob
       libc.src.glob.globfree
 
+      # grp.h entrypoints
+      libc.src.grp.initgroups
+      libc.src.grp.setgroups
+
       # libintl.h entrypoints
+      libc.src.libintl.bind_textdomain_codeset
+      libc.src.libintl.bindtextdomain
       libc.src.libintl.textdomain
 
       # net/if.h entrypoints
@@ -1759,6 +1760,12 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.time.strptime
       libc.src.time.tz_variables
       libc.src.time.tzset
+
+      # unistd.h entrypoints
+      libc.src.unistd.setgid
+      libc.src.unistd.setregid
+      libc.src.unistd.setreuid
+      libc.src.unistd.setuid
 
       # wchar.h entrypoints
       libc.src.wchar.swprintf

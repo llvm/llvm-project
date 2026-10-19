@@ -439,8 +439,11 @@ getLaneConstantCmp(const Instruction *I) {
 CmpSamePredicateHelper::MaskType
 CmpSamePredicateHelper::getLaneMask(const Instruction *I) {
   if (std::optional<std::pair<CmpInst::Predicate, APInt>> Cmp =
-          getLaneConstantCmp(I))
-    return getFormsMask(Cmp->first, Cmp->second);
+          getLaneConstantCmp(I)) {
+    MaskType M = getFormsMask(Cmp->first, Cmp->second);
+    // trunc X to i1 is also and X, 1 eq 1.
+    return isa<TruncInst>(I) ? M | getBit(CmpInst::ICMP_EQ) : M;
+  }
   if (auto *CI = dyn_cast<ICmpInst>(I))
     return getBit(CI->getPredicate());
   return 0;
@@ -456,7 +459,7 @@ bool CmpSamePredicateHelper::isBitTest(const Instruction *I) {
     return false;
   std::optional<std::pair<bool, APInt>> Family =
       getCmpBoundaryFamily(Cmp->first, Cmp->second);
-  return Family && Family->first && Family->second.isZero();
+  return Family && Family->second.isZero();
 }
 
 bool CmpSamePredicateHelper::add(const Instruction *I) {
@@ -500,6 +503,8 @@ Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
     return nullptr;
   if (auto *CI = dyn_cast<ICmpInst>(I); CI && CI->getPredicate() == Pred)
     return nullptr;
+  if (isa<TruncInst>(I) && Pred == CmpInst::ICMP_EQ)
+    return ConstantInt::get(I->getOperand(0)->getType(), 1);
   auto [LanePred, C] = *getLaneConstantCmp(I);
   std::optional<std::pair<bool, APInt>> Family =
       getCmpBoundaryFamily(LanePred, C);
@@ -911,9 +916,11 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           continue;
       }
     } else if (auto *TI = dyn_cast<TruncInst>(I); TI && IsCmpOp) {
-      // trunc X to i1 is the bit test and X, 1 != 0, so the whole list must
-      // be the bit tests of the same type.
-      if (TI->getSrcTy() == MainOp->getOperand(0)->getType() &&
+      // trunc X to i1 is the bit test and X, 1 != 0 or and X, 1 == 1, so the
+      // whole list must be the bit tests of the same type sharing the
+      // predicate.
+      if (InterchangeablePred != CmpInst::BAD_ICMP_PREDICATE &&
+          TI->getSrcTy() == MainOp->getOperand(0)->getType() &&
           all_of(VL, [](Value *V) {
             auto *I = dyn_cast<Instruction>(V);
             return isa<PoisonValue>(V) ||

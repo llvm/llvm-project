@@ -803,10 +803,11 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
                                 unsigned NumStores);
 
-    /// Helper function for mergeConsecutiveStores which checks if all the store
-    /// nodes have the same underlying object. We can still reuse the first
-    /// store's pointer info if all the stores are from the same object.
-    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes);
+    /// Helper function for mergeConsecutiveStores which checks if all the
+    /// load/store nodes have the same underlying object. We can still reuse the
+    /// first load/store's pointer info if all the load/stores are from the same
+    /// object.
+    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> MemOps);
 
     /// This is a helper function for mergeConsecutiveStores. When the source
     /// elements of the consecutive stores are all constants or all extracted
@@ -23406,12 +23407,12 @@ SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
   return DAG.getTokenFactor(StoreDL, Chains);
 }
 
-bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes) {
+bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> MemOps) {
   const Value *UnderlyingObj = nullptr;
-  for (const auto &MemOp : StoreNodes) {
+  for (const auto &MemOp : MemOps) {
     const MachineMemOperand *MMO = MemOp.MemNode->getMemOperand();
     // Pseudo value like stack frame has its own frame index and size, should
-    // not use the first store's frame index for other frames.
+    // not use the first load/store's frame index for other frames.
     if (MMO->getPseudoValue())
       return false;
 
@@ -24211,6 +24212,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     unsigned FirstStoreAS = FirstInChain->getAddressSpace();
     Align FirstStoreAlign = FirstInChain->getAlign();
     LoadSDNode *FirstLoad = cast<LoadSDNode>(LoadNodes[0].MemNode);
+    unsigned FirstLoadAS = FirstLoad->getAddressSpace();
 
     // Scan the memory operations on the chain and find the first
     // non-consecutive load memory address. These variables hold the index in
@@ -24375,10 +24377,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
-
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
-    bool CanReusePtrInfo = hasSameUnderlyingObj(StoreNodes);
     AddToWorklist(NewStoreChain.getNode());
+
+    bool StoreCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(StoreNodes).take_front(NumElem));
+    bool LoadCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(LoadNodes).take_front(NumElem));
 
     MachineMemOperand::Flags LdMMOFlags =
         isDereferenceable ? MachineMemOperand::MODereferenceable
@@ -24406,7 +24411,9 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     if (UseVectorTy || !DoIntegerTruncate) {
       NewLoad = DAG.getLoad(
           JointMemOpVT, LoadDL, FirstLoad->getChain(), FirstLoad->getBasePtr(),
-          FirstLoad->getPointerInfo(), FirstLoadAlign, LdMMOFlags,
+          LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                              : MachinePointerInfo(FirstLoadAS),
+          FirstLoadAlign, LdMMOFlags,
           MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       SDValue StoreOp = NewLoad;
       if (NeedRotate) {
@@ -24420,22 +24427,24 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       }
       NewStore = DAG.getStore(
           NewStoreChain, StoreDL, StoreOp, FirstInChain->getBasePtr(),
-          CanReusePtrInfo ? FirstInChain->getPointerInfo()
-                          : MachinePointerInfo(FirstStoreAS),
+          StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
+                               : MachinePointerInfo(FirstStoreAS),
           FirstStoreAlign, StMMOFlags,
           MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
     } else { // This must be the truncstore/extload case
       EVT ExtendedTy =
           TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad = DAG.getExtLoad(
-          ISD::EXTLOAD, LoadDL, ExtendedTy, FirstLoad->getChain(),
-          FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), JointMemOpVT,
-          FirstLoadAlign, LdMMOFlags,
-          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
+      NewLoad =
+          DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
+                         FirstLoad->getChain(), FirstLoad->getBasePtr(),
+                         LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                                             : MachinePointerInfo(FirstLoadAS),
+                         JointMemOpVT, FirstLoadAlign, LdMMOFlags,
+                         MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       NewStore = DAG.getTruncStore(
           NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
-          CanReusePtrInfo ? FirstInChain->getPointerInfo()
-                          : MachinePointerInfo(FirstStoreAS),
+          StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
+                               : MachinePointerInfo(FirstStoreAS),
           JointMemOpVT, FirstInChain->getAlign(),
           FirstInChain->getMemOperand()->getFlags(),
           MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));

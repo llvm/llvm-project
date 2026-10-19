@@ -139,7 +139,7 @@ public:
 /// (e.g. x <u 1 becomes x == 0); such lanes are interchangeable with the
 /// rest of the list by adjusting the compared constant. InstCombine also
 /// canonicalizes icmp ne (and X, 1), 0 to trunc X to i1, such lanes are
-/// treated as the original comparison.
+/// treated as the original comparison or as icmp eq (and X, 1), 1.
 class CmpSamePredicateHelper {
   using MaskType = std::uint16_t;
   /// Bit i represents predicate ICMP_EQ + i.
@@ -180,7 +180,8 @@ public:
   static CmpInst::Predicate getSharedPredicate(ArrayRef<Value *> VL,
                                                const ICmpInst *Preferred);
   /// Checks if the comparison lane \p I is the bit test of the single use
-  /// and A, B != 0, or trunc X to i1, which is and X, 1 != 0.
+  /// and A, B != 0 or and A, B == 0, or trunc X to i1, which is
+  /// and X, 1 != 0.
   static bool isBitTest(const Instruction *I);
   /// Checks if the comparison lane \p I can be expressed with the predicate
   /// \p Pred by adjusting its constant operand.
