@@ -56,10 +56,7 @@ static bool legalizeInteger(Instruction &I,
     if (!R)
       reportFatalUsageError("DXIL legalization is missing an integer operand "
                             "replacement");
-    if (isa<UndefValue>(R))
-      R = isa<PoisonValue>(R) ? PoisonValue::get(Ty) : UndefValue::get(Ty);
-    else
-      R = B.CreateZExtOrTrunc(R, Ty);
+    R = B.CreateZExtOrTrunc(R, Ty);
     unsigned Width = V->getType()->getIntegerBitWidth();
     unsigned Shift = Ty->getBitWidth() - Width;
     auto *ContextI = dyn_cast<Instruction>(R);
