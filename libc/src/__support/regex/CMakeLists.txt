@@ -41,3 +41,17 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
 )
+
+add_object_library(
+  regex_parser
+  SRCS
+    regex_parser.cpp
+  HDRS
+    regex_parser.h
+  DEPENDS
+    .regex_expr_pool
+    libc.hdr.regex_macros
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)

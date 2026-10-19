@@ -761,6 +761,7 @@ features cannot lower the translation-unit ABI level;
   types that their evaluation silently mishandled. (#GH216997)
 - Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
   during constant evaluation. (#GH173767)
+- Fixed a crash on an invalid pointer argument to `__builtin_assume_aligned`. (#GH194289)
 - Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
   or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
@@ -979,6 +980,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed deduction of the template parameters appearing in the type of a
   constant template parameter of reference type. (#GH40328)
 
+- Template template parameters of the form `template <X &> class` no longer reject
+  template template arguments with the same parameters.
+
+- Fixed an assertion when matching a template template argument against a
+  template template parameter whose constant template parameter is declared
+  as `auto &&`.
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
@@ -1155,6 +1163,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
+
+- The `__interface` tag specifier now implicitly applies `__declspec(novtable)`
+  to the declaration, which matches the documented behavior of the keyword. #GH232046
 
 #### LoongArch Support
 

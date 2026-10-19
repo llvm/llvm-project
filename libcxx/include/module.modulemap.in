@@ -2200,6 +2200,7 @@ module std {
 
   module thread {
     module formatter              { header "__thread/formatter.h" }
+    module hardware_concurrency   { header "__thread/hardware_concurrency.h" }
     module id                     { header "__thread/id.h" }
     module jthread                { header "__thread/jthread.h" }
     module poll_with_backoff      { header "__thread/poll_with_backoff.h" }
