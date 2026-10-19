@@ -20237,12 +20237,12 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
 
   SDValue And, Base, Shl, Shift;
-  APInt MaskImm, OrImm, ShiftImm;
+  APInt OrImm, ShiftImm;
   bool IsImmediate = sd_match(
-      N, m_SpecificVT(MVT::i32,
-                      m_Or(m_OneUse(m_Value(
-                               And, m_And(m_Value(Base), m_ConstInt(MaskImm)))),
-                           m_ConstInt(OrImm))));
+      N, m_SpecificVT(
+             MVT::i32,
+             m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                  m_ConstInt(OrImm))));
 
   if (!IsImmediate &&
       !sd_match(
