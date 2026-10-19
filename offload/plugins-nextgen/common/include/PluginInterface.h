@@ -1331,20 +1331,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return std::move(MB);
   }
 
-  /// The minimum number of threads we use for a low-trip count combined loop.
-  /// Instead of using more threads we increase the outer (block/team)
-  /// parallelism.
-  /// @see OMPX_MinThreadsForLowTripCount
-  virtual uint32_t getMinThreadsForLowTripCountLoop() {
-    return OMPX_MinThreadsForLowTripCount;
-  }
-
-  /// Whether or not to reuse blocks for high trip count loops.
-  /// @see OMPX_ReuseBlocksForHighTripCount
-  bool getReuseBlocksForHighTripCount() {
-    return OMPX_ReuseBlocksForHighTripCount;
-  }
-
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -1538,6 +1524,7 @@ private:
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
+<<<<<<< HEAD
   /// Environment flag to set the minimum number of threads we use for a
   /// low-trip count combined loop. Instead of using more threads we increase
   /// the outer (block/team) parallelism.
@@ -1550,6 +1537,8 @@ private:
   /// Variable to track kernel launch for a device.
   std::atomic<uint32_t> LaunchId = 0;
 
+=======
+>>>>>>> 79d221bc7313
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
 
