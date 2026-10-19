@@ -258,6 +258,20 @@ struct ReturnsSelf {
   }
 };
 
+template <class C> struct SelfCapturingIter {
+  C *c; // expected-note {{escapes to this field}}
+  explicit SelfCapturingIter(C &x) : c(&x) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+};
+
+template <class T> struct AutoReturnSelf {
+  auto make() { return SelfCapturingIter<AutoReturnSelf>(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+};
+
+void test_auto_return_implicit_this() {
+  AutoReturnSelf<char> b;
+  (void)b.make();
+}
+
 struct ReturnThisAnnotated {
   const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
 };
