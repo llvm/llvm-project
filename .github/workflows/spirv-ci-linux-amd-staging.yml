@@ -675,9 +675,9 @@ jobs:
             -DCMAKE_PREFIX_PATH=$STAGING                                       \
             -DCMAKE_DISABLE_FIND_PACKAGE_Perl=TRUE                             \
             -DCMAKE_HIP_FLAGS="--rocm-path=$STAGING"                           \
-            -DCMAKE_HIP_STANDARD_LIBRARIES=amdhip64                            \
-            -DCMAKE_HIP_LINK_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"    \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"
+            -DCMAKE_HIP_STANDARD_LIBRARIES=-lamdhip64                          \
+            -DCMAKE_HIP_LINK_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed"
           cmake --build examples-build-hip-basic -j $(nproc)
 
       - name: ROCm Examples run HIP-Basic
@@ -698,9 +698,9 @@ jobs:
             -DCMAKE_HIP_COMPILER_ROCM_ROOT=$STAGING                            \
             -DCMAKE_PREFIX_PATH=$STAGING                                       \
             -DCMAKE_HIP_FLAGS="--rocm-path=$STAGING"                           \
-            -DCMAKE_HIP_STANDARD_LIBRARIES=amdhip64                            \
-            -DCMAKE_HIP_LINK_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"    \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib"
+            -DCMAKE_HIP_STANDARD_LIBRARIES=-lamdhip64                          \
+            -DCMAKE_HIP_LINK_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed"
           cmake --build examples-build-Applications -j $(nproc)
 
       - name: ROCm Examples run Applications
@@ -725,11 +725,11 @@ jobs:
             -DCMAKE_HIP_ARCHITECTURES=amdgcnspirv                              \
             -DCMAKE_DISABLE_FIND_PACKAGE_Perl=TRUE                             \
             -DCMAKE_HIP_FLAGS="-DROCPRIM_DISABLE_DPP=1 --offload-new-driver --rocm-path=$STAGING -use-spirv-backend --rtlib=libgcc -unwindlib=libgcc" \
-            -DCMAKE_HIP_STANDARD_LIBRARIES=amdhip64                            \
-            -DCMAKE_HIP_LINK_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--unresolved-symbols=ignore-in-shared-libs" \
+            -DCMAKE_HIP_STANDARD_LIBRARIES=-lamdhip64                          \
+            -DCMAKE_HIP_LINK_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed -Wl,--unresolved-symbols=ignore-in-shared-libs" \
             -DCMAKE_CXX_FLAGS="--rtlib=libgcc -unwindlib=libgcc"               \
-            -DCMAKE_EXE_LINKER_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--unresolved-symbols=ignore-in-shared-libs" \
-            -DCMAKE_SHARED_LINKER_FLAGS="--rtlib=libgcc -unwindlib=libgcc"
+            -DCMAKE_EXE_LINKER_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,-rpath,$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed -Wl,--unresolved-symbols=ignore-in-shared-libs" \
+            -DCMAKE_SHARED_LINKER_FLAGS="--rtlib=libgcc -unwindlib=libgcc -L$STAGING/lib -Wl,--no-as-needed -lamdhip64 -Wl,--as-needed"
           cmake --build examples-build-Libraries -j $(nproc)
 
       - name: ROCm Examples run Libraries
