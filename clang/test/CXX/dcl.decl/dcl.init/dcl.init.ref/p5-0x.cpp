@@ -227,6 +227,7 @@ namespace bitfields {
     const int & cir2 = (xvalue<IntBitfield>().i); // no-warning
     const int && cir3 = (xvalue<IntBitfield>().i); // no-warning
     const int && cir4 = move(lvalue<IntBitfield>()).i; // no-warning
+    const int && cir5 = (lvalue<IntBitfield>().i); // expected-error{{rvalue reference to type 'const int' cannot bind to lvalue of type 'int'}}
 
     const volatile int & cvir1 = (lvalue<IntBitfield>().i); // expected-error{{non-const reference cannot bind to bit-field 'i'}}
     const volatile int & cvir2 = (xvalue<IntBitfield>().i); // expected-error{{volatile lvalue reference to type 'const volatile int' cannot bind to a temporary of type 'int'}}

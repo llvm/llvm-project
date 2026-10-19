@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown \
-// RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown \
+// RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // static_cast<T&&> of a bit-field lvalue materializes a temporary holding the
 // loaded bit-field value, and the reference binds to that temporary.

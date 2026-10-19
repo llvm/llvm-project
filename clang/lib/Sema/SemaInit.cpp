@@ -5800,11 +5800,8 @@ static void TryReferenceInitializationCore(Sema &S,
 
   //   [...] If T1 is reference-related to T2 and the reference is an rvalue
   //   reference, the initializer expression shall not be an lvalue.
-  //   However, a non-referenceable glvalue (bit-field, vector element, matrix
-  //   element) cannot be bound directly, so it is materialized into a
-  //   temporary regardless of value category — don't block it here.
   if (RefRelationship >= Sema::Ref_Related && !isLValueRef &&
-      InitCategory.isLValue() && !isNonReferenceableGLValue(Initializer)) {
+      InitCategory.isLValue()) {
     Sequence.SetFailed(
                     InitializationSequence::FK_RValueReferenceBindingToLValue);
     return;

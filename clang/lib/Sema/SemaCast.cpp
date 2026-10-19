@@ -262,11 +262,10 @@ static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
 // %0: Cast Type (a value from the CastType enumeration)
 // %1: Source Type
 // %2: Destination Type
-static TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
-                                           QualType DestType, bool CStyle,
-                                           SourceRange OpRange, CastKind &Kind,
-                                           CXXCastPath &BasePath,
-                                           unsigned &msg);
+static TryCastResult
+TryLValueToRValueCast(Sema &Self, ExprResult &SrcExprResult, QualType DestType,
+                      bool CStyle, SourceRange OpRange, CastKind &Kind,
+                      CXXCastPath &BasePath, unsigned &msg);
 static TryCastResult
 TryStaticReferenceDowncast(Sema &Self, Expr *SrcExpr, QualType DestType,
                            bool CStyle, CastOperation::OpRangeType OpRange,
@@ -1431,8 +1430,10 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // C++11 [expr.static.cast]p3:
   //   A glvalue of type "cv1 T1" can be cast to type "rvalue reference to cv2
   //   T2" if "cv2 T2" is reference-compatible with "cv1 T1".
-  tcr = TryLValueToRValueCast(Self, SrcExpr.get(), DestType, CStyle, OpRange,
-                              Kind, BasePath, msg);
+  tcr = TryLValueToRValueCast(Self, SrcExpr, DestType, CStyle, OpRange, Kind,
+                              BasePath, msg);
+  if (SrcExpr.isInvalid())
+    return TC_Failed;
   if (tcr != TC_NotApplicable)
     return tcr;
 
@@ -1619,10 +1620,11 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
 }
 
 /// Tests whether a conversion according to N2844 is valid.
-TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
+TryCastResult TryLValueToRValueCast(Sema &Self, ExprResult &SrcExprResult,
                                     QualType DestType, bool CStyle,
                                     SourceRange OpRange, CastKind &Kind,
                                     CXXCastPath &BasePath, unsigned &msg) {
+  Expr *SrcExpr = SrcExprResult.get();
   // C++11 [expr.static.cast]p3:
   //   A glvalue of type "cv1 T1" can be cast to type "rvalue reference to
   //   cv2 T2" if "cv2 T2" is reference-compatible with "cv1 T1".
@@ -1631,12 +1633,6 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
     return TC_NotApplicable;
 
   if (!SrcExpr->isGLValue())
-    return TC_NotApplicable;
-
-  // A bit-field lvalue cannot be directly bound to an rvalue reference; it
-  // has no address.  Fall through to TryStaticImplicitCast so the initializer
-  // sequence materializes a temporary and binds to that instead.
-  if (SrcExpr->refersToBitField())
     return TC_NotApplicable;
 
   // Because we try the reference downcast before this function, from now on
@@ -1660,6 +1656,16 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
     msg = SrcExpr->isLValue() ? diag::err_bad_lvalue_to_rvalue_cast
                               : diag::err_bad_rvalue_to_rvalue_cast;
     return TC_Failed;
+  }
+
+  // C++ [expr.static.cast]p3:
+  //   If the value is not a bit-field, the result refers to the object or the
+  //   specified base class subobject thereof; otherwise, the lvalue-to-rvalue
+  //   conversion is applied to the bit-field and the resulting prvalue is used
+  //   as the operand of the static_cast for the remainder of this subclause.
+  if (SrcExpr->refersToBitField()) {
+    SrcExprResult = Self.DefaultLvalueConversion(SrcExpr);
+    return TC_NotApplicable;
   }
 
   if (RefConv & Sema::ReferenceConversions::DerivedToBase) {
