@@ -13,7 +13,7 @@ math.h
 .. toctree::
   :hidden:
 
-  log.rst
+  log
 
 
 Source Locations
