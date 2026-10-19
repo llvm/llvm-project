@@ -1328,11 +1328,13 @@ deleteIfDead(GlobalValue &GV,
       if (C->getUsers().size() > 1) {
         IsComdatLeaderWithUses = true;
       } else if (auto *GA = dyn_cast<GlobalAlias>(&GV)) {
-        if (auto *GO = GA->getAliasee()) {
+        if (auto *GO = dyn_cast<GlobalObject>(GA->getAliasee())) {
           GO->removeDeadConstantUsers();
           // The alias leader has uses if the aliasee cannot be discarded, or if
           // the aliasee has uses other than this alias.
           IsComdatLeaderWithUses = !GO->hasOneUse();
+        } else {
+          IsComdatLeaderWithUses = true;
         }
       }
     }
