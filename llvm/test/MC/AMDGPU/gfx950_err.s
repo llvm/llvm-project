@@ -486,3 +486,27 @@ v_pk_maximum3_f16 v0, s1, s2, v3
 
 v_pk_minimum3_f16 v0, s1, s2, v3
 // GFX950: :[[@LINE-1]]:27: error: invalid operand (violates constant bus restrictions)
+
+v_pk_add_f32 v[4:5], v[8:9], v[16:17] op_sel:[0,1]
+// GFX950: :[[@LINE-1]]:39: error: invalid op_sel operand
+
+v_pk_mul_f32 v[4:5], v[8:9], v[16:17] op_sel:[0,1]
+// GFX950: :[[@LINE-1]]:39: error: invalid op_sel operand
+
+v_pk_fma_f32 v[8:9], v[0:1], v[2:3], v[4:5] op_sel:[0,1,0]
+// GFX950: :[[@LINE-1]]:45: error: invalid op_sel operand
+
+v_pk_fma_f32 v[8:9], v[0:1], v[2:3], v[4:5] op_sel:[0,0,1]
+// GFX950: :[[@LINE-1]]:45: error: invalid op_sel operand
+
+v_pk_fma_f32 v[8:9], v[0:1], v[2:3], v[4:5] op_sel:[0,1,1]
+// GFX950: :[[@LINE-1]]:45: error: invalid op_sel operand
+
+v_pk_fma_f32 v[8:9], v[0:1], v[2:3], v[4:5] op_sel:[1,1,0]
+// GFX950: :[[@LINE-1]]:45: error: invalid op_sel operand
+
+v_pk_fma_f32 v[8:9], v[0:1], v[2:3], v[4:5] op_sel:[1,0,1]
+// GFX950: :[[@LINE-1]]:45: error: invalid op_sel operand
+
+v_pk_fma_f32 v[8:9], v[0:1], v[2:3], v[4:5] op_sel:[1,1,1]
+// GFX950: :[[@LINE-1]]:45: error: invalid op_sel operand

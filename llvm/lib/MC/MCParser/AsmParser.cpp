@@ -3439,8 +3439,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
 
   // Compute alignment in bytes.
   if (IsPow2) {
-    // FIXME: Diagnose overflow.
-    if (Alignment >= 32) {
+    if (Alignment < 0 || Alignment >= 32) {
       ReturnVal |= Error(AlignmentLoc, "invalid alignment value");
       Alignment = 31;
     }
@@ -5182,6 +5181,9 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
       if (!isPowerOf2_64(Pow2Alignment))
         return Error(Pow2AlignmentLoc, "alignment must be a power of 2");
       Pow2Alignment = Log2_64(Pow2Alignment);
+    } else if (Pow2Alignment < 0 || Pow2Alignment > 63) {
+      return Error(Pow2AlignmentLoc,
+                   "log2 alignment must be in the range [0, 63]");
     }
   }
 
