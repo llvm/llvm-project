@@ -1751,7 +1751,8 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
 //   3. merge with load as a smaller load
 //   4. hoist past n-ary element-wise operations (e.g. fdiv, select, icmp) by
 //      slicing every same-length vector operand with the same mask and cloning
-//      the op at the narrow width.
+//      the op at the narrow width. Only done when the source is wider than 16
+//      elements.
 class HandleVectorExtractPattern
     : public OpRewritePattern<LLVM::ShuffleVectorOp> {
   using OpRewritePattern<LLVM::ShuffleVectorOp>::OpRewritePattern;
@@ -1878,6 +1879,10 @@ class HandleVectorExtractPattern
         }
       } else if (isMemoryEffectFree(srcOp) && srcOp->getNumResults() == 1 &&
                  srcOp->getNumOperands() >= 1 &&
+                 // Only to legalize. A source of 16 or fewer elements is
+                 // already legal, and splitting it would put a narrow copy of
+                 // the op next to every slice user.
+                 cast<VectorType>(src.getType()).getNumElements() > 16 &&
                  llvm::all_of(srcOp->getOperands(), [&](Value operand) {
                    auto operandTy = dyn_cast<VectorType>(operand.getType());
                    auto srcTy = cast<VectorType>(src.getType());
