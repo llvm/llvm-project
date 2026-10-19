@@ -33,10 +33,6 @@ class RuntimeLibcallAvailability<dag cond = (?)> {
   dag CondDag = cond;
 }
 
-// Predicate for whether a libcall should be used for the current
-// function/subtarget.
-class LibcallLoweringPredicate<code cond> { code Cond = cond; }
-
 def AlwaysAvailable : RuntimeLibcallAvailability;
 
 class LibcallCallingConv<code CC = [{}]> {
