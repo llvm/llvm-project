@@ -4015,8 +4015,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     if (Ext0 && Ext1 &&
         (Ext->getOpcode() == Ext0->getOpcode() ||
          (Ext0 == Ext1 && Ext0->getOpcode() == Instruction::SExt)) &&
-        Ext0->getOpcode() == Ext1->getOpcode() &&
-        canFoldOuterExtendIntoMul(Mul) && Mul->hasOneUse() &&
+        Ext0->getOpcode() == Ext1->getOpcode() && Mul->hasOneUse() &&
+        canFoldOuterExtendIntoMul(Mul) &&
         IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getScalarType(), nullptr,
