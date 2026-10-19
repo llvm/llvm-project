@@ -10,140 +10,36 @@ define void @test(ptr noalias %d, ptr noalias %dct) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noalias [[D:%.*]], ptr noalias [[DCT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[D]], align 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 6
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; CHECK-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[CONV5]], [[CONV]]
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
-; CHECK-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2
-; CHECK-NEXT:    [[CONV16:%.*]] = sext i16 [[TMP3]] to i32
-; CHECK-NEXT:    [[ADD17:%.*]] = add nsw i32 [[CONV16]], [[CONV11]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV5]]
-; CHECK-NEXT:    [[SUB38:%.*]] = sub nsw i32 [[CONV11]], [[CONV16]]
-; CHECK-NEXT:    [[ADD39:%.*]] = add nsw i32 [[ADD17]], [[ADD6]]
-; CHECK-NEXT:    [[CONV40:%.*]] = trunc i32 [[ADD39]] to i16
-; CHECK-NEXT:    store i16 [[CONV40]], ptr [[DCT]], align 2
-; CHECK-NEXT:    [[MUL44:%.*]] = shl nsw i32 [[SUB]], 1
-; CHECK-NEXT:    [[ADD45:%.*]] = add nsw i32 [[SUB38]], [[MUL44]]
-; CHECK-NEXT:    [[CONV46:%.*]] = trunc i32 [[ADD45]] to i16
-; CHECK-NEXT:    [[ARRAYIDX49:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 8
-; CHECK-NEXT:    store i16 [[CONV46]], ptr [[ARRAYIDX49]], align 2
-; CHECK-NEXT:    [[SUB50:%.*]] = sub nsw i32 [[ADD6]], [[ADD17]]
-; CHECK-NEXT:    [[CONV51:%.*]] = trunc i32 [[SUB50]] to i16
-; CHECK-NEXT:    [[ARRAYIDX54:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 16
-; CHECK-NEXT:    store i16 [[CONV51]], ptr [[ARRAYIDX54]], align 2
-; CHECK-NEXT:    [[MUL55:%.*]] = shl nsw i32 [[SUB38]], 1
-; CHECK-NEXT:    [[SUB56:%.*]] = sub nsw i32 [[SUB]], [[MUL55]]
-; CHECK-NEXT:    [[CONV57:%.*]] = trunc i32 [[SUB56]] to i16
-; CHECK-NEXT:    [[ARRAYIDX60:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 24
-; CHECK-NEXT:    store i16 [[CONV57]], ptr [[ARRAYIDX60]], align 2
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_1]], align 2
-; CHECK-NEXT:    [[CONV_1:%.*]] = sext i16 [[TMP4]] to i32
-; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 14
-; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX4_1]], align 2
-; CHECK-NEXT:    [[CONV5_1:%.*]] = sext i16 [[TMP5]] to i32
-; CHECK-NEXT:    [[ADD6_1:%.*]] = add nsw i32 [[CONV5_1]], [[CONV_1]]
-; CHECK-NEXT:    [[ARRAYIDX10_1:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 10
-; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX10_1]], align 2
-; CHECK-NEXT:    [[CONV11_1:%.*]] = sext i16 [[TMP6]] to i32
-; CHECK-NEXT:    [[ARRAYIDX15_1:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 12
-; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX15_1]], align 2
-; CHECK-NEXT:    [[CONV16_1:%.*]] = sext i16 [[TMP7]] to i32
-; CHECK-NEXT:    [[ADD17_1:%.*]] = add nsw i32 [[CONV16_1]], [[CONV11_1]]
-; CHECK-NEXT:    [[SUB_1:%.*]] = sub nsw i32 [[CONV_1]], [[CONV5_1]]
-; CHECK-NEXT:    [[SUB38_1:%.*]] = sub nsw i32 [[CONV11_1]], [[CONV16_1]]
-; CHECK-NEXT:    [[ADD39_1:%.*]] = add nsw i32 [[ADD17_1]], [[ADD6_1]]
-; CHECK-NEXT:    [[CONV40_1:%.*]] = trunc i32 [[ADD39_1]] to i16
-; CHECK-NEXT:    [[ARRAYIDX43_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 2
-; CHECK-NEXT:    store i16 [[CONV40_1]], ptr [[ARRAYIDX43_1]], align 2
-; CHECK-NEXT:    [[MUL44_1:%.*]] = shl nsw i32 [[SUB_1]], 1
-; CHECK-NEXT:    [[ADD45_1:%.*]] = add nsw i32 [[SUB38_1]], [[MUL44_1]]
-; CHECK-NEXT:    [[CONV46_1:%.*]] = trunc i32 [[ADD45_1]] to i16
-; CHECK-NEXT:    [[ARRAYIDX49_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 10
-; CHECK-NEXT:    store i16 [[CONV46_1]], ptr [[ARRAYIDX49_1]], align 2
-; CHECK-NEXT:    [[SUB50_1:%.*]] = sub nsw i32 [[ADD6_1]], [[ADD17_1]]
-; CHECK-NEXT:    [[CONV51_1:%.*]] = trunc i32 [[SUB50_1]] to i16
-; CHECK-NEXT:    [[ARRAYIDX54_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 18
-; CHECK-NEXT:    store i16 [[CONV51_1]], ptr [[ARRAYIDX54_1]], align 2
-; CHECK-NEXT:    [[MUL55_1:%.*]] = shl nsw i32 [[SUB38_1]], 1
-; CHECK-NEXT:    [[SUB56_1:%.*]] = sub nsw i32 [[SUB_1]], [[MUL55_1]]
-; CHECK-NEXT:    [[CONV57_1:%.*]] = trunc i32 [[SUB56_1]] to i16
-; CHECK-NEXT:    [[ARRAYIDX60_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 26
-; CHECK-NEXT:    store i16 [[CONV57_1]], ptr [[ARRAYIDX60_1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 16
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX_2]], align 2
-; CHECK-NEXT:    [[CONV_2:%.*]] = sext i16 [[TMP8]] to i32
-; CHECK-NEXT:    [[ARRAYIDX4_2:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 22
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX4_2]], align 2
-; CHECK-NEXT:    [[CONV5_2:%.*]] = sext i16 [[TMP9]] to i32
-; CHECK-NEXT:    [[ADD6_2:%.*]] = add nsw i32 [[CONV5_2]], [[CONV_2]]
-; CHECK-NEXT:    [[ARRAYIDX10_2:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 18
-; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX10_2]], align 2
-; CHECK-NEXT:    [[CONV11_2:%.*]] = sext i16 [[TMP10]] to i32
-; CHECK-NEXT:    [[ARRAYIDX15_2:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 20
-; CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ARRAYIDX15_2]], align 2
-; CHECK-NEXT:    [[CONV16_2:%.*]] = sext i16 [[TMP11]] to i32
-; CHECK-NEXT:    [[ADD17_2:%.*]] = add nsw i32 [[CONV16_2]], [[CONV11_2]]
-; CHECK-NEXT:    [[SUB_2:%.*]] = sub nsw i32 [[CONV_2]], [[CONV5_2]]
-; CHECK-NEXT:    [[SUB38_2:%.*]] = sub nsw i32 [[CONV11_2]], [[CONV16_2]]
-; CHECK-NEXT:    [[ADD39_2:%.*]] = add nsw i32 [[ADD17_2]], [[ADD6_2]]
-; CHECK-NEXT:    [[CONV40_2:%.*]] = trunc i32 [[ADD39_2]] to i16
-; CHECK-NEXT:    [[ARRAYIDX43_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 4
-; CHECK-NEXT:    store i16 [[CONV40_2]], ptr [[ARRAYIDX43_2]], align 2
-; CHECK-NEXT:    [[MUL44_2:%.*]] = shl nsw i32 [[SUB_2]], 1
-; CHECK-NEXT:    [[ADD45_2:%.*]] = add nsw i32 [[SUB38_2]], [[MUL44_2]]
-; CHECK-NEXT:    [[CONV46_2:%.*]] = trunc i32 [[ADD45_2]] to i16
-; CHECK-NEXT:    [[ARRAYIDX49_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 12
-; CHECK-NEXT:    store i16 [[CONV46_2]], ptr [[ARRAYIDX49_2]], align 2
-; CHECK-NEXT:    [[SUB50_2:%.*]] = sub nsw i32 [[ADD6_2]], [[ADD17_2]]
-; CHECK-NEXT:    [[CONV51_2:%.*]] = trunc i32 [[SUB50_2]] to i16
-; CHECK-NEXT:    [[ARRAYIDX54_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 20
-; CHECK-NEXT:    store i16 [[CONV51_2]], ptr [[ARRAYIDX54_2]], align 2
-; CHECK-NEXT:    [[MUL55_2:%.*]] = shl nsw i32 [[SUB38_2]], 1
-; CHECK-NEXT:    [[SUB56_2:%.*]] = sub nsw i32 [[SUB_2]], [[MUL55_2]]
-; CHECK-NEXT:    [[CONV57_2:%.*]] = trunc i32 [[SUB56_2]] to i16
-; CHECK-NEXT:    [[ARRAYIDX60_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 28
-; CHECK-NEXT:    store i16 [[CONV57_2]], ptr [[ARRAYIDX60_2]], align 2
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 24
-; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[ARRAYIDX_3]], align 2
-; CHECK-NEXT:    [[CONV_3:%.*]] = sext i16 [[TMP12]] to i32
-; CHECK-NEXT:    [[ARRAYIDX4_3:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 30
-; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[ARRAYIDX4_3]], align 2
-; CHECK-NEXT:    [[CONV5_3:%.*]] = sext i16 [[TMP13]] to i32
-; CHECK-NEXT:    [[ADD6_3:%.*]] = add nsw i32 [[CONV5_3]], [[CONV_3]]
-; CHECK-NEXT:    [[ARRAYIDX10_3:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 26
-; CHECK-NEXT:    [[TMP14:%.*]] = load i16, ptr [[ARRAYIDX10_3]], align 2
-; CHECK-NEXT:    [[CONV11_3:%.*]] = sext i16 [[TMP14]] to i32
-; CHECK-NEXT:    [[ARRAYIDX15_3:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 28
-; CHECK-NEXT:    [[TMP15:%.*]] = load i16, ptr [[ARRAYIDX15_3]], align 2
-; CHECK-NEXT:    [[CONV16_3:%.*]] = sext i16 [[TMP15]] to i32
-; CHECK-NEXT:    [[ADD17_3:%.*]] = add nsw i32 [[CONV16_3]], [[CONV11_3]]
-; CHECK-NEXT:    [[SUB_3:%.*]] = sub nsw i32 [[CONV_3]], [[CONV5_3]]
-; CHECK-NEXT:    [[SUB38_3:%.*]] = sub nsw i32 [[CONV11_3]], [[CONV16_3]]
-; CHECK-NEXT:    [[ADD39_3:%.*]] = add nsw i32 [[ADD17_3]], [[ADD6_3]]
-; CHECK-NEXT:    [[CONV40_3:%.*]] = trunc i32 [[ADD39_3]] to i16
-; CHECK-NEXT:    [[ARRAYIDX43_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 6
-; CHECK-NEXT:    store i16 [[CONV40_3]], ptr [[ARRAYIDX43_3]], align 2
-; CHECK-NEXT:    [[MUL44_3:%.*]] = shl nsw i32 [[SUB_3]], 1
-; CHECK-NEXT:    [[ADD45_3:%.*]] = add nsw i32 [[SUB38_3]], [[MUL44_3]]
-; CHECK-NEXT:    [[CONV46_3:%.*]] = trunc i32 [[ADD45_3]] to i16
-; CHECK-NEXT:    [[ARRAYIDX49_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 14
-; CHECK-NEXT:    store i16 [[CONV46_3]], ptr [[ARRAYIDX49_3]], align 2
-; CHECK-NEXT:    [[SUB50_3:%.*]] = sub nsw i32 [[ADD6_3]], [[ADD17_3]]
-; CHECK-NEXT:    [[CONV51_3:%.*]] = trunc i32 [[SUB50_3]] to i16
-; CHECK-NEXT:    [[ARRAYIDX54_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 22
-; CHECK-NEXT:    store i16 [[CONV51_3]], ptr [[ARRAYIDX54_3]], align 2
-; CHECK-NEXT:    [[MUL55_3:%.*]] = shl nsw i32 [[SUB38_3]], 1
-; CHECK-NEXT:    [[SUB56_3:%.*]] = sub nsw i32 [[SUB_3]], [[MUL55_3]]
-; CHECK-NEXT:    [[CONV57_3:%.*]] = trunc i32 [[SUB56_3]] to i16
-; CHECK-NEXT:    [[ARRAYIDX60_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 30
-; CHECK-NEXT:    store i16 [[CONV57_3]], ptr [[ARRAYIDX60_3]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i16>, ptr [[D]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[TMP0]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i16> [[TMP0]], <16 x i16> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i16> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i16> [[TMP0]], <16 x i16> poison, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 1, i32 5, i32 9, i32 13>
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[TMP5]] to <8 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <4 x i32> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <8 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw <8 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP14]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP11]], <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <8 x i32> [[TMP18]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add nsw <8 x i32> [[TMP11]], [[TMP17]]
+; CHECK-NEXT:    [[TMP22:%.*]] = trunc <8 x i32> [[TMP21]] to <8 x i16>
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <8 x i32> [[TMP17]], <8 x i32> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP24:%.*]] = sub nsw <8 x i32> [[TMP23]], [[TMP20]]
+; CHECK-NEXT:    [[TMP25:%.*]] = trunc <8 x i32> [[TMP24]] to <8 x i16>
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i16> [[TMP22]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i16> [[TMP25]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <16 x i16> [[TMP26]], <16 x i16> [[TMP27]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    store <16 x i16> [[TMP28]], ptr [[DCT]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
