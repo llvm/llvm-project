@@ -56,6 +56,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -20514,17 +20515,13 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_truncl:
   case Builtin::BI__builtin_truncf16:
   case Builtin::BI__builtin_truncf128: {
-    // const Expr * arg0 = E->getArg(0);
+    APFloat Arg0(0.);
+    if (!EvaluateFloat(E->getArg(0), Arg0, Info))
+      return false;
 
-    // FIXME: use 0 for now, will implement later
-    APFloat RHS(0.);
-    Result = RHS;
+    Arg0.roundToIntegral(llvm::RoundingMode::TowardZero);
+    Result = Arg0;
     return true;
-
-    // llvm::errs() << "exprconstant: pending vinay";
-    // llvm::report_fatal_error(
-    //     "TODO: implement constexpr evaluation for __builtin_signbit");
-    // return false;
   }
 
   case Builtin::BI__builtin_fmax:
