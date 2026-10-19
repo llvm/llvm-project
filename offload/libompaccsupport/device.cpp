@@ -183,12 +183,19 @@ llvm::Error DeviceTy::deinit() {
 }
 
 llvm::Expected<void *>
-DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program,
-                                    const char *Name) {
+DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
+                                    size_t ExpectedSize) {
   size_t Size = 0;
   auto AddrOrErr = Program.getGlobalAddress(Name, &Size);
   if (!AddrOrErr)
     return AddrOrErr;
+  // Some backends return size 0 if the size is unknown.
+  // Only check the size if it is non-zero.
+  if (Size && Size != ExpectedSize)
+    return createError(ErrorCode::InvalidBinary,
+                       "size of global symbol %s does not match expected size "
+                       "(expected %zu, got %zu)",
+                       Name, ExpectedSize, Size);
 
   GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
@@ -224,7 +231,7 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       // is instead of size PtrSize (sizeof(void*)).
       void *res;
       auto VtableOrErr =
-          Device.getAndRecordGlobalAddress(Program, Entry.SymbolName);
+          Device.getAndRecordGlobalAddress(Program, Entry.SymbolName, PtrSize);
       if (!VtableOrErr)
         return VtableOrErr.takeError();
       void *Vtable = *VtableOrErr;
@@ -250,8 +257,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       // dealing with a single function pointer (not a VTable)
       assert(Entry.Size == PtrSize && "Global not a function pointer?");
       auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
-      auto PtrOrErr =
-          Device.getAndRecordGlobalAddress(Program, Entry.SymbolName);
+      auto PtrOrErr = Device.getAndRecordGlobalAddress(
+          Program, Entry.SymbolName, Entry.Size);
       if (!PtrOrErr)
         return PtrOrErr.takeError();
       void *Ptr = *PtrOrErr;
@@ -313,8 +320,8 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   });
 
   // This symbol is optional.
-  auto DeviceEnvironmentPtrOrErr =
-      getAndRecordGlobalAddress(Program, "__omp_rtl_device_environment");
+  auto DeviceEnvironmentPtrOrErr = getAndRecordGlobalAddress(
+      Program, "__omp_rtl_device_environment", sizeof(DeviceEnvironmentTy));
   if (!DeviceEnvironmentPtrOrErr) {
     llvm::consumeError(DeviceEnvironmentPtrOrErr.takeError());
     return Program;

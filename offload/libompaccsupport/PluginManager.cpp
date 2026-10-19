@@ -469,8 +469,8 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
           if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)) {
-            auto AddrOrErr =
-                Device.getAndRecordGlobalAddress(Program, Entry.SymbolName);
+            auto AddrOrErr = Device.getAndRecordGlobalAddress(
+                Program, Entry.SymbolName, Entry.Size);
             if (!AddrOrErr) {
               REPORT() << "Failed to load symbol " << Entry.SymbolName << ": "
                        << llvm::toString(AddrOrErr.takeError());

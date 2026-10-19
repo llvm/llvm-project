@@ -29,7 +29,7 @@ public:
                                           __tgt_device_image *Img);
 
   /// Resolve the device address of the global variable \p Name. If \p Size
-  /// is non-null, it is set to the size in bytes of the global
+  /// is non-null, it is set to the size in bytes of the global.
   llvm::Expected<void *> getGlobalAddress(const char *Name,
                                           size_t *Size = nullptr) const;
 

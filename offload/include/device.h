@@ -124,7 +124,8 @@ struct DeviceTy {
   /// Resolve the device address of the global variable \p Name in \p Program,
   /// recording it for kernel record/replay if recording is currently active.
   llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
-                                                   const char *Name);
+                                                   const char *Name,
+                                                   size_t ExpectedSize);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space

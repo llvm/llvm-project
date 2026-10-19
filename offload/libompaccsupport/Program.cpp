@@ -1,4 +1,4 @@
-//===------------ Program.cpp - liboffload program abstraction ----------===//
+//===------------ Program.cpp - liboffload program abstraction ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,9 +45,12 @@ Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
         "failed to get device address of global symbol %s: %s", Name,
         Res->Details);
 
-  if (Size && olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
-                              sizeof(*Size), Size))
-    *Size = 0;
+  if (Size)
+    if (auto Res = olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
+                                   sizeof(*Size), Size))
+      return error::createOffloadError(
+          error::ErrorCode::INVALID_BINARY,
+          "failed to get size of global symbol %s: %s", Name, Res->Details);
 
   return Address;
 }
