@@ -112,7 +112,7 @@ Error MSFBuilder::allocateBlocks(uint32_t NumBlocks,
     uint32_t AllocBlocks = NumBlocks - NumFreeBlocks;
     uint32_t OldBlockCount = FreeBlocks.size();
     uint32_t NewBlockCount = AllocBlocks + OldBlockCount;
-    uint32_t NextFpmBlock = alignTo(OldBlockCount, BlockSize) + 1;
+    uint32_t NextFpmBlock = alignTo(OldBlockCount, BlockSize, 1);
     FreeBlocks.resize(NewBlockCount, true);
     // If we crossed over an fpm page, we actually need to allocate 2 extra
     // blocks for each FPM group crossed and mark both blocks from the group as
