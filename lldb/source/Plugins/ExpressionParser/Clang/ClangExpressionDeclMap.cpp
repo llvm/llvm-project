@@ -22,12 +22,14 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -57,8 +59,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "llvm/ADT/DenseSet.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+
+#include <tuple>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -67,6 +72,48 @@ using namespace clang;
 static const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
 
 namespace {
+SymbolContextList
+FilterOverriddenELFFunctions(Target &target,
+                             const SymbolContextList &functions) {
+  llvm::DenseSet<std::tuple<lldb_private::Module *, ConstString, addr_t>>
+      definitions;
+  for (const SymbolContext &context : functions) {
+    Function *function = context.function;
+    if (function && function->IsExternal()) {
+      definitions.insert(
+          {context.module_sp.get(),
+           function->GetMangled().GetName(Mangled::ePreferMangled),
+           function->GetAddress().GetFileAddress()});
+    }
+  }
+
+  SymbolContextList filtered;
+  for (const SymbolContext &context : functions) {
+    Function *function = context.function;
+    if (function && function->IsExternal()) {
+      ConstString name =
+          function->GetMangled().GetName(Mangled::ePreferMangled);
+      auto symbols = FindELFFunctionSymbolsWithName(
+          target, function->GetAddress().GetModule(), name);
+      Symbol *selected = FindUniqueExternalFunctionSymbol(symbols);
+      // Drop this DWARF candidate if:
+      // 1. The name resolves to a unique external/weak ELF symbol address,
+      // 2. This candidate has no symbol of its own at its address (neither the
+      //    selected symbol nor a localized symbol), and
+      // 3. Another DWARF candidate exists at the selected address (otherwise,
+      //    keep this candidate so its declaration still provides the type).
+      if (selected &&
+          !FindSymbolAtFileAddress(symbols,
+                                   function->GetAddress().GetFileAddress()) &&
+          definitions.contains(
+              {context.module_sp.get(), name, selected->GetFileAddress()}))
+        continue;
+    }
+    filtered.Append(context);
+  }
+  return filtered;
+}
+
 /// A lambda is represented by Clang as an artifical class whose
 /// members are the lambda captures. If we capture a 'this' pointer,
 /// the artifical class will contain a member variable named 'this'.
@@ -643,6 +690,10 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
 
   if (vars.GetSize() == 0)
     return VariableSP();
+
+  // FIXME: This blindly picks the first match without checking ELF symbol
+  // binding. For overridden weak variables, this currently works by accident
+  // only when the weak DIE's DW_AT_location resolves to the strong storage.
   return vars.GetVariableAtIndex(0);
 }
 
@@ -1281,6 +1332,11 @@ bool ClangExpressionDeclMap::LookupFunction(
         sc_list);
   }
 
+  // Select the linked definition before scope filtering or type deduplication
+  // can discard it in favor of a retained, overridden definition.
+  if (target)
+    sc_list = FilterOverriddenELFFunctions(*target, sc_list);
+
   // If we found more than one function, see if we can use the frame's decl
   // context to remove functions that are shadowed by other functions which
   // match in type but are nearer in scope.
@@ -1833,6 +1889,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   CompilerType function_clang_type;
 
   bool is_indirect_function = false;
+  Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
   if (function) {
     Type *function_type = function->GetType();
@@ -1926,6 +1983,19 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
         return;
       }
+
+      // Keep the selected declaration through JIT lookup. Do not pin calls
+      // into shared libraries, which may be overridden by another image.
+      ModuleSP module = function->GetCompileUnit()->GetModule();
+      if (module == target->GetExecutableModule() &&
+          module->GetObjectFile()->GetFileFormat() == llvm::Triple::ELF) {
+        ConstString name =
+            function->GetMangled().GetName(Mangled::ePreferMangled);
+        FunctionCallLabel label{
+            {}, module->GetID(), function->GetID(), name.GetStringRef()};
+        function_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
+            *m_ast_context, label.toString()));
+      }
     } else {
       // We failed to copy the type we found
       LLDB_LOG(log,
@@ -1943,8 +2013,6 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     LLDB_LOG(log, "  AddOneFunction called with no function and no symbol");
     return;
   }
-
-  Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
   lldb::addr_t load_addr =
       fun_address.GetCallableLoadAddress(target, is_indirect_function);
