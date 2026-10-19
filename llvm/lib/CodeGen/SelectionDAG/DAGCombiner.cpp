@@ -5365,11 +5365,9 @@ SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N) {
     return SDValue();
 
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
-  if (N1.getOpcode() != ISD::SELECT && N1.getOpcode() != ISD::VSELECT)
+  SDValue Cond, True, False;
+  if (!sd_match(N1, m_SelectLike(m_Value(Cond), m_Value(True), m_Value(False))))
     return SDValue();
-
-  SDValue Cond = N1.getOperand(0);
-  SDValue True = N1.getOperand(1), False = N1.getOperand(2);
 
   if (Opcode == ISD::FDIV) {
     // Each arm has to turn into a reciprocal multiply, which needs an exact
@@ -5399,8 +5397,9 @@ SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N) {
 
   SDLoc DL(N);
   SDNodeFlags Flags = N->getFlags();
-  SDValue Arm1 = DAG.getNode(Opcode, DL, VT, N0, True, Flags);
-  SDValue Arm2 = DAG.getNode(Opcode, DL, VT, N0, False, Flags);
+  SDValue F0 = DAG.getFreeze(N0);
+  SDValue Arm1 = DAG.getNode(Opcode, DL, VT, F0, True, Flags);
+  SDValue Arm2 = DAG.getNode(Opcode, DL, VT, F0, False, Flags);
   return DAG.getSelect(DL, VT, Cond, Arm1, Arm2);
 }
 
