@@ -14,7 +14,7 @@
 
 #include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/bit.h"
@@ -29,6 +29,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
@@ -36,6 +37,7 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -106,7 +108,7 @@ enum class AccessFlags : unsigned {
 };
 
 static bool isAtomicMemoryAccess(const Instruction *I) {
-  auto SSID = getAtomicSyncScopeID(I);
+  std::optional<SyncScope::ID> SSID = getAtomicSyncScopeID(I);
   if (!SSID)
     return false;
   if (isa<LoadInst>(I) || isa<StoreInst>(I))
@@ -114,47 +116,12 @@ static bool isAtomicMemoryAccess(const Instruction *I) {
   return true;
 }
 
-static AtomicOrdering getAtomicOrdering(const Instruction *I) {
-  if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(I))
-    return CAS->getMergedOrdering();
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getOrdering();
-  if (auto *SI = dyn_cast<StoreInst>(I))
-    return SI->getOrdering();
-  if (auto *FI = dyn_cast<FenceInst>(I))
-    return FI->getOrdering();
-  if (auto *RMW = dyn_cast<AtomicRMWInst>(I))
-    return RMW->getOrdering();
-  return AtomicOrdering::NotAtomic;
-}
-
 static Value *getCallbackAddress(IRBuilderBase &IRB, Value *Addr) {
   return IRB.CreateAddrSpaceCast(Addr, IRB.getPtrTy());
 }
 
 static ConstantInt *createOrdering(IRBuilderBase &IRB, AtomicOrdering Ord) {
-  uint32_t Value = 0;
-  switch (Ord) {
-  case AtomicOrdering::NotAtomic:
-    llvm_unreachable("unexpected atomic ordering");
-  case AtomicOrdering::Unordered:
-  case AtomicOrdering::Monotonic:
-    Value = 0;
-    break;
-  case AtomicOrdering::Acquire:
-    Value = 2;
-    break;
-  case AtomicOrdering::Release:
-    Value = 3;
-    break;
-  case AtomicOrdering::AcquireRelease:
-    Value = 4;
-    break;
-  case AtomicOrdering::SequentiallyConsistent:
-    Value = 5;
-    break;
-  }
-  return IRB.getInt32(Value);
+  return IRB.getInt32(static_cast<uint32_t>(toCABI(Ord)));
 }
 
 static int getAccessSizeIndex(Type *Ty, const DataLayout &DL) {
@@ -167,6 +134,25 @@ static int getAccessSizeIndex(Type *Ty, const DataLayout &DL) {
     return -1;
   unsigned Idx = llvm::countr_zero(TypeSize / 8);
   return static_cast<int>(Idx);
+}
+
+// A later write of the same pointer drops an earlier read in this window.
+static void selectMemoryAccesses(SmallVectorImpl<Instruction *> &Local,
+                                 SmallVectorImpl<Instruction *> &Out) {
+  DenseSet<Value *> WriteTargets;
+  for (Instruction *Inst : reverse(Local)) {
+    const bool IsWrite = isa<StoreInst>(Inst);
+    Value *Addr = getLoadStorePointerOperand(Inst);
+    if (!IsWrite && WriteTargets.contains(Addr)) {
+      ++NumOmittedReadsBeforeWrite;
+      continue;
+    }
+
+    Out.push_back(Inst);
+    if (IsWrite)
+      WriteTargets.insert(Addr);
+  }
+  Local.clear();
 }
 
 static bool addressSpaceMayRace(const Triple &T, unsigned AS) {
@@ -385,7 +371,7 @@ bool ConcurrencySanitizer::shouldInstrumentAddress(Value *Addr) const {
   if (auto *GV = dyn_cast<GlobalVariable>(BaseAddr)) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
-      auto OF = Mod->getTargetTriple().getObjectFormat();
+      Triple::ObjectFormatType OF = Mod->getTargetTriple().getObjectFormat();
       if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
@@ -420,43 +406,10 @@ bool ConcurrencySanitizer::shouldInstrumentAccess(Instruction *I) const {
 
 void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
                                                  MemoryAccessLists &Out) {
-  const DataLayout &DL = F.getDataLayout();
   SmallVector<Instruction *, 8> LocalLoadsAndStores;
-  auto FlushLocalAccesses = [&] {
-    // Writes following reads can be dropped if the write covers the whole span.
-    DenseMap<Value *, TypeSize> WriteSizes;
-    for (Instruction *Inst : reverse(LocalLoadsAndStores)) {
-      const bool IsWrite = isa<StoreInst>(Inst);
-      Value *Addr = getLoadStorePointerOperand(Inst);
-      TypeSize Size = DL.getTypeStoreSize(getLoadStoreType(Inst));
-      if (!IsWrite) {
-        auto It = WriteSizes.find(Addr);
-        if (It != WriteSizes.end() && TypeSize::isKnownLE(Size, It->second)) {
-          ++NumOmittedReadsBeforeWrite;
-          continue;
-        }
-      }
-
-      Out.LoadsAndStores.push_back(Inst);
-      if (IsWrite) {
-        auto [It, Inserted] = WriteSizes.try_emplace(Addr, Size);
-        if (!Inserted && TypeSize::isKnownGE(Size, It->second))
-          It->second = Size;
-      }
-    }
-    LocalLoadsAndStores.clear();
-  };
 
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : BB) {
-      // An acquire or a call still ends the window when marked !nosanitize.
-      if (auto SSID = getAtomicSyncScopeID(&Inst);
-          SSID && *SSID != SyncScope::SingleThread &&
-          isAcquireOrStronger(getAtomicOrdering(&Inst)))
-        FlushLocalAccesses();
-      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst))
-        FlushLocalAccesses();
-
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
@@ -465,13 +418,14 @@ void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
       else if ((isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) &&
                shouldInstrumentAccess(&Inst))
         LocalLoadsAndStores.push_back(&Inst);
-      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+      else if (isa<CallBase>(Inst)) {
         if (isa<AnyMemIntrinsic, MemSetPatternInst>(Inst))
           Out.MemIntrinCalls.push_back(cast<IntrinsicInst>(&Inst));
         Out.HasCalls = true;
+        selectMemoryAccesses(LocalLoadsAndStores, Out.LoadsAndStores);
       }
     }
-    FlushLocalAccesses();
+    selectMemoryAccesses(LocalLoadsAndStores, Out.LoadsAndStores);
   }
 }
 

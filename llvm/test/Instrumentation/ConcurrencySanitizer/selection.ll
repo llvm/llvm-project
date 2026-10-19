@@ -49,13 +49,36 @@ entry:
   ret void
 }
 ; DEFAULT-LABEL: @read_before_write_limits(
-; DEFAULT: call void @__csan_read8(ptr %p, i32 0)
+; DEFAULT-NOT: __csan_read8
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
-; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
 ; DEFAULT: call void @__csan_read4(ptr %flag, i32 1)
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
-; DEFAULT-NOT: call void @__csan_read4(ptr %p, i32 0)
 ; DEFAULT: call void @__csan_atomic_thread_fence(i32 3)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+
+define void @singlethread_acquire(ptr %p) sanitize_concurrency {
+entry:
+  %v = load i32, ptr %p, align 4
+  fence syncscope("singlethread") acquire
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+; DEFAULT-LABEL: @singlethread_acquire(
+; DEFAULT-NOT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT: call void @__csan_atomic_signal_fence(i32 2)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+
+define void @monotonic_between(ptr %p) sanitize_concurrency {
+entry:
+  %v = load i32, ptr %p, align 4
+  store atomic i32 1, ptr %p monotonic, align 4
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+; DEFAULT-LABEL: @monotonic_between(
+; DEFAULT-NOT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 1)
+; DEFAULT: store atomic i32 1, ptr %p monotonic, align 4
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
 
 define void @call_between_accesses(ptr %p) sanitize_concurrency {
@@ -78,8 +101,7 @@ entry:
   ret void
 }
 ; DEFAULT-LABEL: @nosanitize_acquire(
-; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
-; DEFAULT-NOT: __csan_
+; DEFAULT-NOT: __csan_read
 ; DEFAULT: load atomic i32, ptr %flag acquire
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
 
@@ -91,8 +113,7 @@ entry:
   ret void
 }
 ; DEFAULT-LABEL: @nosanitize_acquire_fence(
-; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
-; DEFAULT-NOT: __csan_
+; DEFAULT-NOT: __csan_read
 ; DEFAULT: fence acquire
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
 
@@ -104,7 +125,7 @@ entry:
   ret void
 }
 ; DEFAULT-LABEL: @nosanitize_call(
-; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT-NOT: __csan_read
 ; DEFAULT: {{call|invoke}} void @capture(ptr %p)
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
 
