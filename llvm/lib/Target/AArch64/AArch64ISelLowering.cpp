@@ -30704,6 +30704,11 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
       Offset.getValueType().getSimpleVT().SimpleTy == MVT::nxv2i32)
     Offset = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::nxv2i64, Offset).getValue(0);
 
+  // Reject offsets that do not fit into a single SVE register (e.g. nxv4i64
+  // offsets for an nxv4i32 gather), as performScatterStoreCombine does.
+  if (!TLI.isTypeLegal(Offset.getValueType()))
+    return SDValue();
+
   // Return value type that is representable in hardware
   EVT HwRetVt = getSVEContainerType(RetVT);
 
