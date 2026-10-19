@@ -16,7 +16,8 @@ class CCIfExtend<CCAction A>
   : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
 class CCIfOrigTypeShaderCCIsSGPR<CCAction A>
   : CCIf<[{(!OrigTy->getScalarType()->isFloatTy() &&
-            !OrigTy->getScalarType()->isHalfTy()) }], A>;
+            !OrigTy->getScalarType()->isHalfTy() &&
+            !OrigTy->getScalarType()->isDoubleTy()) }], A>;
 
 
 // Calling convention for SI
