@@ -7,7 +7,7 @@
 define void @intrinsic_unknown_bundle(ptr %p, i64 %n) {
 ; CHECK-LABEL: 'intrinsic_unknown_bundle'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: call instruction with operand bundles cannot be vectorized
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -37,7 +37,7 @@ exit:
 define void @mapped_call_unknown_bundle(ptr %p, i64 %n) {
 ; CHECK-LABEL: 'mapped_call_unknown_bundle'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: call instruction with operand bundles cannot be vectorized
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
