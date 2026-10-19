@@ -314,6 +314,7 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   request.PinnedCertFingerprint =
       GetGlobalPluginProperties().GetTLSCertFingerprint();
   if (llvm::Error Err = client.perform(request, Handler)) {
+    Err = llvm::joinErrors(std::move(Err), Handler.abort());
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
                       llvm::toString(std::move(Err))));

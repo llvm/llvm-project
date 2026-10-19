@@ -1669,7 +1669,7 @@ static StoreInst *getPHIStoreToRewrite(PHINode &PN, bool PreserveCFG,
 
   BasicBlock *BB = PN.getParent();
   // TODO: Allow a harmless prefix between the PHIs and the store.
-  if (&*BB->getFirstNonPHIOrDbg() != SI)
+  if (&*BB->getFirstNonPHIOrPseudoProbe() != SI)
     return nullptr;
 
   Value *StoredValue = SI->getValueOperand();
@@ -6469,7 +6469,7 @@ bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
-  if (ScalarOptions::Global.sroa_skip_mem2reg) {
+  if (C->getLibraryOptions().get<ScalarOptions>().sroa_skip_mem2reg) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
