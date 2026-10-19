@@ -67,7 +67,7 @@ define internal void @g() {
 define void @call_g(ptr %p) {
 ; TUNIT-LABEL: define void @call_g(
 ; TUNIT-SAME: ptr nofree noundef nonnull readnone captures(none) [[P:%.*]]) #[[ATTR1]] {
-; TUNIT-NEXT:    ret void
+; TUNIT-NEXT:    unreachable
 ;
 ; CGSCC-LABEL: define void @call_g(
 ; CGSCC-SAME: ptr nofree noundef nonnull captures(none) [[P:%.*]]) {
