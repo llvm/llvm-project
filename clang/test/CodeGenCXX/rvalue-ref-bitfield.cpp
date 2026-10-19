@@ -1,10 +1,8 @@
 // REQUIRES: asserts
 // RUN: not --crash %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown \
-// RUN:   -emit-llvm -o - %s -DNONCONST 2>&1 | FileCheck %s
-// --check-prefix=CHECK-NONCONST
+// RUN:   -emit-llvm -O0 -disable-llvm-passes -o - %s -DNONCONST 2>&1 | FileCheck %s --check-prefix=CHECK-NONCONST
 // RUN: not --crash %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown \
-// RUN:   -emit-llvm -o - %s -DCONST 2>&1 | FileCheck %s
-// --check-prefix=CHECK-CONST
+// RUN:   -emit-llvm -O0 -disable-llvm-passes -o - %s -DCONST 2>&1 | FileCheck %s --check-prefix=CHECK-CONST
 
 // static_cast<T&&> of a bit-field lvalue should materialize a temporary.
 // FIXME: Sema binds the reference directly to the bit-field, so CodeGen
