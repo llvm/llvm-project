@@ -5133,7 +5133,7 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
       continue;
     const auto ValueID = VE.getValueID(&GV);
     if (ValueID >= GUIDs.size())
-      GUIDs.resize(ValueID + 1, 0);
+      GUIDs.resize(ValueID + 1);
     GUIDs[ValueID] = *MaybeGUID;
   }
 
