@@ -14393,60 +14393,55 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
 }
 
 void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
+  // In cases where a shuffle is mandatory regardless of load type,
+  // prefer Compressed since the reorder/reuse shuffle can be merged
+  // with the compress shuffle.
+  if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
+    return;
+
+  SmallVector<Value *> PointerOps(E.Scalars.size());
+  transform(E.Scalars, PointerOps.begin(),
+            [](Value *V) { return cast<LoadInst>(V)->getPointerOperand(); });
+
+  Type *ScalarTy = E.getMainOp()->getType();
+  Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
   StridedPtrInfo SPtrInfo;
-  auto PreferStridedOverCompressed = [&]() -> bool {
-    // In cases where a shuffle is mandatory regardless of load type,
-    // prefer Compressed since the reorder/reuse shuffle can be merged
-    // with the compress shuffle.
-    if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
-      return false;
-    SmallVector<Value *> PointerOps(E.Scalars.size());
-    transform(E.Scalars, PointerOps.begin(),
-              [](Value *V) { return cast<LoadInst>(V)->getPointerOperand(); });
+  SmallVector<unsigned> Order;
+  std::optional<int64_t> Diff = getPointersDiff(
+      ScalarTy, PointerOps.front(), ScalarTy, PointerOps.back(), *DL, *SE);
+  if (!Diff || !analyzeConstantStrideCandidate(PointerOps, ScalarTy,
+                                               CommonAlignment, Order, *Diff,
+                                               PointerOps.front(), SPtrInfo))
+    return;
 
-    Type *ScalarTy = E.getMainOp()->getType();
-    Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
-    SmallVector<unsigned> Order;
-    std::optional<int64_t> Diff = getPointersDiff(
-        ScalarTy, PointerOps.front(), ScalarTy, PointerOps.back(), *DL, *SE);
-    if (!Diff || !analyzeConstantStrideCandidate(PointerOps, ScalarTy,
-                                                 CommonAlignment, Order, *Diff,
-                                                 PointerOps.front(), SPtrInfo))
-      return false;
+  auto *LI0 = cast<LoadInst>(E.Scalars.front());
+  std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
+      E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
+      [](Value *) { return true; }, Opts.slp_revec);
+  if (!CompressInfo)
+    return;
+  InstructionCost CompressedCost =
+      getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
 
-    auto *LI0 = cast<LoadInst>(E.Scalars.front());
-    std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
-        E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-        [](Value *) { return true; }, Opts.slp_revec);
-    if (!CompressInfo)
-      return false;
-    InstructionCost CompressedCost =
-        getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
+  auto *VecTy =
+      cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
+  FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
+  InstructionCost StridedCost = getStridedLoadCost(
+      *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
+      LI0->getPointerOperand(), CommonAlignment, getCastContextHint(E),
+      CostKind, /*IsReverse=*/false);
+  if (StridedCost >= CompressedCost)
+    return;
 
-    auto *VecTy =
-        cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
-    FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-    InstructionCost StridedCost = getStridedLoadCost(
-        *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
-        LI0->getPointerOperand(), CommonAlignment, getCastContextHint(E),
-        CostKind, /*IsReverse=*/false);
-    bool PreferStrided = StridedCost < CompressedCost;
-    if (PreferStrided)
-      LLVM_DEBUG({
-        dbgs() << "SLP: Converted TreeEntry at Idx " << E.Idx
-               << " from Compressed Load to Strided Load; "
-               << "StridedCost = " << StridedCost
-               << "; CompressedCost = " << CompressedCost << "\n";
-      });
-
-    return PreferStrided;
-  };
-
-  if (PreferStridedOverCompressed()) {
-    E.State = TreeEntry::StridedVectorize;
-    TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
-    CompressEntryToData.erase(&E);
-  }
+  LLVM_DEBUG({
+    dbgs() << "SLP: Converted TreeEntry at Idx " << E.Idx
+           << " from Compressed Load to Strided Load; "
+           << "StridedCost = " << StridedCost
+           << "; CompressedCost = " << CompressedCost << "\n";
+  });
+  E.State = TreeEntry::StridedVectorize;
+  TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+  CompressEntryToData.erase(&E);
 }
 
 void BoUpSLP::transformNodes() {
