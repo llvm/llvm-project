@@ -27,6 +27,7 @@ enum ConversionAction {
 class TextEncoding {
   llvm::StringRef LiteralEncoding;
   std::unique_ptr<llvm::TextEncodingConverter> ToLiteralEncodingConverter;
+  std::unique_ptr<llvm::TextEncodingConverter> FromLiteralEncodingConverter;
 
   // Only non-null on z/OS, where the system default encoding is IBM-1047.
   // This converts UTF-8 to IBM-1047 for asm string literals so that
@@ -37,6 +38,12 @@ class TextEncoding {
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
+
+  /// Returns the converter from the literal encoding (-fexec-charset) to UTF-8,
+  /// or nullptr if the literal encoding is UTF-8.
+  llvm::TextEncodingConverter *getFromLiteralEncodingConverter() const {
+    return FromLiteralEncodingConverter.get();
+  }
 
   /// Returns the converter from IBM-1047 to UTF-8, or nullptr if not on z/OS.
   llvm::TextEncodingConverter *getFromIBM1047Converter() const {

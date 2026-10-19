@@ -96,7 +96,11 @@ void function()
   // CHECK: asm{{.*}}@foo
   // CHECK-UTF8: asm{{.*}}@foo
   asm((getfoo()));
-  // CHECK: asm{{.*}}|\86\96\96
+  // CHECK: asm{{.*}}@foo
   // CHECK-UTF8: asm{{.*}}|foo
+
+  asm((string_view("\tnop\n")));
+  // CHECK: asm{{.*}}\09nop\0A
+  // CHECK-UTF8: asm{{.*}}\09nop\0A
 }
 
