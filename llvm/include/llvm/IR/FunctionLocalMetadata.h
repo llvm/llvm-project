@@ -249,7 +249,7 @@ public:
   LLVM_ABI void getUsedMDNodes(SmallVectorImpl<MDNode *> &Nodes) const;
 
   LLVM_ABI static MDFunctionLocalContext *getDistinct(LLVMContext &Context,
-                                             bool NonDebug = false);
+                                                      bool NonDebug = false);
   TempMDFunctionLocalContext clone() const { return cloneImpl(); }
   TempMDFunctionLocalContext cloneImpl() const {
     llvm_unreachable("Clone unsupported for MDFunctionLocalContext.");
@@ -448,7 +448,8 @@ public:
     return getSrcLoc(Line, Column, ScopeIdx);
   }
 
-  LLVM_ABI FLMDBuilder(MDFunctionLocalContext *FLContext, const DISubprogram *SP);
+  LLVM_ABI FLMDBuilder(MDFunctionLocalContext *FLContext,
+                       const DISubprogram *SP);
 };
 
 } // end namespace llvm
