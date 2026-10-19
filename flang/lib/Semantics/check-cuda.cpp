@@ -74,7 +74,7 @@ static const llvm::StringSet<> inlinePointerFunctions_ = {"c_associated_c_ptr",
     "c_associated_c_funptr", "__builtin_c_ptr_eq", "__builtin_c_ptr_ne",
     "__builtin_c_devptr_eq", "__builtin_c_devptr_ne", "__builtin_c_funloc"};
 
-enum class CallContext { Device, HostDevice, GuardedHostDevice };
+enum class CallContext { Host, Device, HostDevice, GuardedHostDevice };
 
 // Match the BIND(C) intrinsic-module procedure intercepted by CUDA lowering,
 // including calls through a USE rename. A user procedure named ON_DEVICE is
@@ -155,7 +155,7 @@ private:
             }
             if (*attrs == common::CUDASubprogramAttrs::Device &&
                 callContext_ == CallContext::HostDevice) {
-              return CallError(x, calleeAttrs, /*inHostCode=*/true);
+              return CallError(x, calleeAttrs);
             }
             return {};
           }
@@ -189,7 +189,7 @@ private:
     if (callContext_ == CallContext::GuardedHostDevice) {
       return {};
     }
-    return CallError(x, calleeAttrs, /*inHostCode=*/false);
+    return CallError(x, calleeAttrs);
   }
 
   SemanticsContext &context_;
@@ -197,15 +197,14 @@ private:
 
 private:
   Result CallError(const evaluate::ProcedureDesignator &proc,
-      common::CUDASubprogramAttrs calleeAttrs, bool inHostCode) const {
+      common::CUDASubprogramAttrs calleeAttrs) const {
     const std::string procedureType{
         calleeAttrs == common::CUDASubprogramAttrs::HostDevice
             ? "HOST,DEVICE"
             : parser::ToUpperCaseLetters(common::EnumToString(calleeAttrs))};
-    const char *codeContext{callContext_ == CallContext::HostDevice
-            ? "HOST,DEVICE"
-            : inHostCode ? "host"
-                         : "device"};
+    const char *codeContext{callContext_ == CallContext::Host ? "host"
+            : callContext_ == CallContext::Device             ? "device"
+                                                              : "HOST,DEVICE"};
     if (auto generic{proc.genericName()}) {
       const Symbol *specific{proc.GetInterfaceSymbol()};
       const std::string specificName{specific
