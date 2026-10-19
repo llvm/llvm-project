@@ -233,6 +233,18 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
   }
 }
 
+// A section symbol's addend is not validated until getSymVA. Return nullopt
+// to conservatively disable folding for such an out-of-range offset.
+static std::optional<uint64_t> getMergeOffset(const Defined &d,
+                                              uint64_t addend) {
+  auto &ms = cast<MergeInputSection>(*d.section);
+  if (!d.isSection())
+    return ms.getOffset(d.value) + addend;
+  if (addend >= ms.content().size())
+    return std::nullopt;
+  return ms.getOffset(addend);
+}
+
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
@@ -299,11 +311,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
     if (x->getParent() != y->getParent())
       return false;
 
-    uint64_t offsetA =
-        sa.isSection() ? x->getOffset(addA) : x->getOffset(da->value) + addA;
-    uint64_t offsetB =
-        sb.isSection() ? y->getOffset(addB) : y->getOffset(db->value) + addB;
-    if (offsetA != offsetB)
+    auto offA = getMergeOffset(*da, addA);
+    if (!offA || offA != getMergeOffset(*db, addB))
       return false;
   }
 

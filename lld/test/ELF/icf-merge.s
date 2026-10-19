@@ -6,7 +6,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 kind.s -o kind.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 parent.s -o parent.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 far.s -o far.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 far2.s -o far2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 end.s -o end.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 end2.s -o end2.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 past.s -o past.o
 
 ## f1 and f2 reach "foo" from different offsets in different files, and so do
 ## the section symbols g1 and g2. f3 reaches another string, f4 another offset.
@@ -24,9 +27,11 @@
 # RUN: ld.lld parent.o --icf=all --print-icf-sections | count 0
 
 ## A section symbol's addend is not validated until getSymVA.
-# RUN: not ld.lld far.o --icf=all 2>&1 | FileCheck %s --check-prefix=FAR --implicit-check-not=error:
+# RUN: not ld.lld far.o far2.o --icf=all 2>&1 | FileCheck %s --check-prefix=FAR --implicit-check-not=error:
 # FAR: error: far.o:(.rodata.str1.1): offset 0xfffffffffffffffc is outside the section
-# RUN: ld.lld end.o --icf=all
+# FAR: error: far2.o:(.rodata.str1.1): offset 0xfffffffffffffffc is outside the section
+# RUN: not ld.lld end.o end2.o past.o --icf=all 2>&1 | FileCheck %s --check-prefix=END --implicit-check-not=error:
+# END: error: past.o:(.rodata.cst8): offset 0x9 is outside the section
 
 #--- a.s
 .globl _start
@@ -107,6 +112,13 @@ _start:
 .section .text.a,"ax"
 leaq .rodata.str1.1(%rip), %rax
 
+#--- far2.s
+.section .rodata.str1.1,"aMS",@progbits,1
+.asciz "bb"
+
+.section .text.b,"ax"
+leaq .rodata.str1.1(%rip), %rax
+
 #--- end.s
 .globl _start
 _start:
@@ -117,3 +129,17 @@ _start:
 
 .section .text.a,"ax"
 .quad .rodata.cst8+8
+
+#--- end2.s
+.section .rodata.cst8,"aM",@progbits,8
+.quad 0x0112334455667789
+
+.section .text.b,"ax"
+.quad .rodata.cst8+8
+
+#--- past.s
+.section .rodata.cst8,"aM",@progbits,8
+.quad 0
+
+.section .text.c,"ax"
+.quad .rodata.cst8+9
