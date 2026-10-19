@@ -860,7 +860,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   // block (WIdBlock) so they remain static allocas. Splice the leading cluster
   // in bulk, then move any stragglers that are interleaved with other
   // instructions.
-  auto SplitIt = PrevEntryBlock->getFirstNonPHIOrDbgOrAlloca();
+  auto SplitIt = PrevEntryBlock->getFirstNonPHIOrAlloca();
   WIdBlock->splice(WIdBlock->end(), PrevEntryBlock, PrevEntryBlock->begin(),
                    SplitIt);
   for (Instruction &I : make_early_inc_range(*PrevEntryBlock))
@@ -1141,7 +1141,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   // Base table and offset from offset table.
   LLVM_DEBUG(dbgs() << "Sw LDS lowering, lower non-kernel access for : "
                     << Func->getName());
-  auto InsertAt = Func->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+  auto InsertAt = Func->getEntryBlock().getFirstNonPHIOrAlloca();
   IRB.SetInsertPoint(InsertAt);
 
   // Get LDS memory instructions.
@@ -1206,8 +1206,8 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
   uint64_t Offset;
   int Scale;
   bool OrShadowOffset;
-  llvm::getAddressSanitizerParams(M.getTargetTriple(), LongSize, false, &Offset,
-                                  &Scale, &OrShadowOffset);
+  llvm::getAddressSanitizerParams(M.getContext(), M.getTargetTriple(), LongSize,
+                                  false, &Offset, &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
 }
