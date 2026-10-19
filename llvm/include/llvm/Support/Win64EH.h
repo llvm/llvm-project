@@ -61,6 +61,7 @@ enum UnwindOpcodes {
   UOP_AddFP,
   UOP_Nop,
   UOP_End,
+  UOP_EndC,
   UOP_SaveNext,
   UOP_TrapFrame,
   UOP_Context,

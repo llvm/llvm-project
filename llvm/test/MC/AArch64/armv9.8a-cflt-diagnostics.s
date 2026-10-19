@@ -70,6 +70,15 @@ cflteq #0, w0, wzr
 cflteq #0, x0, xzr
 // CHECK: [[@LINE-1]]:16: error: invalid operand for instruction
 
+cflteq #0, w0, label
+// CHECK: [[@LINE-1]]:16: error: invalid operand for instruction
+
+cflthi #0, w0, wzr
+// CHECK: [[@LINE-1]]:16: error: invalid operand for instruction
+
+cflths #0, x0, xzr
+// CHECK: [[@LINE-1]]:16: error: invalid operand for instruction
+
 cfltz #0, wsp
 // CHECK: [[@LINE-1]]:11: error: invalid operand for instruction
 
