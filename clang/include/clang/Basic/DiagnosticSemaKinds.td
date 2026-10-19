@@ -7610,7 +7610,8 @@ def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'|'#pragma clang fp reciprocal'}1">;
 
 def warn_remainder_division_by_zero : Warning<
-  "%select{remainder|division}0 by zero is undefined">,
+  "%select{remainder|division}0 by zero "
+  "%select{is undefined|results in an unspecified value}1">,
   InGroup<DivZero>;
 def warn_shift_lhs_negative : Warning<"shifting a negative signed value is undefined">,
   InGroup<DiagGroup<"shift-negative-value">>;

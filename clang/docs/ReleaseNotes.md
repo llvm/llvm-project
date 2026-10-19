@@ -1026,6 +1026,9 @@ features cannot lower the translation-unit ABI level;
   behavior), by default except on SPIR and SPIR-V targets, as required by
   OpenCL C v3.0 s6.5.1. The new ``-f[no-]defined-int-divrem`` flag controls
   this explicitly.
+- In OpenCL C and C++ for OpenCL, ``-Wdivision-by-zero`` now says that integer
+  division and remainder by zero result in an unspecified value instead of
+  calling them undefined (OpenCL C v3.0 s6.5.1).
 - Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
   ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
   ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are

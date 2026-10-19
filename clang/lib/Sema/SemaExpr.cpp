@@ -11372,7 +11372,8 @@ static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
       RHSValue.Val.getInt() == 0)
     S.DiagRuntimeBehavior(Loc, RHS.get(),
                           S.PDiag(diag::warn_remainder_division_by_zero)
-                            << IsDiv << RHS.get()->getSourceRange());
+                              << IsDiv << S.getLangOpts().OpenCL
+                              << RHS.get()->getSourceRange());
 }
 
 static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
