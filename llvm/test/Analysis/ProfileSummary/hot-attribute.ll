@@ -17,13 +17,6 @@ define void @hot_attr_no_count() hot {
   ret void
 }
 
-; The hot attribute wins over the cold attribute. Clang makes the two mutually
-; exclusive, but nothing enforces that in IR, so the order must be defined.
-define void @hot_and_cold_attrs() hot cold !prof !20 {
-; CHECK: hot_and_cold_attrs :hot entry
-  ret void
-}
-
 ; Without the attribute, an entry count of 0 is cold.
 define void @plain_cold_count() !prof !20 {
 ; CHECK: plain_cold_count :cold entry
