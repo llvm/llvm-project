@@ -275,7 +275,6 @@
 ; GCN-O2-NEXT:       gcn-create-vopd
 ; GCN-O2-NEXT:       si-memory-legalizer
 ; GCN-O2-NEXT:       si-post-ra-16bit-mov-folding
-; GCN-O2-NEXT:       si-reuse-invariant-scalar-loads
 ; GCN-O2-NEXT:       si-insert-waitcnts
 ; GCN-O2-NEXT:       si-mode-register
 ; GCN-O2-NEXT:       si-insert-hard-clauses
@@ -465,7 +464,6 @@
 ; GCN-O3-NEXT:       gcn-create-vopd
 ; GCN-O3-NEXT:       si-memory-legalizer
 ; GCN-O3-NEXT:       si-post-ra-16bit-mov-folding
-; GCN-O3-NEXT:       si-reuse-invariant-scalar-loads
 ; GCN-O3-NEXT:       si-insert-waitcnts
 ; GCN-O3-NEXT:       si-mode-register
 ; GCN-O3-NEXT:       si-insert-hard-clauses
