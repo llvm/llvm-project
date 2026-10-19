@@ -35,7 +35,7 @@ struct S {
 #endif
 
 
-// CHECK-LABEL: define noundef i32 @main(-
+// CHECK-LABEL: define noundef i32 @main(
 // CHECK-SAME: i32 noundef [[ARGC:%.*]], ptr noundef [[ARGV:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
