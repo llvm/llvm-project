@@ -7802,7 +7802,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   Builder.SetInsertPoint(SI);
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
-  const bool IsFullyCoveredLookupTable = !DefaultIsReachable || GeneratingCoveredLookupTable;
+  const bool IsFullyCoveredLookupTable =
+      !DefaultIsReachable || GeneratingCoveredLookupTable;
   if (IsFullyCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
     if (DTU)
