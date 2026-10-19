@@ -8682,10 +8682,9 @@ static ExprResult buildInitListValue(Sema &SemaRef, Expr *E) {
     return buildInitListValue(SemaRef, ILE->getInit(0));
   if (ILE->getNumInits() != 0 || !ILE->getType()->isScalarType())
     return E;
-  SourceLocation Loc = ILE->getLBraceLoc();
-  return SemaRef.BuildCStyleCastExpr(
-      Loc, SemaRef.Context.getTrivialTypeSourceInfo(ILE->getType(), Loc), Loc,
-      SemaRef.ActOnIntegerConstant(Loc, 0).get());
+  return SemaRef.PerformImplicitConversion(
+      SemaRef.ActOnIntegerConstant(ILE->getLBraceLoc(), 0).get(),
+      ILE->getType(), AssignmentAction::Converting);
 }
 
 bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
