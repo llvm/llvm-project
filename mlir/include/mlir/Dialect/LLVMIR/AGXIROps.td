@@ -130,6 +130,14 @@ def AGXIR_ActiveThreadIndexInSIMDGroupOp
     : AGXIR_SpecialRegisterOp<"active.thread.index.in.simdgroup", []>;
 def AGXIR_TotalActiveThreadsInSIMDGroupOp
     : AGXIR_SpecialRegisterOp<"total.active.threads.in.simdgroup", []>;
+def AGXIR_ActiveThreadIndexInQuadgroupOp
+    : AGXIR_SpecialRegisterOp<"active.thread.index.in.quadgroup", []>;
+def AGXIR_TotalActiveThreadsInQuadgroupOp
+    : AGXIR_SpecialRegisterOp<"total.active.threads.in.quadgroup", []>;
+
+def AGXIR_CoreIdOp : AGXIR_SpecialRegisterOp<"core.id", []> {
+  let summary = "Index of the GPU core that runs the thread";
+}
 
 //===----------------------------------------------------------------------===//
 // Synchronization
@@ -261,6 +269,57 @@ def AGXIR_QuadReduceOp : AGXIR_ReduceOp<"quad.reduce">;
 def AGXIR_QuadPrefixOp : AGXIR_ReduceOp<"quad.prefix">;
 
 //===----------------------------------------------------------------------===//
+// Floating point mode
+//===----------------------------------------------------------------------===//
+
+def AGXIR_SetFPModeOp : AGXIR_IntrOp<"set.fpmode", [], [], [], 0>,
+    Arguments<(ins I32:$mode)> {
+  let summary = "Set the emulated floating point mode register";
+  let description = [{
+    Bits 0-1: float rounding (0 toward zero, 1 to nearest even, 2 up, 3
+    down), bits 2-3: half and double rounding, bit 4: float denormals
+    flushed, bit 5: half and double denormals flushed. It applies to the
+    constrained floating point operations with dynamic rounding.
+
+    ```mlir
+    agxir.set.fpmode %mode
+    ```
+  }];
+  let assemblyFormat = "$mode attr-dict";
+}
+
+def AGXIR_GetFPModeOp : AGXIR_IntrOp<"get.fpmode", [], [], [], 1> {
+  let summary = "Read the emulated floating point mode register";
+  let results = (outs I32:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+//===----------------------------------------------------------------------===//
+// SIMD-group matrices
+//===----------------------------------------------------------------------===//
+
+def AGXIR_MatrixFragment : VectorOfLengthAndType<[2], [F16, BF16, F32]>;
+
+def AGXIR_SIMDGroupMatrixFMAOp
+    : AGXIR_IntrOp<"simdgroup.matrix.fma", [0], [],
+                   [AllTypesMatch<["res", "a", "b", "c"]>], 1>,
+      Arguments<(ins AGXIR_MatrixFragment:$a, AGXIR_MatrixFragment:$b,
+                     AGXIR_MatrixFragment:$c)> {
+  let summary = "8x8 matrix multiply-accumulate over the SIMD-group";
+  let description = [{
+    D = A * B + C on 8x8 matrices; thread t holds the elements (r, c) and
+    (r, c + 1) with r = 4 * (t / 16) + (t / 2) % 4 and
+    c = 4 * ((t / 8) % 2) + 2 * (t % 2).
+
+    ```mlir
+    %d = agxir.simdgroup.matrix.fma %a, %b, %c : vector<2xf32>
+    ```
+  }];
+  let results = (outs AGXIR_MatrixFragment:$res);
+  let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($res)";
+}
+
+//===----------------------------------------------------------------------===//
 // Special functions
 //===----------------------------------------------------------------------===//
 
@@ -277,6 +336,10 @@ def AGXIR_RcpOp : AGXIR_FloatUnaryOp<"rcp"> {
 }
 def AGXIR_RsqrtOp : AGXIR_FloatUnaryOp<"rsqrt"> {
   let summary = "Hardware reciprocal square root";
+}
+def AGXIR_RsqrtSpecialOp : AGXIR_FloatUnaryOp<"rsqrt.special"> {
+  let summary = "Hardware reciprocal square root, with special cases so "
+                "that rsqrt.special(x) * x == sqrt(x)";
 }
 def AGXIR_DfdxOp : AGXIR_FloatUnaryOp<"dfdx", []> {
   let summary = "Derivative across the quad in x";

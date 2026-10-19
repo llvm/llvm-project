@@ -29,3 +29,11 @@ func.func @reduce_int_minnumf(%v: i32) -> i32 {
   %0 = agx.reduce minnumf %v : i32
   return %0 : i32
 }
+
+// -----
+
+func.func @mma_shape(%a: vector<4xf32>) -> vector<4xf32> {
+  // expected-error @+1 {{operand #0 must be vector of 16-bit float or bfloat16 type or 32-bit float values of length 2}}
+  %0 = agx.mma %a * %a + %a : vector<4xf32>
+  return %0 : vector<4xf32>
+}

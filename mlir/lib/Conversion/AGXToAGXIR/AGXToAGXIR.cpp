@@ -229,6 +229,56 @@ struct BallotOpLowering : ConvertOpToLLVMPattern<BallotOp> {
   }
 };
 
+struct MemoryBarrierOpLowering : ConvertOpToLLVMPattern<MemoryBarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(MemoryBarrierOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // A sequentially consistent fence, which the backend lowers to a memory
+    // barrier of its scope.
+    StringRef scope = op.getScope() == MemoryScope::threadgroup ? "workgroup" : "";
+    rewriter.replaceOpWithNewOp<LLVM::FenceOp>(
+        op, LLVM::AtomicOrdering::seq_cst, scope);
+    return success();
+  }
+};
+
+struct MMAOpLowering : ConvertOpToLLVMPattern<MMAOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(MMAOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AGXIR::SIMDGroupMatrixFMAOp>(
+        op, adaptor.getA().getType(), adaptor.getA(), adaptor.getB(),
+        adaptor.getC());
+    return success();
+  }
+};
+
+struct SetFPModeOpLowering : ConvertOpToLLVMPattern<SetFPModeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SetFPModeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AGXIR::SetFPModeOp>(op, adaptor.getMode());
+    return success();
+  }
+};
+
+struct GetFPModeOpLowering : ConvertOpToLLVMPattern<GetFPModeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(GetFPModeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AGXIR::GetFPModeOp>(op, rewriter.getI32Type());
+    return success();
+  }
+};
+
 struct ConvertAGXToAGXIRPass
     : public impl::ConvertAGXToAGXIRPassBase<ConvertAGXToAGXIRPass> {
   using Base::Base;
@@ -251,6 +301,8 @@ struct ConvertAGXToAGXIRPass
 
 void mlir::populateAGXToAGXIRConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<ThreadgroupBarrierOpLowering, ShuffleOpLowering,
+  patterns.add<ThreadgroupBarrierOpLowering, MemoryBarrierOpLowering,
+               MMAOpLowering, SetFPModeOpLowering, GetFPModeOpLowering,
+               ShuffleOpLowering,
                ReduceOpLowering, BallotOpLowering>(converter);
 }

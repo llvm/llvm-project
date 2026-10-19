@@ -35,3 +35,20 @@ func.func @misc(%p: i1) -> i32 {
   %0 = agx.ballot %p scope quad : i32
   return %0 : i32
 }
+
+// CHECK-LABEL: @matrices_and_modes
+func.func @matrices_and_modes(%a: vector<2xf32>, %h: vector<2xf16>, %m: i32) -> (vector<2xf32>, vector<2xf16>, i32) {
+  // CHECK: agx.mma %{{.*}} * %{{.*}} + %{{.*}} : vector<2xf32>
+  %0 = agx.mma %a * %a + %a : vector<2xf32>
+  // CHECK: agx.mma %{{.*}} * %{{.*}} + %{{.*}} : vector<2xf16>
+  %1 = agx.mma %h * %h + %h : vector<2xf16>
+  // CHECK: agx.memory_barrier{{$}}
+  agx.memory_barrier
+  // CHECK: agx.memory_barrier scope threadgroup
+  agx.memory_barrier scope threadgroup
+  // CHECK: agx.set_fpmode %{{.*}} : i32
+  agx.set_fpmode %m : i32
+  // CHECK: agx.get_fpmode : i32
+  %2 = agx.get_fpmode : i32
+  return %0, %1, %2 : vector<2xf32>, vector<2xf16>, i32
+}

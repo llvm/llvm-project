@@ -35,3 +35,23 @@ llvm.func @kernel(%out: !llvm.ptr<1>) attributes {agxir.kernel} {
 llvm.func @helper() {
   llvm.return
 }
+
+// CHECK-LABEL: define void @extras
+llvm.func @extras(%out: !llvm.ptr<1>, %v: vector<2xf32>, %m: i32, %x: f32) {
+  // CHECK: call i32 @llvm.agx.core.id()
+  %0 = agxir.core.id : i32
+  // CHECK: call i32 @llvm.agx.active.thread.index.in.quadgroup()
+  %1 = agxir.active.thread.index.in.quadgroup : i32
+  // CHECK: call i32 @llvm.agx.total.active.threads.in.quadgroup()
+  %2 = agxir.total.active.threads.in.quadgroup : i32
+  // CHECK: call void @llvm.agx.set.fpmode(i32 %{{.*}})
+  agxir.set.fpmode %m
+  // CHECK: call i32 @llvm.agx.get.fpmode()
+  %3 = agxir.get.fpmode : i32
+  // CHECK: call <2 x float> @llvm.agx.simdgroup.matrix.fma.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}})
+  %4 = agxir.simdgroup.matrix.fma %v, %v, %v : vector<2xf32>
+  // CHECK: call float @llvm.agx.rsqrt.special.f32(float %{{.*}})
+  %5 = agxir.rsqrt.special %x : f32
+  llvm.store %4, %out : vector<2xf32>, !llvm.ptr<1>
+  llvm.return
+}

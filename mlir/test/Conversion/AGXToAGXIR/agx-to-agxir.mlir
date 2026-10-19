@@ -54,3 +54,28 @@ func.func @ballot(%p: i1) -> (i32, i32) {
   %1 = agx.ballot %p scope quad : i32
   return %0, %1 : i32, i32
 }
+
+// CHECK-LABEL: @memory_barriers
+func.func @memory_barriers() {
+  // CHECK: llvm.fence seq_cst
+  agx.memory_barrier
+  // CHECK: llvm.fence syncscope("workgroup") seq_cst
+  agx.memory_barrier scope threadgroup
+  return
+}
+
+// CHECK-LABEL: @mma
+func.func @mma(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -> vector<2xf32> {
+  // CHECK: agxir.simdgroup.matrix.fma %{{.*}}, %{{.*}}, %{{.*}} : vector<2xf32>
+  %0 = agx.mma %a * %b + %c : vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: @fpmode
+func.func @fpmode(%m: i32) -> i32 {
+  // CHECK: agxir.set.fpmode %{{.*}}
+  agx.set_fpmode %m : i32
+  // CHECK: agxir.get.fpmode : i32
+  %0 = agx.get_fpmode : i32
+  return %0 : i32
+}

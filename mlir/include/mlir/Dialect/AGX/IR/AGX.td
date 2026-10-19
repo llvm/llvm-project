@@ -56,6 +56,19 @@ def AGX_ScopeAttr : EnumAttr<AGX_Dialect, AGX_Scope, "scope"> {
   let assemblyFormat = "$value";
 }
 
+def AGX_MemoryScope : I32EnumAttr<"MemoryScope",
+    "The threads a memory barrier orders accesses for", [
+    I32EnumAttrCase<"threadgroup", 0>,
+    I32EnumAttrCase<"device", 1>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::agx";
+}
+def AGX_MemoryScopeAttr : EnumAttr<AGX_Dialect, AGX_MemoryScope,
+                                   "memory_scope"> {
+  let assemblyFormat = "$value";
+}
+
 def AGX_ShuffleMode : I32EnumAttr<"ShuffleMode", "Lane selection of a shuffle",
   [
     I32EnumAttrCase<"idx", 0>,
@@ -184,6 +197,69 @@ def AGX_BallotOp : AGX_Op<"ballot"> {
                                          "::mlir::agx::Scope::simdgroup">:$scope);
   let results = (outs I32:$result);
   let assemblyFormat = "$predicate (`scope` $scope^)? attr-dict `:` type($result)";
+}
+
+def AGX_MemoryBarrierOp : AGX_Op<"memory_barrier"> {
+  let summary = "Order the memory accesses of the thread";
+  let description = [{
+    Makes the memory accesses of the thread before the barrier visible to
+    the other threads (of the threadgroup, or of the device) before those
+    after it, like `__threadfence_block()` and `__threadfence()`.
+
+    ```mlir
+    agx.memory_barrier
+    agx.memory_barrier scope threadgroup
+    ```
+  }];
+  let arguments = (ins DefaultValuedAttr<AGX_MemoryScopeAttr,
+                                         "::mlir::agx::MemoryScope::device">:$scope);
+  let assemblyFormat = "(`scope` $scope^)? attr-dict";
+}
+
+def AGX_MatrixFragment : VectorOfLengthAndType<[2], [F16, BF16, F32]>;
+
+def AGX_MMAOp : AGX_Op<"mma", [AllTypesMatch<["a", "b", "c", "result"]>]> {
+  let summary = "8x8 matrix multiply-accumulate over the SIMD-group";
+  let description = [{
+    Computes D = A * B + C on 8x8 matrices whose elements are spread over
+    the threads of the SIMD-group, like the MFMA operations of `amdgpu`.
+    Thread t holds the elements (r, c) and (r, c + 1) of each matrix, with
+    r = 4 * (t / 16) + (t / 2) % 4 and c = 4 * ((t / 8) % 2) + 2 * (t % 2).
+    The products are accumulated in order of k with fused multiply-adds,
+    starting from C.
+
+    ```mlir
+    %d = agx.mma %a * %b + %c : vector<2xf32>
+    ```
+  }];
+  let arguments = (ins AGX_MatrixFragment:$a, AGX_MatrixFragment:$b,
+                       AGX_MatrixFragment:$c);
+  let results = (outs AGX_MatrixFragment:$result);
+  let assemblyFormat = "$a `*` $b `+` $c attr-dict `:` type($result)";
+}
+
+def AGX_SetFPModeOp : AGX_Op<"set_fpmode"> {
+  let summary = "Set the floating point mode";
+  let description = [{
+    Sets the rounding directions and denormal modes of the following
+    constrained floating point operations (with dynamic rounding): bits 0-1
+    are the float rounding direction (0 toward zero, 1 to nearest even, 2
+    up, 3 down), bits 2-3 the half and double one, bit 4 flushes float
+    denormals and bit 5 half and double denormals. The hardware rounds to
+    nearest even only: the other directions are computed in software.
+
+    ```mlir
+    agx.set_fpmode %mode : i32
+    ```
+  }];
+  let arguments = (ins I32:$mode);
+  let assemblyFormat = "$mode attr-dict `:` type($mode)";
+}
+
+def AGX_GetFPModeOp : AGX_Op<"get_fpmode"> {
+  let summary = "Read the floating point mode";
+  let results = (outs I32:$mode);
+  let assemblyFormat = "attr-dict `:` type($mode)";
 }
 
 #endif // AGX
