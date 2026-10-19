@@ -186,10 +186,6 @@ module std_core {
       header "__type_traits/is_equality_comparable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_execution_policy {
-      header "__type_traits/is_execution_policy.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_final {
       header "__type_traits/is_final.h"
       export std_core.type_traits.integral_constant
@@ -1271,6 +1267,8 @@ module std {
 
   module execution {
     header "execution"
+    header "__execution/execution_policies.h"
+    header "__execution/is_execution_policy.h"
     export *
   }
 

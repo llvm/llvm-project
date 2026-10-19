@@ -16,16 +16,20 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::regex::Expr;
+using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprKind;
 using LIBC_NAMESPACE::regex::ExprPool;
+using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
 
 TEST(LlvmLibcRegexExprTest, Interning) {
   ExprPool pool;
+  EXPECT_EQ(sizeof(Expr), size_t(16));
+  EXPECT_EQ(pool.allocated_bytes(), size_t(0));
   auto lit_a = pool.make_lit('a');
   ASSERT_TRUE(lit_a.has_value());
   auto lit_a_2 = pool.make_lit('a');
   ASSERT_TRUE(lit_a_2.has_value());
-  // Hash-consing: same literal should return the same pointer.
+  // Hash-consing: same literal should return the same ExprId.
   EXPECT_EQ(lit_a.value(), lit_a_2.value());
 
   auto lit_b = pool.make_lit('b');
@@ -35,10 +39,13 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   auto empty_set_1 = pool.empty_set();
   auto empty_set_2 = pool.empty_set();
   EXPECT_EQ(empty_set_1.value(), empty_set_2.value());
+  EXPECT_FALSE(pool.is_nullable(empty_set_1.value()));
 
   auto empty_str_1 = pool.empty_str();
   auto empty_str_2 = pool.empty_str();
   EXPECT_EQ(empty_str_1.value(), empty_str_2.value());
+  EXPECT_TRUE(pool.is_nullable(empty_str_1.value()));
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
 }
 
 TEST(LlvmLibcRegexExprTest, RecursiveInterning) {
@@ -61,39 +68,94 @@ TEST(LlvmLibcRegexExprTest, RecursiveInterning) {
 
 TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
   ExprPool pool;
-  auto lit_a = pool.make_lit('a').value();
-  auto empty_set = pool.empty_set().value();
-  auto empty_str = pool.empty_str().value();
+  auto lit_a = *pool.make_lit('a');
+  auto lit_b = *pool.make_lit('b');
+  auto empty_set = *pool.empty_set();
+  auto empty_str = *pool.empty_str();
+
+  // Invalid IDs return REG_BADPAT.
+  auto bad_left = pool.make_concat(INVALID_EXPR_ID, lit_a);
+  ASSERT_FALSE(bad_left.has_value());
+  EXPECT_EQ(bad_left.error(), REG_BADPAT);
+  auto bad_right = pool.make_concat(lit_a, INVALID_EXPR_ID);
+  ASSERT_FALSE(bad_right.has_value());
+  EXPECT_EQ(bad_right.error(), REG_BADPAT);
 
   // (Ø · R) or (R · Ø) => Ø
-  EXPECT_EQ(pool.make_concat(empty_set, lit_a).value(), empty_set);
-  EXPECT_EQ(pool.make_concat(lit_a, empty_set).value(), empty_set);
+  EXPECT_EQ(*pool.make_concat(empty_set, lit_a), empty_set);
+  EXPECT_EQ(*pool.make_concat(lit_a, empty_set), empty_set);
 
   // (ε · R) or (R · ε) => R
-  EXPECT_EQ(pool.make_concat(empty_str, lit_a).value(), lit_a);
-  EXPECT_EQ(pool.make_concat(lit_a, empty_str).value(), lit_a);
+  EXPECT_EQ(*pool.make_concat(empty_str, lit_a), lit_a);
+  EXPECT_EQ(*pool.make_concat(lit_a, empty_str), lit_a);
+
+  // Nullability of (L · R) requires both L and R to be nullable.
+  auto opt_a = *pool.make_alt(lit_a, empty_str);
+  auto opt_b = *pool.make_alt(lit_b, empty_str);
+  EXPECT_FALSE(pool.is_nullable(*pool.make_concat(lit_a, opt_b)));
+  EXPECT_FALSE(pool.is_nullable(*pool.make_concat(opt_a, lit_b)));
+  EXPECT_TRUE(pool.is_nullable(*pool.make_concat(opt_a, opt_b)));
+
+  // Expr::operator== structural comparisons across kinds, literals, and binary
+  // children.
+  EXPECT_FALSE(Expr::make_empty_set() == Expr::make_literal('a'));
+  EXPECT_FALSE(Expr::make_literal('a') == Expr::make_literal('b'));
+  EXPECT_FALSE(Expr::make_concat(lit_a, lit_b) ==
+               Expr::make_concat(lit_a, opt_b));
+  EXPECT_FALSE(Expr::make_concat(lit_a, lit_b) ==
+               Expr::make_concat(lit_b, lit_b));
 }
 
 TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAlt) {
   ExprPool pool;
-  auto lit_a = pool.make_lit('a').value();
-  auto empty_set = pool.empty_set().value();
+  auto lit_a = *pool.make_lit('a');
+  auto lit_b = *pool.make_lit('b');
+  auto empty_set = *pool.empty_set();
+  auto empty_str = *pool.empty_str();
+
+  // Invalid IDs return REG_BADPAT.
+  auto bad_left = pool.make_alt(INVALID_EXPR_ID, lit_a);
+  ASSERT_FALSE(bad_left.has_value());
+  EXPECT_EQ(bad_left.error(), REG_BADPAT);
+  auto bad_right = pool.make_alt(lit_a, INVALID_EXPR_ID);
+  ASSERT_FALSE(bad_right.has_value());
+  EXPECT_EQ(bad_right.error(), REG_BADPAT);
 
   // (Ø | R) or (R | Ø) => R
-  EXPECT_EQ(pool.make_alt(empty_set, lit_a).value(), lit_a);
-  EXPECT_EQ(pool.make_alt(lit_a, empty_set).value(), lit_a);
+  EXPECT_EQ(*pool.make_alt(empty_set, lit_a), lit_a);
+  EXPECT_EQ(*pool.make_alt(lit_a, empty_set), lit_a);
 
   // (R | R) => R (Idempotency)
-  EXPECT_EQ(pool.make_alt(lit_a, lit_a).value(), lit_a);
+  EXPECT_EQ(*pool.make_alt(lit_a, lit_a), lit_a);
+
+  // (A | B) == (B | A) (Commutativity)
+  EXPECT_EQ(*pool.make_alt(lit_a, lit_b), *pool.make_alt(lit_b, lit_a));
+
+  // Nullability of (L | R) when L is non-nullable and R (with higher ExprId) is
+  // nullable.
+  auto opt_b = *pool.make_alt(lit_b, empty_str);
+  auto opt_bb = *pool.make_concat(opt_b, opt_b);
+  EXPECT_TRUE(pool.is_nullable(*pool.make_alt(lit_a, opt_bb)));
+}
+
+TEST(LlvmLibcRegexExprTest, HermeticHundredPools) {
+  for (size_t i = 0; i < 100; ++i) {
+    ExprPool pool;
+    ExprId a = pool.make_lit('a').value();
+    ExprId b = pool.make_lit('b').value();
+    ExprId ab = pool.make_concat(a, b).value();
+    EXPECT_NE(ab, INVALID_EXPR_ID);
+    EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+  }
 }
 
 TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   ExprPool pool;
   // Verify that the pool correctly enforces MAX_NODE_LIMIT (10000 nodes).
-  // We exceed the limit by creating a deep chain of unique concatenations.
+  // EmptySet (1), EmptyStr (2), and 'a' (3) occupy the first 3 slots.
   auto lit_a = pool.make_lit('a').value();
   auto current = lit_a;
-  for (size_t i = 0; i < 9999; ++i) {
+  for (size_t i = 0; i < 9997; ++i) {
     auto next = pool.make_concat(lit_a, current);
     ASSERT_TRUE(next.has_value());
     current = next.value();

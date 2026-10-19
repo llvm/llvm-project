@@ -2012,10 +2012,6 @@ def riscv_ppaireo : RVSDNode<"PPAIREO", SDT_RISCVPPair>;
 def riscv_ppairoe : RVSDNode<"PPAIROE", SDT_RISCVPPair>;
 def riscv_ppairo : RVSDNode<"PPAIRO", SDT_RISCVPPair>;
 
-// Averaging subtraction, (a - b) >> 2
-def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
-def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
-
 // MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp, [SDNPCommutative]>;
@@ -2313,14 +2309,14 @@ let Predicates = [HasStdExtP] in {
   // 8-bit averaging patterns
   def : PatGprGpr<avgfloors, PAADD_B, XLenVecI8VT>;
   def : PatGprGpr<avgflooru, PAADDU_B, XLenVecI8VT>;
-  def : PatGprGpr<riscv_asub, PASUB_B, XLenVecI8VT>;
-  def : PatGprGpr<riscv_asubu, PASUBU_B, XLenVecI8VT>;
+  def : PatGprGpr<avgsubfloors, PASUB_B, XLenVecI8VT>;
+  def : PatGprGpr<avgsubflooru, PASUBU_B, XLenVecI8VT>;
 
   // 16-bit averaging patterns
   def : PatGprGpr<avgfloors, PAADD_H, XLenVecI16VT>;
   def : PatGprGpr<avgflooru, PAADDU_H, XLenVecI16VT>;
-  def : PatGprGpr<riscv_asub, PASUB_H, XLenVecI16VT>;
-  def : PatGprGpr<riscv_asubu, PASUBU_H, XLenVecI16VT>;
+  def : PatGprGpr<avgsubfloors, PASUB_H, XLenVecI16VT>;
+  def : PatGprGpr<avgsubflooru, PASUBU_H, XLenVecI16VT>;
 
   // 8-bit absolute difference patterns
   def : Pat<(XLenVecI8VT (abs GPR:$rs1)), (PABD_B GPR:$rs1, (XLenVecI8VT X0))>;
@@ -2565,8 +2561,8 @@ let append Predicates = [IsRV32] in {
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, AADD, i32>;
   def : PatGprGpr<avgflooru, AADDU, i32>;
-  def : PatGprGpr<riscv_asub, ASUB, i32>;
-  def : PatGprGpr<riscv_asubu, ASUBU, i32>;
+  def : PatGprGpr<avgsubfloors, ASUB, i32>;
+  def : PatGprGpr<avgsubflooru, ASUBU, i32>;
 
   // 32-bit multiply high rounding patterns
   def : PatGprGpr<riscv_mulhr, MULHR, i32>;
@@ -2940,20 +2936,20 @@ let append Predicates = [IsRV32] in {
   // 8-bit averaging patterns
   def : PatGprPairGprPair<avgfloors, PAADD_DB, v8i8>;
   def : PatGprPairGprPair<avgflooru, PAADDU_DB, v8i8>;
-  def : PatGprPairGprPair<riscv_asub, PASUB_DB, v8i8>;
-  def : PatGprPairGprPair<riscv_asubu, PASUBU_DB, v8i8>;
+  def : PatGprPairGprPair<avgsubfloors, PASUB_DB, v8i8>;
+  def : PatGprPairGprPair<avgsubflooru, PASUBU_DB, v8i8>;
 
   // 16-bit averaging patterns
   def : PatGprPairGprPair<avgfloors, PAADD_DH, v4i16>;
   def : PatGprPairGprPair<avgflooru, PAADDU_DH, v4i16>;
-  def : PatGprPairGprPair<riscv_asub, PASUB_DH, v4i16>;
-  def : PatGprPairGprPair<riscv_asubu, PASUBU_DH, v4i16>;
+  def : PatGprPairGprPair<avgsubfloors, PASUB_DH, v4i16>;
+  def : PatGprPairGprPair<avgsubflooru, PASUBU_DH, v4i16>;
 
   // 32-bit averaging patterns
   def : PatGprPairGprPair<avgfloors, PAADD_DW, v2i32>;
   def : PatGprPairGprPair<avgflooru, PAADDU_DW, v2i32>;
-  def : PatGprPairGprPair<riscv_asub, PASUB_DW, v2i32>;
-  def : PatGprPairGprPair<riscv_asubu, PASUBU_DW, v2i32>;
+  def : PatGprPairGprPair<avgsubfloors, PASUB_DW, v2i32>;
+  def : PatGprPairGprPair<avgsubflooru, PASUBU_DW, v2i32>;
 
   // 8-bit absolute difference patterns
   def : Pat<(v8i8 (abs GPRPair:$rs1)), (PABD_DB GPRPair:$rs1, (v8i8 X0_Pair))>;
@@ -3338,8 +3334,8 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<avgflooru, PAADDU_W, v2i32>;
 
   // 32-bit averaging-sub patterns
-  def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
-  def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
+  def : PatGprGpr<avgsubfloors, PASUB_W, v2i32>;
+  def : PatGprGpr<avgsubflooru, PASUBU_W, v2i32>;
 
   // Packed halfword multiply-parts accumulate patterns.
   def : PatMulPartsAcc<riscv_pmacc_halves_00, PMACC_W_H00, v2i32, v4i16>;
@@ -3652,8 +3648,12 @@ let append Predicates = [IsRV64] in {
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : Pat<(v2i32 (riscv_ppaire (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (PACK GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_ppaireo (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PPAIREO_W GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_ppairoe (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (PPAIROE_W GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_ppairo (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PPAIRO_W GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV64]
