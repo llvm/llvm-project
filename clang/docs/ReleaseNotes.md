@@ -1156,6 +1156,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
 
+- The `__interface` tag specifier now implicitly applies `__declspec(novtable)`
+  to the declaration, which matches the documented behavior of the keyword. #GH232046
+
 #### LoongArch Support
 
 - `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the
