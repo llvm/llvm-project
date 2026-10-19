@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -1418,6 +1419,58 @@ lowerStringLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   return {buff, len, kind};
 }
 
+/// Decode escapes in the quoted strings of a cooked FORMAT statement. The
+/// prescanner doubles backslashes when escapes are disabled, so these strings
+/// must be decoded just like CHARACTER literals before passing them to the
+/// runtime. Hollerith strings and edit descriptors are already literal text.
+static std::string decodeFormatString(llvm::StringRef text) {
+  std::string result;
+  char quote = '\0';
+  std::uint64_t hollerithCount = 0;
+  while (!text.empty()) {
+    char ch = text.front();
+    if (quote) {
+      if (ch == '\\') {
+        auto decoded = Fortran::parser::DecodeCharacter<
+            Fortran::parser::Encoding::LATIN_1>(text.data(), text.size(),
+                                                /*backslashEscapes=*/true);
+        text = text.drop_front(decoded.bytes);
+        ch = decoded.codepoint;
+        // A decoded quote is part of the string, not its closing delimiter.
+        if (ch == quote)
+          result += quote;
+      } else {
+        text = text.drop_front();
+        if (ch == quote)
+          quote = '\0';
+      }
+      result += ch;
+      continue;
+    }
+
+    result += ch;
+    text = text.drop_front();
+    if (Fortran::parser::IsDecimalDigit(ch)) {
+      hollerithCount = 10 * hollerithCount + ch - '0';
+      continue;
+    }
+    if (ch == ' ')
+      continue;
+    if (ch == '\'' || ch == '"') {
+      quote = ch;
+    } else if (ch == 'h') {
+      // Hollerith counts characters, not bytes, and does not process escapes.
+      for (; hollerithCount && !text.empty(); --hollerithCount) {
+        auto bytes = Fortran::parser::UTF_8CharacterBytes(text.data());
+        result += text.take_front(bytes);
+        text = text.drop_front(bytes);
+      }
+    }
+    hollerithCount = 0;
+  }
+  return result;
+}
+
 /// Pass the body of the FORMAT statement in as if it were a CHARACTER literal
 /// constant. NB: This is the prescribed manner in which the front-end passes
 /// this information to lowering.
@@ -1427,6 +1480,8 @@ lowerSourceTextAsStringLit(Fortran::lower::AbstractConverter &converter,
                            mlir::Type strTy, mlir::Type lenTy) {
   text = text.drop_front(text.find('('));
   text = text.take_front(text.rfind(')') + 1);
+  std::string decoded = decodeFormatString(text);
+  text = decoded;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Value addrGlobalStringLit =
       fir::getBase(fir::factory::createStringLiteral(builder, loc, text));
