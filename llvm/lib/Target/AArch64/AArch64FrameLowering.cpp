@@ -2155,7 +2155,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       assert(!(PPRBegin < ZPRBegin) &&
              "Expected callee save predicate to be handled first");
 #endif
-      assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR pair");
+      assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
       MIB.addReg(AArch64::Z0_Z1 + (RGI.Reg2 - AArch64::Z0));
 
       MIB.addReg(PnReg);
@@ -2296,6 +2296,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       assert(!(PPRBegin < ZPRBegin) &&
              "Expected callee save predicate to be handled first");
 #endif
+      assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
       MIB.addReg(AArch64::Z0_Z1 + (RGI.Reg2 - AArch64::Z0),
                  getDefRegState(true));
       MIB.addReg(PnReg);
