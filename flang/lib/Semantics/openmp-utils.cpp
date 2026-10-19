@@ -1341,7 +1341,16 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
   bool allowsOrdered{IsClauseAllowedOnDirective(
       llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
-  if (allowsCollapse || allowsOrdered) {
+  // KLUDGE:
+  // LOOP is the only non-loop-transforming loop-associated directive
+  // that is not present in 4.5. With version=45 both allowsCollapse and
+  // allowsOrdered will be false, and the function will return nullopt.
+  // This will be handled properly once version checks for directives
+  // are present: LOOP will be added to the semantic overrides if it
+  // ends up being allowed.
+  // Until then treat it as a special case.
+  if (allowsCollapse || allowsOrdered ||
+      dir == llvm::omp::Directive::OMPD_loop) {
     auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
