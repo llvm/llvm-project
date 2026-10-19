@@ -7,9 +7,9 @@
 ; RUN:   -mtriple=riscv64 -mattr=+v -verify-each -riscv-v-min-trip-count=16 \
 ; RUN:   -S < %s | FileCheck %s --check-prefix=LOW-TC
 
-; Peeling changes the vector iteration budget, not the value of a shared
-; trip-count operand in the original program. The stride-two load has a tail
-; gap, so the original final iteration must execute in the scalar loop.
+; The stride-two load has a tail gap, but strided loads are cheaper or tie with
+; interleaving, so peeling is not profitable. The EVL loop uses the original
+; trip count, including when it is shared with other uses in the loop.
 define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i64 @shared_runtime_tc(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -17,9 +17,7 @@ define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[EMPTY]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -27,7 +25,7 @@ define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
@@ -42,26 +40,11 @@ define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[SUM_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[VALUE:%.*]] = add i64 [[V]], [[N]]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[VALUE]]
-; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP10]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
 ; LOW-TC-LABEL: define i64 @shared_runtime_tc(
@@ -70,9 +53,7 @@ define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; LOW-TC-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[N]], 0
 ; LOW-TC-NEXT:    br i1 [[EMPTY]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; LOW-TC:       [[LOOP_PREHEADER]]:
-; LOW-TC-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; LOW-TC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 1
-; LOW-TC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; LOW-TC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; LOW-TC:       [[VECTOR_PH]]:
 ; LOW-TC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; LOW-TC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -80,7 +61,7 @@ define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; LOW-TC:       [[VECTOR_BODY]]:
 ; LOW-TC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; LOW-TC-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; LOW-TC-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; LOW-TC-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; LOW-TC-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX]], 4
 ; LOW-TC-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
@@ -95,26 +76,11 @@ define i64 @shared_runtime_tc(ptr noalias %a, i64 %n) vscale_range(2, 1024) {
 ; LOW-TC-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LOW-TC:       [[MIDDLE_BLOCK]]:
 ; LOW-TC-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
-; LOW-TC-NEXT:    br label %[[SCALAR_PH]]
-; LOW-TC:       [[SCALAR_PH]]:
-; LOW-TC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; LOW-TC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; LOW-TC-NEXT:    br label %[[LOOP:.*]]
 ; LOW-TC:       [[LOOP]]:
-; LOW-TC-NEXT:    [[IV:%.*]] = phi i64 [ [[NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; LOW-TC-NEXT:    [[SUM:%.*]] = phi i64 [ [[SUM_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; LOW-TC-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; LOW-TC-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; LOW-TC-NEXT:    [[VALUE:%.*]] = add i64 [[V]], [[N]]
-; LOW-TC-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[VALUE]]
-; LOW-TC-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; LOW-TC-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N]]
-; LOW-TC-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
-; LOW-TC:       [[EXIT_LOOPEXIT]]:
-; LOW-TC-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
 ; LOW-TC-NEXT:    br label %[[EXIT]]
 ; LOW-TC:       [[EXIT]]:
-; LOW-TC-NEXT:    [[RESULT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; LOW-TC-NEXT:    [[RESULT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP10]], %[[LOOP]] ]
 ; LOW-TC-NEXT:    ret i64 [[RESULT]]
 ;
 entry:
@@ -141,38 +107,27 @@ define i64 @shared_constant_tc(ptr noalias %a) vscale_range(2, 1024) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 4097, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[TMP4]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i64> [[TMP5]], splat (i64 4097)
-; CHECK-NEXT:    [[TMP7]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP7]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP9]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 4096, %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[VALUE:%.*]] = add i64 [[V]], 4097
-; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[VALUE]]
-; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], 4097
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
 ;
 ; LOW-TC-LABEL: define i64 @shared_constant_tc(
@@ -180,38 +135,27 @@ define i64 @shared_constant_tc(ptr noalias %a) vscale_range(2, 1024) {
 ; LOW-TC-NEXT:  [[ENTRY:.*:]]
 ; LOW-TC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; LOW-TC:       [[VECTOR_PH]]:
-; LOW-TC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; LOW-TC-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; LOW-TC-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; LOW-TC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; LOW-TC:       [[VECTOR_BODY]]:
-; LOW-TC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; LOW-TC-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[AVL:%.*]] = phi i64 [ 4097, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; LOW-TC-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[INDEX]], 4
 ; LOW-TC-NEXT:    [[TMP4:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP3]]
 ; LOW-TC-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[TMP4]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; LOW-TC-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i64> [[TMP5]], splat (i64 4097)
-; LOW-TC-NEXT:    [[TMP7]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
-; LOW-TC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; LOW-TC-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
-; LOW-TC-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; LOW-TC-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
+; LOW-TC-NEXT:    [[TMP9]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP7]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; LOW-TC-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP2]] to i64
+; LOW-TC-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
+; LOW-TC-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; LOW-TC-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; LOW-TC-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; LOW-TC:       [[MIDDLE_BLOCK]]:
-; LOW-TC-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
-; LOW-TC-NEXT:    br label %[[SCALAR_PH:.*]]
-; LOW-TC:       [[SCALAR_PH]]:
+; LOW-TC-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP9]])
 ; LOW-TC-NEXT:    br label %[[LOOP:.*]]
 ; LOW-TC:       [[LOOP]]:
-; LOW-TC-NEXT:    [[IV:%.*]] = phi i64 [ 4096, %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; LOW-TC-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; LOW-TC-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; LOW-TC-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; LOW-TC-NEXT:    [[VALUE:%.*]] = add i64 [[V]], 4097
-; LOW-TC-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[VALUE]]
-; LOW-TC-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; LOW-TC-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], 4097
-; LOW-TC-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
-; LOW-TC:       [[EXIT]]:
-; LOW-TC-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
 ; LOW-TC-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
 ;
 entry:
@@ -231,102 +175,71 @@ exit:
 }
 
 ; n - 1 is divisible by every permitted runtime step but is not a constant.
-; Do not reserve another full vector step for the scalar epilogue.
+; Strided loads do not justify peeling, so tail folding handles all n iterations
+; rather than using the divisible n - 1 budget with a scalar epilogue.
 define i64 @symbolic_divisible_tc(ptr noalias %a, i64 %k) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i64 @symbolic_divisible_tc(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[K:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[BUDGET:%.*]] = shl i64 [[K]], 12
 ; CHECK-NEXT:    [[N:%.*]] = add nuw i64 [[BUDGET]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[BUDGET]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[BUDGET]], [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[BUDGET]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[TMP4]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP7]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP10]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP9]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[VALUE:%.*]] = add i64 [[V]], [[N]]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[VALUE]]
-; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
 ;
 ; LOW-TC-LABEL: define i64 @symbolic_divisible_tc(
 ; LOW-TC-SAME: ptr noalias [[A:%.*]], i64 [[K:%.*]]) #[[ATTR0]] {
-; LOW-TC-NEXT:  [[ENTRY:.*]]:
+; LOW-TC-NEXT:  [[ENTRY:.*:]]
 ; LOW-TC-NEXT:    [[BUDGET:%.*]] = shl i64 [[K]], 12
 ; LOW-TC-NEXT:    [[N:%.*]] = add nuw i64 [[BUDGET]], 1
-; LOW-TC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; LOW-TC-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; LOW-TC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[BUDGET]], [[TMP1]]
-; LOW-TC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; LOW-TC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; LOW-TC:       [[VECTOR_PH]]:
-; LOW-TC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[BUDGET]], [[TMP1]]
-; LOW-TC-NEXT:    [[N_VEC:%.*]] = sub i64 [[BUDGET]], [[N_MOD_VF]]
-; LOW-TC-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; LOW-TC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; LOW-TC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; LOW-TC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; LOW-TC:       [[VECTOR_BODY]]:
-; LOW-TC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; LOW-TC-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; LOW-TC-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; LOW-TC-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 4
 ; LOW-TC-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; LOW-TC-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[TMP4]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; LOW-TC-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; LOW-TC-NEXT:    [[TMP7]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
-; LOW-TC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; LOW-TC-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; LOW-TC-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; LOW-TC-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP6]]
+; LOW-TC-NEXT:    [[TMP9]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP7]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; LOW-TC-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP2]] to i64
+; LOW-TC-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP10]], [[INDEX]]
+; LOW-TC-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; LOW-TC-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; LOW-TC-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; LOW-TC:       [[MIDDLE_BLOCK]]:
-; LOW-TC-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
-; LOW-TC-NEXT:    br label %[[SCALAR_PH]]
-; LOW-TC:       [[SCALAR_PH]]:
-; LOW-TC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; LOW-TC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; LOW-TC-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP9]])
 ; LOW-TC-NEXT:    br label %[[LOOP:.*]]
 ; LOW-TC:       [[LOOP]]:
-; LOW-TC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; LOW-TC-NEXT:    [[SUM:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; LOW-TC-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; LOW-TC-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; LOW-TC-NEXT:    [[VALUE:%.*]] = add i64 [[V]], [[N]]
-; LOW-TC-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[VALUE]]
-; LOW-TC-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; LOW-TC-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N]]
-; LOW-TC-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
-; LOW-TC:       [[EXIT]]:
-; LOW-TC-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
 ; LOW-TC-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
 ;
 entry:
@@ -347,68 +260,50 @@ exit:
   ret i64 %sum.next
 }
 
-; The peeled budget equals exactly one runtime vector step. The minimum
-; iteration check must allow vectorization rather than bypassing it, even below
-; the tail-folding threshold, because no tail folding is needed.
+; The trip count would equal one runtime vector step after peeling, but strided
+; loads do not justify peeling. Tail folding is needed for all nine iterations,
+; so LOW-TC leaves the loop scalar below the tail-folding threshold.
 define i64 @one_step_tc(ptr noalias %a) vscale_range(2, 2) {
 ; CHECK-LABEL: define i64 @one_step_tc(
 ; CHECK-SAME: ptr noalias [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[A]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 9, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[TMP2]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i64> [[VEC_PHI]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP8]], <vscale x 4 x i64> [[VEC_PHI]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP6]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP4]])
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 8, %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP5]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[V]]
-; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], 9
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
 ; LOW-TC-LABEL: define i64 @one_step_tc(
 ; LOW-TC-SAME: ptr noalias [[A:%.*]]) #[[ATTR1:[0-9]+]] {
-; LOW-TC-NEXT:  [[ENTRY:.*:]]
-; LOW-TC-NEXT:    br label %[[LOOP:.*]]
-; LOW-TC:       [[LOOP]]:
-; LOW-TC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; LOW-TC-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; LOW-TC-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; LOW-TC-NEXT:    br label %[[VECTOR_BODY:.*]]
-; LOW-TC:       [[VECTOR_BODY]]:
-; LOW-TC-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr align 8 [[A]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; LOW-TC-NEXT:    [[TMP4:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP3]]
-; LOW-TC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; LOW-TC:       [[MIDDLE_BLOCK]]:
-; LOW-TC-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP4]])
-; LOW-TC-NEXT:    br label %[[SCALAR_PH:.*]]
-; LOW-TC:       [[SCALAR_PH]]:
+; LOW-TC-NEXT:  [[SCALAR_PH:.*]]:
 ; LOW-TC-NEXT:    br label %[[LOOP1:.*]]
 ; LOW-TC:       [[LOOP1]]:
-; LOW-TC-NEXT:    [[IV:%.*]] = phi i64 [ 8, %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP1]] ]
-; LOW-TC-NEXT:    [[SUM:%.*]] = phi i64 [ [[TMP5]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP1]] ]
+; LOW-TC-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[NEXT:%.*]], %[[LOOP1]] ]
+; LOW-TC-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP1]] ]
 ; LOW-TC-NEXT:    [[P:%.*]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 [[IV]], i32 0
 ; LOW-TC-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
 ; LOW-TC-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[V]]
 ; LOW-TC-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
 ; LOW-TC-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], 9
-; LOW-TC-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP8:![0-9]+]]
+; LOW-TC-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; LOW-TC:       [[EXIT]]:
 ; LOW-TC-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i64 [ [[SUM_NEXT]], %[[LOOP1]] ]
 ; LOW-TC-NEXT:    ret i64 [[SUM_NEXT_LCSSA]]
@@ -483,20 +378,15 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ;.
 ; LOW-TC: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; LOW-TC: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; LOW-TC: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; LOW-TC: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; LOW-TC: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; LOW-TC: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; LOW-TC: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; LOW-TC: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; LOW-TC: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; LOW-TC: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
+; LOW-TC: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]]}
+; LOW-TC: [[META6]] = !{!"llvm.loop.vectorize.enable"}
 ;.

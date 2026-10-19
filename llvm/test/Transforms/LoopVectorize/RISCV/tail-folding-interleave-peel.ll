@@ -2,32 +2,32 @@
 ; RUN: opt -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail \
 ; RUN:   -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
-; A tail-gap load interleave-group can be used by the EVL tail-folded loop when
-; its final scalar iteration is kept out of the vector loop. This must not
-; happen for a complete interleave group.
+; A tail-gap load interleave group must not cause peeling when strided loads
+; are cheaper or tie with interleaving. The EVL loop handles all iterations
+; with strided loads. A complete interleave group still needs no peeling.
 define i32 @tail_gap_load(i64 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i32 @tail_gap_load(
 ; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[PEELED:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[PEELED]], 1
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[PEELED]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[INDEX]], i32 0
-; CHECK-NEXT:    [[INTERLEAVE_EVL:%.*]] = mul nuw nsw i32 [[TMP1]], 4
-; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr align 4 [[TMP2]], <vscale x 16 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL]])
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[WIDE_VP_LOAD]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 2
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP14]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr nuw i8, ptr [[TMP0]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP15]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i32> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr nuw i8, ptr [[TMP2]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP16]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP1]] to i64
@@ -37,29 +37,9 @@ define i32 @tail_gap_load(i64 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP9]])
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[PEELED]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD2:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 0
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[RDX]], [[V0]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 1
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[V1]]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 2
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD2]] = add nsw i32 [[ADD1]], [[V2]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ADD2_LCSSA:%.*]] = phi i32 [ [[ADD2]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    ret i32 [[ADD2_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
 entry:
   br label %for.body
@@ -149,6 +129,5 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ;.

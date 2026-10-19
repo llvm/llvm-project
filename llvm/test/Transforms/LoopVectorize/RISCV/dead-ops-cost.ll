@@ -8,23 +8,21 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 define void @dead_load(ptr %p, i16 %start) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @dead_load(
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[START_EXT:%.*]] = sext i16 [[START]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[START_EXT]], i64 111)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START_EXT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 3
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 1
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[EXIT:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[START_EXT]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i64 [[START_EXT]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP3]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP4]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP9]], i64 [[TMP11]]
@@ -33,21 +31,10 @@ define void @dead_load(ptr %p, i16 %start) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP19]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START_EXT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[EXIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT1:.*]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -68,9 +55,9 @@ exit:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/100464.
-; Loop with a live-out %l and scalar epilogue required due to an interleave
-; group. As the scalar epilogue is required the live-out is fed from the scalar
-; epilogue and dead in the vector loop.
+; Loop with a live-out %l and a tail-gap interleave group. Strided accesses are
+; cheaper or tie with interleaving, so no peeling or scalar epilogue is needed.
+; The live-out is fed from the vector loop and is no longer dead there.
 define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i8 @dead_live_out_due_to_scalar_epilogue_required(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
@@ -87,23 +74,27 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vsc
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 251, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 252, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP12]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i8.p0.i64(<vscale x 8 x i8> zeroinitializer, ptr align 1 [[TMP7]], i64 4, <vscale x 8 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP7]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP2]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 16 x i8> [[TMP13]], i64 [[TMP10]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1004, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IV]] to i64
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC]], align 1
@@ -111,9 +102,9 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vsc
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 1001
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[L]], %[[LOOP]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[L]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -386,14 +377,13 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], i1 false, !"LVerDomain"}
-; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META6]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
+; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
+; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false, !"LVerDomain"}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META5]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
 ; CHECK: [[META11]] = !{[[META12:![0-9]+]]}
 ; CHECK: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]]}
 ; CHECK: [[META13]] = distinct !{[[META13]], i1 false, !"LVerDomain"}

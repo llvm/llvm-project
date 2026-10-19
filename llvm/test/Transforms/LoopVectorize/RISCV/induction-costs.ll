@@ -8,7 +8,7 @@ target triple = "riscv64-unknown-linux-gnu"
 define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-LABEL: define void @skip_free_iv_truncate(
 ; CHECK-SAME: i16 [[X:%.*]], ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X_I32:%.*]] = sext i16 [[X]] to i32
 ; CHECK-NEXT:    [[X_I64:%.*]] = sext i16 [[X]] to i64
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 -8
@@ -16,8 +16,8 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX20]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[X_I64]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 3
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 1
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = shl nsw i64 [[X_I64]], 1
 ; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP31]]
@@ -41,46 +41,28 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[BOUND118:%.*]] = icmp ult ptr [[SCEVGEP15]], [[SCEVGEP12]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT19:%.*]] = and i1 [[BOUND017]], [[BOUND118]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT19]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[X_I64]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[X_I64]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = mul <vscale x 8 x i64> [[TMP21]], splat (i64 3)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[BROADCAST_SPLAT]], [[TMP24]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP3]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP4]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP27]] to i64
-; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 3, [[TMP28]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP25]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT12]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[SCEVGEP9]], i64 [[TMP22]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i16.p0.i64(<vscale x 8 x i16> zeroinitializer, ptr align 2 [[TMP23]], i64 6, <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP27]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP28]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP28]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT13]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP35:%.*]] = add <vscale x 8 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP30:%.*]] = trunc <vscale x 8 x i64> [[TMP35]] to <vscale x 8 x i32>
-; CHECK-NEXT:    [[TMP36:%.*]] = sub i64 [[TMP28]], 1
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <vscale x 8 x i32> [[TMP30]], i64 [[TMP36]]
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[TMP33:%.*]] = phi i64 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ [[X_I64]], %[[ENTRY]] ], [ [[X_I64]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[TMP34:%.*]] = phi i32 [ [[TMP32]], %[[MIDDLE_BLOCK]] ], [ [[X_I32]], %[[ENTRY]] ], [ [[X_I32]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP33]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_CONV:%.*]] = phi i32 [ [[TMP34]], %[[SCALAR_PH]] ], [ [[TMP64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[X_I64]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_CONV:%.*]] = phi i32 [ [[X_I32]], %[[SCALAR_PH]] ], [ [[TMP64:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_I64:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = load i64, ptr [[GEP_I64]], align 8
 ; CHECK-NEXT:    [[TMP62:%.*]] = sext i32 [[IV_CONV]] to i64
@@ -91,7 +73,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 3
 ; CHECK-NEXT:    [[TMP64]] = trunc i64 [[IV_NEXT]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], 99
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

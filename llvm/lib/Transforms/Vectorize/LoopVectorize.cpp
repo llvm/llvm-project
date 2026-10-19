@@ -825,6 +825,12 @@ public:
 
   bool peelLastIteration() const { return PeelLastIteration; }
 
+  /// Estimate whether interleaving savings pay for the peeled scalar iteration
+  /// at a candidate scalable VF, before selecting the final VF.
+  bool isPeelingForInterleavedAccessesProfitable(ElementCount MaxVF,
+                                               ElementCount UserVF,
+                                               unsigned UserIC, bool FoldTail);
+
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
     return ChosenTailFoldingStyle;
@@ -1051,6 +1057,17 @@ private:
 
   /// The cost computation for scalarized memory instruction.
   InstructionCost getMemInstScalarizationCost(Instruction *I, ElementCount VF);
+
+  struct MemoryWideningCosts {
+    InstructionCost Interleave = InstructionCost::getInvalid();
+    InstructionCost GatherScatter = InstructionCost::getInvalid();
+    InstructionCost Scalarize = InstructionCost::getInvalid();
+    InstructionCost Strided = InstructionCost::getInvalid();
+  };
+
+  /// Compute alternative costs for an instruction or its interleave group,
+  /// without recording a widening decision.
+  MemoryWideningCosts getMemoryWideningCosts(Instruction *I, ElementCount VF);
 
   /// The cost computation for interleaving group of memory instructions.
   InstructionCost getInterleaveGroupCost(Instruction *I, ElementCount VF) const;
@@ -4108,6 +4125,117 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
          TTI.getOperandsScalarizationOverhead(Tys, Config.CostKind, OperandVIC);
 }
 
+LoopVectorizationCostModel::MemoryWideningCosts
+LoopVectorizationCostModel::getMemoryWideningCosts(Instruction *I,
+                                                 ElementCount VF) {
+  MemoryWideningCosts Costs;
+  unsigned NumAccesses = 1;
+  if (const auto *Group = getInterleavedAccessGroup(I)) {
+    NumAccesses = Group->getNumMembers();
+    if (interleavedAccessCanBeWidened(I, VF))
+      Costs.Interleave = getInterleaveGroupCost(I, VF);
+  }
+
+  if (isLegalGatherOrScatter(I, VF))
+    Costs.GatherScatter = getGatherScatterCost(I, VF) * NumAccesses;
+  Costs.Scalarize = getMemInstScalarizationCost(I, VF) * NumAccesses;
+
+  // Match the constant-stride accesses supported by convertToStridedAccesses.
+  Value *Ptr = getLoadStorePointerOperand(I);
+  auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(Ptr));
+  Type *VectorTy = toVectorTy(getLoadStoreType(I), VF);
+  Align Alignment = getLoadStoreAlignment(I);
+  if (Costs.GatherScatter.isValid() && AR && AR->getLoop() == TheLoop &&
+      AR->isAffine() && isa<SCEVConstant>(AR->getStepRecurrence(*PSE.getSE())) &&
+      TTI.isLegalStridedLoadStore(VectorTy, Alignment)) {
+    Intrinsic::ID IID = isa<LoadInst>(I)
+                            ? Intrinsic::experimental_vp_strided_load
+                            : Intrinsic::experimental_vp_strided_store;
+    Costs.Strided = TTI.getMemIntrinsicInstrCost(
+                       MemIntrinsicCostAttributes(IID, VectorTy, /*Ptr=*/nullptr,
+                                                  isMaskRequired(I), Alignment),
+                       Config.CostKind) *
+                   NumAccesses;
+  }
+
+  LLVM_DEBUG(dbgs() << "LV: Memory widening: InterleaveCost = " << Costs.Interleave
+                    << ", GatherScatterCost = " << Costs.GatherScatter
+                    << ", ScalarizationCost = " << Costs.Scalarize
+                    << ", StridedCost = " << Costs.Strided << '\n');
+  return Costs;
+}
+
+bool LoopVectorizationCostModel::isPeelingForInterleavedAccessesProfitable(
+    ElementCount MaxVF, ElementCount UserVF, unsigned UserIC, bool FoldTail) {
+  assert(MaxVF.isScalable() && MaxVF.isNonZero() &&
+         "Expected a scalable vector factor");
+  assert(!PeelLastIteration && "Peeling must not be selected yet");
+  // Cost without a gap mask, as if the final iteration were already reserved.
+  // Restore the prospective state and never cache speculative decisions.
+  PeelLastIteration = true;
+  TailFoldingStyle OldStyle = ChosenTailFoldingStyle;
+  scope_exit RestorePeeling([this, OldStyle] {
+    PeelLastIteration = false;
+    ChosenTailFoldingStyle = OldStyle;
+  });
+  if (FoldTail) {
+    setTailFoldingStyle(/*IsScalableVF=*/true, UserIC);
+    if (!foldTailWithEVL())
+      return false;
+  }
+
+  ElementCount MinVF = ElementCount::getScalable(1);
+  if (UserVF.isNonZero() && UserVF.isScalable() &&
+      ElementCount::isKnownLE(UserVF, MaxVF))
+    MinVF = MaxVF = UserVF;
+
+  InstructionCost ScalarCost = expectedCost(ElementCount::getFixed(1));
+  if (!ScalarCost.isValid())
+    return false;
+  auto ExpectedTC = getSmallBestKnownTC(Opts, PSE, TheLoop);
+  std::optional<unsigned> VScale = Config.getVScaleForTuning();
+  uint64_t EstimatedTC =
+      ExpectedTC ? estimateElementCount(*ExpectedTC, VScale) : 0;
+  if (ExpectedTC && EstimatedTC <= 1)
+    return false;
+
+  // This is an early memory-cost heuristic, not a comparison of complete
+  // peeled and unpeeled plans. The selected VF may differ from this candidate.
+  for (ElementCount VF = MinVF; ElementCount::isKnownLE(VF, MaxVF); VF *= 2) {
+    InstructionCost Savings = 0;
+    for (BasicBlock *BB : TheLoop->blocks())
+      for (Instruction &I : *BB) {
+        const auto *Group = getInterleavedAccessGroup(&I);
+        if (!Group || !Group->requiresScalarEpilogue() || Group->isReverse() ||
+            Group->getInsertPos() != &I)
+          continue;
+        auto Costs = getMemoryWideningCosts(&I, VF);
+        InstructionCost AlternativeCost =
+            std::min({Costs.GatherScatter, Costs.Scalarize, Costs.Strided});
+        if (Costs.Interleave.isValid() && AlternativeCost.isValid() &&
+            Costs.Interleave < AlternativeCost)
+          Savings += (AlternativeCost - Costs.Interleave) /
+                     getPredBlockCostDivisor(Config.CostKind, BB);
+      }
+    // Peeling adds one complete scalar iteration, not just the accesses in
+    // tail-gap groups. Amortize it over the estimated vector iterations, using
+    // one iteration conservatively when the trip count is unknown.
+    uint64_t VectorIterations = 1;
+    if (ExpectedTC) {
+      unsigned RuntimeVF = estimateElementCount(VF, VScale);
+      VectorIterations = FoldTail ? divideCeil(EstimatedTC - 1, RuntimeVF)
+                                  : (EstimatedTC - 1) / RuntimeVF;
+    }
+    LLVM_DEBUG(dbgs() << "LV: Last-iteration peeling: savings = " << Savings
+                      << " over " << VectorIterations
+                      << " vector iterations, scalar epilogue cost = "
+                      << ScalarCost << '\n');
+    if (Savings * VectorIterations > ScalarCost)
+      return true;
+  }
+  return false;
+}
+
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   if (VF.isScalar())
     return;
@@ -4196,44 +4324,29 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       }
 
       // Choose between Interleaving, Gather/Scatter or Scalarization.
-      InstructionCost InterleaveCost = InstructionCost::getInvalid();
-      unsigned NumAccesses = 1;
       if (isAccessInterleaved(&I)) {
-        const auto *Group = getInterleavedAccessGroup(&I);
-        assert(Group && "Fail to get an interleaved access group.");
-
-        NumAccesses = Group->getNumMembers();
-        if (interleavedAccessCanBeWidened(&I, VF))
-          InterleaveCost = getInterleaveGroupCost(&I, VF);
+        // Make one decision for the whole group.
+        if (getWideningDecision(&I, VF) != CM_Unknown)
+          continue;
       }
 
-      InstructionCost GatherScatterCost =
-          isLegalGatherOrScatter(&I, VF)
-              ? getGatherScatterCost(&I, VF) * NumAccesses
-              : InstructionCost::getInvalid();
-
-      InstructionCost ScalarizationCost =
-          getMemInstScalarizationCost(&I, VF) * NumAccesses;
+      auto Costs = getMemoryWideningCosts(&I, VF);
 
       // Choose better solution for the current VF,
       // write down this decision and use it during vectorization.
       InstructionCost Cost;
       InstWidening Decision;
-      if (InterleaveCost <= GatherScatterCost &&
-          InterleaveCost < ScalarizationCost) {
+      if (Costs.Interleave <= Costs.GatherScatter &&
+          Costs.Interleave < Costs.Scalarize) {
         Decision = CM_Interleave;
-        Cost = InterleaveCost;
-      } else if (GatherScatterCost < ScalarizationCost) {
+        Cost = Costs.Interleave;
+      } else if (Costs.GatherScatter < Costs.Scalarize) {
         Decision = CM_GatherScatter;
-        Cost = GatherScatterCost;
+        Cost = Costs.GatherScatter;
       } else {
         Decision = CM_Scalarize;
-        Cost = ScalarizationCost;
+        Cost = Costs.Scalarize;
       }
-      LLVM_DEBUG(
-          dbgs() << "LV: Memory widening: InterleaveCost = " << InterleaveCost
-                 << ", GatherScatterCost = " << GatherScatterCost
-                 << ", ScalarizationCost = " << ScalarizationCost << '\n');
 
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
@@ -4996,6 +5109,12 @@ FixedScalableVFPair LoopVectorizationPlanner::computeMaxVFAndTailFolding(
                              PeeledPlan->getTripCount(), PSE)
                        : TripCount,
             *MaxRuntimeVF);
+    if (PeeledPlan && !CM->isPeelingForInterleavedAccessesProfitable(
+                          MaxFactors.ScalableVF, UserVF, UserIC,
+                          !NoTailFoldingNeeded)) {
+      PeeledPlan.reset();
+      NoTailFoldingNeeded = false;
+    }
     bool SkipTailFolding = false;
     auto ExpectedTC = getSmallBestKnownTC(Opts, PSE, OrigLoop);
     if (!NoTailFoldingNeeded && ExpectedTC && ExpectedTC->isFixed() &&
