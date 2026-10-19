@@ -114,8 +114,12 @@ struct X {
 };
 
 // CHECK: CXXConstructExpr {{.*}} 'const X' 'void (int, int)' list
-// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 106
-// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 107
+// CHECK-NEXT: EmbedExpr {{.*}} 'int'
+// CHECK-NEXT: begin: 0
+// CHECK-NEXT: number of elements: 1
+// CHECK-NEXT: EmbedExpr {{.*}} 'int'
+// CHECK-NEXT: begin: 1
+// CHECK-NEXT: number of elements: 1
 constexpr X ctor_list = {
 #embed <jk.txt>
 };

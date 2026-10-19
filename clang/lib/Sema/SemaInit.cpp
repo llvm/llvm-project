@@ -1718,7 +1718,7 @@ void InitListChecker::CheckComplexType(const InitializedEntity &Entity,
   // the element type of the complex type. The first element initializes
   // the real part, and the second element intitializes the imaginary part.
 
-  if (IList->getNumInitsWithEmbedExpanded() < 2)
+  if (IList->hasZeroInits() || IList->hasOneInit())
     return CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
                            StructuredIndex);
 
@@ -3639,28 +3639,26 @@ bool Sema::CanPerformAggregateInitializationForOverloadResolution(
 
 MultiExprArg Sema::getInitsWithEmbedExpanded(InitListExpr *ILE,
                                              SmallVectorImpl<Expr *> &Storage) {
-  if (llvm::none_of(ILE->inits(), [](const Expr *Init) {
-        return isa<EmbedExpr>(Init->IgnoreParenImpCasts());
-      }))
+  auto AsMultiElementEmbed = [](Expr *Init) {
+    auto *Embed = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts());
+    return Embed && Embed->getDataElementCount() > 1 ? Embed : nullptr;
+  };
+  if (llvm::none_of(ILE->inits(), AsMultiElementEmbed))
     return MultiExprArg(ILE->getInits(), ILE->getNumInits());
 
   Storage.clear();
   Storage.reserve(ILE->getNumInitsWithEmbedExpanded());
   for (Expr *Init : ILE->inits()) {
-    auto *Embed = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts());
+    EmbedExpr *Embed = AsMultiElementEmbed(Init);
     if (!Embed) {
       Storage.push_back(Init);
       continue;
     }
-    const StringLiteral *Data = Embed->getDataStringLiteral();
-    QualType ElemTy = Embed->getType();
-    unsigned Width = Context.getIntWidth(ElemTy);
     for (unsigned I = Embed->getStartingElementPos(),
                   E = I + Embed->getDataElementCount();
          I != E; ++I)
-      Storage.push_back(IntegerLiteral::Create(
-          Context, llvm::APInt(Width, Data->getCodeUnit(I)), ElemTy,
-          Embed->getLocation()));
+      Storage.push_back(new (Context) EmbedExpr(
+          Context, Embed->getLocation(), Embed->getData(), I, 1));
   }
   return Storage;
 }
@@ -4977,7 +4975,7 @@ static void TryReferenceListInitialization(Sema &S,
   // (possibly creating temporaries).
   // Otherwise, initialize a temporary with the initializer list and
   // bind to that.
-  if (InitList->getNumInitsWithEmbedExpanded() == 1) {
+  if (InitList->hasOneInit()) {
     Expr *Initializer = InitList->getInit(0);
     QualType cv2T2 = S.getCompletedType(Initializer);
     Qualifiers T2Quals;
@@ -5068,12 +5066,11 @@ static void TryListInitialization(Sema &S,
     return;
   }
 
-  unsigned NumInits = InitList->getNumInitsWithEmbedExpanded();
-
   // C++ doesn't allow scalar initialization with more than one argument.
   // But C99 complex numbers are scalars and it makes sense there.
   if (S.getLangOpts().CPlusPlus && DestType->isScalarType() &&
-      !DestType->isAnyComplexType() && NumInits > 1) {
+      !DestType->isAnyComplexType() && !InitList->hasZeroInits() &&
+      !InitList->hasOneInit()) {
     Sequence.SetFailed(InitializationSequence::FK_TooManyInitsForScalar);
     return;
   }
@@ -5116,7 +5113,8 @@ static void TryListInitialization(Sema &S,
   //   (8.5.2 [dcl.init.string]), initialization is performed as described
   //   in that section.
   // - Otherwise, if T is an aggregate, [...] (continue below).
-  if (S.getLangOpts().CPlusPlus11 && NumInits == 1 && !IsDesignatedInit) {
+  if (S.getLangOpts().CPlusPlus11 && InitList->hasOneInit() &&
+      !IsDesignatedInit) {
     if (DestType->isRecordType() && DestType->isAggregateType()) {
       QualType InitType = InitList->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, DestType) ||
@@ -5197,7 +5195,7 @@ static void TryListInitialization(Sema &S,
       //   - Otherwise, if the initializer list has no elements and T is a
       //     class type with a default constructor, the object is
       //     value-initialized.
-      if (NumInits == 0) {
+      if (InitList->hasZeroInits()) {
         CXXRecordDecl *RD = DestType->castAsCXXRecordDecl();
         if (S.LookupDefaultConstructor(RD)) {
           TryValueInitialization(S, Entity, Kind, Sequence, InitList);
@@ -5221,7 +5219,7 @@ static void TryListInitialization(Sema &S,
   }
 
   if (S.getLangOpts().CPlusPlus && !DestType->isAggregateType() &&
-      NumInits == 1) {
+      InitList->hasOneInit()) {
     Expr *E = InitList->getInit(0);
 
     //   - Otherwise, if T is an enumeration with a fixed underlying type,
@@ -9071,7 +9069,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   Expr *OnlyArg;
   if (Args.size() == 1) {
     auto *List = dyn_cast<InitListExpr>(Args[0]);
-    if (List && List->getNumInitsWithEmbedExpanded() == 1)
+    if (List && List->hasOneInit())
       OnlyArg = List->getInit(0);
     else
       OnlyArg = Args[0];
@@ -10490,8 +10488,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
     // Try list constructors unless the list is empty and the class has one or
     // more default constructors, in which case those constructors win.
-    unsigned NumInits = ListInit->getNumInitsWithEmbedExpanded();
-    if (!NumInits) {
+    if (ListInit->hasZeroInits()) {
       for (NamedDecl *D : Guides) {
         auto *FD = dyn_cast<FunctionDecl>(D->getUnderlyingDecl());
         if (FD && FD->getMinRequiredArguments() == 0) {
@@ -10499,7 +10496,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           break;
         }
       }
-    } else if (NumInits == 1) {
+    } else if (ListInit->hasOneInit()) {
       // C++ [over.match.class.deduct]:
       //   As an exception, the first phase in [over.match.list] (considering
       //   initializer-list constructors) is omitted if the initializer list

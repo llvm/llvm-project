@@ -5398,6 +5398,17 @@ public:
     return Sum;
   }
 
+  bool hasZeroInits() const { return InitExprs.empty(); }
+
+  /// Whether getNumInitsWithEmbedExpanded() is 1, without walking the list.
+  bool hasOneInit() const {
+    if (InitExprs.size() != 1)
+      return false;
+    auto *EE = dyn_cast<EmbedExpr>(
+        cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
+    return !EE || EE->getDataElementCount() == 1;
+  }
+
   /// Retrieve the set of initializers.
   Expr **getInits() { return reinterpret_cast<Expr **>(InitExprs.data()); }
 

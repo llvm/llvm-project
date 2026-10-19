@@ -5857,8 +5857,6 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       IsDesignatedInit)
     return Result;
 
-  unsigned NumInits = From->getNumInitsWithEmbedExpanded();
-
   // Per DR1467 and DR2137:
   //   If the parameter type is an aggregate class X and the initializer list
   //   has a single element of type cv U, where U is X or a class derived from
@@ -5869,7 +5867,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   and the initializer list has a single element that is an
   //   appropriately-typed string literal (8.5.2 [dcl.init.string]), the
   //   implicit conversion sequence is the identity conversion.
-  if (NumInits == 1 && !IsDesignatedInit) {
+  if (From->hasOneInit() && !IsDesignatedInit) {
     if (ToType->isRecordType() && ToType->isAggregateType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
@@ -5908,7 +5906,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   can be implicitly converted to X, the implicit conversion sequence is
   //   the worst conversion necessary to convert an element of the list to X.
   if ((AT || S.isStdInitializerList(ToType, &InitTy)) && !IsDesignatedInit) {
-    unsigned e = NumInits;
+    unsigned e = From->getNumInitsWithEmbedExpanded();
     ImplicitConversionSequence DfltElt;
     DfltElt.setBad(BadConversionSequence::no_conversion, QualType(),
                    QualType());
@@ -6048,7 +6046,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
 
     // If the initializer list has a single element that is reference-related
     // to the parameter type, we initialize the reference from that.
-    if (NumInits == 1 && !IsDesignatedInit) {
+    if (From->hasOneInit() && !IsDesignatedInit) {
       Expr *Init = From->getInit(0);
 
       QualType T2 = Init->getType();
@@ -6110,7 +6108,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     //    - if the initializer list has one element that is not itself an
     //      initializer list, the implicit conversion sequence is the one
     //      required to convert the element to the parameter type.
-    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0))) {
+    if (From->hasOneInit() && !isa<InitListExpr>(From->getInit(0))) {
       Result = TryCopyInitialization(
           S, From->getInit(0), ToType, SuppressUserConversions,
           InOverloadResolution, AllowObjCWritebackConversion);
@@ -6119,7 +6117,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     }
     //    - if the initializer list has no elements, the implicit conversion
     //      sequence is the identity conversion.
-    else if (NumInits == 0) {
+    else if (From->hasZeroInits()) {
       Result.setStandard();
       Result.Standard.setAsIdentityConversion();
       Result.Standard.setFromType(ToType);

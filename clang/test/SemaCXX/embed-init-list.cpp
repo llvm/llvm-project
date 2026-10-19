@@ -194,19 +194,17 @@ constexpr _Complex double complex = {
 };
 static_assert(__real__ complex == '/' && __imag__ complex == '/', "");
 
-auto deduced_auto{
+auto deduced_auto{ // expected-error {{excess elements in scalar initializer}}
 #embed __FILE__ limit(2)
-  // expected-error@-1 {{initializer for variable 'deduced_auto' with type 'auto' contains multiple expressions}}
 };
 
 void deduced_auto_expr() {
-  (void)new auto{
+  (void)new auto{ // expected-error {{excess elements in scalar initializer}}
 #embed __FILE__ limit(2)
-  // expected-error@-1 {{new expression for type 'auto' contains multiple constructor arguments}}
   };
-  (void)auto{ // expected-warning {{'auto' as a functional-style cast is a C++23 extension}}
+  (void)auto{ // expected-warning {{'auto' as a functional-style cast is a C++23 extension}} \
+                 expected-error {{excess elements in scalar initializer}}
 #embed __FILE__ limit(2)
-  // expected-error@-1 {{initializer for functional-style cast to 'auto' contains multiple expressions}}
   };
 }
 
