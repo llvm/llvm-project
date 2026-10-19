@@ -4066,7 +4066,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS;
+    KnownZero = ZeroLHS & ~UndefRHS;
     KnownUndef = UndefLHS & UndefRHS; // TODO: use getKnownUndefForVectorBinop?
 
     // Attempt to avoid multi-use ops if we don't need anything from them.

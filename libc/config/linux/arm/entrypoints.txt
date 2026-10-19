@@ -724,6 +724,9 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # libintl.h entrypoints
+      libc.src.libintl.textdomain
+
       # regex.h entrypoints
       libc.src.regex.regcomp
       libc.src.regex.regexec
