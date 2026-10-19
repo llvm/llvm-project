@@ -145,9 +145,8 @@ bool RISCVCodeGenPrepareImpl::visitMul(BinaryOperator &BO) {
 
   // RHS should be a splat shuffle.
   Value *SplatVal;
-  if (!match(RHS, m_OneUse(m_Shuffle(
-                      m_InsertElt(m_Undef(), m_Value(SplatVal), m_ZeroInt()),
-                      m_Undef(), m_ZeroMask()))))
+  Instruction *RHSI;
+  if (!match(RHS, m_Instruction(RHSI, m_OneUse(m_Splat(m_Value(SplatVal))))))
     return false;
 
   // zext should be in the same basic block as the mul.
@@ -165,8 +164,6 @@ bool RISCVCodeGenPrepareImpl::visitMul(BinaryOperator &BO) {
     return false;
   if (Size == 64 && !ST->hasVInstructionsI64())
     return false;
-
-  auto *RHSI = cast<Instruction>(RHS);
 
   // Splat should be in another basic block.
   if (RHSI->getParent() == BO.getParent())
