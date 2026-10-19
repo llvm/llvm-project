@@ -92,7 +92,9 @@ public:
   explicit operator bool() const { return !val.isNull(); }
 
   /// Dumps textual repesentation to stderr.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   // Union storing either ShapedTypeComponents, ShapedType (stored as Type and

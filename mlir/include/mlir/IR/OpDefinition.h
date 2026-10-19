@@ -123,7 +123,9 @@ public:
   }
 
   /// Dump this operation.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() { state->dump(); }
+#endif
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }
