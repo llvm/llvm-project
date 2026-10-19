@@ -17393,7 +17393,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   // N first, since replacing the load can CSE N into an existing node.
   if (FreezeNode && !FreezeNode.hasOneUse()) {
     CombineTo(N, Result);
-    DAG.ReplaceAllUsesOfValueWith(N0.getValue(0), Load.getValue(0));
+    CombineTo(LN0, Load, Load.getValue(1));
     return SDValue(N, 0);
   }
 
