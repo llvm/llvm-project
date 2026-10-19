@@ -668,7 +668,8 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
 }
 
 Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
-  using IntType = Type<TypeCategory::Integer, 4>;
+  using IntType = Type<TypeCategory::Integer>;
+  const int IntKind{4};
   const semantics::DerivedTypeSpec *derived{
       GetDerivedTypeSpec(operand.GetType())};
   CHECK(derived);
@@ -687,7 +688,7 @@ Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
   ActualArguments intArgs;
   intArgs.emplace_back(AsGenericExpr(std::move(operand)));
   return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-      ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+      IntKind, ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
 }
 
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
@@ -1515,11 +1516,11 @@ static SignedNumericExpr<CAT> buildSignedAdd(
       true};
 }
 
-template <common::TypeCategory CAT, int KIND>
-static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
-    const NumericExpr<CAT, KIND> &expr) {
-  if (const auto *convert =
-          std::get_if<Convert<Numeric<CAT, KIND>, CAT>>(&expr.u)) {
+template <common::TypeCategory CAT>
+static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
+    const NumericExpr<CAT> &expr) {
+  const int kind{expr.kind()};
+  if (const auto *convert = std::get_if<Convert<Numeric<CAT>, CAT>>(&expr.u)) {
     std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
           if (auto result = tryBuildSplitSumExpressionTree(typedExpr))

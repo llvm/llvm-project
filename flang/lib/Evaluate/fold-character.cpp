@@ -78,7 +78,7 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
     if (auto identity{
             Identity<T>(least, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
-          kind, context, std::move(funcRef), RelationalOperator::GT, *identity);
+          context, std::move(funcRef), RelationalOperator::GT, *identity);
     }
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
@@ -88,7 +88,7 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
     if (auto identity{
             Identity<T>(most, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
-          kind, context, std::move(funcRef), RelationalOperator::LT, *identity);
+          context, std::move(funcRef), RelationalOperator::LT, *identity);
     }
   } else if (name == "new_line") {
     return MakeConstantExpr<T>(kind, CharacterUtils::NEW_LINE(kind));

@@ -29,6 +29,7 @@ static Expr<Type<TypeCategory::Integer>> MakeDefaultIntegerExpr(int32_t v) {
 
 int main() {
   using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer>>;
+  const int defaultIntegerKind{4};
   TEST(DefaultIntegerExpr::Result{4}.AsFortran() == "INTEGER(4)");
   MATCH("666_4", MakeDefaultIntegerExpr(666).AsFortran());
   MATCH("-1_4", (-MakeDefaultIntegerExpr(1)).AsFortran());
@@ -60,7 +61,7 @@ int main() {
       defaults, languageFeatures, langOptions, cookedSources};
   auto &scope{semantics.globalScope()};
   const auto &integerType{
-      scope.MakeNumericType(TypeCategory::Integer, Expr<SubscriptInteger>{4})};
+      scope.MakeNumericType(TypeCategory::Integer, MakeDefaultIntegerExpr(4))};
   auto &coarray{scope.MakeSymbol(Fortran::parser::CharBlock{"a", 1}, {},
       Fortran::semantics::ObjectEntityDetails{})};
   auto &status{scope.MakeSymbol(Fortran::parser::CharBlock{"s", 1}, {},
@@ -68,16 +69,16 @@ int main() {
   coarray.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
   status.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
   auto asExpr{[](const CoarrayRef &ref) {
-    return DefaultIntegerExpr{
-        Designator<DefaultIntegerExpr::Result>{DataRef{ref}}};
+    return DefaultIntegerExpr{Designator<DefaultIntegerExpr::Result>{
+        defaultIntegerKind, DataRef{ref}}};
   }};
 
-  CoarrayRef noNotify{DataRef{coarray},
-      {Expr<SubscriptInteger>{1} + Expr<SubscriptInteger>{1}}};
+  CoarrayRef noNotify{
+      DataRef{coarray}, {MakeSubscriptIntExpr(1) + MakeSubscriptIntExpr(1)}};
   CoarrayRef withNotify{noNotify};
   // Integer expressions exercise the type-independent specifier representation.
   withNotify.set_notify(
-      AsGenericExpr(DefaultIntegerExpr{2} + DefaultIntegerExpr{3}));
+      AsGenericExpr(MakeDefaultIntegerExpr(2) + MakeDefaultIntegerExpr(3)));
   MATCH("a[1_8+1_8,NOTIFY=2_4+3_4]", asExpr(withNotify).AsFortran());
 
   auto foldedNotify{ExtractCoarrayRef(Fold(context, asExpr(withNotify)))};
@@ -98,10 +99,11 @@ int main() {
   }
 
   CoarrayRef combined{withNotify};
-  combined.set_stat(AsCategoryExpr(DefaultIntegerExpr{
-      Designator<DefaultIntegerExpr::Result>{DataRef{status}}}));
+  combined.set_stat(
+      AsCategoryExpr(DefaultIntegerExpr{Designator<DefaultIntegerExpr::Result>{
+          defaultIntegerKind, DataRef{status}}}));
   combined.set_team(
-      AsGenericExpr(DefaultIntegerExpr{7} + DefaultIntegerExpr{1}));
+      AsGenericExpr(MakeDefaultIntegerExpr(7) + MakeDefaultIntegerExpr(1)));
   auto foldedCombined{ExtractCoarrayRef(Fold(context, asExpr(combined)))};
   TEST(foldedCombined.has_value());
   if (foldedCombined) {

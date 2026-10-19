@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Evaluate/real.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Testing/fp-testing.h"
 #include "flang/Testing/testing.h"

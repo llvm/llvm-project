@@ -1797,7 +1797,7 @@ private:
   genEnumerationConstructor(const Fortran::evaluate::StructureConstructor &ctor,
                             fir::RecordType recTy) {
     using Int4 =
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>;
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>;
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     assert(ctor.values().size() == 1 &&
@@ -1819,8 +1819,10 @@ private:
               &ordExpr.u))
         if (const auto *int4Expr =
                 std::get_if<Fortran::evaluate::Expr<Int4>>(&intExpr->u))
-          narrowing =
-              std::get_if<Fortran::evaluate::Convert<Int4>>(&int4Expr->u);
+          if (const auto *conv =
+                  std::get_if<Fortran::evaluate::Convert<Int4>>(&int4Expr->u))
+            if (conv->kind() == 4)
+              narrowing = conv;
       hlfir::Entity original =
           narrowing ? gen(narrowing->left()) : gen(ordExpr);
       mlir::Value value = hlfir::loadTrivialScalar(loc, builder, original);

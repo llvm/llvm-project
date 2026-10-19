@@ -269,7 +269,7 @@ static Expr<LogicalResult> CompareUnsigned(FoldingContext &context,
       ActualArguments{
           ActualArgument{std::move(x)}, ActualArgument{std::move(y)}})};
   auto &logical{DEREF(UnwrapExpr<Expr<SomeLogical>>(result))};
-  return ConvertToType<LogicalResult>(std::move(logical));
+  return ConvertToType<LogicalResult>(LogicalResultKind, std::move(logical));
 }
 
 // Determines the right kind of INTEGER to hold the bits of a REAL type.

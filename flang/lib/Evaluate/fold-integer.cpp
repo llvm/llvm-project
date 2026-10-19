@@ -955,7 +955,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
-    return FoldMaxvalMinval<T>(kind, context, std::move(funcRef),
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT,
         T::category == TypeCategory::Unsigned ? T::Scalar::Zero(kind)
                                               : T::Scalar::Least(kind));
@@ -965,7 +965,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
-    return FoldMaxvalMinval<T>(kind, context, std::move(funcRef),
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::LT,
         T::category == TypeCategory::Unsigned ? T::Scalar::Zero(kind).NOT()
                                               : T::Scalar::HUGE(kind));

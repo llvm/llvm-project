@@ -132,9 +132,9 @@ template <typename T> struct ArrayAndMask {
   Constant<LogicalResult> mask;
 };
 template <typename T>
-std::optional<ArrayAndMask<T>> ProcessReductionArgs(FoldingContext &context,
-    ActualArguments &arg, std::optional<int> &dim, int arrayIndex,
-    std::optional<int> dimIndex = std::nullopt,
+std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
+    FoldingContext &context, ActualArguments &arg, std::optional<int> &dim,
+    int arrayIndex, std::optional<int> dimIndex = std::nullopt,
     std::optional<int> maskIndex = std::nullopt) {
   if (arg.empty()) {
     return std::nullopt;
@@ -175,7 +175,7 @@ std::optional<ArrayAndMask<T>> ProcessReductionArgs(FoldingContext &context,
 // operator()(Scalar<T> &, const ConstantSubscripts &, bool first)
 // and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
-Constant<T> DoReduction(const Constant<ARRAY> &array,
+Constant<T> DoReduction(int kind, const Constant<ARRAY> &array,
     const Constant<LogicalResult> &mask, std::optional<int> &dim,
     const Scalar<T> &identity, ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
@@ -276,6 +276,7 @@ Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
+  const int kind{ref.kind()};
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<T>> arrayAndMask{ProcessReductionArgs<T>(kind,
           context, ref.arguments(), dim, /*ARRAY=*/0, /*DIM=*/1,

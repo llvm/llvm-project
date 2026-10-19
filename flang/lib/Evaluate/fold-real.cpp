@@ -285,12 +285,12 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
-    return FoldMaxvalMinval<T>(kind, context, std::move(funcRef),
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, Scalar<T>::HUGE(kind).Negate());
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
-    return FoldMaxvalMinval<T>(kind, context, std::move(funcRef),
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::LT, Scalar<T>::HUGE(kind));
   } else if (name == "mod") {
     CHECK(args.size() == 2);
