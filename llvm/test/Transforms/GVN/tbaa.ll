@@ -164,7 +164,8 @@ declare i32 @foo(ptr) readonly
 
 ; A TBAA structure who's only point is to have a constant location.
 !9 = !{!"yet another root"}
-!10 = !{!"node", !9, i64 1}
+!10 = !{!21, !21, i64 0, i64 1}
+!21 = !{!"node", !9}
 ;.
 ; CHECK: [[C_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"C", [[META2:![0-9]+]]}

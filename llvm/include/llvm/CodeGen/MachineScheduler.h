@@ -96,6 +96,7 @@
 #include <algorithm>
 #include <cassert>
 #include <llvm/Support/raw_ostream.h>
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -105,6 +106,7 @@ namespace impl_detail {
 // FIXME: Remove these declarations once RegisterClassInfo is queryable as an
 // analysis.
 class MachineSchedulerImpl;
+class SSAMachineSchedulerImpl;
 class PostMachineSchedulerImpl;
 } // namespace impl_detail
 
@@ -117,8 +119,10 @@ enum Direction {
 };
 } // namespace MISched
 
-LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
-LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+/// Returns -misched-prera-direction.
+LLVM_ABI MISched::Direction getPreRADirection();
+/// Returns whether -verify-misched is set.
+LLVM_ABI bool shouldVerifyScheduling();
 
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
@@ -1411,19 +1415,16 @@ protected:
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI,
                              bool ReorderWhileClustering = false);
 
 /// If ReorderWhileClustering is set to true, no attempt will be made to
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI,
                               bool ReorderWhileClustering = false);
 
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
-createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
-                               const TargetRegisterInfo *TRI);
+createCopyConstrainDAGMutation(const TargetInstrInfo *TII);
 
 /// Create the standard converging machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
@@ -1437,7 +1438,7 @@ ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   // FIXME: extend the mutation API to allow earlier mutations to instantiate
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   return DAG;
 }
 
@@ -1459,6 +1460,21 @@ public:
   LLVM_ABI MachineSchedulerPass(const TargetMachine *TM);
   LLVM_ABI MachineSchedulerPass(MachineSchedulerPass &&Other);
   LLVM_ABI ~MachineSchedulerPass();
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
+class SSAMachineSchedulerPass
+    : public OptionalPassInfoMixin<SSAMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::SSAMachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  LLVM_ABI SSAMachineSchedulerPass(const TargetMachine *TM);
+  LLVM_ABI SSAMachineSchedulerPass(SSAMachineSchedulerPass &&Other);
+  LLVM_ABI ~SSAMachineSchedulerPass();
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
 };

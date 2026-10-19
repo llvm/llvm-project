@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -218,15 +220,58 @@ void SampleProfileProber::findUnreachableBlocks(
   }
 }
 
+// Follow invoke normal-dest edges and record blocks that sit on a cycle.
+static void
+findInvokeNormalDestCycles(const Function &F,
+                           DenseSet<const BasicBlock *> &CycleBlocks) {
+  DenseSet<const BasicBlock *> Processed;
+  DenseSet<const BasicBlock *> OnCurrentPath;
+  SmallVector<const BasicBlock *, 16> CurrentPath;
+
+  for (const BasicBlock &Start : F) {
+    if (Processed.contains(&Start))
+      continue;
+
+    CurrentPath.clear();
+    OnCurrentPath.clear();
+    const BasicBlock *Cur = &Start;
+    while (Cur) {
+      if (OnCurrentPath.contains(Cur)) {
+        // Back-edge onto CurrentPath: the cycle is the suffix starting at Cur.
+        auto CycleStart = llvm::find(CurrentPath, Cur);
+        assert(CycleStart != CurrentPath.end() &&
+               "OnCurrentPath must hold exactly the blocks in CurrentPath");
+        CycleBlocks.insert(CycleStart, CurrentPath.end());
+        break;
+      }
+      if (Processed.contains(Cur))
+        break;
+      OnCurrentPath.insert(Cur);
+      CurrentPath.push_back(Cur);
+      if (const auto *II = dyn_cast<InvokeInst>(Cur->getTerminator()))
+        Cur = II->getNormalDest();
+      else
+        Cur = nullptr;
+    }
+    for (const BasicBlock *B : CurrentPath)
+      Processed.insert(B);
+  }
+}
+
 // In call-to-invoke conversion, basic block can be split into multiple blocks,
 // only instrument probe in the head block, ignore the normal dests.
 void SampleProfileProber::findInvokeNormalDests(
     DenseSet<BasicBlock *> &InvokeNormalDests) {
+  DenseSet<const BasicBlock *> CycleBlocks;
+  findInvokeNormalDestCycles(*F, CycleBlocks);
+
   for (auto &BB : *F) {
     auto *TI = BB.getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       auto *ND = II->getNormalDest();
-      InvokeNormalDests.insert(ND);
+      // Cycle members are original loop blocks, not split continuations.
+      if (!CycleBlocks.contains(ND))
+        InvokeNormalDests.insert(ND);
 
       // The normal dest and the try/catch block are connected by an
       // unconditional branch.
@@ -249,15 +294,28 @@ void SampleProfileProber::findInvokeNormalDests(
 // the tail block's successors are the original block's successors.
 const Instruction *SampleProfileProber::getOriginalTerminator(
     const BasicBlock *Head, const DenseSet<BasicBlock *> &BlocksToIgnore) {
-  auto *TI = Head->getTerminator();
-  if (auto *II = dyn_cast<InvokeInst>(TI)) {
-    return getOriginalTerminator(II->getNormalDest(), BlocksToIgnore);
-  } else if (succ_size(Head) == 1 &&
-             BlocksToIgnore.contains(*succ_begin(Head))) {
-    // Go to the unconditional branch dest.
-    return getOriginalTerminator(*succ_begin(Head), BlocksToIgnore);
+  // Follow invoke dests and ignored blocks to the original terminator. Stop
+  // if a block repeats; a cycle of invokes has no unique tail.
+  DenseSet<const BasicBlock *> Visited;
+  const BasicBlock *BB = Head;
+  Visited.insert(BB);
+  while (true) {
+    auto *TI = BB->getTerminator();
+    const BasicBlock *Next = nullptr;
+    if (const auto *II = dyn_cast<InvokeInst>(TI))
+      Next = II->getNormalDest();
+    else if (succ_size(BB) == 1 && BlocksToIgnore.contains(*succ_begin(BB)))
+      Next = *succ_begin(BB);
+    else
+      return TI;
+
+    // A cycle has no tail block whose terminator represents the original
+    // block. Stop at the terminator that closes the cycle.
+    if (!Visited.insert(Next).second)
+      return TI;
+
+    BB = Next;
   }
-  return TI;
 }
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index

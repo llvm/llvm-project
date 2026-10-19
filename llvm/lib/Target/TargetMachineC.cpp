@@ -284,7 +284,9 @@ void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
 }
 
 LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
-  return wrap(new DataLayout(unwrap(T)->createDataLayout()));
+  TargetMachine *TM = unwrap(T);
+  return wrap(new DataLayout(TM->getTargetTriple().computeDataLayout(
+      TM->Options.MCOptions.getABIName())));
 }
 
 static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
@@ -298,7 +300,8 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 
   std::string error;
 
-  Mod->setDataLayout(TM->createDataLayout());
+  Mod->setDataLayout(TM->getTargetTriple().computeDataLayout(
+      TM->Options.MCOptions.getABIName()));
 
   CodeGenFileType ft;
   switch (codegen) {

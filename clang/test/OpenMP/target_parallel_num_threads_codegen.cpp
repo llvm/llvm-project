@@ -677,7 +677,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126
-// CHECK1-SAME: (ptr noundef [[THIS:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noundef [[THIS:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
@@ -754,7 +754,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l88
-// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
@@ -1308,7 +1308,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126
-// CHECK3-SAME: (ptr noundef [[THIS:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noundef [[THIS:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -1385,7 +1385,7 @@ int bar(int n){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l88
-// CHECK3-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
@@ -1573,7 +1573,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126
-// CHECK9-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
@@ -1608,7 +1608,7 @@ int bar(int n){
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l88
-// CHECK9-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0]] {
+// CHECK9-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
@@ -1817,7 +1817,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l126
-// CHECK11-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
@@ -1852,7 +1852,7 @@ int bar(int n){
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l88
-// CHECK11-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0]] {
+// CHECK11-SAME: (ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4

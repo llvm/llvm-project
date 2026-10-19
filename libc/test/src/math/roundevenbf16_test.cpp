@@ -16,4 +16,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/roundevenbf16.h"
 
-LIST_ROUNDEVEN_TESTS(bfloat16, LIBC_NAMESPACE::roundevenbf16)
+LIST_ROUNDEVEN_TESTS(Roundevenbf16, bfloat16, LIBC_NAMESPACE::roundevenbf16)

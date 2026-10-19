@@ -676,10 +676,8 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
 
         // Add left paren
         if (FoundSeparatorToken) {
-          TempToken.startToken();
-          TempToken.setKind(tok::l_paren);
-          TempToken.setLocation(ArgStartIterator->getLocation());
-          TempToken.setLength(0);
+          TempToken =
+              Token::create(tok::l_paren, ArgStartIterator->getLocation());
           NewTokens.push_back(TempToken);
         }
 
@@ -689,10 +687,7 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
         // Add right paren and store the paren locations in ParenHints
         if (FoundSeparatorToken) {
           SourceLocation Loc = PP.getLocForEndOfToken((I - 1)->getLocation());
-          TempToken.startToken();
-          TempToken.setKind(tok::r_paren);
-          TempToken.setLocation(Loc);
-          TempToken.setLength(0);
+          TempToken = Token::create(tok::r_paren, Loc);
           NewTokens.push_back(TempToken);
           ParenHints.push_back(SourceRange(ArgStartIterator->getLocation(),
                                            Loc));
@@ -848,17 +843,15 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Empty arguments are standard in C99 and C++0x, and are supported as an
     // extension in other modes.
-    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99)
-      Diag(Tok, getLangOpts().CPlusPlus11
-                    ? diag::warn_cxx98_compat_empty_fnmacro_arg
-                    : diag::ext_empty_fnmacro_arg);
+    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99) {
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(Tok, diag_compat::empty_fnmacro_arg);
+      else
+        Diag(Tok, diag::ext_empty_fnmacro_arg);
+    }
 
     // Add a marker EOF token to the end of the token list for this argument.
-    Token EOFTok;
-    EOFTok.startToken();
-    EOFTok.setKind(tok::eof);
-    EOFTok.setLocation(Tok.getLocation());
-    EOFTok.setLength(0);
+    Token EOFTok = Token::createEof(Tok.getLocation());
     ArgTokens.push_back(EOFTok);
     ++NumActuals;
     if (!ContainsCodeCompletionTok && NumFixedArgsLeft != 0)
@@ -915,11 +908,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
   if (ContainsCodeCompletionTok) {
     // Recover from not-fully-formed macro invocation during code-completion.
-    Token EOFTok;
-    EOFTok.startToken();
-    EOFTok.setKind(tok::eof);
-    EOFTok.setLocation(Tok.getLocation());
-    EOFTok.setLength(0);
+    Token EOFTok = Token::createEof(Tok.getLocation());
     for (; NumActuals < MinArgsExpected; ++NumActuals)
       ArgTokens.push_back(EOFTok);
   }
@@ -978,10 +967,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Add a marker EOF token to the end of the token list for this argument.
     SourceLocation EndLoc = Tok.getLocation();
-    Tok.startToken();
-    Tok.setKind(tok::eof);
-    Tok.setLocation(EndLoc);
-    Tok.setLength(0);
+    Tok = Token::createEof(EndLoc);
     ArgTokens.push_back(Tok);
 
     // If we expect two arguments, add both as empty.
@@ -2032,12 +2018,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     }
 
     // Discard the ')', preserving 'Tok' as our result.
-    Token RParen;
-    LexNonComment(RParen);
-    if (RParen.isNot(tok::r_paren)) {
+    Token Next;
+    LexNonComment(Next);
+    if (Next.isNot(tok::r_paren)) {
       Diag(getLocForEndOfToken(Tok.getLocation()), diag::err_pp_expected_after)
         << Tok.getKind() << tok::r_paren;
       Diag(LParenLoc, diag::note_matching) << tok::l_paren;
+      if (Next.isOneOf(tok::eof, tok::eod) || Next.isAnnotation())
+        Tok = Next;
     }
     return;
   } else if (II == Ident__is_target_arch) {

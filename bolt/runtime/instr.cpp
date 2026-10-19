@@ -147,18 +147,34 @@ public:
       StackBase = reinterpret_cast<uint8_t *>(
           __mmap(0, MaxSize, PROT_READ | PROT_WRITE,
                  (Shared ? MAP_SHARED : MAP_PRIVATE) | MAP_ANONYMOUS, -1, 0));
+#if defined(ANDROID_AARCH64)
+      if (StackBase == MAP_FAILED) {
+        StackBase = nullptr;
+        boltHandleFatalAndRecover();
+        return nullptr;
+      }
+#else
       assert(StackBase != MAP_FAILED,
              "BumpPtrAllocator: failed to mmap stack!");
+#endif
       StackSize = 0;
     }
 
     Size = alignTo(Size + sizeof(EntryMetadata), 16);
+#if defined(ANDROID_AARCH64)
+    if (StackSize + Size >= MaxSize) {
+      boltHandleFatalAndRecover();
+      return nullptr;
+    }
+#endif
     uint8_t *AllocAddress = StackBase + StackSize + sizeof(EntryMetadata);
     auto *M = reinterpret_cast<EntryMetadata *>(StackBase + StackSize);
     M->Magic = Magic;
     M->AllocSize = Size;
     StackSize += Size;
+#if !defined(ANDROID_AARCH64)
     assert(StackSize < MaxSize, "allocator ran out of memory");
+#endif
     return AllocAddress;
   }
 
@@ -243,17 +259,38 @@ void *GlobalMetadataStorage;
 // User-defined placement new operators. We only use those (as opposed to
 // overriding the regular operator new) so we can keep our allocator in the
 // stack instead of in a data section (global).
-void *operator new(size_t Sz, BumpPtrAllocator &A) { return A.allocate(Sz); }
-void *operator new(size_t Sz, BumpPtrAllocator &A, char C) {
+// On Android when allocate() returns nullptr due to OOM, the noexcept
+// specification here makes the new-expression check for nullptr and skip
+// construction.
+#if defined(ANDROID_AARCH64)
+#define BOLT_RT_ALLOC_NOEXCEPT noexcept
+#else
+#define BOLT_RT_ALLOC_NOEXCEPT
+#endif
+
+void *operator new(size_t Sz, BumpPtrAllocator &A) BOLT_RT_ALLOC_NOEXCEPT {
+  return A.allocate(Sz);
+}
+void *operator new(size_t Sz, BumpPtrAllocator &A,
+                   char C) BOLT_RT_ALLOC_NOEXCEPT {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
+#if defined(ANDROID_AARCH64)
+  if (Ptr == nullptr)
+    return nullptr;
+#endif
   memset(Ptr, C, Sz);
   return Ptr;
 }
-void *operator new[](size_t Sz, BumpPtrAllocator &A) {
+void *operator new[](size_t Sz, BumpPtrAllocator &A) BOLT_RT_ALLOC_NOEXCEPT {
   return A.allocate(Sz);
 }
-void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
+void *operator new[](size_t Sz, BumpPtrAllocator &A,
+                     char C) BOLT_RT_ALLOC_NOEXCEPT {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
+#if defined(ANDROID_AARCH64)
+  if (Ptr == nullptr)
+    return nullptr;
+#endif
   memset(Ptr, C, Sz);
   return Ptr;
 }
@@ -390,6 +427,10 @@ private:
 
   MapEntry &firstAllocation(uint64_t Key, BumpPtrAllocator &Alloc) {
     TableRoot = new (Alloc, 0) MapEntry[InitialSize];
+#if defined(ANDROID_AARCH64)
+    if (TableRoot == nullptr)
+      return NoEntry;
+#endif
     MapEntry &Entry = TableRoot[Key % InitialSize];
     Entry.Key = Key;
     // DEBUG(Entry.dump("Created root entry: "));
@@ -428,6 +469,10 @@ private:
     // DEBUG(Entry.dump("Creating new level: "));
 
     MapEntry *NextLevelTbl = new (Alloc, 0) MapEntry[IncSize];
+#if defined(ANDROID_AARCH64)
+    if (NextLevelTbl == nullptr)
+      return NoEntry;
+#endif
     // DEBUG(
     //     reportNumber("Newly allocated level: 0x", uint64_t(NextLevelTbl),
     //     16));
@@ -440,6 +485,12 @@ private:
     assert((NextLevelTbl[CurEntrySelector].Key & ~FollowUpTableMarker) !=
                uint64_t(Entries),
            "circular reference created!\n");
+#if defined(ANDROID_AARCH64)
+    if (__atomic_load_n(&__bolt_runtime_error, __ATOMIC_RELAXED)) {
+      // The assert above could have tripped and disabled profiling
+      return NoEntry;
+    }
+#endif
     // DEBUG(NextLevelTbl[CurEntrySelector].dump("New level entry: "));
     // DEBUG(Entry.dump("Updated old entry: "));
     return getEntry(NextLevelTbl, Key, Remainder, Alloc, CurLevel + 1);
@@ -449,6 +500,12 @@ private:
     if (TableRoot) {
       MapEntry &E = getEntry(TableRoot, Key, Key, Alloc, 0);
       assert(!(E.Key & FollowUpTableMarker), "Invalid entry!");
+#if defined(ANDROID_AARCH64)
+      if (__atomic_load_n(&__bolt_runtime_error, __ATOMIC_RELAXED)) {
+        // The assert above could have tripped and disabled profiling
+        return NoEntry;
+      }
+#endif
       return E;
     }
     return firstAllocation(Key, Alloc);
@@ -954,8 +1011,16 @@ Graph::Graph(BumpPtrAllocator &Alloc, const FunctionDescription &D,
 
   DEBUG(reportNumber("G->CFGNodes = 0x", (uint64_t)CFGNodes, 16));
   SpanningTreeNodes = new (Alloc) Node[MaxNodes];
-  DEBUG(reportNumber("G->SpanningTreeNodes = 0x",
-                     (uint64_t)SpanningTreeNodes, 16));
+  DEBUG(reportNumber("G->SpanningTreeNodes = 0x", (uint64_t)SpanningTreeNodes,
+                     16));
+#if defined(ANDROID_AARCH64)
+  if (CFGNodes == nullptr || SpanningTreeNodes == nullptr) {
+    // Out of memory. Leave NumNodes at zero so ~Graph() skips the per-node
+    // edge sets; whichever array did get allocated is still freed there.
+    NumNodes = 0;
+    return;
+  }
+#endif
 
   // Figure out how much to allocate to each vector (in/out edge sets)
   for (int I = 0; I < D.NumEdges; ++I) {
@@ -980,6 +1045,17 @@ Graph::Graph(BumpPtrAllocator &Alloc, const FunctionDescription &D,
     if (SpanningTreeNodes[I].NumOutEdges > 0)
       SpanningTreeNodes[I].OutEdges =
           new (Alloc) Edge[SpanningTreeNodes[I].NumOutEdges];
+#if defined(ANDROID_AARCH64)
+    // Out of memory. Return with NumNodes and the edge sets allocated so far
+    // left intact, so ~Graph() still deallocates them in reverse order.
+    if ((CFGNodes[I].NumInEdges > 0 && CFGNodes[I].InEdges == nullptr) ||
+        (CFGNodes[I].NumOutEdges > 0 && CFGNodes[I].OutEdges == nullptr) ||
+        (SpanningTreeNodes[I].NumInEdges > 0 &&
+         SpanningTreeNodes[I].InEdges == nullptr) ||
+        (SpanningTreeNodes[I].NumOutEdges > 0 &&
+         SpanningTreeNodes[I].OutEdges == nullptr))
+      return;
+#endif
     CFGNodes[I].NumInEdges = 0;
     CFGNodes[I].NumOutEdges = 0;
     SpanningTreeNodes[I].NumInEdges = 0;
@@ -1084,11 +1160,22 @@ struct NodeToCallsMap {
   MapEntry *Entries;
   BumpPtrAllocator &Alloc;
   const uint32_t NumNodes;
+#if defined(ANDROID_AARCH64)
+  /// Cleared when an allocation failed while building the map. Callers must
+  /// check this before reading any entry.
+  bool Valid{true};
+#endif
 
   NodeToCallsMap(BumpPtrAllocator &Alloc, const FunctionDescription &D,
                  uint32_t NumNodes)
       : Alloc(Alloc), NumNodes(NumNodes) {
     Entries = new (Alloc, 0) MapEntry[NumNodes];
+#if defined(ANDROID_AARCH64)
+    if (Entries == nullptr) {
+      Valid = false;
+      return;
+    }
+#endif
     for (int I = 0; I < D.NumCalls; ++I) {
       DEBUG(reportNumber("Registering call in node ", D.Calls[I].FromNode, 10));
       ++Entries[D.Calls[I].FromNode].NumCalls;
@@ -1097,6 +1184,13 @@ struct NodeToCallsMap {
       Entries[I].Calls = Entries[I].NumCalls ? new (Alloc)
                                                    uint32_t[Entries[I].NumCalls]
                                              : nullptr;
+#if defined(ANDROID_AARCH64)
+      if (Entries[I].NumCalls && Entries[I].Calls == nullptr) {
+        Entries[I].NumCalls = 0;
+        Valid = false;
+        return;
+      }
+#endif
       Entries[I].NumCalls = 0;
     }
     for (int I = 0; I < D.NumCalls; ++I) {
@@ -1140,6 +1234,10 @@ struct NodeToCallsMap {
   }
 
   ~NodeToCallsMap() {
+#if defined(ANDROID_AARCH64)
+    if (Entries == nullptr)
+      return;
+#endif
     for (int I = NumNodes - 1; I >= 0; --I)
       if (Entries[I].Calls)
         Alloc.deallocate(Entries[I].Calls);
@@ -1171,6 +1269,43 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
   uint64_t *LeafFrequency = new (Alloc, 0) uint64_t[NumNodes];
   uint64_t *EntryAddress = new (Alloc, 0) uint64_t[NumNodes];
 
+  auto releaseScratch = [&] {
+    if (EntryAddress)
+      Alloc.deallocate(EntryAddress);
+    if (LeafFrequency)
+      Alloc.deallocate(LeafFrequency);
+    if (Visited)
+      Alloc.deallocate(Visited);
+    if (Stack)
+      Alloc.deallocate(Stack);
+    if (CallMap) {
+      CallMap->~NodeToCallsMap();
+      Alloc.deallocate(CallMap);
+    }
+  };
+
+  auto releaseAll = [&] {
+    releaseScratch();
+    if (CallFreqs)
+      Alloc.deallocate(CallFreqs);
+    if (EdgeFreqs)
+      Alloc.deallocate(EdgeFreqs);
+    EdgeFreqs = nullptr;
+    CallFreqs = nullptr;
+  };
+
+#if defined(ANDROID_AARCH64)
+  // Any of the allocations above may have run out of memory and returned null.
+  // Release what we did get and leave the graph without frequencies.
+  if ((D.NumEdges && EdgeFreqs == nullptr) ||
+      (D.NumCalls && CallFreqs == nullptr) || CallMap == nullptr ||
+      !CallMap->Valid || Stack == nullptr || Visited == nullptr ||
+      LeafFrequency == nullptr || EntryAddress == nullptr) {
+    releaseAll();
+    return;
+  }
+#endif
+
   // Setup a fast lookup for frequency of leaf nodes, which have special
   // basic block frequency instrumentation (they are not edge profiled).
   for (int I = 0; I < D.NumLeafNodes; ++I) {
@@ -1197,18 +1332,7 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
   // Empty stack?
   if (StackTop == 0) {
     DEBUG(report("Empty stack!\n"));
-    Alloc.deallocate(EntryAddress);
-    Alloc.deallocate(LeafFrequency);
-    Alloc.deallocate(Visited);
-    Alloc.deallocate(Stack);
-    CallMap->~NodeToCallsMap();
-    Alloc.deallocate(CallMap);
-    if (CallFreqs)
-      Alloc.deallocate(CallFreqs);
-    if (EdgeFreqs)
-      Alloc.deallocate(EdgeFreqs);
-    EdgeFreqs = nullptr;
-    CallFreqs = nullptr;
+    releaseAll();
     return;
   }
   // Add all known edge counts, will infer the rest
@@ -1305,12 +1429,7 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
     EdgeFreqs[ParentEdge] = ParentEdgeFreq;
   }
 
-  Alloc.deallocate(EntryAddress);
-  Alloc.deallocate(LeafFrequency);
-  Alloc.deallocate(Visited);
-  Alloc.deallocate(Stack);
-  CallMap->~NodeToCallsMap();
-  Alloc.deallocate(CallMap);
+  releaseScratch();
   DEBUG(dumpEdgeFreqs());
 }
 
@@ -1356,6 +1475,11 @@ const uint8_t *writeFunctionProfile(int FD, ProfileWriterContext &Ctx,
 #endif
 
   Graph *G = new (Alloc) Graph(Alloc, F, bolt_instr_locations, Ctx);
+#if defined(ANDROID_AARCH64)
+  // Out of memory: no graph, so no profile for this function.
+  if (G == nullptr)
+    return next;
+#endif
   DEBUG(G->dump());
 
   if (!G->EdgeFreqs && !G->CallFreqs) {
@@ -1510,11 +1634,17 @@ int openProfile() {
   uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC,
                        /*mode=*/0600);
   if (static_cast<int64_t>(FD) < 0) {
+#if defined(ANDROID_AARCH64)
+    // Never terminate the host app if the profile path is somehow unwritable.
+    // Callers will skip dumping on FD < 0.
+    return -1;
+#else
     report("Error while trying to open profile file for writing: ");
     report(Buf);
     reportNumber("\nFailed with error number: 0x",
                  0 - static_cast<int64_t>(FD), 16);
     __exit(1);
+#endif // defined(ANDROID_AARCH64)
   }
   return FD;
 }
@@ -1536,6 +1666,15 @@ int openProfile() {
 /// Where 0xdeadbeef is this function address and PROCESSNAME your binary file
 /// name.
 extern "C" void __bolt_instr_clear_counters() {
+  // Nothing to clear if there are no counters or setup never completed
+  // (GlobalWriteProfileMutex is only initialized once setup succeeds),
+  // or if profiling has been disabled due to prior runtime error.
+  if (__bolt_num_counters == 0 || GlobalAlloc == nullptr)
+    return;
+#if defined(ANDROID_AARCH64)
+  if (__atomic_load_n(&__bolt_runtime_error, __ATOMIC_RELAXED))
+    return;
+#endif
   while (!GlobalWriteProfileMutex->acquire()) {
   }
 
@@ -1569,9 +1708,13 @@ extern "C" void __bolt_instr_clear_counters() {
 extern "C" int ALIGN_ARG_POINTER __bolt_instr_data_dump(
     int FD, const char *LibPath = nullptr, const uint8_t *LibContents = nullptr,
     uint64_t LibSize = 0) {
+  // Nothing to dump if this binary has no instrumented locations or setup never
+  // completed (GlobalAlloc is only set once setup succeeds).
+  if (__bolt_num_counters == 0 || GlobalAlloc == nullptr)
+    return 1;
 #if defined(ANDROID_AARCH64)
-  // A prior dump already failed. No recovery is attempted so don't retry.
-  if (__bolt_instr_dump_failed)
+  // A prior failure disabled profiling; don't retry.
+  if (__atomic_load_n(&__bolt_runtime_error, __ATOMIC_RELAXED))
     return 1;
 #endif
 
@@ -1603,6 +1746,27 @@ extern "C" int ALIGN_ARG_POINTER __bolt_instr_data_dump(
   ProfileWriterContext Ctx = readDescriptions(LibContents, LibSize);
   Ctx.CallFlowTable = new (HashAlloc, 0) CallFlowHashTable(HashAlloc);
 
+  auto cleanup = [&] {
+    if (Ctx.FileDesc != -1) {
+      __munmap((void *)Ctx.MMapPtr, Ctx.MMapSize);
+      __close(Ctx.FileDesc);
+    }
+    HashAlloc.destroy();
+#if defined(ANDROID_AARCH64)
+    __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);
+#endif
+    GlobalWriteProfileMutex->release();
+  };
+
+#if defined(ANDROID_AARCH64)
+  if (Ctx.CallFlowTable == nullptr) {
+    // Out of memory before anything was written. Undo what readDescriptions()
+    // set up and report failure instead of dereferencing null.
+    cleanup();
+    return 1;
+  }
+#endif
+
   DEBUG(printStats(Ctx));
 
   BumpPtrAllocator Alloc;
@@ -1620,15 +1784,7 @@ extern "C" int ALIGN_ARG_POINTER __bolt_instr_data_dump(
   Ctx.CallFlowTable->forEachElement(visitCallFlowEntry, FD, &Ctx);
 
   __fsync(FD);
-  if (Ctx.FileDesc != -1) {
-    __munmap((void *)Ctx.MMapPtr, Ctx.MMapSize);
-    __close(Ctx.FileDesc);
-  }
-  HashAlloc.destroy();
-#if defined(ANDROID_AARCH64)
-  __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);
-#endif
-  GlobalWriteProfileMutex->release();
+  cleanup();
   DEBUG(report("Finished writing profile.\n"));
   return 0;
 }
@@ -1639,6 +1795,8 @@ void watchProcess() {
   timespec ts, rem;
   uint64_t Elapsed = 0ull;
   int FD = openProfile();
+  if (static_cast<int64_t>(FD) < 0)
+    __exit(0); // forked watcher child: nothing to write to, so exit the child
   uint64_t ppid;
   if (__bolt_instr_wait_forks) {
     // Store parent pgid
@@ -1687,6 +1845,12 @@ extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
 extern "C" void ALIGN_ARG_POINTER __bolt_instr_setup() {
+  // A binary could have zero instrumented locations. There are no counters to
+  // map and the counter/indirect-call handlers will never fire, so there is
+  // nothing to set up. Bail out cleanly.
+  if (__bolt_num_counters == 0)
+    return;
+
   TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
@@ -1704,12 +1868,26 @@ extern "C" void ALIGN_ARG_POINTER __bolt_instr_setup() {
   void *Ret =
       __mmap(CountersStart, CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
+#if defined(ANDROID_AARCH64)
+  if (Ret == MAP_FAILED) {
+    boltHandleFatalAndRecover();
+    return;
+  }
+#else
   assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
+#endif
 
   GlobalMetadataStorage = __mmap(0, 4096, PROT_READ | PROT_WRITE,
                                  MapPrivateOrShared | MAP_ANONYMOUS, -1, 0);
+#if defined(ANDROID_AARCH64)
+  if (GlobalMetadataStorage == MAP_FAILED) {
+    boltHandleFatalAndRecover();
+    return;
+  }
+#else
   assert(GlobalMetadataStorage != MAP_FAILED,
          "__bolt_instr_setup: failed to mmap page for metadata!");
+#endif
 
   GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
   // The max memory size can be set by -instrumentation-max-size, the default
@@ -1717,9 +1895,18 @@ extern "C" void ALIGN_ARG_POINTER __bolt_instr_setup() {
   GlobalAlloc->setMaxSize(__bolt_instr_max_size);
   GlobalAlloc->setShared(Shared);
   GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
-  if (__bolt_instr_num_ind_calls > 0)
+#if defined(ANDROID_AARCH64)
+  if (GlobalWriteProfileMutex == nullptr)
+    return;
+#endif
+  if (__bolt_instr_num_ind_calls > 0) {
     GlobalIndCallCounters =
         new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
+#if defined(ANDROID_AARCH64)
+    if (GlobalIndCallCounters == nullptr)
+      return;
+#endif
+  }
 
   // Set these up after initializing indirect call counters. Otherwise,
   // background threads spawned through global constructors might try to access
@@ -1740,6 +1927,10 @@ extern "C" void ALIGN_ARG_POINTER __bolt_instr_setup() {
 
 extern "C" ALIGN_ARG_POINTER void instrumentIndirectCall(uint64_t Target,
                                                          uint64_t IndCallID) {
+#if defined(ANDROID_AARCH64)
+  if (__atomic_load_n(&__bolt_runtime_error, __ATOMIC_RELAXED))
+    return;
+#endif
   GlobalIndCallCounters[IndCallID].incrementVal(Target, *GlobalAlloc);
 }
 
@@ -1875,8 +2066,10 @@ extern "C" void __bolt_instr_fini() {
 #endif
   if (__bolt_instr_sleep_time == 0) {
     int FD = openProfile();
-    __bolt_instr_data_dump(FD);
-    __close(FD);
+    if (static_cast<int64_t>(FD) >= 0) {
+      __bolt_instr_data_dump(FD);
+      __close(FD);
+    }
   }
   DEBUG(report("Finished.\n"));
 }

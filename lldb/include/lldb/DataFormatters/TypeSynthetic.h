@@ -53,7 +53,7 @@ public:
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   /// This function is assumed to always succeed and if it fails, the front-end
@@ -121,7 +121,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   lldb::ChildCacheState Update() override {
@@ -317,25 +317,15 @@ public:
       AddExpressionPath(path);
   }
 
-  void AddExpressionPath(const char *path) {
-    AddExpressionPath(std::string(path));
-  }
-
   void Clear() { m_expression_paths.clear(); }
 
   size_t GetCount() const { return m_expression_paths.size(); }
 
-  const char *GetExpressionPathAtIndex(size_t i) const {
-    return m_expression_paths[i].c_str();
-  }
+  llvm::StringRef GetExpressionPathAtIndex(size_t i) const;
 
-  bool SetExpressionPathAtIndex(size_t i, const char *path) {
-    return SetExpressionPathAtIndex(i, std::string(path));
-  }
+  void AddExpressionPath(llvm::StringRef path);
 
-  void AddExpressionPath(const std::string &path);
-
-  bool SetExpressionPathAtIndex(size_t i, const std::string &path);
+  bool SetExpressionPathAtIndex(size_t i, llvm::StringRef path);
 
   bool IsScripted() override { return false; }
 
@@ -507,6 +497,8 @@ private:
 class BytecodeSyntheticChildren : public SyntheticChildren {
 public:
   struct SyntheticBytecodeImplementation {
+    /// The version of this record. Specs are found in formatterbytecode.md.
+    uint32_t version = 1;
     std::unique_ptr<llvm::MemoryBuffer> init;
     std::unique_ptr<llvm::MemoryBuffer> update;
     std::unique_ptr<llvm::MemoryBuffer> num_children;

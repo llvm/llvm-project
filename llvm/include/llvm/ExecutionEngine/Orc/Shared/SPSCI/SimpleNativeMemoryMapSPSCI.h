@@ -23,6 +23,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 
 #include <cstdint>
@@ -32,20 +33,21 @@ namespace llvm::orc::rt::sps_ci {
 /// The executor-side memory-manager instance. This is a data symbol (the
 /// allocator object) -- passed as the first argument to each call below -- not
 /// a wrapper to call.
-inline constexpr char SimpleNativeMemoryMapInstanceName[] =
-    "orc_rt_ci_SimpleNativeMemoryMap_Instance";
+inline constexpr SymbolNameSpec SimpleNativeMemoryMapInstanceName =
+    SymbolNameSpec::c("orc_rt_ci_SimpleNativeMemoryMap_Instance");
 
 /// Reserve an address range of the given size; returns its base.
 struct MemMgrReserve {
-  static constexpr char Name[] = "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve");
   using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
       shared::SPSExecutorAddr, uint64_t);
 };
 
 /// Apply a finalize request; returns a key for the initialized allocation.
 struct MemMgrInitialize {
-  static constexpr char Name[] =
-      "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_initialize");
   using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
       shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
 };
@@ -53,16 +55,16 @@ struct MemMgrInitialize {
 /// Deinitialize the allocations with the given base addresses (running their
 /// deallocation actions) without releasing their memory.
 struct MemMgrDeinitialize {
-  static constexpr char Name[] =
-      "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple";
+  static constexpr SymbolNameSpec Name = SymbolNameSpec::c(
+      "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple");
   using SPSSig = shared::SPSError(shared::SPSExecutorAddr,
                                   shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 /// Release the allocations with the given base addresses.
 struct MemMgrRelease {
-  static constexpr char Name[] =
-      "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple");
   using SPSSig = shared::SPSError(shared::SPSExecutorAddr,
                                   shared::SPSSequence<shared::SPSExecutorAddr>);
 };

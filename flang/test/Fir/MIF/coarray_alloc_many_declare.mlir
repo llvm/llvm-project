@@ -9,7 +9,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "P"} {
   %1 = fir.alloca !fir.array<1xi64>
   %2 = fir.dummy_scope : !fir.dscope
   %3 = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
-  %4:2 = hlfir.declare %3 {fortran_attrs = #fir.var_attrs<allocatable, internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
+  %4:2 = hlfir.declare %3 uniq_name("_QFEa") fortran_attrs<allocatable, internal_assoc> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
   %5 = fir.absent !fir.box<none>
   %c1_i64 = arith.constant 1 : i64
   %c0 = arith.constant 0 : index
@@ -17,14 +17,14 @@ func.func @_QQmain() attributes {fir.bindc_name = "P"} {
   fir.store %c1_i64 to %6 : !fir.ref<i64>
   %7 = fir.embox %1 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   %8 = fir.embox %0 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-  mif.alloc_coarray %4#0 lcobounds %7 ucobounds %8 errmsg %5 {uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
+  mif.alloc_coarray %4#0 lcobounds %7 ucobounds %8 errmsg %5 uniq_name("_QFEa") : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
   fir.call @_QFPinner() fastmath<contract> : () -> ()
   return
 }
 func.func private @_QFPinner() attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
-  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
   %c1_i32 = arith.constant 1 : i32
   hlfir.assign %c1_i32 to %2#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
   return
@@ -43,7 +43,7 @@ fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1> {
 //CHECK-NEXT:  %[[VAL_4:.*]] = fir.alloca !fir.array<1xi64>
 //CHECK-NEXT:  %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
 //CHECK-NEXT:  %[[VAL_6:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
-//CHECK-NEXT:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {fortran_attrs = #fir.var_attrs<allocatable, internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
+//CHECK-NEXT:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFEa") fortran_attrs<allocatable, internal_assoc> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
 //CHECK-NEXT:  %[[VAL_8:.*]] = fir.absent !fir.box<none>
 //CHECK-NEXT:  %c1_i64 = arith.constant 1 : i64
 //CHECK-NEXT:  %c0 = arith.constant 0 : index
@@ -73,7 +73,7 @@ fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1> {
 //CHECK-LABEL: func.func private @_QFPinner() attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>}
 //CHECK:       %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 //CHECK-NEXT:  %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
-//CHECK-NEXT:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
+//CHECK-NEXT:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
 //CHECK-NEXT:  %c1_i32 = arith.constant 1 : i32
 //CHECK-NEXT:  hlfir.assign %c1_i32 to %[[VAL_2]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
 

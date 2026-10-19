@@ -17,6 +17,7 @@
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/move.h>
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
 #include <__config>
@@ -49,8 +50,10 @@
 #include <__pstl/cpu_algos/search.h>
 #include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
+#include <__pstl/cpu_algos/swap_ranges.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
+#include <__pstl/cpu_algos/uninitialized_algorithms.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -411,6 +414,10 @@ struct __search_n<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_search_n<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
+struct __swap_ranges<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_swap_ranges<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_stable_sort<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
@@ -438,6 +445,14 @@ struct __any_of<__libdispatch_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_copy<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_uninitialized_copy<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_move<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_uninitialized_move<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

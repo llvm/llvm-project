@@ -52,6 +52,11 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &Hexagon::IntRegsRegClass;
+  }
+
   bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
   bool hasQFPInstrs(const MachineFunction &MF) const;
 
@@ -217,8 +222,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
@@ -234,6 +238,7 @@ public:
 
   /// Return true for post-incremented instructions.
   bool isPostIncrement(const MachineInstr &MI) const override;
+  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.
@@ -418,8 +423,7 @@ public:
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset,
-                     const TargetRegisterInfo *TRI, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,
@@ -433,7 +437,6 @@ public:
   bool doesNotReturn(const MachineInstr &CallMI) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
   bool hasNonExtEquivalent(const MachineInstr &MI) const;
-  bool hasPseudoInstrPair(const MachineInstr &MI) const;
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr &MI) const;
   bool mayBeNewStore(const MachineInstr &MI) const;
@@ -464,9 +467,8 @@ public:
   int getDotNewPredOp(const MachineInstr &MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
   int getDotOldOp(const MachineInstr &MI) const;
-  HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
-                                                         const;
-  short getEquivalentHWInstr(const MachineInstr &MI) const;
+  HexagonII::SubInstructionGroup
+  getDuplexCandidateGroup(const MachineInstr &MI) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
@@ -477,7 +479,6 @@ public:
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
                   unsigned &PredRegPos, RegState &PredRegFlags) const;
-  short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
   uint64_t getType(const MachineInstr &MI) const;
