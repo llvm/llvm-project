@@ -276,6 +276,18 @@ void transform::ApplyEraseUnusedOperandsAndResultsPatternsOp::populatePatterns(
   linalg::populateEraseUnusedOperandsAndResultsPatterns(patterns);
 }
 
+void transform::ApplyFoldReshapeOpsByExpansionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlFusionFn controlFn =
+      [foldSingleUseOnly = getFoldSingleUseOnly()](OpOperand *fusedOperand) {
+        if (!foldSingleUseOnly)
+          return true;
+        Operation *producer = fusedOperand->get().getDefiningOp();
+        return producer && producer->hasOneUse();
+      };
+  linalg::populateFoldReshapeOpsByExpansionPatterns(patterns, controlFn);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
