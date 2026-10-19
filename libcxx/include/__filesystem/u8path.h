@@ -13,7 +13,7 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__filesystem/path.h>
-#include <__locale>
+#include <__locale_dir/utf8_conversions.h>
 #include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-#  if !defined(_LIBCPP_WIN32API) || _LIBCPP_HAS_LOCALIZATION
+#  if !defined(_WIN32) || _LIBCPP_HAS_LOCALIZATION
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(_InputIt __f, _InputIt __l) {
   static_assert(
@@ -34,7 +34,7 @@ template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0
           is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
       "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
       " or 'char8_t'");
-#    if defined(_LIBCPP_WIN32API)
+#    if defined(_WIN32)
   string __tmp(__f, __l);
   using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
   std::wstring __w;
@@ -43,11 +43,11 @@ template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0
   return path(__w);
 #    else
   return path(__f, __l);
-#    endif // defined(_LIBCPP_WIN32API)
+#    endif // defined(_WIN32)
 }
-#  endif // !defined(_LIBCPP_WIN32API) || _LIBCPP_HAS_LOCALIZATION
+#  endif // !defined(_WIN32) || _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(_LIBCPP_WIN32API) && _LIBCPP_HAS_LOCALIZATION
+#  if defined(_WIN32) && _LIBCPP_HAS_LOCALIZATION
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(_InputIt __f, _NullSentinel) {
   static_assert(
@@ -67,7 +67,7 @@ template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0
   _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
   return path(__w);
 }
-#  endif // defined(_LIBCPP_WIN32API) && _LIBCPP_HAS_LOCALIZATION
+#  endif // defined(_WIN32) && _LIBCPP_HAS_LOCALIZATION
 
 template <class _Source, __enable_if_t<__is_pathable<_Source>::value, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(const _Source& __s) {
@@ -78,7 +78,7 @@ template <class _Source, __enable_if_t<__is_pathable<_Source>::value, int> = 0>
           is_same<typename __is_pathable<_Source>::__char_type, char>::value,
       "u8path(Source const&) requires Source have a character type of type "
       "'char' or 'char8_t'");
-#  if defined(_LIBCPP_WIN32API)
+#  if defined(_WIN32)
   using _Traits = __is_pathable<_Source>;
   return u8path(std::__unwrap_iter(_Traits::__range_begin(__s)), std::__unwrap_iter(_Traits::__range_end(__s)));
 #  else

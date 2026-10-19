@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
-# RUN:     -start-before=phi-node-elimination -stop-after=virtregrewriter \
+# RUN:     -start-before=phi-node-elimination -stop-after=virt-reg-rewriter \
 # RUN:    -mtriple x86_64-unknown-unknown \
 # RUN:  | FileCheck %s
 #

@@ -14,6 +14,7 @@
 #define LLVM_OBJECT_ELFOBJECTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -45,9 +45,7 @@ template <typename T> class SmallVectorImpl;
 
 namespace object {
 
-constexpr int NumElfSymbolTypes = 16;
-LLVM_ABI extern const llvm::EnumEntry<unsigned>
-    ElfSymbolTypes[NumElfSymbolTypes];
+LLVM_ABI EnumStrings<uint8_t, 2> getElfSymbolTypes();
 
 class elf_symbol_iterator;
 
@@ -109,6 +107,8 @@ public:
   virtual uint16_t getEMachine() const = 0;
 
   virtual uint8_t getEIdentABIVersion() const = 0;
+
+  virtual uint8_t getEIdentOSABI() const = 0;
 
   std::vector<ELFPltEntry> getPltEntries(const MCSubtargetInfo &STI) const;
 
@@ -195,13 +195,7 @@ public:
   }
 
   StringRef getELFTypeName() const {
-    uint8_t Type = getELFType();
-    for (const auto &EE : ElfSymbolTypes) {
-      if (EE.Value == Type) {
-        return EE.AltName;
-      }
-    }
-    return "";
+    return getElfSymbolTypes().toString(getELFType(), 1);
   }
 };
 
@@ -269,6 +263,7 @@ template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
   uint16_t getEType() const override;
   uint8_t getEIdentABIVersion() const override;
+  uint8_t getEIdentOSABI() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -688,6 +683,10 @@ template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
 
 template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentABIVersion() const {
   return EF.getHeader().e_ident[ELF::EI_ABIVERSION];
+}
+
+template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentOSABI() const {
+  return EF.getHeader().e_ident[ELF::EI_OSABI];
 }
 
 template <class ELFT>
@@ -1425,7 +1424,7 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
       return Triple::r600;
     if (MACH >= ELF::EF_AMDGPU_MACH_AMDGCN_FIRST &&
         MACH <= ELF::EF_AMDGPU_MACH_AMDGCN_LAST)
-      return Triple::amdgcn;
+      return Triple::amdgpu;
 
     return Triple::UnknownArch;
   }

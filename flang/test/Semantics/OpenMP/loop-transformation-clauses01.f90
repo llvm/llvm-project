@@ -10,7 +10,7 @@ subroutine loop_transformation_construct1
   integer :: a
   integer :: v(i)
 
-  !ERROR: At most one LOOPRANGE clause can appear on the FUSE directive
+  !ERROR: At most one LOOPRANGE clause can appear on FUSE directive
   !$omp fuse looprange(1,2) looprange(1,2)
   do x = 1, i
     v(x) = x * 2

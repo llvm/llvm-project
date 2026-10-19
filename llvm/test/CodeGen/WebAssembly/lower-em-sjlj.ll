@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT: phi i32 [ 0, %entry.split ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
 ; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint ptr %buf to [[PTR]]
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_[[PTR]]_i32(ptr @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void_[[PTR]]_i32(ptr @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: %[[CMP0:.*]] = icmp ne [[PTR]] %__THREW__.val, 0
@@ -189,7 +189,7 @@ define ptr @allocsize() {
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %call = call i32 @setjmp(ptr %buf) #0
-; CHECK: call cc{{.*}} ptr @__invoke_ptr_i32_ptr([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
+; CHECK: call wasm_emscripten_invokecc ptr @__invoke_ptr_i32_ptr([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
   %alloc = call ptr @allocator(i32 20, ptr %buf) #3
   ret ptr %alloc
 }
@@ -302,9 +302,11 @@ attributes #3 = { allocsize(0) }
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename: "lower-em-sjlj.c", directory: "test")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
-!3 = distinct !DISubprogram(name: "setjmp_debug_info", unit:!2, file: !1, line: 1)
+!3 = distinct !DISubprogram(name: "setjmp_debug_info", unit:!2, file: !1, line: 1, type: !10)
 !4 = !DILocation(line:2, scope: !3)
 !5 = !DILocation(line:3, scope: !3)
 !6 = !DILocation(line:4, scope: !3)
 !7 = !DILocation(line:5, scope: !3)
 !8 = !DILocation(line:6, scope: !3)
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)

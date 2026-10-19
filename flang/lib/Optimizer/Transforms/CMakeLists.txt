@@ -5,28 +5,31 @@ add_flang_library(FIRTransforms
   AffineDemotion.cpp
   AffinePromotion.cpp
   AlgebraicSimplification.cpp
+  AllocationPlacement.cpp
   AnnotateConstant.cpp
-  ArrayValueCopy.cpp
-  ArrayValueCopy.cpp
   AssumedRankOpConversion.cpp
   CUDA/CUFAddConstructor.cpp
   CUDA/CUFAllocationConversion.cpp
   CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFAllocDelay.cpp
   CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
-  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFDuplicateDeviceFunc.cpp
   CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
   CUDA/CUFOpConversion.cpp
   CUDA/CUFOpConversionLate.cpp
   CUDA/CUFPredefinedVarToGPU.cpp
+  CUDA/CUFSharedTypeInfo.cpp
   CharacterConversion.cpp
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   ConvertComplexPow.cpp
+  CudaHeapAllocPromotion.cpp
   DebugTypeGenerator.cpp
+  EmitMIFGlobalCtors.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
   FIRToMemRef.cpp
@@ -43,11 +46,13 @@ add_flang_library(FIRTransforms
   GenRuntimeCallsForTest.cpp
   LoopInvariantCodeMotion.cpp
   LoopVersioning.cpp
+  SelectOpsConversion.cpp
   MIFOpConversion.cpp
   MemRefDataFlowOpt.cpp
   MemoryAllocation.cpp
   MemoryUtils.cpp
   OptimizeArrayRepacking.cpp
+  O0CanonicalizerPass.cpp
   PolymorphicOpConversion.cpp
   SetRuntimeCallAttributes.cpp
   SimplifyFIROperations.cpp
@@ -82,13 +87,15 @@ add_flang_library(FIRTransforms
   MLIR_LIBS
   MLIRAffineUtils
   MLIRAnalysis
+  MLIRControlFlowDialect
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMathTransforms
+  MLIRNVVMDialect
   MLIROpenACCDialect
-  MLIROpenACCToLLVMIRTranslation
+  MLIROpenACCUtils
   MLIROpenMPDialect
   MLIRTransformUtils
 )

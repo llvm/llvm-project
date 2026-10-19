@@ -112,6 +112,7 @@ static_library("clangd") {
     "IncludeFixer.cpp",
     "InlayHints.cpp",
     "JSONTransport.cpp",
+    "LSPBinder.cpp",
     "ModulesBuilder.cpp",
     "ParsedAST.cpp",
     "PathMapping.cpp",

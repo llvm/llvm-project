@@ -213,8 +213,9 @@ TSAN_INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
     return REAL(OSSpinLockLock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(OSSpinLockLock, lock);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(OSSpinLockLock)(lock);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 TSAN_INTERCEPTOR(bool, OSSpinLockTry, volatile OSSpinLock *lock) {
@@ -225,7 +226,7 @@ TSAN_INTERCEPTOR(bool, OSSpinLockTry, volatile OSSpinLock *lock) {
   SCOPED_TSAN_INTERCEPTOR(OSSpinLockTry, lock);
   bool result = REAL(OSSpinLockTry)(lock);
   if (result)
-    Acquire(thr, pc, (uptr)lock);
+    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
   return result;
 }
 
@@ -235,7 +236,7 @@ TSAN_INTERCEPTOR(void, OSSpinLockUnlock, volatile OSSpinLock *lock) {
     return REAL(OSSpinLockUnlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(OSSpinLockUnlock, lock);
-  Release(thr, pc, (uptr)lock);
+  MutexUnlock(thr, pc, (uptr)lock);
   REAL(OSSpinLockUnlock)(lock);
 }
 #  pragma clang diagnostic pop  // OSSpinLock* deprecation
@@ -246,8 +247,9 @@ TSAN_INTERCEPTOR(void, os_lock_lock, void *lock) {
     return REAL(os_lock_lock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_lock_lock, lock);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_lock_lock)(lock);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 TSAN_INTERCEPTOR(bool, os_lock_trylock, void *lock) {
@@ -258,7 +260,7 @@ TSAN_INTERCEPTOR(bool, os_lock_trylock, void *lock) {
   SCOPED_TSAN_INTERCEPTOR(os_lock_trylock, lock);
   bool result = REAL(os_lock_trylock)(lock);
   if (result)
-    Acquire(thr, pc, (uptr)lock);
+    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
   return result;
 }
 
@@ -268,7 +270,7 @@ TSAN_INTERCEPTOR(void, os_lock_unlock, void *lock) {
     return REAL(os_lock_unlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_lock_unlock, lock);
-  Release(thr, pc, (uptr)lock);
+  MutexUnlock(thr, pc, (uptr)lock);
   REAL(os_lock_unlock)(lock);
 }
 
@@ -277,8 +279,9 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
     return REAL(os_unfair_lock_lock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock, lock);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_lock)(lock);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 // os_unfair_lock_lock_with_flags was introduced in macOS 15
@@ -294,8 +297,9 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_flags, os_unfair_lock_t lock,
     return REAL(os_unfair_lock_lock_with_flags)(lock, flags);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_flags, lock, flags);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_lock_with_flags)(lock, flags);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 #    pragma clang diagnostic pop
 #  endif
@@ -306,8 +310,9 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_options, os_unfair_lock_t lock,
     return REAL(os_unfair_lock_lock_with_options)(lock, options);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_options, lock, options);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_lock_with_options)(lock, options);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
@@ -317,7 +322,7 @@ TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_trylock, lock);
   bool result = REAL(os_unfair_lock_trylock)(lock);
   if (result)
-    Acquire(thr, pc, (uptr)lock);
+    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
   return result;
 }
 
@@ -326,7 +331,7 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_unlock, os_unfair_lock_t lock) {
     return REAL(os_unfair_lock_unlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_unlock, lock);
-  Release(thr, pc, (uptr)lock);
+  MutexUnlock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_unlock)(lock);
 }
 

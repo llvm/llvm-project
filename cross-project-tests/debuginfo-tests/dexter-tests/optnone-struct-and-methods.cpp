@@ -1,9 +1,9 @@
 // RUN: %clang++ -std=gnu++11 -O2 -g %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -v -- %s
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -v -- %s | FileCheck %s
 // RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -- %s
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 
 // REQUIRES: lldb
 // Currently getting intermittent failures on darwin.
@@ -67,31 +67,19 @@ public:
   __attribute__((optnone))
   A() {
     __builtin_memset(this, 0xFF, sizeof(*this));
-  } //DexLabel('break_0')
-  // DexExpectWatchValue('a', '-1', on_line=ref('break_0'))
-  //// Check b is NaN by comparing it to itself.
-  // DexExpectWatchValue('this->b == this->b', 'false', on_line=ref('break_0'))
-  // DexExpectWatchValue('_data.a.raw_ptr == -1', 'true', on_line=ref('break_0'))
-  // DexExpectWatchValue('_data.a.float_ptr == -1', 'true', on_line=ref('break_0'))
-  // DexExpectWatchValue('_data.a.float_ptr == -1', 'true', on_line=ref('break_0'))
-  // DexExpectWatchValue('a_global_ptr[0]', 0xcafebabe, on_line=ref('break_0'))
-  // DexExpectWatchValue('a_global_ptr[1]', 0xfeedbeef, on_line=ref('break_0'))
+  } // !dex_label break_0
 
   __attribute__((optnone))
   ~A() {
     *getOtherData()->a.long_ptr = 0xADDF00DL;
-  } //DexLabel('break_1')
-  // DexExpectWatchValue('_data.a.raw_ptr == a_global_ptr', 'true', on_line=ref('break_1'))
-  // DexExpectWatchValue('a_global_ptr[0]', 0xaddf00d, on_line=ref('break_1'))
+  } // !dex_label break_1
 
   __attribute__((optnone))
   long getData() {
     setSomeData1(B_VALUE, A_VALUE);
     setOtherData();
-    return getOtherData()->a.long_ptr[1]; //DexLabel('break_2')
+    return getOtherData()->a.long_ptr[1]; // !dex_label break_2
   }
-  // DexExpectWatchValue('_data.b.other_b', 'B_VALUE', on_line=ref('break_2'))
-  // DexExpectWatchValue('_data.b.other_other_b', 'A_VALUE', on_line=ref('break_2'))
 };
 
 } // anonymous namespace
@@ -104,3 +92,26 @@ int main() {
   }
   return result;
 }
+
+// CHECK-DAG: seen_values: 11
+// CHECK-DAG: correct_step_coverage: 100.0%
+
+/*
+---
+!where {lines: !label break_0}:
+  !value a: -1
+  # Check b is NaN by comparing it to itself.
+  !value 'this->b == this->b': 'false'
+  !value '_data.a.raw_ptr == -1': 'true'
+  !value '_data.a.float_ptr == -1': 'true'
+  !value '_data.a.float_ptr == -1': 'true'
+  !value 'a_global_ptr[0]': 0xcafebabe
+  !value 'a_global_ptr[1]': 0xfeedbeef
+!where {lines: !label break_1}:
+  !value '_data.a.raw_ptr == a_global_ptr': 'true'
+  !value 'a_global_ptr[0]': 0xaddf00d
+!where {lines: !label break_2}:
+  !value '_data.b.other_b': 'B_VALUE'
+  !value '_data.b.other_other_b': 'A_VALUE'
+...
+*/

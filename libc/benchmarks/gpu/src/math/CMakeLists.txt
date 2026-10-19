@@ -4,7 +4,7 @@ set(math_benchmark_flags "")
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   if(CUDAToolkit_FOUND)
     set(libdevice_path ${CUDAToolkit_BIN_DIR}/../nvvm/libdevice/libdevice.10.bc)
-    if (EXISTS ${libdevice_path})
+    if(EXISTS ${libdevice_path})
       list(APPEND math_benchmark_flags
         "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${libdevice_path}")
       # Compile definition needed so the benchmark knows to register
@@ -19,7 +19,7 @@ if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
   if(AMDDeviceLibs_FOUND)
     get_target_property(ocml_path ocml IMPORTED_LOCATION)
     list(APPEND math_benchmark_flags
-        "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}")
+      "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}")
     list(APPEND math_benchmark_flags "-DAMDGPU_MATH_FOUND=1")
   endif()
 endif()

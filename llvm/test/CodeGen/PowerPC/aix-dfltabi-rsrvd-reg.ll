@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+altivec \
 ; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=DFLABI
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+altivec -vec-extabi\
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+altivec -target-abi=vec-extabi\
 ; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=EXTABI
 

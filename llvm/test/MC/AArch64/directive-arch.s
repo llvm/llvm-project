@@ -38,3 +38,11 @@
 	.arch armv9-a+f8f32mm
 	fmmla v0.4s, v1.16b, v2.16b
 # CHECK:        fmmla v0.4s, v1.16b, v2.16b
+
+	.arch armv9-a+cflt
+	cfltz #1, w0
+# CHECK:        cflteq #1, w0, #0
+
+	.arch armv9-a+ls64+lsc64b
+	lda64b x0, [x13]
+# CHECK:        lda64b x0, [x13]

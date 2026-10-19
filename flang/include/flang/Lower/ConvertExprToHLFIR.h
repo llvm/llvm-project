@@ -21,7 +21,6 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 
 namespace mlir {
 class Location;
@@ -62,7 +61,7 @@ fir::ExtendedValue convertToBox(mlir::Location loc,
                                 Fortran::lower::AbstractConverter &,
                                 hlfir::Entity entity,
                                 Fortran::lower::StatementContext &,
-                                mlir::Type fortranType);
+                                mlir::Type fortranType, unsigned corank = 0);
 
 /// Lower an evaluate::Expr to fir::ExtendedValue address.
 /// The address may be a raw fir.ref<T>, or a fir.box<T>/fir.class<T>, or a
@@ -145,6 +144,19 @@ hlfir::Entity genVectorSubscriptedDesignatorFirstElementAddress(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx);
+
+/// Address the ordinal component of a scalar or array variable of an F2023
+/// enumeration type.
+hlfir::Entity genEnumerationOrdinalDesignator(mlir::Location loc,
+                                              fir::FirOpBuilder &builder,
+                                              hlfir::Entity enumVar);
+
+/// Create a scalar temporary of enumeration type recTy holding ordinal.
+hlfir::EntityWithAttributes genEnumerationTemp(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               fir::RecordType recTy,
+                                               mlir::Value ordinal,
+                                               llvm::StringRef name);
 
 } // namespace Fortran::lower
 

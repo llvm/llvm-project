@@ -277,10 +277,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   Loop *NewOuter = LI->AllocateLoop();
 
   // Change the parent loop to use the outer loop as its child now.
-  if (Loop *Parent = L->getParentLoop())
-    Parent->replaceChildLoopWith(L, NewOuter);
-  else
-    LI->changeTopLevelLoop(L, NewOuter);
+  LI->replaceLoop(L, NewOuter);
 
   // L is now a subloop of our outer loop.
   NewOuter->addChildLoop(L);
@@ -490,7 +487,7 @@ ReprocessLoop:
     if (BB == L->getHeader())
       continue;
 
-    SmallPtrSet<BasicBlock*, 4> BadPreds;
+    SmallSetVector<BasicBlock *, 4> BadPreds;
     for (BasicBlock *P : predecessors(BB))
       if (!L->contains(P))
         BadPreds.insert(P);

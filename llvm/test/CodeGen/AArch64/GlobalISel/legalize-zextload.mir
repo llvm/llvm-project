@@ -9,9 +9,9 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i32) = G_ZEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8))
+    %1:_(i32) = G_ZEXTLOAD %0 :: (load (i8))
     $w0 = COPY %1
 ...

@@ -438,8 +438,8 @@ if.end:
 !0 = !{ !"an example type tree" }
 !1 = !{ !"int", !0 }
 !2 = !{ !"float", !0 }
-!3 = !{ !"const float", !2, i64 0 }
-!4 = !{ !"special float", !2, i64 1 }
+!3 = !{!15, !15, i64 0, i64 0}
+!4 = !{!16, !16, i64 0, i64 1}
 
 
 ; The call should be commoned.
@@ -510,7 +510,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !{i32 2, !"Dwarf Version", i32 4}
 !6 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !10)
-!8 = distinct !DISubprogram(name: "foo", unit: !7)
+!8 = distinct !DISubprogram(name: "foo", unit: !7, type: !14)
 !9 = !DILocalVariable(name: "b", line: 1, arg: 2, scope: !8)
 !10 = !DIFile(filename: "a.c", directory: "a/b")
 !11 = !DILocation(line: 1, column: 14, scope: !8)
@@ -2181,3 +2181,7 @@ declare void @dummy()
 declare void @use.ptr(ptr)
 
 !12 = !{i32 1}
+!13 = !{null}
+!14 = !DISubroutineType(types: !13)
+!15 = !{!"const float", !2}
+!16 = !{!"special float", !2}

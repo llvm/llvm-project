@@ -38,3 +38,7 @@ float3 test_sin_float3(float3 p0) { return sin(p0); }
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z15test_sin_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.sin.v4f32
 float4 test_sin_float4(float4 p0) { return sin(p0); }
+
+// CHECK-LABEL: test_sin_float5
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.sin.v5f32
+vector<float, 5> test_sin_float5(vector<float, 5> p0) { return sin(p0); }

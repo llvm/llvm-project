@@ -20,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: minnum
-; CHECK: jump fminf
+; CHECK: sfmin
 define float @minnum(float %x, float %y) #0 {
 entry:
   %call = tail call float @llvm.minnum.f32(float %x, float %y) #1
@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: maxnum
-; CHECK: jump fmaxf
+; CHECK: sfmax
 define float @maxnum(float %x, float %y) #0 {
 entry:
   %call = tail call float @llvm.maxnum.f32(float %x, float %y) #1

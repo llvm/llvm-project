@@ -29,6 +29,15 @@ using namespace mlir;
 using namespace affine;
 using namespace presburger;
 
+FailureOr<FlatAffineValueConstraints>
+FlatAffineValueConstraints::create(IntegerSet set, ValueRange operands) {
+  bool error = false;
+  FlatAffineValueConstraints cst(set, operands, &error);
+  if (error)
+    return failure();
+  return cst;
+}
+
 LogicalResult
 FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
   if (containsVar(val))
@@ -208,13 +217,18 @@ void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
   canonicalizeSetAndOperands(&set, &operands);
 
   // Create the base constraints from the integer set attached to ifOp.
-  FlatAffineValueConstraints cst(set, operands);
+  FailureOr<FlatAffineValueConstraints> cst =
+      FlatAffineValueConstraints::create(set, operands);
+  if (failed(cst)) {
+    assert(false && "semi-affine integer sets are unsupported here");
+    return;
+  }
 
   // Merge the constraints from ifOp to the current domain. We need first merge
   // and align the IDs from both constraints, and then append the constraints
   // from the ifOp into the current one.
-  mergeAndAlignVarsWithOther(0, &cst);
-  append(cst);
+  mergeAndAlignVarsWithOther(0, &*cst);
+  append(*cst);
 }
 
 LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,

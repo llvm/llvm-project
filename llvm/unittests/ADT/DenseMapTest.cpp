@@ -10,6 +10,7 @@
 #include "CountCopyAndMove.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -85,8 +86,6 @@ public:
 std::set<CtorTester *> CtorTester::Constructed;
 
 struct CtorTesterMapInfo {
-  static inline CtorTester getEmptyKey() { return CtorTester(-1); }
-  static inline CtorTester getTombstoneKey() { return CtorTester(-2); }
   static unsigned getHashValue(const CtorTester &Val) {
     return Val.getValue() * 37u;
   }
@@ -476,6 +475,23 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+using IntBucket = detail::DenseMapPair<int, int>;
+using PairBucket =
+    detail::DenseMapPair<std::pair<int, int>, std::pair<int, int>>;
+
+static_assert(std::is_trivially_copyable_v<IntBucket>);
+static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
+
+// std::pair has a user-provided copy assignment operator.
+static_assert(!std::is_trivially_copyable_v<PairBucket>);
+static_assert(densemap::detail::isRelocatableBucket<PairBucket>);
+static_assert(!densemap::detail::isRelocatableBucket<
+              detail::DenseMapPair<int, std::unique_ptr<int>>>);
+
+// A bucket converts to a std::pair, so code naming the pair type keeps working.
+static_assert(std::is_convertible_v<IntBucket, std::pair<int, int>>);
+static_assert(std::is_convertible_v<IntBucket, std::pair<const int, int>>);
+
 TEST(DenseMapCustomTest, InsertRange) {
   DenseMap<int, int> M;
 
@@ -485,6 +501,44 @@ TEST(DenseMapCustomTest, InsertRange) {
   EXPECT_EQ(M.size(), 2u);
   EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
                                                testing::Pair(1, 2)));
+
+  // A move iterator yields an rvalue from operator*, which the range insert
+  // must forward to the members for a move-only value to survive.
+  std::vector<std::pair<int, std::unique_ptr<int>>> MoveOnly;
+  MoveOnly.emplace_back(3, std::make_unique<int>(42));
+  DenseMap<int, std::unique_ptr<int>> MoveMap;
+  MoveMap.insert(std::make_move_iterator(MoveOnly.begin()),
+                 std::make_move_iterator(MoveOnly.end()));
+  auto It = MoveMap.find(3);
+  ASSERT_NE(It, MoveMap.end());
+  EXPECT_EQ(*It->second, 42);
+  EXPECT_EQ(MoveOnly[0].second, nullptr);
+
+  // A move iterator over a map yields bucket rvalues instead, which must reach
+  // insert(BucketT &&) rather than be copied.
+  DenseMap<int, std::unique_ptr<int>> MoveSrc;
+  MoveSrc.try_emplace(4, std::make_unique<int>(7));
+  MoveMap.insert(std::make_move_iterator(MoveSrc.begin()),
+                 std::make_move_iterator(MoveSrc.end()));
+  EXPECT_EQ(*MoveMap.find(4)->second, 7);
+  EXPECT_EQ(MoveSrc.find(4)->second, nullptr);
+
+  // The conversion reaches a vector's element type, and a std::map's, whose key
+  // is const.
+  DenseMap<int, int> Src({{1, 10}, {2, 20}});
+  SmallVector<std::pair<int, int>> Vec(Src.begin(), Src.end());
+  EXPECT_THAT(Vec, testing::UnorderedElementsAre(testing::Pair(1, 10),
+                                                 testing::Pair(2, 20)));
+  std::map<int, int> Sorted(Src.begin(), Src.end());
+  EXPECT_THAT(Sorted,
+              testing::ElementsAre(testing::Pair(1, 10), testing::Pair(2, 20)));
+
+  // As polly inserts a DenseMap<BasicBlock *, BasicBlock *> into a
+  // DenseMap<AssertingVH<Value>, AssertingVH<Value>>, insert from a map whose
+  // key and value types only convert to this one's.
+  DenseMap<CtorTester, CtorTester, CtorTesterMapInfo> Convertible;
+  Convertible.insert_range(DenseMap<uint32_t, uint32_t>({{1, 10}}));
+  EXPECT_EQ(CtorTester(10), Convertible.lookup(CtorTester(1)));
 }
 
 TEST(SmallDenseMapCustomTest, InsertRange) {
@@ -732,8 +786,6 @@ TEST(DenseMapCustomTest, LookupOrConstness) {
 // Key traits that allows lookup with either an unsigned or char* key;
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -789,8 +841,6 @@ TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
 }
 
 struct ContiguousDenseMapInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val; }
   static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
     return LHS == RHS;
@@ -910,13 +960,42 @@ struct B : public A {
 struct AlwaysEqType {
   bool operator==(const AlwaysEqType &RHS) const { return true; }
 };
+
+struct PointeeHashed {
+  unsigned V;
+};
+
+struct ExprKey {
+  unsigned V;
+};
+
+struct AliasedKey {
+  const unsigned *A;
+};
+
+// Shaped like clang::WeakInfo::DenseMapInfoByAliasOnly: an info that privately
+// inherits the pointer info, hiding the tag from a lookup through it.
+struct AliasedKeyInfo : private DenseMapInfo<const unsigned *> {
+  static unsigned getHashValue(const AliasedKey &K) {
+    return DenseMapInfo::getHashValue(K.A);
+  }
+  static bool isEqual(const AliasedKey &L, const AliasedKey &R) {
+    return DenseMapInfo::isEqual(L.A, R.A);
+  }
+};
+
+// Shaped like VPCSEDenseMapInfo: inherits the pointer info, hashes the pointee.
+struct ExprKeyTrait : DenseMapInfo<ExprKey *> {
+  static unsigned getHashValue(const ExprKey *P) { return P->V * 37; }
+  static bool isEqual(const ExprKey *LHS, const ExprKey *RHS) {
+    return LHS->V == RHS->V;
+  }
+};
 } // namespace
 
 namespace llvm {
 template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
-  static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
-  static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
   static unsigned getHashValue(const T &Val) { return Val.value; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return LHS.value == RHS.value;
@@ -925,11 +1004,18 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
 
 template <> struct DenseMapInfo<AlwaysEqType> {
   using T = AlwaysEqType;
-  static inline T getEmptyKey() { return {}; }
-  static inline T getTombstoneKey() { return {}; }
   static unsigned getHashValue(const T &Val) { return 0; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return false;
+  }
+};
+
+// Shaped like Attributor's InstExclusionSet: a specialization for one pointer
+// type that hashes the pointee.
+template <> struct DenseMapInfo<PointeeHashed *> {
+  static unsigned getHashValue(const PointeeHashed *P) { return P->V * 37; }
+  static bool isEqual(const PointeeHashed *LHS, const PointeeHashed *RHS) {
+    return LHS->V == RHS->V;
   }
 };
 } // namespace llvm
@@ -981,6 +1067,9 @@ TEST(DenseMapCustomTest, PairPrinting) {
 
 TEST(DenseMapCustomTest, InitSize) {
   constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  // getMemorySize() counts the bucket array plus the packed used-bit array: one
+  // uint32 word per 32 buckets (a single word covers all counts used here).
+  constexpr unsigned UsedSize = sizeof(uint32_t);
 
   {
     DenseMap<int *, int> Map;
@@ -992,59 +1081,62 @@ TEST(DenseMapCustomTest, InitSize) {
   }
   {
     DenseMap<int *, int> Map(1);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     DenseMap<int *, int> Map(2);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     DenseMap<int *, int> Map(3);
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B;
     DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B, C;
     DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
 }
 
 TEST(SmallDenseMapCustomTest, InitSize) {
   constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  // getMemorySize() counts the bucket array plus the packed used-bit array: one
+  // uint32 word per 32 buckets (a single word covers all counts used here).
+  constexpr unsigned UsedSize = sizeof(uint32_t);
   {
     SmallDenseMap<int *, int> Map;
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(0);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(1);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(2);
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     SmallDenseMap<int *, int> Map(3);
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B;
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
-    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 4U + UsedSize, Map.getMemorySize());
   }
   {
     int A, B, C;
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
-    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+    EXPECT_EQ(ElemSize * 8U + UsedSize, Map.getMemorySize());
   }
 }
 
@@ -1106,6 +1198,206 @@ TEST(DenseMapCustomTest, ValueDtor) {
     EXPECT_EQ(0u, CtorTester::getNumConstructed());
   }
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
+}
+
+TEST(DenseMapCustomTest, RemoveIf) {
+  // Use enough entries to exercise the large representation and force the
+  // same-size rehash inside remove_if to restore the probe invariant.
+  DenseMap<int, int> Map;
+  for (int I = 0; I < 100; ++I)
+    Map[I] = I * 10;
+
+  // Remove all even keys.
+  EXPECT_TRUE(Map.remove_if([](const auto &E) { return E.first % 2 == 0; }));
+  EXPECT_EQ(Map.size(), 50u);
+  for (int I = 0; I < 100; ++I) {
+    auto It = Map.find(I);
+    if (I % 2 == 0) {
+      EXPECT_EQ(It, Map.end());
+    } else {
+      ASSERT_NE(It, Map.end());
+      EXPECT_EQ(It->second, I * 10);
+    }
+  }
+
+  // A predicate that matches nothing returns false and leaves the map alone.
+  EXPECT_FALSE(Map.remove_if([](const auto &) { return false; }));
+  EXPECT_EQ(Map.size(), 50u);
+
+  // Remove everything.
+  EXPECT_TRUE(Map.remove_if([](const auto &) { return true; }));
+  EXPECT_TRUE(Map.empty());
+}
+
+TEST(DenseMapCustomTest, RemoveIfValueDtor) {
+  // remove_if must destroy the values of removed entries exactly once, and the
+  // rehash must not leak or double-destroy surviving values.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<int, CtorTester> Map;
+    for (int I = 0; I < 16; ++I)
+      Map.try_emplace(I, CtorTester(I));
+    EXPECT_EQ(16u, CtorTester::getNumConstructed());
+    EXPECT_TRUE(Map.remove_if([](const auto &E) { return E.first < 10; }));
+    EXPECT_EQ(6u, CtorTester::getNumConstructed());
+    EXPECT_EQ(Map.size(), 6u);
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+}
+
+TEST(DenseMapCustomTest, BucketComparison) {
+  IntBucket A(1, 2), B(1, 2), C(1, 3);
+  EXPECT_EQ(A, B);
+  EXPECT_NE(A, C);
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  M.try_emplace(2, 20);
+  auto It = M.find(1);
+  M.erase(M.find(2));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(DenseMapCustomTest, IteratorComparability) {
+  DenseMap<int, int>::iterator I1, I2;
+  EXPECT_EQ(I1, I2);
+
+  DenseMap<int, int> Map1, Map2;
+  Map1.try_emplace(1, 10);
+  Map2.try_emplace(2, 20);
+  EXPECT_DEATH((void)(Map1.begin() == Map2.begin()), "incomparable iterators");
+}
+
+TEST(DenseMapCustomTest, InsertInvalidatesIteratorComparison) {
+  DenseMap<int, int> Map;
+  Map.try_emplace(1, 10);
+  auto It = Map.begin();
+  Map.try_emplace(2, 20);
+  EXPECT_DEATH((void)(It == Map.end()), "incomparable iterators");
+}
+
+TEST(DenseMapCustomTest, MoveConstructInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  auto It = M.find(1);
+  DenseMap<int, int> Other = std::move(M);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  auto It = M.find(1);
+  DenseMap<int, int> Other;
+  Other = std::move(M);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+#endif
+
+// A wrong bucket size or hash puts entries where a later lookup will not probe.
+template <unsigned NumWords> struct RehashValue {
+  uint64_t V[NumWords];
+  RehashValue(unsigned X = 0) : V{X} {}
+  bool operator==(const RehashValue &O) const { return V[0] == O.V[0]; }
+};
+
+static void *rehashTestKey(unsigned I) {
+  return reinterpret_cast<void *>(static_cast<uintptr_t>(I) * 4096 + 16);
+}
+
+// Enough entries that the destination probe walk runs.
+static constexpr unsigned NumRehashKeys = 200;
+
+// Insert Key(1..NumRehashKeys), grow, and look each up again.
+template <typename ContainerT, typename KeyFn = void *(*)(unsigned)>
+static void expectSurvivesRehash(KeyFn Key = rehashTestKey) {
+  constexpr bool IsSet = std::is_same_v<typename ContainerT::key_type,
+                                        typename ContainerT::value_type>;
+  ContainerT C;
+  for (unsigned I = 1; I <= NumRehashKeys; ++I) {
+    if constexpr (IsSet)
+      C.insert(Key(I));
+    else
+      C[Key(I)] = typename ContainerT::mapped_type(I);
+  }
+  C.reserve(1024);
+  ASSERT_EQ(NumRehashKeys, C.size());
+  for (unsigned I = 1; I <= NumRehashKeys; ++I) {
+    if constexpr (IsSet)
+      EXPECT_TRUE(C.contains(Key(I)));
+    else
+      EXPECT_EQ(typename ContainerT::mapped_type(I), C.lookup(Key(I)));
+  }
+  EXPECT_FALSE(C.contains(Key(NumRehashKeys + 1)));
+}
+
+// As LazyValueInfo's DenseSet<LVIValueHandle, DenseMapInfo<Value *>> does: an
+// info for a type the key converts to, with bookkeeping before the pointer.
+struct RehashConvertibleKey {
+  uint64_t Bookkeeping;
+  void *P;
+  RehashConvertibleKey(void *P = nullptr) : Bookkeeping(~0ULL), P(P) {}
+  operator void *() const { return P; }
+};
+
+TEST(DenseMapCustomTest, LookupSurvivesRehash) {
+  expectSurvivesRehash<DenseSet<void *>>();                 // 8-byte bucket
+  expectSurvivesRehash<DenseMap<void *, unsigned>>();       // 16
+  expectSurvivesRehash<DenseMap<void *, RehashValue<2>>>(); // 24
+  expectSurvivesRehash<DenseMap<void *, RehashValue<3>>>(); // 32
+  expectSurvivesRehash<DenseMap<void *, RehashValue<4>>>(); // 40
+  expectSurvivesRehash<DenseMap<void *, RehashValue<5>>>(); // 48
+  expectSurvivesRehash<DenseMap<void *, RehashValue<7>>>(); // 64, runtime size
+  // Spilling the inline buffer rehashes it without freeing it.
+  expectSurvivesRehash<SmallDenseMap<void *, unsigned, 4>>();
+  expectSurvivesRehash<SmallDenseMap<void *, RehashValue<7>, 4>>();
+  expectSurvivesRehash<DenseSet<RehashConvertibleKey, DenseMapInfo<void *>>>();
+}
+
+// A pointer key hashed by its pointee, through a specialization or an info
+// inheriting the pointer info, keeps that hash; an info privately inheriting
+// the pointer info still compiles.
+TEST(DenseMapCustomTest, PointerKeyInfos) {
+  PointeeHashed Specialized[NumRehashKeys + 1];
+  ExprKey Inherited[NumRehashKeys + 1];
+  unsigned Aliased[NumRehashKeys + 1];
+  for (unsigned I = 0; I <= NumRehashKeys; ++I)
+    Specialized[I].V = Inherited[I].V = Aliased[I] = I + 1;
+  expectSurvivesRehash<DenseMap<PointeeHashed *, unsigned>>(
+      [&](unsigned I) { return &Specialized[I - 1]; });
+  expectSurvivesRehash<DenseMap<ExprKey *, unsigned, ExprKeyTrait>>(
+      [&](unsigned I) { return &Inherited[I - 1]; });
+  expectSurvivesRehash<DenseMap<AliasedKey, unsigned, AliasedKeyInfo>>(
+      [&](unsigned I) { return AliasedKey{&Aliased[I - 1]}; });
+}
+
+// remove_if rehashes the inline buckets in place. Five entries in eight buckets
+// leave clusters that wrap, so a survivor needs the probe chain walked.
+TEST(DenseMapCustomTest, SmallRemoveIf) {
+  for (unsigned Trial = 0; Trial != 200; ++Trial) {
+    SmallDenseMap<void *, unsigned, 8> Map;
+    const unsigned First = Trial * 5 + 1;
+    for (unsigned I = First; I != First + 5; ++I)
+      Map[rehashTestKey(I)] = I;
+    ASSERT_EQ(5u, Map.size());
+
+    EXPECT_TRUE(Map.remove_if([](const auto &E) { return E.second % 2 == 0; }));
+    for (unsigned I = First; I != First + 5; ++I) {
+      if (I % 2)
+        EXPECT_EQ(I, Map.lookup(rehashTestKey(I)));
+      else
+        EXPECT_FALSE(Map.contains(rehashTestKey(I)));
+    }
+
+    // Refilling past the inline buckets spills the compacted table.
+    for (unsigned I = 1; I <= NumRehashKeys; ++I)
+      Map[rehashTestKey(I)] = I;
+    for (unsigned I = 1; I <= NumRehashKeys; ++I)
+      EXPECT_EQ(I, Map.lookup(rehashTestKey(I)));
+  }
 }
 
 } // namespace

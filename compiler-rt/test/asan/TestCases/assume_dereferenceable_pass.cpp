@@ -1,4 +1,5 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-assume-dereferenceable=1 %s -o %t && %run %t
+// UNSUPPORTED: msvc
 
 #include <stdlib.h>
 

@@ -40,9 +40,11 @@ static bool isResultValueDead(linalg::GenericOp genericOp, OpResult result) {
   if (!argUserOp->use_empty())
     return false;
 
-  // Check that argUser is a yield.
+  // Check that argUser is this op's own terminator. A nested op's
+  // `linalg.yield` also matches, but leaves the argument live inside that
+  // region.
   auto yieldOp = dyn_cast<linalg::YieldOp>(argUserOp);
-  if (!yieldOp)
+  if (!yieldOp || yieldOp != genericOp.getBody()->getTerminator())
     return false;
 
   // Check outArg data is not being used by other outArgs.
@@ -269,9 +271,9 @@ mlir::linalg::deduplicateOperandsAndRemoveDeadResults(
       });
   // Copy over unknown attributes. They might be load bearing for some flow.
   ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
-  for (NamedAttribute kv : genericOp->getAttrs())
+  for (NamedAttribute kv : genericOp->getDiscardableAttrDictionary())
     if (!llvm::is_contained(odsAttrs, kv.getName().getValue()))
-      newOp->setAttr(kv.getName(), kv.getValue());
+      newOp->setDiscardableAttr(kv.getName(), kv.getValue());
 
   // Fix up the payload of the canonicalized operation.
   populateOpPayload(genericOp, newOp, origInsToNewInsPos, origOutsToNewOutsPos,

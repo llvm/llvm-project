@@ -211,6 +211,7 @@ static char p_b_symbol(struct parse *);
 static char p_b_coll_elem(struct parse *, int);
 static char othercase(int);
 static void bothcases(struct parse *, int);
+static void uncased(struct parse *, int);
 static void ordinary(struct parse *, int);
 static void nonnewline(struct parse *);
 static void repeat(struct parse *, sopno, int, int);
@@ -519,6 +520,31 @@ static void p_ere_exp(struct parse *p) {
         backrefnum = backrefnum * 10 + c - '0';
       }
       MUSTEAT('}', REG_BADRPT);
+    } else if (c == 'n') {
+      ordinary(p, '\n');
+      break;
+    } else if (c == 't') {
+      ordinary(p, '\t');
+      break;
+    } else if (c == 'x') {
+      /* Support \xAA hexadecimal escape sequences. \x must be followed by
+       * exactly two hex digits, otherwise it is interpreted literally.
+       */
+      char hexstr[3] = {0};
+      char *hexp;
+      int val;
+      if (MORE2()) {
+        hexstr[0] = PEEK();
+        hexstr[1] = PEEK2();
+        val = strtol(hexstr, &hexp, 16);
+        if (*hexp == '\0') {
+          NEXT2();
+          uncased(p, (char)val);
+          break;
+        }
+      }
+      ordinary(p, 'x');
+      break;
     } else {
       /* Other chars are simply themselves when escaped with a backslash.
        */
@@ -1063,18 +1089,24 @@ static void bothcases(struct parse *p, int ch) {
 }
 
 /*
+ - uncased - emit an ordinary character that is never treated as cased
+ */
+static void uncased(struct parse *p, int ch) {
+  cat_t *cap = p->g->categories;
+
+  EMIT(OCHAR, (uch)ch);
+  if (cap[ch] == 0)
+    cap[ch] = p->g->ncategories++;
+}
+
+/*
  - ordinary - emit an ordinary character
  */
 static void ordinary(struct parse *p, int ch) {
-  cat_t *cap = p->g->categories;
-
   if ((p->g->cflags & REG_ICASE) && isalpha((uch)ch) && othercase(ch) != ch)
     bothcases(p, ch);
-  else {
-    EMIT(OCHAR, (uch)ch);
-    if (cap[ch] == 0)
-      cap[ch] = p->g->ncategories++;
-  }
+  else
+    uncased(p, ch);
 }
 
 /*

@@ -13,6 +13,7 @@
 #include <limits>
 
 using namespace Fortran::runtime;
+using Fortran::common::numeric_limits;
 using Fortran::common::TypeCategory;
 template <int KIND> using Int = CppTypeFor<TypeCategory::Integer, KIND>;
 template <int KIND> using Real = CppTypeFor<TypeCategory::Real, KIND>;
@@ -43,25 +44,25 @@ TEST(Numeric, Exponent) {
   EXPECT_EQ(RTNAME(Exponent4_4)(Real<4>{0}), 0);
   EXPECT_EQ(RTNAME(Exponent4_8)(Real<4>{1.0}), 1);
   EXPECT_EQ(RTNAME(Exponent8_4)(Real<8>{4.1}), 3);
-  EXPECT_EQ(RTNAME(Exponent8_8)(std::numeric_limits<Real<8>>::infinity()),
-      std::numeric_limits<Int<8>>::max());
-  EXPECT_EQ(RTNAME(Exponent8_8)(std::numeric_limits<Real<8>>::quiet_NaN()),
-      std::numeric_limits<Int<8>>::max());
+  EXPECT_EQ(RTNAME(Exponent8_8)(numeric_limits<Real<8>>::infinity()),
+      numeric_limits<Int<8>>::max());
+  EXPECT_EQ(RTNAME(Exponent8_8)(numeric_limits<Real<8>>::quiet_NaN()),
+      numeric_limits<Int<8>>::max());
 }
 
 TEST(Numeric, Fraction) {
   EXPECT_EQ(RTNAME(Fraction4)(Real<4>{0}), 0);
   EXPECT_EQ(RTNAME(Fraction8)(Real<8>{3.0}), 0.75);
   EXPECT_TRUE(
-      std::isnan(RTNAME(Fraction4)(std::numeric_limits<Real<4>>::infinity())));
+      std::isnan(RTNAME(Fraction4)(numeric_limits<Real<4>>::infinity())));
   EXPECT_TRUE(
-      std::isnan(RTNAME(Fraction8)(std::numeric_limits<Real<8>>::quiet_NaN())));
+      std::isnan(RTNAME(Fraction8)(numeric_limits<Real<8>>::quiet_NaN())));
 }
 
 TEST(Numeric, IsNaN) {
   EXPECT_FALSE(RTNAME(IsNaN4)(Real<4>{0}));
-  EXPECT_FALSE(RTNAME(IsNaN8)(std::numeric_limits<Real<8>>::infinity()));
-  EXPECT_TRUE(RTNAME(IsNaN8)(std::numeric_limits<Real<8>>::quiet_NaN()));
+  EXPECT_FALSE(RTNAME(IsNaN8)(numeric_limits<Real<8>>::infinity()));
+  EXPECT_TRUE(RTNAME(IsNaN8)(numeric_limits<Real<8>>::quiet_NaN()));
 }
 
 TEST(Numeric, Mod) {
@@ -74,28 +75,26 @@ TEST(Numeric, Mod) {
   EXPECT_EQ(RTNAME(ModReal8)(Real<8>{8.0}, Real<8>(-5.0)), 3.0);
   EXPECT_EQ(RTNAME(ModReal8)(Real<8>{-8.0}, Real<8>(-5.0)), -3.0);
   EXPECT_EQ(
-      RTNAME(ModReal4)(Real<4>{0.5}, std::numeric_limits<Real<4>>::infinity()),
-      0.5);
+      RTNAME(ModReal4)(Real<4>{0.5}, numeric_limits<Real<4>>::infinity()), 0.5);
   EXPECT_EQ(
-      RTNAME(ModReal4)(Real<4>{-0.5}, std::numeric_limits<Real<4>>::infinity()),
+      RTNAME(ModReal4)(Real<4>{-0.5}, numeric_limits<Real<4>>::infinity()),
       -0.5);
   EXPECT_EQ(
-      RTNAME(ModReal4)(Real<4>{0.5}, -std::numeric_limits<Real<4>>::infinity()),
+      RTNAME(ModReal4)(Real<4>{0.5}, -numeric_limits<Real<4>>::infinity()),
       0.5);
-  EXPECT_EQ(RTNAME(ModReal4)(
-                Real<4>{-0.5}, -std::numeric_limits<Real<4>>::infinity()),
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{-0.5}, -numeric_limits<Real<4>>::infinity()),
       -0.5);
   EXPECT_EQ(
-      RTNAME(ModReal8)(Real<8>{0.5}, std::numeric_limits<Real<8>>::infinity()),
-      0.5);
+      RTNAME(ModReal8)(Real<8>{0.5}, numeric_limits<Real<8>>::infinity()), 0.5);
   EXPECT_EQ(
-      RTNAME(ModReal8)(Real<8>{-0.5}, std::numeric_limits<Real<8>>::infinity()),
+      RTNAME(ModReal8)(Real<8>{-0.5}, numeric_limits<Real<8>>::infinity()),
       -0.5);
   EXPECT_EQ(
-      RTNAME(ModReal8)(Real<8>{0.5}, -std::numeric_limits<Real<8>>::infinity()),
+      RTNAME(ModReal8)(Real<8>{0.5}, -numeric_limits<Real<8>>::infinity()),
       0.5);
-  EXPECT_EQ(RTNAME(ModReal8)(
-                Real<8>{-0.5}, -std::numeric_limits<Real<8>>::infinity()),
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{-0.5}, -numeric_limits<Real<8>>::infinity()),
       -0.5);
 }
 
@@ -109,22 +108,22 @@ TEST(Numeric, Modulo) {
   EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{8.0}, Real<8>(-5.0)), -2.0);
   EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{-8.0}, Real<8>(-5.0)), -3.0);
   // MODULO(x, INF) == NaN
+  EXPECT_TRUE(std::isnan(
+      RTNAME(ModuloReal4)(Real<4>{0.5}, numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(
+      RTNAME(ModuloReal4)(Real<4>{-0.5}, numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(
+      RTNAME(ModuloReal4)(Real<4>{0.5}, -numeric_limits<Real<4>>::infinity())));
   EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
-      Real<4>{0.5}, std::numeric_limits<Real<4>>::infinity())));
-  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
-      Real<4>{-0.5}, std::numeric_limits<Real<4>>::infinity())));
-  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
-      Real<4>{0.5}, -std::numeric_limits<Real<4>>::infinity())));
-  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
-      Real<4>{-0.5}, -std::numeric_limits<Real<4>>::infinity())));
+      Real<4>{-0.5}, -numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(
+      RTNAME(ModuloReal8)(Real<8>{-0.5}, numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(
+      RTNAME(ModuloReal8)(Real<8>{0.5}, numeric_limits<Real<8>>::infinity())));
   EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
-      Real<8>{-0.5}, std::numeric_limits<Real<8>>::infinity())));
-  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
-      Real<8>{0.5}, std::numeric_limits<Real<8>>::infinity())));
-  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
-      Real<8>{-0.5}, -std::numeric_limits<Real<8>>::infinity())));
-  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
-      Real<8>{0.5}, -std::numeric_limits<Real<8>>::infinity())));
+      Real<8>{-0.5}, -numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(
+      RTNAME(ModuloReal8)(Real<8>{0.5}, -numeric_limits<Real<8>>::infinity())));
   // MODULO(x, y) for integer values of x and y with 0 remainder.
   EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{5.0}, Real<4>(1.0)), 0.0);
   EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{5.0}, Real<4>(-1.0)), -0.0);
@@ -134,7 +133,7 @@ TEST(Numeric, Modulo) {
 
 TEST(Numeric, Nearest) {
   EXPECT_EQ(RTNAME(Nearest4)(Real<4>{0}, true),
-      std::numeric_limits<Real<4>>::denorm_min());
+      numeric_limits<Real<4>>::denorm_min());
   EXPECT_EQ(RTNAME(Nearest4)(Real<4>{3.0}, true),
       Real<4>{3.0} + std::ldexp(Real<4>{1.0}, -22));
   EXPECT_EQ(RTNAME(Nearest8)(Real<8>{1.0}, true),
@@ -156,9 +155,9 @@ TEST(Numeric, RRSpacing) {
   EXPECT_EQ(RTNAME(RRSpacing4)(Real<4>{-3.0}), 0.75 * (1 << 24));
   EXPECT_EQ(RTNAME(RRSpacing8)(Real<8>{-3.0}), 0.75 * (std::int64_t{1} << 53));
   EXPECT_TRUE(
-      std::isnan(RTNAME(RRSpacing4)(std::numeric_limits<Real<4>>::infinity())));
-  EXPECT_TRUE(std::isnan(
-      RTNAME(RRSpacing8)(std::numeric_limits<Real<8>>::quiet_NaN())));
+      std::isnan(RTNAME(RRSpacing4)(numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(
+      std::isnan(RTNAME(RRSpacing8)(numeric_limits<Real<8>>::quiet_NaN())));
 }
 
 TEST(Numeric, Scale) {
@@ -167,9 +166,9 @@ TEST(Numeric, Scale) {
   EXPECT_EQ(RTNAME(Scale4)(Real<4>{1.0}, 1), 2.0);
   EXPECT_EQ(RTNAME(Scale4)(Real<4>{1.0}, -1), 0.5);
   EXPECT_TRUE(
-      std::isinf(RTNAME(Scale4)(std::numeric_limits<Real<4>>::infinity(), 1)));
+      std::isinf(RTNAME(Scale4)(numeric_limits<Real<4>>::infinity(), 1)));
   EXPECT_TRUE(
-      std::isnan(RTNAME(Scale8)(std::numeric_limits<Real<8>>::quiet_NaN(), 1)));
+      std::isnan(RTNAME(Scale8)(numeric_limits<Real<8>>::quiet_NaN(), 1)));
 }
 
 TEST(Numeric, SetExponent) {
@@ -179,10 +178,10 @@ TEST(Numeric, SetExponent) {
   EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, 0), 0.5);
   EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, 1), 1.0);
   EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, -1), 0.25);
+  EXPECT_TRUE(
+      std::isnan(RTNAME(SetExponent4)(numeric_limits<Real<4>>::infinity(), 1)));
   EXPECT_TRUE(std::isnan(
-      RTNAME(SetExponent4)(std::numeric_limits<Real<4>>::infinity(), 1)));
-  EXPECT_TRUE(std::isnan(
-      RTNAME(SetExponent8)(std::numeric_limits<Real<8>>::quiet_NaN(), 1)));
+      RTNAME(SetExponent8)(numeric_limits<Real<8>>::quiet_NaN(), 1)));
 }
 
 TEST(Numeric, SelectedIntKind) {
@@ -253,17 +252,16 @@ TEST(Numeric, SelectedRealKind) {
 }
 
 TEST(Numeric, Spacing) {
-  EXPECT_EQ(RTNAME(Spacing8)(Real<8>{0}), std::numeric_limits<Real<8>>::min());
+  EXPECT_EQ(RTNAME(Spacing8)(Real<8>{0}), numeric_limits<Real<8>>::min());
   EXPECT_EQ(RTNAME(Spacing4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -22));
   EXPECT_TRUE(
-      std::isnan(RTNAME(Spacing4)(std::numeric_limits<Real<4>>::infinity())));
+      std::isnan(RTNAME(Spacing4)(numeric_limits<Real<4>>::infinity())));
   EXPECT_TRUE(
-      std::isnan(RTNAME(Spacing8)(std::numeric_limits<Real<8>>::quiet_NaN())));
+      std::isnan(RTNAME(Spacing8)(numeric_limits<Real<8>>::quiet_NaN())));
   EXPECT_EQ(RTNAME(Spacing2By4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -9));
   EXPECT_EQ(RTNAME(Spacing2By4)(Real<4>{0.0}), Real<4>{0.00006103515625E-04});
   EXPECT_EQ(RTNAME(Spacing3By4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -6));
-  EXPECT_EQ(
-      RTNAME(Spacing3By4)(Real<4>{0.0}), std::numeric_limits<Real<4>>::min());
+  EXPECT_EQ(RTNAME(Spacing3By4)(Real<4>{0.0}), numeric_limits<Real<4>>::min());
 }
 
 TEST(Numeric, FPowI) {
@@ -334,7 +332,7 @@ TEST(Numeric, FPowI) {
     double result;
     *reinterpret_cast<std::uint64_t *>(&result) = 4607182414505051137ULL;
     EXPECT_TRUE(std::abs(RTNAME(FPow8i)(Real<8>{base},
-                             Int<4>{std::numeric_limits<Int<4>>::min()}) -
+                             Int<4>{numeric_limits<Int<4>>::min()}) -
                     Real<8>{result}) < 0.00000000001);
 
     // (0x3FF0000000000001 ** 4294967296ULL) ~ 0x3FF00001000007FF

@@ -234,6 +234,24 @@ define void @dest_not_writable(ptr noalias dereferenceable(128) %dst) {
   ret void
 }
 
+; Ensure call slot optimization does not attempt to lower the existing destination
+; alloca's alignment.
+define void @dest_alignment(ptr %src) {
+; CHECK-LABEL: @dest_alignment(
+; CHECK-NEXT:    [[SRC_2:%.*]] = alloca [24 x i8], align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca [24 x i8], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[DST]], ptr [[SRC:%.*]], i64 24, i1 false)
+; CHECK-NEXT:    call void @accept_ptr(ptr [[DST]])
+; CHECK-NEXT:    ret void
+;
+  %src.2 = alloca [24 x i8], align 4
+  %dst = alloca [24 x i8], align 16
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %dst, ptr %src, i64 24, i1 false)
+  call void @accept_ptr(ptr %src.2)
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src.2, i64 24, i1 false)
+  ret void
+}
+
 declare void @may_throw()
 declare void @accept_ptr(ptr)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

@@ -1,0 +1,121 @@
+// RUN: cir-opt %s -split-input-file -verify-diagnostics -cir-call-conv-lowering=target=x86_64 -o %t.cir
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @take_s(!rec_S)
+  cir.func @direct_atomic(%arg0: !cir.ptr<!rec_S>) {
+    %0 = cir.load atomic(seq_cst) %arg0 : !cir.ptr<!rec_S>, !rec_S
+    // expected-error @below {{atomic load of a record operand not yet implemented in CallConvLowering}}
+    cir.call @take_s(%0) : (!rec_S) -> ()
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_SF = !cir.struct<"SF" {data !s64i, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @take_sf(!rec_SF)
+  cir.func @flattened_atomic(%arg0: !cir.ptr<!rec_SF>) {
+    %0 = cir.load atomic(seq_cst) %arg0 : !cir.ptr<!rec_SF>, !rec_SF
+    // expected-error @below {{atomic load of a record operand not yet implemented in CallConvLowering}}
+    cir.call @take_sf(%0) : (!rec_SF) -> ()
+    cir.return
+  }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_SMem = !cir.struct<"SMem" {data !s64i, data !s64i, data !s64i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @take_smem(!rec_SMem)
+  cir.func @byval_atomic(%arg0: !cir.ptr<!rec_SMem>) {
+    %0 = cir.load atomic(seq_cst) %arg0 : !cir.ptr<!rec_SMem>, !rec_SMem
+    // expected-error @below {{atomic load of a record operand not yet implemented in CallConvLowering}}
+    cir.call @take_smem(%0) : (!rec_SMem) -> ()
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func @return_atomic(%arg0: !cir.ptr<!rec_S>) -> !rec_S {
+    %0 = cir.load atomic(seq_cst) %arg0 : !cir.ptr<!rec_S>, !rec_S
+    // expected-error @below {{atomic load of a record operand not yet implemented in CallConvLowering}}
+    cir.return %0 : !rec_S
+  }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_SMem = !cir.struct<"SMem" {data !s64i, data !s64i, data !s64i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func @byval_atomic_spill(%arg0: !rec_SMem) {
+    %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
+    // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
+    cir.store atomic(seq_cst) %arg0, %0 : !rec_SMem, !cir.ptr<!rec_SMem>
+    cir.return
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_HS = !cir.struct<"HS" {data !s8i, data !s32i}>
+!rec_H = !cir.union<"H" {data !rec_HS, data !cir.array<!s32i x 2>}>
+!rec_W = !cir.struct<"W" {data !rec_H}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+  cir.func private @make_w() -> !rec_W
+  cir.func @result_record_member(%arg0: !cir.ptr<!rec_H>) {
+    %0 = cir.call @make_w() : () -> !rec_W
+    // expected-error @below {{use of a record argument or result other than by a store, call, return or member read not yet implemented in CallConvLowering}}
+    %1 = cir.extract_member %0[0] : !rec_W -> !rec_H
+    cir.store %1, %arg0 : !rec_H, !cir.ptr<!rec_H>
+    cir.return
+  }
+}

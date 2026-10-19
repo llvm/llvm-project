@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
+#include "hdr/sys_mman_macros.h"
 #include "include/llvm-libc-macros/linux/time-macros.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/raw_mutex.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/clock_gettime.h"
-#include "src/stdlib/exit.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "test/UnitTest/Test.h"
@@ -78,7 +79,7 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, PSharedLock) {
   shared->finished.fetch_add(1);
   // let the child exit early to avoid output pollution
   if (pid == 0)
-    LIBC_NAMESPACE::exit(0);
+    LIBC_NAMESPACE::internal::exit(0);
   while (shared->finished.load() != 2)
     LIBC_NAMESPACE::sleep_briefly();
   ASSERT_EQ(shared->data, 20000);

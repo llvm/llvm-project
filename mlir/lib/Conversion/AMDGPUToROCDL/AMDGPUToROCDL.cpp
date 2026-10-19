@@ -14,7 +14,6 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -32,6 +31,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <cstdint>
 #include <optional>
 
@@ -43,24 +43,23 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::amdgpu;
 
-// Define commonly used chipsets versions for convenience.
-constexpr Chipset kGfx908 = Chipset(9, 0, 8);
-constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
-constexpr Chipset kGfx942 = Chipset(9, 4, 2);
-constexpr Chipset kGfx950 = Chipset(9, 5, 0);
-constexpr Chipset kGfx1250 = Chipset(12, 5, 0);
+/// Zero-extend or truncate the unsigned number `val` to `width` bits.
+static Value convertUnsignedToInt(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val, unsigned width) {
+  IntegerType destTy = rewriter.getIntegerType(width);
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (destTy == valTy)
+    return val;
+  return valTy.getWidth() > width
+             ? Value(LLVM::TruncOp::create(rewriter, loc, destTy, val))
+             : Value(LLVM::ZExtOp::create(rewriter, loc, destTy, val));
+}
 
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
-  IntegerType i32 = rewriter.getI32Type();
-  // Force check that `val` is of int type.
-  auto valTy = cast<IntegerType>(val.getType());
-  if (i32 == valTy)
-    return val;
-  return valTy.getWidth() > 32
-             ? Value(LLVM::TruncOp::create(rewriter, loc, i32, val))
-             : Value(LLVM::ZExtOp::create(rewriter, loc, i32, val));
+  return convertUnsignedToInt(rewriter, loc, val, 32);
 }
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
@@ -71,14 +70,7 @@ static Value createI32Constant(ConversionPatternRewriter &rewriter,
 /// Convert an unsigned number `val` to i64.
 static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
-  IntegerType i64 = rewriter.getI64Type();
-  // Force check that `val` is of int type.
-  auto valTy = cast<IntegerType>(val.getType());
-  if (i64 == valTy)
-    return val;
-  return valTy.getWidth() > 64
-             ? Value(LLVM::TruncOp::create(rewriter, loc, i64, val))
-             : Value(LLVM::ZExtOp::create(rewriter, loc, i64, val));
+  return convertUnsignedToInt(rewriter, loc, val, 64);
 }
 
 static Value createI64Constant(ConversionPatternRewriter &rewriter,
@@ -114,11 +106,9 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefType memrefType,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides, int64_t elementByteWidth,
-                           amdgpu::Chipset chipset, bool boundsCheck) {
-  if (chipset >= kGfx1250 && !boundsCheck) {
-    constexpr int64_t first45bits = (1ll << 45) - 1;
-    return createI64Constant(rewriter, loc, first45bits);
-  }
+                           unsigned numRecordsWidth, bool boundsCheck) {
+  if (numRecordsWidth > 32 && !boundsCheck)
+    return createI64Constant(rewriter, loc, llvm::maxUIntN(numRecordsWidth));
   if (memrefType.hasStaticShape() &&
       !llvm::any_of(strides, ShapedType::isDynamic)) {
     int64_t size = memrefType.getRank() == 0 ? 1 : 0;
@@ -144,7 +134,8 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
 
 static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
                             Value basePointer, Value numRecords,
-                            bool boundsCheck, amdgpu::Chipset chipset,
+                            bool boundsCheck, const ROCDL::TargetInfo &target,
+                            unsigned numRecordsWidth,
                             Value cacheSwizzleStride = nullptr,
                             unsigned addressSpace = 8) {
   // The stride value is generally 0. However, on MI-300 and onward, you can
@@ -152,7 +143,7 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
   // and setting that stride to a cache stride.
   Type i16 = rewriter.getI16Type();
   Value stride;
-  if (chipset.majorVersion == 9 && chipset >= kGfx942 && cacheSwizzleStride) {
+  if (target.has(llvm::AMDGPU::FEAT_GFX940_INSTS) && cacheSwizzleStride) {
     Value cacheStrideZext =
         LLVM::ZExtOp::create(rewriter, loc, i16, cacheSwizzleStride);
     Value swizzleBit = LLVM::ConstantOp::create(
@@ -165,7 +156,7 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
   }
 
   uint32_t flags = 0;
-  if (chipset >= kGfx1250) {
+  if (target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS)) {
     // Flag word:
     // bit 0: swizzle
     // bit 1: 0 means (total_offset + payload > numRecords)
@@ -191,13 +182,14 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
     //  none, 3 = either swizzles or testing against offset field) RDNA only
     // bits 30-31: Type (must be 0)
     flags |= (7 << 12) | (4 << 15);
-    if (chipset.majorVersion >= 10) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX10_INSTS)) {
       flags |= (1 << 24);
       uint32_t oob = boundsCheck ? 3 : 2;
       flags |= (oob << 28);
     }
   }
   Value flagsConst = createI32Constant(rewriter, loc, flags);
+  numRecords = convertUnsignedToInt(rewriter, loc, numRecords, numRecordsWidth);
   Type rsrcType =
       LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
   Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(
@@ -208,11 +200,11 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
 namespace {
 struct FatRawBufferCastLowering
     : public ConvertOpToLLVMPattern<FatRawBufferCastOp> {
-  FatRawBufferCastLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<FatRawBufferCastOp>(converter),
-        chipset(chipset) {}
+  FatRawBufferCastLowering(const LLVMTypeConverter &converter,
+                           const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<FatRawBufferCastOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(FatRawBufferCastOp op, FatRawBufferCastOpAdaptor adaptor,
@@ -232,11 +224,17 @@ struct FatRawBufferCastLowering
     if (failed(memrefType.getStridesAndOffset(strideVals, unusedOffset)))
       return op.emitOpError("Can't lower non-stride-offset memrefs");
 
+    std::optional<unsigned> numRecordsWidth =
+        target.getBufferResourceNumRecordsWidth();
+    if (!numRecordsWidth)
+      return op.emitOpError(
+          "buffer resource num_records width is unknown for this target");
+
     Value numRecords = adaptor.getValidBytes();
     if (!numRecords)
-      numRecords =
-          getNumRecords(rewriter, loc, memrefType, descriptor, strideVals,
-                        elementByteWidth, chipset, adaptor.getBoundsCheck());
+      numRecords = getNumRecords(rewriter, loc, memrefType, descriptor,
+                                 strideVals, elementByteWidth, *numRecordsWidth,
+                                 adaptor.getBoundsCheck());
 
     Value basePointer =
         adaptor.getResetOffset()
@@ -244,10 +242,10 @@ struct FatRawBufferCastLowering
                                    memrefType)
             : descriptor.alignedPtr(rewriter, loc);
 
-    Value offset = adaptor.getResetOffset()
-                       ? LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                                  rewriter.getIndexAttr(0))
-                       : descriptor.offset(rewriter, loc);
+    Value offset =
+        adaptor.getResetOffset()
+            ? createIndexAttrConstant(rewriter, loc, getIndexType(), 0)
+            : descriptor.offset(rewriter, loc);
 
     bool hasSizes = memrefType.getRank() > 0;
     // No need to unpack() and pack() all the individual sizes and strides,
@@ -263,7 +261,8 @@ struct FatRawBufferCastLowering
 
     Value fatPtr = makeBufferRsrc(
         rewriter, loc, basePointer, numRecords, adaptor.getBoundsCheck(),
-        chipset, adaptor.getCacheSwizzleStride(), /*addressSpace=*/7);
+        target, *numRecordsWidth, adaptor.getCacheSwizzleStride(),
+        /*addressSpace=*/7);
 
     Value result = MemRefDescriptor::poison(
         rewriter, loc,
@@ -288,10 +287,11 @@ struct FatRawBufferCastLowering
 /// Define lowering patterns for raw buffer ops
 template <typename GpuOp, typename Intrinsic>
 struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
-  RawBufferOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<GpuOp>(converter), chipset(chipset) {}
+  RawBufferOpLowering(const LLVMTypeConverter &converter,
+                      const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<GpuOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
   static constexpr uint32_t maxVectorOpWidth = 128;
 
   LogicalResult
@@ -302,7 +302,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value unconvertedMemref = gpuOp.getMemref();
     MemRefType memrefType = cast<MemRefType>(unconvertedMemref.getType());
 
-    if (chipset.majorVersion < 9)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX9_INSTS))
       return gpuOp.emitOpError("raw buffer ops require GCN or higher");
 
     Value storeData = adaptor.getODSOperands(0)[0];
@@ -407,11 +407,18 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     Value ptr = memrefDescriptor.bufferPtr(
         rewriter, loc, *this->getTypeConverter(), memrefType);
-    Value numRecords =
-        getNumRecords(rewriter, loc, memrefType, memrefDescriptor, strides,
-                      elementByteWidth, chipset, adaptor.getBoundsCheck());
-    Value resource = makeBufferRsrc(rewriter, loc, ptr, numRecords,
-                                    adaptor.getBoundsCheck(), chipset);
+    std::optional<unsigned> numRecordsWidth =
+        target.getBufferResourceNumRecordsWidth();
+    if (!numRecordsWidth)
+      return gpuOp.emitOpError(
+          "buffer resource num_records width is unknown for this target");
+
+    Value numRecords = getNumRecords(
+        rewriter, loc, memrefType, memrefDescriptor, strides, elementByteWidth,
+        *numRecordsWidth, adaptor.getBoundsCheck());
+    Value resource =
+        makeBufferRsrc(rewriter, loc, ptr, numRecords, adaptor.getBoundsCheck(),
+                       target, *numRecordsWidth);
     args.push_back(resource);
 
     // Indexing (voffset)
@@ -434,15 +441,12 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     sgprOffset = LLVM::MulOp::create(rewriter, loc, sgprOffset, byteWidthConst);
     args.push_back(sgprOffset);
 
-    // bit 0: GLC = 0 (atomics drop value, less coherency)
-    // bits 1-2: SLC, DLC = 0 (similarly)
-    // bit 3: swizzled (0 for raw)
-    args.push_back(createI32Constant(rewriter, loc, 0));
-
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);
-    Operation *lowered = Intrinsic::create(rewriter, loc, resultTypes, args,
-                                           ArrayRef<NamedAttribute>());
+    typename Intrinsic::Properties properties{};
+    properties.aux = rewriter.getI32IntegerAttr(0);
+    Operation *lowered =
+        Intrinsic::create(rewriter, loc, resultTypes, args, properties);
     if (lowered->getNumResults() == 1) {
       Value replacement = lowered->getResult(0);
       if (llvmBufferValType != llvmWantedDataType) {
@@ -468,15 +472,18 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 ///     Lgkmcnt = Waitcnt[11:8]     (pre-gfx10)
 ///     Lgkmcnt = Waitcnt[13:8]     (gfx10)
 ///     Lgkmcnt = Waitcnt[9:4]      (gfx11)
-static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
-                                         unsigned expcnt, unsigned lgkmcnt) {
-  if (chipset.majorVersion < 9) {
+static FailureOr<unsigned> encodeWaitcnt(const ROCDL::TargetInfo &target,
+                                         unsigned vmcnt, unsigned expcnt,
+                                         unsigned lgkmcnt) {
+  if (target.isUnknown())
+    return failure();
+  if (!target.has(llvm::AMDGPU::FEAT_GFX9_INSTS)) {
     vmcnt = std::min(15u, vmcnt);
     expcnt = std::min(7u, expcnt);
     lgkmcnt = std::min(15u, lgkmcnt);
     return vmcnt | (expcnt << 4) | (lgkmcnt << 8);
   }
-  if (chipset.majorVersion == 9) {
+  if (target.isGeneration(9)) {
     vmcnt = std::min(63u, vmcnt);
     expcnt = std::min(7u, expcnt);
     lgkmcnt = std::min(15u, lgkmcnt);
@@ -485,7 +492,7 @@ static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
     unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
     return lowBits | highBits | otherCnts;
   }
-  if (chipset.majorVersion == 10) {
+  if (target.isGeneration(10)) {
     vmcnt = std::min(63u, vmcnt);
     expcnt = std::min(7u, expcnt);
     lgkmcnt = std::min(63u, lgkmcnt);
@@ -494,7 +501,7 @@ static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
     unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
     return lowBits | highBits | otherCnts;
   }
-  if (chipset.majorVersion == 11) {
+  if (target.isGeneration(11)) {
     vmcnt = std::min(63u, vmcnt);
     expcnt = std::min(7u, expcnt);
     lgkmcnt = std::min(63u, lgkmcnt);
@@ -506,16 +513,16 @@ static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
 struct MemoryCounterWaitOpLowering
     : public ConvertOpToLLVMPattern<MemoryCounterWaitOp> {
   MemoryCounterWaitOpLowering(const LLVMTypeConverter &converter,
-                              Chipset chipset)
-      : ConvertOpToLLVMPattern<MemoryCounterWaitOp>(converter),
-        chipset(chipset) {}
+                              const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<MemoryCounterWaitOp>(converter), target(target) {
+  }
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(MemoryCounterWaitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset.majorVersion >= 12) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX12_INSTS)) {
       Location loc = op.getLoc();
       if (std::optional<int> ds = adaptor.getDs())
         ROCDL::WaitDscntOp::create(rewriter, loc, *ds);
@@ -560,7 +567,7 @@ struct MemoryCounterWaitOpLowering
       vmcnt = getVal(store);
     }
 
-    FailureOr<unsigned> waitcnt = encodeWaitcnt(chipset, vmcnt, exp, ds);
+    FailureOr<unsigned> waitcnt = encodeWaitcnt(target, vmcnt, exp, ds);
     if (failed(waitcnt))
       return op.emitOpError("unsupported chipset");
 
@@ -570,18 +577,24 @@ struct MemoryCounterWaitOpLowering
 };
 
 struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
-  LDSBarrierOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<LDSBarrierOp>(converter), chipset(chipset) {}
+  LDSBarrierOpLowering(const LLVMTypeConverter &converter,
+                       const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<LDSBarrierOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(LDSBarrierOp op, LDSBarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    // This ensures that waits on global memory aren't introduced on
-    // chips that don't have the BackOffBarrier feature enabled in LLVM.
-    bool requiresInlineAsm = chipset < kGfx90a;
+    bool hasSplitBarriers = target.has(llvm::AMDGPU::FEAT_GFX12_INSTS);
+    // Inline assembly is only needed for cases where the hardware doesn't use
+    // split barriers and doesn't have FeatureBackOffBarrier (this is mainly
+    // early gfx9). In that case, we use inline assembly to bypass the
+    // conservative insertion of global memory waits at barriers, since we care
+    // more about performance than having debug watches work correctly.
+    bool requiresInlineAsm =
+        !hasSplitBarriers && !target.has(llvm::AMDGPU::FEAT_BACK_OFF_BARRIER);
 
     Attribute mmra =
         rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
@@ -608,9 +621,10 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
           /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
           /*is_align_stack=*/false, LLVM::TailCallKind::None,
+          /*convergent=*/false,
           /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
-    } else if (chipset.majorVersion < 12) {
+    } else if (!hasSplitBarriers) {
       ROCDL::SBarrierOp::create(rewriter, loc);
     } else {
       ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
@@ -626,16 +640,16 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 };
 
 struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
-  SchedBarrierOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<SchedBarrierOp>(converter), chipset(chipset) {}
+  SchedBarrierOpLowering(const LLVMTypeConverter &converter,
+                         const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<SchedBarrierOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(SchedBarrierOp op, SchedBarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<ROCDL::SchedBarrier>(op,
-                                                     (uint32_t)op.getOpts());
+    rewriter.replaceOpWithNewOp<ROCDL::SchedBarrier>(op, op.getOptsAttr());
     return success();
   }
 };
@@ -683,9 +697,8 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts sparse MFMA/WMMA (smfmac/swmmac) operands to the expected ROCDL
-/// types.
-static Value convertSparseVectorOperand(ConversionPatternRewriter &rewriter,
+/// Converts packed vector operands to the expected ROCDL types.
+static Value convertPackedVectorOperand(ConversionPatternRewriter &rewriter,
                                         Location loc, Value input,
                                         bool allowBf16 = true) {
   Type inputType = input.getType();
@@ -738,10 +751,11 @@ static Value castScaleOperand(ConversionPatternRewriter &rewriter, Location loc,
 }
 
 /// Maps f8 scale element types to WMMA scale format codes.
-static std::optional<uint32_t> getWmmaScaleFormat(Type elemType) {
-  return TypeSwitch<Type, std::optional<uint32_t>>(elemType)
-      .Case([](Float8E8M0FNUType) { return 0; })
-      .Case([](Float8E4M3FNType) { return 2; })
+static std::optional<ROCDL::WMMAMatrixScaleFormat>
+getWmmaScaleFormat(Type elemType) {
+  return TypeSwitch<Type, std::optional<ROCDL::WMMAMatrixScaleFormat>>(elemType)
+      .Case([](Float8E8M0FNUType) { return ROCDL::WMMAMatrixScaleFormat::e8; })
+      .Case([](Float8E4M3FNType) { return ROCDL::WMMAMatrixScaleFormat::e4m3; })
       .Default(std::nullopt);
 }
 
@@ -846,31 +860,34 @@ static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
 }
 
 /// Return true if `type` is the E5M2 variant of an 8-bit float that is
-/// supported by the `_bf8` instructions on the given `chipset`.
-static bool typeIsExpectedBf8ForChipset(Chipset chipset, Type type) {
-  return (chipset == kGfx942 && isa<Float8E5M2FNUZType>(type)) ||
-         (hasOcpFp8(chipset) && isa<Float8E5M2Type>(type));
+/// supported by the `_bf8` instructions on `target`.
+static bool typeIsExpectedBf8ForTarget(const ROCDL::TargetInfo &target,
+                                       Type type) {
+  return (target.hasFnuzFp8() && isa<Float8E5M2FNUZType>(type)) ||
+         (target.hasOcpFp8() && isa<Float8E5M2Type>(type));
 }
 
 /// Return true if `type` is the E4M3FN variant of an 8-bit float that is
-/// supported by the `_fp8` instructions on the given `chipset`.
-static bool typeIsExpectedFp8ForChipset(Chipset chipset, Type type) {
-  return (chipset == kGfx942 && isa<Float8E4M3FNUZType>(type)) ||
-         (hasOcpFp8(chipset) && isa<Float8E4M3FNType>(type));
+/// supported by the `_fp8` instructions on `target`.
+static bool typeIsExpectedFp8ForTarget(const ROCDL::TargetInfo &target,
+                                       Type type) {
+  return (target.hasFnuzFp8() && isa<Float8E4M3FNUZType>(type)) ||
+         (target.hasOcpFp8() && isa<Float8E4M3FNType>(type));
 }
 
 /// Return the `rocdl` intrinsic corresponding to a MFMA operation `mfma`
 /// if one exists. This includes checking to ensure the intrinsic is supported
 /// on the architecture you are compiling for.
-static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
-                                                  Chipset chipset) {
+static std::optional<StringRef>
+mfmaOpToIntrinsic(MFMAOp mfma, const ROCDL::TargetInfo &target) {
   uint32_t m = mfma.getM(), n = mfma.getN(), k = mfma.getK(),
            b = mfma.getBlocks();
   Type sourceElem = getElementTypeOrSelf(mfma.getSourceA().getType());
   Type destElem = getElementTypeOrSelf(mfma.getDestC().getType());
 
   if (sourceElem.isF32() && destElem.isF32()) {
-    if (mfma.getReducePrecision() && chipset >= kGfx942) {
+    if (mfma.getReducePrecision() &&
+        target.has(llvm::AMDGPU::FEAT_XF32_INSTS)) {
       if (m == 32 && n == 32 && k == 4 && b == 1)
         return ROCDL::mfma_f32_32x32x4_xf32::getOperationName();
       if (m == 16 && n == 16 && k == 8 && b == 1)
@@ -889,7 +906,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   }
 
   if (sourceElem.isF16() && destElem.isF32()) {
-    if (chipset >= kGfx950) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX950_INSTS)) {
       if (m == 32 && n == 32 && k == 16 && b == 1)
         return ROCDL::mfma_f32_32x32x16_f16::getOperationName();
       if (m == 16 && n == 16 && k == 32 && b == 1)
@@ -908,13 +925,13 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   }
 
   if (sourceElem.isBF16() && destElem.isF32()) {
-    if (chipset >= kGfx950) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX950_INSTS)) {
       if (m == 32 && n == 32 && k == 16 && b == 1)
         return ROCDL::mfma_f32_32x32x16_bf16::getOperationName();
       if (m == 16 && n == 16 && k == 32 && b == 1)
         return ROCDL::mfma_f32_16x16x32_bf16::getOperationName();
     }
-    if (chipset >= kGfx90a) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX90A_INSTS)) {
       if (m == 32 && n == 32 && k == 4 && b == 2)
         return ROCDL::mfma_f32_32x32x4bf16_1k::getOperationName();
       if (m == 16 && n == 16 && k == 4 && b == 4)
@@ -939,7 +956,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   }
 
   if (sourceElem.isInteger(8) && destElem.isInteger(32)) {
-    if (chipset >= kGfx950) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX950_INSTS)) {
       if (m == 32 && n == 32 && k == 32 && b == 1)
         return ROCDL::mfma_i32_32x32x32_i8::getOperationName();
       if (m == 16 && n == 16 && k == 64 && b == 1)
@@ -955,51 +972,54 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
       return ROCDL::mfma_i32_32x32x8i8::getOperationName();
     if (m == 16 && n == 16 && k == 16 && b == 1)
       return ROCDL::mfma_i32_16x16x16i8::getOperationName();
-    if (m == 32 && n == 32 && k == 16 && b == 1 && chipset >= kGfx942)
+    if (m == 32 && n == 32 && k == 16 && b == 1 &&
+        target.has(llvm::AMDGPU::FEAT_GFX940_INSTS))
       return ROCDL::mfma_i32_32x32x16_i8::getOperationName();
-    if (m == 16 && n == 16 && k == 32 && b == 1 && chipset >= kGfx942)
+    if (m == 16 && n == 16 && k == 32 && b == 1 &&
+        target.has(llvm::AMDGPU::FEAT_GFX940_INSTS))
       return ROCDL::mfma_i32_16x16x32_i8::getOperationName();
   }
 
-  if (sourceElem.isF64() && destElem.isF64() && chipset >= kGfx90a) {
+  if (sourceElem.isF64() && destElem.isF64() &&
+      target.has(llvm::AMDGPU::FEAT_GFX90A_INSTS)) {
     if (m == 16 && n == 16 && k == 4 && b == 1)
       return ROCDL::mfma_f64_16x16x4f64::getOperationName();
     if (m == 4 && n == 4 && k == 4 && b == 4)
       return ROCDL::mfma_f64_4x4x4f64::getOperationName();
   }
 
-  if (destElem.isF32() && typeIsExpectedBf8ForChipset(chipset, sourceElem)) {
+  if (destElem.isF32() && typeIsExpectedBf8ForTarget(target, sourceElem)) {
     // Known to be correct because there are no scalar f8 instructions and
     // because a length mismatch will have been caught by the verifier.
     Type sourceBElem =
         cast<VectorType>(mfma.getSourceB().getType()).getElementType();
     if (m == 16 && n == 16 && k == 32 && b == 1) {
-      if (typeIsExpectedBf8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedBf8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_16x16x32_bf8_bf8::getOperationName();
-      if (typeIsExpectedFp8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedFp8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_16x16x32_bf8_fp8::getOperationName();
     }
     if (m == 32 && n == 32 && k == 16 && b == 1) {
-      if (typeIsExpectedBf8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedBf8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_32x32x16_bf8_bf8::getOperationName();
-      if (typeIsExpectedFp8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedFp8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_32x32x16_bf8_fp8::getOperationName();
     }
   }
 
-  if (destElem.isF32() && typeIsExpectedFp8ForChipset(chipset, sourceElem)) {
+  if (destElem.isF32() && typeIsExpectedFp8ForTarget(target, sourceElem)) {
     Type sourceBElem =
         cast<VectorType>(mfma.getSourceB().getType()).getElementType();
     if (m == 16 && n == 16 && k == 32 && b == 1) {
-      if (typeIsExpectedBf8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedBf8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_16x16x32_fp8_bf8::getOperationName();
-      if (typeIsExpectedFp8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedFp8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_16x16x32_fp8_fp8::getOperationName();
     }
     if (m == 32 && n == 32 && k == 16 && b == 1) {
-      if (typeIsExpectedBf8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedBf8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_32x32x16_fp8_bf8::getOperationName();
-      if (typeIsExpectedFp8ForChipset(chipset, sourceBElem))
+      if (typeIsExpectedFp8ForTarget(target, sourceBElem))
         return ROCDL::mfma_f32_32x32x16_fp8_fp8::getOperationName();
     }
   }
@@ -1007,13 +1027,15 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   return std::nullopt;
 }
 
-static std::optional<uint32_t> smallFloatTypeToFormatCode(Type mlirElemType) {
-  return llvm::TypeSwitch<Type, std::optional<uint32_t>>(mlirElemType)
-      .Case([](Float8E4M3FNType) { return 0u; })
-      .Case([](Float8E5M2Type) { return 1u; })
-      .Case([](Float6E2M3FNType) { return 2u; })
-      .Case([](Float6E3M2FNType) { return 3u; })
-      .Case([](Float4E2M1FNType) { return 4u; })
+static std::optional<ROCDL::MatrixFormat>
+smallFloatTypeToMatrixFormat(Type mlirElemType) {
+  return llvm::TypeSwitch<Type, std::optional<ROCDL::MatrixFormat>>(
+             mlirElemType)
+      .Case([](Float8E4M3FNType) { return ROCDL::MatrixFormat::fp8_e4m3; })
+      .Case([](Float8E5M2Type) { return ROCDL::MatrixFormat::fp8_e5m2; })
+      .Case([](Float6E2M3FNType) { return ROCDL::MatrixFormat::fp6_e2m3; })
+      .Case([](Float6E3M2FNType) { return ROCDL::MatrixFormat::fp6_e3m2; })
+      .Case([](Float4E2M1FNType) { return ROCDL::MatrixFormat::fp4_e2m1; })
       .Default(std::nullopt);
 }
 
@@ -1024,20 +1046,26 @@ static std::optional<uint32_t> smallFloatTypeToFormatCode(Type mlirElemType) {
 /// that intrinsic. Note that this is also used to implement some un-scaled
 /// MFMAs, since the compiler represents the ordinary instruction as a "scaled"
 /// MFMA with a scale of 0.
-static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+using ScaledMFMAIntrinsic =
+    std::tuple<StringRef, ROCDL::MatrixFormat, ROCDL::MatrixFormat>;
+
+static std::optional<ScaledMFMAIntrinsic>
 mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
-                        uint32_t n, uint32_t k, uint32_t b, Chipset chipset) {
+                        uint32_t n, uint32_t k, uint32_t b,
+                        const ROCDL::TargetInfo &target) {
   aType = getElementTypeOrSelf(aType);
   bType = getElementTypeOrSelf(bType);
   destType = getElementTypeOrSelf(destType);
 
-  if (chipset < kGfx950)
+  if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS))
     return std::nullopt;
   if (!isa<Float32Type>(destType))
     return std::nullopt;
 
-  std::optional<uint32_t> aTypeCode = smallFloatTypeToFormatCode(aType);
-  std::optional<uint32_t> bTypeCode = smallFloatTypeToFormatCode(bType);
+  std::optional<ROCDL::MatrixFormat> aTypeCode =
+      smallFloatTypeToMatrixFormat(aType);
+  std::optional<ROCDL::MatrixFormat> bTypeCode =
+      smallFloatTypeToMatrixFormat(bType);
   if (!aTypeCode || !bTypeCode)
     return std::nullopt;
 
@@ -1052,20 +1080,20 @@ mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
   return std::nullopt;
 }
 
-static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-mfmaOpToScaledIntrinsic(MFMAOp mfma, Chipset chipset) {
+static std::optional<ScaledMFMAIntrinsic>
+mfmaOpToScaledIntrinsic(MFMAOp mfma, const ROCDL::TargetInfo &target) {
   return mfmaOpToScaledIntrinsic(
       mfma.getSourceA().getType(), mfma.getSourceB().getType(),
       mfma.getDestC().getType(), mfma.getM(), mfma.getN(), mfma.getK(),
-      mfma.getBlocks(), chipset);
+      mfma.getBlocks(), target);
 }
 
-static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
+static std::optional<ScaledMFMAIntrinsic>
+mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, const ROCDL::TargetInfo &target) {
   return mfmaOpToScaledIntrinsic(smfma.getSourceA().getType(),
                                  smfma.getSourceB().getType(),
                                  smfma.getDestC().getType(), smfma.getM(),
-                                 smfma.getN(), smfma.getK(), 1u, chipset);
+                                 smfma.getN(), smfma.getK(), 1u, target);
 }
 
 /// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -1220,11 +1248,11 @@ static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
 /// Returns the `rocdl` intrinsic corresponding to a SparseMFMA (smfmac)
 /// operation if one exists. This includes checking to ensure the intrinsic is
 /// supported on the architecture you are compiling for.
-static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
-                                                    Chipset chipset) {
-  bool isGfx950 = chipset >= kGfx950;
-  auto isFp8 = [&](Type t) { return typeIsExpectedFp8ForChipset(chipset, t); };
-  auto isBf8 = [&](Type t) { return typeIsExpectedBf8ForChipset(chipset, t); };
+static std::optional<StringRef>
+smfmacOpToIntrinsic(SparseMFMAOp op, const ROCDL::TargetInfo &target) {
+  bool isGfx950 = target.has(llvm::AMDGPU::FEAT_GFX950_INSTS);
+  auto isFp8 = [&](Type t) { return typeIsExpectedFp8ForTarget(target, t); };
+  auto isBf8 = [&](Type t) { return typeIsExpectedBf8ForTarget(target, t); };
 
   uint32_t m = op.getM(), n = op.getN(), k = op.getK();
   Type sourceAElem = getElementTypeOrSelf(op.getSourceA().getType());
@@ -1319,8 +1347,8 @@ static std::optional<StringRef> smfmacOpToIntrinsic(SparseMFMAOp op,
 /// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
 /// if one exists. This includes checking to ensure the intrinsic is supported
 /// on the architecture you are compiling for.
-static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
-                                                  Chipset chipset) {
+static std::optional<StringRef>
+wmmaOpToIntrinsic(WMMAOp wmma, const ROCDL::TargetInfo &target) {
   auto sourceVectorType = cast<VectorType>(wmma.getSourceA().getType());
   auto sourceBVectorType = cast<VectorType>(wmma.getSourceB().getType());
   auto destVectorType = cast<VectorType>(wmma.getDestC().getType());
@@ -1329,8 +1357,9 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
   Type elemDestType = destVectorType.getElementType();
 
   const uint32_t k = wmma.getK();
-  const bool isRDNA3 = chipset.majorVersion == 11;
-  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
+  const bool isRDNA3 = target.isGeneration(11);
+  const bool isRDNA4 =
+      target.isGeneration(12) && !target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS);
 
   // Handle RDNA3 and RDNA4.
   if (isRDNA3 || isRDNA4)
@@ -1338,7 +1367,7 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
                                  k, isRDNA3);
 
   // Handle gfx1250.
-  if (chipset == kGfx1250)
+  if (target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
     return wmmaOpToIntrinsicGfx1250(elemSourceType, elemBSourceType,
                                     elemDestType, k);
 
@@ -1356,7 +1385,7 @@ struct SparseWMMAOpInfo {
 };
 
 static std::optional<SparseWMMAOpInfo>
-sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
+sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, const ROCDL::TargetInfo &target) {
   Type sourceAElem = getElementTypeOrSelf(swmmac.getSourceA().getType());
   Type sourceBElem = getElementTypeOrSelf(swmmac.getSourceB().getType());
   Type destElem = getElementTypeOrSelf(swmmac.getDestC().getType());
@@ -1366,7 +1395,8 @@ sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
   if ((m != 16) || (n != 16))
     return std::nullopt;
 
-  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
+  const bool isRDNA4 =
+      target.isGeneration(12) && !target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS);
   if (isRDNA4) {
     if (k == 32) {
       if (destElem.isF32() && sourceAElem.isF16() && sourceBElem.isF16())
@@ -1424,7 +1454,7 @@ sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
     }
   }
 
-  const bool isGFX1250 = chipset == kGfx1250;
+  const bool isGFX1250 = target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS);
   const bool isWavesize64 = swmmac.getWave64();
   if (isGFX1250 && !isWavesize64) {
     if (k == 64) {
@@ -1502,33 +1532,35 @@ sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
 
 namespace {
 struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
-  MFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<MFMAOp>(converter), chipset(chipset) {}
+  MFMAOpLowering(const LLVMTypeConverter &converter,
+                 const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<MFMAOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(MFMAOp op, MFMAOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
+    Type destElem = getElementTypeOrSelf(op.getDestD().getType());
     Type outType = typeConverter->convertType(op.getDestD().getType());
     Type intrinsicOutType = outType;
     if (auto outVecType = dyn_cast<VectorType>(outType))
       if (outVecType.getElementType().isBF16())
         intrinsicOutType = outVecType.clone(rewriter.getI16Type());
 
-    if (chipset.majorVersion != 9 || chipset < kGfx908)
+    if (!target.has(llvm::AMDGPU::FEAT_MAI_INSTS))
       return op->emitOpError("MFMA only supported on gfx908+");
     uint32_t getBlgpField = static_cast<uint32_t>(op.getBlgp());
     if (op.getNegateA() || op.getNegateB() || op.getNegateC()) {
-      if (chipset < kGfx942)
+      if (!target.has(llvm::AMDGPU::FEAT_GFX940_INSTS))
         return op.emitOpError("negation unsupported on older than gfx942");
       getBlgpField |=
           op.getNegateA() | (op.getNegateB() << 1) | (op.getNegateC() << 2);
     }
-    std::optional<StringRef> maybeIntrinsic = mfmaOpToIntrinsic(op, chipset);
-    std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-        maybeScaledIntrinsic = mfmaOpToScaledIntrinsic(op, chipset);
+    std::optional<StringRef> maybeIntrinsic = mfmaOpToIntrinsic(op, target);
+    std::optional<ScaledMFMAIntrinsic> maybeScaledIntrinsic =
+        mfmaOpToScaledIntrinsic(op, target);
     if (!maybeIntrinsic.has_value() && !maybeScaledIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching MFMA size on given chipset");
 
@@ -1546,7 +1578,7 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     // Determine if we can use bf16 in the intrinsic. Newer MFMAs in gfx950+
     // allows bf16 as the input. For reference check IntrinsicsAMDGPU.td file.
     bool allowBf16 = [&]() {
-      if (chipset < kGfx950)
+      if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS))
         return false;
       if (isScaled)
         return true;
@@ -1564,15 +1596,26 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
       Value zero = createI32Constant(rewriter, loc, 0);
       auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
       loweredOp.addOperands({/*scale A=*/zero, /*scale B=*/zero});
-      loweredOp.addAttributes({{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
-                               {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
-                               {"opselA", rewriter.getI32IntegerAttr(0)},
-                               {"opselB", rewriter.getI32IntegerAttr(0)}});
+      loweredOp.addAttributes(
+          {{"cbsz",
+            ROCDL::MatrixFormatAttr::get(rewriter.getContext(), aTypeCode)},
+           {"blgp",
+            ROCDL::MatrixFormatAttr::get(rewriter.getContext(), bTypeCode)},
+           {"opselA", rewriter.getI32IntegerAttr(0)},
+           {"opselB", rewriter.getI32IntegerAttr(0)}});
     } else {
+      Attribute blgpAttr =
+          destElem.isF64()
+              ? Attribute(ROCDL::MFMANegModifierAttr::get(
+                    rewriter.getContext(),
+                    static_cast<ROCDL::MFMANegModifier>(getBlgpField)))
+              : Attribute(ROCDL::MFMAPermBAttr::get(
+                    rewriter.getContext(),
+                    static_cast<ROCDL::MFMAPermB>(getBlgpField)));
       loweredOp.addAttributes(
           {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
            {"abid", rewriter.getI32IntegerAttr(op.getAbid())},
-           {"blgp", rewriter.getI32IntegerAttr(getBlgpField)}});
+           {"blgp", blgpAttr}});
     };
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     if (outType != intrinsicOutType)
@@ -1583,10 +1626,11 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
 };
 
 struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
-  ScaledMFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern(converter), chipset(chipset) {}
+  ScaledMFMAOpLowering(const LLVMTypeConverter &converter,
+                       const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(ScaledMFMAOp op, ScaledMFMAOpAdaptor adaptor,
@@ -1594,10 +1638,10 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
     Location loc = op.getLoc();
     Type intrinsicOutType = typeConverter->convertType(op.getDestD().getType());
 
-    if (chipset.majorVersion != 9 || chipset < kGfx950)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS))
       return op->emitOpError("scaled MFMA only supported on gfx908+");
-    std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-        maybeScaledIntrinsic = mfmaOpToScaledIntrinsic(op, chipset);
+    std::optional<ScaledMFMAIntrinsic> maybeScaledIntrinsic =
+        mfmaOpToScaledIntrinsic(op, target);
     if (!maybeScaledIntrinsic.has_value())
       return op.emitOpError(
           "no intrinsic matching scaled MFMA size on given chipset");
@@ -1615,8 +1659,10 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
          /*scales B*/
          castScaleOperand(rewriter, loc, adaptor.getScalesB())});
     loweredOp.addAttributes(
-        {{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
-         {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+        {{"cbsz",
+          ROCDL::MatrixFormatAttr::get(rewriter.getContext(), aTypeCode)},
+         {"blgp",
+          ROCDL::MatrixFormatAttr::get(rewriter.getContext(), bTypeCode)},
          {"opselA", rewriter.getI32IntegerAttr(adaptor.getScalesIdxA())},
          {"opselB", rewriter.getI32IntegerAttr(adaptor.getScalesIdxB())}});
 
@@ -1627,10 +1673,11 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
 };
 
 struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
-  SparseMFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<SparseMFMAOp>(converter), chipset(chipset) {}
+  SparseMFMAOpLowering(const LLVMTypeConverter &converter,
+                       const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<SparseMFMAOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(SparseMFMAOp op, SparseMFMAOpAdaptor adaptor,
@@ -1642,24 +1689,33 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     // smfmac is supported on gfx942 and gfx950.
-    if (chipset.majorVersion != 9 || chipset < kGfx942)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX940_INSTS))
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
-    bool isGfx950 = chipset >= kGfx950;
 
-    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
-                                         isGfx950);
-    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
-                                         isGfx950);
-    Value c = adaptor.getDestC();
-
-    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
+    std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, target);
     if (!maybeIntrinsic.has_value())
       return op.emitOpError(
           "no intrinsic matching sparse MFMA on the given chipset");
+    bool isGfx942BF16 =
+        (*maybeIntrinsic ==
+             ROCDL::smfmac_f32_16x16x32_bf16::getOperationName() ||
+         *maybeIntrinsic ==
+             ROCDL::smfmac_f32_32x32x16_bf16::getOperationName());
+    bool isGfx950 =
+        (target.has(llvm::AMDGPU::FEAT_GFX950_INSTS)) && !isGfx942BF16;
+
+    Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
+                                         isGfx950);
+    Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB(),
+                                         isGfx950);
+    Value c = adaptor.getDestC();
 
     // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
-    Value sparseIdx = LLVM::BitcastOp::create(
-        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+    // gfx950 8-bit variants already carry the index as i32; skip the bitcast.
+    Value sparseIdx = adaptor.getSparseIdx();
+    Type i32Type = rewriter.getI32Type();
+    if (sparseIdx.getType() != i32Type)
+      sparseIdx = LLVM::BitcastOp::create(rewriter, loc, i32Type, sparseIdx);
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
@@ -1674,10 +1730,11 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
 };
 
 struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
-  WMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<WMMAOp>(converter), chipset(chipset) {}
+  WMMAOpLowering(const LLVMTypeConverter &converter,
+                 const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<WMMAOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(WMMAOp op, WMMAOpAdaptor adaptor,
@@ -1688,10 +1745,10 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     if (!outType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
+    if (!target.isGeneration(11) && !target.isGeneration(12))
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
 
-    bool isGFX1250 = chipset >= kGfx1250;
+    bool isGFX1250 = target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS);
 
     // The WMMA operations represent vectors of bf16s as vectors of i16s
     // (except on gfx1250), so we need to bitcast bfloats to i16 and then
@@ -1719,12 +1776,13 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
       destC = LLVM::BitcastOp::create(
           rewriter, loc, destCType.clone(rewriter.getI16Type()), destC);
 
-    std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, chipset);
+    std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, target);
 
     if (!maybeIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching WMMA on the given chipset");
 
-    if (chipset.majorVersion >= 12 && op.getSubwordOffset() != 0)
+    if (target.has(llvm::AMDGPU::FEAT_GFX12_INSTS) &&
+        op.getSubwordOffset() != 0)
       return op.emitOpError("subwordOffset not supported on gfx12+");
 
     SmallVector<Value, 4> operands;
@@ -1753,11 +1811,172 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   }
 };
 
-struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
-  SparseWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<SparseWMMAOp>(converter), chipset(chipset) {}
+enum class DotFamily {
+  /// ROCDL_Dot_IntrOp: single `clamp` attribute.
+  Clamp,
+  /// ROCDL_Dot_NoClamp_IntrOp: no attributes.
+  NoClamp,
+  /// ROCDL_Sudot_IntrOp: `signA`, `signB`, and `clamp` attributes.
+  Sudot,
+};
 
-  Chipset chipset;
+static std::optional<std::pair<StringRef, DotFamily>>
+dotOpToIntrinsic(DotOp op, const ROCDL::TargetInfo &target) {
+  Type aElem = cast<VectorType>(op.getSourceA().getType()).getElementType();
+  Type bElem = cast<VectorType>(op.getSourceB().getType()).getElementType();
+  Type dest = op.getDestC().getType();
+  bool uA = op.getUnsignedA();
+  bool uB = op.getUnsignedB();
+
+  // f16 x f16 -> f32 / f16.
+  if (aElem.isF16() && bElem.isF16()) {
+    if (dest.isF32() && target.has(llvm::AMDGPU::FEAT_DOT10_INSTS))
+      return {{ROCDL::fdot2::getOperationName(), DotFamily::Clamp}};
+    if (dest.isF16() && target.has(llvm::AMDGPU::FEAT_DOT9_INSTS))
+      return {{ROCDL::fdot2_f16_f16::getOperationName(), DotFamily::NoClamp}};
+    return std::nullopt;
+  }
+
+  // bf16 x bf16 -> f32 / bf16.
+  if (aElem.isBF16() && bElem.isBF16()) {
+    if (dest.isF32() && target.has(llvm::AMDGPU::FEAT_DOT12_INSTS))
+      return {{ROCDL::fdot2_f32_bf16::getOperationName(), DotFamily::Clamp}};
+    if (dest.isBF16() && target.has(llvm::AMDGPU::FEAT_DOT9_INSTS))
+      return {{ROCDL::fdot2_bf16_bf16::getOperationName(), DotFamily::NoClamp}};
+    return std::nullopt;
+  }
+
+  // Integer sources -> i32.
+  if (isa<IntegerType>(aElem) && isa<IntegerType>(bElem) &&
+      dest.isInteger(32)) {
+    bool mixedSign = (uA != uB);
+    unsigned elemWidth = aElem.getIntOrFloatBitWidth();
+
+    if (mixedSign) {
+      if (!target.has(llvm::AMDGPU::FEAT_DOT8_INSTS))
+        return std::nullopt;
+      StringRef name;
+      switch (elemWidth) {
+      case 8:
+        name = ROCDL::sudot4::getOperationName();
+        break;
+      case 4:
+        name = ROCDL::sudot8::getOperationName();
+        break;
+      default:
+        return std::nullopt;
+      }
+      return {{name, DotFamily::Sudot}};
+    }
+
+    StringRef name;
+    bool supported = false;
+    switch (elemWidth) {
+    case 16:
+      supported = target.has(llvm::AMDGPU::FEAT_DOT2_INSTS);
+      name = uA ? ROCDL::udot2::getOperationName()
+                : ROCDL::sdot2::getOperationName();
+      break;
+    case 8:
+      supported = uA ? target.has(llvm::AMDGPU::FEAT_DOT7_INSTS)
+                     : target.has(llvm::AMDGPU::FEAT_DOT1_INSTS) ||
+                           target.has(llvm::AMDGPU::FEAT_DOT8_INSTS);
+      name = uA ? ROCDL::udot4::getOperationName()
+                : ROCDL::sdot4::getOperationName();
+      break;
+    case 4:
+      supported = uA ? target.has(llvm::AMDGPU::FEAT_DOT7_INSTS)
+                     : target.has(llvm::AMDGPU::FEAT_DOT1_INSTS) ||
+                           target.has(llvm::AMDGPU::FEAT_DOT8_INSTS);
+      name = uA ? ROCDL::udot8::getOperationName()
+                : ROCDL::sdot8::getOperationName();
+      break;
+    default:
+      return std::nullopt;
+    }
+    if (!supported)
+      return std::nullopt;
+    return {{name, DotFamily::Clamp}};
+  }
+
+  // fp8/bf8 x fp8/bf8 -> f32.
+  bool aIsFp8 = isa<Float8E4M3FNType>(aElem);
+  bool aIsBf8 = isa<Float8E5M2Type>(aElem);
+  bool bIsFp8 = isa<Float8E4M3FNType>(bElem);
+  bool bIsBf8 = isa<Float8E5M2Type>(bElem);
+  if ((aIsFp8 || aIsBf8) && (bIsFp8 || bIsBf8) && dest.isF32()) {
+    if (!target.has(llvm::AMDGPU::FEAT_DOT11_INSTS))
+      return std::nullopt;
+    StringRef name;
+    if (aIsFp8 && bIsFp8)
+      name = ROCDL::dot4_f32_fp8_fp8::getOperationName();
+    else if (aIsFp8 && bIsBf8)
+      name = ROCDL::dot4_f32_fp8_bf8::getOperationName();
+    else if (aIsBf8 && bIsFp8)
+      name = ROCDL::dot4_f32_bf8_fp8::getOperationName();
+    else
+      name = ROCDL::dot4_f32_bf8_bf8::getOperationName();
+    return {{name, DotFamily::NoClamp}};
+  }
+
+  return std::nullopt;
+}
+
+struct DotOpLowering : public ConvertOpToLLVMPattern<DotOp> {
+  DotOpLowering(const LLVMTypeConverter &converter,
+                const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<DotOp>(converter), target(target) {}
+
+  ROCDL::TargetInfo target;
+
+  LogicalResult
+  matchAndRewrite(DotOp op, DotOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    std::optional<std::pair<StringRef, DotFamily>> maybeIntrinsic =
+        dotOpToIntrinsic(op, target);
+    if (!maybeIntrinsic)
+      return op.emitOpError("no intrinsic matching dot on the given chipset: ")
+             << op.getSourceA().getType() << " * " << op.getSourceB().getType()
+             << " + " << op.getDestC().getType();
+
+    auto [intrinsicName, family] = maybeIntrinsic.value();
+
+    Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA());
+    Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB());
+    Value c = adaptor.getDestC();
+
+    SmallVector<NamedAttribute, 3> attrs;
+    if (family == DotFamily::Sudot) {
+      attrs.push_back(rewriter.getNamedAttr(
+          "signA", rewriter.getBoolAttr(!op.getUnsignedA())));
+      attrs.push_back(rewriter.getNamedAttr(
+          "signB", rewriter.getBoolAttr(!op.getUnsignedB())));
+    }
+
+    if (family != DotFamily::NoClamp && op.getClamp())
+      attrs.push_back(
+          rewriter.getNamedAttr("clamp", rewriter.getBoolAttr(true)));
+
+    Type resultType = typeConverter->convertType(op.getDestD().getType());
+
+    OperationState loweredOp(loc, intrinsicName);
+    loweredOp.addTypes(resultType);
+    loweredOp.addOperands({a, b, c});
+    loweredOp.addAttributes(attrs);
+    Operation *lowered = rewriter.create(loweredOp);
+    rewriter.replaceOp(op, lowered->getResults());
+    return success();
+  }
+};
+
+struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
+  SparseWMMAOpLowering(const LLVMTypeConverter &converter,
+                       const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<SparseWMMAOp>(converter), target(target) {}
+
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(SparseWMMAOp op, SparseWMMAOpAdaptor adaptor,
@@ -1769,7 +1988,7 @@ struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     std::optional<SparseWMMAOpInfo> maybeIntrinsic =
-        sparseWMMAOpToIntrinsic(op, chipset);
+        sparseWMMAOpToIntrinsic(op, target);
 
     if (!maybeIntrinsic.has_value())
       return op.emitOpError(
@@ -1801,16 +2020,15 @@ struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
     if (intrinsic.useClamp && op.getClampAttr())
       attrs.push_back({"clamp", op.getClampAttr()});
 
-    const bool isGFX1250orHigher =
-        chipset.majorVersion == 12 && chipset.minorVersion >= 5;
-    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+    const bool isGFX1250orHigher = target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS);
+    Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
                                          isGFX1250orHigher);
-    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+    Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB(),
                                          isGFX1250orHigher);
     Value c = adaptor.getDestC();
     VectorType rawOutType = outType;
     if (!isGFX1250orHigher) {
-      c = convertSparseVectorOperand(rewriter, loc, adaptor.getDestC(), false);
+      c = convertPackedVectorOperand(rewriter, loc, adaptor.getDestC(), false);
       rawOutType = cast<VectorType>(c.getType());
     }
 
@@ -1835,10 +2053,11 @@ struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
 };
 
 struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
-  ScaledWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<ScaledWMMAOp>(converter), chipset(chipset) {}
+  ScaledWMMAOpLowering(const LLVMTypeConverter &converter,
+                       const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<ScaledWMMAOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(ScaledWMMAOp op, ScaledWMMAOpAdaptor adaptor,
@@ -1849,7 +2068,7 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
     if (!outType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("WMMA scale only supported on gfx1250+");
 
     int64_t m = op.getM();
@@ -1859,8 +2078,10 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
     Type aElemType = getElementTypeOrSelf(op.getSourceA().getType());
     Type bElemType = getElementTypeOrSelf(op.getSourceB().getType());
 
-    std::optional<uint32_t> aFmtCode = smallFloatTypeToFormatCode(aElemType);
-    std::optional<uint32_t> bFmtCode = smallFloatTypeToFormatCode(bElemType);
+    std::optional<ROCDL::MatrixFormat> aFmtCode =
+        smallFloatTypeToMatrixFormat(aElemType);
+    std::optional<ROCDL::MatrixFormat> bFmtCode =
+        smallFloatTypeToMatrixFormat(bElemType);
 
     if (!aFmtCode || !bFmtCode)
       return op.emitOpError("unsupported element types for scaled_wmma");
@@ -1876,8 +2097,10 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
     Type scaleAElemType = scaleAVecType.getElementType();
     Type scaleBElemType = scaleBVecType.getElementType();
 
-    std::optional<uint32_t> scaleAFmt = getWmmaScaleFormat(scaleAElemType);
-    std::optional<uint32_t> scaleBFmt = getWmmaScaleFormat(scaleBElemType);
+    std::optional<ROCDL::WMMAMatrixScaleFormat> scaleAFmt =
+        getWmmaScaleFormat(scaleAElemType);
+    std::optional<ROCDL::WMMAMatrixScaleFormat> scaleBFmt =
+        getWmmaScaleFormat(scaleBElemType);
 
     if (!scaleAFmt || !scaleBFmt)
       return op.emitOpError("unsupported scale element types");
@@ -1895,21 +2118,31 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
     // The f4 variant does not have fmtA and fmtB attributes.
     bool is32x16 = (m == 32 && n == 16 && k == 128);
     if (!is32x16) {
-      attrs.emplace_back("fmtA", rewriter.getI32IntegerAttr(*aFmtCode));
-      attrs.emplace_back("fmtB", rewriter.getI32IntegerAttr(*bFmtCode));
+      attrs.emplace_back("fmtA", ROCDL::MatrixFormatAttr::get(
+                                     rewriter.getContext(), *aFmtCode));
+      attrs.emplace_back("fmtB", ROCDL::MatrixFormatAttr::get(
+                                     rewriter.getContext(), *bFmtCode));
     }
 
     // modC uses default value of 0.
-    attrs.emplace_back("modC", rewriter.getI16IntegerAttr(0));
+    attrs.emplace_back(
+        "modC", ROCDL::WMMACModifierAttr::get(rewriter.getContext(),
+                                              ROCDL::WMMACModifier::none));
 
     // Scale attributes. Convert user-facing firstScaleLane (0 or 16) to the
     // half of the wave that is being selected (0 or 1).
-    attrs.emplace_back(
-        "scaleAType", rewriter.getI32IntegerAttr(op.getAFirstScaleLane() / 16));
-    attrs.emplace_back("fmtScaleA", rewriter.getI32IntegerAttr(*scaleAFmt));
-    attrs.emplace_back(
-        "scaleBType", rewriter.getI32IntegerAttr(op.getBFirstScaleLane() / 16));
-    attrs.emplace_back("fmtScaleB", rewriter.getI32IntegerAttr(*scaleBFmt));
+    attrs.emplace_back("scaleAType", ROCDL::WMMAMatrixScaleAttr::get(
+                                         rewriter.getContext(),
+                                         static_cast<ROCDL::WMMAMatrixScale>(
+                                             op.getAFirstScaleLane() / 16)));
+    attrs.emplace_back("fmtScaleA", ROCDL::WMMAMatrixScaleFormatAttr::get(
+                                        rewriter.getContext(), *scaleAFmt));
+    attrs.emplace_back("scaleBType", ROCDL::WMMAMatrixScaleAttr::get(
+                                         rewriter.getContext(),
+                                         static_cast<ROCDL::WMMAMatrixScale>(
+                                             op.getBFirstScaleLane() / 16)));
+    attrs.emplace_back("fmtScaleB", ROCDL::WMMAMatrixScaleFormatAttr::get(
+                                        rewriter.getContext(), *scaleBFmt));
 
     // Reuse flags use default value of false.
     attrs.emplace_back("reuseA", rewriter.getBoolAttr(false));
@@ -1941,16 +2174,19 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
 
 struct TransposeLoadOpLowering
     : public ConvertOpToLLVMPattern<TransposeLoadOp> {
-  TransposeLoadOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<TransposeLoadOp>(converter), chipset(chipset) {}
+  TransposeLoadOpLowering(const LLVMTypeConverter &converter,
+                          const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<TransposeLoadOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(TransposeLoadOp op, TransposeLoadOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset != kGfx950)
-      return op.emitOpError("Non-gfx950 chipset not supported");
+    if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS) &&
+        !target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
+      return op.emitOpError(
+          "transpose_load is only supported on gfx950 and gfx1250+");
 
     Location loc = op.getLoc();
     auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
@@ -1973,57 +2209,211 @@ struct TransposeLoadOpLowering
     size_t elementTypeSize =
         resultType.getElementType().getIntOrFloatBitWidth();
 
-    // ROCDL transpose load intrinsics return vectors of 32-bit integers, if
-    // the element size is smaller than 16 bits.
-    Type rocdlResultType = VectorType::get((numElements * elementTypeSize) / 32,
-                                           rewriter.getIntegerType(32));
+    Type llvmResultType = typeConverter->convertType(resultType);
+    // ROCDL transpose load intrinsics return vectors of 32-bit integers for
+    // sub-16-bit element types, and otherwise return the converted result type.
+    Type rocdlResultType =
+        elementTypeSize < 16
+            ? VectorType::get((numElements * elementTypeSize) / 32,
+                              rewriter.getIntegerType(32))
+            : llvmResultType;
+
+    auto emitNumElementsError = [&](size_t expected, StringRef chipsetName) {
+      return op.emitOpError()
+             << elementTypeSize << "-bit transpose_load requires " << expected
+             << " elements on " << chipsetName;
+    };
+
+    Value intrinsic;
+    if (target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS)) {
+      switch (elementTypeSize) {
+      case 4: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
+                .getResult();
+        break;
+      }
+      case 6: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
+                .getResult();
+        break;
+      }
+      case 8: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
+                .getResult();
+        break;
+      }
+      case 16: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx1250+");
+        intrinsic = ROCDL::DsLoadTr16_B128::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
+                        .getResult();
+        break;
+      }
+      default:
+        return op.emitOpError("Unsupported element size for transpose load");
+      }
+    } else {
+      switch (elementTypeSize) {
+      case 4: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx950");
+        intrinsic = ROCDL::ds_read_tr4_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
+                        .getResult();
+        break;
+      }
+      case 6: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx950");
+        intrinsic = ROCDL::ds_read_tr6_b96::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
+                        .getResult();
+        break;
+      }
+      case 8: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx950");
+        intrinsic = ROCDL::ds_read_tr8_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
+                        .getResult();
+        break;
+      }
+      case 16: {
+        if (numElements != 4)
+          return emitNumElementsError(4, "gfx950");
+        intrinsic = ROCDL::ds_read_tr16_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
+                        .getResult();
+        break;
+      }
+      default:
+        return op.emitOpError("Unsupported element size for transpose load");
+      }
+    }
+
+    assert(intrinsic && "expected ROCDL transpose load intrinsic");
+    if (intrinsic.getType() == llvmResultType) {
+      rewriter.replaceOp(op, intrinsic);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, intrinsic);
+    return success();
+  }
+};
+
+struct GlobalTransposeLoadOpLowering
+    : public ConvertOpToLLVMPattern<GlobalTransposeLoadOp> {
+  GlobalTransposeLoadOpLowering(const LLVMTypeConverter &converter,
+                                const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<GlobalTransposeLoadOp>(converter),
+        target(target) {}
+
+  ROCDL::TargetInfo target;
+
+  LogicalResult
+  matchAndRewrite(GlobalTransposeLoadOp op,
+                  GlobalTransposeLoadOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!target.has(llvm::AMDGPU::FEAT_GFX12_INSTS))
+      return op.emitOpError(
+          "global_transpose_load is only supported on gfx1200+");
+
+    Location loc = op.getLoc();
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto resultType = cast<VectorType>(op.getResult().getType());
+
+    Value srcPtr = getStridedElementPtr(
+        rewriter, loc, srcMemRefType, adaptor.getSrc(), adaptor.getSrcIndices(),
+        LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw);
+
+    size_t numElements = resultType.getNumElements();
+    size_t elementTypeSize =
+        resultType.getElementType().getIntOrFloatBitWidth();
+
+    // ROCDL global transpose load intrinsics return vectors of i32 for
+    // sub-16-bit elements, matching the LDS lowering convention.
+    Type rocdlResultType =
+        elementTypeSize < 16
+            ? VectorType::get((numElements * elementTypeSize) / 32,
+                              rewriter.getIntegerType(32))
+            : typeConverter->convertType(resultType);
     Type llvmResultType = typeConverter->convertType(resultType);
 
     switch (elementTypeSize) {
     case 4: {
       assert(numElements == 16);
-      auto rocdlOp = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
+      if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
+        return op.emitOpError("4-bit global_transpose_load requires gfx1250+");
+      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 6: {
       assert(numElements == 16);
-      auto rocdlOp = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
+      if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
+        return op.emitOpError("6-bit global_transpose_load requires gfx1250+");
+      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 8: {
       assert(numElements == 8);
-      auto rocdlOp = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 16: {
-      assert(numElements == 4);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(op, llvmResultType,
-                                                           srcPtr);
+      assert(numElements == 8);
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadTr8_B128>(
+          op, llvmResultType, srcPtr, ArrayAttr{}, ArrayAttr{}, ArrayAttr{});
       break;
     }
     default:
-      return op.emitOpError("Unsupported element size for transpose load");
+      return op.emitOpError(
+          "unsupported element size for global transpose load");
     }
     return success();
   }
 };
 
 struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
-  GatherToLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<GatherToLDSOp>(converter), chipset(chipset) {}
+  GatherToLDSOpLowering(const LLVMTypeConverter &converter,
+                        const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<GatherToLDSOp>(converter), target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(GatherToLDSOp op, GatherToLDSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset.majorVersion < 9 || chipset.majorVersion > 10)
+    if (!target.has(llvm::AMDGPU::FEAT_VMEM_TO_LDS_LOAD_INSTS))
       return op.emitOpError("pre-gfx9 and post-gfx10 not supported");
 
     Location loc = op.getLoc();
@@ -2048,7 +2438,8 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     if (!llvm::is_contained({1, 2, 4, 12, 16}, loadWidth))
       return op.emitOpError("chipset unsupported element size");
 
-    if (chipset != kGfx950 && llvm::is_contained({12, 16}, loadWidth))
+    if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS) &&
+        llvm::is_contained({12, 16}, loadWidth))
       return op.emitOpError("Gather to LDS instructions with 12-byte and "
                             "16-byte load widths are only supported on gfx950");
 
@@ -2080,17 +2471,17 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
 struct GlobalLoadAsyncToLDSOpLowering
     : public ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp> {
   GlobalLoadAsyncToLDSOpLowering(const LLVMTypeConverter &converter,
-                                 Chipset chipset)
+                                 const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp>(converter),
-        chipset(chipset) {}
+        target(target) {}
 
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(GlobalLoadAsyncToLDSOp op,
                   GlobalLoadAsyncToLDSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op.emitOpError(
           "global_load_async_to_lds is only supported on gfx1250+");
 
@@ -2124,7 +2515,7 @@ struct GlobalLoadAsyncToLDSOpLowering
     }
 
     auto offset = rewriter.getI32IntegerAttr(0);
-    auto aux = rewriter.getI32IntegerAttr(0);
+    Attribute aux = rewriter.getI32IntegerAttr(0);
 
     switch (transferBits) {
     case 8:
@@ -2157,10 +2548,11 @@ struct GlobalLoadAsyncToLDSOpLowering
 namespace {
 struct ExtPackedFp8OpLowering final
     : public ConvertOpToLLVMPattern<ExtPackedFp8Op> {
-  ExtPackedFp8OpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+  ExtPackedFp8OpLowering(const LLVMTypeConverter &converter,
+                         const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<amdgpu::ExtPackedFp8Op>(converter),
-        chipset(chipset) {}
-  Chipset chipset;
+        target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(ExtPackedFp8Op op, ExtPackedFp8OpAdaptor adaptor,
@@ -2170,10 +2562,10 @@ struct ExtPackedFp8OpLowering final
 struct ScaledExtPackedMatrixOpLowering final
     : public ConvertOpToLLVMPattern<ScaledExtPackedMatrixOp> {
   ScaledExtPackedMatrixOpLowering(const LLVMTypeConverter &converter,
-                                  Chipset chipset)
+                                  const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<amdgpu::ScaledExtPackedMatrixOp>(converter),
-        chipset(chipset) {}
-  Chipset chipset;
+        target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(ScaledExtPackedMatrixOp op,
@@ -2184,10 +2576,10 @@ struct ScaledExtPackedMatrixOpLowering final
 struct PackedTrunc2xFp8OpLowering final
     : public ConvertOpToLLVMPattern<PackedTrunc2xFp8Op> {
   PackedTrunc2xFp8OpLowering(const LLVMTypeConverter &converter,
-                             Chipset chipset)
+                             const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<amdgpu::PackedTrunc2xFp8Op>(converter),
-        chipset(chipset) {}
-  Chipset chipset;
+        target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(PackedTrunc2xFp8Op op, PackedTrunc2xFp8OpAdaptor adaptor,
@@ -2197,10 +2589,10 @@ struct PackedTrunc2xFp8OpLowering final
 struct PackedStochRoundFp8OpLowering final
     : public ConvertOpToLLVMPattern<PackedStochRoundFp8Op> {
   PackedStochRoundFp8OpLowering(const LLVMTypeConverter &converter,
-                                Chipset chipset)
+                                const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<amdgpu::PackedStochRoundFp8Op>(converter),
-        chipset(chipset) {}
-  Chipset chipset;
+        target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(PackedStochRoundFp8Op op,
@@ -2210,10 +2602,11 @@ struct PackedStochRoundFp8OpLowering final
 
 struct ScaledExtPackedOpLowering final
     : public ConvertOpToLLVMPattern<ScaledExtPackedOp> {
-  ScaledExtPackedOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+  ScaledExtPackedOpLowering(const LLVMTypeConverter &converter,
+                            const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<amdgpu::ScaledExtPackedOp>(converter),
-        chipset(chipset) {}
-  Chipset chipset;
+        target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(ScaledExtPackedOp op, ScaledExtPackedOpAdaptor adaptor,
@@ -2223,10 +2616,10 @@ struct ScaledExtPackedOpLowering final
 struct PackedScaledTruncOpLowering final
     : public ConvertOpToLLVMPattern<PackedScaledTruncOp> {
   PackedScaledTruncOpLowering(const LLVMTypeConverter &converter,
-                              Chipset chipset)
+                              const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<amdgpu::PackedScaledTruncOp>(converter),
-        chipset(chipset) {}
-  Chipset chipset;
+        target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(PackedScaledTruncOp op, PackedScaledTruncOpAdaptor adaptor,
@@ -2239,7 +2632,7 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
     ExtPackedFp8Op op, ExtPackedFp8OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (!(chipset == kGfx942 || hasOcpFp8(chipset)))
+  if (!target.has(llvm::AMDGPU::FEAT_FP8_CONVERSION_INSTS))
     return rewriter.notifyMatchFailure(
         loc, "Fp8 conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -2270,18 +2663,18 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   }
   Value i32Source = LLVM::BitcastOp::create(rewriter, loc, i32, source);
   if (resultVecType) {
-    if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
+    if (typeIsExpectedBf8ForTarget(target, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Bf8Op>(op, f32, i32Source,
                                                         op.getIndex());
-    } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
+    } else if (typeIsExpectedFp8ForTarget(target, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Fp8Op>(op, f32, i32Source,
                                                         op.getIndex());
     }
   } else {
-    if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
+    if (typeIsExpectedBf8ForTarget(target, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtF32Bf8Op>(op, f32, i32Source,
                                                       op.getIndex());
-    } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
+    } else if (typeIsExpectedFp8ForTarget(target, sourceElemType)) {
       rewriter.replaceOpWithNewOp<ROCDL::CvtF32Fp8Op>(op, f32, i32Source,
                                                       op.getIndex());
     }
@@ -2389,7 +2782,7 @@ LogicalResult ScaledExtPackedMatrixOpLowering::matchAndRewrite(
   using fp6 = Float6E2M3FNType;
   using bf6 = Float6E3M2FNType;
   Location loc = op.getLoc();
-  if (chipset != kGfx1250) {
+  if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS)) {
     return rewriter.notifyMatchFailure(
         loc,
         "Scaled fp packed conversion instructions are not available on target "
@@ -2460,7 +2853,7 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
     ScaledExtPackedOp op, ScaledExtPackedOpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (chipset != kGfx950)
+  if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS))
     return rewriter.notifyMatchFailure(
         loc, "Scaled fp conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -2540,7 +2933,7 @@ LogicalResult PackedScaledTruncOpLowering::matchAndRewrite(
     PackedScaledTruncOp op, PackedScaledTruncOpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (chipset != kGfx950)
+  if (!target.has(llvm::AMDGPU::FEAT_GFX950_INSTS))
     return rewriter.notifyMatchFailure(
         loc, "Scaled fp conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -2622,7 +3015,7 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
     PackedTrunc2xFp8Op op, PackedTrunc2xFp8OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (!(chipset == kGfx942 || hasOcpFp8(chipset)))
+  if (!target.has(llvm::AMDGPU::FEAT_FP8_CONVERSION_INSTS))
     return rewriter.notifyMatchFailure(
         loc, "Fp8 conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -2642,12 +3035,15 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
     existing = LLVM::UndefOp::create(rewriter, loc, i32);
 
   Value result;
-  if (typeIsExpectedBf8ForChipset(chipset, resultElemType))
+  if (typeIsExpectedBf8ForTarget(target, resultElemType))
     result = ROCDL::CvtPkBf8F32Op::create(rewriter, loc, i32, sourceA, sourceB,
                                           existing, op.getWordIndex());
-  else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
+  else if (typeIsExpectedFp8ForTarget(target, resultElemType))
     result = ROCDL::CvtPkFp8F32Op::create(rewriter, loc, i32, sourceA, sourceB,
                                           existing, op.getWordIndex());
+  else
+    return op.emitOpError(
+        "no truncation to result type available on given chipset");
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -2658,7 +3054,7 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
     PackedStochRoundFp8Op op, PackedStochRoundFp8OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  if (!(chipset == kGfx942 || hasOcpFp8(chipset)))
+  if (!target.has(llvm::AMDGPU::FEAT_FP8_CONVERSION_INSTS))
     return rewriter.notifyMatchFailure(
         loc, "Fp8 conversion instructions are not available on target "
              "architecture and their emulation is not implemented");
@@ -2676,12 +3072,15 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
     existing = LLVM::UndefOp::create(rewriter, loc, i32);
 
   Value result;
-  if (typeIsExpectedBf8ForChipset(chipset, resultElemType))
+  if (typeIsExpectedBf8ForTarget(target, resultElemType))
     result = ROCDL::CvtSrBf8F32Op::create(rewriter, loc, i32, source, stoch,
                                           existing, op.getStoreIndex());
-  else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
+  else if (typeIsExpectedFp8ForTarget(target, resultElemType))
     result = ROCDL::CvtSrFp8F32Op::create(rewriter, loc, i32, source, stoch,
                                           existing, op.getStoreIndex());
+  else
+    return op.emitOpError(
+        "no stochastic rounding to result type available on given chipset");
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -2691,9 +3090,10 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
 // Implement the AMDGPU_DPPLowering class that will convert the amdgpu.dpp
 // operation into the corresponding ROCDL instructions.
 struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
-  AMDGPUDPPLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<DPPOp>(converter), chipset(chipset) {}
-  Chipset chipset;
+  AMDGPUDPPLowering(const LLVMTypeConverter &converter,
+                    const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<DPPOp>(converter), target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(DPPOp DppOp, DPPOp::Adaptor adaptor,
@@ -2815,9 +3215,9 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 
     // Check for row_mask, bank_mask, bound_ctrl if they exist and create
     // constants
-    auto rowMask = DppOp->getAttrOfType<IntegerAttr>("row_mask").getInt();
-    auto bankMask = DppOp->getAttrOfType<IntegerAttr>("bank_mask").getInt();
-    bool boundCtrl = DppOp->getAttrOfType<BoolAttr>("bound_ctrl").getValue();
+    auto rowMask = DppOp.getRowMask();
+    auto bankMask = DppOp.getBankMask();
+    bool boundCtrl = DppOp.getBoundCtrl();
 
     // create a ROCDL_DPPMovOp instruction with the appropriate attributes
     auto dppMovOp =
@@ -2877,20 +3277,25 @@ struct AMDGPUSwizzleBitModeLowering
 struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
-  AMDGPUPermlaneLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<PermlaneSwapOp>(converter), chipset(chipset) {}
-  Chipset chipset;
+  AMDGPUPermlaneLowering(const LLVMTypeConverter &converter,
+                         const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<PermlaneSwapOp>(converter), target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(PermlaneSwapOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx950)
-      return op->emitOpError("permlane_swap is only supported on gfx950+");
+    unsigned rowLength = op.getRowLength();
+    bool supported = rowLength == 16
+                         ? target.has(llvm::AMDGPU::FEAT_PERMLANE16_SWAP)
+                         : target.has(llvm::AMDGPU::FEAT_PERMLANE32_SWAP);
+    if (!supported)
+      return op->emitOpError("permlane_swap of row length ")
+             << rowLength << " is not supported on " << target.getArchName();
 
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    unsigned rowLength = op.getRowLength();
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
@@ -2933,6 +3338,52 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
   }
 };
 
+struct AMDGPUPermlaneVarLowering
+    : public ConvertOpToLLVMPattern<PermlaneVarOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUPermlaneVarLowering(const LLVMTypeConverter &converter,
+                            const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<PermlaneVarOp>(converter), target(target) {}
+  ROCDL::TargetInfo target;
+
+  LogicalResult
+  matchAndRewrite(PermlaneVarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!target.has(llvm::AMDGPU::FEAT_GFX12_INSTS))
+      return op->emitOpError("permlane_var is only supported on GFX12+");
+
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    Value selector = adaptor.getSelector();
+    bool cross = op.getCross();
+    bool fi = op.getFetchInactive();
+    bool boundCtrl = op.getBoundCtrl();
+
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
+
+    SmallVector<Value> permuted;
+    for (Value v : decomposed) {
+      Value res;
+      if (cross)
+        res = ROCDL::PermlaneX16VarOp::create(rewriter, loc, i32, v, v,
+                                              selector, fi, boundCtrl);
+      else
+        res = ROCDL::Permlane16VarOp::create(rewriter, loc, i32, v, v, selector,
+                                             fi, boundCtrl);
+      permuted.emplace_back(res);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // In-LDS Barrier Operations
 //===----------------------------------------------------------------------===//
@@ -2949,15 +3400,16 @@ constexpr int32_t kDsBarrierPendingCountMask =
 
 struct DsBarrierInitOpLowering
     : public ConvertOpToLLVMPattern<DsBarrierInitOp> {
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
-  DsBarrierInitOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<DsBarrierInitOp>(converter), chipset(chipset) {}
+  DsBarrierInitOpLowering(const LLVMTypeConverter &converter,
+                          const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<DsBarrierInitOp>(converter), target(target) {}
 
   LogicalResult
   matchAndRewrite(DsBarrierInitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("only supported on gfx1250+");
 
     Location loc = op.getLoc();
@@ -3002,17 +3454,17 @@ struct DsBarrierInitOpLowering
 
 struct DsBarrierPollStateOpLowering
     : public ConvertOpToLLVMPattern<DsBarrierPollStateOp> {
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   DsBarrierPollStateOpLowering(const LLVMTypeConverter &converter,
-                               Chipset chipset)
+                               const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<DsBarrierPollStateOp>(converter),
-        chipset(chipset) {}
+        target(target) {}
 
   LogicalResult
   matchAndRewrite(DsBarrierPollStateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("only supported on gfx1250+");
 
     Location loc = op.getLoc();
@@ -3027,7 +3479,8 @@ struct DsBarrierPollStateOpLowering
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         op, i64, ptr, /*alignment=*/8, /*volatile_=*/false,
         /*nontemporal=*/false, /*invariant=*/false,
-        /*invariantGroup=*/false, LLVM::AtomicOrdering::acquire,
+        /*invariantGroup=*/false, /*noundef=*/false,
+        LLVM::AtomicOrdering::acquire,
         /*syncscope=*/"workgroup");
     return success();
   }
@@ -3035,17 +3488,17 @@ struct DsBarrierPollStateOpLowering
 
 struct DsAsyncBarrierArriveOpLowering
     : public ConvertOpToLLVMPattern<DsAsyncBarrierArriveOp> {
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
   DsAsyncBarrierArriveOpLowering(const LLVMTypeConverter &converter,
-                                 Chipset chipset)
+                                 const ROCDL::TargetInfo &target)
       : ConvertOpToLLVMPattern<DsAsyncBarrierArriveOp>(converter),
-        chipset(chipset) {}
+        target(target) {}
 
   LogicalResult
   matchAndRewrite(DsAsyncBarrierArriveOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("only supported on gfx1250+");
 
     Location loc = op.getLoc();
@@ -3063,16 +3516,16 @@ struct DsAsyncBarrierArriveOpLowering
 
 struct DsBarrierArriveOpLowering
     : public ConvertOpToLLVMPattern<DsBarrierArriveOp> {
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 
-  DsBarrierArriveOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<DsBarrierArriveOp>(converter), chipset(chipset) {
-  }
+  DsBarrierArriveOpLowering(const LLVMTypeConverter &converter,
+                            const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<DsBarrierArriveOp>(converter), target(target) {}
 
   LogicalResult
   matchAndRewrite(DsBarrierArriveOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("only supported on gfx1250+");
 
     Location loc = op.getLoc();
@@ -3205,14 +3658,15 @@ struct AMDGPUMakeDmaBaseLowering : public ConvertOpToLLVMPattern<BaseOp> {
   using ConvertOpToLLVMPattern<BaseOp>::ConvertOpToLLVMPattern;
   using Adaptor = typename ConvertOpToLLVMPattern<BaseOp>::OpAdaptor;
 
-  AMDGPUMakeDmaBaseLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<BaseOp>(converter), chipset(chipset) {}
-  Chipset chipset;
+  AMDGPUMakeDmaBaseLowering(const LLVMTypeConverter &converter,
+                            const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<BaseOp>(converter), target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(BaseOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("make_dma_base is only supported on gfx1250");
 
     Location loc = op.getLoc();
@@ -3295,13 +3749,14 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   using ConvertOpToLLVMPattern<DescriptorOp>::ConvertOpToLLVMPattern;
   using OpAdaptor = typename ConvertOpToLLVMPattern<DescriptorOp>::OpAdaptor;
 
-  AMDGPULowerDescriptor(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<DescriptorOp>(converter), chipset(chipset) {}
-  Chipset chipset;
+  AMDGPULowerDescriptor(const LLVMTypeConverter &converter,
+                        const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<DescriptorOp>(converter), target(target) {}
+  ROCDL::TargetInfo target;
 
-  Value getDGroup0(OpAdaptor adaptor) const { return adaptor.getBase(); }
+  Value getDGroup0(OpAdaptor &adaptor) const { return adaptor.getBase(); }
 
-  Value setWorkgroupMask(DescriptorOp op, OpAdaptor adaptor,
+  Value setWorkgroupMask(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0) const {
     Value mask = op.getWorkgroupMask();
@@ -3315,7 +3770,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, extendedMask, 0);
   }
 
-  Value setDataSize(DescriptorOp op, OpAdaptor adaptor,
+  Value setDataSize(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
     unsigned elementTypeWidthInBits = op.getElementTypeWidth();
@@ -3326,7 +3781,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
   }
 
-  Value setAtomicBarrier(DescriptorOp op, OpAdaptor adaptor,
+  Value setAtomicBarrier(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
     if (!adaptor.getAtomicBarrierAddress())
@@ -3335,7 +3790,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 18);
   }
 
-  Value setIterateEnable(DescriptorOp op, OpAdaptor adaptor,
+  Value setIterateEnable(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
     if (!adaptor.getGlobalIncrement())
@@ -3346,7 +3801,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 19);
   }
 
-  Value setPadEnable(DescriptorOp op, OpAdaptor adaptor,
+  Value setPadEnable(DescriptorOp op, OpAdaptor &adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -3355,7 +3810,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 20);
   }
 
-  Value setEarlyTimeout(DescriptorOp op, OpAdaptor adaptor,
+  Value setEarlyTimeout(DescriptorOp op, OpAdaptor &adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getWorkgroupMask())
@@ -3364,7 +3819,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 21);
   }
 
-  Value setPadInterval(DescriptorOp op, OpAdaptor adaptor,
+  Value setPadInterval(DescriptorOp op, OpAdaptor &adaptor,
                        ConversionPatternRewriter &rewriter, Location loc,
                        Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -3385,7 +3840,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, padInterval, 22);
   }
 
-  Value setPadAmount(DescriptorOp op, OpAdaptor adaptor,
+  Value setPadAmount(DescriptorOp op, OpAdaptor &adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -3403,7 +3858,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, padAmount, 25);
   }
 
-  Value setAtomicBarrierAddress(DescriptorOp op, OpAdaptor adaptor,
+  Value setAtomicBarrierAddress(DescriptorOp op, OpAdaptor &adaptor,
                                 ConversionPatternRewriter &rewriter,
                                 Location loc, Value sgpr1,
                                 ArrayRef<Value> consts) const {
@@ -3433,7 +3888,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr1, atomicBarrierAddress, 32);
   }
 
-  std::pair<Value, Value> setTensorDimX(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDimX(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts, uint64_t dimX,
@@ -3469,7 +3924,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return {sgpr1, sgpr2};
   }
 
-  std::pair<Value, Value> setTensorDim0(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim0(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts) const {
@@ -3477,7 +3932,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                          48);
   }
 
-  std::pair<Value, Value> setTensorDim1(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim1(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr2, Value sgpr3,
                                         ArrayRef<Value> consts) const {
@@ -3485,7 +3940,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                          80);
   }
 
-  Value setTileDimX(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDimX(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr, ArrayRef<Value> consts, size_t dimX,
                     int64_t offset) const {
@@ -3517,19 +3972,19 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr, tileDimX, offset);
   }
 
-  Value setTileDim0(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim0(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr3, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr3, consts, 0, 112);
   }
 
-  Value setTileDim1(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim1(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 1, 128);
   }
 
-  Value setValidIndices(DescriptorOp op, OpAdaptor adaptor,
+  Value setValidIndices(DescriptorOp op, OpAdaptor &adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr4, ArrayRef<Value> consts) const {
     auto type = cast<VectorType>(op.getIndices().getType());
@@ -3541,7 +3996,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr4, value, 128);
   }
 
-  Value setTileDim1OrValidIndices(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim1OrValidIndices(DescriptorOp op, OpAdaptor &adaptor,
                                   ConversionPatternRewriter &rewriter,
                                   Location loc, Value sgpr4,
                                   ArrayRef<Value> consts) const {
@@ -3550,7 +4005,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setTileDim1(op, adaptor, rewriter, loc, sgpr4, consts);
   }
 
-  Value setTileDim2(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim2(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
     // Value is ignored when in gather mode.
@@ -3560,7 +4015,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setTensorDimXStride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDimXStride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgprY, Value sgprZ, ArrayRef<Value> consts,
                       size_t dimX, int64_t offset) const {
@@ -3606,7 +4061,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setTensorDim0Stride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDim0Stride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
@@ -3614,7 +4069,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setTensorDim1Stride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDim1Stride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     // Value is ignored when in gather mode.
@@ -3624,7 +4079,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                1, 208);
   }
 
-  Value getDGroup1(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup1(DescriptorOp op, OpAdaptor &adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     Value sgprs[8];
@@ -3670,7 +4125,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup1;
   }
 
-  Value setTensorDimX(DescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDimX(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts, int64_t dimX,
                       int64_t offset) const {
@@ -3695,7 +4150,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, tensorDimX, offset);
   }
 
-  Value setTensorDim2(DescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDim2(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts) const {
     return setTensorDimX(op, adaptor, rewriter, loc, sgpr0, consts, 2, 0);
@@ -3710,7 +4165,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, accumulator, value, shift);
   }
 
-  Value setLDSAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
+  Value setLDSAddrIncrement(DescriptorOp op, OpAdaptor &adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             Value sgpr1, ArrayRef<Value> consts,
                             int64_t offset) const {
@@ -3719,7 +4174,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setGlobalAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
+  setGlobalAddrIncrement(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr2, Value sgpr3, ArrayRef<Value> consts,
                          int64_t offset) const {
@@ -3737,7 +4192,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return {sgpr2, sgpr3};
   }
 
-  Value setTensorDim3OrLDSAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDim3OrLDSAddrIncrement(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1,
                                         ArrayRef<Value> consts) const {
@@ -3752,7 +4207,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value> setTensorDim2StrideOrGlobalAddrIncrement(
-      DescriptorOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter,
+      DescriptorOp op, OpAdaptor &adaptor, ConversionPatternRewriter &rewriter,
       Location loc, Value sgpr2, Value sgpr3, ArrayRef<Value> consts) const {
     Value globalIncrement = op.getGlobalIncrement();
     constexpr int32_t dim = 2;
@@ -3764,7 +4219,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                   consts, offset);
   }
 
-  Value setIterateCount(DescriptorOp op, OpAdaptor adaptor,
+  Value setIterateCount(DescriptorOp op, OpAdaptor &adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr3, ArrayRef<Value> consts,
                         int32_t offset) const {
@@ -3782,7 +4237,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr3, iterationCount, offset);
   }
 
-  Value setTileDim3OrIterateCount(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim3OrIterateCount(DescriptorOp op, OpAdaptor &adaptor,
                                   ConversionPatternRewriter &rewriter,
                                   Location loc, Value sgpr3,
                                   ArrayRef<Value> consts) const {
@@ -3796,7 +4251,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setIterateCount(op, adaptor, rewriter, loc, sgpr3, consts, offset);
   }
 
-  Value getDGroup2(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2(DescriptorOp op, OpAdaptor &adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     if constexpr (DescriptorOp::isGather())
@@ -3804,7 +4259,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return getDGroup2NonGather(op, adaptor, rewriter, loc, consts);
   }
 
-  Value getDGroup2NonGather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2NonGather(DescriptorOp op, OpAdaptor &adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             ArrayRef<Value> consts) const {
     IntegerType i32 = rewriter.getI32Type();
@@ -3836,7 +4291,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup2;
   }
 
-  Value getGatherIndices(DescriptorOp op, OpAdaptor adaptor,
+  Value getGatherIndices(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          ArrayRef<Value> consts, bool firstHalf) const {
     IntegerType i32 = rewriter.getI32Type();
@@ -3867,7 +4322,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     SmallVector<Value> indicesI32Vector;
     if (elementType == i32) {
-      indicesI32Vector = indicesVector;
+      indicesI32Vector = std::move(indicesVector);
     } else {
       for (unsigned i = 0; i < targetSize; ++i) {
         Value index = indicesVector[i];
@@ -3881,7 +4336,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     SmallVector<Value> indicesToInsert;
     if (elementType == i32) {
-      indicesToInsert = indicesI32Vector;
+      indicesToInsert = std::move(indicesI32Vector);
     } else {
       unsigned size = indicesI32Vector.size() / 2;
       for (unsigned i = 0; i < size; ++i) {
@@ -3900,14 +4355,14 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup;
   }
 
-  Value getDGroup2Gather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2Gather(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          ArrayRef<Value> consts) const {
     return getGatherIndices(op, adaptor, rewriter, loc, consts, true);
   }
 
   std::pair<Value, Value>
-  setTensorDim3Stride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDim3Stride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, Value sgpr1, ArrayRef<Value> consts) const {
     constexpr int32_t dim = 3;
@@ -3916,7 +4371,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                dim, offset);
   }
 
-  std::pair<Value, Value> setTensorDim4(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim4(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts) const {
@@ -3926,7 +4381,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                          offset);
   }
 
-  Value setTileDim4(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim4(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr2, ArrayRef<Value> consts) const {
     constexpr int32_t dim = 4;
@@ -3934,7 +4389,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr2, consts, dim, offset);
   }
 
-  Value getDGroup3(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3(DescriptorOp op, OpAdaptor &adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     if constexpr (DescriptorOp::isGather())
@@ -3942,7 +4397,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return getDGroup3NonGather(op, adaptor, rewriter, loc, consts);
   }
 
-  Value getDGroup3NonGather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3NonGather(DescriptorOp op, OpAdaptor &adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             ArrayRef<Value> consts) const {
     IntegerType i32 = rewriter.getI32Type();
@@ -3971,7 +4426,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup3;
   }
 
-  Value getDGroup3Gather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3Gather(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          ArrayRef<Value> consts) const {
     return getGatherIndices(op, adaptor, rewriter, loc, consts, false);
@@ -3980,7 +4435,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   LogicalResult
   matchAndRewrite(DescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError(
           "make_dma_descriptor is only supported on gfx1250");
 
@@ -4006,14 +4461,14 @@ struct AMDGPUTensorLoadStoreOpLowering
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
   using Adaptor = typename ConvertOpToLLVMPattern<SourceOp>::OneToNOpAdaptor;
   AMDGPUTensorLoadStoreOpLowering(const LLVMTypeConverter &converter,
-                                  Chipset chipset)
-      : ConvertOpToLLVMPattern<SourceOp>(converter), chipset(chipset) {}
-  Chipset chipset;
+                                  const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<SourceOp>(converter), target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(SourceOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("is only supported on gfx1250");
 
     ValueRange desc = adaptor.getDesc();
@@ -4021,8 +4476,9 @@ struct AMDGPUTensorLoadStoreOpLowering
     // will move into the TDM descriptor once it becomes relevant for future use
     auto v8i32 = VectorType::get(8, rewriter.getI32Type());
     Value dgroup4 = LLVM::ZeroOp::create(rewriter, op.getLoc(), v8i32);
+    Attribute cachePolicy = rewriter.getI32IntegerAttr(0);
     rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
-                                          desc[3], dgroup4, /*cachePolicy=*/0,
+                                          desc[3], dgroup4, cachePolicy,
                                           /*alias_scopes=*/nullptr,
                                           /*noalias_scopes=*/nullptr,
                                           /*tbaa=*/nullptr);
@@ -4032,19 +4488,24 @@ struct AMDGPUTensorLoadStoreOpLowering
 
 struct GlobalPrefetchOpLowering
     : public ConvertOpToLLVMPattern<GlobalPrefetchOp> {
-  GlobalPrefetchOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<GlobalPrefetchOp>(converter), chipset(chipset) {}
+  GlobalPrefetchOpLowering(const LLVMTypeConverter &converter,
+                           const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<GlobalPrefetchOp>(converter), target(target) {}
 
   LogicalResult
   matchAndRewrite(GlobalPrefetchOp op, GlobalPrefetchOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250)
+    if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
       return op->emitOpError("is only supported on gfx1250+");
 
     const bool isSpeculative = op.getSpeculative();
     const int32_t immArgValue = getGlobalPrefetchLLVMEncoding(
         op.getTemporalHint(), op.getCacheScope(), isSpeculative);
-    IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
+    // amdgpu.global_prefetch is gfx1250+, so its policy bits use gfx12
+    // encoding.
+    Attribute cachePolicy = ROCDL::Gfx12CachePolicyAttr::get(
+        rewriter.getContext(),
+        static_cast<ROCDL::Gfx12CachePolicy>(immArgValue));
 
     ValueRange indices = adaptor.getIndices();
     Value memRef = adaptor.getSrc();
@@ -4058,13 +4519,13 @@ struct GlobalPrefetchOpLowering
         rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
 
     rewriter.replaceOpWithNewOp<ROCDL::GlobalPrefetchOp>(
-        op, prefetchPtr, immArgAttr, mlir::ArrayAttr{}, mlir::ArrayAttr{},
+        op, prefetchPtr, cachePolicy, mlir::ArrayAttr{}, mlir::ArrayAttr{},
         mlir::ArrayAttr{});
     return success();
   }
 
 private:
-  Chipset chipset;
+  ROCDL::TargetInfo target;
 };
 
 struct ConvertAMDGPUToROCDLPass
@@ -4073,16 +4534,16 @@ struct ConvertAMDGPUToROCDLPass
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
-    FailureOr<Chipset> maybeChipset = Chipset::parse(chipset);
-    if (failed(maybeChipset)) {
-      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+    FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+        ROCDL::resolveArchOption(arch, chipset),
+        /*waveSize=*/0, [&] { return emitError(UnknownLoc::get(ctx)); });
+    if (failed(targetInfo))
       return signalPassFailure();
-    }
 
     RewritePatternSet patterns(ctx);
     LLVMTypeConverter converter(ctx);
 
-    populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
+    populateAMDGPUToROCDLConversionPatterns(converter, patterns, *targetInfo);
     amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
@@ -4111,6 +4572,10 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
         }
         llvm_unreachable("unknown address space enum value");
       });
+  typeConverter.addConversion([](gpu::NamedBarrierType type) {
+    return LLVM::LLVMPointerType::get(
+        type.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
+  });
 }
 
 void mlir::populateAMDGPUTypeAndAttributeConversions(
@@ -4170,9 +4635,9 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
   typeConverter.addTargetMaterialization(addUnrealizedCast);
 }
 
-void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                                   RewritePatternSet &patterns,
-                                                   Chipset chipset) {
+void mlir::populateAMDGPUToROCDLConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const ROCDL::TargetInfo &target) {
   populateAMDGPUTypeAndAttributeConversions(converter);
   patterns
       .add<FatRawBufferCastLowering,
@@ -4191,12 +4656,13 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
-           SparseWMMAOpLowering, ExtPackedFp8OpLowering,
+           SparseWMMAOpLowering, DotOpLowering, ExtPackedFp8OpLowering,
            ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
            GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           GlobalTransposeLoadOpLowering, AMDGPUPermlaneLowering,
+           AMDGPUPermlaneVarLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,
@@ -4206,7 +4672,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                            ROCDL::TensorStoreFromLDSOp>,
            DsBarrierInitOpLowering, DsBarrierPollStateOpLowering,
            DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering,
-           GlobalPrefetchOpLowering>(converter, chipset);
+           GlobalPrefetchOpLowering>(converter, target);
   patterns.add<AMDGPUSwizzleBitModeLowering, DsBarrierStatePhaseOpLowering,
                DsBarrierStatePendingCountOpLowering,
                DsBarrierStateInitCountOpLowering,

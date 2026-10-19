@@ -26,7 +26,7 @@ struct Fruit {
     virtual void eval();
 };
 
-// CHECK-DAG: @_ZTVW3foo5Fruit = unnamed_addr constant
+// CHECK-DAG: @_ZTVW3foo5Fruit = constant
 // CHECK-DAG: @_ZTSW3foo5Fruit = constant
 // CHECK-DAG: @_ZTIW3foo5Fruit = constant
 
@@ -42,6 +42,6 @@ export void layer2_fun() {
     b->eval();
 }
 void Fruit::eval() {}
-// CHECK: @_ZTVW3foo5Fruit = external unnamed_addr constant
+// CHECK: @_ZTVW3foo5Fruit = external constant
 // CHECK-NOT: @_ZTSW3foo5Fruit
 // CHECK-NOT: @_ZTIW3foo5Fruit

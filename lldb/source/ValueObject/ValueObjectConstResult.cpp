@@ -31,8 +31,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
                                              uint32_t addr_byte_size,
                                              lldb::addr_t address,
                                              ValueObjectManager *manager) {
-  std::shared_ptr<ValueObjectManager> manager_sp =
-      CreateManagerIfEmpty(manager);
+  ValueObjectManagerSP manager_sp = CreateManagerIfEmpty(manager);
 
   return (new ValueObjectConstResult(exe_scope, *manager, byte_order,
                                      addr_byte_size, address))

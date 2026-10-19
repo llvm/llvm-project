@@ -11,11 +11,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVR.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
 using namespace clang::targets;
+
+static constexpr int NumBuiltins = AVR::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAVR.def"
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAVR.def"
+});
 
 namespace clang {
 namespace targets {
@@ -471,8 +487,13 @@ static bool ArchHas3BytePC(StringRef Arch) {
 }
 
 bool AVRTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::any_of(
-      AVRMcus, [&](const MCUInfo &Info) { return Info.Name == Name; });
+  return llvm::any_of(AVRMcus,
+                      [&](const MCUInfo &Info) { return Info.Name == Name; });
+}
+
+llvm::SmallVector<Builtin::InfosShard>
+AVRTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 void AVRTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
@@ -480,7 +501,7 @@ void AVRTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
     Values.push_back(Info.Name);
 }
 
-bool AVRTargetInfo::setCPU(const std::string &Name) {
+bool AVRTargetInfo::setCPU(StringRef Name) {
   // Set the ABI field based on the device or family name.
   auto It = llvm::find_if(
       AVRMcus, [&](const MCUInfo &Info) { return Info.Name == Name; });
@@ -524,7 +545,7 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVR_TINY__", "1");
 
   if (DefineName.size() != 0)
-      Builder.defineMacro(DefineName);
+    Builder.defineMacro(DefineName);
 
   Builder.defineMacro("__AVR_ARCH__", Arch);
 
@@ -564,4 +585,12 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__flash4", "__attribute__((__address_space__(5)))");
   if (NumFlashBanks >= 6)
     Builder.defineMacro("__flash5", "__attribute__((__address_space__(6)))");
+
+  // Define macros for builtins
+  Builder.defineMacro("__BUILTIN_AVR_NOP", "1");
+  Builder.defineMacro("__BUILTIN_AVR_SEI", "1");
+  Builder.defineMacro("__BUILTIN_AVR_CLI", "1");
+  Builder.defineMacro("__BUILTIN_AVR_WDR", "1");
+  Builder.defineMacro("__BUILTIN_AVR_SLEEP", "1");
+  Builder.defineMacro("__BUILTIN_AVR_SWAP", "1");
 }

@@ -55,3 +55,13 @@ func.func @test_two_result() {
   }
   return
 }
+
+// CHECK-LABEL: func.func @test_attributes(
+// CHECK-SAME:    %[[COND:.*]]: i1) {
+// CHECK:         scf.if %[[COND]] {
+// CHECK:         } {region_weights = array<i32: 3, 1>, test.attr = "if"}
+func.func @test_attributes(%cond: i1) {
+  fir.if %cond weights([3, 1]) {
+  } {test.attr = "if"}
+  return
+}

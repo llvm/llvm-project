@@ -1,7 +1,9 @@
-// RUN: mlir-opt -split-input-file -convert-to-llvm %s | FileCheck %s
+// `dynamic=true` makes the conversion respect the module's data layout,
+// which is needed to test index types other than the default `i64`.
+// RUN: mlir-opt -split-input-file -convert-to-llvm="dynamic=true" %s | FileCheck %s
 
 // COM: Test MPICH ABI
-// CHECK-LABEL: module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
+// CHECK-LABEL: module <dlti = #dlti.map<"MPI:Implementation" = "MPICH">> {
 // CHECK-DAG: llvm.func @MPI_Finalize() -> i32
 // CHECK-DAG: llvm.func @MPI_Reduce_scatter_block(!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
 // CHECK-DAG: llvm.func @MPI_Allreduce(!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
@@ -12,7 +14,7 @@
 // CHECK-DAG: llvm.func @MPI_Send(!llvm.ptr, i32, i32, i32, i32, i32) -> i32
 // CHECK-DAG: llvm.func @MPI_Comm_rank(i32, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Init(!llvm.ptr, !llvm.ptr) -> i32
-module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
+module <{dlti = #dlti.map<"MPI:Implementation" = "MPICH">}> {
 
   // CHECK-LABEL: llvm.func @test_init_finalize_mpich
   func.func @test_init_finalize_mpich() {
@@ -137,7 +139,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
     %comm = mpi.comm_world : !mpi.comm
     // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[4, 0]
     // CHECK: llvm.mul
-    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: [[v3:%.*]] = llvm.trunc [[v2]] : i64 to i32
     // CHECK: [[v4:%.*]] = llvm.mul [[v3]], [[v1]] : i32
@@ -153,7 +155,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
 // -----
 
 // COM: Test OpenMPI ABI
-// CHECK-LABEL: module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI">} {
+// CHECK-LABEL: module <dlti = #dlti.map<"MPI:Implementation" = "OpenMPI">> {
 // CHECK-DAG: llvm.func @MPI_Finalize() -> i32
 // CHECK-DAG: llvm.func @MPI_Comm_split(!llvm.ptr, i32, i32, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Reduce_scatter_block(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
@@ -167,7 +169,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
 // CHECK-DAG: llvm.func @MPI_Comm_rank(!llvm.ptr, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.mlir.global external @ompi_mpi_comm_world() {addr_space = 0 : i32} : !llvm.struct<"ompi_communicator_t", opaque>
 // CHECK-DAG: llvm.func @MPI_Init(!llvm.ptr, !llvm.ptr) -> i32
-module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
+module <{dlti = #dlti.map<"MPI:Implementation" = "OpenMPI">}> {
 
   // CHECK-LABEL: llvm.func @test_init_finalize_openmpi
   func.func @test_init_finalize_openmpi() {
@@ -298,7 +300,7 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
     %comm = mpi.comm_world : !mpi.comm
     // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[4, 0]
     // CHECK: llvm.mul
-    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: [[v3:%.*]] = llvm.trunc [[v2]] : i64 to i32
     // CHECK: [[v4:%.*]] = llvm.mul [[v3]], [[v1]] : i32
@@ -313,7 +315,7 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
 
 // -----
 
-module attributes {mpi.dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:comm_world_size" = 4, "MPI:comm_world_rank" = 1> } {
+module <{dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:comm_world_size" = 4, "MPI:comm_world_rank" = 1>}> {
   // CHECK-LABEL: llvm.func @test_fold
   func.func @test_fold(%arg0: memref<100xf32>) {
     // CHECK: [[v0:%.*]] = llvm.mlir.constant(1140850688 : i64) : i64
@@ -322,6 +324,74 @@ module attributes {mpi.dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:com
     // CHECK-NOT: llvm.call @MPI_Comm_size
     // CHECK: llvm.call @MPI_Allgather({{.*}}) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, i32) -> i32
     %err3 = mpi.allgather(%arg0, %arg0, %comm) : memref<100xf32>, memref<100xf32> -> !mpi.retval
+    return
+  }
+}
+
+// -----
+
+// COM: Test that an index type that already matches the MPI element count width
+// COM: is used as is, both for the offset and for the extents.
+module <{dlti = #dlti.map<"MPI:Implementation" = "MPICH">}>
+    attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  // CHECK-LABEL: llvm.func @test_send_index32
+  func.func @test_send_index32(%arg0: memref<100xf32>, %rank: i32) {
+    // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+    %comm = mpi.comm_world : !mpi.comm
+    // CHECK: [[v1:%.*]] = llvm.extractvalue [[v0]][1] : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+    // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][2] : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+    // CHECK: [[v3:%.*]] = llvm.getelementptr [[v1]][[[v2]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+    // CHECK: [[v4:%.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: [[v5:%.*]] = llvm.extractvalue [[v0]][3, 0] : !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
+    // COM: No width adjustment, the extent is already an `i32`.
+    // CHECK-NOT: llvm.trunc
+    // CHECK-NOT: llvm.zext
+    // CHECK: [[v6:%.*]] = llvm.mul [[v5]], [[v4]] : i32
+    // CHECK: llvm.call @MPI_Send([[v3]], [[v6]], {{.*}}) : (!llvm.ptr, i32, i32, i32, i32, i32) -> i32
+    mpi.send(%arg0, %rank, %rank, %comm) : memref<100xf32>, i32, i32
+    return
+  }
+}
+
+// -----
+
+// COM: Test that an index type narrower than the MPI element count is zero
+// COM: extended.
+module <{dlti = #dlti.map<"MPI:Implementation" = "MPICH">}>
+    attributes {dlti.dl_spec = #dlti.dl_spec<index = 16 : i32>} {
+  // CHECK-LABEL: llvm.func @test_send_index16
+  func.func @test_send_index16(%arg0: memref<100xf32>, %rank: i32) {
+    // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i16, array<1 x i16>, array<1 x i16>)>
+    %comm = mpi.comm_world : !mpi.comm
+    // CHECK: [[v1:%.*]] = llvm.extractvalue [[v0]][1] : !llvm.struct<(ptr, ptr, i16, array<1 x i16>, array<1 x i16>)>
+    // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][2] : !llvm.struct<(ptr, ptr, i16, array<1 x i16>, array<1 x i16>)>
+    // CHECK: [[v3:%.*]] = llvm.getelementptr [[v1]][[[v2]]] : (!llvm.ptr, i16) -> !llvm.ptr, f32
+    // CHECK: [[v4:%.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: [[v5:%.*]] = llvm.extractvalue [[v0]][3, 0] : !llvm.struct<(ptr, ptr, i16, array<1 x i16>, array<1 x i16>)>
+    // CHECK: [[v6:%.*]] = llvm.zext [[v5]] : i16 to i32
+    // CHECK: [[v7:%.*]] = llvm.mul [[v6]], [[v4]] : i32
+    // CHECK: llvm.call @MPI_Send([[v3]], [[v7]], {{.*}}) : (!llvm.ptr, i32, i32, i32, i32, i32) -> i32
+    mpi.send(%arg0, %rank, %rank, %comm) : memref<100xf32>, i32, i32
+    return
+  }
+}
+
+// -----
+
+// COM: Test that a rank-zero memref, whose descriptor carries no extents, uses
+// COM: the element count of one directly.
+module <{dlti = #dlti.map<"MPI:Implementation" = "MPICH">}> {
+  // CHECK-LABEL: llvm.func @test_send_rank_zero
+  func.func @test_send_rank_zero(%arg0: memref<f32>, %rank: i32) {
+    // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>
+    %comm = mpi.comm_world : !mpi.comm
+    // CHECK: [[v1:%.*]] = llvm.extractvalue [[v0]][1] : !llvm.struct<(ptr, ptr, i64)>
+    // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][2] : !llvm.struct<(ptr, ptr, i64)>
+    // CHECK: [[v3:%.*]] = llvm.getelementptr [[v1]][[[v2]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    // CHECK: [[v4:%.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.mul
+    // CHECK: llvm.call @MPI_Send([[v3]], [[v4]], {{.*}}) : (!llvm.ptr, i32, i32, i32, i32, i32) -> i32
+    mpi.send(%arg0, %rank, %rank, %comm) : memref<f32>, i32, i32
     return
   }
 }

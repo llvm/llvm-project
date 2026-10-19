@@ -61,6 +61,16 @@ bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested);
 /// Replaces invalid characters (like ':') with safe characters (like '@').
 /// Currently only replaces ':' with '@' on Windows.
 std::string sanitizeTargetIDInFileName(llvm::StringRef TargetID);
+
+/// Constructs the normalized triple string used inside an offload bundle entry
+/// ID for device triple \p T. When \p BoundArch is non-empty (a target ID is
+/// present) the four triple components are kept (and, for AMDGCN, the legacy
+/// "amdgcn-<vendor>-<os>-<env>" spelling the HIP runtime expects is forced);
+/// otherwise the triple is normalized to its canonical four-identifier form.
+/// Shared by the HIP toolchain, the offload linker wrapper, and clang-repl
+/// device offloading so they all agree on the bundle target-name policy.
+std::string normalizeForBundler(const llvm::Triple &T,
+                                llvm::StringRef BoundArch);
 } // namespace clang
 
 #endif

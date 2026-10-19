@@ -123,7 +123,7 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
         InstructionCost Cost =
             getCost(Inst, OutputCostKindToTargetCostKind(CostKind), TTI);
         if (Cost.isValid())
-          OS << "Found an estimated cost of " << Cost.getValue();
+          OS << "Found an estimated cost of " << Cost;
         else
           OS << "Invalid cost";
         OS << " for instruction: " << Inst << "\n";

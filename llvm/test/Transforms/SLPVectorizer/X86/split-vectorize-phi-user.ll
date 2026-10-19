@@ -5,7 +5,7 @@ define i32 @test() {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p3(<4 x ptr addrspace(3)> align 4 zeroinitializer, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p3(<4 x ptr addrspace(3)> align 4 splat (ptr addrspace(3) null), <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    br i1 false, label %[[BB4:.*]], label %[[BB8:.*]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ]

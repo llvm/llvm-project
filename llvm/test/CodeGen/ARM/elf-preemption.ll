@@ -64,7 +64,9 @@ define ptr @get_weak_dsolocal_var() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI2_0:
-; PIC-NEXT:    .long weak_dsolocal_var-(.LPC2_0+8)
+; PIC-NEXT:  .Ltmp1:
+; PIC-NEXT:    .long .Ltmp1-(.LPC2_0+8)
+; PIC-NEXT:    .reloc .Ltmp1, R_ARM_REL32, weak_dsolocal_var
   ret ptr @weak_dsolocal_var
 }
 
@@ -126,8 +128,8 @@ define dso_preemptable ptr @preemptable_func() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI5_0:
-; PIC-NEXT:  .Ltmp1:
-; PIC-NEXT:    .long preemptable_func(GOT_PREL)-(.LPC5_0+8-.Ltmp1)
+; PIC-NEXT:  .Ltmp2:
+; PIC-NEXT:    .long preemptable_func(GOT_PREL)-(.LPC5_0+8-.Ltmp2)
   ret ptr @preemptable_func
 }
 
@@ -167,7 +169,9 @@ define weak dso_local ptr @weak_dsolocal_func() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI7_0:
-; PIC-NEXT:    .long weak_dsolocal_func-(.LPC7_0+8)
+; PIC-NEXT:  .Ltmp3:
+; PIC-NEXT:    .long .Ltmp3-(.LPC7_0+8)
+; PIC-NEXT:    .reloc .Ltmp3, R_ARM_REL32, weak_dsolocal_func
   ret ptr @weak_dsolocal_func
 }
 
@@ -189,4 +193,136 @@ define dso_local void @call_dsolocal_func() nounwind {
 ; PIC-NEXT:    pop {r11, pc}
   call ptr @dsolocal_func()
   ret void
+}
+
+;; extern_weak (undefined) symbols are external/preemptible and must go through
+;; the GOT in PIC mode. R_ARM_REL32 against an external or undefined symbol
+;; cannot be used when making a shared object, so the .reloc path must not
+;; apply to them.
+@extern_weak_var = extern_weak global i32
+define ptr @get_extern_weak_var() nounwind {
+; STATIC-LABEL: get_extern_weak_var:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:extern_weak_var
+; STATIC-NEXT:    movt r0, :upper16:extern_weak_var
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_extern_weak_var:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI9_0
+; PIC-NEXT:  .LPC9_0:
+; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI9_0:
+; PIC-NEXT:  .Ltmp4:
+; PIC-NEXT:    .long extern_weak_var(GOT_PREL)-(.LPC9_0+8-.Ltmp4)
+  ret ptr @extern_weak_var
+}
+
+declare extern_weak ptr @extern_weak_func()
+define ptr @get_extern_weak_func() nounwind {
+; STATIC-LABEL: get_extern_weak_func:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:extern_weak_func
+; STATIC-NEXT:    movt r0, :upper16:extern_weak_func
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_extern_weak_func:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI10_0
+; PIC-NEXT:  .LPC10_0:
+; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI10_0:
+; PIC-NEXT:  .Ltmp5:
+; PIC-NEXT:    .long extern_weak_func(GOT_PREL)-(.LPC10_0+8-.Ltmp5)
+  ret ptr @extern_weak_func
+}
+
+;; An undefined weak reference with hidden visibility (e.g. from
+;; `[[gnu::weak, gnu::visibility("hidden")]] extern int foo;`) is still not
+;; dso_local, so it must go through the GOT: the compiler cannot know whether
+;; it will be defined or undefined at link time, and an undefined weak has to
+;; materialize as 0, which only the GOT can produce (R_ARM_REL32 cannot).
+@extern_weak_hidden_var = extern_weak hidden global i32
+define ptr @get_extern_weak_hidden_var() nounwind {
+; STATIC-LABEL: get_extern_weak_hidden_var:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:extern_weak_hidden_var
+; STATIC-NEXT:    movt r0, :upper16:extern_weak_hidden_var
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_extern_weak_hidden_var:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI11_0
+; PIC-NEXT:  .LPC11_0:
+; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI11_0:
+; PIC-NEXT:  .Ltmp6:
+; PIC-NEXT:    .long extern_weak_hidden_var(GOT_PREL)-(.LPC11_0+8-.Ltmp6)
+  ret ptr @extern_weak_hidden_var
+}
+
+declare extern_weak hidden ptr @extern_weak_hidden_func()
+define ptr @get_extern_weak_hidden_func() nounwind {
+; STATIC-LABEL: get_extern_weak_hidden_func:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    movw r0, :lower16:extern_weak_hidden_func
+; STATIC-NEXT:    movt r0, :upper16:extern_weak_hidden_func
+; STATIC-NEXT:    bx lr
+;
+; PIC-LABEL: get_extern_weak_hidden_func:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    ldr r0, .LCPI12_0
+; PIC-NEXT:  .LPC12_0:
+; PIC-NEXT:    ldr r0, [pc, r0]
+; PIC-NEXT:    bx lr
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI12_0:
+; PIC-NEXT:  .Ltmp7:
+; PIC-NEXT:    .long extern_weak_hidden_func(GOT_PREL)-(.LPC12_0+8-.Ltmp7)
+  ret ptr @extern_weak_hidden_func
+}
+
+;; TLS weak symbols must not use the .reloc/R_ARM_REL32 path; they require
+;; TLS-specific relocations (R_ARM_TLS_GD32 etc.), not R_ARM_REL32. Using
+;; R_ARM_REL32 for a TLS symbol produces a wrong address and crashes at runtime.
+@tls_weak_var = weak dso_local thread_local global i32 42
+define ptr @get_tls_weak_var() nounwind {
+; STATIC-LABEL: get_tls_weak_var:
+; STATIC:       @ %bb.0:
+; STATIC-NEXT:    .save {r11, lr}
+; STATIC-NEXT:    push {r11, lr}
+; STATIC-NEXT:    ldr r1, .LCPI13_0
+; STATIC-NEXT:    bl __aeabi_read_tp
+; STATIC-NEXT:    add r0, r0, r1
+; STATIC-NEXT:    pop {r11, pc}
+; STATIC-NEXT:    .p2align 2
+; STATIC-NEXT:  @ %bb.1:
+; STATIC-NEXT:  .LCPI13_0:
+; STATIC-NEXT:    .long tls_weak_var(TPOFF)
+;
+; PIC-LABEL: get_tls_weak_var:
+; PIC:       @ %bb.0:
+; PIC-NEXT:    .save {r11, lr}
+; PIC-NEXT:    push {r11, lr}
+; PIC-NEXT:    ldr r0, .LCPI13_0
+; PIC-NEXT:  .LPC13_0:
+; PIC-NEXT:    add r0, pc, r0
+; PIC-NEXT:    bl __tls_get_addr
+; PIC-NEXT:    pop {r11, pc}
+; PIC-NEXT:    .p2align 2
+; PIC-NEXT:  @ %bb.1:
+; PIC-NEXT:  .LCPI13_0:
+; PIC-NEXT:  .Ltmp8:
+; PIC-NEXT:    .long tls_weak_var(TLSGD)-(.LPC13_0+8-.Ltmp8)
+  ret ptr @tls_weak_var
 }

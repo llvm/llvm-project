@@ -34,8 +34,8 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -670,8 +670,9 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 
 template <class ELFT>
 template <class RelTy>
-void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                                 unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   RelType type;
   for (auto it = rels.begin(); it != rels.end();) {
@@ -741,12 +742,13 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-template <class ELFT> void MIPS<ELFT>::scanSection(InputSectionBase &sec) {
+template <class ELFT>
+void MIPS<ELFT>::scanSection(InputSectionBase &sec, unsigned shard) {
   auto relocs = sec.template relsOrRelas<ELFT>();
   if (relocs.areRelocsRel())
-    scanSectionImpl(sec, relocs.rels);
+    scanSectionImpl(sec, relocs.rels, shard);
   else
-    scanSectionImpl(sec, relocs.relas);
+    scanSectionImpl(sec, relocs.relas, shard);
 }
 
 template <class ELFT>
@@ -905,6 +907,10 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     writeValue(ctx, loc, val, 32, 0);
     break;
   case R_MICROMIPS_26_S1:
+    // Like R_MIPS_26, this encodes an index within the current PC region,
+    // not a signed absolute address. The destination need not fit in 27 bits.
+    writeShuffle<e>(ctx, loc, val, 26, 1);
+    break;
   case R_MICROMIPS_PC26_S1:
     checkInt(ctx, loc, val, 27, rel);
     writeShuffle<e>(ctx, loc, val, 26, 1);

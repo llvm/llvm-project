@@ -12,12 +12,12 @@ define void @test() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX25:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <8 x i64> [ [[TMP0]], [[ENTRY]] ], [ [[TMP1]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP6]])
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP8]], 2
-; CHECK-NEXT:    [[OP_RDX17:%.*]] = add i64 [[TMP7]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[OP_RDX17]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP6]], <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i64> [[TMP4]], <16 x i64> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <16 x i64> [[TMP9]], <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP7]])
+; CHECK-NEXT:    [[OP_RDX25]] = add i64 [[TMP8]], [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

@@ -1,14 +1,27 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
-// RUN:             -I %S/Inputs/Headers %s -x c++ -verify -Wunsafe-buffer-usage -Wno-unused-value
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++17 -verify -Wunsafe-buffer-usage -Wno-unused-value
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
-// RUN:             -I %S/Inputs/Headers %s -x c++ -Wunused-value -ast-dump -ast-dump-filter unsafeFunc | FileCheck %s --check-prefixes=CHECK-UNSAFE
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++17 -Wunused-value -ast-dump -ast-dump-filter unsafeFunc | FileCheck %s --check-prefixes=CHECK-UNSAFE
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
-// RUN:             -I %S/Inputs/Headers %s -x c++ -Wunused-value -ast-dump -ast-dump-filter annotatedUnsafeFunc | FileCheck %s --check-prefixes=CHECK-ANNO
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++17 -Wunused-value -ast-dump -ast-dump-filter annotatedUnsafeFunc | FileCheck %s --check-prefixes=CHECK-ANNO
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
-// RUN:             -I %S/Inputs/Headers %s -x c++ -Wunused-value -ast-dump -ast-dump-filter falseAPINotesButAnnotatedUnsafeFunc | FileCheck %s --check-prefixes=CHECK-ANNO-FALSE
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++17 -Wunused-value -ast-dump -ast-dump-filter falseAPINotesButAnnotatedUnsafeFunc | FileCheck %s --check-prefixes=CHECK-ANNO-FALSE
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
-// RUN:             -I %S/Inputs/Headers %s -x c++ -Wunused-value -ast-dump -ast-dump-filter funcWithoutAnnotation | FileCheck %s --check-prefixes=CHECK-UNANNO
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++17 -Wunused-value -ast-dump -ast-dump-filter funcWithoutAnnotation | FileCheck %s --check-prefixes=CHECK-UNANNO
+
+// C++20 mode
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++20 -verify=expected,cpp20 -Wunsafe-buffer-usage -Wno-unused-value
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++20 -Wunused-value -ast-dump -ast-dump-filter unsafeFunc | FileCheck %s --check-prefixes=CHECK-UNSAFE
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++20 -Wunused-value -ast-dump -ast-dump-filter annotatedUnsafeFunc | FileCheck %s --check-prefixes=CHECK-ANNO
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++20 -Wunused-value -ast-dump -ast-dump-filter falseAPINotesButAnnotatedUnsafeFunc | FileCheck %s --check-prefixes=CHECK-ANNO-FALSE
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules\
+// RUN:             -I %S/Inputs/Headers %s -x c++ -std=c++20 -Wunused-value -ast-dump -ast-dump-filter funcWithoutAnnotation | FileCheck %s --check-prefixes=CHECK-UNANNO
 
 #include "UnsafeBufferUsage.h"
 
@@ -44,11 +57,15 @@ void falseAPINotesButAnnotatedUnsafeFunc(int *p, int n) {
 
 void funcWithoutAnnotation(int *p, int n) {
   p[n]; // expected-warning{{unsafe buffer access}}
+        // cpp20-note@-1{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
 }
 
 void caller(int *p, int n) {
   unsafeFunc(p, n); // expected-warning{{function introduces unsafe buffer manipulation}}
+                    // cpp20-note@-1{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
   annotatedUnsafeFunc(p, n); // expected-warning{{function introduces unsafe buffer manipulation}}
+                             // cpp20-note@-1{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
   falseAPINotesButAnnotatedUnsafeFunc(p, n); // expected-warning{{function introduces unsafe buffer manipulation}}
+                                             // cpp20-note@-1{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
   funcWithoutAnnotation(p, n);   // no warning
 }

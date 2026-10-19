@@ -1,5 +1,5 @@
-; RUN: not opt --mtriple=amdgcn --passes='lint<abort-on-error>' %s -disable-output 2>&1 | FileCheck %s
-; RUN: opt --mtriple=amdgcn --mcpu=gfx1030 --passes=lint %s -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK0
+; RUN: not opt --mtriple=amdgpu6.00 --passes='lint<abort-on-error>' %s -disable-output 2>&1 | FileCheck %s
+; RUN: opt --mtriple=amdgpu10.30 --passes=lint %s -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK0
 ; RUN: opt --mtriple=x86_64 --passes='lint<abort-on-error>' %s -disable-output 2>&1 | FileCheck %s --allow-empty --check-prefix=NOERR
 ; NOERR: {{^$}}
 

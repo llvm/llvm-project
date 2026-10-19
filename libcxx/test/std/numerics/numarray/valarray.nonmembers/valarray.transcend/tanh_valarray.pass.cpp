@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing tanh
+// XFAIL: LLVM-LIBC-FIXME
+
 // <valarray>
 
 // template<class T> class valarray;

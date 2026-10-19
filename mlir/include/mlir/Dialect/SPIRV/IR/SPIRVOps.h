@@ -38,6 +38,7 @@ class OpBuilder;
 
 namespace spirv {
 class VerCapExtAttr;
+class SPIRVDialect;
 } // namespace spirv
 } // namespace mlir
 

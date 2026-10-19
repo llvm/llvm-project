@@ -396,16 +396,18 @@ exit:
   ret void
 }
 
-define void @neg_ref(ptr %loc) {
-; CHECK-LABEL: define void @neg_ref(
+;; The store can be hoisted because the its value is loop-invariant.
+;; Does not depend on values modified inside the loop.
+define void @ref(ptr %loc) {
+; CHECK-LABEL: define void @ref(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[LOC]], align 4
 ; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp eq i32 [[V]], 198
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
 ; CHECK-NEXT:    br i1 [[EARLYCND]], label %[[EXIT1:.*]], label %[[BACKEDGE]]
 ; CHECK:       [[BACKEDGE]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
@@ -619,4 +621,5 @@ loop:
 exit:
   ret void
 }
+
 

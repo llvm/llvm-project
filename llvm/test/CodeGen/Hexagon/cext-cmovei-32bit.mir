@@ -1,0 +1,45 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -run-pass=hexagon-cext-opt \
+# RUN:     -hexagon-cext-threshold=1 -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s
+
+## C2_cmoveit / C2_cmoveif are 32-bit predicated immediate moves into
+## IntRegs. When the constant-extender pass hoists the extended immediate
+## into a register, the replacement opcode must be the 32-bit predicated
+## transfer A2_tfrt / A2_tfrf, not the 64-bit DoubleRegs form
+## A2_tfrpt / A2_tfrpf, which fails the machine verifier.
+##
+## -hexagon-cext-threshold=1 makes the pass replace even a single extended
+## use, so a minimal function is enough to exercise the lowering.
+
+---
+name: test_cmoveit
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+    ; CHECK-LABEL: name: test_cmoveit
+    ; CHECK: [[IMM:%[0-9]+]]:intregs = A2_tfrsi 65535
+    ; CHECK: %{{[0-9]+}}:intregs = A2_tfrt %{{[0-9]+}}, [[IMM]]
+    ; CHECK-NOT: A2_tfrpt
+    %0:intregs = COPY $r0
+    %1:predregs = S2_tstbit_i %0, 0
+    %2:intregs = C2_cmoveit %1, 65535
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def $pc, implicit $r0
+...
+---
+name: test_cmoveif
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+    ; CHECK-LABEL: name: test_cmoveif
+    ; CHECK: [[IMM:%[0-9]+]]:intregs = A2_tfrsi 65535
+    ; CHECK: %{{[0-9]+}}:intregs = A2_tfrf %{{[0-9]+}}, [[IMM]]
+    ; CHECK-NOT: A2_tfrpf
+    %0:intregs = COPY $r0
+    %1:predregs = S2_tstbit_i %0, 0
+    %2:intregs = C2_cmoveif %1, 65535
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def $pc, implicit $r0
+...

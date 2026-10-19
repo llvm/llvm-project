@@ -45,7 +45,7 @@
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[CMP]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[DOTMIN_LESS_MAX]], align 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP4]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP4]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // CHECK:       [[COND_TRUE]]:
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTLB_MIN]], align 4
@@ -82,7 +82,7 @@
 // CHECK-NEXT:    [[STOREDV15:%.*]] = zext i1 [[CMP14]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV15]], ptr [[DOTMIN_LESS_MAX13]], align 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX13]], align 1
-// CHECK-NEXT:    [[LOADEDV17:%.*]] = trunc i8 [[TMP14]] to i1
+// CHECK-NEXT:    [[LOADEDV17:%.*]] = icmp ne i8 [[TMP14]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV17]], label %[[COND_TRUE18:.*]], label %[[COND_FALSE19:.*]]
 // CHECK:       [[COND_TRUE18]]:
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTLB_MIN4]], align 4
@@ -341,7 +341,7 @@ void triangular_loop_1() {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[CMP]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[DOTMIN_LESS_MAX]], align 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP4]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP4]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // CHECK:       [[COND_TRUE]]:
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTLB_MIN]], align 4
@@ -378,7 +378,7 @@ void triangular_loop_1() {
 // CHECK-NEXT:    [[STOREDV15:%.*]] = zext i1 [[CMP14]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV15]], ptr [[DOTMIN_LESS_MAX13]], align 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX13]], align 1
-// CHECK-NEXT:    [[LOADEDV17:%.*]] = trunc i8 [[TMP14]] to i1
+// CHECK-NEXT:    [[LOADEDV17:%.*]] = icmp ne i8 [[TMP14]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV17]], label %[[COND_TRUE18:.*]], label %[[COND_FALSE19:.*]]
 // CHECK:       [[COND_TRUE18]]:
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTLB_MIN4]], align 4
@@ -631,7 +631,7 @@ void triangular_loop_2() {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[CMP]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[DOTMIN_LESS_MAX]], align 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP4]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP4]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // CHECK:       [[COND_TRUE]]:
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTLB_MIN]], align 4
@@ -851,7 +851,7 @@ void triangular_loop_3() {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[CMP]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[DOTMIN_LESS_MAX]], align 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOTMIN_LESS_MAX]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP4]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP4]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // CHECK:       [[COND_TRUE]]:
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTLB_MIN]], align 4

@@ -1,0 +1,146 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Pair2 = !cir.struct<"Pair2" {data !s32i, data !s32i}>
+!rec_E0 = !cir.struct<"E0" {}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @make_big(!s32i) -> !rec_Big
+  cir.func private @make_pair(!s32i) -> !rec_Pair2
+  cir.func private @take_big(!rec_Big)
+  cir.func private @take_char(!s8i)
+  cir.func private @plain(!s32i) -> !s32i
+  cir.func private @take_empty(!rec_E0)
+  cir.global "private" external @data : !s32i
+
+  // A 32-byte return becomes an sret pointer parameter, so the address of the
+  // function has to be taken at the rewritten type and cast back for the use.
+  cir.func @addr_sret() -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>> {
+    %0 = cir.get_global @make_big : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+    cir.return %0 : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_sret() -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @make_big : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>> -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  // CHECK-NEXT:    cir.return %[[C]] : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+
+  // An 8-byte return is coerced to a single register, which changes the return
+  // type rather than adding a parameter.
+  cir.func @addr_coerced_return() -> !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>> {
+    %0 = cir.get_global @make_pair : !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>>
+    cir.return %0 : !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_coerced_return() -> !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @make_pair : !cir.ptr<!cir.func<(!s32i) -> !u64i>>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!s32i) -> !u64i>> -> !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>>
+  // CHECK-NEXT:    cir.return %[[C]] : !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>>
+
+  // A rewrite on the argument side reaches the address the same way.
+  cir.func @addr_byval_arg() -> !cir.ptr<!cir.func<(!rec_Big)>> {
+    %0 = cir.get_global @take_big : !cir.ptr<!cir.func<(!rec_Big)>>
+    cir.return %0 : !cir.ptr<!cir.func<(!rec_Big)>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_byval_arg() -> !cir.ptr<!cir.func<(!rec_Big)>>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @take_big : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>> -> !cir.ptr<!cir.func<(!rec_Big)>>
+  // CHECK-NEXT:    cir.return %[[C]] : !cir.ptr<!cir.func<(!rec_Big)>>
+
+  // Extend is carried by an argument attribute and leaves the function type
+  // alone, so the address needs no cast.
+  cir.func @addr_extend_only() -> !cir.ptr<!cir.func<(!s8i)>> {
+    %0 = cir.get_global @take_char : !cir.ptr<!cir.func<(!s8i)>>
+    cir.return %0 : !cir.ptr<!cir.func<(!s8i)>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_extend_only() -> !cir.ptr<!cir.func<(!s8i)>>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @take_char : !cir.ptr<!cir.func<(!s8i)>>
+  // CHECK-NEXT:    cir.return %[[G]] : !cir.ptr<!cir.func<(!s8i)>>
+
+  // A signature the ABI passes as written keeps its address type.
+  cir.func @addr_unrewritten() -> !cir.ptr<!cir.func<(!s32i) -> !s32i>> {
+    %0 = cir.get_global @plain : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+    cir.return %0 : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_unrewritten() -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @plain : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  // CHECK-NEXT:    cir.return %[[G]] : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+
+  // The address of a data global names no function at all.
+  cir.func @addr_data() -> !cir.ptr<!s32i> {
+    %0 = cir.get_global @data : !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_data() -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @data : !cir.ptr<!s32i>
+  // CHECK-NEXT:    cir.return %[[G]] : !cir.ptr<!s32i>
+
+  // The address can also be the callee of an indirect call.  It is retyped
+  // with its callee's rewrite, and the indirect-call rewrite that runs later
+  // casts it back to the coerced signature it calls through.
+  cir.func @call_through_address(%arg0: !s32i, %arg1: !cir.ptr<!rec_Big>) {
+    %0 = cir.get_global @make_big : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+    %1 = cir.call %0(%arg0) : (!cir.ptr<!cir.func<(!s32i) -> !rec_Big>>, !s32i) -> !rec_Big
+    cir.store %1, %arg1 : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @call_through_address(%arg0: !s32i, %arg1: !cir.ptr<!rec_Big>)
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @make_big : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>> -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  // CHECK-NEXT:    %[[BACK:.*]] = cir.cast bitcast %[[C]] : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>>
+  // CHECK-NEXT:    cir.call %[[BACK]](%arg1, %arg0) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>>, !cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}, !s32i) -> ()
+
+  // A direct call and an address of the same callee are rewritten in one
+  // iteration, the call first.  The sret path there reuses a dominating store
+  // and erases it, so the address must survive that.
+  cir.func @call_and_address(%arg0: !cir.ptr<!rec_Big>) -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>> {
+    %0 = cir.const #cir.int<7> : !s32i
+    %1 = cir.call @make_big(%0) : (!s32i) -> !rec_Big
+    cir.store %1, %arg0 : !rec_Big, !cir.ptr<!rec_Big>
+    %2 = cir.get_global @make_big : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+    cir.return %2 : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @call_and_address(%arg0: !cir.ptr<!rec_Big>) -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  // CHECK:         cir.call @make_big(%arg0, %{{.*}}) : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}, !s32i) -> ()
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @make_big : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>> -> !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+  // CHECK-NEXT:    cir.return %[[C]] : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+
+  // An address nothing reads still has to be retyped, since the verifier ties
+  // it to the callee, but it needs no cast back.
+  cir.func @unused_address() {
+    %0 = cir.get_global @make_big : !cir.ptr<!cir.func<(!s32i) -> !rec_Big>>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @unused_address()
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @make_big : !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !s32i)>>
+  // CHECK-NEXT:    cir.return
+
+  // An empty record argument the ABI ignores leaves the signature shorter, so
+  // the address changes type by losing a parameter rather than coercing one.
+  cir.func @addr_ignored_arg() -> !cir.ptr<!cir.func<(!rec_E0)>> {
+    %0 = cir.get_global @take_empty : !cir.ptr<!cir.func<(!rec_E0)>>
+    cir.return %0 : !cir.ptr<!cir.func<(!rec_E0)>>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @addr_ignored_arg() -> !cir.ptr<!cir.func<(!rec_E0)>>
+  // CHECK-NEXT:    %[[G:.*]] = cir.get_global @take_empty : !cir.ptr<!cir.func<()>>
+  // CHECK-NEXT:    %[[C:.*]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<()>> -> !cir.ptr<!cir.func<(!rec_E0)>>
+  // CHECK-NEXT:    cir.return %[[C]] : !cir.ptr<!cir.func<(!rec_E0)>>
+}

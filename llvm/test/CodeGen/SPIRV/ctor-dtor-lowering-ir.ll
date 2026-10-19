@@ -1,5 +1,6 @@
 ; Test for SPIR-V constructor/destructor lowering pass at IR level.
 ; RUN: llc -mtriple=spirv64-intel-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o /dev/null -print-after=spirv-lower-ctor-dtor 2>&1 | FileCheck %s
+; RUN: opt -S -passes=spirv-lower-ctor-dtor -mtriple=spirv64-intel-unknown < %s | FileCheck %s
 
 ; This test verifies that:
 ; 1. The init/fini kernels are created.

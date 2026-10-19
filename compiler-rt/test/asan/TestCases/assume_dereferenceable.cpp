@@ -1,4 +1,5 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-assume-dereferenceable=1 -fsanitize-recover=address %s -o %t && %env_asan_opts=halt_on_error=0 %run %t 2>&1 | FileCheck %s
+// UNSUPPORTED: msvc
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,22 +48,24 @@ void test_stack_fully_oob(int i) {
   p[i] = 0;
 }
 
-void test_stack_partial_right() {
+void test_stack_partial_right(int i) {
   char p[10];
   fprintf(stderr, "test_stack_partial_right\n");
   // CHECK: test_stack_partial_right
   // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR5:0x[0-9a-fA-F]+]]
   // CHECK: ASSUME of size 10 at [[PTR5]] thread T0
   __builtin_assume_dereferenceable(p + 5, 10);
+  p[i] = 0;
 }
 
-void test_stack_partial_left() {
+void test_stack_partial_left(int i) {
   char p[10];
   fprintf(stderr, "test_stack_partial_left\n");
   // CHECK: test_stack_partial_left
   // CHECK: ERROR: AddressSanitizer: dereferenceable-assumption-violation on address [[PTR6:0x[0-9a-fA-F]+]]
   // CHECK: ASSUME of size 10 at [[PTR6]] thread T0
   __builtin_assume_dereferenceable(p - 5, 10);
+  p[i] = 0;
 }
 
 void test_malloc_completely_poisoned() {
@@ -80,8 +83,8 @@ int main() {
   test_malloc_partial_right();
   test_malloc_partial_left();
   test_stack_fully_oob(0);
-  test_stack_partial_right();
-  test_stack_partial_left();
+  test_stack_partial_right(0);
+  test_stack_partial_left(0);
   test_malloc_completely_poisoned();
   return 0;
 }

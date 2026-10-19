@@ -95,7 +95,7 @@ for.cond.cleanup:
 }
 
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride2'
-; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at %0, ir<%arrayidx>
+; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 define void @gather_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body
@@ -185,6 +185,6 @@ attributes #0 = { vscale_range(1, 16) "target-features"="+sve" }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
-!5 = !{!"llvm.loop.vectorize.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.enable"}

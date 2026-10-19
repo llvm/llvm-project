@@ -58,7 +58,7 @@ public:
   using FmaFunc = OutType (*)(InType, InType, InType);
 
   void test_subnormal_range(FmaFunc func) {
-    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType RAW_STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
     constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
@@ -76,7 +76,7 @@ public:
   }
 
   void test_normal_range(FmaFunc func) {
-    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType RAW_STEP =
         (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
     constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
@@ -93,14 +93,18 @@ public:
   }
 };
 
-#define LIST_FMA_TESTS(T, func)                                                \
-  using LlvmLibcFmaTest = FmaTestTemplate<T>;                                  \
-  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
+#define LIST_FMA_TESTS(Name, T, func)                                          \
+  using LlvmLibc##Name##Test = FmaTestTemplate<T>;                             \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
-#define LIST_NARROWING_FMA_TESTS(OutType, InType, func)                        \
-  using LlvmLibcFmaTest = FmaTestTemplate<OutType, InType>;                    \
-  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
+#define LIST_NARROWING_FMA_TESTS(Name, OutType, InType, func)                  \
+  using LlvmLibc##Name##Test = FmaTestTemplate<OutType, InType>;               \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMATEST_H

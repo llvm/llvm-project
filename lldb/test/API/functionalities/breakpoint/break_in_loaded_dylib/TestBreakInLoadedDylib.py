@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestBreakInLoadedDylib(TestBase):
     """Test that we can set a source regex breakpoint that will take in
     a dlopened library that hasn't loaded when we set the breakpoint."""

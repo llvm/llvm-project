@@ -144,6 +144,7 @@ void GPUToSPIRVPass::runOnOperation() {
     options.use64bitIndex = this->use64bitIndex;
     SPIRVTypeConverter typeConverter(targetAttr, options);
     populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter);
+    populateGPUNamedBarrierToSPIRVTypeConversion(typeConverter);
 
     RewritePatternSet patterns(context);
     populateGPUToSPIRVPatterns(typeConverter, patterns);
@@ -176,8 +177,8 @@ void GPUToSPIRVPass::runOnOperation() {
         auto entryBlock = newFuncOp.addEntryBlock();
         builder.setInsertionPointToEnd(entryBlock);
         func::ReturnOp::create(builder, funcOp.getLoc());
-        newFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                           builder.getUnitAttr());
+        newFuncOp->setDiscardableAttr(gpu::GPUDialect::getKernelFuncAttrName(),
+                                      builder.getUnitAttr());
         funcOp.erase();
       });
     }

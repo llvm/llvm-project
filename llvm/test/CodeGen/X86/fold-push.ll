@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=i686-windows | FileCheck %s -check-prefix=CHECK -check-prefix=NORMAL
 ; RUN: llc < %s -mtriple=i686-windows -mattr=slow-two-mem-ops | FileCheck %s -check-prefix=CHECK -check-prefix=SLM
+; slow-indirect-call should not affect push folding (only slow-two-mem-ops does).
+; RUN: llc < %s -mtriple=i686-windows -mattr=slow-indirect-call | FileCheck %s -check-prefix=CHECK -check-prefix=NORMAL
 
 declare void @foo(i32 %r)
 

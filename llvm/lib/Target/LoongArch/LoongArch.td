@@ -35,7 +35,7 @@ def IsLA64
                          "LA64 Basic Integer and Privilege Instruction Set">;
 def IsLA32
     : Predicate<"!Subtarget->is64Bit()">,
-      AssemblerPredicate<(all_of(not Feature64Bit)),
+      AssemblerPredicate<(none_of Feature64Bit),
                          "LA32 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;

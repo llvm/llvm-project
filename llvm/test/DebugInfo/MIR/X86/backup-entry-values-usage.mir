@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -emit-call-site-info -o - \
+# RUN: llc -run-pass=live-debug-values -emit-call-site-info -o - \
 # RUN:    %s  -experimental-debug-variable-locations=false | FileCheck %s
 
 ## Test from PR47628.
@@ -12,7 +12,7 @@
 ##    return 0;
 ##  }
 ## Using command:
-## $ clang m.c -O1 -g -c -mllvm -stop-before=livedebugvalues
+## $ clang m.c -O1 -g -c -mllvm -stop-before=live-debug-values
 
 ## Confirm that Backup Entry Value is not used for modified parameter "param".
 

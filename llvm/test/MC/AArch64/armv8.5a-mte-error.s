@@ -107,7 +107,7 @@ subg x0, x1, #16, #2, #99
 // CHECK-NEXT: addg x0, #0, #0, #0
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: addg x0, x1, x0, #0
-// CHECK: immediate must be an integer in range [0, 15]
+// CHECK: invalid operand for instruction
 // CHECK-NEXT: addg x0, x1, #0, x0
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: addg x0, x1, #16, #2, #99
@@ -142,7 +142,7 @@ subg x0, x1, #16, #2, #99
 // CHECK-NEXT: subg x0, #0, #0, #0
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: subg x0, x1, x0, #0
-// CHECK: immediate must be an integer in range [0, 15]
+// CHECK: invalid operand for instruction
 // CHECK-NEXT: subg x0, x1, #0, x0
 // CHECK: invalid operand for instruction
 // CHECK-NEXT: subg x0, x1, #16, #2, #99

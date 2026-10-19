@@ -25,6 +25,7 @@ using namespace llvm::yaml;
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::CoffSectionHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiSectionContrib)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::pdb::PdbRaw_FeatureSig)
 
@@ -99,6 +100,13 @@ template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_FeatureSig> {
     io.enumCase(Features, "VC140", PdbRaw_FeatureSig::VC140);
   }
 };
+
+template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_DbiSecContribVer> {
+  static void enumeration(IO &IO, PdbRaw_DbiSecContribVer &Ver) {
+    IO.enumCase(Ver, "Ver60", PdbRaw_DbiSecContribVer::DbiSecContribVer60);
+    IO.enumCase(Ver, "V2", PdbRaw_DbiSecContribVer::DbiSecContribV2);
+  }
+};
 }
 }
 
@@ -112,6 +120,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("TpiStream", Obj.TpiStream);
   IO.mapOptional("IpiStream", Obj.IpiStream);
   IO.mapOptional("PublicsStream", Obj.PublicsStream);
+  IO.mapOptional("DXContainerStream", Obj.DXContainerStream);
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
@@ -191,6 +200,25 @@ void MappingTraits<PdbInfoStream>::mapping(IO &IO, PdbInfoStream &Obj) {
   IO.mapOptional("Version", Obj.Version, PdbImplVC70);
 }
 
+void MappingTraits<PdbDbiSectionContribs>::mapping(IO &IO,
+                                                   PdbDbiSectionContribs &Obj) {
+  IO.mapOptional("Version", Obj.Version,
+                 PdbRaw_DbiSecContribVer::DbiSecContribVer60);
+  IO.mapOptional("Items", Obj.Items);
+}
+
+void MappingTraits<PdbDbiSectionContrib>::mapping(IO &IO,
+                                                  PdbDbiSectionContrib &Obj) {
+  IO.mapOptional("ISect", Obj.ISect);
+  IO.mapOptional("Offset", Obj.Off);
+  IO.mapOptional("Size", Obj.Size);
+  IO.mapOptional("Characteristics", Obj.Characteristics);
+  IO.mapOptional("Imod", Obj.Imod);
+  IO.mapOptional("DataCrc", Obj.DataCrc);
+  IO.mapOptional("RelocCrc", Obj.RelocCrc);
+  IO.mapOptional("ISectCoff", Obj.ISectCoff);
+}
+
 void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapOptional("VerHeader", Obj.VerHeader, PdbDbiV70);
   IO.mapOptional("Age", Obj.Age, 1U);
@@ -208,6 +236,7 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   }
   IO.mapOptional("Modules", Obj.ModInfos);
   IO.mapOptional("SectionHeaders", Obj.SectionHeaders);
+  IO.mapOptional("SectionContribs", Obj.SectionContribs);
 }
 
 void MappingTraits<PdbTpiStream>::mapping(IO &IO,
@@ -238,4 +267,9 @@ void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
   IO.mapOptional("Subsections", Obj.Subsections);
   IO.mapOptional("Modi", Obj.Modi);
+}
+
+void MappingTraits<PdbDXContainerStream>::mapping(
+    IO &IO, pdb::yaml::PdbDXContainerStream &Obj) {
+  IO.mapRequired("DXContainer", Obj.DXC);
 }

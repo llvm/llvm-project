@@ -88,7 +88,7 @@ int main(int argc, char **argv, char *env[]) {
 #pragma omp task depend(in: argc, omp_all_memory) // omp45-error {{use of undeclared identifier 'omp_all_memory'}} omp50-error {{use of undeclared identifier 'omp_all_memory'}} omp51-error {{reserved locator 'omp_all_memory' requires 'out' or 'inout' dependency types}}
 #pragma omp task depend(out: omp_all_memory, argc, omp_all_memory) // omp45-error {{use of undeclared identifier 'omp_all_memory'}} omp45-error {{use of undeclared identifier 'omp_all_memory'}} omp50-error {{use of undeclared identifier 'omp_all_memory'}} omp50-error {{use of undeclared identifier 'omp_all_memory'}} omp51warn-warning {{reserved locator 'omp_all_memory' cannot be specified more than once}}
   // expected-error@+1 {{use of undeclared identifier 'omp_all_memory'}}
-#pragma omp task depend(out: argc) private(argc) allocate(argc, omp_all_memory)
+#pragma omp task depend(out: argc) private(argc) allocate(argc, omp_all_memory) // omp45-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp task'}}
   argc = 0;
   return 0;
 }

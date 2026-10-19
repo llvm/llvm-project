@@ -11,6 +11,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
+#include <optional>
 
 namespace TestEnvironment {
 
@@ -21,6 +22,8 @@ struct Device {
 
 const std::vector<Device> &getDevices();
 ol_device_handle_t getHostDevice();
-bool loadDeviceBinary(const std::string &BinaryName, ol_device_handle_t Device,
-                      std::unique_ptr<llvm::MemoryBuffer> &BinaryOut);
+bool loadDeviceBinary(
+    const std::string &BinaryName, ol_device_handle_t Device,
+    std::unique_ptr<llvm::MemoryBuffer> &BinaryOut,
+    std::optional<ol_platform_backend_t> OverrideBackend = std::nullopt);
 } // namespace TestEnvironment

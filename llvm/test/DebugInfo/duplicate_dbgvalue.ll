@@ -107,11 +107,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "res", scope: !2, file: !3, type: !9, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "main", scope: !4, file: !3, line: 1, type: !12, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !4)
+!2 = distinct !DISubprogram(name: "main", scope: !4, file: !3, line: 1, type: !12, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !4, retainedNodes: !60)
 !3 = !DIFile(filename: "duplicate-dbgvalue.f90", directory: "/dir")
 !4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5)
 !5 = !{}
-!6 = !{!0, !7, !10}
+!6 = !{!7, !10}
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
 !8 = distinct !DIGlobalVariable(name: "res", scope: !4, file: !3, type: !9, isLocal: true, isDefinition: true)
 !9 = !DIBasicType(name: "integer", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -165,3 +165,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !57 = !{!"unlimited ptr", !58, i64 0}
 !58 = !{!"Flang FAA 3"}
 !59 = !DILocation(line: 15, column: 1, scope: !52)
+!60 = !{!0}

@@ -1,8 +1,8 @@
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgpu8.03-amd-amdhsa -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; LLVM IR generated with the following command and OpenCL source:
 ;
-; $clang -cl-std=CL2.0 -g -O0 -target amdgcn-amd-amdhsa -S -emit-llvm <path-to-file>
+; $clang -cl-std=CL2.0 -g -O0 -target amdgpu8.03-amd-amdhsa -S -emit-llvm <path-to-file>
 ;
 ; global int GlobA;
 ; global int GlobB;

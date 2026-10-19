@@ -199,6 +199,43 @@ TYPED_TEST(BitVectorTest, Equality) {
   EXPECT_TRUE(A == B);
 }
 
+TYPED_TEST(BitVectorTest, TestAllAndAny) {
+  TypeParam Vec;
+  Vec.resize(10);
+
+  // Empty range
+  EXPECT_TRUE(Vec.test_all(3, 3));
+  EXPECT_FALSE(Vec.test_any(3, 3));
+
+  Vec.set(2, 5);
+  EXPECT_TRUE(Vec.test_all(2, 5));
+  EXPECT_FALSE(Vec.test_all(2, 6));
+  EXPECT_FALSE(Vec.test_all(1, 5));
+  EXPECT_TRUE(Vec.test_any(2, 5));
+  EXPECT_TRUE(Vec.test_any(4, 5));
+  EXPECT_FALSE(Vec.test_any(0, 2));
+
+  Vec.set(7);
+  EXPECT_FALSE(Vec.test_all(0, Vec.size()));
+  EXPECT_TRUE(Vec.test_any(6, Vec.size()));
+  Vec.reset(7);
+
+  TypeParam LargeVec;
+  LargeVec.resize(80);
+  LargeVec.set(10, 30);
+  EXPECT_TRUE(LargeVec.test_any(10, 30));
+  EXPECT_FALSE(LargeVec.test_all(10, 35));
+  EXPECT_FALSE(LargeVec.test_any(0, 10));
+
+  LargeVec.set(30, 35);
+  EXPECT_TRUE(LargeVec.test_all(10, 35));
+
+  LargeVec.set(70);
+  EXPECT_TRUE(LargeVec.test_any(68, 72));
+  LargeVec.reset(70);
+  EXPECT_FALSE(LargeVec.test_any(68, 72));
+}
+
 TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   TypeParam A;
 
@@ -1432,11 +1469,13 @@ TYPED_TEST(BitVectorTest, DenseSet) {
   I = Set.insert(C);
   EXPECT_EQ(true, I.second);
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // Occupancy lives in the used-bit array rather than a sentinel key stored in
+  // a bucket, so a value equal to the Empty/Tombstone key can be inserted like
+  // any other.
   TypeParam D;
-  EXPECT_DEATH(Set.insert(D),
-               "Empty/Tombstone value shouldn't be inserted into map!");
-#endif
+  EXPECT_EQ(true, Set.insert(D).second);
+  EXPECT_EQ(1U, Set.count(D));
+  EXPECT_EQ(true, Set.erase(D));
 
   EXPECT_EQ(3U, Set.size());
   EXPECT_EQ(1U, Set.count(A));

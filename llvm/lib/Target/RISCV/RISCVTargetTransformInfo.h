@@ -72,6 +72,20 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind) const;
 
+  /// Return the type used to cost vzip.vv, whose LMUL represents the
+  /// interleaved destination EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVZIPCostVT(MVT InterleavedVT) const;
+
+  /// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
+  /// the interleaved source EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVUNZIPCostVT(MVT InterleavedVT) const;
+
+  /// If a fixed-length shuffle can be lowered to a vzip.vv instruction,
+  /// return its cost.
+  InstructionCost getVZIPCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                              VectorType *SrcTy, ArrayRef<int> Mask,
+                              TTI::TargetCostKind CostKind) const;
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -128,7 +142,6 @@ public:
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
-  std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
 
   TypeSize
@@ -159,7 +172,7 @@ public:
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
-                       TTI::TargetCostKind CostKind) const override;
+                       const TTI::TargetCostKind CostKind) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -177,9 +190,11 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
@@ -227,7 +242,7 @@ public:
   std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
       unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CxtI) const;
+      ArrayRef<const Value *> Args, const Instruction *CtxI) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
@@ -272,7 +287,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
@@ -364,6 +379,9 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
+  bool isLegalBroadcastLoad(Type *ElementTy,
+                            ElementCount NumElements) const override;
+
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
@@ -374,18 +392,11 @@ public:
         Intrinsic::experimental_vp_strided_store,
         Intrinsic::experimental_vp_reverse,
         Intrinsic::experimental_vp_splice,
-        Intrinsic::vp_add,
-        Intrinsic::vp_ashr,
         Intrinsic::vp_cttz_elts,
-        Intrinsic::vp_fptrunc,
         Intrinsic::vp_gather,
-        Intrinsic::vp_icmp,
-        Intrinsic::vp_is_fpclass,
         Intrinsic::vp_load,
         Intrinsic::vp_load_ff,
-        Intrinsic::vp_lshr,
         Intrinsic::vp_merge,
-        Intrinsic::vp_mul,
         Intrinsic::vp_reduce_add,
         Intrinsic::vp_reduce_and,
         Intrinsic::vp_reduce_fadd,
@@ -403,16 +414,10 @@ public:
         Intrinsic::vp_reduce_xor,
         Intrinsic::vp_scatter,
         Intrinsic::vp_sdiv,
-        Intrinsic::vp_select,
-        Intrinsic::vp_sext,
-        Intrinsic::vp_shl,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
-        Intrinsic::vp_sub,
-        Intrinsic::vp_trunc,
         Intrinsic::vp_udiv,
-        Intrinsic::vp_urem,
-        Intrinsic::vp_zext};
+        Intrinsic::vp_urem};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
          cast<VectorType>(PI.getArgOperand(1)->getType())
@@ -445,22 +450,35 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindIV:
     case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:
+    case RecurKind::FSub:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
       // expanded.
       if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
         return false;
       return true;
-    default:
+    case RecurKind::Mul:
+    case RecurKind::FMul:
+    case RecurKind::FMinNum:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinimum:
+    case RecurKind::FMaximum:
+    case RecurKind::FMinimumNum:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FAddChainWithSubs:
       return false;
+    case RecurKind::None:
+      llvm_unreachable("Unknown reduction kind.");
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override {
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
     // Don't interleave if the loop has been vectorized with scalable vectors.
     if (VF.isScalable())
       return 1;
@@ -542,7 +560,14 @@ public:
   bool canSplatOperand(Instruction *I, int Operand) const;
   /// Return true if a vector instruction will lower to a target instruction
   /// able to splat the given operand.
-  bool canSplatOperand(unsigned Opcode, int Operand) const;
+  bool canSplatOperand(unsigned Opcode, int Operand,
+                       Intrinsic::ID IntrinsicID) const;
+
+  TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<
+          bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+          GatherUseOps) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;

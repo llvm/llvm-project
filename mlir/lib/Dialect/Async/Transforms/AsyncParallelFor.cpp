@@ -710,6 +710,10 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   // We do not currently support rewrite for parallel op with reductions.
   if (op.getNumReductions() != 0)
     return failure();
+  // The trip count computation below assumes signed bounds.
+  if (op.getUnsignedCmp())
+    return rewriter.notifyMatchFailure(
+        op, "unsigned loop bounds are not supported");
 
   ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 

@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -82,6 +83,9 @@ static bool CanIgnoreCall(const CallInst *call) {
       break;
     case llvm::Intrinsic::dbg_declare:
     case llvm::Intrinsic::dbg_value:
+    case llvm::Intrinsic::ptrauth_auth:
+    case llvm::Intrinsic::ptrauth_blend:
+    case llvm::Intrinsic::ptrauth_strip:
       return true;
     }
   }
@@ -134,7 +138,7 @@ public:
   std::string SummarizeValue(const Value *value) {
     lldb_private::StreamString ss;
 
-    ss.Printf("%s", PrintValue(value).c_str());
+    ss.PutCString(PrintValue(value).c_str());
 
     ValueMap::iterator i = m_values.find(value);
 
@@ -266,7 +270,12 @@ public:
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)
           return false;
-        value = APInt(m_target_data.getPointerSizeInBits(), addr);
+        // A resolved symbol address may be wider than a target pointer when we
+        // store extra information in the high bits, such as an address-space
+        // tag. Truncate to the pointer width rather than asserting. When the
+        // address already fits this is a no-op.
+        value = APInt(m_target_data.getPointerSizeInBits(), addr,
+                      /*isSigned=*/false, /*implicitTrunc=*/true);
         return true;
       }
       break;
@@ -1447,6 +1456,55 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     case Instruction::Call: {
       const CallInst *call_inst = cast<CallInst>(inst);
 
+      if (auto *fn = call_inst->getCalledFunction()) {
+        if (fn->isIntrinsic() &&
+            ((fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_auth &&
+              call_inst->arg_size() == 3) ||
+             (fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_strip &&
+              call_inst->arg_size() == 2)) &&
+            exe_ctx.GetProcessPtr()) {
+          llvm::Value *auth_ptr = call_inst->getArgOperand(0);
+          // Extract the argument's value.
+          lldb_private::Scalar auth_ptr_val;
+          if (!frame.EvaluateValue(auth_ptr_val, auth_ptr, module)) {
+            error = lldb_private::Status::FromErrorString(
+                "unable to evaluate argument 0");
+            return false;
+          }
+
+          if (lldb::ABISP abi_sp = exe_ctx.GetProcessPtr()->GetABI()) {
+            auto stripped_ptr = lldb_private::Scalar(
+                abi_sp->FixCodeAddress(auth_ptr_val.ULongLong()));
+            frame.AssignValue(call_inst, stripped_ptr, module);
+          }
+        }
+
+        if (fn->isIntrinsic() &&
+            fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_blend) {
+          llvm::Value *addr = call_inst->getArgOperand(0);
+          llvm::Value *lobits = call_inst->getArgOperand(1);
+
+          // Extract the address.
+          lldb_private::Scalar addr_val;
+          if (!frame.EvaluateValue(addr_val, addr, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 0);
+            return false;
+          }
+
+          // Extract the low bits to blend in.
+          lldb_private::Scalar lobits_val;
+          if (!frame.EvaluateValue(lobits_val, lobits, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 1);
+            return false;
+          }
+
+          lldb_private::Scalar blend_val = addr_val | (lobits_val << 48);
+          frame.AssignValue(call_inst, blend_val, module);
+        }
+      }
+
       if (CanIgnoreCall(call_inst))
         break;
 
@@ -1580,6 +1638,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       process->SetRunningUserExpression(true);
+
+      lldb_private::PolicyStack::Guard expr_policy_guard =
+          lldb_private::PolicyStack::Get().PushPublicStateRunningExpression();
 
       // Execute the actual function call thread plan
       lldb::ExpressionResults res =

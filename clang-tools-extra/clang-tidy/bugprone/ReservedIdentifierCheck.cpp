@@ -140,7 +140,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
   using FailureInfo = RenamerClangTidyCheck::FailureInfo;
   if (!Invert) {
     std::optional<FailureInfo> Info;
-    auto AppendFailure = [&](StringRef Kind, std::string &&Fixup) {
+    const auto AppendFailure = [&](StringRef Kind, std::string &&Fixup) {
       if (!Info) {
         Info = FailureInfo{std::string(Kind), std::move(Fixup)};
       } else {
@@ -148,7 +148,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
         Info->Fixup = std::move(Fixup);
       }
     };
-    auto InProgressFixup = [&] {
+    const auto InProgressFixup = [&] {
       return llvm::transformOptional(
                  Info,
                  [](const FailureInfo &Info) { return StringRef(Info.Fixup); })

@@ -31,7 +31,7 @@
 ; CHECK: %[[#SourceComp:]] = OpBitcast %[[#Int8PtrConst]] %[[#VarComp]]
 ; CHECK: OpCopyMemorySized %[[#]] %[[#SourceComp]] %[[#Const4]] Aligned 4
 
-; CHECK-SPIRV: %[[#]] = OpFunctionCall %[[#]] %[[#Memset_p0i32]] %[[#]] %[[#]] %[[#]] %[[#False]]
+; CHECK: %[[#]] = OpFunctionCall %[[#]] %[[#Memset_p0i32]] %[[#]] %[[#]] %[[#]] %[[#False]]
 
 ; CHECK: %[[#Memset_p0i32]] = OpFunction %[[#]]
 ; CHECK: %[[#Dest:]] = OpFunctionParameter %[[#]]
@@ -85,6 +85,9 @@ define spir_func void @_Z5foo11v(ptr addrspace(4) noalias nocapture sret(ptr add
 
   ;; Volatile
   tail call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %c, i8 %v, i64 %s2, i1 true)
+
+  ;; Constant zero size is a no-op and must not emit OpCopyMemorySized.
+  tail call void @llvm.memset.p0.i32(ptr align 4 %x.bc, i8 21, i32 0, i1 false)
   ret void
 }
 

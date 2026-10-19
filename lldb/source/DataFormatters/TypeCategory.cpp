@@ -185,48 +185,27 @@ uint32_t TypeCategoryImpl::GetCount(FormatCategoryItems items) {
 }
 
 bool TypeCategoryImpl::AnyMatches(
-    const FormattersMatchCandidate &candidate_type, FormatCategoryItems items,
-    bool only_enabled, const char **matching_category,
-    FormatCategoryItems *matching_type) {
-  if (!IsEnabled() && only_enabled)
-    return false;
-
+    const FormattersMatchCandidate &candidate_type, FormatCategoryItems items) {
   if (items & eFormatCategoryItemFormat) {
     if (m_format_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemFormat;
       return true;
     }
   }
 
   if (items & eFormatCategoryItemSummary) {
     if (m_summary_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemSummary;
       return true;
     }
   }
 
   if (items & eFormatCategoryItemFilter) {
     if (m_filter_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemFilter;
       return true;
     }
   }
 
   if (items & eFormatCategoryItemSynth) {
     if (m_synth_cont.AnyMatches(candidate_type)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemSynth;
       return true;
     }
   }
@@ -318,7 +297,7 @@ std::string TypeCategoryImpl::GetDescription() {
   StreamString stream;
   stream.Printf("%s (%s", GetName(), (IsEnabled() ? "enabled" : "disabled"));
   StreamString lang_stream;
-  lang_stream.Printf(", applicable for language(s): ");
+  lang_stream.PutCString(", applicable for language(s): ");
   bool print_lang = false;
   for (size_t idx = 0; idx < GetNumLanguages(); idx++) {
     const lldb::LanguageType lang = GetLanguageAtIndex(idx);

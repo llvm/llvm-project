@@ -8,7 +8,7 @@ define i32 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 152, ptr @f, align 4
 ; CHECK-NEXT:    [[AGG_TMP_SROA_0_0_COPYLOAD_I:%.*]] = load i32, ptr @f, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> <i32 poison, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080>, i32 [[AGG_TMP_SROA_0_0_COPYLOAD_I]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> <i32 poison, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080>, i32 [[AGG_TMP_SROA_0_0_COPYLOAD_I]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl <8 x i32> [[TMP3]], <i32 24, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> <i32 83886080, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i32> [[TMP1]], splat (i32 24)

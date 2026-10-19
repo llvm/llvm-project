@@ -110,7 +110,8 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate,
   return success();
 }
 
-bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
+OperationFolder::ConstantInsertionResult
+OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   Block *opBlock = op->getBlock();
 
   // If this is a constant we unique'd, we don't need to insert, but we can
@@ -119,8 +120,9 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
     if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
       op->moveBefore(&opBlock->front());
       op->setLoc(erasedFoldedLocation);
+      return ConstantInsertionResult::Hoisted;
     }
-    return true;
+    return ConstantInsertionResult::Unchanged;
   }
 
   // Get the constant value of the op if necessary.
@@ -149,7 +151,7 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
     notifyRemoval(op);
     rewriter.replaceOp(op, folderConstOp->getResults());
     folderConstOp->setLoc(erasedFoldedLocation);
-    return false;
+    return ConstantInsertionResult::Replaced;
   }
 
   // Otherwise, we insert `op`. If `op` is in the insertion block and is either
@@ -157,18 +159,21 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // constant we unique'd (i.e. one we inserted), then we don't need to do
   // anything. Otherwise, we move the constant to the insertion block.
   // The location info is erased if the constant is moved to a different block.
+  ConstantInsertionResult result = ConstantInsertionResult::Unchanged;
   Block *insertBlock = &insertRegion->front();
   if (opBlock != insertBlock) {
     op->moveBefore(&insertBlock->front());
     op->setLoc(erasedFoldedLocation);
+    result = ConstantInsertionResult::Hoisted;
   } else if (&insertBlock->front() != op &&
              !isFolderOwnedConstant(op->getPrevNode())) {
     op->moveBefore(&insertBlock->front());
+    result = ConstantInsertionResult::Hoisted;
   }
 
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
-  return true;
+  return result;
 }
 
 /// Notifies that the given constant `op` should be remove from this

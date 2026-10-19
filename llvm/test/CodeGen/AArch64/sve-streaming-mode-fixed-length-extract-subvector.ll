@@ -324,9 +324,8 @@ define <1 x float> @extract_subvector_v2f32(<2 x float> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #12]
-; NONEON-NOSVE-NEXT:    str w8, [sp]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp], #16
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #12]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %ret = call <1 x float> @llvm.vector.extract.v1f32.v2f32(<2 x float> %op, i64 1)
   ret <1 x float> %ret

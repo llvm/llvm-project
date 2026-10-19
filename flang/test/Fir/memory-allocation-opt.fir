@@ -3,7 +3,7 @@
 // Test for size of array being too big.
 
 // CHECK-LABEL: func @_QPs1(
-// CHECK: %[[mem:.*]] = fir.allocmem !fir.array<1000123xi32> {bindc_name = "array", uniq_name = "_QFs1Earray"}
+// CHECK: %[[mem:.*]] = fir.allocmem !fir.array<1000123xi32> <{bindc_name = "array", uniq_name = "_QFs1Earray"}>
 // CHECK: fir.call @_QPs3(
 // CHECK: fir.freemem %[[mem]]
 // CHECK-NEXT: return
@@ -17,7 +17,7 @@ func.func @_QPs1() {
 // Test for dynamic array.
 
 // CHECK-LABEL: func @_QPs2(
-// CHECK: %[[mem:.*]] = fir.allocmem !fir.array<?xi32>, %{{[0-9]+}} {bindc_name = "array", uniq_name = "_QFs2Earray"}
+// CHECK: %[[mem:.*]] = fir.allocmem !fir.array<?xi32>, %{{[0-9]+}} <{bindc_name = "array", uniq_name = "_QFs2Earray"}>
 // CHECK: fir.call @_QPs3(
 // CHECK: fir.freemem %[[mem]]
 // CHECK-NEXT: return

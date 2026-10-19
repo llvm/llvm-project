@@ -84,7 +84,6 @@ machineFunctionInfo:
   params:          [  ]
   results:         [ i32 ]
   isCFGStackified: false
-  wasmEHFuncInfo:  {}
 body:             |
   bb.0.entry:
     liveins: $arguments

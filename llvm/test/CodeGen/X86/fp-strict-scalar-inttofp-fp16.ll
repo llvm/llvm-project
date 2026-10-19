@@ -33,9 +33,8 @@ define half @sitofp_i1tof16(i1 %x) #0 {
 ; AVX-NEXT:    andb $1, %dil
 ; AVX-NEXT:    negb %dil
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -74,9 +73,8 @@ define half @sitofp_i8tof16(i8 %x) #0 {
 ; AVX-LABEL: sitofp_i8tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -110,9 +108,8 @@ define half @sitofp_i16tof16(i16 %x) #0 {
 ; AVX-LABEL: sitofp_i16tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movswl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -144,9 +141,8 @@ define half @sitofp_i32tof16(i32 %x) #0 {
 ;
 ; AVX-LABEL: sitofp_i32tof16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -176,9 +172,8 @@ define half @sitofp_i64tof16(i64 %x) #0 {
 ;
 ; AVX-LABEL: sitofp_i64tof16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -211,9 +206,8 @@ define half @uitofp_i1tof16(i1 %x) #0 {
 ; AVX-LABEL: uitofp_i1tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    andl $1, %edi
-; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -249,9 +243,8 @@ define half @uitofp_i8tof16(i8 %x) #0 {
 ; AVX-LABEL: uitofp_i8tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -285,9 +278,8 @@ define half @uitofp_i16tof16(i16 %x) #0 {
 ; AVX-LABEL: uitofp_i16tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -321,17 +313,15 @@ define half @uitofp_i32tof16(i32 %x) #0 {
 ; F16C-LABEL: uitofp_i32tof16:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    movl %edi, %eax
-; F16C-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
-; F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: uitofp_i32tof16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;
@@ -393,9 +383,8 @@ define half @uitofp_i64tof16(i64 %x) #0 {
 ;
 ; AVX512-LABEL: uitofp_i64tof16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;

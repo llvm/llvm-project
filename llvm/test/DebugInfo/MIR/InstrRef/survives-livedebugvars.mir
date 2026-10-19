@@ -1,4 +1,4 @@
-# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations | FileCheck %s
+# RUN: llc -start-after=phi-node-elimination -stop-after=virt-reg-rewriter %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations | FileCheck %s
 # RUN: llc -O0 -start-after=phi-node-elimination -stop-after=regallocfast %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations | FileCheck %s --check-prefix=FASTREG
 #
 # Test that DBG_INSTR_REFs can pass through livedebugvariables to the end of

@@ -1,14 +1,15 @@
 ! Test lowering complex division to llvm ir according to options
 
 ! REQUIRES: flang-supports-f128-math
+! RUN: export FILECHECK_OPTS="-DF128_ALIGN=%if target=s390x{{.*}} %{8%} %else %{16%}"
 ! RUN: %flang -fcomplex-arithmetic=improved -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
 ! RUN: %flang -fcomplex-arithmetic=basic -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
 
 
 ! CHECK-LABEL: @div_test_quad
 ! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
-! CHECK: %[[LOAD_LHS:.*]] = load { fp128, fp128 }, ptr %[[LHS]], align 16
-! CHECK: %[[LOAD_RHS:.*]] = load { fp128, fp128 }, ptr %[[RHS]], align 16
+! CHECK: %[[LOAD_LHS:.*]] = load { fp128, fp128 }, ptr %[[LHS]], align [[F128_ALIGN]]
+! CHECK: %[[LOAD_RHS:.*]] = load { fp128, fp128 }, ptr %[[RHS]], align [[F128_ALIGN]]
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { fp128, fp128 } %[[LOAD_LHS]], 0
 ! CHECK: %[[LHS_IMAG:.*]] = extractvalue { fp128, fp128 } %[[LOAD_LHS]], 1
 ! CHECK: %[[RHS_REAL:.*]] = extractvalue { fp128, fp128 } %[[LOAD_RHS]], 0
@@ -35,61 +36,61 @@
 
 ! Case 1. Zero denominator, numerator contains at most one NaN value.
 ! IMPRVD: %[[RHS_REAL_ABS:.*]] = call contract fp128 @llvm.fabs.f128(fp128 %[[RHS_REAL]])
-! IMPRVD: %[[RHS_REAL_ABS_IS_ZERO:.*]] = fcmp oeq fp128 %[[RHS_REAL_ABS]], 0xL00000000000000000000000000000000
+! IMPRVD: %[[RHS_REAL_ABS_IS_ZERO:.*]] = fcmp oeq fp128 %[[RHS_REAL_ABS]], 0.000000e+00
 ! IMPRVD: %[[RHS_IMAG_ABS:.*]] = call contract fp128 @llvm.fabs.f128(fp128 %[[RHS_IMAG]])
-! IMPRVD: %[[RHS_IMAG_ABS_IS_ZERO:.*]] = fcmp oeq fp128 %[[RHS_IMAG_ABS]], 0xL00000000000000000000000000000000
-! IMPRVD: %[[LHS_REAL_IS_NOT_NAN:.*]] = fcmp ord fp128 %[[LHS_REAL]], 0xL00000000000000000000000000000000
-! IMPRVD: %[[LHS_IMAG_IS_NOT_NAN:.*]] = fcmp ord fp128 %[[LHS_IMAG]], 0xL00000000000000000000000000000000
+! IMPRVD: %[[RHS_IMAG_ABS_IS_ZERO:.*]] = fcmp oeq fp128 %[[RHS_IMAG_ABS]], 0.000000e+00
+! IMPRVD: %[[LHS_REAL_IS_NOT_NAN:.*]] = fcmp ord fp128 %[[LHS_REAL]], 0.000000e+00
+! IMPRVD: %[[LHS_IMAG_IS_NOT_NAN:.*]] = fcmp ord fp128 %[[LHS_IMAG]], 0.000000e+00
 ! IMPRVD: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = or i1 %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]]
 ! IMPRVD: %[[RHS_IS_ZERO:.*]] = and i1 %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]]
 ! IMPRVD: %[[RESULT_IS_INFINITY:.*]] = and i1 %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]]
-! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call fp128 @llvm.copysign.f128(fp128 0xL00000000000000007FFF000000000000, fp128 %[[RHS_REAL]])
+! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call fp128 @llvm.copysign.f128(fp128 +inf, fp128 %[[RHS_REAL]])
 ! IMPRVD: %[[INFINITY_RESULT_REAL:.*]] = fmul contract fp128 %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]]
 ! IMPRVD: %[[INFINITY_RESULT_IMAG:.*]] = fmul contract fp128 %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]]
 
 ! Case 2. Infinite numerator, finite denominator.
-! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one fp128 %[[RHS_REAL_ABS]], 0xL00000000000000007FFF000000000000
-! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one fp128 %[[RHS_IMAG_ABS]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one fp128 %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one fp128 %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_FINITE:.*]] = and i1 %[[RHS_REAL_FINITE]], %[[RHS_IMAG_FINITE]]
 ! IMPRVD: %[[LHS_REAL_ABS:.*]] = call contract fp128 @llvm.fabs.f128(fp128 %[[LHS_REAL]])
-! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq fp128 %[[LHS_REAL_ABS]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq fp128 %[[LHS_REAL_ABS]], +inf
 ! IMPRVD: %[[LHS_IMAG_ABS:.*]] = call contract fp128 @llvm.fabs.f128(fp128 %[[LHS_IMAG]])
-! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq fp128 %[[LHS_IMAG_ABS]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq fp128 %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_INFINITE:.*]] = or i1 %[[LHS_REAL_INFINITE]], %[[LHS_IMAG_INFINITE]]
 ! IMPRVD: %[[INF_NUM_FINITE_DENOM:.*]] = and i1 %[[LHS_IS_INFINITE]], %[[RHS_IS_FINITE]]
-! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], fp128 0xL00000000000000003FFF000000000000, fp128 0xL00000000000000000000000000000000
+! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], fp128 1.000000e+00, fp128 0.000000e+00
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN:.*]] = call fp128 @llvm.copysign.f128(fp128 %[[LHS_REAL_IS_INF]], fp128 %[[LHS_REAL]])
-! IMPRVD: %[[LHS_IMAG_IS_INF:.*]] = select i1 %[[LHS_IMAG_INFINITE]], fp128 0xL00000000000000003FFF000000000000, fp128 0xL00000000000000000000000000000000
+! IMPRVD: %[[LHS_IMAG_IS_INF:.*]] = select i1 %[[LHS_IMAG_INFINITE]], fp128 1.000000e+00, fp128 0.000000e+00
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN:.*]] = call fp128 @llvm.copysign.f128(fp128 %[[LHS_IMAG_IS_INF]], fp128 %[[LHS_IMAG]])
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract fp128 %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract fp128 %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_1:.*]] = fadd contract fp128 %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract fp128 %[[INF_MULTIPLICATOR_1]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract fp128 %[[INF_MULTIPLICATOR_1]], +inf
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract fp128 %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract fp128 %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_2:.*]] = fsub contract fp128 %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract fp128 %[[INF_MULTIPLICATOR_2]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract fp128 %[[INF_MULTIPLICATOR_2]], +inf
 
 ! Case 3. Finite numerator, infinite denominator.
-! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one fp128 %[[LHS_REAL_ABS]], 0xL00000000000000007FFF000000000000
-! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one fp128 %[[LHS_IMAG_ABS]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one fp128 %[[LHS_REAL_ABS]], +inf
+! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one fp128 %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_FINITE:.*]] = and i1 %[[LHS_REAL_FINITE]], %[[LHS_IMAG_FINITE]]
-! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq fp128 %[[RHS_REAL_ABS]], 0xL00000000000000007FFF000000000000
-! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq fp128 %[[RHS_IMAG_ABS]], 0xL00000000000000007FFF000000000000
+! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq fp128 %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq fp128 %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_INFINITE:.*]] = or i1 %[[RHS_REAL_INFINITE]], %[[RHS_IMAG_INFINITE]]
 ! IMPRVD: %[[FINITE_NUM_INFINITE_DENOM:.*]] = and i1 %[[LHS_IS_FINITE]], %[[RHS_IS_INFINITE]]
-! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], fp128 0xL00000000000000003FFF000000000000, fp128 0xL00000000000000000000000000000000
+! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], fp128 1.000000e+00, fp128 0.000000e+00
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN:.*]] = call fp128 @llvm.copysign.f128(fp128 %[[RHS_REAL_IS_INF]], fp128 %[[RHS_REAL]])
-! IMPRVD: %[[RHS_IMAG_IS_INF:.*]] = select i1 %[[RHS_IMAG_INFINITE]], fp128 0xL00000000000000003FFF000000000000, fp128 0xL00000000000000000000000000000000
+! IMPRVD: %[[RHS_IMAG_IS_INF:.*]] = select i1 %[[RHS_IMAG_INFINITE]], fp128 1.000000e+00, fp128 0.000000e+00
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN:.*]] = call fp128 @llvm.copysign.f128(fp128 %[[RHS_IMAG_IS_INF]], fp128 %[[RHS_IMAG]])
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_REAL:.*]] = fmul contract fp128 %[[LHS_REAL]], %[[RHS_REAL_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_IMAG:.*]] = fmul contract fp128 %[[LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[ZERO_MULTIPLICATOR_1:.*]] = fadd contract fp128 %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_REAL]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_4:.*]] = fmul contract fp128 %[[ZERO_MULTIPLICATOR_1]], 0xL00000000000000000000000000000000
+! IMPRVD: %[[RESULT_REAL_4:.*]] = fmul contract fp128 %[[ZERO_MULTIPLICATOR_1]], 0.000000e+00
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG:.*]] = fmul contract fp128 %[[LHS_IMAG]], %[[RHS_REAL_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL:.*]] = fmul contract fp128 %[[LHS_REAL]], %[[RHS_IMAG_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[ZERO_MULTIPLICATOR_2:.*]] = fsub contract fp128 %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL]]
-! IMPRVD: %[[RESULT_IMAG_4:.*]] = fmul contract fp128 %[[ZERO_MULTIPLICATOR_2]], 0xL00000000000000000000000000000000
+! IMPRVD: %[[RESULT_IMAG_4:.*]] = fmul contract fp128 %[[ZERO_MULTIPLICATOR_2]], 0.000000e+00
 
 ! IMPRVD: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = fcmp olt fp128 %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]]
 ! IMPRVD: %[[RESULT_REAL:.*]] = select i1 %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], fp128 %[[RESULT_REAL_1]], fp128 %[[RESULT_REAL_2]]
@@ -100,14 +101,14 @@
 ! IMPRVD: %[[RESULT_IMAG_SPECIAL_CASE_2:.*]] = select i1 %[[INF_NUM_FINITE_DENOM]], fp128 %[[RESULT_IMAG_3]], fp128 %[[RESULT_IMAG_SPECIAL_CASE_3]]
 ! IMPRVD: %[[RESULT_REAL_SPECIAL_CASE_1:.*]] = select i1 %[[RESULT_IS_INFINITY]], fp128 %[[INFINITY_RESULT_REAL]], fp128 %[[RESULT_REAL_SPECIAL_CASE_2]]
 ! IMPRVD: %[[RESULT_IMAG_SPECIAL_CASE_1:.*]] = select i1 %[[RESULT_IS_INFINITY]], fp128 %[[INFINITY_RESULT_IMAG]], fp128 %[[RESULT_IMAG_SPECIAL_CASE_2]]
-! IMPRVD: %[[RESULT_REAL_IS_NAN:.*]] = fcmp uno fp128 %[[RESULT_REAL]], 0xL00000000000000000000000000000000
-! IMPRVD: %[[RESULT_IMAG_IS_NAN:.*]] = fcmp uno fp128 %[[RESULT_IMAG]], 0xL00000000000000000000000000000000
+! IMPRVD: %[[RESULT_REAL_IS_NAN:.*]] = fcmp uno fp128 %[[RESULT_REAL]], 0.000000e+00
+! IMPRVD: %[[RESULT_IMAG_IS_NAN:.*]] = fcmp uno fp128 %[[RESULT_IMAG]], 0.000000e+00
 ! IMPRVD: %[[RESULT_IS_NAN:.*]] = and i1 %[[RESULT_REAL_IS_NAN]], %[[RESULT_IMAG_IS_NAN]]
 ! IMPRVD: %[[RESULT_REAL_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], fp128 %[[RESULT_REAL_SPECIAL_CASE_1]], fp128 %[[RESULT_REAL]]
 ! IMPRVD: %[[RESULT_IMAG_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], fp128 %[[RESULT_IMAG_SPECIAL_CASE_1]], fp128 %[[RESULT_IMAG]]
 ! IMPRVD: %[[RESULT_1:.*]] = insertvalue { fp128, fp128 } poison, fp128 %[[RESULT_REAL_WITH_SPECIAL_CASES]], 0
 ! IMPRVD: %[[RESULT_2:.*]] = insertvalue { fp128, fp128 } %[[RESULT_1]], fp128 %[[RESULT_IMAG_WITH_SPECIAL_CASES]], 1
-! IMPRVD: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align 16
+! IMPRVD: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align [[F128_ALIGN]]
 
 ! BASIC-DAG: %[[RHS_REAL_SQ:.*]] = fmul contract fp128 %[[RHS_REAL]], %[[RHS_REAL]]
 ! BASIC-DAG: %[[RHS_IMAG_SQ:.*]] = fmul contract fp128 %[[RHS_IMAG]], %[[RHS_IMAG]]
@@ -122,7 +123,7 @@
 ! BASIC: %[[IMAG:.*]] = fdiv contract fp128 %[[IMAG_TMP_2]], %[[SQ_NORM]]
 ! BASIC: %[[RESULT_1:.*]] = insertvalue { fp128, fp128 } poison, fp128 %[[REAL]], 0
 ! BASIC: %[[RESULT_2:.*]] = insertvalue { fp128, fp128 } %[[RESULT_1]], fp128 %[[IMAG]], 1
-! BASIC: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align 16
+! BASIC: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align [[F128_ALIGN]]
 
 ! CHECK: ret void
 subroutine div_test_quad(a,b,c)

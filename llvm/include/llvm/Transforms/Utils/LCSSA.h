@@ -35,7 +35,7 @@
 namespace llvm {
 
 /// Converts loops into loop-closed SSA form.
-class LCSSAPass : public PassInfoMixin<LCSSAPass> {
+class LCSSAPass : public OptionalPassInfoMixin<LCSSAPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

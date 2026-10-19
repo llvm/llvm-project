@@ -9,6 +9,7 @@ The ORC runtime provides executor-side support code for the LLVM ORC APIs.
    :titlesonly:
 
    Building-orc-rt
+   CodingConventions
 ```
 
 ### Current Status

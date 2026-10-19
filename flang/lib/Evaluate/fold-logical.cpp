@@ -430,7 +430,8 @@ static Expr<LogicalResult> CompareUnsigned(FoldingContext &context,
   Expr<SomeType> result{ApplyIntrinsic(context, intrin,
       ActualArguments{
           ActualArgument{std::move(x)}, ActualArgument{std::move(y)}})};
-  return DEREF(UnwrapExpr<Expr<LogicalResult>>(result));
+  auto &logical{DEREF(UnwrapExpr<Expr<SomeLogical>>(result))};
+  return ConvertToType<LogicalResult>(std::move(logical));
 }
 
 // Determines the right kind of INTEGER to hold the bits of a REAL type.
@@ -930,7 +931,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     if (context.targetCharacteristics().ieeeFeatures().test(
             IeeeFeature::Rounding)) {
       if (auto mode{GetRoundingMode(args[0])}) {
-        return Expr<T>{mode != common::RoundingMode::TiesAwayFromZero};
+        return Expr<T>{mode < common::RoundingMode::TiesAwayFromZero};
       }
     }
   } else if (name == "__builtin_ieee_support_sqrt") {

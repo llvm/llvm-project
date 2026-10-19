@@ -33,6 +33,29 @@ Select the targets to build with `LLVM_RUNTIME_TARGETS`, and enable libclc for
 each selected target with the matching
 `RUNTIMES_<target-triple>_LLVM_ENABLE_RUNTIMES` cache entry.
 
+#### Using CMake cache files
+
+CMake cache files for target build are provided under `libclc/cmake/caches/`.
+Pass one with `-C` to avoid setting each variable manually:
+
+| Cache file                    | Targets          |
+|---                            |---               |
+| `amdgcn-amd-amdhsa-llvm.cmake`| AMDGPU           |
+| `nvptx64-nvidia-cuda.cmake`   | NVPTX64          |
+| `spirv.cmake`                 | SPIR-V           |
+| `spirv-vulkan.cmake`          | Vulkan (clspv)   |
+| `all-targets.cmake`           | All of the above |
+
+
+For example, from the root of the `llvm-project` repository:
+```
+cmake -C libclc/cmake/caches/amdgcn-amd-amdhsa-llvm.cmake -G Ninja -B build llvm
+```
+
+The cache file sets `LLVM_ENABLE_PROJECTS`, `LLVM_RUNTIME_TARGETS`, and all
+required `RUNTIMES_*` entries.
+Additional `-D` flags can still be appended to override individual settings.
+
 #### Configure for the AMDGPU target
 ```
 cd llvm-project
@@ -50,20 +73,20 @@ cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release
   -DLLVM_RUNTIME_TARGETS="nvptx64-nvidia-cuda"
 ```
 
-#### Configure for CLSPV targets
+#### Configure for Vulkan (clspv) targets
 ```
 cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
-  -DRUNTIMES_clspv--_LLVM_ENABLE_RUNTIMES=libclc \
-  -DRUNTIMES_clspv64--_LLVM_ENABLE_RUNTIMES=libclc \
-  -DLLVM_RUNTIME_TARGETS="clspv--;clspv64--"
+  -DRUNTIMES_spirv32-unknown-vulkan_LLVM_ENABLE_RUNTIMES=libclc \
+  -DRUNTIMES_spirv64-unknown-vulkan_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="spirv32-unknown-vulkan;spirv64-unknown-vulkan"
 ```
 
 #### Configure for SPIR-V targets
 ```
 cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release \
-  -DRUNTIMES_spirv-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
-  -DRUNTIMES_spirv64-mesa3d-_LLVM_ENABLE_RUNTIMES=libclc \
-  -DLLVM_RUNTIME_TARGETS="spirv-mesa3d-;spirv64-mesa3d-"
+  -DRUNTIMES_spirv32-unknown-unknown_LLVM_ENABLE_RUNTIMES=libclc \
+  -DRUNTIMES_spirv64-unknown-unknown_LLVM_ENABLE_RUNTIMES=libclc \
+  -DLLVM_RUNTIME_TARGETS="spirv32-unknown-unknown;spirv64-unknown-unknown"
 ```
 
 To build multiple targets, pass them as a semicolon-separated list in

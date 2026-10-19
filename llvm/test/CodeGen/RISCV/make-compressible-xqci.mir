@@ -30,7 +30,7 @@
 
   define void @store_large_offset_two_uses(ptr %p) #0 { ret void }
 
-  attributes #0 = { minsize }
+  attributes #0 = { optsize }
 
 ...
 ---

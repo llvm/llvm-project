@@ -1,0 +1,75 @@
+# RUN: llc -mtriple=riscv64 -run-pass=riscv-merge-base-offset \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# Debug uses do not stop an offset from being folded into the address of a
+# global. Those of a register whose value the fold changes subtract the offset
+# again.
+
+--- |
+  @values = external hidden global [2 x i64]
+
+  define void @debug_use_of_base() !dbg !4 { ret void }
+  define void @debug_use_of_offset() !dbg !8 { ret void }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "t.c", directory: "/")
+  !3 = !DISubroutineType(types: !{null})
+  !4 = distinct !DISubprogram(name: "debug_use_of_base", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !5 = !DILocalVariable(name: "base", scope: !4, file: !2)
+  !6 = !DILocalVariable(name: "elt", scope: !4, file: !2)
+  !7 = !DILocation(line: 1, scope: !4)
+  !8 = distinct !DISubprogram(name: "debug_use_of_offset", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !9 = !DILocalVariable(name: "off", scope: !8, file: !2)
+  !10 = !DILocation(line: 2, scope: !8)
+  !11 = !DILocalVariable(name: "list", scope: !4, file: !2)
+...
+
+# The register that held the base now holds the address with the offset, so
+# the debug uses of the base subtract it again, while that of the sum moves to
+# it.
+# CHECK-LABEL: name: debug_use_of_base
+# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 8
+# CHECK-NEXT:  %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values + 8
+# CHECK-NEXT:  DBG_VALUE %lo, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value)
+# CHECK-NEXT:  DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value), %lo
+# CHECK-NEXT:  DBG_VALUE %lo, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_stack_value)
+# CHECK-NEXT:  $x10 = COPY %lo
+---
+name:            debug_use_of_base
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %hi:gpr = LUI target-flags(riscv-hi) @values
+    %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values
+    DBG_VALUE %lo, $noreg, !5, !DIExpression(DW_OP_stack_value), debug-location !7
+    DBG_VALUE_LIST !11, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), %lo, debug-location !7
+    %sum:gpr = ADDI %lo, 8
+    DBG_VALUE %sum, $noreg, !6, !DIExpression(DW_OP_stack_value), debug-location !7
+    $x10 = COPY %sum
+    PseudoRET implicit $x10
+...
+
+# The offset is folded into the address, so nothing computes it anymore. Its
+# debug use is left without a definition, so later passes drop it.
+# CHECK-LABEL: name: debug_use_of_offset
+# CHECK-NOT:   LUI 128
+# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 524288
+# CHECK:       DBG_VALUE %off:gpr, $noreg
+# CHECK-NOT:   ADD
+# CHECK:       $x10 = COPY %lo
+---
+name:            debug_use_of_offset
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %hi:gpr = LUI target-flags(riscv-hi) @values
+    %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values
+    %off:gpr = LUI 128
+    DBG_VALUE %off, $noreg, !9, !DIExpression(DW_OP_stack_value), debug-location !10
+    %sum:gpr = ADD %lo, %off
+    $x10 = COPY %sum
+    PseudoRET implicit $x10
+...

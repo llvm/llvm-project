@@ -7,32 +7,93 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
 ; CHECK: tags must be valid attribute names
 ; CHECK: "adazdazd"
   call void @llvm.assume(i1 true) ["adazdazd"()]
+; CHECK: assume with operand bundles must have i1 true condition
+  call void @llvm.assume(i1 %cond) ["nonnull"(ptr %P)]
+
+; Align checks
+;
+; CHECK: alignment assumptions should have 2 or 3 arguments
+  call void @llvm.assume(i1 true) ["align"(ptr %P)]
+; This one is valid
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1)]
+; This one is valid
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i32 4)]
+; CHECK: alignment assumptions should have 2 or 3 arguments
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i32 4, i32 4)]
+; CHECK: first argument should be a pointer
+  call void @llvm.assume(i1 true) ["align"(i32 %P1, ptr %P2)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["align"(ptr %P, ptr %P2)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i65 1)]
+; CHECK: third argument should be an integer with a maximum width of 64 bits if present
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, ptr %P2)]
+; CHECK: third argument should be an integer with a maximum width of 64 bits if present
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i65 1)]
+
+; Cold checks
+;
+; CHECK: cold assumptions should have no arguments
+  call void @llvm.assume(i1 true) ["cold"(ptr %P)]
+
+; Dereferenceable checks
+;
 ; CHECK-NOT: call{{.+}}deref
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 %P1)]
-; CHECK: second argument should be an integer
+; CHECK: first argument should be a pointer
+  call void @llvm.assume(i1 true) ["dereferenceable"(i32 %P1, i32 %P1)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i65 0)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, float 1.5)]
 ; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 8, i32 8)]
 ; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P)]
-; CHECK: this attribute has no argument
-  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 4), "cold"(ptr %P)]
-; CHECK: this attribute should have one argument
-  call void @llvm.assume(i1 true) ["noalias"()]
-  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i32 4)]
-; CHECK: alignment assumptions should have 2 or 3 arguments
-  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i32 4, i32 4)]
-; CHECK: second argument should be an integer
-  call void @llvm.assume(i1 true) ["align"(ptr %P, ptr %P2)]
-; CHECK: third argument should be an integer if present
-  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, ptr %P2)]
+
+; DereferenceableOrNull checks
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, i32 %P1)]
+; CHECK: first argument should be a pointer
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(i32 %P1, i32 %P1)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, i65 0)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, float 1.5)]
+; CHECK: dereferenceable assumptions should have 2 arguments
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, i32 8, i32 8)]
+; CHECK: dereferenceable assumptions should have 2 arguments
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P)]
+
+; NonNull checks
+;
+; CHECK: nonnull assumptions should have 1 argument
+  call void @llvm.assume(i1 true) ["nonnull"()]
+; CHECK: nonnull assumptions should have 1 argument
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %P, ptr %P)]
+; CHECK: first argument should be a pointer
+  call void @llvm.assume(i1 true) ["nonnull"(i32 0)]
+
+; NoUndef checks
+;
+; CHECK: noundef assumptions should have 1 argument
+  call void @llvm.assume(i1 true) ["noundef"()]
+; CHECK: noundef assumptions should have 1 argument
+  call void @llvm.assume(i1 true) ["noundef"(ptr %P, ptr %P)]
+
+; SeparateStorage checks
+;
 ; CHECK: separate_storage assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P)]
+; CHECK: separate_storage assumptions should have 2 arguments
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %P, ptr %P, ptr %P)]
 ; CHECK: arguments to separate_storage assumptions should be pointers
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P, i32 123)]
+
+; Combining multiple attributes checks
+;
+; CHECK: cold assumptions should have no arguments
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 4), "cold"(ptr %P)]
 ; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["align"(ptr %P, i32 4), "dereferenceable"(ptr %P)]
-; CHECK: assume with operand bundles must have i1 true condition
-  call void @llvm.assume(i1 %cond) ["nonnull"(ptr %P)]
   ret void
 }

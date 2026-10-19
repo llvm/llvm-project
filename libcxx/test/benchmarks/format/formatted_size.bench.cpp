@@ -19,7 +19,7 @@
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
 template <class CharT>
-static void BM_formatted_size_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_formatted_size_string(benchmark::State& state) {
   size_t size = state.range(0);
   std::basic_string<CharT> str(size, CharT('*'));
 

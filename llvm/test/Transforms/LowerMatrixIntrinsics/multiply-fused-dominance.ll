@@ -26,45 +26,45 @@ define void @multiply_can_hoist_cast(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP4]])
 ; CHECK-NEXT:    store <1 x double> [[TMP7]], ptr [[C]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[C]], i64 8
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 8
 ; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[C]], i64 16
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP23]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 24
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 24
 ; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
@@ -98,42 +98,42 @@ define void @multiply_can_hoist_multiple_insts(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP4]])
 ; CHECK-NEXT:    store <1 x double> [[TMP7]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[C]], i64 72
 ; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[C]], i64 80
 ; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP23]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 88
@@ -172,42 +172,42 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP4]])
 ; CHECK-NEXT:    store <1 x double> [[TMP7]], ptr [[GEP_1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[C]], i64 1352
 ; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[C]], i64 1360
 ; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP23]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP3]], i64 24
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 24
 ; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 1368
@@ -232,9 +232,9 @@ define void @multiply_dont_hoist_phi(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 16
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A]], align 8
@@ -273,10 +273,10 @@ define void @multiply_dont_hoist_cast_due_to_operand(ptr noalias %A, ptr %B, ptr
 ; CHECK-LABEL: @multiply_dont_hoist_cast_due_to_operand(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -288,7 +288,7 @@ define void @multiply_dont_hoist_cast_due_to_operand(ptr noalias %A, ptr %B, ptr
 ; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[C_PTR:%.*]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[C]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr i8, ptr [[C]], i64 16
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -306,10 +306,10 @@ define void @multiply_dont_hoist_load(ptr noalias %A, ptr %B, ptr %C.ptr) {
 ; CHECK-LABEL: @multiply_dont_hoist_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -321,7 +321,7 @@ define void @multiply_dont_hoist_load(ptr noalias %A, ptr %B, ptr %C.ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[C_PTR:%.*]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[C]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr i8, ptr [[C]], i64 16
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -339,10 +339,10 @@ define void @multiply_dont_hoist_call(ptr noalias %A, ptr %B) {
 ; CHECK-LABEL: @multiply_dont_hoist_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -354,7 +354,7 @@ define void @multiply_dont_hoist_call(ptr noalias %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[C:%.*]] = call ptr @get_address()
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[C]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr i8, ptr [[C]], i64 16
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -376,10 +376,10 @@ define void @multiply_phi_dominates_matmul(ptr noalias %A, ptr noalias %B, ptr n
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -392,7 +392,7 @@ define void @multiply_phi_dominates_matmul(ptr noalias %A, ptr noalias %B, ptr n
 ; CHECK-NEXT:    [[OFFSET:%.*]] = shl i64 [[IV]], 5
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[OFFSET]]
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N:%.*]]

@@ -15,7 +15,8 @@ class RewritePatternSet;
 class TypeConverter;
 
 void populateFuncToEmitCPatterns(const TypeConverter &typeConverter,
-                                 RewritePatternSet &patterns);
+                                 RewritePatternSet &patterns,
+                                 bool lowerToCpp = true);
 
 void registerConvertFuncToEmitCInterface(DialectRegistry &registry);
 } // namespace mlir

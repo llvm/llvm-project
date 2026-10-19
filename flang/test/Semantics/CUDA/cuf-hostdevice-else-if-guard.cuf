@@ -1,0 +1,61 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! An ON_DEVICE condition guards the remaining ELSE IF and ELSE arms too.
+! PR #228176 discussion_r4190378451.
+module elseif_after_guard
+  use cudadevice, only: on_device
+contains
+  subroutine host_only()
+  end subroutine
+  attributes(device) subroutine device_only()
+  end subroutine
+  attributes(host,device) subroutine later_else_if(x, y)
+    logical, value :: x, y
+    if (x) then
+      continue
+    else if (on_device()) then
+      call device_only()
+    else if (y) then
+      call host_only()
+    end if
+    ! The guard does not apply after the entire IF.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine later_else(x, y)
+    logical, value :: x, y
+    if (x) then
+      continue
+    else if (on_device()) then
+      call device_only()
+    else if (y) then
+      continue
+    else
+      call host_only()
+    end if
+  end subroutine
+  attributes(host,device) subroutine nested_else(x, y)
+    logical, value :: x, y
+    if (x) then
+      continue
+    else
+      if (on_device()) then
+        call device_only()
+      else if (y) then
+        call host_only()
+      end if
+    end if
+  end subroutine
+  attributes(host,device) subroutine reset_last_else_if(x, y)
+    logical, value :: x, y
+    if (x) then
+      continue
+    else if (y) then
+      if (on_device()) return
+      call host_only()
+    else
+      ! A nested guard in another arm does not guard this ELSE.
+      !ERROR: 'host_only' may not be called in device code
+      call host_only()
+    end if
+  end subroutine
+end module

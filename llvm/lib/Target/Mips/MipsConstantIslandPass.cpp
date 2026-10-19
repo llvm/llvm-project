@@ -41,7 +41,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -60,27 +59,6 @@ STATISTIC(NumCPEs,       "Number of constpool entries");
 STATISTIC(NumSplit,      "Number of uncond branches inserted");
 STATISTIC(NumCBrFixed,   "Number of cond branches fixed");
 STATISTIC(NumUBrFixed,   "Number of uncond branches fixed");
-
-// FIXME: This option should be removed once it has received sufficient testing.
-static cl::opt<bool>
-AlignConstantIslands("mips-align-constant-islands", cl::Hidden, cl::init(true),
-          cl::desc("Align constant islands in code"));
-
-// Rather than do make check tests with huge amounts of code, we force
-// the test to use this amount.
-static cl::opt<int> ConstantIslandsSmallOffset(
-  "mips-constant-islands-small-offset",
-  cl::init(0),
-  cl::desc("Make small offsets be this amount for testing purposes"),
-  cl::Hidden);
-
-// For testing purposes we tell it to not use relaxed load forms so that it
-// will split blocks.
-static cl::opt<bool> NoLoadRelaxation(
-  "mips-constant-islands-no-load-relaxation",
-  cl::init(false),
-  cl::desc("Don't relax loads to long loads - for testing purposes"),
-  cl::Hidden);
 
 static unsigned int branchTargetOperand(MachineInstr *MI) {
   switch (MI->getOpcode()) {
@@ -271,11 +249,7 @@ namespace {
       }
 
       /// getMaxDisp - Returns the maximum displacement supported by MI.
-      unsigned getMaxDisp() const {
-        unsigned xMaxDisp = ConstantIslandsSmallOffset?
-                            ConstantIslandsSmallOffset: MaxDisp;
-        return xMaxDisp;
-      }
+      unsigned getMaxDisp() const { return MaxDisp; }
 
       void setMaxDisp(unsigned val) {
         MaxDisp = val;
@@ -369,6 +343,10 @@ namespace {
     void doInitialPlacement(std::vector<MachineInstr*> &CPEMIs);
     CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
     Align getCPEAlign(const MachineInstr &CPEMI);
+    unsigned getMaxDisp(const CPUser &U) const {
+      int SmallOffset = STI->getCLOpts().constant_islands_small_offset;
+      return SmallOffset ? SmallOffset : U.getMaxDisp();
+    }
     void initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs);
     unsigned getOffsetOf(MachineInstr *MI) const;
     unsigned getUserOffset(CPUser&) const;
@@ -413,8 +391,7 @@ char MipsConstantIslands::ID = 0;
 bool MipsConstantIslands::isOffsetInRange
   (unsigned UserOffset, unsigned TrialOffset,
    const CPUser &U) {
-  return isOffsetInRange(UserOffset, TrialOffset,
-                         U.getMaxDisp(), U.NegOk);
+  return isOffsetInRange(UserOffset, TrialOffset, getMaxDisp(U), U.NegOk);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -436,7 +413,7 @@ bool MipsConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   STI = &mf.getSubtarget<MipsSubtarget>();
   LLVM_DEBUG(dbgs() << "constant island machine function "
                     << "\n");
-  if (!STI->inMips16Mode() || !MipsSubtarget::useConstantIslands()) {
+  if (!STI->inMips16Mode() || !STI->useConstantIslands()) {
     return false;
   }
   TII = (const Mips16InstrInfo *)STI->getInstrInfo();
@@ -529,8 +506,10 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
   const Align MaxAlign = MCP->getConstantPoolAlign();
 
   // Mark the basic block as required by the const-pool.
-  // If AlignConstantIslands isn't set, use 4-byte alignment for everything.
-  BB->setAlignment(AlignConstantIslands ? MaxAlign : Align(4));
+  // If -mips-align-constant-islands isn't set, use 4-byte alignment for
+  // everything.
+  BB->setAlignment(STI->getCLOpts().align_constant_islands ? MaxAlign
+                                                           : Align(4));
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
@@ -613,8 +592,8 @@ MipsConstantIslands::CPEntry
 Align MipsConstantIslands::getCPEAlign(const MachineInstr &CPEMI) {
   assert(CPEMI.getOpcode() == Mips::CONSTPOOL_ENTRY);
 
-  // Everything is 4-byte aligned unless AlignConstantIslands is set.
-  if (!AlignConstantIslands)
+  // Everything is 4-byte aligned unless -mips-align-constant-islands is set.
+  if (!STI->getCLOpts().align_constant_islands)
     return Align(4);
 
   unsigned CPI = CPEMI.getOperand(1).getIndex();
@@ -1040,7 +1019,7 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
   MachineInstr *CPEMI  = U.CPEMI;
 
   // Check to see if the CPE is already in-range.
-  if (isCPEntryInRange(UserMI, UserOffset, CPEMI, U.getMaxDisp(), U.NegOk,
+  if (isCPEntryInRange(UserMI, UserOffset, CPEMI, getMaxDisp(U), U.NegOk,
                        true)) {
     LLVM_DEBUG(dbgs() << "In range\n");
     return 1;
@@ -1056,7 +1035,7 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
     // Removing CPEs can leave empty entries, skip
     if (CPE.CPEMI == nullptr)
       continue;
-    if (isCPEntryInRange(UserMI, UserOffset, CPE.CPEMI, U.getMaxDisp(),
+    if (isCPEntryInRange(UserMI, UserOffset, CPE.CPEMI, getMaxDisp(U),
                          U.NegOk)) {
       LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#" << CPE.CPI
                         << "\n");
@@ -1243,7 +1222,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   // point where we can add a 4-byte branch instruction, and then align to
   // Align which is the largest possible alignment in the function.
   const Align Align = MF->getAlignment();
-  unsigned BaseInsertOffset = UserOffset + U.getMaxDisp();
+  unsigned BaseInsertOffset = UserOffset + getMaxDisp(U);
   LLVM_DEBUG(dbgs() << format("Split in middle of big block before %#x",
                               BaseInsertOffset));
 
@@ -1332,7 +1311,7 @@ bool MipsConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
     // No water found.
     // we first see if a longer form of the instrucion could have reached
     // the constant. in that case we won't bother to split
-    if (!NoLoadRelaxation) {
+    if (!STI->getCLOpts().constant_islands_no_load_relaxation) {
       result = findLongFormInRangeCPEntry(U, UserOffset);
       if (result != 0) return true;
     }

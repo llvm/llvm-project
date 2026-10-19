@@ -49,8 +49,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
     FileSpec sc_directory_symbols = sc_directory;
     sc_directory_symbols.AppendPathComponent("Symbols");
     if (FileSystem::Instance().Exists(sc_directory_symbols)) {
-      SDKDirectoryInfo thisdir(sc_directory,
-                               sc_directory.GetFilename().GetStringRef());
+      SDKDirectoryInfo thisdir(sc_directory, sc_directory.GetFilename());
       m_sdk_directory_infos.push_back(thisdir);
       LLDB_LOGF(log,
                 "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -69,8 +68,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
       FileSpec subdir_directory_symbols = subdir;
       subdir_directory_symbols.AppendPathComponent("Symbols");
       if (FileSystem::Instance().Exists(subdir_directory_symbols)) {
-        SDKDirectoryInfo thisdir(subdir,
-                                 sc_directory.GetFilename().GetStringRef());
+        SDKDirectoryInfo thisdir(subdir, sc_directory.GetFilename());
         m_sdk_directory_infos.push_back(thisdir);
         LLDB_LOGF(log,
                   "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -98,19 +96,22 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
     if (device_support_dir) {
       AddSharedCacheDirectory(device_support_dir, "builtin SDK directory");
 
-      // "macOS DeviceSupport", "iOS DeviceSupport", etc.
-      llvm::StringRef dirname = GetDeviceSupportDirectoryName();
-      std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
-      local_sdk_cache_str += std::string(dirname);
-      FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
-      FileSystem::Instance().Resolve(local_sdk_cache);
-      if (FileSystem::Instance().Exists(local_sdk_cache)) {
-        LLDB_LOGF(log,
-                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                  "searching %s for additional SDKs",
-                  local_sdk_cache.GetPath().c_str());
-        AddSharedCacheDirectory(local_sdk_cache.GetPath().c_str(),
-                                "system developer dir directory");
+      // "macOS DeviceSupport", "iOS DeviceSupport", etc. The names are in
+      // order of preference, so stop at the first one that exists.
+      for (llvm::StringRef dirname : GetDeviceSupportDirectoryNames()) {
+        std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
+        local_sdk_cache_str += std::string(dirname);
+        FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
+        FileSystem::Instance().Resolve(local_sdk_cache);
+        if (FileSystem::Instance().Exists(local_sdk_cache)) {
+          LLDB_LOGF(log,
+                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                    "searching %s for additional SDKs",
+                    local_sdk_cache.GetPath().c_str());
+          AddSharedCacheDirectory(local_sdk_cache.GetPath().c_str(),
+                                  "system developer dir directory");
+          break;
+        }
       }
 
       const char *addtional_platform_dirs = getenv("PLATFORM_SDK_DIRECTORY");
@@ -274,7 +275,7 @@ BringInRemoteFile(Platform *platform,
 lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
-    Process *process) {
+    Target &target) {
 
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log,
@@ -291,8 +292,8 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
   Status err;
 
   if (CheckLocalSharedCache()) {
-    err = GetModuleFromSharedCaches(module_spec, process, module_sp,
-                                    old_modules, did_create_ptr);
+    err = GetModuleFromSharedCaches(module_spec, target, module_sp, old_modules,
+                                    did_create_ptr);
     if (module_sp)
       return err;
   }

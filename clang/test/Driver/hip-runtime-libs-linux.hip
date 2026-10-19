@@ -27,8 +27,8 @@
 
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %t && mkdir -p %t/opt
-// RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
-// RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.10.0
+// RUN: cp -R %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
+// RUN: cp -R %S/Inputs/rocm %t/opt/rocm-3.10.0
 // RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
 // RUN:   --sysroot=%t %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s

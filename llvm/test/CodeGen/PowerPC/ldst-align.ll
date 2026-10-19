@@ -21,7 +21,7 @@ define void @store(ptr %p) {
   ; CHECK:   liveins: $x3
   ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
   ; CHECK:   [[LI8_:%[0-9]+]]:g8rc = LI8 9
-  ; CHECK:   STD killed [[LI8_]], 16, [[COPY]] :: (store (s64) into %ir.arrayidx, align 1)
+  ; CHECK:   STD [[LI8_]], 16, [[COPY]] :: (store (s64) into %ir.arrayidx, align 1)
   ; CHECK:   BLR8 implicit $lr8, implicit $rm
 entry:
   %arrayidx = getelementptr inbounds i64, ptr %p, i64 2
@@ -35,7 +35,7 @@ define void @store_aligned(ptr %p) {
   ; CHECK:   liveins: $x3
   ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
   ; CHECK:   [[LI8_:%[0-9]+]]:g8rc = LI8 9
-  ; CHECK:   STD killed [[LI8_]], 16, [[COPY]] :: (store (s64) into %ir.arrayidx, align 4)
+  ; CHECK:   STD [[LI8_]], 16, [[COPY]] :: (store (s64) into %ir.arrayidx, align 4)
   ; CHECK:   BLR8 implicit $lr8, implicit $rm
 entry:
   %arrayidx = getelementptr inbounds i64, ptr %p, i64 2

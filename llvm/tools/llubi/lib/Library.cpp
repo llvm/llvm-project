@@ -19,9 +19,9 @@
 
 namespace llvm::ubi {
 
-static uint64_t getMaxAlign(const DataLayout &DL) {
+static uint64_t getMaxAlign(const DataLayout &DL, unsigned AS) {
   // Return an alignment of 16 for 64-bit platforms, and 8 for 32-bit ones.
-  return DL.getPointerABIAlignment(0).value() >= 8 ? 16 : 8;
+  return DL.getPointerABIAlignment(AS).value() >= 8 ? 16 : 8;
 }
 
 Library::Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,
@@ -29,28 +29,22 @@ Library::Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,
     : Ctx(Ctx), Handler(Handler), DL(DL), Executor(Executor) {}
 
 std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
-  auto *MO = Ptr.getMemoryObject();
-  if (!MO) {
-    Executor.reportImmediateUB(
-        "Invalid memory access via a pointer with nullary "
-        "provenance.");
-    return std::nullopt;
-  }
-
   std::string Result;
   const APInt &Address = Ptr.address();
   uint64_t Offset = 0;
 
   while (true) {
-    auto ValidOffset =
-        Executor.verifyMemAccess(*MO, Address + Offset, 1, Align(1), false);
-    if (!ValidOffset)
+    auto [MO, ValidOffset] = Executor.verifyMemAccess(
+        Ptr.getWithNewAddr(Address + Offset), 1, Align(1), /*IsStore=*/false);
+    if (!MO)
       return std::nullopt;
 
-    Byte B = (*MO)[*ValidOffset];
+    Byte B = (*MO)[ValidOffset];
     if (B.ConcreteMask != 0xFF) {
-      Executor.reportImmediateUB("Read uninitialized or poison memory while "
-                                 "parsing C-string.");
+      Executor.reportImmediateUB()
+          << "Read uninitialized or poison memory while "
+             "parsing C-string at offset "
+          << Offset << ".";
       return std::nullopt;
     }
 
@@ -67,23 +61,24 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
 AnyValue Library::executeMalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args,
                                 MemAllocKind AllocKind) {
-  assert(AllocKind == MemAllocKind::Malloc || AllocKind == MemAllocKind::New ||
-         AllocKind == MemAllocKind::NewArray &&
-             "Unexpected MemAllocKind for malloc()/new/new[]");
+  assert((AllocKind == MemAllocKind::Malloc || AllocKind == MemAllocKind::New ||
+          AllocKind == MemAllocKind::NewArray) &&
+         "Unexpected MemAllocKind for malloc()/new/new[]");
 
   const auto &SizeVal = Args[0];
 
-  const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
+  const uint64_t AllocSize = SizeVal.asInteger().getLimitedValue();
+  const unsigned AS = Type->getPointerAddressSpace();
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
-      Ctx.allocate(AllocSize, getMaxAlign(DL), Name, 0,
+      Ctx.allocate(AllocSize, getMaxAlign(DL, AS), Name, AS,
                    MemInitKind::Uninitialized, AllocKind);
 
   if (!Obj) {
     if (AllocKind == MemAllocKind::New || AllocKind == MemAllocKind::NewArray) {
       // FIXME: As llubi doesn't support stack unwinding yet, we report an error
       // when new/new[] fails.
-      Executor.reportError("Insufficient heap space.");
+      Executor.reportError() << "Insufficient heap space.";
       return AnyValue::poison();
     }
     return AnyValue::getNullValue(Ctx, Type);
@@ -108,9 +103,10 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   const APInt AllocSize = Count.umul_ov(Size, Overflow);
   if (Overflow)
     return AnyValue::getNullValue(Ctx, Type);
+  const unsigned AS = Type->getPointerAddressSpace();
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
-      Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
+      Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL, AS), Name, AS,
                    MemInitKind::Zeroed, AllocKind);
 
   if (!Obj)
@@ -119,35 +115,46 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   return Ctx.deriveFromMemoryObject(Obj);
 }
 
-AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
+AnyValue Library::executeFree(ArrayRef<AnyValue> Args, unsigned AS) {
   const auto &PtrVal = Args[0];
 
   auto &Ptr = PtrVal.asPointer();
   // no-op when free is called with a null pointer.
-  if (Ptr.address().isZero())
+  if (Ptr.isNullPtr(AS, DL))
     return AnyValue();
 
-  MemoryObject *Obj = Ptr.getMemoryObject();
+  MemoryObject *Obj = Ctx.checkProvenance(Ptr, [](const Provenance &) {
+    // TODO: check nofree
+    return true;
+  });
   if (!Obj) {
-    Executor.reportImmediateUB("freeing a pointer with nullary provenance.");
-    return AnyValue::poison();
+    Executor.reportImmediateUB()
+        << "freeing a pointer with nullary provenance.";
+    return AnyValue();
   }
 
-  if (const uint64_t Address = Ptr.address().getZExtValue();
-      Address != Obj->getAddress()) {
-    Executor.reportImmediateUB(
-        "freeing a pointer that does not point to the start of an allocation.");
-    return AnyValue::poison();
+  if (Ptr.address() != Obj->getAddress()) {
+    SmallString<32> AddrStr;
+    Ptr.address().toStringUnsigned(AddrStr, 16);
+    Executor.reportImmediateUB()
+        << "freeing a pointer that does not point to "
+           "the start of an allocation. Pointer address: 0x"
+        << AddrStr << ", allocation base: 0x"
+        << Twine::utohexstr(Obj->getAddress()) << ".";
+    return AnyValue();
   }
 
   if (Obj->getState() == MemoryObjectState::Freed) {
-    Executor.reportImmediateUB("double-freeing a memory object.");
-    return AnyValue::poison();
+    Executor.reportImmediateUB()
+        << "double-freeing a memory object allocated at 0x"
+        << Twine::utohexstr(Obj->getAddress()) << ".";
+    return AnyValue();
   }
 
   if (!Obj->isHeapAllocated()) {
-    Executor.reportImmediateUB("freeing a non-heap allocation.");
-    return AnyValue::poison();
+    Executor.reportImmediateUB() << "freeing a non-heap allocation at 0x"
+                                 << Twine::utohexstr(Obj->getAddress()) << ".";
+    return AnyValue();
   }
 
   // Currently we don't check for cases where a memory allocated with C
@@ -155,7 +162,8 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   // function comes from a different family (C++ delete, etc.)
 
   if (!Ctx.free(*Obj)) {
-    Executor.reportImmediateUB("freeing an invalid pointer.");
+    Executor.reportImmediateUB() << "freeing an invalid pointer at 0x"
+                                 << Twine::utohexstr(Obj->getAddress()) << ".";
     return AnyValue::poison();
   }
 
@@ -206,9 +214,8 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
       ++I;
 
     if (I >= FormatStr.size()) {
-      Executor.reportImmediateUB(
-          "Invalid format string in printf: missing conversion "
-          "specifier.");
+      Executor.reportImmediateUB()
+          << "Invalid format string in printf: missing conversion specifier.";
       return AnyValue::poison();
     }
 
@@ -220,14 +227,34 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
         CleanChunk.end());
 
     if (ArgIndex >= Args.size()) {
-      Executor.reportImmediateUB(
-          "Not enough arguments provided for the format string.");
+      Executor.reportImmediateUB() << "Not enough arguments provided for the "
+                                      "format string. Required argument for '"
+                                   << Specifier << "'.";
       return AnyValue::poison();
     }
 
     const auto &Arg = Args[ArgIndex++];
     if (Arg.isPoison()) {
-      Executor.reportImmediateUB("Poison argument passed to printf.");
+      Executor.reportImmediateUB()
+          << "Poison argument passed to printf for format specifier '"
+          << Specifier << "' at argument index " << ArgIndex << ".";
+      return AnyValue::poison();
+    }
+
+    bool TypeMismatch =
+        (StringRef("diuoxXc").contains(Specifier) &&
+         !(Arg.isInteger() && (Arg.asInteger().getBitWidth() == 32 ||
+                               Arg.asInteger().getBitWidth() == 64))) ||
+        (StringRef("feEgGaA").contains(Specifier) &&
+         !(Arg.isFloat() &&
+           &Arg.asFloat().getSemantics() == &APFloat::IEEEdouble())) ||
+        (StringRef("nps").contains(Specifier) &&
+         !(Arg.isPointer() && Arg.asPointer().address().getBitWidth() <= 64));
+
+    if (TypeMismatch) {
+      Executor.reportImmediateUB()
+          << "Argument type mismatch in printf for format specifier '"
+          << Specifier << "' at argument index " << (ArgIndex - 1) << ".";
       return AnyValue::poison();
     }
 
@@ -290,8 +317,9 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
       break;
     }
     default:
-      Executor.reportImmediateUB(
-          "Unknown or unsupported format specifier in printf.");
+      Executor.reportImmediateUB()
+          << "Unknown or unsupported format specifier '" << Specifier
+          << "' in printf.";
       return AnyValue::poison();
     }
   }
@@ -320,13 +348,19 @@ AnyValue Library::executeTerminate() {
 }
 
 std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
-                                                Type *Type,
+                                                FunctionType *FuncType,
                                                 ArrayRef<AnyValue> Args) {
+  Type *Type = FuncType->getReturnType();
+
+  unsigned Index = 0;
   for (const AnyValue &Arg : Args) {
     if (Arg.isPoison()) {
-      Executor.reportImmediateUB("Poison argument passed to a library call.");
+      Executor.reportImmediateUB()
+          << "Poison argument passed to a library call at argument index "
+          << Index << ".";
       return AnyValue::poison();
     }
+    ++Index;
   }
 
   switch (LF) {
@@ -343,7 +377,8 @@ std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
   case LibFunc_free:
   case LibFunc_ZdaPv:
   case LibFunc_ZdlPv:
-    return executeFree(Args);
+    return executeFree(Args,
+                       FuncType->getParamType(0)->getPointerAddressSpace());
 
   case LibFunc_puts:
     return executePuts(Args);

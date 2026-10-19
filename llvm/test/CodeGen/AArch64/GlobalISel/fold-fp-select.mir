@@ -38,9 +38,9 @@ body:             |
     %0:fpr(f32) = COPY $s0
     %1:fpr(f32) = COPY $s1
     %2:fpr(f32) = G_FCONSTANT float 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(oeq), %0(f32), %2
+    %5:gpr(i32) = G_FCMP floatpred(oeq), %0(f32), %2
     %4:fpr(f32) = G_SELECT %5, %2, %1
-    $w1 = COPY %5(f32)
+    $w1 = COPY %5(i32)
     $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
 
@@ -71,7 +71,7 @@ body:             |
     %0:fpr(f32) = COPY $s0
     %1:fpr(f32) = COPY $s1
     %2:fpr(f32) = G_FCONSTANT float 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(oeq), %0(f32), %2
+    %5:gpr(i32) = G_FCMP floatpred(oeq), %0(f32), %2
     %4:fpr(f32) = G_SELECT %5, %2, %1
     %7:fpr(f32) = G_SELECT %5, %1, %2
     $s0 = COPY %4(f32)
@@ -132,7 +132,7 @@ body:             |
     %0:fpr(f32) = COPY $s0
     %1:fpr(f32) = COPY $s1
     %2:fpr(f32) = G_FCONSTANT float 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(oeq), %0(f32), %2
+    %5:gpr(i32) = G_FCMP floatpred(oeq), %0(f32), %2
     %4:fpr(f32) = G_SELECT %5, %2, %1
     $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
@@ -165,7 +165,7 @@ body:             |
     %0:fpr(f32) = COPY $s0
     %1:fpr(f32) = COPY $s1
     %2:fpr(f32) = G_FCONSTANT float 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(ueq), %0(f32), %2
+    %5:gpr(i32) = G_FCMP floatpred(ueq), %0(f32), %2
     %4:fpr(f32) = G_SELECT %5, %2, %1
     $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
@@ -198,7 +198,7 @@ body:             |
     %0:fpr(f32) = COPY $s0
     %1:fpr(f32) = COPY $s1
     %2:fpr(f32) = G_FCONSTANT float 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(one), %0(f32), %2
+    %5:gpr(i32) = G_FCMP floatpred(one), %0(f32), %2
     %4:fpr(f32) = G_SELECT %5, %1, %2
     $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
@@ -227,7 +227,7 @@ body:             |
     %0:fpr(f32) = COPY $s0
     %1:fpr(f32) = COPY $s1
     %2:fpr(f32) = G_FCONSTANT float 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(une), %0(f32), %2
+    %5:gpr(i32) = G_FCMP floatpred(une), %0(f32), %2
     %4:fpr(f32) = G_SELECT %5, %1, %2
     $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
@@ -256,7 +256,7 @@ body:             |
     %0:fpr(f64) = COPY $d0
     %1:fpr(f64) = COPY $d1
     %2:fpr(f64) = G_FCONSTANT double 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(oeq), %0(f64), %2
+    %5:gpr(i32) = G_FCMP floatpred(oeq), %0(f64), %2
     %4:fpr(f64) = G_SELECT %5, %2, %1
     $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
@@ -289,7 +289,7 @@ body:             |
     %0:fpr(f64) = COPY $d0
     %1:fpr(f64) = COPY $d1
     %2:fpr(f64) = G_FCONSTANT double 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(ueq), %0(f64), %2
+    %5:gpr(i32) = G_FCMP floatpred(ueq), %0(f64), %2
     %4:fpr(f64) = G_SELECT %5, %2, %1
     $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
@@ -322,7 +322,7 @@ body:             |
     %0:fpr(f64) = COPY $d0
     %1:fpr(f64) = COPY $d1
     %2:fpr(f64) = G_FCONSTANT double 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(one), %0(f64), %2
+    %5:gpr(i32) = G_FCMP floatpred(one), %0(f64), %2
     %4:fpr(f64) = G_SELECT %5, %1, %2
     $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
@@ -351,7 +351,7 @@ body:             |
     %0:fpr(f64) = COPY $d0
     %1:fpr(f64) = COPY $d1
     %2:fpr(f64) = G_FCONSTANT double 0.000000e+00
-    %5:gpr(f32) = G_FCMP floatpred(une), %0(f64), %2
+    %5:gpr(i32) = G_FCMP floatpred(une), %0(f64), %2
     %4:fpr(f64) = G_SELECT %5, %1, %2
     $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0

@@ -50,6 +50,8 @@
 //  L   -> long (e.g. Li for 'long int', Ld for 'long double')
 //  LL  -> long long (e.g. LLi for 'long long int', LLd for __float128)
 //  LLL -> __int128_t (e.g. LLLi)
+//  B   -> int8_t (byte-width integer, e.g. Bi for 'int8_t', UBi for 'uint8_t')
+//  T   -> int16_t (short-width integer, e.g. Ti for 'int16_t', UTi for 'uint16_t')
 //  Z   -> int32_t (require a native 32-bit integer type on the target)
 //  W   -> int64_t (require a native 64-bit integer type on the target)
 //  N   -> 'int' size if target is LP64, 'L' otherwise.

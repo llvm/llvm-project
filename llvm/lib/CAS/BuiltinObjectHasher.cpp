@@ -46,6 +46,6 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   return H.finish();
 }
 
-// Provide the definition for when using the BLAKE3 hasher.
-template Expected<BuiltinObjectHasher<BLAKE3>::HashT>
-BuiltinObjectHasher<BLAKE3>::hashFile(StringRef FilePath);
+namespace llvm::cas {
+template class LLVM_EXPORT_TEMPLATE BuiltinObjectHasher<BLAKE3>;
+}

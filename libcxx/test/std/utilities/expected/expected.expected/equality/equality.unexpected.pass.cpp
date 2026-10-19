@@ -45,6 +45,26 @@ constexpr bool test() {
     assert(e1 == un3);
   }
 
+  // LWG4366
+  { // x.has_value()
+    const std::expected<int, ImplicitBool::E1> e1(std::in_place, 1);
+    const std::unexpected<ImplicitBool::E2> u2{ImplicitBool::E2{1}};
+    const std::unexpected<ImplicitBool::E2> u3{ImplicitBool::E2{2}};
+
+    assert(e1 != u2);
+    assert(e1 != u3);
+  }
+
+  { // !x.has_value()
+    const std::unexpected<ImplicitBool::E1> u1{ImplicitBool::E1{1}};
+    const std::unexpected<ImplicitBool::E2> u2{ImplicitBool::E2{1}};
+    const std::unexpected<ImplicitBool::E2> u3{ImplicitBool::E2{2}};
+
+    const std::expected<int, ImplicitBool::E1> e1(u1);
+    assert(e1 == u2);
+    assert(e1 != u3);
+  }
+
   return true;
 }
 

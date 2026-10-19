@@ -23,21 +23,21 @@ frameInfo:
   adjustsStack:    true
 body:             |
   bb.0 (%ir-block.0):
-    liveins: $a0_64, $t9_64, $ra_64, $fp_64, $gp_64
+    liveins: $r4_64, $r25_64, $r31_64, $r30_64, $r28_64
     ; CHECK-LABEL: name: a
-    ; CHECK: liveins: $a0_64, $t9_64, $ra_64, $fp_64, $gp_64
+    ; CHECK: liveins: $r4_64, $r25_64, $r31_64, $r30_64, $r28_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: $a0_64 = COPY $zero_64
-    ; CHECK-NEXT: JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: $a0_64 = COPY $zero_64
-    ; CHECK-NEXT: PseudoReturn64 undef $ra_64, implicit $v0_64, implicit killed $a0_64
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    renamable $s0_64 = COPY $zero_64
-    $a0_64 = COPY renamable $s0_64
-    JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    $a0_64 = COPY killed renamable $s0_64
-    PseudoReturn64 undef $ra_64, implicit $v0_64, implicit killed $a0_64
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
+    ; CHECK-NEXT: $r4_64 = COPY $r0_64
+    ; CHECK-NEXT: JALR64Pseudo $r25_64, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit $r28_64, implicit-def $r29, implicit-def $r2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
+    ; CHECK-NEXT: $r4_64 = COPY $r0_64
+    ; CHECK-NEXT: PseudoReturn64 undef $r31_64, implicit $r2_64, implicit killed $r4_64
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
+    renamable $r16_64 = COPY $r0_64
+    $r4_64 = COPY renamable $r16_64
+    JALR64Pseudo $r25_64, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit $r28_64, implicit-def $r29, implicit-def $r2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
+    $r4_64 = COPY killed renamable $r16_64
+    PseudoReturn64 undef $r31_64, implicit $r2_64, implicit killed $r4_64
 ...

@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tonga -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgpu8.02-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgpu9.00-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgpu10.12-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV --enable-var-scope %s
 
 #define INVALID_MEMORY_SCOPE (__MEMORY_SCOPE_CLUSTR+1)

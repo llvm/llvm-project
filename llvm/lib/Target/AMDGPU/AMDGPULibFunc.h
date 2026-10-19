@@ -312,9 +312,6 @@ public:
     }
 
     static Param getFromTy(Type *Ty, bool Signed);
-
-    template <typename Stream>
-    void mangleItanium(Stream& os);
   };
   static bool isMangled(EFuncId Id) {
     return static_cast<unsigned>(Id) <= static_cast<unsigned>(EI_LAST_MANGLED);
@@ -447,7 +444,6 @@ public:
   std::string getName() const override;
   unsigned getNumArgs() const override;
   FunctionType *getFunctionType(const Module &M) const override;
-  static StringRef getUnmangledName(StringRef MangledName);
 
   bool parseFuncName(StringRef &mangledName) override;
 
@@ -459,7 +455,6 @@ public:
 private:
   std::string mangleNameItanium() const;
 
-  std::string mangleName(StringRef Name) const;
   bool parseUnmangledName(StringRef MangledName);
 
   template <typename Stream> void writeName(Stream &OS) const;

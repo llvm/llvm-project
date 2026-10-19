@@ -23,8 +23,6 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-lpad-setup"
 #define PASS_NAME "RISC-V Landing Pad Setup"
 
-extern cl::opt<uint32_t> PreferredLandingPadLabel;
-
 namespace {
 
 class RISCVLandingPadSetup : public MachineFunctionPass {
@@ -53,11 +51,11 @@ bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   uint32_t Label = 0;
-  if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
-    if (!isUInt<20>(PreferredLandingPadLabel))
+  if (std::optional<uint32_t> Preferred = STI.getCLOpts().landing_pad_label) {
+    if (!isUInt<20>(*Preferred))
       report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit in "
                          "unsigned 20-bits");
-    Label = PreferredLandingPadLabel;
+    Label = *Preferred;
   }
 
   // Zicfilp does not check X7 if landing pad label is zero.

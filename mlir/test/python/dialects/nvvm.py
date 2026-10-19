@@ -143,12 +143,12 @@ def test_barriers():
             nvvm.BarrierReduction.OR,
             nvvm.BarrierReduction.POPC,
         ):
-            pred = nvvm.barrier(
+            pred = nvvm.barrier_reduction(
                 reduction_op=reduction,
                 reduction_predicate=pred,
             )
 
-        nvvm.barrier0()
+        nvvm.barrier()
         nvvm.bar_warp_sync(mask)
         nvvm.cluster_arrive()
         nvvm.cluster_arrive(aligned=True)
@@ -167,17 +167,17 @@ def test_barriers():
 # CHECK:           %[[CONSTANT_1:.*]] = arith.constant 65535 : i32
 # CHECK:           nvvm.barrier id = %[[CONSTANT_0]] number_of_threads = %[[CONSTANT_1]]
 # CHECK:           %[[PRED:.*]] = arith.constant 1 : i32
-# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[PRED]] -> i32
-# CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier #nvvm.reduction<or> %[[BARRIER_1]] -> i32
-# CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
-# CHECK:           nvvm.barrier0
+# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier.reduction #nvvm.reduction<and> %[[PRED]] -> i32
+# CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier.reduction #nvvm.reduction<or> %[[BARRIER_1]] -> i32
+# CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier.reduction #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
+# CHECK:           nvvm.barrier
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           nvvm.cluster.arrive
-# CHECK:           nvvm.cluster.arrive {aligned}
+# CHECK:           nvvm.cluster.arrive aligned
 # CHECK:           nvvm.cluster.arrive.relaxed
-# CHECK:           nvvm.cluster.arrive.relaxed {aligned}
+# CHECK:           nvvm.cluster.arrive.relaxed aligned
 # CHECK:           nvvm.cluster.wait
-# CHECK:           nvvm.cluster.wait {aligned}
+# CHECK:           nvvm.cluster.wait aligned
 # CHECK:           nvvm.fence.mbarrier.init
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           return %[[BARRIER_3]] : i32
@@ -273,7 +273,7 @@ def test_shfl_sync_infer_type():
 # CHECK-SAME:      %[[MASK:.*]]: i32, %[[I32VAL:.*]]: i32, %[[F32VAL:.*]]: f32, %[[OFF:.*]]: i32, %[[CLAMP:.*]]: i32) -> i32 {
 # CHECK:           %[[I32R:.*]] = nvvm.shfl.sync bfly %[[MASK]], %[[I32VAL]], %[[OFF]], %[[CLAMP]] : i32 -> i32
 # CHECK:           %[[F32R:.*]] = nvvm.shfl.sync bfly %[[MASK]], %[[F32VAL]], %[[OFF]], %[[CLAMP]] : f32 -> f32
-# CHECK:           %[[STRUCT:.*]] = nvvm.shfl.sync bfly %[[MASK]], %[[I32VAL]], %[[OFF]], %[[CLAMP]] {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+# CHECK:           %[[STRUCT:.*]] = nvvm.shfl.sync bfly %[[MASK]], %[[I32VAL]], %[[OFF]], %[[CLAMP]] return_value_and_is_valid : i32 -> !llvm.struct<(i32, i1)>
 # CHECK:           return %[[I32R]] : i32
 
 
@@ -305,8 +305,8 @@ def test_ldmatrix_infer_type():
 
 # CHECK-LABEL:   func.func @ldmatrix_ops(
 # CHECK-SAME:      %[[PTR:.*]]: !llvm.ptr<3>) -> i32 {
-# CHECK:           %[[R1:.*]] = nvvm.ldmatrix %[[PTR]] {{.*}}num = 1{{.*}} : (!llvm.ptr<3>) -> i32
-# CHECK:           %[[R4:.*]] = nvvm.ldmatrix %[[PTR]] {{.*}}num = 4{{.*}} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+# CHECK:           %[[R1:.*]] = nvvm.ldmatrix %[[PTR]], num = 1, layout = <row>, shape = <m = 8, n = 8>, element_type = <b16> : (!llvm.ptr<3>) -> i32
+# CHECK:           %[[R4:.*]] = nvvm.ldmatrix %[[PTR]], num = 4, layout = <row>, shape = <m = 8, n = 8>, element_type = <b16> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
 # CHECK:           return %[[R1]] : i32
 
 
@@ -346,8 +346,8 @@ def test_reductions():
 # CHECK:           %[[REDUX_4:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_5:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_6:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_7:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] {abs = true, nan = true} : f32 -> f32
-# CHECK:           %[[REDUX_8:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] {abs = true, nan = true} : f32 -> f32
+# CHECK:           %[[REDUX_7:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] abs = true nan = true : f32 -> f32
+# CHECK:           %[[REDUX_8:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] abs = true nan = true : f32 -> f32
 # CHECK:           %[[REDUX_9:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_10:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_11:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
@@ -355,8 +355,8 @@ def test_reductions():
 # CHECK:           %[[REDUX_13:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_14:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_15:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_16:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] {abs = true} : f32 -> f32
-# CHECK:           %[[REDUX_17:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] {abs = true} : f32 -> f32
+# CHECK:           %[[REDUX_16:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] abs = true : f32 -> f32
+# CHECK:           %[[REDUX_17:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] abs = true : f32 -> f32
 # CHECK:           %[[REDUX_18:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_19:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_20:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
@@ -364,8 +364,8 @@ def test_reductions():
 # CHECK:           %[[REDUX_22:.*]] = nvvm.redux.sync umax %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_23:.*]] = nvvm.redux.sync umin %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_24:.*]] = nvvm.redux.sync xor %[[ARG1]], %[[ARG1]] : i32 -> i32
-# CHECK:           %[[REDUX_25:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] {nan = true} : f32 -> f32
-# CHECK:           %[[REDUX_26:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] {nan = true} : f32 -> f32
+# CHECK:           %[[REDUX_25:.*]] = nvvm.redux.sync fmin %[[ARG2]], %[[ARG1]] nan = true : f32 -> f32
+# CHECK:           %[[REDUX_26:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] nan = true : f32 -> f32
 # CHECK:           %[[REDUX_27:.*]] = nvvm.redux.sync and %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_28:.*]] = nvvm.redux.sync max %[[ARG1]], %[[ARG1]] : i32 -> i32
 # CHECK:           %[[REDUX_29:.*]] = nvvm.redux.sync min %[[ARG1]], %[[ARG1]] : i32 -> i32
@@ -377,3 +377,16 @@ def test_reductions():
 # CHECK:           %[[REDUX_35:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] : f32 -> f32
 # CHECK:           return
 # CHECK:         }
+
+
+# CHECK-LABEL: TEST: testSpecialRegisterInferredResults
+@constructAndPrintInModule
+def testSpecialRegisterInferredResults():
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.tid.x : i32
+    nvvm.ThreadIdXOp()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
+    nvvm.ClockOp()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
+    nvvm.Clock64Op()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
+    nvvm.GlobalTimerOp()

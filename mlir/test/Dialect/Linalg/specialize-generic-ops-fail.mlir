@@ -46,3 +46,19 @@ func.func @not_copy(%input: tensor<8xi32>, %init: tensor<8xi32>) -> tensor<8xi32
   } -> tensor<8xi32>
   return %res : tensor<8xi32>
 }
+
+
+// -----
+
+// CHECK-LABEL: @scalar_input
+// CHECK: linalg.generic
+#map = affine_map<(d0) -> (d0)>
+#map1 = affine_map<(d0) -> ()>
+func.func @scalar_input(%arg0: tensor<128xf32>, %arg1: f32) -> tensor<128xf32> {
+  %1 = linalg.generic {indexing_maps = [#map, #map1, #map], iterator_types = ["parallel"]} ins(%arg0, %arg1 : tensor<128xf32>, f32) outs(%arg0 : tensor<128xf32>) {
+  ^bb0(%in: f32, %in_1: f32, %out: f32):
+    %2 = arith.addf %in_1, %in_1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<128xf32>
+  return %1 : tensor<128xf32>
+}

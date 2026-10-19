@@ -20,6 +20,7 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/libc_errno.h"
 
@@ -59,9 +60,9 @@ ssize_t read_ss(void *cookie, char *buf, size_t size) {
   return copysize;
 }
 
-int seek_ss(void *cookie, off64_t *offset, int whence) {
+int seek_ss(void *cookie, off_t *offset, int whence) {
   auto *ss = reinterpret_cast<StringStream *>(cookie);
-  off64_t new_offset;
+  off_t new_offset;
   if (whence == SEEK_SET) {
     new_offset = *offset;
   } else if (whence == SEEK_CUR) {

@@ -96,6 +96,21 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
+    def test_type_guarding(self):
+        yaml_file = self.source_dir / "input/type_guarding.yaml"
+        expected_output_file = self.source_dir / "expected_output/type_guarding.h"
+        output_file = self.output_dir / "type_guarding.h"
+        self.run_script(yaml_file, output_file)
+        self.compare_files(output_file, expected_output_file)
+
+    def test_func_guarding(self):
+        yaml_file = self.source_dir / "input/func_guarding.yaml"
+        expected_output_file = self.source_dir / "expected_output/func_guarding.h"
+        output_file = self.output_dir / "func_guarding.h"
+        self.run_script(yaml_file, output_file)
+        self.compare_files(output_file, expected_output_file)
+
+
 def main():
     parser = argparse.ArgumentParser(description="TestHeaderGenIntegration arguments")
     parser.add_argument(

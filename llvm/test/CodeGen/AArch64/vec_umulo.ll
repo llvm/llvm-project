@@ -169,7 +169,7 @@ define <16 x i32> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    uzp2 v2.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    str q6, [x0]
 ; CHECK-NEXT:    cmtst v2.16b, v2.16b, v2.16b
-; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d3, v2.d[1]
 ; CHECK-NEXT:    zip1 v4.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    zip2 v2.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    zip1 v5.8b, v3.8b, v0.8b

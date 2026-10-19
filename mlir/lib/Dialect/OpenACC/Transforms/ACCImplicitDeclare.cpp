@@ -45,10 +45,11 @@
 //
 // The pass performs two main optimizations:
 //
-// 1. Hoisting: For non-constant globals referenced in compute regions, the
-//    pass hoists the address-of operation out of the region when possible,
-//    allowing them to be implicitly mapped through normal data clause
-//    mechanisms rather than requiring declare marking.
+// 1. Hoisting: For non-constant globals and constant globals without a local
+//    initializer referenced in compute regions, the pass hoists the address-of
+//    operation out of the region when possible, allowing them to be implicitly
+//    mapped through normal data clause mechanisms rather than requiring
+//    declare marking.
 //
 // 2. Declaration: For globals that must be available on the device (constants,
 //    globals in routines, globals in recipe operations), the pass adds the
@@ -184,6 +185,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -214,20 +216,27 @@ static bool isGlobalUseCandidateForHoisting(Operation *globalOp,
   if (accSupport.isValidSymbolUse(user, symbol))
     return false;
 
-  bool isConstant = false;
+  bool isInitializedConstant = false;
   bool isFunction = false;
 
   if (auto globalVarOp = dyn_cast<acc::GlobalVariableOpInterface>(globalOp))
-    isConstant = globalVarOp.isConstant();
+    isInitializedConstant =
+        globalVarOp.isConstant() && globalVarOp.hasInitializer();
 
   if (isa<FunctionOpInterface>(globalOp))
     isFunction = true;
 
-  // Constants should be kept in device code to ensure they are duplicated.
+  // Initialized constants should be kept in device code so their definitions
+  // can be duplicated in the device image. An initializer-less constant is an
+  // external declaration, so keeping its address-of in device code would
+  // create a device symbol that a separately compiled defining translation
+  // unit may not provide. Hoist it so normal implicit mapping passes its host
+  // definition to the compute region instead.
+  //
   // Function references should be kept in device code to ensure their device
   // addresses are computed. Everything else should be hoisted since we already
-  // proved they are not valid symbols in GPU region.
-  return !isConstant && !isFunction;
+  // proved it is not a valid symbol in the GPU region.
+  return !isInitializedConstant && !isFunction;
 }
 
 /// Checks whether it is valid to use acc.declare marking on the global.
@@ -236,12 +245,50 @@ bool isValidForAccDeclare(Operation *globalOp) {
   return !isa<FunctionOpInterface>(globalOp);
 }
 
+/// Collect remaining symbol uses with a single walk. Asking whether each
+/// recipe is referenced via getSymbolUses walks the whole module again, and
+/// recipes are generated per type, so there can be many of them. A recipe
+/// referring only to its own symbol is not a "relevant" use (it does not
+/// mean the recipe is attached to a compute construct).
+static std::optional<llvm::DenseSet<StringAttr>>
+collectUsedSymbolsExcludingRecipeSelfUses(ModuleOp mod) {
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
+  std::optional<SymbolTable::UseRange> uses =
+      SymbolTable::getSymbolUses(&mod.getBodyRegion());
+  if (!uses)
+    return std::nullopt;
+
+  llvm::DenseSet<StringAttr> usedSymbols;
+  auto isRecipeSelfUse = [](Operation *user, StringAttr name) {
+    if (auto recipe = dyn_cast<acc::PrivateRecipeOp>(user))
+      return recipe.getNameAttr() == name;
+    if (auto recipe = dyn_cast<acc::FirstprivateRecipeOp>(user))
+      return recipe.getNameAttr() == name;
+    if (auto recipe = dyn_cast<acc::ReductionRecipeOp>(user))
+      return recipe.getNameAttr() == name;
+    return false;
+  };
+  for (const SymbolTable::SymbolUse &use : *uses) {
+    StringAttr name = use.getSymbolRef().getLeafReference();
+    if (!isRecipeSelfUse(use.getUser(), name))
+      usedSymbols.insert(name);
+  }
+  return usedSymbols;
+}
+
 /// Checks whether a recipe operation has meaningful use of its symbol that
 /// justifies processing its regions for global references. Returns false if:
 /// 1. The recipe has no symbol uses at all, or
 /// 2. The only symbol use is the recipe's own symbol definition
 template <typename RecipeOpT>
-static bool hasRelevantRecipeUse(RecipeOpT &recipeOp, ModuleOp &mod) {
+static bool hasRelevantRecipeUse(
+    RecipeOpT &recipeOp, ModuleOp &mod,
+    const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) {
+  auto recipeName = recipeOp.getNameAttr();
+  if (usedSymbols)
+    return usedSymbols->contains(recipeName);
+
   std::optional<SymbolTable::UseRange> symbolUses = recipeOp.getSymbolUses(mod);
 
   // No recipe symbol uses.
@@ -259,9 +306,9 @@ static bool hasRelevantRecipeUse(RecipeOpT &recipeOp, ModuleOp &mod) {
   return use.getUser() != recipeOp.getOperation();
 }
 
-// Hoists addr_of operations for non-constant globals out of OpenACC regions.
-// This way - they are implicitly mapped instead of being considered for
-// implicit declare.
+// Hoists addr_of operations for globals that cannot be defined in this
+// translation unit out of OpenACC regions. This way they are implicitly mapped
+// instead of being considered for implicit declare.
 template <typename AccConstructT>
 static void hoistNonConstantDirectUses(AccConstructT accOp,
                                        acc::OpenACCSupport &accSupport) {
@@ -323,9 +370,10 @@ static void collectGlobalsFromDeviceRegion(Region &region,
 // Adds the declare attribute to the operation `op`.
 static void addDeclareAttr(MLIRContext *context, Operation *op,
                            acc::DataClause clause) {
-  op->setAttr(acc::getDeclareAttrName(),
-              acc::DeclareAttr::get(context,
-                                    acc::DataClauseAttr::get(context, clause)));
+  op->setDiscardableAttr(
+      acc::getDeclareAttrName(),
+      acc::DeclareAttr::get(context,
+                            acc::DataClauseAttr::get(context, clause)));
 }
 
 // This pass applies implicit declare actions for globals referenced in
@@ -357,6 +405,8 @@ public:
     // attribute.
     SymbolTable symTab(mod);
     GlobalOpSetT globalsToAccDeclare;
+    std::optional<llvm::DenseSet<StringAttr>> usedSymbols =
+        collectUsedSymbolsExcludingRecipeSelfUses(mod);
     mod.walk([&](Operation *op) {
       TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::ComputeRegionOp>(
@@ -373,13 +423,13 @@ public:
                                              symTab);
           })
           .Case([&](acc::GlobalVariableOpInterface globalVarOp) {
-            if (globalVarOp->getAttr(acc::getDeclareAttrName()))
+            if (globalVarOp->getDiscardableAttr(acc::getDeclareAttrName()))
               if (Region *initRegion = globalVarOp.getInitRegion())
                 collectGlobalsFromDeviceRegion(*initRegion, globalsToAccDeclare,
                                                accSupport, symTab);
           })
           .Case([&](acc::PrivateRecipeOp privateRecipe) {
-            if (hasRelevantRecipeUse(privateRecipe, mod)) {
+            if (hasRelevantRecipeUse(privateRecipe, mod, usedSymbols)) {
               collectGlobalsFromDeviceRegion(privateRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
@@ -389,7 +439,7 @@ public:
             }
           })
           .Case([&](acc::FirstprivateRecipeOp firstprivateRecipe) {
-            if (hasRelevantRecipeUse(firstprivateRecipe, mod)) {
+            if (hasRelevantRecipeUse(firstprivateRecipe, mod, usedSymbols)) {
               collectGlobalsFromDeviceRegion(firstprivateRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
@@ -402,7 +452,7 @@ public:
             }
           })
           .Case([&](acc::ReductionRecipeOp reductionRecipe) {
-            if (hasRelevantRecipeUse(reductionRecipe, mod)) {
+            if (hasRelevantRecipeUse(reductionRecipe, mod, usedSymbols)) {
               collectGlobalsFromDeviceRegion(reductionRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);

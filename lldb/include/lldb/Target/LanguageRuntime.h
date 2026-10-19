@@ -53,7 +53,7 @@ protected:
   LanguageRuntime *m_language_runtime;
   lldb::SearchFilterSP m_filter_sp;
 
-  lldb::SearchFilterSP DoCreateCopy() override;
+  std::unique_ptr<SearchFilter> DoCreateCopy() override;
 
   void UpdateModuleListIfNeeded();
 };
@@ -136,6 +136,13 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// This allows a language runtime to adjust the location of \p variable
+  /// computed from its debug info, for storage whose indirection is only
+  /// known at runtime.
+  virtual llvm::Error FixupVariableLocation(Variable &variable, Value &value) {
+    return llvm::Error::success();
+  }
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}
@@ -144,6 +151,17 @@ public:
 
   virtual bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) {
     return false;
+  }
+
+  /// Create a breakpoint that catches an error escaping an expression
+  /// that runs as top-level code, such as a REPL line, where no
+  /// handler encloses it.
+  virtual lldb::BreakpointSP CreateErrorBackstopBreakpoint() { return {}; }
+
+  /// Return the error value that reached the breakpoint from
+  /// CreateErrorBackstopBreakpoint, with \p frame stopped there.
+  virtual lldb::ValueObjectSP GetErrorValueAtBackstop(StackFrame &frame) {
+    return {};
   }
 
   static lldb::BreakpointSP

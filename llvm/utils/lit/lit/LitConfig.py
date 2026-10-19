@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import inspect
 import os
 import enum
@@ -12,7 +11,7 @@ import lit.util
 from lit.DiffUpdater import diff_test_updater
 
 # LitConfig must be a new style class for properties to work
-class LitConfig(object):
+class LitConfig:
     """LitConfig - Configuration data for a 'lit' test runner instance, shared
     across all tests.
 
@@ -36,7 +35,8 @@ class LitConfig(object):
         order,
         params,
         config_prefix=None,
-        maxIndividualTestTime=0,
+        pass_env=[],
+        maxIndividualTestTime=None,
         maxRetriesPerTest=None,
         parallelism_groups={},
         per_test_coverage=False,
@@ -56,6 +56,9 @@ class LitConfig(object):
         self.isWindows = bool(isWindows)
         self.order = order
         self.params = dict(params)
+        # Extra environment variables to pass through to the test environment,
+        # in addition to the built-in allow-list (see TestingConfig).
+        self.pass_env = list(pass_env)
         self.bashPath = None
 
         # Configuration files to look for when discovering test suites.
@@ -124,6 +127,14 @@ class LitConfig(object):
         Interface for setting maximum time to spend executing
         a single test
         """
+        if hasattr(self, "_maxIndividualTestTime"):
+            raise AttributeError(
+                "lit_config.maxIndividualTestTime is read-only. "
+                "Use config.maxIndividualTestTime instead."
+            )
+        if value is None:
+            self._maxIndividualTestTime = None
+            return
         if not isinstance(value, int):
             self.fatal("maxIndividualTestTime must set to a value of type int.")
         self._maxIndividualTestTime = value
@@ -215,7 +226,11 @@ class LitConfig(object):
         f = inspect.currentframe()
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
-        file = os.path.abspath(inspect.getsourcefile(f))
+        # getsourcefile() can return None when the source can't be located
+        # (e.g. lit byte-compiled and packaged into an archive). Fall back to
+        # getfile(), which returns the frame's co_filename and is always a str,
+        # so os.path.abspath() below never raises TypeError.
+        file = os.path.abspath(inspect.getsourcefile(f) or inspect.getfile(f))
         if lit.util.pythonize_bool(self.params.get("use_normalized_slashes")):
             file = file.replace("\\", "/")
         line = inspect.getlineno(f)
@@ -262,6 +277,22 @@ class LitConfig(object):
     def fatal(self, message):
         self._write_message("fatal", message)
         sys.exit(2)
+
+    def run_command_cached(self, cmd, allow_failure=False, **kwargs):
+        """
+        Run a command with subprocess.run, with a cache global to this llvm-lit invocation
+        If allow_failure is True, lit_config.fatal will be invoked if the command fails.
+        All additional kwargs are passed to subprocess.run
+        """
+        if type(cmd) is list:
+            cmd = tuple(cmd)
+            return lit.util.runCommandCached(self, cmd, allow_failure, **kwargs)
+        elif type(cmd) is str:
+            return lit.util.runCommandCached(self, cmd, allow_failure, **kwargs)
+        else:
+            raise ValueError(
+                f"runCommandCached expected list or str, got {type(cmd)}: {cmd}"
+            )
 
 
 @enum.unique

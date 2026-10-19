@@ -1,0 +1,22 @@
+# Check that debug name and hashed are passed to DXContainerPDBPass, but
+# not emitted into output file (checked with --implicit-check-not arguments).
+RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals --dx-pdb-path=%t.pdb -S -o - \
+RUN:   | FileCheck %s --check-prefix=BC
+BC:          @dx.pdb.name
+BC:          @dx.pdb.hash
+
+# Check that ILDN debug name is calculated from DXIL by default.
+RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc
+RUN: llvm-objcopy --dump-section=DXIL=%t0.bc %t.dxbc
+RUN: %md5sum %t0.bc >%t0.bc.md5
+RUN: obj2yaml %t.dxbc >%t.yaml
+RUN: cat %t.yaml %t0.bc.md5 | FileCheck %s --implicit-check-not PDBN --implicit-check-not PDBH
+
+CHECK:       - Name:            ILDN
+CHECK-NEXT:    Size:            44
+CHECK-NEXT:    DebugName:
+CHECK-NEXT:      Flags:           0
+CHECK-NEXT:      NameLength:      36
+CHECK-NEXT:      DebugName:       [[MD5:[0-9a-f]+]].pdb
+CHECK:       ...
+CHECK-NEXT:  [[MD5]]

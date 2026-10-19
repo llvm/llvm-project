@@ -173,7 +173,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY [[INSvi16lane6]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<8 x f16>) = COPY $q0
-    %2:fpr(f16), %3:fpr(f16), %4:fpr(f16), %5:fpr(f16), %6:fpr(f16), %7:fpr(f16), %8:fpr(f16), %9:fpr(f16) = G_UNMERGE_VALUES %0(<8 x s16>)
+    %2:fpr(f16), %3:fpr(f16), %4:fpr(f16), %5:fpr(f16), %6:fpr(f16), %7:fpr(f16), %8:fpr(f16), %9:fpr(f16) = G_UNMERGE_VALUES %0(<8 x f16>)
     %32:fpr(f32) = G_FPEXT %2(f16)
     %33:fpr(f32) = G_FRINT %32
     %10:fpr(f16) = G_FPTRUNC %33(f32)

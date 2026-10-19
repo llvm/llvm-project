@@ -14,6 +14,68 @@ func.func @zero_offset(%ptr: !ptr.ptr<#ptr.generic_space>) -> !ptr.ptr<#ptr.gene
   return %res0 : !ptr.ptr<#ptr.generic_space>
 }
 
+// A zero offset must not fold away a broadcast of a scalar base.
+// CHECK-LABEL: func.func @zero_offset_vector_broadcast(
+// CHECK-SAME: %[[PTR:.*]]: !ptr.ptr<#ptr.generic_space>)
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<4xi64>
+// CHECK-NEXT: %[[RESULT:.*]] = ptr.ptr_add %[[PTR]], %[[ZERO]] : !ptr.ptr<#ptr.generic_space>, vector<4xi64>
+// CHECK-NEXT: return %[[RESULT]] : vector<4x!ptr.ptr<#ptr.generic_space>>
+func.func @zero_offset_vector_broadcast(%ptr: !ptr.ptr<#ptr.generic_space>) -> vector<4x!ptr.ptr<#ptr.generic_space>> {
+  %zero = arith.constant dense<0> : vector<4xi64>
+  %result = ptr.ptr_add %ptr, %zero : !ptr.ptr<#ptr.generic_space>, vector<4xi64>
+  return %result : vector<4x!ptr.ptr<#ptr.generic_space>>
+}
+
+// CHECK-LABEL: func.func @zero_offset_scalable_vector_broadcast(
+// CHECK-SAME: %[[PTR:.*]]: !ptr.ptr<#ptr.generic_space>)
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<[4]xi32>
+// CHECK-NEXT: %[[RESULT:.*]] = ptr.ptr_add %[[PTR]], %[[ZERO]] : !ptr.ptr<#ptr.generic_space>, vector<[4]xi32>
+// CHECK-NEXT: return %[[RESULT]] : vector<[4]x!ptr.ptr<#ptr.generic_space>>
+func.func @zero_offset_scalable_vector_broadcast(%ptr: !ptr.ptr<#ptr.generic_space>) -> vector<[4]x!ptr.ptr<#ptr.generic_space>> {
+  %zero = arith.constant dense<0> : vector<[4]xi32>
+  %result = ptr.ptr_add %ptr, %zero : !ptr.ptr<#ptr.generic_space>, vector<[4]xi32>
+  return %result : vector<[4]x!ptr.ptr<#ptr.generic_space>>
+}
+
+// CHECK-LABEL: func.func @zero_offset_tensor_broadcast(
+// CHECK-SAME: %[[PTR:.*]]: !ptr.ptr<#ptr.generic_space>)
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : tensor<2x4xi64>
+// CHECK-NEXT: %[[RESULT:.*]] = ptr.ptr_add %[[PTR]], %[[ZERO]] : !ptr.ptr<#ptr.generic_space>, tensor<2x4xi64>
+// CHECK-NEXT: return %[[RESULT]] : tensor<2x4x!ptr.ptr<#ptr.generic_space>>
+func.func @zero_offset_tensor_broadcast(%ptr: !ptr.ptr<#ptr.generic_space>) -> tensor<2x4x!ptr.ptr<#ptr.generic_space>> {
+  %zero = arith.constant dense<0> : tensor<2x4xi64>
+  %result = ptr.ptr_add %ptr, %zero : !ptr.ptr<#ptr.generic_space>, tensor<2x4xi64>
+  return %result : tensor<2x4x!ptr.ptr<#ptr.generic_space>>
+}
+
+// Type-preserving zero-offset folds still apply to shaped bases.
+// CHECK-LABEL: func.func @zero_offset_vector(
+// CHECK-SAME: %[[PTR:.*]]: vector<4x!ptr.ptr<#ptr.generic_space>>)
+// CHECK-NEXT: return %[[PTR]] : vector<4x!ptr.ptr<#ptr.generic_space>>
+func.func @zero_offset_vector(%ptr: vector<4x!ptr.ptr<#ptr.generic_space>>) -> vector<4x!ptr.ptr<#ptr.generic_space>> {
+  %zero = arith.constant dense<0> : vector<4xi64>
+  %result = ptr.ptr_add %ptr, %zero : vector<4x!ptr.ptr<#ptr.generic_space>>, vector<4xi64>
+  return %result : vector<4x!ptr.ptr<#ptr.generic_space>>
+}
+
+// CHECK-LABEL: func.func @zero_offset_scalable_vector_scalar_offset(
+// CHECK-SAME: %[[PTR:.*]]: vector<[4]x!ptr.ptr<#ptr.generic_space>>)
+// CHECK-NEXT: return %[[PTR]] : vector<[4]x!ptr.ptr<#ptr.generic_space>>
+func.func @zero_offset_scalable_vector_scalar_offset(%ptr: vector<[4]x!ptr.ptr<#ptr.generic_space>>) -> vector<[4]x!ptr.ptr<#ptr.generic_space>> {
+  %zero = arith.constant 0 : i32
+  %result = ptr.ptr_add %ptr, %zero : vector<[4]x!ptr.ptr<#ptr.generic_space>>, i32
+  return %result : vector<[4]x!ptr.ptr<#ptr.generic_space>>
+}
+
+// CHECK-LABEL: func.func @zero_offset_tensor(
+// CHECK-SAME: %[[PTR:.*]]: tensor<2x4x!ptr.ptr<#ptr.generic_space>>)
+// CHECK-NEXT: return %[[PTR]] : tensor<2x4x!ptr.ptr<#ptr.generic_space>>
+func.func @zero_offset_tensor(%ptr: tensor<2x4x!ptr.ptr<#ptr.generic_space>>) -> tensor<2x4x!ptr.ptr<#ptr.generic_space>> {
+  %zero = arith.constant dense<0> : tensor<2x4xi64>
+  %result = ptr.ptr_add %ptr, %zero : tensor<2x4x!ptr.ptr<#ptr.generic_space>>, tensor<2x4xi64>
+  return %result : tensor<2x4x!ptr.ptr<#ptr.generic_space>>
+}
+
 /// Tests the the `from_ptr` folder.
 // CHECK-LABEL: @test_from_ptr_0
 // CHECK-SAME: (%[[MEM_REF:.*]]: memref<f32, #ptr.generic_space>)

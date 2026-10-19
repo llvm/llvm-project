@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/SandboxIR/Function.h"
@@ -87,7 +88,7 @@ public:
   }
 
   /// \Returns the gap between the memory locations accessed by \p I0 and
-  /// \p I1 in bytes.
+  /// \p I1 in bytes. Returns nullopt if the gap can't be determined.
   template <typename LoadOrStoreT>
   static std::optional<int> getPointerDiffInBytes(LoadOrStoreT *I0,
                                                   LoadOrStoreT *I1,
@@ -100,21 +101,22 @@ public:
     llvm::Value *Ptr0 = getUnderlyingObject(Opnd0);
     llvm::Value *Ptr1 = getUnderlyingObject(Opnd1);
     if (Ptr0 != Ptr1)
-      return false;
+      return std::nullopt;
     llvm::Type *ElemTy = llvm::Type::getInt8Ty(SE.getContext());
     return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, I0->getDataLayout(),
                            SE, /*StrictCheck=*/false, /*CheckType=*/false);
   }
 
   /// \Returns true if \p I0 accesses a memory location lower than \p I1.
-  /// Returns false if the difference cannot be determined, if the memory
-  /// locations are equal, or if I1 accesses a memory location greater than I0.
+  /// Returns false if the memory locations are equal, or if I1 accesses a
+  /// memory location greater than I0. Returns nullopt if the difference cannot
+  /// be determined.
   template <typename LoadOrStoreT>
-  static bool atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
-                             ScalarEvolution &SE) {
+  static std::optional<bool> atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
+                                            ScalarEvolution &SE) {
     auto Diff = getPointerDiffInBytes(I0, I1, SE);
     if (!Diff)
-      return false;
+      return std::nullopt;
     return *Diff > 0;
   }
 
@@ -130,6 +132,15 @@ public:
   static bool verifyFunction(const Function *F, raw_ostream &OS) {
     const auto &LLVMF = *cast<llvm::Function>(F->Val);
     return llvm::verifyFunction(LLVMF, &OS);
+  }
+
+  static bool TTIAllowsMisalignedMemoryAccesses(TargetTransformInfo &TTI,
+                                                Context &Ctx, unsigned BitWidth,
+                                                unsigned AddressSpace = 0,
+                                                Align Alignment = Align(1),
+                                                unsigned *Fast = nullptr) {
+    return TTI.allowsMisalignedMemoryAccesses(Ctx.LLVMCtx, BitWidth,
+                                              AddressSpace, Alignment, Fast);
   }
 };
 

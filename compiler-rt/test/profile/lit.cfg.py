@@ -30,6 +30,11 @@ if (
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 
+if target_is_msvc:
+    config.environment["LIB"] = os.path.pathsep.join(
+        [config.compiler_rt_libdir, config.environment.get("LIB", "")]
+    )
+
 if config.target_os in ["Linux"]:
     extra_link_flags = ["-ldl"]
 elif target_is_msvc:
@@ -186,3 +191,5 @@ if config.have_curl:
 
 if config.target_os in ("AIX", "Darwin", "Linux"):
     config.available_features.add("continuous-mode")
+
+config.suffixes.append(".hip")

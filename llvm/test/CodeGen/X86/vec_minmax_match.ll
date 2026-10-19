@@ -7,26 +7,26 @@
 define <4 x i32> @smin_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: smin_vec1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %not_x = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %cmp = icmp sgt <4 x i32> %x, zeroinitializer
-  %sel = select <4 x i1> %cmp, <4 x i32> %not_x, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+  %1 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> zeroinitializer)
+  %sel = xor <4 x i32> %1, splat (i32 -1)
   ret <4 x i32> %sel
 }
 
 define <4 x i32> @smin_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: smin_vec2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %not_x = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %cmp = icmp slt <4 x i32> %x, zeroinitializer
-  %sel = select <4 x i1> %cmp, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %not_x
+  %1 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> zeroinitializer)
+  %sel = xor <4 x i32> %1, splat (i32 -1)
   ret <4 x i32> %sel
 }
 
@@ -121,8 +121,7 @@ define <4 x i32> @umax_vec1(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp = icmp slt <4 x i32> %x, zeroinitializer
-  %sel = select <4 x i1> %cmp, <4 x i32> %x, <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %sel = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 2147483647))
   ret <4 x i32> %sel
 }
 
@@ -131,8 +130,7 @@ define <4 x i32> @umax_vec2(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %sel = select <4 x i1> %cmp, <4 x i32> <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>, <4 x i32> %x
+  %sel = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 -2147483648))
   ret <4 x i32> %sel
 }
 
@@ -141,8 +139,7 @@ define <4 x i32> @umin_vec1(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp = icmp slt <4 x i32> %x, zeroinitializer
-  %sel = select <4 x i1> %cmp, <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>, <4 x i32> %x
+  %sel = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 2147483647))
   ret <4 x i32> %sel
 }
 
@@ -151,8 +148,7 @@ define <4 x i32> @umin_vec2(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %sel = select <4 x i1> %cmp, <4 x i32> %x, <4 x i32> <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %sel = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %x, <4 x i32> splat (i32 -2147483648))
   ret <4 x i32> %sel
 }
 
@@ -164,13 +160,11 @@ define <4 x i32> @umin_vec2(<4 x i32> %x) {
 define <4 x i32> @clamp_signed1(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_signed1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp2 = icmp slt <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
-  %min = select <4 x i1> %cmp2, <4 x i32> %x, <4 x i32><i32 255, i32 255, i32 255, i32 255>
-  %cmp1 = icmp slt <4 x i32> %x, <i32 15, i32 15, i32 15, i32 15>
-  %r = select <4 x i1> %cmp1, <4 x i32><i32 15, i32 15, i32 15, i32 15>, <4 x i32> %min
+  %1 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 15))
+  %r = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %1, <4 x i32> splat (i32 255))
   ret <4 x i32> %r
 }
 
@@ -182,10 +176,8 @@ define <4 x i32> @clamp_signed2(<4 x i32> %x) {
 ; CHECK-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp2 = icmp sgt <4 x i32> %x, <i32 15, i32 15, i32 15, i32 15>
-  %max = select <4 x i1> %cmp2, <4 x i32> %x, <4 x i32><i32 15, i32 15, i32 15, i32 15>
-  %cmp1 = icmp sgt <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
-  %r = select <4 x i1> %cmp1, <4 x i32><i32 255, i32 255, i32 255, i32 255>, <4 x i32> %max
+  %max = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 15))
+  %r = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %max, <4 x i32> splat (i32 255))
   ret <4 x i32> %r
 }
 
@@ -194,13 +186,11 @@ define <4 x i32> @clamp_signed2(<4 x i32> %x) {
 define <4 x i32> @clamp_unsigned1(<4 x i32> %x) {
 ; CHECK-LABEL: clamp_unsigned1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp2 = icmp ult <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
-  %min = select <4 x i1> %cmp2, <4 x i32> %x, <4 x i32><i32 255, i32 255, i32 255, i32 255>
-  %cmp1 = icmp ult <4 x i32> %x, <i32 15, i32 15, i32 15, i32 15>
-  %r = select <4 x i1> %cmp1, <4 x i32><i32 15, i32 15, i32 15, i32 15>, <4 x i32> %min
+  %1 = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 15))
+  %r = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %1, <4 x i32> splat (i32 255))
   ret <4 x i32> %r
 }
 
@@ -212,37 +202,19 @@ define <4 x i32> @clamp_unsigned2(<4 x i32> %x) {
 ; CHECK-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %cmp2 = icmp ugt <4 x i32> %x, <i32 15, i32 15, i32 15, i32 15>
-  %max = select <4 x i1> %cmp2, <4 x i32> %x, <4 x i32><i32 15, i32 15, i32 15, i32 15>
-  %cmp1 = icmp ugt <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
-  %r = select <4 x i1> %cmp1, <4 x i32><i32 255, i32 255, i32 255, i32 255>, <4 x i32> %max
+  %max = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 15))
+  %r = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %max, <4 x i32> splat (i32 255))
   ret <4 x i32> %r
 }
 
 define <4 x i32> @umin_not_ops(<4 x i32> %x) {
 ; CHECK-LABEL: umin_not_ops:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %not_x = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %cmp = icmp ugt <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
-  %sel = select <4 x i1> %cmp, <4 x i32> %not_x, <4 x i32> <i32 -5, i32 -5, i32 -5, i32 -5>
+  %1 = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %x, <4 x i32> splat (i32 4))
+  %sel = xor <4 x i32> %1, splat (i32 -1)
   ret <4 x i32> %sel
 }
-
-define <4 x i32> @wrong_pred_for_smin_with_subnsw(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: wrong_pred_for_smin_with_subnsw:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vpminud %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    retq
-  %sub = sub nsw <4 x i32> %x, %y
-  %cmp = icmp ugt <4 x i32> %x, %y
-  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %sub
-  ret <4 x i32> %sel
-}
-

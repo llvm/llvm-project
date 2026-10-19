@@ -165,7 +165,7 @@ namespace {
 // (with a direct-out variant without the disassemble).
 //
 struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   SparseFuncAssembler(MLIRContext *context, bool dO)
       : OpRewritePattern(context), directOut(dO) {}
@@ -233,12 +233,13 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     func::ReturnOp::create(rewriter, loc, outputs);
 
     // Finally, migrate a potential c-interface property.
-    if (funcOp->getAttrOfType<UnitAttr>(
+    if (funcOp->getDiscardableAttrOfType<UnitAttr>(
             LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(context));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(context));
       rewriter.modifyOpInPlace(funcOp, [&]() {
-        funcOp->removeAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName());
+        funcOp->removeDiscardableAttr(
+            LLVM::LLVMDialect::getEmitCWrapperAttrName());
       });
     }
     return success();

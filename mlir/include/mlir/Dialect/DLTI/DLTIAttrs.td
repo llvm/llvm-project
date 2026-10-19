@@ -115,14 +115,14 @@ def DLTI_MapAttr : DLTIAttr<"Map", [DLTIQueryInterface]> {
     A Data Layout and Target Information map is a list of entries effectively
     encoding a dictionary, mapping DLTI-related keys to DLTI-related values.
 
-    This attribute's main purpose is to facilate querying IR for arbitrary
-    key-value associations that encode DLTI. Facility functions exist to perform
-    recursive lookups on nested DLTI-map/query interface-implementing
-    attributes.
+    This attribute facilitates queries for arbitrary DLTI key-value
+    associations. An operation can store it in its inherent `dlti` attribute
+    and expose its entries through `DLTIQueryOpInterface`. Query results that
+    implement `DLTIQueryInterface` can be queried recursively.
 
     Consider the following flat encoding of a single-key dictionary
     ```
-    #dlti.map<"CPU::cache::L1::size_in_bytes" = 65536 : i32>>
+    #dlti.map<"CPU::cache::L1::size_in_bytes" = 65536 : i32>
     ```
     versus nested maps, which make it possible to obtain sub-dictionaries of
     related information (with the following example making use of other
@@ -137,12 +137,12 @@ def DLTI_MapAttr : DLTIAttr<"Map", [DLTIQueryInterface]> {
     With the flat encoding, the implied structure of the key is ignored, that is
     the only successful query (as expressed in the Transform Dialect) is:
     `transform.dlti.query ["CPU::cache::L1::size_in_bytes"] at %op`,
-    where `%op` is a handle to an operation which associates the flat-encoding
-    `#dlti.map` attribute.
+    where `%op` handles an operation with the flat `#dlti.map` stored as its
+    inherent `dlti` attribute.
 
     For querying nested dictionaries, the relevant keys need to be separately
-    provided. That is, if `%op` is an handle to an op which has the nesting
-    `#dlti.target_system_spec`-attribute from above attached, then
+    provided. If `%op` handles an operation with the nested
+    `#dlti.target_system_spec` above as its inherent `dlti` attribute, then
     `transform.dlti.query ["CPU","cache","L1","size_in_bytes"] at %op` gives
     back the first leaf value contained. To access the other leaf, we need to do
     `transform.dlti.query ["CPU","cache","L1d","size_in_bytes"] at %op`.

@@ -1,0 +1,80 @@
+# Specify short tbz offset so we can check that isBlockInRange works correctly
+# for newly created trampolines.
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass branch-relaxation -aarch64-tbz-offset-bits=4 %s -o - | FileCheck %s
+
+# CHECK: body:
+# CHECK: TBZW killed renamable $w0, 0, %[[TBB1:.*]]
+# CHECK: bb.1.hot_block:
+# CHECK: [[TBB1]]
+# CHECK: successors: %[[TBB2:.*]]({{.*}}) 
+# CHECK: [[TBB2]]
+# CHECK: successors: %[[BB_COLD:.*]]({{.*}})
+# CHECK: B %[[BB_COLD]]
+# CHECK: [[BB_COLD]].cold_block 
+
+--- |
+  declare i32 @bar()
+  declare i32 @baz()
+  declare i32 @qux()
+
+  define void @tbz_hot_to_cold(i1 zeroext %0) {
+    br i1 %0, label %hot_block, label %cold_block
+  
+  hot_block:                                        ; preds = %1
+    %2 = call i32 @baz()
+    br label %end
+  
+  end:                                              ; preds = %cold_block, %hot_block
+    %3 = tail call i32 @qux()
+    ret void
+  
+  cold_block:                                       ; preds = %1
+    %4 = call i32 @bar()
+    br label %end
+  }
+
+...
+---
+name:            tbz_hot_to_cold
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0 (%ir-block.1):
+    successors: %bb.1, %bb.2
+    liveins: $w0, $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    HINT 0
+    TBZW killed renamable $w0, 0, %bb.2
+
+  bb.1.hot_block:
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
+  bb.2.cold_block (bbsections Cold):
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $w0
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
+    TCRETURNdi @qux, 0, csr_aarch64_aapcs, implicit $sp
+
+...

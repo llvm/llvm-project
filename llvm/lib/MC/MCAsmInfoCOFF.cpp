@@ -24,7 +24,8 @@ using namespace llvm;
 
 void MCAsmInfoCOFF::anchor() {}
 
-MCAsmInfoCOFF::MCAsmInfoCOFF() {
+MCAsmInfoCOFF::MCAsmInfoCOFF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   // MingW 4.5 and later support .comm with log2 alignment, but .lcomm uses byte
   // alignment.
   COMMDirectiveAlignmentIsInBytes = false;
@@ -61,11 +62,13 @@ bool MCAsmInfoCOFF::useCodeAlign(const MCSection &Sec) const {
 
 void MCAsmInfoMicrosoft::anchor() {}
 
-MCAsmInfoMicrosoft::MCAsmInfoMicrosoft() = default;
+MCAsmInfoMicrosoft::MCAsmInfoMicrosoft(const MCTargetOptions &Options)
+    : MCAsmInfoCOFF(Options) {}
 
 void MCAsmInfoGNUCOFF::anchor() {}
 
-MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF() {
+MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
+    : MCAsmInfoCOFF(Options) {
   // If this is a GNU environment (mingw or cygwin), don't use associative
   // comdats for jump tables, unwind information, and other data associated with
   // a function.

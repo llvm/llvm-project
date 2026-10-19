@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir-c/Dialect/Tensor.h"
 #include "mlir/CAPI/Registration.h"
+#include "mlir/Dialect/Tensor/IR/TensorDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Tensor, tensor,
                                       mlir::tensor::TensorDialect)

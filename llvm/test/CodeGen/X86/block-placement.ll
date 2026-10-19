@@ -608,8 +608,8 @@ define void @test_unnatural_cfg_backwards_inner_loop(i1 %arg) {
 ;
 ; CHECK-LABEL: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
-; CHECK: %loop2b
 ; CHECK: %loop3
+; CHECK: %loop2b
 
 entry:
   br i1 %arg, label %loop2a, label %body
@@ -1057,6 +1057,7 @@ while.end:
 }
 
 declare void @cold_function() cold
+declare i32 @foo_function(i32)
 
 define i32 @test_cold_calls(ptr %a) {
 ; Test that edges to blocks post-dominated by cold calls are
@@ -1085,7 +1086,8 @@ else:
 
 exit:
   %ret = phi i32 [ %val1, %then ], [ %val2, %else ]
-  ret i32 %ret
+  %ret2 = call i32 @foo_function(i32 %ret)
+  ret i32 %ret2
 }
 
 ; Make sure we put landingpads out of the way.

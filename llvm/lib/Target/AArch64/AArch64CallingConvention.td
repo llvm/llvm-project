@@ -274,6 +274,9 @@ def CC_AArch64_Arm64EC_Thunk : CallingConv<[
   CCIfType<[f16],
            CCAssignToRegWithShadow<[H0, H1, H2, H3],
                                    [X0, X1, X2, X3]>>,
+  CCIfType<[bf16],
+           CCAssignToRegWithShadow<[H0, H1, H2, H3],
+                                   [X0, X1, X2, X3]>>,
   CCIfType<[f32],
            CCAssignToRegWithShadow<[S0, S1, S2, S3],
                                    [X0, X1, X2, X3]>>,
@@ -294,7 +297,7 @@ def CC_AArch64_Arm64EC_Thunk : CallingConv<[
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
-  CCIfType<[i8, i16, i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>
+  CCIfType<[i8, i16, i32, i64, f16, bf16, f32, f64], CCAssignToStack<8, 8>>
 ]>;
 
 // The native side of ARM64EC thunks
@@ -313,6 +316,7 @@ def RetCC_AArch64_Arm64EC_Thunk : CallingConv<[
 
   // The X86-64 calling convention always returns FP values in XMM0.
   CCIfType<[f16], CCAssignToReg<[H0, H1]>>,
+  CCIfType<[bf16], CCAssignToReg<[H0, H1]>>,
   CCIfType<[f32], CCAssignToReg<[S0, S1]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
   CCIfType<[f128], CCAssignToReg<[Q0, Q1]>>,
@@ -483,6 +487,11 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
            CCAssignToStack<8, 8>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToStack<16, 16>>
+]>;
+
+let Entry = 1 in
+def CC_AArch64_AnyReg : CallingConv<[
+  CCCustom<"CC_AArch64_AnyReg_Error">
 ]>;
 
 //===----------------------------------------------------------------------===//

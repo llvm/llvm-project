@@ -73,7 +73,7 @@ func.func @transfer_rank_mismatch_no_crash(%arg0: memref<82x97xf32>) {
 // VECNEST:         vector.transfer_read
 // VECNEST-NEXT:    affine.for %{{.*}} = 0 to 30 {
 // VECNEST:           vector.transfer_read
-// VECNEST-NEXT:      vector.transfer_write %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] {permutation_map = #{{.*}}}
+// VECNEST-NEXT:      vector.transfer_write %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] {in_bounds = [true], permutation_map = #{{.*}}}
 // VECNEST-NEXT:    }
 // VECNEST-NEXT:    vector.transfer_write
 // VECNEST:       }

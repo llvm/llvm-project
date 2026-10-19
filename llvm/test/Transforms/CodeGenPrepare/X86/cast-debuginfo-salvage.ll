@@ -21,13 +21,15 @@ define void @test(i64 %arg) {
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !DILocalVariable(name: "c", scope: !5, file: !1, line: 26)
-!5 = distinct !DISubprogram(name: "n<(lambda at test.cpp:39:14)>", linkageName: "_ZN1m1nIZN1o1pEvEUl1kE_EE5arrayT_i", scope: null, file: !1, line: 25, spFlags: DISPFlagDefinition, unit: !0)
+!5 = distinct !DISubprogram(name: "n<(lambda at test.cpp:39:14)>", linkageName: "_ZN1m1nIZN1o1pEvEUl1kE_EE5arrayT_i", scope: null, file: !1, line: 25, spFlags: DISPFlagDefinition, unit: !0, type: !7)
 !6 = !DILocation(line: 26, column: 11, scope: !5)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: [[META2:![0-9]+]], globals: [[META2]], splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "test.cpp", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
 ; CHECK: [[META4]] = !DILocalVariable(name: "c", scope: [[META5:![0-9]+]], file: [[META1]], line: 26)
-; CHECK: [[META5]] = distinct !DISubprogram(name: "n<(lambda at test.cpp:39:14)>", linkageName: "_ZN1m1nIZN1o1pEvEUl1kE_EE5arrayT_i", scope: null, file: [[META1]], line: 25, spFlags: DISPFlagDefinition, unit: [[META0]])
+; CHECK: [[META5]] = distinct !DISubprogram(name: "n<(lambda at test.cpp:39:14)>", linkageName: "_ZN1m1nIZN1o1pEvEUl1kE_EE5arrayT_i", scope: null, file: [[META1]], line: 25, type: [[TYPE:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META0]])
 ; CHECK: [[META6]] = !DILocation(line: 26, column: 11, scope: [[META5]])
 ;.
+!7 = !DISubroutineType(types: !8)
+!8 = !{null}

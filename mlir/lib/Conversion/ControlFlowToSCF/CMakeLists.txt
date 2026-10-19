@@ -11,7 +11,6 @@ add_mlir_conversion_library(MLIRControlFlowToSCF
   MLIRAnalysis
   MLIRArithDialect
   MLIRControlFlowDialect
-  MLIRFuncDialect
   MLIRSCFDialect
   MLIRUBDialect
   MLIRPass

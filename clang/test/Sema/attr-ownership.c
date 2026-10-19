@@ -31,3 +31,7 @@ int f19(void *)
 
 void f20(void) __attribute__((ownership_returns(foo)));  // expected-error {{'ownership_returns' attribute only applies to functions that return a pointer}}
 int f21(void) __attribute__((ownership_returns(foo)));  // expected-error {{'ownership_returns' attribute only applies to functions that return a pointer}}
+
+void *f22(int, int) 
+  __attribute__((ownership_returns(used)))    // expected-error {{'ownership_returns' attribute index does not match; here it is omitted}}
+  __attribute__((ownership_returns(foo, 2))); // expected-note {{declared with index 2 here}}

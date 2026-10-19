@@ -302,6 +302,12 @@ func.func @caller() {
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/201521
+// CHECK-LABEL: func.func private @callee_multi_result(f64) -> (f64, i32, i32, f16, f16)
+func.func private @callee_multi_result(i64) -> (i64, i32, i32, f32)
+
+// -----
+
 //      CHECK: func.func @use_of_replaced_bbarg(
 // CHECK-SAME:     %[[arg0:.*]]: f64)
 //      CHECK:   "test.valid"(%[[arg0]])
@@ -490,3 +496,14 @@ func.func @test_preorder_legalization() {
   // expected-remark @+1 {{'func.return' is not legalizable}}
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/159675.
+// In a graph region, SSA values may be used before their definitions. Folding
+// the addi below first swaps its operands, then repeatedly attempts an
+// in-place self-fold. The legalizer must stop rather than looping forever.
+// expected-remark@+1 {{op 'arith.addi' is not legalizable}}
+%0 = "arith.addi"(%1, %0) <{overflowFlags = #arith.overflow<none>}> : (index, index) -> index
+// expected-remark@+1 {{op 'arith.constant' is not legalizable}}
+%1 = "arith.constant"() <{value = 0 : index}> : () -> index

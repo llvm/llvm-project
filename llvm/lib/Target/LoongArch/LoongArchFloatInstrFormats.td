@@ -194,7 +194,7 @@ class FP_SEL<bits<32> op, RegisterClass rc = FPR32>
                 "$fd, $fj, $fk, $ca">;
 
 class FP_BRANCH<bits<32> opcode>
-    : FPFmtBR<opcode, (outs), (ins CFR:$cj, simm21_lsl2:$imm21),
+    : FPFmtBR<opcode, (outs), (ins CFR:$cj, simm21_lsl2_br:$imm21),
               "$cj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -219,6 +219,8 @@ class FP_STORE_2RI12<bits<32> op, RegisterClass rc = FPR32>
                  "$fd, $rj, $imm12">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
+def CFRSetDest : RegisterOperand<CFR, "printCFRSetDest">;
+
 // This class is used to define `SET_CFR_{FALSE,TRUE}` instructions which are
 // used to expand `PseudoCopyCFR`.
 class SET_CFR<bits<32> op, string opcstr>
@@ -226,7 +228,7 @@ class SET_CFR<bits<32> op, string opcstr>
   let isCodeGenOnly = 1;
   let fj = 0; // fa0
   let fk = 0; // fa0
-  let AsmString = opcstr # "\t$cd, $$fa0, $$fa0";
-  let OutOperandList = (outs CFR:$cd);
+  let AsmString = opcstr # "\t$cd";
+  let OutOperandList = (outs CFRSetDest:$cd);
   let InOperandList = (ins);
 }

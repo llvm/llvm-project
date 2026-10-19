@@ -16,10 +16,10 @@ using namespace llvm;
 #if LLVM_WITH_Z3
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 
 #include <set>
-#include <unordered_map>
 
 #include <z3.h>
 
@@ -825,19 +825,11 @@ public:
       }
 
       // FIXME: This function is also used to retrieve floating-point values,
-      // which can be 16, 32, 64 or 128 bits long. Bitvectors can be anything
-      // between 1 and 64 bits long, which is the reason we have this weird
-      // guard. In the future, we need proper calls in the backend to retrieve
-      // floating-points and its special values (NaN, +/-infinity, +/-zero),
-      // then we can drop this weird condition.
-      if (Sort->getBitvectorSortSize() <= 64 ||
-          Sort->getBitvectorSortSize() == 128) {
-        Int = getBitvector(AST, Int.getBitWidth(), Int.isUnsigned());
-        return true;
-      }
-
-      assert(false && "Bitwidth not supported!");
-      return false;
+      // which can be 16, 32, 64 or 128 bits long. In the future, we need proper
+      // calls in the backend to retrieve floating-points and its special values
+      // (NaN, +/-infinity, +/-zero).
+      Int = getBitvector(AST, Int.getBitWidth(), Int.isUnsigned());
+      return true;
     }
 
     if (Sort->isBooleanSort()) {
@@ -938,19 +930,18 @@ public:
   };
 
   void print(raw_ostream &OS) const override {
-    for (auto const &[K, V] : UnsignedValues) {
-      OS << K << ": " << V << '\n';
-    }
-    for (auto const &[K, V] : DoubleValues) {
-      write_double(OS << K << ": ", V, FloatStyle::Fixed);
+    for (const auto &E : UnsignedValues)
+      OS << E.first() << ": " << E.second << '\n';
+    for (const auto &E : DoubleValues) {
+      write_double(OS << E.first() << ": ", E.second, FloatStyle::Fixed);
       OS << '\n';
     }
   }
 
 private:
   friend class Z3Solver;
-  std::unordered_map<std::string, unsigned> UnsignedValues;
-  std::unordered_map<std::string, double> DoubleValues;
+  StringMap<unsigned> UnsignedValues;
+  StringMap<double> DoubleValues;
 };
 
 std::unique_ptr<SMTSolverStatistics> Z3Solver::getStatistics() const {

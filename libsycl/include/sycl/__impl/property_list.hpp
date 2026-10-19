@@ -17,6 +17,8 @@
 #ifndef _LIBSYCL___IMPL_PROPERTY_LIST_HPP
 #define _LIBSYCL___IMPL_PROPERTY_LIST_HPP
 
+#include <sycl/__impl/detail/config.hpp>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 /// Collection of properties for SYCL objects. Supported properties are defined

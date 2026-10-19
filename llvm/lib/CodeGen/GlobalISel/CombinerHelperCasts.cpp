@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -24,6 +25,7 @@
 #define DEBUG_TYPE "gi-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) const {
@@ -38,14 +40,15 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
 
   // Combines without nsw trunc.
   if (!Trunc->getFlag(MachineInstr::NoSWrap)) {
-    if (DstTy != SrcTy ||
-        !isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT_INREG, {DstTy, SrcTy}}))
-      return false;
-
     // Do this for 8 bit values and up. We don't want to do it for e.g. G_TRUNC
     // to i1.
     unsigned TruncWidth = MRI.getType(Trunc->getReg(0)).getScalarSizeInBits();
     if (TruncWidth < 8)
+      return false;
+
+    if (DstTy != SrcTy ||
+        !isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_SEXT_INREG, {DstTy, SrcTy}, {}, {TruncWidth}}))
       return false;
 
     MatchInfo = [=](MachineIRBuilder &B) {
@@ -115,10 +118,10 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
 
 bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
                                      BuildFnTy &MatchInfo) const {
-  GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
-
-  Register Dst = Zext->getReg(0);
-  Register Src = Zext->getSrcReg();
+  Register Dst = MO.getReg();
+  Register Src;
+  if (!mi_match(Dst, MRI, m_GZExt(m_Reg(Src))))
+    return false;
 
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);

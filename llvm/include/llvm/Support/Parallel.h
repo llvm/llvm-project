@@ -32,28 +32,8 @@ namespace parallel {
 LLVM_ABI extern ThreadPoolStrategy strategy;
 
 #if LLVM_ENABLE_THREADS
-#define GET_THREAD_INDEX_IMPL                                                  \
-  if (parallel::strategy.ThreadsRequested == 1)                                \
-    return 0;                                                                  \
-  assert((threadIndex != UINT_MAX) &&                                          \
-         "getThreadIndex() must be called from a thread created by "           \
-         "ThreadPoolExecutor");                                                \
-  return threadIndex;
-
-#ifdef _WIN32
-// Direct access to thread_local variables from a different DLL isn't
-// possible with Windows Native TLS.
-LLVM_ABI unsigned getThreadIndex();
-#else
-// Don't access this directly, use the getThreadIndex wrapper.
-LLVM_ABI extern thread_local unsigned threadIndex;
-
-inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
-#endif
-
 LLVM_ABI size_t getThreadCount();
 #else
-inline unsigned getThreadIndex() { return 0; }
 inline size_t getThreadCount() { return 1; }
 #endif
 

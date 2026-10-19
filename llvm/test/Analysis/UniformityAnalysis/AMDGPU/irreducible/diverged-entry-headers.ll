@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; These tests have identical control flow graphs with slight changes
 ; that affect cycle-info. There is a minor functional difference in
@@ -11,7 +11,7 @@
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 't_header':
 ;; CHECK: CYCLES ASSUMED DIVERGENT:
-;; CHECK:   depth=1: entries(T P) S Q R
+;; CHECK:   depth=1: entries(T P) Q R S
 
 define amdgpu_kernel void @t_header(i32 %a, i32 %b, i32 %c) {
 entry:

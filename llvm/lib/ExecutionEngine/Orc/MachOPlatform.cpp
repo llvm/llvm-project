@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -86,6 +89,16 @@ public:
 } // namespace orc
 } // namespace llvm
 
+// Controller-interface descriptors for the MachO platform runtime's SPS
+// wrapper calls.
+namespace llvm::orc::macho_sps_ci {
+struct CreatePThreadKey {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_create_pthread_key");
+  using SPSSig = SPSExpected<uint64_t>();
+};
+} // namespace llvm::orc::macho_sps_ci
+
 namespace {
 
 using SPSRegisterSymbolsArgs =
@@ -98,7 +111,8 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
   auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
       std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -292,8 +306,6 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases)
     RuntimeAliases = standardPlatformAliases(ES);
@@ -302,15 +314,18 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(
-          absoluteSymbols({{ES.intern("___orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("___orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
+    if (auto Err = PlatformJD.define(reexports(
+            ES.getBootstrapJITDylib(),
+            {{ES.intern("___orc_rt_jit_dispatch"),
+              {Mangle(rt::DispatchName),
+               JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
+             {ES.intern("___orc_rt_jit_dispatch_ctx"),
+              {Mangle(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();
@@ -431,8 +446,7 @@ ArrayRef<std::pair<const char *, const char *>>
 MachOPlatform::standardLazyCompilationAliases() {
   static const std::pair<const char *, const char *>
       StandardLazyCompilationAliases[] = {
-          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"},
-          {"__orc_rt_resolve_tag", "___orc_rt_resolve_tag"}};
+          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(
       StandardLazyCompilationAliases);
@@ -611,21 +625,19 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions() {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
   using PushInitializersSPSSig =
       SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("___orc_rt_macho_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
-          this, &MachOPlatform::rt_pushInitializers);
-
   using PushSymbolsSPSSig =
       SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
-  WFs[ES.intern("___orc_rt_macho_push_symbols_tag")] =
-      ES.wrapAsyncWithSPS<PushSymbolsSPSSig>(this,
-                                             &MachOPlatform::rt_pushSymbols);
 
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandlerSPS<PushInitializersSPSSig>(
+          SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag"), this,
+          &MachOPlatform::rt_pushInitializers),
+      bindCallControllerHandlerSPS<PushSymbolsSPSSig>(
+          SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag"), this,
+          &MachOPlatform::rt_pushSymbols));
 }
 
 void MachOPlatform::pushInitializersLoop(
@@ -797,11 +809,12 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
         "not been loaded yet",
         inconvertibleErrorCode());
 
-  Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          CreatePThreadKey.Addr, Result))
-    return std::move(Err);
-  return Result;
+  using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
+  CreatePThreadKeyProxy CreateKey(
+      sps::ProxySpec<CreatePThreadKeyProxy,
+                     macho_sps_ci::CreatePThreadKey>::dispatch,
+      CreatePThreadKey.Addr);
+  return CreateKey(ES);
 }
 
 void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
@@ -1124,8 +1137,8 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
         return E;
 
     // __objc_imageinfo is valid. Delete the block.
-    for (auto *S : ObjCImageInfo->symbols())
-      G.removeDefinedSymbol(*S);
+    while (ObjCImageInfo->symbols_size() != 0)
+      G.removeDefinedSymbol(**ObjCImageInfo->symbols().begin());
     G.removeBlock(ObjCImageInfoBlock);
   } else {
     LLVM_DEBUG({
@@ -1771,6 +1784,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
+
+  if (Opts.TargetTriple)
+    B.template addLoadCommand<MachO::LC_TARGET_TRIPLE>(*Opts.TargetTriple);
 
   using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
   for (auto &LD : Opts.LoadDylibs) {

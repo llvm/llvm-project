@@ -97,7 +97,7 @@ define i32 @test_sroa_phi_gep_global(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN:%.*]] = load i32, ptr getelementptr inbounds ([[PAIR:%.*]], ptr @g, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @g, i64 4), align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHI_SROA_PHI_SROA_SPECULATE_LOAD_IF_THEN]], [[IF_THEN]] ]
@@ -756,7 +756,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !2 = !{!"branch_weights", i32 7, i32 11}
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}

@@ -164,7 +164,10 @@ define float @roundeven_f32(float %x) #0 {
 
 define float @uitofp_f32_i32(i32 %x) #0 {
 ; CHECK-LABEL: uitofp_f32_i32:
-; CHECK: ldc1
+; CHECK: lui
+; CHECK: sw
+; CHECK: mtc1
+; CHECK: mthc1
 ; CHECK: ldc1
 ; CHECK: cvt.s.d
   %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -222,7 +225,8 @@ define float @exp2_f32(float %x) #0 {
 
 define float @rint_f32(float %x) #0 {
 ; CHECK-LABEL: rint_f32:
-; CHECK: jal rintf
+; CHECK-R2: jal rintf
+; CHECK-R6: rint.s
   %val = call float @llvm.experimental.constrained.rint.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -467,7 +471,10 @@ define double @roundeven_f64(double %x) #0 {
 
 define double @uitofp_f64_i32(i32 %x) #0 {
 ; CHECK-LABEL: uitofp_f64_i32:
-; CHECK: ldc1 
+; CHECK: lui
+; CHECK: sw
+; CHECK: mtc1
+; CHECK: mthc1
 ; CHECK: ldc1
   %val = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
@@ -524,7 +531,8 @@ define double @exp2_f64(double %x) #0 {
 
 define double @rint_f64(double %x) #0 {
 ; CHECK-LABEL: rint_f64:
-; CHECK: jal rint
+; CHECK-R2: jal rint
+; CHECK-R6: rint.d
   %val = call double @llvm.experimental.constrained.rint.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }

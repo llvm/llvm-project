@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// Missing wchar string formatting functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cwchar>
 #include <ctime>
 #include <cstdarg>

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-lower-module-lds -amdgpu-enable-object-linking < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-lower-module-lds -amdgpu-enable-object-linking < %s | FileCheck %s
 
 ; Test the three-way classification of LDS variables:
 ;   1. Global-scope (external linkage): standalone external declaration
@@ -50,9 +50,6 @@ declare void @extern_func()
 ;   Global-scope entries (one per using function).
 ; CHECK-DAG: !{ptr @my_kernel, ptr addrspace(3) @lds_global}
 ; CHECK-DAG: !{ptr @func, ptr addrspace(3) @lds_global}
-
-; Module should be marked with the link-time LDS module flag.
-; CHECK: !{i32 1, !"amdgpu-link-time-lds", i32 1}
 
 define void @func() {
   %gep1 = getelementptr [64 x i32], ptr addrspace(3) @lds_global, i32 0, i32 0

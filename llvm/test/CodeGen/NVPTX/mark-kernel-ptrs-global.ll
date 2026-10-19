@@ -71,8 +71,8 @@ define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%st
 ; PTXO-NEXT:    .reg .b64 %rd<2>;
 ; PTXO-EMPTY:
 ; PTXO-NEXT:  // %bb.0:
-; PTXO-NEXT:    ld.param.b32 %r1, [ptr_as_int_aggr_param_1];
 ; PTXO-NEXT:    ld.param.b64 %rd1, [ptr_as_int_aggr_param_0];
+; PTXO-NEXT:    ld.param.b32 %r1, [ptr_as_int_aggr_param_1];
 ; PTXO-NEXT:    st.b32 [%rd1], %r1;
 ; PTXO-NEXT:    ret;
   %i = load i64, ptr %s, align 8

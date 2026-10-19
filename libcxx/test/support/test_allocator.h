@@ -195,8 +195,14 @@ public:
       ++stats_->destroy_count;
     p->~T();
   }
-  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator& y) { return x.data_ == y.data_; }
-  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator& y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator<U>& y) {
+    return x.data_ == static_cast<const test_allocator&>(y).data_;
+  }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator<U>& y) {
+    return !(x == y);
+  }
 
   TEST_CONSTEXPR int get_data() const { return data_; }
   TEST_CONSTEXPR int get_id() const { return id_; }
@@ -259,8 +265,14 @@ public:
   TEST_CONSTEXPR int get_id() const { return id_; }
   TEST_CONSTEXPR int get_data() const { return data_; }
 
-  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator& y) { return x.data_ == y.data_; }
-  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator& y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator<U>& y) {
+    return x.data_ == static_cast<const test_allocator&>(y).data_;
+  }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator<U>& y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -284,11 +296,15 @@ public:
 
   TEST_CONSTEXPR_CXX14 other_allocator select_on_container_copy_construction() const { return other_allocator(-2); }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator==(const other_allocator& x, const other_allocator& y) {
-    return x.data_ == y.data_;
+  template <class U>
+  TEST_CONSTEXPR_CXX14 friend bool operator==(const other_allocator& x, const other_allocator<U>& y) {
+    return x.data_ == y.get_data();
   }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator!=(const other_allocator& x, const other_allocator& y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR_CXX14 friend bool operator!=(const other_allocator& x, const other_allocator<U>& y) {
+    return !(x == y);
+  }
   TEST_CONSTEXPR int get_data() const { return data_; }
 
   typedef std::true_type propagate_on_container_copy_assignment;
@@ -361,6 +377,18 @@ public:
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
   TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+
+  template <class U>
+  TEST_CONSTEXPR friend bool operator==(const TaggingAllocator&, const TaggingAllocator<U>&) {
+    return true;
+  }
+
+#if TEST_STD_VER < 20
+  template <class U>
+  TEST_CONSTEXPR friend bool operator!=(const TaggingAllocator&, const TaggingAllocator<U>&) {
+    return false;
+  }
+#endif
 };
 
 template <std::size_t MaxAllocs>
@@ -393,21 +421,30 @@ namespace detail {
 template <class T>
 class thread_unsafe_shared_ptr {
 public:
-  thread_unsafe_shared_ptr() = default;
-
-  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr(const thread_unsafe_shared_ptr& other) : block(other.block) {
+  // as it's internal and technically not nullable, we don't care about null pointer state
+  // and don't need destructive move
+  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr(const thread_unsafe_shared_ptr& other) // TODO: TEST_NOEXCEPT
+      : block(other.block) {
     ++block->ref_count;
   }
-
-  TEST_CONSTEXPR_CXX20 ~thread_unsafe_shared_ptr() {
-    --block->ref_count;
-    if (block->ref_count != 0)
-      return;
-    typedef std::allocator_traits<std::allocator<control_block> > allocator_traits;
-    std::allocator<control_block> alloc;
-    allocator_traits::destroy(alloc, block);
-    allocator_traits::deallocate(alloc, block, 1);
+  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr(thread_unsafe_shared_ptr&& other) TEST_NOEXCEPT : block(other.block) {
+    ++block->ref_count;
   }
+  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr& operator=(const thread_unsafe_shared_ptr& other) TEST_NOEXCEPT {
+    // self-assignment safe order
+    ++other.block->ref_count;
+    detach_control_block();
+    block = other.block;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX20 thread_unsafe_shared_ptr& operator=(thread_unsafe_shared_ptr&& other) TEST_NOEXCEPT {
+    // self-assignment safe order
+    ++other.block->ref_count;
+    detach_control_block();
+    block = other.block;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX20 ~thread_unsafe_shared_ptr() TEST_NOEXCEPT { detach_control_block(); }
 
   TEST_CONSTEXPR const T& operator*() const { return block->content; }
   TEST_CONSTEXPR const T* operator->() const { return &block->content; }
@@ -423,6 +460,18 @@ private:
     std::size_t ref_count = 1;
     T content;
   };
+
+  thread_unsafe_shared_ptr() = default;
+
+  TEST_CONSTEXPR_CXX20 void detach_control_block() {
+    --block->ref_count;
+    if (block->ref_count != 0)
+      return;
+    typedef std::allocator_traits<std::allocator<control_block> > allocator_traits;
+    std::allocator<control_block> alloc;
+    allocator_traits::destroy(alloc, block);
+    allocator_traits::deallocate(alloc, block, 1);
+  }
 
   control_block* block = nullptr;
 
@@ -508,7 +557,17 @@ struct SocccAllocator {
 
   SocccAllocator select_on_container_copy_construction() const { return SocccAllocator(count_ + 1); }
 
-  bool operator==(const SocccAllocator&) const { return true; }
+  template <class U>
+  bool operator==(const SocccAllocator<U>&) const {
+    return true;
+  }
+
+#if TEST_STD_VER < 20
+  template <class U>
+  bool operator!=(const SocccAllocator<U>&) const {
+    return false;
+  }
+#endif
 
   using propagate_on_container_copy_assignment = std::false_type;
   using propagate_on_container_move_assignment = std::false_type;

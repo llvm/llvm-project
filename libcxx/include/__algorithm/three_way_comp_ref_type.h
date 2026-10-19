@@ -19,17 +19,17 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Comp>
 struct __debug_three_way_comp {
   _Comp& __comp_;
-  _LIBCPP_HIDE_FROM_ABI constexpr __debug_three_way_comp(_Comp& __c) : __comp_(__c) {}
+  constexpr __debug_three_way_comp(_Comp& __c) : __comp_(__c) {}
 
   template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(const _Tp& __x, const _Up& __y) {
+  constexpr auto operator()(const _Tp& __x, const _Up& __y) {
     auto __r = __comp_(__x, __y);
     if constexpr (__comparison_category<decltype(__comp_(__x, __y))>)
       __do_compare_assert(__y, __x, __r);
@@ -37,7 +37,7 @@ struct __debug_three_way_comp {
   }
 
   template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __x, _Up& __y) {
+  constexpr auto operator()(_Tp& __x, _Up& __y) {
     auto __r = __comp_(__x, __y);
     if constexpr (__comparison_category<decltype(__comp_(__x, __y))>)
       __do_compare_assert(__y, __x, __r);
@@ -45,7 +45,7 @@ struct __debug_three_way_comp {
   }
 
   template <class _LHS, class _RHS, class _Order>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __do_compare_assert(_LHS& __l, _RHS& __r, _Order __o) {
+  constexpr void __do_compare_assert(_LHS& __l, _RHS& __r, _Order __o) {
     _Order __expected = __o;
     if (__o == _Order::less)
       __expected = _Order::greater;
@@ -67,8 +67,8 @@ template <class _Comp>
 using __three_way_comp_ref_type _LIBCPP_NODEBUG = _Comp&;
 #  endif
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H

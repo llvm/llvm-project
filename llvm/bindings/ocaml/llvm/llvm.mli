@@ -394,6 +394,91 @@ module ModuleFlagBehavior :sig
   | AppendUnique
 end
 
+module GEPNoWrapFlags : sig
+  val none : int
+  val inbounds : int
+  val nusw : int
+  val nuw : int
+end
+
+(** {6 Data Layout} *)
+
+module Endian : sig
+  type t =
+  | Big
+  | Little
+end
+
+module DataLayout : sig
+  type t
+
+  (** [of_string rep] parses the data layout string representation [rep].
+      See the constructor [llvm::DataLayout::DataLayout]. *)
+  val of_string : string -> t
+
+  (** [as_string dl] is the string representation of the data layout [dl].
+      See the method [llvm::DataLayout::getStringRepresentation]. *)
+  val as_string : t -> string
+
+  (** Returns the byte order of a target, either [Endian.Big] or
+      [Endian.Little].
+      See the method [llvm::DataLayout::isLittleEndian]. *)
+  val byte_order : t -> Endian.t
+
+  (** Returns the pointer size in bytes for a target.
+      See the method [llvm::DataLayout::getPointerSize]. *)
+  val pointer_size : t -> int
+
+  (** Returns the integer type that is the same size as a pointer on a target.
+      See the method [llvm::DataLayout::getIntPtrType]. *)
+  val intptr_type : llcontext -> t -> lltype
+
+  (** Returns the pointer size in bytes for a target in a given address space.
+      See the method [llvm::DataLayout::getPointerSize]. *)
+  val qualified_pointer_size : int -> t -> int
+
+  (** Returns the integer type that is the same size as a pointer on a target
+      in a given address space.
+      See the method [llvm::DataLayout::getIntPtrType]. *)
+  val qualified_intptr_type : llcontext -> int -> t -> lltype
+
+  (** Computes the size of a type in bits for a target.
+      See the method [llvm::DataLayout::getTypeSizeInBits]. *)
+  val size_in_bits : lltype -> t -> Int64.t
+
+  (** Computes the storage size of a type in bytes for a target.
+      See the method [llvm::DataLayout::getTypeStoreSize]. *)
+  val store_size : lltype -> t -> Int64.t
+
+  (** Computes the ABI size of a type in bytes for a target.
+      See the method [llvm::DataLayout::getTypeAllocSize]. *)
+  val abi_size : lltype -> t -> Int64.t
+
+  (** Computes the ABI alignment of a type in bytes for a target.
+      See the method [llvm::DataLayout::getTypeABISize]. *)
+  val abi_align : lltype -> t -> int
+
+  (** Computes the call frame alignment of a type in bytes for a target.
+      See the method [llvm::DataLayout::getTypeABISize]. *)
+  val stack_align : lltype -> t -> int
+
+  (** Computes the preferred alignment of a type in bytes for a target.
+      See the method [llvm::DataLayout::getTypeABISize]. *)
+  val preferred_align : lltype -> t -> int
+
+  (** Computes the preferred alignment of a global variable in bytes for
+      a target. See the method [llvm::DataLayout::getPreferredAlignment]. *)
+  val preferred_align_of_global : llvalue -> t -> int
+
+  (** Computes the structure element that contains the byte offset for a target.
+      See the method [llvm::StructLayout::getElementContainingOffset]. *)
+  val element_at_offset : lltype -> Int64.t -> t -> int
+
+  (** Computes the byte offset of the indexed struct element for a target.
+      See the method [llvm::StructLayout::getElementContainingOffset]. *)
+  val offset_of_element : lltype -> int -> t -> Int64.t
+end
+
 (** {6 Iteration} *)
 
 (** [Before b] and [At_end a] specify positions from the start of the ['b] list
@@ -525,14 +610,13 @@ val target_triple: llmodule -> string
     the string [triple]. See the method [llvm::Module::setTargetTriple]. *)
 val set_target_triple: string -> llmodule -> unit
 
-(** [data_layout m] is the data layout specifier for the module [m], something
-    like [e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-...-a0:0:64-f80:128:128]. See the
-    method [llvm::Module::getDataLayout]. *)
-val data_layout: llmodule -> string
+(** [data_layout m] is the data layout for the module [m].
+    See the method [llvm::Module::getDataLayout]. *)
+val data_layout: llmodule -> DataLayout.t
 
-(** [set_data_layout s m] changes the data layout specifier for the module [m]
-    to the string [s]. See the method [llvm::Module::setDataLayout]. *)
-val set_data_layout: string -> llmodule -> unit
+(** [set_data_layout dl m] changes the data layout specifier for the module [m]
+    to [dl]. See the method [llvm::Module::setDataLayout]. *)
+val set_data_layout: DataLayout.t -> llmodule -> unit
 
 (** [dump_module m] prints the .ll representation of the module [m] to standard
     error. See the method [llvm::Module::dump]. *)
@@ -1075,18 +1159,6 @@ val aggregate_element : llvalue -> int -> llvalue option
 
 (** {7 Constant expressions} *)
 
-(** [align_of ty] returns the alignof constant for the type [ty]. This is
-    equivalent to [const_ptrtoint (const_gep (const_null (pointer_type {i8,ty}))
-    (const_int i32_type 0) (const_int i32_type 1)) i32_type], but considerably
-    more readable.  See the method [llvm::ConstantExpr::getAlignOf]. *)
-val align_of : lltype -> llvalue
-
-(** [size_of ty] returns the sizeof constant for the type [ty]. This is
-    equivalent to [const_ptrtoint (const_gep (const_null (pointer_type ty))
-    (const_int i32_type 1)) i64_type], but considerably more readable.
-    See the method [llvm::ConstantExpr::getSizeOf]. *)
-val size_of : lltype -> llvalue
-
 (** [const_neg c] returns the arithmetic negation of the constant [c].
     See the method [llvm::ConstantExpr::getNeg]. *)
 val const_neg : llvalue -> llvalue
@@ -1133,16 +1205,21 @@ val const_nuw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
 
-(** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
-    with source element type [srcty] and the constant integers indices from the
-    array [indices].
-    See the method [llvm::ConstantExpr::getGetElementPtr]. *)
-val const_gep : lltype -> llvalue -> llvalue array -> llvalue
+(** [const_ptradd pc offset flags] returns the constant ptradd
+    (getelementptr i8) of [pc] with constant [offset] and the given
+    {!GEPNoWrapFlags} no-wrap flags (combined with [lor]).
+    See the method [llvm::ConstantExpr::getPtrAdd]. *)
+val const_ptradd : llvalue -> llvalue -> int -> llvalue
 
-(** [const_in_bounds_gep ty pc indices] returns the constant [getElementPtr] of
-    [pc] with the constant integers indices from the array [indices].
-    See the method [llvm::ConstantExpr::getInBoundsGetElementPtr]. *)
-val const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
+(** [const_ptradd_from_indices dl srcty pc indices flags] returns the constant
+    ptradd of [pc] with the offset derived from the data layout [dl], the
+    source element type [srcty] and the constant integers indices from the
+    array [indices]. The flags are {!GEPNoWrapFlags} (combined with [lor]).
+    The result may be [None] if the indices cannot be converted to ptradd
+    representation.
+    See the method [llvm::ConstantExpr::getGetElementPtr]. *)
+val const_ptradd_from_indices : DataLayout.t -> lltype -> llvalue ->
+                                llvalue array -> int -> llvalue option
 
 (** [const_trunc c ty] returns the constant truncation of integer constant [c]
     to the smaller integer type [ty].
@@ -1850,16 +1927,15 @@ val fold_successors : (llbasicblock -> 'a -> 'a) -> llvalue -> 'a -> 'a
 
 (** {7 Operations on branches} *)
 
-(** [is_conditional v] returns true if the branch instruction [v] is conditional.
-    See the method [llvm::BranchInst::isConditional]. *)
+(** [is_conditional v] returns true if the branch instruction [v] is conditional. *)
 val is_conditional : llvalue -> bool
 
 (** [condition v] return the condition of the branch instruction [v].
-    See the method [llvm::BranchInst::getCondition]. *)
+    See the method [llvm::CondBrInst::getCondition]. *)
 val condition : llvalue -> llvalue
 
 (** [set_condition v c] sets the condition of the branch instruction [v] to the value [c].
-    See the method [llvm::BranchInst::setCondition]. *)
+    See the method [llvm::CondBrInst::setCondition]. *)
 val set_condition : llvalue -> llvalue -> unit
 
 (** [get_branch c] returns a description of the branch instruction [c]. *)

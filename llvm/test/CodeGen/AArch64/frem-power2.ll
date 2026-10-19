@@ -665,9 +665,8 @@ define float @frem2_const_sitofp(float %x, i32 %sa) {
 ; CHECK-GI-LABEL: frem2_const_sitofp:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    and w9, w0, #0x1f
 ; CHECK-GI-NEXT:    fmov s0, #12.50000000
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w0
 ; CHECK-GI-NEXT:    scvtf s1, w8
 ; CHECK-GI-NEXT:    b fmodf
 entry:
@@ -695,9 +694,8 @@ define float @frem2_constneg_sitofp(float %x, i32 %sa) {
 ; CHECK-GI-LABEL: frem2_constneg_sitofp:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    and w9, w0, #0x1f
 ; CHECK-GI-NEXT:    fmov s0, #-12.50000000
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w0
 ; CHECK-GI-NEXT:    scvtf s1, w8
 ; CHECK-GI-NEXT:    b fmodf
 entry:

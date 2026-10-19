@@ -48,7 +48,7 @@ struct ScalarizerPassOptions {
   bool ScalarizeLoadStore = false;
 };
 
-class ScalarizerPass : public PassInfoMixin<ScalarizerPass> {
+class ScalarizerPass : public OptionalPassInfoMixin<ScalarizerPass> {
   ScalarizerPassOptions Options;
 
 public:

@@ -462,8 +462,7 @@ define void @simple_idiv(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 [[INDEX1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD2]], <vscale x 4 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = udiv <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.masked.udiv.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD2]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP16]], ptr align 4 [[TMP12]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add i64 [[INDEX1]], [[TMP6]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT3]], i64 [[UMAX]])
@@ -512,8 +511,9 @@ define void @simple_memset_trip1024(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[WHILE_END_LOOPEXIT:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
+; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %while.body
@@ -530,10 +530,52 @@ while.end.loopexit:
   ret void
 }
 
+define void @uniform_load_store(ptr noalias %p, ptr noalias %q, ptr noalias %l, i32 %n) #0 {
+; CHECK-LABEL: @uniform_load_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[LOOP:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_L:%.*]] = getelementptr i32, ptr [[L:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP_L]], align 4, !alias.scope [[META13:![0-9]+]], !noalias [[META16:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[Y]], ptr [[GEP]], align 4, !alias.scope [[META13]], !noalias [[META16]]
+; CHECK-NEXT:    store i32 [[Y]], ptr [[Q:%.*]], align 4, !alias.scope [[META16]], !noalias [[META13]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1025
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %gep.l = getelementptr i32, ptr %l, i32 %iv
+  %x = load i32, ptr %gep.l, !alias.scope !7, !noalias !9
+  %y = add i32 %x, 1
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 %y, ptr %gep, !alias.scope !7, !noalias !9
+  store i32 %y, ptr %q, !alias.scope !9, !noalias !7
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv.next, 1025
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
+!5 = distinct !{!5, !6}
+!6 = distinct !{!6, i1 false, !"LVerDomain"}
+!7 = !{!5}
+!8 = distinct !{!8, !6}
+!9 = !{!8}
 
 attributes #0 = { "target-features"="+sve" vscale_range(1,16) }

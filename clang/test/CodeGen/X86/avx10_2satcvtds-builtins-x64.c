@@ -41,6 +41,42 @@ unsigned test_mm_cvtts_ss_u32(__m128 __A) {
   return _mm_cvtts_roundss_u32(__A, _MM_FROUND_NO_EXC);
 }
 
+unsigned long long test_mm_cvtts_ss_u64(__m128 __A) {
+  // CHECK-LABEL: @test_mm_cvtts_ss_u64(
+  // CHECK: @llvm.x86.avx10.vcvttss2usis64(<4 x float>
+  return _mm_cvtts_ss_u64(__A);
+}
+
+unsigned long long test_mm_cvtts_sd_u64(__m128d __A) {
+  // CHECK-LABEL: @test_mm_cvtts_sd_u64(
+  // CHECK: @llvm.x86.avx10.vcvttsd2usis64(<2 x double>
+  return _mm_cvtts_sd_u64(__A);
+}
+
+long long test_mm_cvtts_ss_i64(__m128 __A) {
+  // CHECK-LABEL: @test_mm_cvtts_ss_i64(
+  // CHECK: @llvm.x86.avx10.vcvttss2sis64(<4 x float>
+  return _mm_cvtts_ss_i64(__A);
+}
+
+long long test_mm_cvtts_ss_si64(__m128 __A) {
+  // CHECK-LABEL: @test_mm_cvtts_ss_si64(
+  // CHECK: @llvm.x86.avx10.vcvttss2sis64(<4 x float>
+  return _mm_cvtts_ss_si64(__A);
+}
+
+long long test_mm_cvtts_sd_si64(__m128d __A) {
+  // CHECK-LABEL: @test_mm_cvtts_sd_si64(
+  // CHECK: @llvm.x86.avx10.vcvttsd2sis64(<2 x double>
+  return _mm_cvtts_sd_si64(__A);
+}
+
+long long test_mm_cvtts_sd_i64(__m128d __A) {
+  // CHECK-LABEL: @test_mm_cvtts_sd_i64(
+  // CHECK: @llvm.x86.avx10.vcvttsd2sis64(<2 x double>
+  return _mm_cvtts_sd_i64(__A);
+}
+
 // vector
 // 128 bit
 __m128i test_mm_cvtts_pd_epi64(__m128d A){

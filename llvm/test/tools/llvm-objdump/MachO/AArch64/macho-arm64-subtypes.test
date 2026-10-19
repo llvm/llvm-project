@@ -7,11 +7,15 @@
 # RUN: yaml2obj %s -o %tarm64e.o -DSUBTYPE=0x2
 # RUN: llvm-objdump -p %tarm64e.o | FileCheck --strict-whitespace %s --check-prefixes="COMMON,E"
 
+# RUN: yaml2obj %s -o %tarm64e.x1.o -DSUBTYPE=0xC
+# RUN: llvm-objdump -p %tarm64e.x1.o | FileCheck --strict-whitespace %s --check-prefixes="COMMON,E_X1"
+
 # COMMON:      Mach header
 # COMMON-NEXT:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
 # ALL-NEXT:    MH_MAGIC_64   ARM64        ALL  0x00      OBJECT     0          0 0x00000000
 # V8-NEXT:     MH_MAGIC_64   ARM64         V8  0x00      OBJECT     0          0 0x00000000
 # E-NEXT:      MH_MAGIC_64   ARM64          E  0x00      OBJECT     0          0 0x00000000
+# E_X1-NEXT:   MH_MAGIC_64   ARM64       E.X1  0x00      OBJECT     0          0 0x00000000
 
 --- !mach-o
 FileHeader:

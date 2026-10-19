@@ -205,6 +205,50 @@ def DistinctAttr : DialectAttribute<(attr
   Attribute:$referencedAttr
 )>;
 
+// Make easy to disable until version number gets added.
+class EnableAffineMapPrintingJuly2026<dag d> : DialectAttribute<d>;
+
+def AffineMapAttr : EnableAffineMapPrintingJuly2026<(attr
+  WithParser<"succeeded(readAffineMap($_reader, context, $_var))",
+    WithPrinter<"writeAffineMap($_writer, $_name)",
+    WithType<"AffineMap">>>:$value
+)>;
+
+def AffineExpr :
+  WithParser<"succeeded(readAffineExpr($_reader, context, $_var))",
+  WithBuilder<"$_args",
+  WithPrinter<"writeAffineExpr($_writer, $_getter)",
+  WithType<"AffineExpr">>>>;
+def AffineExprList : List<AffineExpr>;
+
+// Similar to AffineMapAttr, IntegerSetAttr has everything going via IntegerSet
+// and getValue, so extra indirections.
+def IntegerSetConstraints : Array<AffineExprList> {
+  let cGetter = "$_attrType.getValue().getConstraints()";
+}
+
+def IntegerSetEqFlags : ArrayWithKnownSize<BoolList, "constraints.size()"> {
+  let cGetter = "$_attrType.getValue().getEqFlags()";
+}
+
+class EnableIntegerSetPrintingJuly2026<dag d> : DialectType<d>;
+
+def IntegerSetAttr : EnableIntegerSetPrintingJuly2026<(attr
+  WithGetter<"$_attrType.getValue().getNumDims()", VarInt>:$numDims,
+  WithGetter<"$_attrType.getValue().getNumSymbols()", VarInt>:$numSymbols,
+  IntegerSetConstraints:$constraints,
+  IntegerSetEqFlags:$eqFlags
+)> {
+  let cBuilder = "IntegerSetAttr::get(IntegerSet::get(numDims, numSymbols, constraints, eqFlags))";
+}
+
+class EnableStridedPrintingJuly2026<dag d> : DialectAttribute<d>;
+
+def StridedLayoutAttr : EnableStridedPrintingJuly2026<(attr
+  SignedVarInt:$offset,
+  Array<SignedVarIntList>:$strides
+)>;
+
 // Types
 // -----
 
@@ -227,9 +271,22 @@ def FunctionType : DialectType<(type
   Array<Type>:$results
 )>;
 
+def GraphType : DialectType<(type
+  Array<Type>:$inputs,
+  Array<Type>:$results
+)>;
+
 def BFloat16Type : DialectType<(type)>;
 
 def Float16Type : DialectType<(type)>;
+
+// Make it easy to stage the addition of new floating point types so that
+// readers can be updated first. This is enabled by default, but can be flipped
+// to DialectTypeNoPrint if staging needed.
+// Note: this will be removed post next release.
+class EnableFloatPrintingJune2026<dag d> : DialectType<d>;
+
+def FloatTF32Type : EnableFloatPrintingJune2026<(type)>;
 
 def Float32Type : DialectType<(type)>;
 
@@ -238,6 +295,28 @@ def Float64Type : DialectType<(type)>;
 def Float80Type : DialectType<(type)>;
 
 def Float128Type : DialectType<(type)>;
+
+def Float8E5M2Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E5M2FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3B11FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E3M4Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float4E2M1FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float6E2M3FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float6E3M2FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E8M0FNUType : EnableFloatPrintingJune2026<(type)>;
 
 def ComplexType : DialectType<(type
   Type:$elementType
@@ -294,6 +373,8 @@ def UnrankedTensorType : DialectType<(type
   Type:$elementType
 )>;
 
+def TokenType : DialectType<(type)>;
+
 let cType = "VectorType" in {
 def VectorType : DialectType<(type
   Array<SignedVarIntList>:$shape,
@@ -346,6 +427,9 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     SparseElementsAttr,
     DistinctAttr,
     FileLineColRange,
+    AffineMapAttr,
+    IntegerSetAttr,
+    StridedLayoutAttr,
   ];
 }
 
@@ -371,7 +455,21 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     UnrankedMemRefTypeWithMemSpace,
     UnrankedTensorType,
     VectorType,
-    VectorTypeWithScalableDims
+    VectorTypeWithScalableDims,
+    FloatTF32Type,
+    Float8E5M2Type,
+    Float8E4M3Type,
+    Float8E4M3FNType,
+    Float8E5M2FNUZType,
+    Float8E4M3FNUZType,
+    Float8E4M3B11FNUZType,
+    Float8E3M4Type,
+    Float4E2M1FNType,
+    Float6E2M3FNType,
+    Float6E3M2FNType,
+    Float8E8M0FNUType,
+    TokenType,
+    GraphType
   ];
 }
 

@@ -15,13 +15,13 @@
 
 #include <cassert>
 #include <level_zero/ze_api.h>
-#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 
 #include "L0Defs.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -33,36 +33,6 @@ class L0DeviceTy;
 class L0ContextTy;
 
 constexpr static int32_t MaxMemKind = TARGET_ALLOC_LAST + 1;
-
-struct DynamicMemHeapTy {
-  /// Base address memory is allocated from.
-  uintptr_t AllocBase = 0;
-  /// Minimal size served by the current heap.
-  size_t BlockSize = 0;
-  /// Max size served by the current heap.
-  size_t MaxSize = 0;
-  /// Available memory blocks.
-  uint32_t NumBlocks = 0;
-  /// Number of block descriptors.
-  uint32_t NumBlockDesc = 0;
-  /// Number of block counters.
-  uint32_t NumBlockCounter = 0;
-  /// List of memory block descriptors.
-  uint64_t *BlockDesc = nullptr;
-  /// List of memory block counters.
-  uint32_t *BlockCounter = nullptr;
-};
-
-struct DynamicMemPoolTy {
-  /// Location of device memory blocks.
-  void *PoolBase = nullptr;
-  /// Heap size common to all heaps.
-  size_t HeapSize = 0;
-  /// Number of heaps available.
-  uint32_t NumHeaps = 0;
-  /// Heap descriptors (using fixed-size array to simplify memory allocation).
-  DynamicMemHeapTy HeapDesc[8];
-};
 
 /// Memory allocation information used in memory allocation/deallocation.
 struct MemAllocInfoTy {
@@ -240,7 +210,7 @@ class MemAllocatorTy {
     /// Map from allocated pointer to allocation information.
     std::map<void *, MemAllocInfoTy> Map;
     /// Map from target alloc kind to number of implicit arguments.
-    std::array<uint32_t, MaxMemKind> NumImplicitArgs;
+    std::array<uint32_t, MaxMemKind> NumImplicitArgs{};
 
   public:
     /// Add allocation information to the map.
@@ -250,13 +220,20 @@ class MemAllocatorTy {
     /// Remove allocation information for the given memory location.
     bool remove(void *Ptr, MemAllocInfoTy *Removed = nullptr);
 
-    /// Finds allocation information for the given memory location.
+    /// Finds allocation information for the given memory location. Ptr may
+    /// point anywhere inside the allocation.
     const MemAllocInfoTy *find(void *Ptr) const {
-      auto AllocInfo = Map.find(Ptr);
-      if (AllocInfo == Map.end())
+      if (Map.empty())
         return nullptr;
-      else
-        return &AllocInfo->second;
+      auto I = Map.upper_bound(Ptr);
+      if (I == Map.begin())
+        return nullptr;
+      --I;
+      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t Base = reinterpret_cast<uintptr_t>(I->first);
+      if (PtrAsInt >= Base + I->second.ReqSize)
+        return nullptr;
+      return &I->second;
     }
 
     /// Check if the map contains the given pointer and offset.
@@ -287,6 +264,11 @@ class MemAllocatorTy {
 
   /// L0 context to use.
   const L0ContextTy *L0Context = nullptr;
+  /// ze_context used for allocations. Normally matches
+  /// L0Context->getZeContext(), but for pools owned by a user-created
+  /// plugin context this holds that context's ze_context so memory ends
+  /// up in the ze_context the caller's queues use.
+  ze_context_handle_t ZeContext = nullptr;
   /// L0 device to use.
   L0DeviceTy *Device = nullptr;
   /// Whether the device supports large memory allocation.
@@ -377,8 +359,11 @@ public:
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
   ~MemAllocatorTy() = default;
 
-  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
-  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
+  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option,
+                        ze_context_handle_t ZeCtx);
+  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option,
+                     ze_context_handle_t ZeCtx);
+  ze_context_handle_t getZeContext() const { return ZeContext; }
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
   /// Release resources and report statistics if requested.
@@ -421,183 +406,6 @@ public:
     return Ret;
   }
 }; /// MemAllocatorTy
-
-// Simple generic wrapper to reuse objects
-// objects must have zero argument accessible constructor.
-template <class ObjTy> class ObjPool {
-  // Protection.
-  std::unique_ptr<std::mutex> Mtx;
-  // List of Objects.
-  std::list<ObjTy *> Objects;
-
-public:
-  ObjPool() { Mtx.reset(new std::mutex); }
-
-  ObjPool(const ObjPool &) = delete;
-  ObjPool(ObjPool &) = delete;
-  ObjPool &operator=(const ObjPool &) = delete;
-  ObjPool &operator=(const ObjPool &&) = delete;
-
-  ObjTy *get() {
-    if (!Objects.empty()) {
-      std::lock_guard<std::mutex> Lock(*Mtx);
-      if (!Objects.empty()) {
-        const auto Ret = Objects.back();
-        Objects.pop_back();
-        return Ret;
-      }
-    }
-    return new ObjTy();
-  }
-
-  void release(ObjTy *obj) {
-    std::lock_guard<std::mutex> Lock(*Mtx);
-    Objects.push_back(obj);
-  }
-
-  ~ObjPool() {
-    for (auto Object : Objects)
-      delete Object;
-  }
-};
-
-/// Common event pool used in the plugin. This event pool assumes all events
-/// from the pool are host-visible and use the same event pool flag.
-class EventPoolTy {
-  /// Size of L0 event pool created on demand.
-  size_t PoolSize = 64;
-
-  /// Context of the events.
-  ze_context_handle_t Context = nullptr;
-
-  /// Additional event pool flags common to this pull.
-  uint32_t Flags = 0;
-
-  /// Protection.
-  std::unique_ptr<std::mutex> Mtx;
-
-  /// List of created L0 event pools.
-  std::list<ze_event_pool_handle_t> Pools;
-
-  /// List of free L0 events.
-  std::list<ze_event_handle_t> Events;
-
-#ifdef OMPT_SUPPORT
-  /// Event to OMPT record map. The timestamp information is recorded to the
-  /// OMPT record before the event is recycled.
-  std::unordered_map<ze_event_handle_t, ompt_record_ompt_t *> EventToRecord;
-#endif // OMPT_SUPPORT
-
-public:
-  /// Initialize context, flags, and mutex.
-  Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
-    Context = ContextIn;
-    Flags = FlagsIn;
-    Mtx.reset(new std::mutex);
-    return Plugin::success();
-  }
-
-  /// Destroys L0 resources.
-  Error deinit() {
-    for (auto E : Events)
-      CALL_ZE_RET_ERROR(zeEventDestroy, E);
-    for (auto P : Pools)
-      CALL_ZE_RET_ERROR(zeEventPoolDestroy, P);
-    return Plugin::success();
-  }
-
-  /// Get a free event from the pool.
-  Expected<ze_event_handle_t> getEvent();
-
-  /// Return an event to the pool.
-  Error releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device);
-};
-
-/// Staging buffer.
-/// A single staging buffer is not enough when batching is enabled since there
-/// can be multiple pending copy operations.
-class StagingBufferTy {
-  /// Context for L0 calls.
-  ze_context_handle_t Context = nullptr;
-  /// Max allowed size for staging buffer.
-  size_t Size = L0StagingBufferSize;
-  /// Number of buffers allocated together.
-  size_t Count = L0StagingBufferCount;
-  /// Buffers increasing by Count if a new buffer is required.
-  llvm::SmallVector<void *> Buffers;
-  /// Next buffer location in the buffers.
-  size_t Offset = 0;
-
-  Expected<void *> addBuffers() {
-    ze_host_mem_alloc_desc_t AllocDesc{ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC,
-                                       nullptr, 0};
-    void *Ret = nullptr;
-    size_t AllocSize = Size * Count;
-    CALL_ZE_RET_ERROR(zeMemAllocHost, Context, &AllocDesc, AllocSize,
-                      L0DefaultAlignment, &Ret);
-    Buffers.push_back(Ret);
-    return Ret;
-  }
-
-public:
-  StagingBufferTy() = default;
-  StagingBufferTy(const StagingBufferTy &) = delete;
-  StagingBufferTy(StagingBufferTy &&) = delete;
-  StagingBufferTy &operator=(const StagingBufferTy &) = delete;
-  StagingBufferTy &operator=(const StagingBufferTy &&) = delete;
-  ~StagingBufferTy() = default;
-
-  Error clear() {
-    for (auto Ptr : Buffers)
-      CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
-    Context = nullptr;
-    return Plugin::success();
-  }
-
-  bool initialized() const { return Context != nullptr; }
-
-  void init(ze_context_handle_t ContextIn, size_t SizeIn, size_t CountIn) {
-    Context = ContextIn;
-    Size = SizeIn;
-    Count = CountIn;
-  }
-
-  void reset() { Offset = 0; }
-
-  /// Always return the first buffer.
-  Expected<void *> get() {
-    if (Size == 0 || Count == 0)
-      return nullptr;
-    return Buffers.empty() ? addBuffers() : Buffers.front();
-  }
-
-  /// Return the next available buffer.
-  Expected<void *> getNext() {
-    void *Ret = nullptr;
-    if (Size == 0 || Count == 0)
-      return Ret;
-
-    size_t AllocSize = Size * Count;
-    bool NeedToGrow = Buffers.empty() || Offset >= Buffers.size() * AllocSize;
-    if (NeedToGrow) {
-      auto PtrOrErr = addBuffers();
-      if (!PtrOrErr)
-        return PtrOrErr.takeError();
-      Ret = *PtrOrErr;
-    } else
-      Ret = reinterpret_cast<void *>(
-          reinterpret_cast<uintptr_t>(Buffers.back()) + (Offset % AllocSize));
-
-    if (!Ret)
-      return nullptr;
-
-    Offset += Size;
-    return Ret;
-  }
-
-  /// Return either a fixed buffer or next buffer.
-  Expected<void *> get(bool Next) { return Next ? getNext() : get(); }
-};
 
 } // namespace llvm::omp::target::plugin
 

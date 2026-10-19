@@ -134,7 +134,6 @@ public:
     ReversePostOrderTraversal<const Function *> RPOT(&F);
     for (const BasicBlock *BB : RPOT) {
       const Instruction *TI = BB->getTerminator();
-      assert(TI && "blocks must be well formed");
 
       // For conditional branches, we can perform simple conditional propagation on
       // the condition value itself.
@@ -267,8 +266,11 @@ static bool containsGCPtrType(Type *Ty) {
 }
 
 // Debugging aid -- prints a [Begin, End) range of values.
-template<typename IteratorTy>
-static void PrintValueSet(raw_ostream &OS, IteratorTy Begin, IteratorTy End) {
+// Only used inside LLVM_DEBUG below, so it has no instantiations in release
+// builds (NDEBUG); [[maybe_unused]] avoids -Wunused-template in that case.
+template <typename IteratorTy>
+[[maybe_unused]] static void PrintValueSet(raw_ostream &OS, IteratorTy Begin,
+                                           IteratorTy End) {
   OS << "[ ";
   while (Begin != End) {
     OS << **Begin << " ";

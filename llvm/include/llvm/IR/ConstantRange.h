@@ -41,6 +41,7 @@ namespace llvm {
 
 class MDNode;
 class raw_ostream;
+class CmpPredicate;
 struct KnownBits;
 
 /// This class represents a range of values.
@@ -107,6 +108,13 @@ public:
   /// Example: Pred = ult and Other = i8 [2, 5) returns Result = [0, 4)
   LLVM_ABI static ConstantRange
   makeAllowedICmpRegion(CmpInst::Predicate Pred, const ConstantRange &Other);
+
+  /// Produce the smallest range such that all values that may satisfy the given
+  /// predicate with any value contained within Other is contained in the
+  /// returned range. This overload takes a CmpPredicate, which may carry
+  /// samesign information for tighter ranges on unsigned predicates.
+  LLVM_ABI static ConstantRange
+  makeAllowedICmpRegion(CmpPredicate Pred, const ConstantRange &Other);
 
   /// Produce the largest range such that all values in the returned range
   /// satisfy the given predicate with all values contained within Other.
@@ -399,6 +407,13 @@ public:
   LLVM_ABI ConstantRange binaryOp(Instruction::BinaryOps BinOp,
                                   const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting from an
+  /// application of the specified binary operation \p BO (including
+  /// poison-generating flags) to a left hand side of this range and a right
+  /// hand side of \p Other.
+  LLVM_ABI ConstantRange binaryOp(const BinaryOperator &BO,
+                                  const ConstantRange &Other) const;
+
   /// Return a new range representing the possible values resulting
   /// from an application of the specified overflowing binary operator to a
   /// left hand side of this range and a right hand side of \p Other given
@@ -434,18 +449,11 @@ public:
                 PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting
-  /// from a multiplication of a value in this range and a value in \p Other,
-  /// treating both this and \p Other as unsigned ranges.
-  LLVM_ABI ConstantRange multiply(const ConstantRange &Other) const;
-
-  /// Return a new range representing the possible values resulting
-  /// from a multiplication with wrap type \p NoWrapKind of a value in this
-  /// range and a value in \p Other.
-  /// If the result range is disjoint, the preferred range is determined by the
-  /// \p PreferredRangeType.
-  LLVM_ABI ConstantRange
-  multiplyWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
-                     PreferredRangeType RangeType = Smallest) const;
+  /// from a multiplication of a value in this range and a value in \p Other.
+  /// If \p NoWrapKind is set, assume that corresponding wrapping can not
+  /// occur.
+  LLVM_ABI ConstantRange multiply(const ConstantRange &Other,
+                                  unsigned NoWrapKind = 0) const;
 
   /// Return range of possible values for a signed multiplication of this and
   /// \p Other. However, if overflow is possible always return a full range
@@ -501,7 +509,8 @@ public:
 
   /// Return a new range representing the possible values resulting
   /// from a binary-or of a value in this range by a value in \p Other.
-  LLVM_ABI ConstantRange binaryOr(const ConstantRange &Other) const;
+  LLVM_ABI ConstantRange binaryOr(const ConstantRange &Other,
+                                  bool IsDisjoint = false) const;
 
   /// Return a new range representing the possible values resulting
   /// from a binary-xor of a value in this range by a value in \p Other.
@@ -573,6 +582,9 @@ public:
 
   /// Calculate ctpop range.
   LLVM_ABI ConstantRange ctpop() const;
+
+  /// Calculate sqrtFloor range.  See APInt::sqrtFloor().
+  LLVM_ABI ConstantRange sqrtFloor() const;
 
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.

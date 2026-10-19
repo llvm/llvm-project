@@ -31,6 +31,10 @@ LIBC_INLINE void ensure_monotonicity(AbsTimeout &timeout) {
         convert_clock(timeout.get_timespec(), CLOCK_REALTIME, CLOCK_MONOTONIC),
         false);
 
+    // Clamp the timeout to epoch if becomes negative after the conversion.
+    if (!res.has_value() && res.error() == AbsTimeout::Error::BeforeEpoch)
+      res = AbsTimeout::from_timespec(timespec{0, 0}, false);
+
     LIBC_ASSERT(res.has_value());
     if (!res.has_value())
       __builtin_unreachable();

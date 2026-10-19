@@ -16,6 +16,11 @@ def verbose : FF<"verbose", "Enable verbose logging and encoding details">;
 defm convert :
   Eq<"convert",
      "Convert the specified file to the GSYM format.\nSupported files include ELF and mach-o files that will have their debug info (DWARF) and symbol table converted">;
+defm symtab_file :
+  Eq<"symtab-file",
+     "Specify a separate file to read the symbol table from during GSYM conversion.\n"
+     "Use when the symbol table and debug info are in separate files.\n"
+     "Matching architectures are selected automatically for universal binaries">;
 def merged_functions :
   FF<"merged-functions", "When used with --convert, encodes merged function information for functions in debug info that have matching address ranges.\n"
                          "Without this option one function per unique address range will be emitted.\n"
@@ -38,7 +43,7 @@ defm num_threads :
 defm segment_size :
   Eq<"segment-size",
      "Specify the size in bytes of the size the final GSYM file should be segmented into. This allows GSYM files to be split across multiple files">;
-def quiet : FF<"quiet", "Do not output warnings about the debug information">;
+def quiet : FF<"quiet", "Do not output warnings or errors about the debug information. The aggregated counts are still printed">;
 defm address : Eq<"address", "Lookup an address in a GSYM file">;
 def addresses_from_stdin :
   FF<"addresses-from-stdin",
@@ -55,6 +60,18 @@ defm output_version :
   Eq<"output-version",
      "Set the GSYM output version (1 or 2). Default: 1.">;
 def benchmark_reader :
-  FF<"benchmark-reader",
-     "Open a GSYM file and perform a lookup for every function start address to benchmark the reader performance">,
+  Joined<["--"], "benchmark-reader=">,
+  HelpText<"Benchmark reader with start,stride (default: 0,1 = every address)">,
   Flags<[HelpHidden]>;
+def benchmark_reader_all :
+  Flag<["--"], "benchmark-reader">,
+  HelpText<"Benchmark reader by looking up every address">,
+  Flags<[HelpHidden]>;
+def statistics_EQ :
+  Joined<["--"], "statistics=">,
+  HelpText<"Print the size of each section in the input GSYM file(s).\nFormat: text (default), json, or pretty-json">;
+def statistics :
+  Flag<["--"], "statistics">,
+  Alias<statistics_EQ>,
+  AliasArgs<["text"]>,
+  HelpText<"Alias for --statistics=text">;

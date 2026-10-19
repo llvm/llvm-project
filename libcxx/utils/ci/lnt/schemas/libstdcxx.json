@@ -1,0 +1,70 @@
+{
+  "name": "libstdcxx",
+  "metrics": [
+    {
+      "name": "execution_time",
+      "type": "real",
+      "display_name": "Execution Time",
+      "unit": "nanoseconds",
+      "unit_abbrev": "ns"
+    },
+    {
+      "name": "instructions",
+      "type": "real",
+      "display_name": "Instructions Retired",
+      "unit": "instructions",
+      "unit_abbrev": "instr"
+    },
+    {
+      "name": "max_rss",
+      "type": "real",
+      "display_name": "Maximum Resident Set Size",
+      "unit": "megabytes",
+      "unit_abbrev": "mb"
+    },
+    {
+      "name": "cycles",
+      "type": "real",
+      "display_name": "Cycles Elapsed",
+      "unit": "cycles",
+      "unit_abbrev": "cycles"
+    },
+    {
+      "name": "peak_memory",
+      "type": "real",
+      "display_name": "Peak Memory Footprint",
+      "unit": "megabytes",
+      "unit_abbrev": "mb"
+    }
+  ],
+  "commit_fields": [],
+  "machine_fields": [
+    {
+      "name": "hardware",
+      "type": "text",
+      "display_name": "Hardware",
+      "searchable": true
+    },
+    {
+      "name": "os",
+      "type": "text",
+      "display_name": "OS",
+      "searchable": true
+    },
+    {
+      "name": "sdk",
+      "type": "text",
+      "display_name": "SDK"
+    },
+    {
+      "name": "compiler",
+      "type": "text",
+      "display_name": "Compiler"
+    },
+    {
+      "name": "test_suite_commit",
+      "type": "text",
+      "display_name": "Benchmark Suite Commit"
+    }
+  ]
+}

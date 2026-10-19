@@ -6,6 +6,7 @@
 # RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
 # RUN: llvm-gsymutil --address=0 --address=0x100000000 --address=0x100000f90 --address=0x100000faa --address=0x200000000 %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDR
 # RUN: llvm-gsymutil --verbose --address=0x100000000 --address=0x100000f90 --address=0x100000faa %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDRV
+# RUN: llvm-gsymutil --address=0x1000000000 --merged-functions %t.gsym | FileCheck %s --check-prefix=MERGED-ADDR
 # RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
 
 # CONVERT: Input file: {{.*\.yaml\.tmp}}
@@ -53,6 +54,9 @@
 # ADDRV:      LookupResult for 0x0000000100000faa:
 # ADDRV-NEXT: 0x0000000100000faa: _Z3fooi @ /tmp/main.cpp:2 [inlined]
 # ADDRV-NEXT:                     main + 26 @ /tmp/main.cpp:5
+
+# MERGED-ADDR:      Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
+# MERGED-ADDR-NEXT: 0x0000001000000000: error: address 0x1000000000 is not in GSYM
 
 # DUMP:      Header:
 # DUMP-NEXT:   Magic        = 0x4753594d

@@ -62,6 +62,13 @@ ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,
 /// Whether or not to use Key Instructions to determine breakpoint locations.
 DEBUGOPT(DebugKeyInstructions, 1, 0, Benign)
 
+/// Whether or not to use the Dynamic Debugging feature.
+DEBUGOPT(DynamicDebugging, 1, 0, Benign)
+
+/// Flag for testing: discard the dynamic debugging debug module before codegen
+/// if true.
+DEBUGOPT(DiscardDynamicDebuggingDebugModule, 1, 0, Benign)
+
 DEBUGOPT(DebugColumnInfo, 1, 0, Compatible) ///< Whether or not to use column information
                                            ///< in debug info.
 
@@ -124,6 +131,9 @@ DEBUGOPT(CodeViewCommandLine, 1, 0, Compatible)
 
 /// Whether emit extra debug info for sample pgo profile collection.
 DEBUGOPT(DebugInfoForProfiling, 1, 0, Compatible)
+
+/// Whether to record the sysroot path or scrub it from debug info.
+DEBUGOPT(DebugRecordSysroot, 1, 1, Compatible)
 
 /// Whether to emit DW_TAG_template_alias for template aliases.
 DEBUGOPT(DebugTemplateAlias, 1, 0, Compatible)

@@ -111,3 +111,35 @@ namespace cwg1070 { // cwg1070: 3.5
   C c = {};
 #endif
 } // namespace cwg1070
+
+namespace cwg1094 { // cwg1094: 24
+#if __cplusplus >= 201103L
+enum class E : bool { Zero, One };
+constexpr E from_double(double d) { return static_cast<E>(d); }
+
+static_assert(static_cast<E>(0.0) == E::Zero, "");
+static_assert(static_cast<E>(-0.0) == E::Zero, "");
+static_assert(static_cast<E>(0.5) == E::One, "");
+static_assert(static_cast<E>(-0.5) == E::One, "");
+static_assert(static_cast<E>(2.5) == E::One, "");
+static_assert(static_cast<E>(__builtin_nan("")) == E::One, "");
+
+static_assert(from_double(0.0) == E::Zero, "");
+static_assert(from_double(-0.0) == E::Zero, "");
+static_assert(from_double(0.5) == E::One, "");
+static_assert(from_double(-0.5) == E::One, "");
+static_assert(from_double(2.5) == E::One, "");
+static_assert(from_double(__builtin_nan("")) == E::One, "");
+
+enum class G : unsigned char { Zero, One, Two };
+
+static_assert(static_cast<G>(0.0) == G::Zero, "");
+static_assert(static_cast<G>(-0.0) == G::Zero, "");
+static_assert(static_cast<G>(0.5) == G::Zero, "");
+static_assert(static_cast<G>(-0.5) == G::Zero, "");
+static_assert(static_cast<G>(2.5) == G::Two, "");
+static_assert(static_cast<G>(__builtin_nan("")) == G::Zero, "");
+// since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+//   since-cxx11-note@-2 {{value NaN is outside the range of representable values of type 'G'}}
+#endif
+} // namespace cwg1094

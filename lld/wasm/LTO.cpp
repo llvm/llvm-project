@@ -42,6 +42,8 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 
 static lto::Config createConfig() {
   lto::Config c;
+  c.LibraryOptions = &ctx.arg.libraryOptions;
+  c.PTO = PipelineTuningOptions(c.LibraryOptions);
   c.Options = initTargetOptionsFromCodeGenFlags();
 
   // Always emit a section per function/data with LTO.
@@ -195,6 +197,10 @@ static void thinLTOCreateEmptyIndexFiles() {
   }
 }
 
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
+}
+
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
@@ -246,7 +252,8 @@ SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
   }
 
   if (!ctx.arg.thinLTOCacheDir.empty())
-    pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files);
+    check(
+        pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
   SmallVector<InputFile *, 0> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {

@@ -83,7 +83,7 @@ define fastcc void @test4(ptr inreg %a) nounwind {
 define fastcc i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; CHECK-LABEL: test9:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub.l #10, %d0
+; CHECK-NEXT:    cmpi.l #10, %d0
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    ext.w %d0
 ; CHECK-NEXT:    ext.l %d0

@@ -9,10 +9,12 @@ of the constructor.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
 class TestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_breakpoints_on_initializers(self):
         """Show we can set breakpoints on initializers appearing both before
         and after the constructor body, and hit them."""

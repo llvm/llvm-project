@@ -92,7 +92,7 @@ BENCHMARK(BM_Mapper_Scale)->Range(10, 10000);
 // --- Reducer Benchmarks ---
 
 static void BM_SerializeFunctionInfo(benchmark::State &State) {
-  auto I = allocatePtr<FunctionInfo>();
+  auto I = allocateTransient<FunctionInfo>();
   I->Name = "f";
   I->DefLoc = Location(0, 0, "test.cpp");
   I->ReturnType = TypeInfo("void");
@@ -102,10 +102,10 @@ static void BM_SerializeFunctionInfo(benchmark::State &State) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
 
-  OwnedPtr<Info> InfoPtr = std::move(I);
+  Info *InfoPtr = I;
 
   for (auto _ : State) {
-    auto Result = serialize::serialize(InfoPtr, Diags);
+    auto Result = serialize::serialize(*InfoPtr, Diags);
     benchmark::DoNotOptimize(Result);
   }
 }
@@ -117,13 +117,13 @@ static void BM_MergeInfos_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     State.PauseTiming();
-    OwningPtrArray<Info> Input;
+    SmallVector<Info *> Input;
     Input.reserve(State.range(0));
-    for (int i = 0; i < State.range(0); ++i) {
-      auto I = allocatePtr<FunctionInfo>();
+    for (int Idx = 0; Idx < State.range(0); ++Idx) {
+      auto *I = allocateTransient<FunctionInfo>();
       I->Name = "f";
       I->USR = USR;
-      I->DefLoc = Location(10, i, "test.cpp");
+      I->DefLoc = Location(10, Idx, "test.cpp");
       Input.push_back(std::move(I));
     }
     State.ResumeTiming();
@@ -181,12 +181,12 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
     return;
   }
   int NumRecords = State.range(0);
-  auto NI = allocatePtr<NamespaceInfo>();
+  auto *NI = allocateTransient<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
   for (int i = 0; i < NumRecords; ++i) {
-    NI->Children.Records.emplace_back(SymbolID{(uint8_t)(i & 0xFF)},
-                                      "Record" + std::to_string(i),
-                                      InfoType::IT_record);
+    NI->Children.Records.push_back(*allocateListNodeTransient<Reference>(
+        SymbolID{(uint8_t)(i & 0xFF)}, "Record" + std::to_string(i),
+        InfoType::IT_record));
   }
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -200,7 +200,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     Output.clear();
-    auto Err = (*G)->generateDocForInfo(getPtr(NI), OS, CDCtx);
+    auto Err = (*G)->generateDocForInfo(NI, OS, CDCtx);
     if (Err) {
       State.SkipWithError("generateDocForInfo failed");
       llvm::consumeError(std::move(Err));

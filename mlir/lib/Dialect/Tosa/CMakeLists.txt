@@ -14,7 +14,6 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRTosaOpsIncGen
   MLIRTosaInterfacesIncGen
   MLIRTosaEnumsIncGen
-  MLIRTosaAvailabilityIncGen
   MLIRShardingInterfaceIncGen
 
   LINK_LIBS PUBLIC

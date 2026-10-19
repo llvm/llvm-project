@@ -8,22 +8,24 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; X86-LABEL: select00:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB0_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_1:
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    vmovdqa64 %zmm0, %zmm1
-; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select00:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl $255, %edi
+; X64-NEXT:    je .LBB0_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB0_1:
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
-; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
@@ -36,22 +38,24 @@ define <8 x i64> @select01(i32 %a, <8 x i64> %b) nounwind {
 ; X86-LABEL: select01:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB1_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    vpxorq %zmm0, %zmm0, %zmm0
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB1_1:
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-NEXT:    je .LBB1_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    vmovdqa64 %zmm0, %zmm1
-; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select01:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl $255, %edi
+; X64-NEXT:    je .LBB1_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    vpxorq %zmm0, %zmm0, %zmm0
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB1_1:
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    je .LBB1_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
-; X64-NEXT:  .LBB1_2:
 ; X64-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255

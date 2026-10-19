@@ -76,6 +76,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "MemRefPasses.md"]
 
+## 'omp' Dialect Passes
+
+[include "OpenMPPasses.md"]
+
 ## 'shard' Dialect Passes
 
 [include "ShardPasses.md"]
@@ -87,6 +91,10 @@ This document describes the available MLIR passes and their contracts.
 ## 'nvgpu' Dialect Passes
 
 [include "NVGPUPasses.md"]
+
+## 'nvvm' Dialect Passes
+
+[include "NVVMPasses.md"]
 
 ## 'quant' Dialect Passes
 

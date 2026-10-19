@@ -14,5 +14,5 @@ struct S { float f; };
 
 int test_bad_conversion(S x) {
   return __builtin_hlsl_wave_active_count_bits(x);
-  // expected-error@-1 {{no viable conversion from 'S' to 'bool'}}
+  // expected-error@-1 {{cannot initialize a parameter of type 'bool' with an lvalue of type 'S'}}
 }

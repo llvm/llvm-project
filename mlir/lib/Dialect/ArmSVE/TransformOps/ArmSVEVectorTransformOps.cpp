@@ -20,12 +20,12 @@ using namespace mlir;
 
 void transform::ApplyArmSVELowerContractionToI8MMPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  mlir::populateLowerContractionToSVEI8MMPatterns(patterns);
+  arm_sve::populateLowerContractionToSVEI8MMPatterns(patterns);
 }
 
 void transform::ApplyArmSVELowerContractionToBFMMLAPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  mlir::populateLowerContractionToSVEBFMMLAPatterns(patterns);
+  arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

@@ -706,7 +706,7 @@ bb:
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { allockind("alloc,uninitialized,aligned") allocsize(1) }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) }
 ; CHECK: attributes #[[ATTR9]] = { norecurse }
-; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR11]] = { nounwind }
 ; CHECK: attributes #[[ATTR12]] = { nocallback nosync nounwind willreturn }
 ;.

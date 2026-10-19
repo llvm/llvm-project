@@ -1,7 +1,7 @@
 ; REQUIRES: arm-registered-target
 
 ; Make sure that codegen flags work to change the set of libcalls
-; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -float-abi=hard -exception-model=sjlj -meabi=4 < %s | FileCheck %s
+; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-eabi -float-abi=hard -exception-model=sjlj < %s | FileCheck %s
 
 ; Depends on -exception-model
 ; CHECK: declare arm_aapcs_vfpcc void @_Unwind_SjLj_Register(...)

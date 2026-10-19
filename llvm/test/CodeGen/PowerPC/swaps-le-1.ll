@@ -4,7 +4,7 @@
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck  \
 ; RUN:   -check-prefix=CHECK-P8 %s
 
-; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -disable-ppc-vsx-swap-removal \
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -ppc-vsx-swap-removal=false \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck  \
 ; RUN:   -check-prefix=NOOPTSWAP-P8 %s
 
@@ -12,7 +12,7 @@
 ; RUN:  -verify-machineinstrs -ppc-vsr-nums-as-vr < %s | FileCheck  \
 ; RUN:  -check-prefix=CHECK-P9 --implicit-check-not xxswapd %s
 
-; RUN: llc -O3 -mcpu=pwr9 -disable-ppc-vsx-swap-removal -mattr=-power9-vector \
+; RUN: llc -O3 -mcpu=pwr9 -ppc-vsx-swap-removal=false -mattr=-power9-vector \
 ; RUN:  -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:  | FileCheck  -check-prefix=NOOPTSWAP-P9 %s
 

@@ -23,6 +23,11 @@ mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRCIREnumsGen)
 
+# CIR dialect bytecode reader/writer tables.
+set(LLVM_TARGET_DEFINITIONS CIRDialectBytecode.td)
+mlir_tablegen(CIRDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="CIR")
+add_public_tablegen_target(MLIRCIRDialectBytecodeIncGen)
+
 clang_tablegen(CIRLowering.inc -gen-cir-lowering
                SOURCE CIROps.td
                TARGET CIRLowering)

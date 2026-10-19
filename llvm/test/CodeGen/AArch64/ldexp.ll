@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=aarch64-windows-msvc -mattr=+sve < %s -o - | FileCheck -check-prefixes=SVE,SVEWINDOWS %s
 ; RUN: llc -mtriple=aarch64-windows-msvc < %s -o - | FileCheck -check-prefixes=WINDOWS %s
 
-; GISEL:       warning: Instruction selection used fallback path for testExpbf16
+; GISEL:       warning: Instruction selection used fallback path for testExpIntrinsic_i16
 
 define double @testExp(double %val, i32 %a) {
 ; SVE-LABEL: testExp:
@@ -53,6 +53,37 @@ define double @testExpIntrinsic(double %val, i32 %a) {
 ; WINDOWS-NEXT:    b ldexp
 entry:
   %call = tail call fast double @llvm.ldexp.f64(double %val, i32 %a)
+  ret double %call
+}
+
+; A sub-int exponent must be sign-extended to int on the libcall path;
+; PromoteIntOp_ExpOp must not crash on it.
+define double @testExpIntrinsic_i16(double %val, i16 %a) nounwind {
+; SVE-LABEL: testExpIntrinsic_i16:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SVE-NEXT:    sxth w0, w0
+; SVE-NEXT:    bl ldexp
+; SVE-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SVE-NEXT:    ret
+;
+; GISEL-LABEL: testExpIntrinsic_i16:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    sxth w0, w0
+; GISEL-NEXT:    bl ldexp
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
+;
+; WINDOWS-LABEL: testExpIntrinsic_i16:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    sxth w0, w0
+; WINDOWS-NEXT:    bl ldexp
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+entry:
+  %call = tail call fast double @llvm.ldexp.f64.i16(double %val, i16 %a)
   ret double %call
 }
 
@@ -295,7 +326,7 @@ define bfloat @testExpbf16(bfloat %val, i32 %a) {
 ; GISEL-NEXT:    mov w8, #32767 // =0x7fff
 ; GISEL-NEXT:    ubfx w10, w9, #16, #1
 ; GISEL-NEXT:    add w8, w9, w8
-; GISEL-NEXT:    add w8, w10, w8
+; GISEL-NEXT:    add w8, w8, w10
 ; GISEL-NEXT:    lsr w8, w8, #16
 ; GISEL-NEXT:    fmov s0, w8
 ; GISEL-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -331,4 +362,40 @@ define bfloat @testExpbf16(bfloat %val, i32 %a) {
 entry:
   %0 = tail call fast bfloat @llvm.ldexp.bf16.i32(bfloat %val, i32 %a)
   ret bfloat %0
+}
+
+; The v1f16 result is scalarized but the v1i32 exponent is widened, so the
+; exponent was never scalarized.
+define <1 x half> @test_ldexp_v1f16_v1i32(<1 x half> %val, <1 x i32> %exp) nounwind {
+; SVE-LABEL: test_ldexp_v1f16_v1i32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fcvt s0, h0
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    fcvt h0, s0
+; SVE-NEXT:    ret
+;
+; GISEL-LABEL: test_ldexp_v1f16_v1i32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    fcvt s0, h0
+; GISEL-NEXT:    fmov w0, s1
+; GISEL-NEXT:    bl ldexpf
+; GISEL-NEXT:    fcvt h0, s0
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
+;
+; WINDOWS-LABEL: test_ldexp_v1f16_v1i32:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    fcvt d0, h0
+; WINDOWS-NEXT:    // kill: def $d1 killed $d1 def $q1
+; WINDOWS-NEXT:    fmov w0, s1
+; WINDOWS-NEXT:    bl ldexp
+; WINDOWS-NEXT:    fcvt h0, d0
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+  %result = call <1 x half> @llvm.ldexp.v1f16.v1i32(<1 x half> %val, <1 x i32> %exp)
+  ret <1 x half> %result
 }

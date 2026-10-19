@@ -21,13 +21,13 @@ body:             |
     ; CHECK-NEXT: [[BFMXri1:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG1]], 51, 31
     ; CHECK-NEXT: $x0 = COPY [[BFMXri]]
     ; CHECK-NEXT: $x1 = COPY [[BFMXri1]]
-    %0:gpr(s32) = COPY $w0
+    %0:gpr(i32) = COPY $w0
 
-    %1:gpr(s64) = G_IMPLICIT_DEF
+    %1:gpr(i64) = G_IMPLICIT_DEF
 
-    %2:gpr(s64) = G_INSERT %1, %0, 0
+    %2:gpr(i64) = G_INSERT %1, %0, 0
 
-    %3:gpr(s64) = G_INSERT %1, %0, 13
+    %3:gpr(i64) = G_INSERT %1, %0, 13
 
     $x0 = COPY %2
     $x1 = COPY %3
@@ -50,14 +50,14 @@ body:             |
     ; CHECK-NEXT: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY]], 16, 15
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[BFMWri1]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %1:gpr(s32) = COPY $w0
-    %2:gpr(s32) = COPY $w1
-    %3:gpr(s16) = G_TRUNC %1(s32)
-    %4:gpr(s16) = G_TRUNC %1(s32)
-    %5:gpr(s32) = G_IMPLICIT_DEF
-    %6:gpr(s32) = G_INSERT %5, %3(s16), 0
-    %7:gpr(s32) = G_INSERT %6, %4(s16), 16
-    %0:gpr(s32) = COPY %7(s32)
+    %1:gpr(i32) = COPY $w0
+    %2:gpr(i32) = COPY $w1
+    %3:gpr(i16) = G_TRUNC %1(i32)
+    %4:gpr(i16) = G_TRUNC %1(i32)
+    %5:gpr(i32) = G_IMPLICIT_DEF
+    %6:gpr(i32) = G_INSERT %5, %3(i16), 0
+    %7:gpr(i32) = G_INSERT %6, %4(i16), 16
+    %0:gpr(i32) = COPY %7(i32)
     $w0 = COPY %0
 ...
 
@@ -80,11 +80,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[UBFMXri1]].sub_32
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     ; CHECK-NEXT: $w1 = COPY [[COPY2]]
-    %0:gpr(s64) = COPY $x0
+    %0:gpr(i64) = COPY $x0
 
-    %1:gpr(s32) = G_EXTRACT %0, 0
+    %1:gpr(i32) = G_EXTRACT %0, 0
 
-    %2:gpr(s32) = G_EXTRACT %0, 13
+    %2:gpr(i32) = G_EXTRACT %0, 13
 
     $w0 = COPY %1
     $w1 = COPY %2
@@ -111,11 +111,11 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:fpr16 = COPY [[COPY3]].hsub
     ; CHECK-NEXT: $h1 = COPY [[COPY4]]
-    %0:gpr(s32) = COPY $w0
+    %0:gpr(i32) = COPY $w0
 
-    %1:gpr(s16) = G_EXTRACT %0, 0
+    %1:gpr(i16) = G_EXTRACT %0, 0
 
-    %2:gpr(s16) = G_EXTRACT %0, 15
+    %2:gpr(i16) = G_EXTRACT %0, 15
 
     $h0 = COPY %1
     $h1 = COPY %2

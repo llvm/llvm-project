@@ -9,6 +9,11 @@ import os, signal, subprocess
 
 
 class SBModuleAPICase(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
+    # Shared build causes collisions in the ObjectArchive file cache
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.background_pid = None

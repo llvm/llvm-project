@@ -16,6 +16,7 @@
 
 #include "TestAttributes.h" // TestTensorEncodingAttr, TestMemRefLayoutAttr
 #include "TestDialect.h"
+#include "TestOps.h"
 
 using namespace mlir;
 
@@ -30,13 +31,28 @@ getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
   return {};
 }
 
+test::TestMemRefLayoutAttr
+getLayoutFromBuffer(bufferization::BufferLikeType buffer) {
+  auto layout =
+      llvm::TypeSwitch<bufferization::BufferLikeType,
+                       MemRefLayoutAttrInterface>(buffer)
+          .Case([&](MemRefType memref) { return memref.getLayout(); })
+          .Case([&](test::TestMemrefType testMemref) {
+            return cast<MemRefLayoutAttrInterface>(testMemref.getLayout());
+          })
+          .Default([](bufferization::BufferLikeType) {
+            return MemRefLayoutAttrInterface();
+          });
+  return dyn_cast_or_null<test::TestMemRefLayoutAttr>(layout);
+}
+
 struct TestOneShotModuleBufferizePass
     : public PassWrapper<TestOneShotModuleBufferizePass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOneShotModuleBufferizePass)
 
   TestOneShotModuleBufferizePass() = default;
-  TestOneShotModuleBufferizePass(const TestOneShotModuleBufferizePass &pass) =
-      default;
+  TestOneShotModuleBufferizePass(const TestOneShotModuleBufferizePass &pass)
+      : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<test::TestDialect>();
@@ -58,14 +74,66 @@ struct TestOneShotModuleBufferizePass
     opt.bufferizeFunctionBoundaries = true;
     opt.functionArgTypeConverterFn =
         [&](bufferization::TensorLikeType tensor, Attribute memSpace,
-            func::FuncOp, const bufferization::BufferizationOptions &) {
-          assert(isa<RankedTensorType>(tensor) && "tests only builtin tensors");
-          auto tensorType = cast<RankedTensorType>(tensor);
-          auto layout = getMemRefLayoutForTensorEncoding(tensorType);
-          return cast<bufferization::BufferLikeType>(
-              MemRefType::get(tensorType.getShape(),
-                              tensorType.getElementType(), layout, memSpace));
+            func::FuncOp, const bufferization::BufferizationOptions &options) {
+          return options.unknownTypeConverterFn(tensor, memSpace, options);
         };
+    opt.unknownTypeConverterFn =
+        [&](bufferization::TensorLikeType tensor, Attribute memSpace,
+            const bufferization::BufferizationOptions &) {
+          return llvm::TypeSwitch<bufferization::TensorLikeType,
+                                  bufferization::BufferLikeType>(tensor)
+              .Case([&](UnrankedTensorType unrankedTensorType) {
+                return cast<bufferization::BufferLikeType>(
+                    UnrankedMemRefType::get(unrankedTensorType.getElementType(),
+                                            memSpace));
+              })
+              .Case([&](RankedTensorType rankedTensorType) {
+                // Note: builtin ranked tensor with custom encoding to layout
+                // conversion.
+                auto layout =
+                    getMemRefLayoutForTensorEncoding(rankedTensorType);
+                return cast<bufferization::BufferLikeType>(MemRefType::get(
+                    rankedTensorType.getShape(),
+                    rankedTensorType.getElementType(), layout, memSpace));
+              })
+              .Case([&](test::TestTensorType testTensorType)
+                        -> bufferization::BufferLikeType {
+                assert(memSpace == nullptr &&
+                       "memory space is not supported for test types");
+                // Note: unknown type conversion cannot create layout because
+                // test tensor does not have an encoding, this is probably
+                // enough for a test.
+                return test::TestMemrefType::get(
+                    testTensorType.getContext(), testTensorType.getShape(),
+                    testTensorType.getElementType(), /*layout=*/nullptr);
+              })
+              .Default([&](bufferization::TensorLikeType tensor) {
+                llvm_unreachable("unexpected tensor type");
+                return bufferization::BufferLikeType{};
+              });
+        };
+    // A simple yet distinct (from upstream) policy: compare layouts and return
+    // "smaller" one.
+    opt.reconcileBufferTypeMismatchFn =
+        [](bufferization::BufferLikeType x, bufferization::BufferLikeType y,
+           const bufferization::BufferizationOptions &)
+        -> FailureOr<bufferization::BufferLikeType> {
+      auto lhsLayout = getLayoutFromBuffer(x);
+      auto rhsLayout = getLayoutFromBuffer(y);
+      if (lhsLayout && rhsLayout) {
+        return lhsLayout.getDummy().getValue() <=
+                       rhsLayout.getDummy().getValue()
+                   ? x
+                   : y;
+      }
+      return rhsLayout ? y : x;
+    };
+    opt.castFn = [&](OpBuilder &b, Location loc, Type dest, Value value) {
+      return test::TestDummyCastOp::create(b, loc, dest, value).getResult();
+    };
+    // Function signature update only works with memref.cast. Disable it to
+    // align behaviour for upstream and user casts.
+    opt.inferFunctionResultLayout = false;
 
     bufferization::BufferizationState bufferizationState;
 

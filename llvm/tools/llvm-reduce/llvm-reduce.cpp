@@ -8,20 +8,20 @@
 //
 // This program tries to reduce an IR test case for a given interesting-ness
 // test. It runs multiple delta debugging passes in order to minimize the input
-// file. It's worth noting that this is a part of the bugpoint redesign
-// proposal, and thus a *temporary* tool that will eventually be integrated
-// into the bugpoint tool itself.
+// file.
 //
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
+#include "deltas/Delta.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,8 +33,6 @@ using namespace llvm;
 
 cl::OptionCategory LLVMReduceOptions("llvm-reduce options");
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(LLVMReduceOptions));
 static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
                              cl::cat(LLVMReduceOptions));
 
@@ -138,9 +136,15 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   const StringRef ToolName(Argv[0]);
 
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+
+  LLVMContext Context;
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
-  cl::ParseCommandLineOptions(
-      Argc, Argv,
+  cl::parseCommandLineOptions(
+      Context.getLibraryOptions(), ArrayRef(Argv, Argc),
       "LLVM automatic testcase reducer.\n"
       "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
       "information.\n");
@@ -174,10 +178,17 @@ int main(int Argc, char **Argv) {
     return 1;
   }
 
+  // Chunks are handed to worker threads by round tripping the program through
+  // bitcode, which cannot represent MachineFunctions.
+  if (ReduceModeMIR && getNumChunkProcessingJobs() > 1) {
+    WithColor::error(errs(), ToolName)
+        << "-j is not supported for MIR reduction\n";
+    return 1;
+  }
+
   if (!PreserveDebugEnvironment)
     disableEnvironmentDebugFeatures();
 
-  LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
 
   auto [OriginalProgram, InputIsBitcode] =

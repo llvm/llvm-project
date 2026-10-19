@@ -67,6 +67,7 @@ struct Inclusion {
 };
 static std::vector<Inclusion> Includes;
 static std::vector<syntax::Token> SkippedFiles;
+static std::vector<std::string> DefinedMacros;
 struct ReplayPreamblePPCallback : public PPCallbacks {
   const SourceManager &SM;
   explicit ReplayPreamblePPCallback(const SourceManager &SM) : SM(SM) {}
@@ -83,6 +84,11 @@ struct ReplayPreamblePPCallback : public PPCallbacks {
   void FileSkipped(const FileEntryRef &, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind) override {
     SkippedFiles.emplace_back(FilenameTok);
+  }
+
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override {
+    DefinedMacros.push_back(MacroNameTok.getIdentifierInfo()->getName().str());
   }
 };
 struct ReplayPreambleCheck : public tidy::ClangTidyCheck {
@@ -105,6 +111,52 @@ static tidy::ClangTidyModuleRegistry::Add<ReplayPreambleModule>
 
 MATCHER_P(rangeIs, R, "") {
   return arg.beginOffset() == R.Begin && arg.endOffset() == R.End;
+}
+
+TEST(ReplayPreambleTest, MacroDefinitions) {
+  DefinedMacros.clear();
+
+  TestTU TU;
+  TU.ClangTidyProvider = addTidyChecks(CheckName);
+  TU.Code = R"cpp(
+      #ifndef _TEST_H
+      #define _TEST_H
+      #define _TEST_MACRO
+      #endif
+  )cpp";
+
+  Config Cfg;
+  Cfg.Diagnostics.ClangTidy.FastCheckFilter = Config::FastCheckPolicy::Loose;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  TU.build();
+
+  EXPECT_THAT(DefinedMacros, testing::Contains(std::string("_TEST_H")));
+  EXPECT_THAT(DefinedMacros, testing::Contains(std::string("_TEST_MACRO")));
+}
+
+TEST(ReplayPreambleTest, MacroDefinitionsPartialPreamble) {
+  DefinedMacros.clear();
+
+  TestTU TU;
+  TU.ClangTidyProvider = addTidyChecks(CheckName);
+  TU.Code = R"cpp(
+    #ifndef _TEST_H
+    #define _TEST_H
+    void unused(void);
+    #define _TEST_MACRO
+    #endif
+  )cpp";
+
+  Config Cfg;
+  Cfg.Diagnostics.ClangTidy.FastCheckFilter = Config::FastCheckPolicy::Loose;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  TU.build();
+
+  // Both macros should be seen by clang-tidy
+  EXPECT_THAT(DefinedMacros, testing::Contains(std::string("_TEST_H")));
+  EXPECT_THAT(DefinedMacros, testing::Contains(std::string("_TEST_MACRO")));
 }
 
 TEST(ReplayPreambleTest, IncludesAndSkippedFiles) {

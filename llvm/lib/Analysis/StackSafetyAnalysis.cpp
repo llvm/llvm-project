@@ -152,7 +152,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
 // in case of confution.
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
   const DataLayout &DL = AI.getDataLayout();
-  TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
+  TypeSize TS = AI.getAllocationBaseSize(DL);
   unsigned PointerSize = DL.getPointerTypeSizeInBits(AI.getType());
   // Fallback to empty range for alloca size.
   ConstantRange R = ConstantRange::getEmpty(PointerSize);
@@ -527,7 +527,8 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // dso_preemptable aliases or aliases with interposable linkage.
         const GlobalValue *Callee =
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
-        if (!Callee || isa<GlobalIFunc>(Callee)) {
+        if (!Callee || isa<GlobalIFunc>(Callee) ||
+            isa<GlobalVariable>(Callee)) {
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
           break;
         }
@@ -1068,14 +1069,17 @@ AnalysisKey StackSafetyGlobalAnalysis::Key;
 
 StackSafetyGlobalInfo
 StackSafetyGlobalAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  // FIXME: Lookup Module Summary.
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const ModuleSummaryIndex *Index = nullptr;
+  if (auto *IndexPass =
+          AM.getCachedResult<ImmutableModuleSummaryIndexAnalysis>(M))
+    Index = IndexPass->getIndex();
   return {&M,
           [&FAM](Function &F) -> const StackSafetyInfo & {
             return FAM.getResult<StackSafetyAnalysis>(F);
           },
-          nullptr};
+          Index};
 }
 
 PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,

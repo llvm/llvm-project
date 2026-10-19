@@ -41,7 +41,7 @@
 
 // RUN: not %clang %s -### --target=arm-liteos -rtlib=libgcc 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
-// CHECK-RTLIB: error: invalid runtime library name in argument '-rtlib=libgcc'
+// CHECK-RTLIB: error: unsupported runtime library 'libgcc' for platform 'OHOS'
 
 // RUN: %clang %s -### --target=arm-liteos -static -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC

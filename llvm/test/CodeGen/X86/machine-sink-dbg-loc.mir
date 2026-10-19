@@ -1,0 +1,123 @@
+# RUN: llc --passes=machine-sink %s -o - | FileCheck %s
+
+## The instructions `ADD64rm` `MOVSX64rr32` and `SHL64ri` are sunk from bb.1
+## into bb.2 before the DBG_VALUE. Check that the debug instruction's debug
+## location isn't applied (merged) to these instructions.
+
+# CHECK: ![[DBG_VALUE_SCOPE:[0-9]+]] = distinct !DISubprogram
+# CHECK: ![[MERGE_SCOPE:[0-9]+]] = !DILexicalBlock
+# CHECK: ![[DBG_VALUE_LOC:[0-9]+]] = !DILocation(line: 5, scope: ![[DBG_VALUE_SCOPE]])
+
+# CHECK: bb.2.if.else:
+# CHECK-NEXT:   successors: %bb.1
+# CHECK-NEXT: {{  $}}
+# CHECK-NEXT:   [[MOVSX64rr32_:%[0-9]+]]:gr64 = MOVSX64rr32 %[[#]]
+# CHECK-NEXT:   [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[MOVSX64rr32_]], 4, implicit-def dead $eflags, debug-location !DILocation(line: 0, scope: ![[MERGE_SCOPE]])
+# CHECK-NEXT:   [[ADD64rm:%[0-9]+]]:gr64 = ADD64rm [[SHL64ri]], %[[#]], 1, $noreg, 0, $noreg, implicit-def dead $eflags, debug-location !DILocation(line: 0, scope: ![[MERGE_SCOPE]])
+# CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location ![[DBG_VALUE_LOC]]
+
+
+--- |
+  target triple = "x86_64-unknown-linux"
+
+  define i1 @fun(ptr %this, i1 %cmp4) !dbg !5 {
+  entry:
+    br label %while.body
+
+  while.body:                                       ; preds = %if.else, %entry
+    %key.addr.013 = phi i32 [ 0, %entry ], [ %0, %if.else ]
+    %.pre.pre = load ptr, ptr %this, align 8
+    %conv = sext i32 %key.addr.013 to i64
+    %add.ptr.i = getelementptr [16 x i8], ptr %.pre.pre, i64 %conv, !dbg !13
+    br i1 %cmp4, label %return, label %if.else
+
+  if.else:                                          ; preds = %while.body
+      #dbg_value(ptr %parent_m.i, !9, !DIExpression(), !12)
+    %parent_m.i = getelementptr i8, ptr %add.ptr.i, i64 12, !dbg !14
+    %0 = load i32, ptr %add.ptr.i, align 4
+    br label %while.body
+
+  return:                                           ; preds = %while.body
+    ret i1 false
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.debugify = !{!2, !3}
+  !llvm.module.flags = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "/app/example.ll", directory: "/")
+  !2 = !{i32 10}
+  !3 = !{i32 6}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !8 = !{!9}
+  !9 = !DILocalVariable(name: "5", scope: !5, file: !1, line: 7, type: !10)
+  !10 = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_unsigned)
+  !11 = !DILexicalBlock(line: 7, scope: !5)
+  !12 = !DILocation(line: 5, scope: !5)
+  !13 = !DILocation(line: 7, scope: !11)
+  !14 = !DILocation(line: 9, scope: !11)
+...
+---
+name:            fun
+alignment:       1
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+debugInstrRef:   true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr64 }
+  - { id: 4, class: gr32 }
+  - { id: 5, class: gr8 }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: gr64 }
+  - { id: 8, class: gr64 }
+  - { id: 9, class: gr32 }
+  - { id: 10, class: gr8 }
+liveins:
+  - { reg: '$rdi', virtual-reg: '%3' }
+  - { reg: '$esi', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+  framePointerPolicy: none
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $esi
+
+    %4:gr32 = COPY $esi
+    %3:gr64 = COPY $rdi
+    %5:gr8 = COPY %4.sub_8bit
+    %6:gr32 = MOV32r0 implicit-def dead $eflags
+
+  bb.1.while.body:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %0:gr32 = PHI %6, %bb.0, %2, %bb.2
+    %7:gr64 = MOVSX64rr32 %0
+    %8:gr64 = SHL64ri %7, 4, implicit-def dead $eflags, debug-location !13
+    %1:gr64 = ADD64rm %8, %3, 1, $noreg, 0, $noreg, implicit-def dead $eflags, debug-location !13 :: (load (s64) from %ir.this)
+    TEST8ri %5, 1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2.if.else:
+    DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !12
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg, debug-location !14 :: (load (s32) from %ir.add.ptr.i)
+    JMP_1 %bb.1
+
+  bb.3.return:
+    %9:gr32 = MOV32r0 implicit-def dead $eflags
+    %10:gr8 = COPY %9.sub_8bit
+    $al = COPY %10
+    RET 0, $al
+...

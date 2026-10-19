@@ -20,21 +20,21 @@ body:             |
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY $f14
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
-    ; FP32: $v0 = COPY [[FCMP]](s32)
-    ; FP32: RetRA implicit $v0
+    ; FP32: $r2 = COPY [[FCMP]](s32)
+    ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: oeq_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY $f14
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
-    ; FP64: $v0 = COPY [[FCMP]](s32)
-    ; FP64: RetRA implicit $v0
+    ; FP64: $r2 = COPY [[FCMP]](s32)
+    ; FP64: RetRA implicit $r2
     %0:_(s32) = COPY $f12
     %1:_(s32) = COPY $f14
     %2:_(s1) = G_FCMP floatpred(oeq), %0(s32), %1
     %3:_(s32) = G_ANYEXT %2(s1)
-    $v0 = COPY %3(s32)
-    RetRA implicit $v0
+    $r2 = COPY %3(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -50,20 +50,20 @@ body:             |
     ; FP32: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:_(s64) = COPY $d7
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(oeq), [[COPY]](s64), [[COPY1]]
-    ; FP32: $v0 = COPY [[FCMP]](s32)
-    ; FP32: RetRA implicit $v0
+    ; FP32: $r2 = COPY [[FCMP]](s32)
+    ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: oeq_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:_(s64) = COPY $d7
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(oeq), [[COPY]](s64), [[COPY1]]
-    ; FP64: $v0 = COPY [[FCMP]](s32)
-    ; FP64: RetRA implicit $v0
+    ; FP64: $r2 = COPY [[FCMP]](s32)
+    ; FP64: RetRA implicit $r2
     %0:_(s64) = COPY $d6
     %1:_(s64) = COPY $d7
     %2:_(s1) = G_FCMP floatpred(oeq), %0(s64), %1
     %3:_(s32) = G_ANYEXT %2(s1)
-    $v0 = COPY %3(s32)
-    RetRA implicit $v0
+    $r2 = COPY %3(s32)
+    RetRA implicit $r2
 
 ...

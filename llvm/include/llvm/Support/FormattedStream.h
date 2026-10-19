@@ -193,6 +193,9 @@ public:
     return TheStream->is_displayed();
   }
 
+  /// Forward to the underlying stream.
+  bool has_colors() const override { return TheStream->has_colors(); }
+
 private:
   void releaseStream() {
     // Transfer the buffer settings from this raw_ostream back to the underlying

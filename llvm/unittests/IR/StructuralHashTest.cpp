@@ -86,6 +86,56 @@ TEST(StructuralHashTest, GlobalType) {
   EXPECT_NE(StructuralHash(*M1), StructuralHash(*M2));
 }
 
+TEST(StructuralHashTest, SourceQualifiedLocalGlobals) {
+  LLVMContext Ctx;
+  // clang-format off
+  const char *IRA = "@internal = internal global i32 0\n"
+                    "@external = global i32 0\n"
+                    "@.str = private constant [5 x i8] c\"same\\00\"\n"
+                    "@\"OBJC_CLASSLIST_REFERENCES_$_\" = internal global ptr null, section \"__DATA,__objc_classrefs,regular,no_dead_strip\"\n";
+  // clang-format on
+  // The same module compiled from a different source: @internal and @external
+  // keep their names, while the content-hashed globals have different symbol
+  // identities but identical contents.
+  // clang-format off
+  const char *IRB = "@internal = internal global i32 0\n"
+                    "@external = global i32 0\n"
+                    "@.str.1 = private constant [5 x i8] c\"same\\00\"\n"
+                    "@\"OBJC_CLASSLIST_REFERENCES_$_.1\" = internal global ptr null, section \"__DATA,__objc_classrefs,regular,no_dead_strip\"\n";
+  // clang-format on
+  std::unique_ptr<Module> M1 = parseIR(Ctx, IRA);
+  std::unique_ptr<Module> M2 = parseIR(Ctx, IRB);
+  ASSERT_TRUE(M1);
+  ASSERT_TRUE(M2);
+  M1->setSourceFileName("a.c");
+  M2->setSourceFileName("b.c");
+
+  const GlobalVariable *Internal1 = M1->getNamedGlobal("internal");
+  const GlobalVariable *Internal2 = M2->getNamedGlobal("internal");
+
+  // By default the source is not part of the hash.
+  EXPECT_EQ(StructuralHash(*Internal1), StructuralHash(*Internal2));
+
+  // Name-based hashes of locals differ across sources.
+  EXPECT_NE(StructuralHash(*Internal1, /*SourceQualifyLocalGlobals=*/true),
+            StructuralHash(*Internal2, /*SourceQualifyLocalGlobals=*/true));
+
+  // Non-local globals and content-hashed globals are not qualified.
+  EXPECT_EQ(StructuralHash(*M1->getNamedGlobal("external"),
+                           /*SourceQualifyLocalGlobals=*/true),
+            StructuralHash(*M2->getNamedGlobal("external"),
+                           /*SourceQualifyLocalGlobals=*/true));
+  EXPECT_EQ(StructuralHash(*M1->getNamedGlobal(".str"),
+                           /*SourceQualifyLocalGlobals=*/true),
+            StructuralHash(*M2->getNamedGlobal(".str.1"),
+                           /*SourceQualifyLocalGlobals=*/true));
+  EXPECT_EQ(
+      StructuralHash(*M1->getNamedGlobal("OBJC_CLASSLIST_REFERENCES_$_"),
+                     /*SourceQualifyLocalGlobals=*/true),
+      StructuralHash(*M2->getNamedGlobal("OBJC_CLASSLIST_REFERENCES_$_.1"),
+                     /*SourceQualifyLocalGlobals=*/true));
+}
+
 TEST(StructuralHashTest, Function) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M1 = parseIR(Ctx, "define void @f() { ret void }");

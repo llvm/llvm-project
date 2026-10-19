@@ -395,10 +395,10 @@ define <vscale x 1 x float> @vfwsub_vf_nxv1f32_2(<vscale x 1 x bfloat> %va, bflo
 ; ZVFH-LABEL: vfwsub_vf_nxv1f32_2:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.w a0, fa0
+; ZVFH-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; ZVFH-NEXT:    slli a0, a0, 16
 ; ZVFH-NEXT:    fmv.w.x fa5, a0
-; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFH-NEXT:    vfsub.vf v8, v9, fa5
 ; ZVFH-NEXT:    ret
@@ -532,10 +532,10 @@ define <vscale x 2 x float> @vfwsub_vf_nxv2f32_2(<vscale x 2 x bfloat> %va, bflo
 ; ZVFH-LABEL: vfwsub_vf_nxv2f32_2:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.w a0, fa0
+; ZVFH-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; ZVFH-NEXT:    slli a0, a0, 16
 ; ZVFH-NEXT:    fmv.w.x fa5, a0
-; ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFH-NEXT:    vfsub.vf v8, v9, fa5
 ; ZVFH-NEXT:    ret
@@ -670,10 +670,10 @@ define <vscale x 4 x float> @vfwsub_vf_nxv4f32_2(<vscale x 4 x bfloat> %va, bflo
 ; ZVFH-LABEL: vfwsub_vf_nxv4f32_2:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.w a0, fa0
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
 ; ZVFH-NEXT:    slli a0, a0, 16
 ; ZVFH-NEXT:    fmv.w.x fa5, a0
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFH-NEXT:    vfsub.vf v8, v10, fa5
 ; ZVFH-NEXT:    ret
@@ -808,10 +808,10 @@ define <vscale x 8 x float> @vfwsub_vf_nxv8f32_2(<vscale x 8 x bfloat> %va, bflo
 ; ZVFH-LABEL: vfwsub_vf_nxv8f32_2:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    fmv.x.w a0, fa0
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFH-NEXT:    slli a0, a0, 16
 ; ZVFH-NEXT:    fmv.w.x fa5, a0
-; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfsub.vf v8, v12, fa5
 ; ZVFH-NEXT:    ret

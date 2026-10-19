@@ -3,8 +3,8 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init] {alignment = 4 : i64}
-    %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) init : !cir.ptr<!cir.bool>
+    %1 = cir.alloca "b" align(4) init : !cir.ptr<!cir.bool>
     %2 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
     %3 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
     %4 = cir.or %2, %3 : !cir.bool

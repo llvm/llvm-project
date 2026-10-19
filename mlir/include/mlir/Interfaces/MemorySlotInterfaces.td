@@ -121,11 +121,13 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
         storing a value to a slot must always be able to provide the value it
         stores. This method is only called once per slot promotion, and only
         on operations that store to the slot according to the `storesTo` method.
-        The returned value must dominate all operations dominated by the storing
-        operation.
 
-        The builder is located immediately after the memory operation on call.
-        No IR deletion is allowed in this method. IR mutations must not
+        The returned value must dominate the memory operation. This ensures
+        that new uses inserted by `visitReplacedValues` after the memory
+        operation are properly dominated.
+
+        The builder is positioned immediately before the memory operation on
+        call. No IR deletion is allowed in this method. IR mutations must not
         introduce new uses of the memory slot. Existing control flow must not
         be modified.
       }],
@@ -235,33 +237,118 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
            "::mlir::OpBuilder &":$builder)
     >,
     InterfaceMethod<[{
-        This method allows the promoted operation to visit the SSA values used
-        in place of the memory slot once the promotion process of the memory
-        slot is complete.
+        Indicates whether the promoted operation needs to visit the SSA values
+        that replace the memory slot.
 
-        If this method returns true, the `visitReplacedValues` method on this
-        operation will be called after the main mutation stage finishes
-        (i.e., after all ops have been processed with `removeBlockingUses`).
+        If true, `visitReplacedValues` will be called once for this operation
+        after all reaching definitions have been computed but before any
+        blocking uses are removed.
 
-        Operations should only visit the replaced values if the intended
-        transformation applies to all the replaced values. Furthermore, replaced
-        values must not be deleted.
+        This should only return true if the intended transformation applies
+        to all replaced values. Replaced values must not be deleted.
       }], "bool", "requiresReplacedValues", (ins), [{}],
       [{ return false; }]
     >,
     InterfaceMethod<[{
-        Transforms the IR using the SSA values that replaced the memory slot.
+        Transforms the IR using the SSA values replacing the memory slot.
 
-        This method will only be called after all blocking uses have been
-        scheduled for removal and if `requiresReplacedValues` returned
-        true.
+        Called after all reaching definitions for the slot have been computed
+        but before any blocking uses are removed, provided
+        `requiresReplacedValues` returns true. `mutatedDefs` contains the
+        replacing values. Any new uses of a load result created here will be
+        automatically redirected to its reaching definition when the load is
+        replaced.
 
-        The builder is located after the promotable operation on call. During
-        the transformation, *no operation should be deleted*.
+        The builder is positioned after the promotable operation.
+        No operations may be deleted during this transformation.
       }],
       "void", "visitReplacedValues",
       (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
            "::mlir::OpBuilder &":$builder), [{}], [{ return; }]
+    >,
+  ];
+}
+
+def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
+  let description = [{
+    Describes an operation that creates a transparent alias of a memory slot
+    accessed through one of its operands. Mem2Reg traverses chains of these
+    aliases to project slot values across them. This allows load and store
+    operations on the alias to be promoted as if they were directly accessing
+    the underlying slot.
+
+    Since an alias remains a blocking use of the underlying slot pointer, the
+    operation must also implement either `PromotableOpInterface` or
+    `PromotableMemOpInterface`. This ensures that mem2reg can remove the alias
+    after the slot has been promoted.
+  }];
+  let cppNamespace = "::mlir";
+
+  let verify = [{
+    if (!::mlir::isa<::mlir::PromotableOpInterface,
+                     ::mlir::PromotableMemOpInterface>($_op))
+      return $_op->emitOpError(
+          "implements `PromotableAliaserInterface` but must also implement "
+          "`PromotableOpInterface` or `PromotableMemOpInterface`.");
+    return ::mlir::success();
+  }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Populates `newMemorySlots` with the memory slots this operation
+        exposes by aliasing `parentSlot` (accessed via
+        `aliasedSlotPointerOperand`). Each new slot's pointer must be a
+        result of this operation, and its element type may differ from the
+        parent's. Leave the vector empty if no alias is exposed. An operation
+        can expose multiple aliases for the same parent slot.
+
+        `parentSlot` is provided so that aliasers using opaque pointers can
+        derive the new slot's element type from `parentSlot.elemType`.
+
+        Exposing an alias requires implementing the two projection methods
+        below to bridge values between the parent and new slot element types.
+        If these projections cannot be performed, `newMemorySlots` must be left
+        empty.
+
+        No IR mutation is allowed in this method.
+      }],
+      "void",
+      "getPromotableSlotAliases",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "::llvm::SmallVectorImpl<::mlir::MemorySlot> &":$newMemorySlots)
+    >,
+    InterfaceMethod<[{
+        Extracts the value of `aliasSlot` from `slotValue` (the value of
+        `parentSlot`). Mem2Reg invokes this method when a load on the new slot
+        requires the parent's value to be materialized with the new slot's
+        element type.
+      }],
+      "::mlir::Value",
+      "projectSlotValueToAliasValue",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "const ::mlir::MemorySlot &":$aliasSlot,
+           "::mlir::Value":$slotValue,
+           "::mlir::OpBuilder &":$builder), [{}],
+      [{ return slotValue; }]
+    >,
+    InterfaceMethod<[{
+        Reconstructs the value of `parentSlot` from `aliasValue` (a store to
+        `aliasSlot`) and `reachingDef` (the parent slot's value immediately
+        preceding the store). For full aliases, `reachingDef` can be ignored.
+        For partial sub-aliases, it allows the result to be constructed by
+        inserting `aliasValue` into `reachingDef`.
+      }],
+      "::mlir::Value",
+      "projectAliasValueToSlotValue",
+      (ins "::mlir::OpOperand &":$aliasedSlotPointerOperand,
+           "const ::mlir::MemorySlot &":$parentSlot,
+           "const ::mlir::MemorySlot &":$aliasSlot,
+           "::mlir::Value":$aliasValue,
+           "::mlir::Value":$reachingDef,
+           "::mlir::OpBuilder &":$builder), [{}],
+      [{ return aliasValue; }]
     >,
   ];
 }

@@ -146,6 +146,10 @@ public:
   /// diagnostic ID.
   std::string getCheckName(unsigned DiagnosticID) const;
 
+  /// Returns true if this clang-tidy check is in fact a compiler warning
+  /// exposed as a 'clang-diagnostic-*' check.
+  bool isCompilerDiagnostic(unsigned DiagnosticID) const;
+
   /// Returns \c true if the check is enabled for the \c CurrentFile.
   ///
   /// The \c CurrentFile can be changed using \c setCurrentFile.
@@ -319,8 +323,9 @@ private:
   llvm::Regex *getExcludeHeaderFilter();
 
   /// Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
-  /// according to the diagnostic \p Location.
-  void checkFilters(SourceLocation Location, const SourceManager &Sources);
+  /// according to the diagnostic kind \p DiagnosticID and the \p Location.
+  void checkFilters(SourceLocation Location, unsigned DiagnosticID,
+                    const SourceManager &Sources);
   bool passesLineFilter(StringRef FileName, unsigned LineNumber) const;
 
   void forwardDiagnostic(const Diagnostic &Info);

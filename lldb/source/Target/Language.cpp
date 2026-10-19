@@ -396,6 +396,20 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   }
 }
 
+bool Language::LanguageIsFortran(LanguageType language) {
+  switch (language) {
+  case eLanguageTypeFortran77:
+  case eLanguageTypeFortran90:
+  case eLanguageTypeFortran95:
+  case eLanguageTypeFortran03:
+  case eLanguageTypeFortran08:
+  case eLanguageTypeFortran18:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool Language::LanguageIsPascal(LanguageType language) {
   switch (language) {
   case eLanguageTypePascal83:
@@ -630,4 +644,10 @@ bool SourceLanguage::IsObjC() const {
 
 bool SourceLanguage::IsCPlusPlus() const {
   return name == llvm::dwarf::DW_LNAME_C_plus_plus;
+}
+
+void llvm::format_provider<lldb::LanguageType>::format(
+    const lldb::LanguageType &language, llvm::raw_ostream &OS,
+    llvm::StringRef Options) {
+  OS << Language::GetNameForLanguageType(language);
 }

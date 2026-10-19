@@ -37,54 +37,42 @@ class Serializer {
 public:
   Serializer() = default;
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const NamespaceDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const NamespaceDecl *D,
+                                     const FullComment *FC, Location Loc,
+                                     bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const RecordDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const RecordDecl *D, const FullComment *FC,
+                                     Location Loc, bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const EnumDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const EnumDecl *D, const FullComment *FC,
+                                     Location Loc, bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const FunctionDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const FunctionDecl *D,
+                                     const FullComment *FC, Location Loc,
+                                     bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
-  emitInfo(const VarDecl *D, const FullComment *FC, int LineNumber,
-           StringRef File, bool IsFileInRootDir, bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const VarDecl *D, const FullComment *FC,
+                                     int LineNumber, StringRef File,
+                                     bool IsFileInRootDir, bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const CXXMethodDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const CXXMethodDecl *D,
+                                     const FullComment *FC, Location Loc,
+                                     bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const TypedefDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const TypedefDecl *D,
+                                     const FullComment *FC, Location Loc,
+                                     bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const TypeAliasDecl *D,
-                                                     const FullComment *FC,
-                                                     Location Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const TypeAliasDecl *D,
+                                     const FullComment *FC, Location Loc,
+                                     bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const ConceptDecl *D,
-                                                     const FullComment *FC,
-                                                     const Location &Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const ConceptDecl *D,
+                                     const FullComment *FC, const Location &Loc,
+                                     bool PublicOnly);
 
-  std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const VarDecl *D,
-                                                     const FullComment *FC,
-                                                     const Location &Loc,
-                                                     bool PublicOnly);
+  std::pair<Info *, Info *> emitInfo(const VarDecl *D, const FullComment *FC,
+                                     const Location &Loc, bool PublicOnly);
 
 private:
   void getTemplateParameters(const TemplateParameterList *TemplateParams,
@@ -94,8 +82,7 @@ private:
 
   StringRef getTypeAlias(const TypeAliasDecl *Alias);
 
-  StringRef
-  getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces);
+  StringRef getInfoRelativePath(llvm::ArrayRef<doc::Reference> Namespaces);
 
   StringRef getInfoRelativePath(const Decl *D);
 
@@ -118,14 +105,13 @@ private:
 
   void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info);
   void InsertChild(ScopeChildren &Scope, const RecordInfo &Info);
-  void InsertChild(ScopeChildren &Scope, EnumInfo Info);
-  void InsertChild(ScopeChildren &Scope, FunctionInfo Info);
-  void InsertChild(ScopeChildren &Scope, TypedefInfo Info);
-  void InsertChild(ScopeChildren &Scope, ConceptInfo Info);
-  void InsertChild(ScopeChildren &Scope, VarInfo Info);
+  void InsertChild(ScopeChildren &Scope, EnumInfo &Info);
+  void InsertChild(ScopeChildren &Scope, FunctionInfo &Info);
+  void InsertChild(ScopeChildren &Scope, TypedefInfo &Info);
+  void InsertChild(ScopeChildren &Scope, ConceptInfo &Info);
+  void InsertChild(ScopeChildren &Scope, VarInfo &Info);
 
-  template <typename ChildType>
-  OwnedPtr<Info> makeAndInsertIntoParent(ChildType Child);
+  template <typename ChildType> Info *makeAndInsertIntoParent(ChildType &Child);
 
   AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
                                           AccessSpecifier SecondAS);
@@ -139,8 +125,9 @@ private:
 
   void parseBases(RecordInfo &I, const CXXRecordDecl *D);
 
-  void parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
-                  bool PublicOnly, bool IsParent,
+  void parseBases(llvm::SmallVectorImpl<BaseRecordInfo> &Bases,
+                  const CXXRecordDecl *D, bool IsFileInRootDir, bool PublicOnly,
+                  bool IsParent,
                   AccessSpecifier ParentAccess = AccessSpecifier::AS_public);
 
   template <typename T>
@@ -165,8 +152,9 @@ private:
   void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
                           Location Loc, bool &IsInAnonymousNamespace);
 
-  void handleCompoundConstraints(const Expr *Constraint,
-                                 OwningVec<ConstraintInfo> &ConstraintInfos);
+  void handleCompoundConstraints(
+      const Expr *Constraint,
+      llvm::SmallVectorImpl<ConstraintInfo> &ConstraintInfos);
 
   void populateConstraints(TemplateInfo &I, const TemplateDecl *D);
 
@@ -176,8 +164,9 @@ private:
 
   template <typename T> void populateMemberTypeInfo(T &I, const Decl *D);
 
-  void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
-                              const DeclaratorDecl *D, bool IsStatic = false);
+  void populateMemberTypeInfo(llvm::SmallVectorImpl<MemberTypeInfo> &Members,
+                              AccessSpecifier &Access, const DeclaratorDecl *D,
+                              bool IsStatic = false);
 
   void parseFriends(RecordInfo &RI, const CXXRecordDecl *D);
 
@@ -191,7 +180,7 @@ private:
 // memory (vs storing USRs directly).
 SymbolID hashUSR(llvm::StringRef USR);
 
-std::string serialize(OwnedPtr<Info> &I, DiagnosticsEngine &Diags);
+std::string serialize(const Info &I, DiagnosticsEngine &Diags);
 
 } // namespace serialize
 } // namespace doc

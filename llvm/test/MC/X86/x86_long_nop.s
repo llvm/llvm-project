@@ -23,6 +23,14 @@
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=znver5 | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=znver6 %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=znver6 | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=c86-4g-m4 %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=c86-4g-m4 | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=c86-4g-m6 %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=c86-4g-m6 | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=c86-4g-m7 %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=c86-4g-m7 | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=c86-4g-m8 %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=c86-4g-m8 | llvm-objdump -d --no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=nehalem %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=westmere %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=sandybridge %s | llvm-objdump -d --no-show-raw-insn - | FileCheck --check-prefix=LNOP15 %s

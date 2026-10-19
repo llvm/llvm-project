@@ -4,26 +4,18 @@
 define void @call_loop_invariant_operand_bundle(ptr %dst, {float, float} %sv) {
 ; CHECK-LABEL: define void @call_loop_invariant_operand_bundle(
 ; CHECK-SAME: ptr [[DST:%.*]], { float, float } [[SV:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { float, float } [[SV]], 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[SV]], 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[BROADCAST_SPLAT2]]) [ "deopt"(float 1.000000e+01) ]
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { float, float } [[SV]], 0
+; CHECK-NEXT:    [[B:%.*]] = extractvalue { float, float } [[SV]], 1
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr float, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[A]], float [[B]]) [ "deopt"(float 1.000000e+01) ]
+; CHECK-NEXT:    store float [[P]], ptr [[ADDR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -48,26 +40,18 @@ exit:
 define void @call_unknown_operand_bundle(ptr %dst, {float, float} %sv) {
 ; CHECK-LABEL: define void @call_unknown_operand_bundle(
 ; CHECK-SAME: ptr [[DST:%.*]], { float, float } [[SV:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { float, float } [[SV]], 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[SV]], 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[BROADCAST_SPLAT2]]) [ "unknown"(ptr null) ]
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { float, float } [[SV]], 0
+; CHECK-NEXT:    [[B:%.*]] = extractvalue { float, float } [[SV]], 1
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr float, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[A]], float [[B]]) [ "unknown"(ptr null) ]
+; CHECK-NEXT:    store float [[P]], ptr [[ADDR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -92,26 +76,18 @@ exit:
 define void @call_cold_operand_bundle(ptr %dst, {float, float} %sv) {
 ; CHECK-LABEL: define void @call_cold_operand_bundle(
 ; CHECK-SAME: ptr [[DST:%.*]], { float, float } [[SV:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { float, float } [[SV]], 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[SV]], 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[BROADCAST_SPLAT2]]) [ "cold"() ]
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { float, float } [[SV]], 0
+; CHECK-NEXT:    [[B:%.*]] = extractvalue { float, float } [[SV]], 1
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr float, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[A]], float [[B]]) [ "cold"() ]
+; CHECK-NEXT:    store float [[P]], ptr [[ADDR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -156,7 +132,7 @@ define void @assume_loop_variant_operand_bundle(ptr noalias %a, ptr noalias %b) 
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -199,7 +175,7 @@ define void @assume_cold_operand_bundle(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -224,3 +200,228 @@ loop:
 exit:
   ret void
 }
+
+define void @assume_loop_invariant_operand_bundle(ptr noalias %a, ptr %q) {
+; CHECK-LABEL: define void @assume_loop_invariant_operand_bundle(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[Q]]) ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds float, ptr %a, i64 %iv
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %q) ]
+  %l = load float, ptr %gep, align 4
+  %add = fadd float %l, 1.000000e+00
+  store float %add, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1600
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @call_loop_invariant_unknown_operand_bundle(ptr %dst, float %x) {
+; CHECK-LABEL: define void @call_loop_invariant_unknown_operand_bundle(
+; CHECK-SAME: ptr [[DST:%.*]], float [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[S:%.*]] = call float @foo(float [[X]]) [ "unknown"() ]
+; CHECK-NEXT:    store float [[S]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr float, ptr %dst, i64 %iv
+  %s = call float @foo(float %x) [ "unknown"() ]
+  store float %s, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @call_unused_unknown_operand_bundle(ptr %dst) {
+; CHECK-LABEL: define void @call_unused_unknown_operand_bundle(
+; CHECK-SAME: ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[S:%.*]] = call float @foo(float [[L]]) [ "unknown"() ]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[L]], 1.000000e+00
+; CHECK-NEXT:    store float [[ADD]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr float, ptr %dst, i64 %iv
+  %l = load float, ptr %gep
+  %s = call float @foo(float %l) [ "unknown"() ]
+  %add = fadd float %l, 1.000000e+00
+  store float %add, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @call_deactivation_symbol_operand_bundle(ptr %dst) {
+; CHECK-LABEL: define void @call_deactivation_symbol_operand_bundle(
+; CHECK-SAME: ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x ptr>, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x ptr> @bar_v4(<4 x ptr> [[WIDE_LOAD]]) [ "deactivation-symbol"(ptr @sym) ]
+; CHECK-NEXT:    store <4 x ptr> [[TMP1]], ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr ptr, ptr %dst, i64 %iv
+  %l = load ptr, ptr %gep
+  %s = notail call ptr @bar(ptr %l) [ "deactivation-symbol"(ptr @sym) ]
+  store ptr %s, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Calls with loop-variant bundle operands must not be widened.
+define void @intrinsic_loop_variant_deopt_operand_bundle(ptr %dst, i64 %n) {
+; CHECK-LABEL: define void @intrinsic_loop_variant_deopt_operand_bundle(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[L]]) [ "deopt"(i64 [[IV]]) ]
+; CHECK-NEXT:    store float [[S]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr float, ptr %dst, i64 %iv
+  %l = load float, ptr %gep
+  %s = call float @llvm.sin.f32(float %l) [ "deopt"(i64 %iv) ]
+  store float %s, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @call_loop_variant_unknown_operand_bundle(ptr %dst, i64 %n) {
+; CHECK-LABEL: define void @call_loop_variant_unknown_operand_bundle(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[S:%.*]] = call float @foo(float [[L]]) [ "unknown"(i64 [[IV]]) ]
+; CHECK-NEXT:    store float [[S]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr float, ptr %dst, i64 %iv
+  %l = load float, ptr %gep
+  %s = call float @foo(float %l) [ "unknown"(i64 %iv) ]
+  store float %s, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+@sym = external global i8
+
+declare float @foo(float) memory(none) nounwind willreturn #0
+declare <4 x float> @foo_v4(<4 x float>) memory(none) nounwind willreturn
+declare ptr @bar(ptr) memory(none) nounwind willreturn #1
+declare <4 x ptr> @bar_v4(<4 x ptr>) memory(none) nounwind willreturn
+
+attributes #0 = { "vector-function-abi-variant"="_ZGV_LLVM_N4v_foo(foo_v4)" }
+attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_N4v_bar(bar_v4)" }

@@ -49,7 +49,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
     case Triple::x86_64:
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
       break;
-    case Triple::amdgcn:
+    case Triple::amdgpu:
     case Triple::nvptx:
     case Triple::nvptx64:
     case Triple::spirv64:
@@ -92,7 +92,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
       ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_cpu));
       break;
-    case Triple::amdgcn:
+    case Triple::amdgpu:
     case Triple::nvptx:
     case Triple::nvptx64:
     case Triple::spirv64:
@@ -160,15 +160,6 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
     ++It0;
   }
   return true;
-}
-
-/// Return true if \p C0 is a strict subset of \p C1. Note that both arrays are
-/// expected to be sorted.
-template <typename T>
-static bool isStrictSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
-  if (C0.size() >= C1.size())
-    return false;
-  return isSubset<T>(C0, C1);
 }
 
 static bool isStrictSubset(const VariantMatchInfo &VMI0,

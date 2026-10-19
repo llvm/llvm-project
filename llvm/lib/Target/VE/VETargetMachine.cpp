@@ -41,8 +41,9 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 
 namespace {
 class VEELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override {
-    TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override {
+    TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
     InitializeELF(TM.Options.UseInitArray);
   }
 };
@@ -59,7 +60,7 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  std::optional<Reloc::Model> RM,
                                  std::optional<CodeModel::Model> CM,
                                  CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF()),

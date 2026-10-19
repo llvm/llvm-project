@@ -11,15 +11,15 @@
 // RUN:   FileCheck -check-prefixes=FTZ,PTXFTZ %s
 
 // RUN: %clang_cc1 -fcuda-is-device -x hip \
-// RUN:   -triple amdgcn-amd-amdhsa -target-cpu gfx900 -emit-llvm -o - %s | \
+// RUN:   -triple amdgpu9.00-amd-amdhsa -emit-llvm -o - %s | \
 // RUN:   FileCheck -check-prefix=NOFTZ %s
 
 // RUN: %clang_cc1 -fcuda-is-device -x hip \
-// RUN:   -triple amdgcn-amd-amdhsa -target-cpu gfx900 -fdenormal-fp-math-f32=ieee -emit-llvm -o - %s | \
+// RUN:   -triple amdgpu9.00-amd-amdhsa -fdenormal-fp-math-f32=ieee -emit-llvm -o - %s | \
 // RUN:   FileCheck -check-prefix=NOFTZ %s
 
 // RUN: %clang_cc1 -fcuda-is-device -x hip -fdenormal-fp-math-f32=preserve-sign \
-// RUN:   -triple amdgcn-amd-amdhsa -target-cpu gfx900 -emit-llvm -o - %s | \
+// RUN:   -triple amdgpu9.00-amd-amdhsa -emit-llvm -o - %s | \
 // RUN:   FileCheck -check-prefix=FTZ %s
 
 #include "Inputs/cuda.h"

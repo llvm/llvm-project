@@ -348,6 +348,7 @@ Status NativeRegisterContextDBReg::ClearAllHardwareWatchpoints() {
 Status
 NativeRegisterContextDBReg::GetWatchpointHitIndex(uint32_t &wp_index,
                                                   lldb::addr_t trap_addr) {
+  wp_index = LLDB_INVALID_INDEX32;
   Log *log = GetLog(LLDBLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}, trap_addr: {1:x}", wp_index, trap_addr);
 

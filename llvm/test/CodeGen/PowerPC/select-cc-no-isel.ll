@@ -21,7 +21,7 @@ define signext i32 @foo(ptr nocapture noundef %dummy) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, [[ADDI]], %bb.0
-  ; CHECK-NEXT:   STW killed [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
+  ; CHECK-NEXT:   STW [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
   ; CHECK-NEXT:   [[LI8_:%[0-9]+]]:g8rc = LI8 0
   ; CHECK-NEXT:   $x3 = COPY [[LI8_]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -42,7 +42,7 @@ define signext i32 @foo(ptr nocapture noundef %dummy) #0 {
   ; CHECK-32-NEXT: {{  $}}
   ; CHECK-32-NEXT: bb.2.entry:
   ; CHECK-32-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, [[ADDI]], %bb.0
-  ; CHECK-32-NEXT:   STW killed [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
+  ; CHECK-32-NEXT:   STW [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
   ; CHECK-32-NEXT:   [[LI1:%[0-9]+]]:gprc = LI 0
   ; CHECK-32-NEXT:   $r3 = COPY [[LI1]]
   ; CHECK-32-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3

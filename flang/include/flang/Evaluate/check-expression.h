@@ -177,6 +177,16 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
 
+// Actual arguments of procedure references may retain designators of named
+// constants (rather than their folded values) so that lowering can associate
+// dummy arguments with the named constant's storage.  Intrinsic argument
+// matching, checking, and folding inspect constant values structurally, so
+// such arguments must be folded back to values once a call is known to
+// resolve to an intrinsic procedure.
+bool IsNamedConstantDesignator(const Expr<SomeType> &);
+bool AnyNamedConstantActualArguments(const ActualArguments &);
+void FoldNamedConstantActualArguments(FoldingContext &, ActualArguments &);
+
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *,
     const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut);
 

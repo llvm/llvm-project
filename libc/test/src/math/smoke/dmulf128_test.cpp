@@ -10,4 +10,4 @@
 
 #include "src/math/dmulf128.h"
 
-LIST_MUL_TESTS(double, float128, LIBC_NAMESPACE::dmulf128)
+LIST_MUL_TESTS(Dmulf128, double, float128, LIBC_NAMESPACE::dmulf128)

@@ -24,9 +24,10 @@ struct VersionRange {
   int Min = 0;
   int Max = MaxValue;
 
-  bool operator<(const VersionRange &R) const {
+  constexpr bool operator<(const VersionRange &R) const {
     return std::tie(Min, Max) < std::tie(R.Min, R.Max);
   }
+  constexpr bool isValid() const { return Min <= Max; }
 };
 
 struct Spelling {

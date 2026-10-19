@@ -18,6 +18,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -29,7 +30,7 @@ Option::Option(const OptTable::Info *Info, const OptTable *Owner)
   assert((!Info || !getAlias().isValid() || !getAlias().getAlias().isValid()) &&
          "Multi-level aliases are not supported.");
 
-  if (Info && getAliasArgs()) {
+  if (Info && hasAliasArgs()) {
     assert(getAlias().isValid() && "Only alias options can have alias args.");
     assert(getKind() == FlagClass && "Only Flag aliases can have alias args.");
     assert(getAlias().getKind() != FlagClass &&
@@ -45,9 +46,11 @@ void Option::print(raw_ostream &O, bool AddNewLine) const {
     P(InputClass);
     P(UnknownClass);
     P(FlagClass);
+    P(FlagOrEqClass);
     P(JoinedClass);
     P(ValuesClass);
     P(SeparateClass);
+    P(SeparateOrEqClass);
     P(CommaJoinedClass);
     P(MultiArgClass);
     P(JoinedOrSeparateClass);
@@ -215,6 +218,23 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
       A->getValues().push_back(Args.getArgString(Index++));
     return A;
   }
+  case FlagOrEqClass:
+  case SeparateOrEqClass: {
+    const char *Rest = Args.getArgString(Index) + SpellingSize;
+    if (*Rest == '=')
+      return std::make_unique<Arg>(*this, CurArg, Index++, Rest + 1);
+    if (*Rest)
+      return nullptr;
+    if (getKind() == FlagOrEqClass)
+      return std::make_unique<Arg>(*this, CurArg, Index++);
+
+    Index += 2;
+    if (Index > Args.getNumInputArgStrings() ||
+        Args.getArgString(Index - 1) == nullptr)
+      return nullptr;
+    return std::make_unique<Arg>(*this, CurArg, Index - 2,
+                                 Args.getArgString(Index - 1));
+  }
   case RemainingArgsJoinedClass: {
     auto A = std::make_unique<Arg>(*this, CurArg, Index);
     if (SpellingSize != ArgStringSize) {
@@ -281,15 +301,9 @@ std::unique_ptr<Arg> Option::accept(const ArgList &Args, StringRef CurArg,
   }
 
   // FlagClass aliases can have AliasArgs<>; add those to the unaliased arg.
-  if (const char *Val = getAliasArgs()) {
-    while (*Val != '\0') {
-      UnaliasedA->getValues().push_back(Val);
-
-      // Move past the '\0' to the next argument.
-      Val += strlen(Val) + 1;
-    }
-  }
-  if (UnaliasedOption.getKind() == JoinedClass && !getAliasArgs())
+  for (const char *Val = getAliasArgs(); *Val; Val += strlen(Val) + 1)
+    UnaliasedA->getValues().push_back(Val);
+  if (UnaliasedOption.getKind() == JoinedClass && !hasAliasArgs())
     // A Flag alias for a Joined option must provide an argument.
     UnaliasedA->getValues().push_back("");
   return UnaliasedA;

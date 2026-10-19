@@ -53,6 +53,9 @@ MakeVFrameRelIndirLocationExpression(llvm::StringRef fpo_program,
                                      lldb::ModuleSP module);
 DWARFExpression MakeGlobalLocationExpression(uint16_t section, uint32_t offset,
                                              lldb::ModuleSP module);
+DWARFExpression
+MakeGlobalThreadLocalLocationExpression(uint32_t offset,
+                                        const lldb::ModuleSP &module);
 llvm::Expected<DWARFExpression> MakeConstantLocationExpression(
     llvm::codeview::TypeIndex underlying_ti, llvm::pdb::TpiStream &tpi,
     const llvm::APSInt &constant, lldb::ModuleSP module);

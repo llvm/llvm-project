@@ -5,103 +5,105 @@ name:            test_ext
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_ext
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC1]](s32)
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC2]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC3]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: $x0 = COPY [[AND]](s64)
-    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
-    ; CHECK-NEXT: $x0 = COPY [[SEXT_INREG]](s64)
-    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC4]], 1
-    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG1]](s32)
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC5]], [[C1]]
-    ; CHECK-NEXT: $w0 = COPY [[AND1]](s32)
-    ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC6]](s32)
-    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[TRUNC7]], [[C2]]
-    ; CHECK-NEXT: $w0 = COPY [[AND2]](s32)
-    ; CHECK-NEXT: [[TRUNC8:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC8]](s32)
-    ; CHECK-NEXT: [[TRUNC9:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC9]], 16
-    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG2]](s32)
-    ; CHECK-NEXT: [[TRUNC10:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[TRUNC10]], [[C2]]
-    ; CHECK-NEXT: $w0 = COPY [[AND3]](s32)
-    ; CHECK-NEXT: [[TRUNC11:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC11]](s32)
-    ; CHECK-NEXT: [[TRUNC12:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC12]](s32)
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s64) = G_FPEXT [[TRUNC12]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[FPEXT]](s64)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY [[C3]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[C3]](s32)
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    %0:_(s64) = COPY $x0
-    %1:_(s1) = G_TRUNC %0(s64)
-    %19:_(s32) = G_ANYEXT %1(s1)
-    $w0 = COPY %19(s32)
-    %2:_(s8) = G_TRUNC %0(s64)
-    %20:_(s32) = G_ANYEXT %2(s8)
-    $w0 = COPY %20(s32)
-    %3:_(s16) = G_TRUNC %0(s64)
-    %21:_(s32) = G_ANYEXT %3(s16)
-    $w0 = COPY %21(s32)
-    %4:_(s32) = G_TRUNC %0(s64)
-    $w0 = COPY %4(s32)
-    %5:_(s64) = G_ANYEXT %1(s1)
-    $x0 = COPY %5(s64)
-    %6:_(s64) = G_ZEXT %2(s8)
-    $x0 = COPY %6(s64)
-    %7:_(s64) = G_ANYEXT %3(s16)
-    $x0 = COPY %7(s64)
-    %8:_(s64) = G_SEXT %4(s32)
-    $x0 = COPY %8(s64)
-    %9:_(s32) = G_SEXT %1(s1)
-    $w0 = COPY %9(s32)
-    %10:_(s32) = G_ZEXT %2(s8)
-    $w0 = COPY %10(s32)
-    %11:_(s32) = G_ANYEXT %3(s16)
-    $w0 = COPY %11(s32)
-    %12:_(s32) = G_ZEXT %1(s1)
-    $w0 = COPY %12(s32)
-    %13:_(s32) = G_ANYEXT %2(s8)
-    $w0 = COPY %13(s32)
-    %14:_(s32) = G_SEXT %3(s16)
-    $w0 = COPY %14(s32)
-    %15:_(s8) = G_ZEXT %1(s1)
-    %22:_(s32) = G_ANYEXT %15(s8)
-    $w0 = COPY %22(s32)
-    %16:_(s16) = G_ANYEXT %2(s8)
-    %23:_(s32) = G_ANYEXT %16(s16)
-    $w0 = COPY %23(s32)
-    %17:_(s32) = G_TRUNC %0(s64)
-    $w0 = COPY %17(s32)
-    %18:_(s64) = G_FPEXT %17(s32)
-    $x0 = COPY %18(s64)
-    %24:_(s16) = G_IMPLICIT_DEF
-    %25:_(s32) = G_ZEXT %24(s16)
-    $w0 = COPY %25(s32)
-    %26:_(s32) = G_SEXT %24(s16)
-    $w0 = COPY %26(s32)
-    %27:_(s32) = G_ANYEXT %24(s16)
-    $w0 = COPY %27(s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC1]](i32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC2]](i32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC3]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: $x0 = COPY [[AND]](i64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: $x0 = COPY [[SEXT_INREG]](i64)
+    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i32) = G_SEXT_INREG [[TRUNC4]], 1
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG1]](i32)
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[TRUNC5]], [[C1]]
+    ; CHECK-NEXT: $w0 = COPY [[AND1]](i32)
+    ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC6]](i32)
+    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[TRUNC7]], [[C2]]
+    ; CHECK-NEXT: $w0 = COPY [[AND2]](i32)
+    ; CHECK-NEXT: [[TRUNC8:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC8]](i32)
+    ; CHECK-NEXT: [[TRUNC9:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(i32) = G_SEXT_INREG [[TRUNC9]], 16
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG2]](i32)
+    ; CHECK-NEXT: [[TRUNC10:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(i32) = G_AND [[TRUNC10]], [[C2]]
+    ; CHECK-NEXT: $w0 = COPY [[AND3]](i32)
+    ; CHECK-NEXT: [[TRUNC11:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC11]](i32)
+    ; CHECK-NEXT: [[TRUNC12:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC12]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $s0
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f64) = G_FPEXT [[COPY1]](f32)
+    ; CHECK-NEXT: $x0 = COPY [[FPEXT]](f64)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY [[C3]](i32)
+    ; CHECK-NEXT: $w0 = COPY [[C3]](i32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](i32)
+    %0:_(i64) = COPY $x0
+    %1:_(i1) = G_TRUNC %0(i64)
+    %19:_(i32) = G_ANYEXT %1(i1)
+    $w0 = COPY %19(i32)
+    %2:_(i8) = G_TRUNC %0(i64)
+    %20:_(i32) = G_ANYEXT %2(i8)
+    $w0 = COPY %20(i32)
+    %3:_(i16) = G_TRUNC %0(i64)
+    %21:_(i32) = G_ANYEXT %3(i16)
+    $w0 = COPY %21(i32)
+    %4:_(i32) = G_TRUNC %0(i64)
+    $w0 = COPY %4(i32)
+    %5:_(i64) = G_ANYEXT %1(i1)
+    $x0 = COPY %5(i64)
+    %6:_(i64) = G_ZEXT %2(i8)
+    $x0 = COPY %6(i64)
+    %7:_(i64) = G_ANYEXT %3(i16)
+    $x0 = COPY %7(i64)
+    %8:_(i64) = G_SEXT %4(i32)
+    $x0 = COPY %8(i64)
+    %9:_(i32) = G_SEXT %1(i1)
+    $w0 = COPY %9(i32)
+    %10:_(i32) = G_ZEXT %2(i8)
+    $w0 = COPY %10(i32)
+    %11:_(i32) = G_ANYEXT %3(i16)
+    $w0 = COPY %11(i32)
+    %12:_(i32) = G_ZEXT %1(i1)
+    $w0 = COPY %12(i32)
+    %13:_(i32) = G_ANYEXT %2(i8)
+    $w0 = COPY %13(i32)
+    %14:_(i32) = G_SEXT %3(i16)
+    $w0 = COPY %14(i32)
+    %15:_(i8) = G_ZEXT %1(i1)
+    %22:_(i32) = G_ANYEXT %15(i8)
+    $w0 = COPY %22(i32)
+    %16:_(i16) = G_ANYEXT %2(i8)
+    %23:_(i32) = G_ANYEXT %16(i16)
+    $w0 = COPY %23(i32)
+    %17:_(i32) = G_TRUNC %0(i64)
+    $w0 = COPY %17(i32)
+    %28:_(f32) = COPY $s0
+    %18:_(f64) = G_FPEXT %28(f32)
+    $x0 = COPY %18(f64)
+    %24:_(i16) = G_IMPLICIT_DEF
+    %25:_(i32) = G_ZEXT %24(i16)
+    $w0 = COPY %25(i32)
+    %26:_(i32) = G_SEXT %24(i16)
+    $w0 = COPY %26(i32)
+    %27:_(i32) = G_ANYEXT %24(i16)
+    $w0 = COPY %27(i32)
 
 ...
 ---
@@ -113,13 +115,13 @@ body:             |
     ; CHECK-LABEL: name: test_anyext_anyext
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s1) = G_TRUNC %0(s32)
-    %2:_(s8) = G_ANYEXT %1(s1)
-    %3:_(s32) = G_ANYEXT %2(s8)
-    $w0 = COPY %3(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i1) = G_TRUNC %0(i32)
+    %2:_(i8) = G_ANYEXT %1(i1)
+    %3:_(i32) = G_ANYEXT %2(i8)
+    $w0 = COPY %3(i32)
 
 ...
 ---
@@ -131,14 +133,14 @@ body:             |
     ; CHECK-LABEL: name: test_anyext_sext
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
-    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s1) = G_TRUNC %0(s32)
-    %2:_(s8) = G_SEXT %1(s1)
-    %3:_(s32) = G_ANYEXT %2(s8)
-    $w0 = COPY %3(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i32) = G_SEXT_INREG [[COPY]], 1
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i1) = G_TRUNC %0(i32)
+    %2:_(i8) = G_SEXT %1(i1)
+    %3:_(i32) = G_ANYEXT %2(i8)
+    $w0 = COPY %3(i32)
 
 ...
 ---
@@ -150,15 +152,15 @@ body:             |
     ; CHECK-LABEL: name: test_anyext_zext
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s1) = G_TRUNC %0(s32)
-    %2:_(s8) = G_ZEXT %1(s1)
-    %3:_(s32) = G_ANYEXT %2(s8)
-    $w0 = COPY %3(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i1) = G_TRUNC %0(i32)
+    %2:_(i8) = G_ZEXT %1(i1)
+    %3:_(i32) = G_ANYEXT %2(i8)
+    $w0 = COPY %3(i32)
 
 ...
 ---
@@ -172,13 +174,13 @@ body:             |
     ; CHECK-LABEL: name: test_zext_v8s16_from_v8s8
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<8 x s16>) = G_ZEXT [[COPY]](<8 x s8>)
-    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<8 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<8 x i16>) = G_ZEXT [[COPY]](<8 x i8>)
+    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<8 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %1:fpr(<8 x s8>) = COPY $d0
-    %2:_(<8 x s16>) = G_ZEXT %1(<8 x s8>)
-    $q0 = COPY %2(<8 x s16>)
+    %1:fpr(<8 x i8>) = COPY $d0
+    %2:_(<8 x i16>) = G_ZEXT %1(<8 x i8>)
+    $q0 = COPY %2(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -193,13 +195,13 @@ body:             |
     ; CHECK-LABEL: name: test_sext_v8s16_from_v8s8
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<8 x s16>) = G_SEXT [[COPY]](<8 x s8>)
-    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<8 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<8 x i16>) = G_SEXT [[COPY]](<8 x i8>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<8 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %1:fpr(<8 x s8>) = COPY $d0
-    %2:_(<8 x s16>) = G_SEXT %1(<8 x s8>)
-    $q0 = COPY %2(<8 x s16>)
+    %1:fpr(<8 x i8>) = COPY $d0
+    %2:_(<8 x i16>) = G_SEXT %1(<8 x i8>)
+    $q0 = COPY %2(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -214,13 +216,13 @@ body:             |
     ; CHECK-LABEL: name: test_anyext_v8s16_from_v8s8
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<8 x s16>) = G_ANYEXT [[COPY]](<8 x s8>)
-    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<8 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<8 x i8>) = COPY $d0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<8 x i16>) = G_ANYEXT [[COPY]](<8 x i8>)
+    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<8 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %1:fpr(<8 x s8>) = COPY $d0
-    %2:_(<8 x s16>) = G_ANYEXT %1(<8 x s8>)
-    $q0 = COPY %2(<8 x s16>)
+    %1:fpr(<8 x i8>) = COPY $d0
+    %2:_(<8 x i16>) = G_ANYEXT %1(<8 x i8>)
+    $q0 = COPY %2(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -236,13 +238,13 @@ body:             |
     ; CHECK-LABEL: name: test_zext_v4s32_from_v4s16
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<4 x s32>) = G_ZEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<4 x i32>) = G_ZEXT [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<4 x s16>) = COPY $d0
-    %1:_(<4 x s32>) = G_ZEXT %0(<4 x s16>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:_(<4 x i16>) = COPY $d0
+    %1:_(<4 x i32>) = G_ZEXT %0(<4 x i16>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -258,13 +260,13 @@ body:             |
     ; CHECK-LABEL: name: test_sext_v4s32_from_v4s16
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<4 x s32>) = G_SEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<4 x i32>) = G_SEXT [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<4 x s16>) = COPY $d0
-    %1:_(<4 x s32>) = G_SEXT %0(<4 x s16>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:_(<4 x i16>) = COPY $d0
+    %1:_(<4 x i32>) = G_SEXT %0(<4 x i16>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -280,13 +282,13 @@ body:             |
     ; CHECK-LABEL: name: test_anyext_v4s32_from_v4s16
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<4 x i32>) = G_ANYEXT [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<4 x s16>) = COPY $d0
-    %1:_(<4 x s32>) = G_ANYEXT %0(<4 x s16>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:_(<4 x i16>) = COPY $d0
+    %1:_(<4 x i32>) = G_ANYEXT %0(<4 x i16>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -305,13 +307,13 @@ body:             |
     ; CHECK-LABEL: name: test_zext_v2s64_from_v2s32
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: $q0 = COPY [[ZEXT]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<2 x s32>) = COPY $d0
-    %1:_(<2 x s64>) = G_ZEXT %0(<2 x s32>)
-    $q0 = COPY %1(<2 x s64>)
+    %0:_(<2 x i32>) = COPY $d0
+    %1:_(<2 x i64>) = G_ZEXT %0(<2 x i32>)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -330,13 +332,13 @@ body:             |
     ; CHECK-LABEL: name: test_sext_v2s64_from_v2s32
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(<2 x i64>) = G_SEXT [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: $q0 = COPY [[SEXT]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<2 x s32>) = COPY $d0
-    %1:_(<2 x s64>) = G_SEXT %0(<2 x s32>)
-    $q0 = COPY %1(<2 x s64>)
+    %0:_(<2 x i32>) = COPY $d0
+    %1:_(<2 x i64>) = G_SEXT %0(<2 x i32>)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -355,13 +357,13 @@ body:             |
     ; CHECK-LABEL: name: test_anyext_v2s64_from_v2s32
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<2 x i64>) = G_ANYEXT [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: $q0 = COPY [[ANYEXT]](<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<2 x s32>) = COPY $d0
-    %1:_(<2 x s64>) = G_ANYEXT %0(<2 x s32>)
-    $q0 = COPY %1(<2 x s64>)
+    %0:_(<2 x i32>) = COPY $d0
+    %1:_(<2 x i64>) = G_ANYEXT %0(<2 x i32>)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...

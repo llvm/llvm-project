@@ -1,7 +1,7 @@
-# RUN: llc %s -start-after=livedebugvalues -debugger-tune=gdb --filetype=obj -o - \
+# RUN: llc %s -start-after=live-debug-values -debugger-tune=gdb --filetype=obj -o - \
 # RUN: | llvm-dwarfdump - | FileCheck %s
 
-# Generated from IR crash reproducer with `llc -stop-after=livedebugvalues -simplify-mir`.
+# Generated from IR crash reproducer with `llc -stop-after=live-debug-values -simplify-mir`.
 # Check the GNU equivalent of DW_AT_call_target_clobbered is emitted without
 # hitting assertions (DWARF version 4, -debugger-tune=gdb).
 
@@ -53,6 +53,6 @@ body:             |
     liveins: $rdi
 
     $rax = MOV64rr $rdi
-    dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
+    $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
     TAILJMPr64 killed renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit $rdi
 ...

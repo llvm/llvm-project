@@ -270,7 +270,8 @@ LLVM_ABI void native(const Twine &path, SmallVectorImpl<char> &result,
 /// converts all '\' to '/'.
 ///
 /// @param path A path that is transformed to native format.
-LLVM_ABI std::string native(const Twine &path, Style style = Style::native);
+[[nodiscard]] LLVM_ABI std::string native(const Twine &path,
+                                          Style style = Style::native);
 
 /// Convert path to the native form in place. This is used to give paths to
 /// users and operating system calls in the platform's normal way. For example,

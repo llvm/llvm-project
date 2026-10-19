@@ -29,7 +29,7 @@ define void @_Z8DistanceIlLi5EEvPfiPmS0_(ptr %p1, i32 %p2, ptr %p3, ptr %p4) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], splat (i64 5)
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[P3]], align 8
 ; CHECK-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds float, ptr [[ADD_PTR]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP6]], 5
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds float, ptr [[ADD_PTR11]], i64 [[AND]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX13]], align 4

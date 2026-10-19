@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s
+# RUN: llc -run-pass=live-debug-values -o - %s -experimental-debug-variable-locations=false | FileCheck %s
 #
 # This test is used to acknowledge situation when spill register is killed
 # in instruction after the spill occurs.
@@ -311,7 +311,7 @@ body:             |
 
     renamable $r14 = OR64rr killed renamable $r14, renamable $r12, implicit-def dead $eflags
     $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
-    dead $edx = MOV32ri 16, implicit-def $rdx
+    $edx = MOV32ri 16, implicit-def $rdx
     $rdi = MOV64rr killed $r14
     CALL64pcrel32 @memset, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
     $rdi = MOV64rr $r12

@@ -23,7 +23,7 @@ mlir::convertFromAttribute(int64_t &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<IntegerAttr>(attr);
   if (!valueAttr) {
-    emitError() << "expected IntegerAttr for key `value`";
+    emitError() << "expected IntegerAttr";
     return failure();
   }
   storage = valueAttr.getValue().getSExtValue();
@@ -38,7 +38,7 @@ mlir::convertFromAttribute(int32_t &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<IntegerAttr>(attr);
   if (!valueAttr) {
-    emitError() << "expected IntegerAttr for key `value`";
+    emitError() << "expected IntegerAttr";
     return failure();
   }
   storage = valueAttr.getValue().getSExtValue();
@@ -53,7 +53,7 @@ mlir::convertFromAttribute(int8_t &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<IntegerAttr>(attr);
   if (!valueAttr) {
-    emitError() << "expected IntegerAttr for key `value`";
+    emitError() << "expected IntegerAttr";
     return failure();
   }
   storage = valueAttr.getValue().getSExtValue();
@@ -70,7 +70,7 @@ mlir::convertFromAttribute(uint8_t &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<IntegerAttr>(attr);
   if (!valueAttr) {
-    emitError() << "expected IntegerAttr for key `value`";
+    emitError() << "expected IntegerAttr";
     return failure();
   }
   storage = valueAttr.getValue().getZExtValue();
@@ -87,8 +87,7 @@ mlir::convertFromAttribute(std::string &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<StringAttr>(attr);
   if (!valueAttr)
-    return emitError()
-           << "expected string property to come from string attribute";
+    return emitError() << "expected StringAttr";
   storage = valueAttr.getValue().str();
   return success();
 }
@@ -102,7 +101,7 @@ mlir::convertFromAttribute(bool &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<BoolAttr>(attr);
   if (!valueAttr)
-    return emitError() << "expected BoolAttr for key `value`";
+    return emitError() << "expected BoolAttr";
   storage = valueAttr.getValue();
   return success();
 }
@@ -117,7 +116,7 @@ convertDenseArrayFromAttr(MutableArrayRef<T> storage, Attribute attr,
                           StringRef denseArrayTyStr) {
   auto valueAttr = dyn_cast<DenseArrayTy>(attr);
   if (!valueAttr) {
-    emitError() << "expected " << denseArrayTyStr << " for key `value`";
+    emitError() << "expected " << denseArrayTyStr;
     return failure();
   }
   if (valueAttr.size() != static_cast<int64_t>(storage.size())) {
@@ -148,7 +147,7 @@ convertDenseArrayFromAttr(SmallVectorImpl<T> &storage, Attribute attr,
                           StringRef denseArrayTyStr) {
   auto valueAttr = dyn_cast<DenseArrayTy>(attr);
   if (!valueAttr) {
-    emitError() << "expected " << denseArrayTyStr << " for key `value`";
+    emitError() << "expected " << denseArrayTyStr;
     return failure();
   }
   storage.resize_for_overwrite(valueAttr.size());

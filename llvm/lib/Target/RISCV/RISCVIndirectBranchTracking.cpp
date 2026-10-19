@@ -27,10 +27,6 @@
 
 using namespace llvm;
 
-cl::opt<uint32_t> PreferredLandingPadLabel(
-    "riscv-landing-pad-label", cl::ReallyHidden,
-    cl::desc("Use preferred fixed label for all labels"));
-
 namespace {
 class RISCVIndirectBranchTracking : public MachineFunctionPass {
 public:
@@ -65,16 +61,6 @@ emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
       .addImm(Label);
 }
 
-static bool isCallReturnTwice(const MachineOperand &MOp) {
-  if (!MOp.isGlobal())
-    return false;
-  auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
-  if (!CalleeFn)
-    return false;
-  AttributeList Attrs = CalleeFn->getAttributes();
-  return Attrs.hasFnAttr(Attribute::ReturnsTwice);
-}
-
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
@@ -83,11 +69,11 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   uint32_t FixedLabel = 0;
-  if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
-    if (!isUInt<20>(PreferredLandingPadLabel))
+  if (std::optional<uint32_t> Label = Subtarget.getCLOpts().landing_pad_label) {
+    if (!isUInt<20>(*Label))
       report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit in "
                          "unsigned 20-bits");
-    FixedLabel = PreferredLandingPadLabel;
+    FixedLabel = *Label;
   }
 
   bool Changed = false;
@@ -112,19 +98,6 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.getAlignment() < LpadAlign)
         MBB.setAlignment(LpadAlign);
       Changed = true;
-    }
-  }
-
-  // Check for calls to functions with ReturnsTwice attribute and insert
-  // LPAD after such calls
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
-      if (I->isCall() && I->getNumOperands() > 0 &&
-          isCallReturnTwice(I->getOperand(0))) {
-        auto NextI = std::next(I);
-        emitLpad(MBB, TII, FixedLabel, NextI);
-        Changed = true;
-      }
     }
   }
 

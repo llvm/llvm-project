@@ -23,7 +23,7 @@ namespace Fortran::runtime {
 template <typename CHAR>
 inline RT_API_ATTRS int CompareToBlankPadding(
     const CHAR *x, std::size_t chars) {
-  using UNSIGNED_CHAR = std::make_unsigned_t<CHAR>;
+  using UNSIGNED_CHAR = common::make_unsigned_t<CHAR>;
   const auto blank{static_cast<UNSIGNED_CHAR>(' ')};
   for (; chars-- > 0; ++x) {
     const UNSIGNED_CHAR ux{*reinterpret_cast<const UNSIGNED_CHAR *>(x)};
@@ -159,7 +159,7 @@ template <typename CHAR, bool ADJUSTR>
 static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
     const Descriptor &string, const Terminator &terminator) {
   int rank{string.rank()};
-  SubscriptValue ub[maxRank], stringAt[maxRank];
+  SubscriptValue ub[maxRank]{}, stringAt[maxRank]{};
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
     ub[j] = string.GetDimension(j).Extent();
@@ -215,7 +215,7 @@ template <typename INT, typename CHAR>
 static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
     const Terminator &terminator) {
   int rank{string.rank()};
-  SubscriptValue ub[maxRank], stringAt[maxRank];
+  SubscriptValue ub[maxRank]{}, stringAt[maxRank]{};
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
     ub[j] = string.GetDimension(j).Extent();
@@ -407,8 +407,8 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
           : arg.rank()   ? arg.rank()
           : back         ? back->rank()
                          : 0};
-  SubscriptValue ub[maxRank], stringAt[maxRank], argAt[maxRank],
-      backAt[maxRank];
+  SubscriptValue ub[maxRank]{}, stringAt[maxRank]{}, argAt[maxRank]{},
+      backAt[maxRank]{};
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
     ub[j] = string.rank() ? string.GetDimension(j).Extent()

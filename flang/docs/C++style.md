@@ -8,11 +8,6 @@
 
 # Flang C++ Style Guide
 
-```{contents}
----
-local:
----
-```
 
 This document captures the style guide rules that are followed in the Flang codebase.
 

@@ -88,6 +88,7 @@ uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
       .Cases({"sp", "x31"}, LLDB_REGNUM_GENERIC_SP)
       .Cases({"fp", "x29"}, LLDB_REGNUM_GENERIC_FP)
       .Case("cpsr", LLDB_REGNUM_GENERIC_FLAGS)
+      .Case("tpidr", LLDB_REGNUM_GENERIC_TP)
       .Case("x0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("x1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("x2", LLDB_REGNUM_GENERIC_ARG3)

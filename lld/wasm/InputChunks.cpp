@@ -67,6 +67,9 @@ uint32_t InputChunk::getSize() const {
   if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this))
     return ms->builder.getSize();
 
+  if (const auto *sis = dyn_cast<SyntheticInputSegment>(this))
+    return sis->getSize();
+
   if (const auto *f = dyn_cast<InputFunction>(this)) {
     if (ctx.arg.compressRelocations && f->file) {
       return f->getCompressedSize();
@@ -91,6 +94,9 @@ void InputChunk::writeTo(uint8_t *buf) const {
     ms->builder.write(buf + outSecOff);
     // Apply relocations
     ms->relocate(buf + outSecOff);
+    return;
+  } else if (const auto *sis = dyn_cast<SyntheticInputSegment>(this)) {
+    sis->writeTo(buf);
     return;
   }
 
@@ -160,6 +166,7 @@ void InputChunk::relocate(uint8_t *buf) const {
     case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
     case R_WASM_FUNCTION_OFFSET_I64:
+    case R_WASM_MEMORY_ADDR_LOCREL_I64:
       write64le(loc, value);
       break;
     default:
@@ -257,6 +264,7 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_TABLE_INDEX_I64:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64:
   case R_WASM_FUNCTION_INDEX_I32:
     fatal("relocation compression not supported for " +
           relocTypeToString(rel.Type));
@@ -294,6 +302,7 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_TABLE_INDEX_I64:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64:
   case R_WASM_FUNCTION_INDEX_I32:
     fatal("relocation compression not supported for " +
           relocTypeToString(rel.Type));
@@ -386,6 +395,10 @@ void InputFunction::writeCompressed(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "  total: " << (buf + chunkSize - orig) << "\n");
 }
 
+void SyntheticInputSegment::writeTo(uint8_t *buf) const {
+  memset(buf + outSecOff, 0, size);
+}
+
 uint64_t InputChunk::getChunkOffset(uint64_t offset) const {
   if (const auto *ms = dyn_cast<MergeInputChunk>(this)) {
     LLVM_DEBUG(dbgs() << "getChunkOffset(merged): " << name << "\n");
@@ -403,6 +416,13 @@ uint64_t InputChunk::getOffset(uint64_t offset) const {
 }
 
 uint64_t InputChunk::getVA(uint64_t offset) const {
+  // In multithreaded PIC builds TLS chunks are never assigned an absolute
+  // virtual address; at runtime they live at an offset from `__tls_base`, so
+  // their VA is that relative offset. In single-threaded builds TLS is instead
+  // lowered to normal data with a fixed base and so is assigned addresses as
+  // usual.
+  if (ctx.isPic && ctx.arg.isMultithreaded() && isTLS())
+    return getChunkOffset(offset);
   return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
 

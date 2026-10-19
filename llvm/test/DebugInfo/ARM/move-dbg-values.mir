@@ -1,14 +1,14 @@
 # RUN: llc %s -start-after=arm-mve-vpt-opts -stop-after=arm-prera-ldst-opt -o - | FileCheck %s
-# CHECK: %5:rgpr = t2MOVCCr %3, killed %4, 0 /* CC::eq */, $cpsr, debug-location !15
-# CHECK-NEXT: DBG_VALUE 0, $noreg, !10, !DIExpression(), debug-location !15
-# CHECK-NEXT: DBG_VALUE $noreg, $noreg, !10, !DIExpression(), debug-location !15
-# CHECK-NEXT: DBG_VALUE $noreg, $noreg, !10, !DIExpression(), debug-location !15
-# CHECK-NEXT: %0:rgpr = t2LDRi12 %5, 0, 14 /* CC::al */, $noreg, debug-location !15 :: (load (s32) from %ir..backtrace_user.ctl_default, align 8)
-# CHECK-NEXT: %6:rgpr = t2LDRi12 %5, 4, 14 /* CC::al */, $noreg, debug-location !15 :: (load (s32) from %ir.btc_user_copy)
-# CHECK-NEXT: DBG_VALUE %6, $noreg, !10, !DIExpression(), debug-location !15
-# CHECK-NEXT: %2:gpr = t2LDRi12 %5, 8, 14 /* CC::al */, $noreg, debug-location !15 :: (load (s32) from %ir.btc_user_copy_context, align 8)
+# CHECK: %5:rgpr = t2MOVCCr %3, killed %4, 0 /* CC::eq */, $cpsr, debug-location !17
+# CHECK-NEXT: DBG_VALUE 0, $noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: %0:rgpr = t2LDRi12 %5, 0, 14 /* CC::al */, $noreg, debug-location !17 :: (load (s32) from %ir..backtrace_user.ctl_default, align 8)
+# CHECK-NEXT: %6:rgpr = t2LDRi12 %5, 4, 14 /* CC::al */, $noreg, debug-location !17 :: (load (s32) from %ir.btc_user_copy)
+# CHECK-NEXT: DBG_VALUE %6, $noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: %2:gpr = t2LDRi12 %5, 8, 14 /* CC::al */, $noreg, debug-location !17 :: (load (s32) from %ir.btc_user_copy_context, align 8)
 # CHECK-NEXT: %7:rgpr = t2ANDrr %6, %0, 14 /* CC::al */, $noreg, def $cpsr
-# CHECK-NEXT: DBG_VALUE %2, $noreg, !10, !DIExpression(), debug-location !15
+# CHECK-NEXT: DBG_VALUE %2, $noreg, !12, !DIExpression(), debug-location !17
 --- |
   target triple = "thumbv7k-apple-watchos8.0.0"
   %struct.backtrace_control = type {}
@@ -25,7 +25,7 @@
   !llvm.dbg.cu = !{!32}
   !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
   !1 = distinct !DIGlobalVariable(type: !11, isDefinition: true)
-  !2 = distinct !DISubprogram(unit: !32, retainedNodes: !38)
+  !2 = distinct !DISubprogram(type: !97, unit: !32, retainedNodes: !38)
   !3 = !DIFile(filename: "backtrace.pp.c", directory: "/Users/shubham/Development/Delta")
   !8 = !DIDerivedType(tag: DW_TAG_typedef, baseType: !11, size: 32)
   !11 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !12)
@@ -40,6 +40,8 @@
   !88 = !{i32 2, !"Debug Info Version", i32 3}
   !93 = !{i32 7, !"frame-pointer", i32 1}
   !95 = !DILocation(line: 5, column: 10, scope: !2)
+  !96 = !{null}
+  !97 = !DISubroutineType(types: !96)
 name:            backtrace_user
 registers:
   - {id: 0, class: rgpr, }

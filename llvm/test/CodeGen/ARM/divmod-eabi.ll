@@ -6,20 +6,20 @@
 ; Sometimes the checks that the correct registers are used after the libcalls
 ; are different between optimization levels, so we have to separate them.
 ; RUN: llc -mtriple armv7-none-eabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-none-eabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-none-eabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-none-eabihf %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-none-eabihf %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-none-eabihf %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; All "eabi" (Bare, GNU and Android) must lower SREM/UREM to __aeabi_{u,i}divmod
 ; RUN: llc -mtriple armv7-linux-androideabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-linux-androideabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-androideabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-linux-gnueabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-linux-gnueabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-gnueabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-linux-musleabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-linux-musleabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-musleabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-apple-darwin %s -o - | FileCheck %s --check-prefixes=DARWIN
-; RUN: llc -mtriple armv7-apple-darwin %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=DARWIN-O0
+; RUN: llc -mtriple armv7-apple-darwin %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=DARWIN-O0
 ; RUN: llc -mtriple thumbv7-windows %s -o - | FileCheck %s --check-prefixes=WINDOWS,WINDOWS-DEFAULT
-; RUN: llc -mtriple thumbv7-windows %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefixes=WINDOWS,WINDOWS-O0
+; RUN: llc -mtriple thumbv7-windows %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefixes=WINDOWS,WINDOWS-O0
 
 define signext i16 @f16(i16 signext %a, i16 signext %b) {
 ; EABI-LABEL: f16:
@@ -133,15 +133,21 @@ entry:
 ; EABI-NEXT: adc r1
 ; EABI-NOT: __aeabi_ldivmod
 ; DARWIN: ___divdi3
-; DARWIN: mov [[div1:r[0-9]+]], r0
-; DARWIN: mov [[div2:r[0-9]+]], r1
-; DARWIN: __moddi3
+; DARWIN: umull
+; DARWIN: mla
+; DARWIN: subs
+; DARWIN: mla
+; DARWIN: sbc
 ; DARWIN-O0: __divdi3
-; DARWIN-O0: __moddi3
+; DARWIN-O0: umull
+; DARWIN-O0: mla
+; DARWIN-O0: mla
+; DARWIN-O0: subs
+; DARWIN-O0: sbc
 ; WINDOWS: __rt_sdiv64
   %add = add nsw i64 %rem, %div
-; DARWIN: adds r0{{.*}}[[div1]]
-; DARWIN: adc r1{{.*}}[[div2]]
+; DARWIN: adds r0
+; DARWIN: adc r1
 ; WINDOWS: adds r0, r0, r2
 ; WINDOWS: adcs r1, r3
   ret i64 %add

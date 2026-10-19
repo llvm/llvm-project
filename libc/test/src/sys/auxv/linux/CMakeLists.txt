@@ -1,12 +1,12 @@
 add_custom_target(libc_sys_auxv_unittests)
-add_libc_unittest(
+add_libc_test(
   getauxval_test
   SUITE
     libc_sys_auxv_unittests
   SRCS
     getauxval_test.cpp
   DEPENDS
-    libc.include.sys_auxv
+    libc.hdr.sys_auxv_macros
     libc.src.errno.errno
     libc.src.sys.auxv.getauxval
     libc.test.UnitTest.ErrnoCheckingTest

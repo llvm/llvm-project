@@ -41,7 +41,9 @@ LLVM_ABI void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
 ///
 /// \param E to be printed
 /// \param OS to this stream
-/// \param GetNameForDWARFReg callback to return dwarf register name
+/// \param GetNameForDWARFReg side-effect-free callback to return a target
+/// register name, or an empty string if none is available. The printer may try
+/// another name-resolution method before reporting failure.
 ///
 /// \returns true if the expression was successfully printed
 LLVM_ABI bool printDwarfExpressionCompact(

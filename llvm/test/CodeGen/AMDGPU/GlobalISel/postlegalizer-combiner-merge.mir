@@ -1,4 +1,4 @@
-# RUN: llc -mtriple amdgcn-amd-amdhsa -run-pass=amdgpu-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -run-pass=amdgpu-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 ---
 name:            merge_unmerge
@@ -35,7 +35,7 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[BITCAST:%[a-z]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>) 
+    ; CHECK-NEXT: [[BITCAST:%[a-z]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0_vgpr1
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1

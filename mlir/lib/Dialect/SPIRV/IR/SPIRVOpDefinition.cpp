@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the TableGen'erated SPIR-V op implementation in the SPIR-V dialect.
-// These are placed in a separate file to reduce the total amount of code in
-// SPIRVOps.cpp and make that file faster to recompile.
+// Defines helpers referenced by the TableGen-generated SPIR-V operation
+// implementations.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
+#include "SPIRVOpDefinition.h"
 #include "SPIRVParsingUtils.h"
 
 #include "mlir/IR/TypeUtilities.h"
@@ -21,7 +21,7 @@
 namespace mlir::spirv {
 /// Returns true if the given op is a function-like op or nested in a
 /// function-like op without a module-like op in the middle.
-static bool isNestedInFunctionOpInterface(Operation *op) {
+bool isNestedInFunctionOpInterface(Operation *op) {
   if (!op)
     return false;
   if (op->hasTrait<OpTrait::SymbolTable>())
@@ -33,7 +33,7 @@ static bool isNestedInFunctionOpInterface(Operation *op) {
 
 /// Returns true if the given op is a GraphARM op or nested in a
 /// GraphARM op without a module-like op in the middle.
-static bool isNestedInGraphARMOpInterface(Operation *op) {
+bool isNestedInGraphARMOpInterface(Operation *op) {
   if (!op)
     return false;
   if (op->hasTrait<OpTrait::SymbolTable>())
@@ -45,13 +45,13 @@ static bool isNestedInGraphARMOpInterface(Operation *op) {
 
 /// Returns true if the given op is an module-like op that maintains a symbol
 /// table.
-static bool isDirectInModuleLikeOp(Operation *op) {
+bool isDirectInModuleLikeOp(Operation *op) {
   return op && op->hasTrait<OpTrait::SymbolTable>();
 }
 
 /// Returns a boolean scalar or vector type matching the shape of the given
 /// type. Scalar inputs yield i1, vector inputs yield vector<Nxi1>.
-static Type getMatchingBoolType(Type operandType) {
+Type getMatchingBoolType(Type operandType) {
   Builder builder(operandType.getContext());
   Type resultType = builder.getIntegerType(1);
   if (auto vecType = dyn_cast<VectorType>(operandType))
@@ -59,8 +59,8 @@ static Type getMatchingBoolType(Type operandType) {
   return resultType;
 }
 
-static ParseResult parseImageOperands(OpAsmParser &parser,
-                                      spirv::ImageOperandsAttr &attr) {
+ParseResult parseImageOperands(OpAsmParser &parser,
+                               spirv::ImageOperandsAttr &attr) {
   // Expect image operands
   if (parser.parseOptionalLSquare())
     return success();
@@ -74,8 +74,8 @@ static ParseResult parseImageOperands(OpAsmParser &parser,
   return parser.parseRSquare();
 }
 
-static void printImageOperands(OpAsmPrinter &printer, Operation *imageOp,
-                               spirv::ImageOperandsAttr attr) {
+void printImageOperands(OpAsmPrinter &printer, Operation *imageOp,
+                        spirv::ImageOperandsAttr attr) {
   if (attr) {
     auto strImageOperands = stringifyImageOperands(attr.getValue());
     printer << "[\"" << strImageOperands << "\"]";
@@ -85,7 +85,7 @@ static void printImageOperands(OpAsmPrinter &printer, Operation *imageOp,
 /// Adapted from the cf.switch implementation.
 /// <cases> ::= `default` `:` bb-id (`(` ssa-use-and-type-list `)`)?
 ///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )*
-static ParseResult parseSwitchOpCases(
+ParseResult parseSwitchOpCases(
     OpAsmParser &parser, Type &selectorType, Block *&defaultTarget,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &defaultOperands,
     SmallVectorImpl<Type> &defaultOperandTypes, DenseIntElementsAttr &literals,
@@ -136,12 +136,12 @@ static ParseResult parseSwitchOpCases(
   return success();
 }
 
-static void
-printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type selectorType,
-                   Block *defaultTarget, OperandRange defaultOperands,
-                   TypeRange defaultOperandTypes, DenseIntElementsAttr literals,
-                   SuccessorRange targets, OperandRangeRange targetOperands,
-                   const TypeRangeRange &targetOperandTypes) {
+void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type selectorType,
+                        Block *defaultTarget, OperandRange defaultOperands,
+                        TypeRange defaultOperandTypes,
+                        DenseIntElementsAttr literals, SuccessorRange targets,
+                        OperandRangeRange targetOperands,
+                        const TypeRangeRange &targetOperandTypes) {
   p << "  default: ";
   p.printSuccessorAndUseList(defaultTarget, defaultOperands);
 
@@ -160,7 +160,3 @@ printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type selectorType,
 }
 
 } // namespace mlir::spirv
-
-// TablenGen'erated operation definitions.
-#define GET_OP_CLASSES
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.cpp.inc"

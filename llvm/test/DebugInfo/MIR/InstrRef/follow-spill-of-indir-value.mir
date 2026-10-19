@@ -1,8 +1,8 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations=true \
-# RUN:   -run-pass=livedebugvalues \
+# RUN:   -run-pass=live-debug-values \
 # RUN: | FileCheck %s --implicit-check-not=DBG_VALUE
 # RUN: llc %s -o - -experimental-debug-variable-locations=true \
-# RUN:   -start-before=livedebugvalues -filetype=obj \
+# RUN:   -start-before=live-debug-values -filetype=obj \
 # RUN: | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ## Test that we can spill indirect plain variable locations, and those with

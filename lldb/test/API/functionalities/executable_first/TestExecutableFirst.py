@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestExecutableIsFirst(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

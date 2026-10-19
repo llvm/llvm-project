@@ -9,6 +9,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.locale_macros
     libc.src.locale.newlocale
+    libc.src.locale.setlocale
     libc.src.locale.uselocale
     libc.src.locale.freelocale
 )

@@ -36,12 +36,12 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr8 = COPY killed [[COPY]].sub_8bit
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY2]]
   ; CHECK-NEXT:   TEST8ri [[COPY1]], 1, implicit-def $eflags
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags

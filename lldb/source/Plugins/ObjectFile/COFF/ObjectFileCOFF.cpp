@@ -87,7 +87,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   }
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file->GetFilename().GetStringRef()};
+                         file->GetFilename()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -131,7 +131,7 @@ ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
     return {};
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file.GetFilename().GetStringRef()};
+                         file.GetFilename()};
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
     Log *log = GetLog(LLDBLog::Object);
@@ -145,6 +145,7 @@ ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
       unique_dyn_cast<COFFObjectFile>(std::move(*binary));
   ModuleSpecList specs;
   switch (static_cast<COFF::MachineTypes>(object->getMachine())) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
     specs.Append(ModuleSpec(file, ArchSpec("i686-unknown-windows-msvc")));
     return specs;
   case COFF::IMAGE_FILE_MACHINE_AMD64:
@@ -251,17 +252,12 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
     if (!Name)
       consumeError(Name.takeError());
 
-    SectionSP section =
-        std::make_unique<Section>(module, this,
-                                  static_cast<user_id_t>(SecRef.getIndex()),
-                                  ConstString(SectionName),
-                                  SectionType(SectionName, COFFSection),
-                                  COFFSection->VirtualAddress,
-                                  COFFSection->VirtualSize,
-                                  COFFSection->PointerToRawData,
-                                  COFFSection->SizeOfRawData,
-                                  COFFSection->getAlignment(),
-                                  0);
+    SectionSP section = std::make_unique<Section>(
+        module, this, static_cast<user_id_t>(SecRef.getIndex()),
+        SectionName.str(), SectionType(SectionName, COFFSection),
+        COFFSection->VirtualAddress, COFFSection->VirtualSize,
+        COFFSection->PointerToRawData, COFFSection->SizeOfRawData,
+        COFFSection->getAlignment(), 0);
     section->SetPermissions(Permissions(COFFSection));
 
     m_sections_up->AddSection(section);

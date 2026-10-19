@@ -900,20 +900,14 @@ define double @sitofp_i32tof64(i32 %x) #0 {
 define double @sitofp_i64tof64(i64 %x) #0 {
 ; SSE-X86-LABEL: sitofp_i64tof64:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %ebp
-; SSE-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE-X86-NEXT:    .cfi_offset %ebp, -8
-; SSE-X86-NEXT:    movl %esp, %ebp
-; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
-; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $8, %esp
-; SSE-X86-NEXT:    fildll 8(%ebp)
+; SSE-X86-NEXT:    .cfi_def_cfa_offset 12
+; SSE-X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    fstpl (%esp)
 ; SSE-X86-NEXT:    fldl (%esp)
 ; SSE-X86-NEXT:    wait
-; SSE-X86-NEXT:    movl %ebp, %esp
-; SSE-X86-NEXT:    popl %ebp
-; SSE-X86-NEXT:    .cfi_def_cfa %esp, 4
+; SSE-X86-NEXT:    addl $8, %esp
+; SSE-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: sitofp_i64tof64:
@@ -923,20 +917,14 @@ define double @sitofp_i64tof64(i64 %x) #0 {
 ;
 ; AVX-X86-LABEL: sitofp_i64tof64:
 ; AVX-X86:       # %bb.0:
-; AVX-X86-NEXT:    pushl %ebp
-; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    .cfi_offset %ebp, -8
-; AVX-X86-NEXT:    movl %esp, %ebp
-; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
-; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    fildll 8(%ebp)
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 12
+; AVX-X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX-X86-NEXT:    fstpl (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
-; AVX-X86-NEXT:    movl %ebp, %esp
-; AVX-X86-NEXT:    popl %ebp
-; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
+; AVX-X86-NEXT:    addl $8, %esp
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
 ;
 ; AVX-X64-LABEL: sitofp_i64tof64:

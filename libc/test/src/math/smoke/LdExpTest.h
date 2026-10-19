@@ -167,18 +167,20 @@ public:
   }
 };
 
-#define LIST_LDEXP_TESTS(T, func)                                              \
-  using LlvmLibcLdExpTest = LdExpTestTemplate<T>;                              \
-  TEST_F(LlvmLibcLdExpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcLdExpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcLdExpTest, OverFlow) { testOverflow(&func); }                 \
-  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnNormal) {                         \
+#define LIST_LDEXP_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = LdExpTestTemplate<T>;                           \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, OverFlow) { testOverflow(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, UnderflowToZeroOnNormal) {                      \
     testUnderflowToZeroOnNormal(&func);                                        \
   }                                                                            \
-  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnSubnormal) {                      \
+  TEST_F(LlvmLibc##Name##Test, UnderflowToZeroOnSubnormal) {                   \
     testUnderflowToZeroOnSubnormal(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }   \
+  TEST_F(LlvmLibc##Name##Test, NormalOperation) {                              \
+    testNormalOperation(&func);                                                \
+  }                                                                            \
   static_assert(true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H

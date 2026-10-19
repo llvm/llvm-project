@@ -30,8 +30,10 @@ entry:
 !1 = !DIFile(filename: "test_selectiondag.cpp", directory: "/home/AnonTokyo/documents/llvm-project/temp")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
-!4 = distinct !DISubprogram(name: "test_empty_struct_debug", scope: !1, file: !1, line: 1, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+!4 = distinct !DISubprogram(name: "test_empty_struct_debug", scope: !1, file: !1, line: 1, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, type: !10)
 !5 = !DILocalVariable(name: "v1", scope: !4, file: !1, line: 2)
 !6 = !DILocation(line: 2, column: 1, scope: !4)
 !7 = !DILocalVariable(name: "v2", scope: !4, file: !1, line: 3)
 !8 = !DILocation(line: 3, column: 1, scope: !4)
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)

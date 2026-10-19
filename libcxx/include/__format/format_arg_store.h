@@ -17,8 +17,8 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__format/concepts.h>
 #include <__format/format_arg.h>
+#include <__format/formattable.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/integer_traits.h>

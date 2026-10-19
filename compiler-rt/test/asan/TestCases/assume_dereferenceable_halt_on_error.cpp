@@ -1,6 +1,7 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-assume-dereferenceable=1 -fsanitize-recover=address %s -o %t
 // RUN: %env_asan_opts=halt_on_error=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=halt_on_error=0 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RECOVER
+// UNSUPPORTED: msvc
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -13,19 +13,19 @@
 
 ; CHECK: ref value must be pointer typed
 ; CHECK: ptr @a
-; CHECK: !0 = !{i32 1}
+; CHECK: !{{[0-9]+}} = !{i32 1}
 
 ; CHECK: values should not reference themselves
 ; CHECK: ptr @b
-; CHECK: !1 = !{ptr @b}
+; CHECK: !{{[0-9]+}} = !{ptr @b}
 
 ; CHECK: ref metadata must be ValueAsMetadata
 ; CHECK: ptr @c
-; CHECK: !2 = !{!"Hello World!"}
+; CHECK: !{{[0-9]+}} = !{!"Hello World!"}
 
 ; CHECK: ref metadata must have one operand
 ; CHECK: ptr @d
-; CHECK: !3 = !{ptr @c, ptr @a}
+; CHECK: !{{[0-9]+}} = !{ptr @c, ptr @a}
 
 ; CHECK: ref metadata must not be placed on a declaration
 ; CHECK: @e

@@ -3135,11 +3135,11 @@ define <2 x i64> @test_mm_mulhi_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.smulh.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_mulhi_epu16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_mulhi_epu16:
@@ -3158,11 +3158,11 @@ define <2 x i64> @test_mm_mulhi_epu16(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.umulh.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_mullo_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_mullo_epi16:

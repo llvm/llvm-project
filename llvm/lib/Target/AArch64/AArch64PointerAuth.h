@@ -9,11 +9,17 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64POINTERAUTH_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64POINTERAUTH_H
 
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/Register.h"
+#include "Utils/AArch64BaseInfo.h"
 
 namespace llvm {
 namespace AArch64PAuth {
+
+/// PAuth key to be used with function pointers in .init_array and .fini_array.
+constexpr AArch64PACKey::ID InitFiniKey = AArch64PACKey::IA;
+
+/// Constant discriminator to be used with function pointers in .init_array and
+/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
+constexpr unsigned InitFiniPointerConstantDiscriminator = 0xD9D4;
 
 /// Variants of check performed on an authenticated pointer.
 ///
@@ -85,21 +91,31 @@ enum class AuthCheckMethod {
   XPAC,
 };
 
-#define AUTH_CHECK_METHOD_CL_VALUES_COMMON                                     \
-  clEnumValN(AArch64PAuth::AuthCheckMethod::None, "none",                      \
-             "Do not check authenticated address"),                            \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::DummyLoad, "load",             \
-                 "Perform dummy load from authenticated address"),             \
-      clEnumValN(                                                              \
-          AArch64PAuth::AuthCheckMethod::HighBitsNoTBI, "high-bits-notbi",     \
-          "Compare bits 62 and 61 of address (TBI should be disabled)"),       \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::XPAC, "xpac",                  \
-                 "Compare with the result of XPAC (requires Armv8.3-a)")
+/// Ways to check pointer authentication auth/resign failures.
+enum class PtrauthCheckMode { Unchecked, Poison, Trap };
 
-#define AUTH_CHECK_METHOD_CL_VALUES_LR                                         \
-      AUTH_CHECK_METHOD_CL_VALUES_COMMON,                                      \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::XPACHint, "xpac-hint",         \
-                 "Compare with the result of XPACLRI")
+/// Control the emission of .cfi_set_ra_state, which replaces the
+/// deprecated .cfi_negate_ra_state_with_pc [1].
+///
+/// The latter is fundamentally unable to express some program orders [2], as
+/// the dwarf 'program' reads functions in a linear scan of their addresses to
+/// reconstruct the state of the frame, whereas control flow may enter and exit
+/// such regions arbitrarily (such as in hot-cold-split, and shrinkwrapped
+/// fucntions), and thus the negate-based cfi is unable to encode the address of
+/// the signing instruciton in all program orders.
+///
+/// Since .cfi_negate_ra_state is still sufficient for describing
+/// ptrauth-returns=pauth, we default to using the new CFI only for PAuth_LR, as
+/// DW_CFA_AARCH64_negate_ra_state has a smaller encoding than
+/// DW_CFA_AARCH64_set_ra_state.
+///
+/// 1: https://github.com/ARM-software/abi-aa/pull/346
+/// 2: https://github.com/ARM-software/abi-aa/issues/327
+enum class SetRAStateMode {
+  Never,   // Always use .cfi_negate_ra_state(_with_pc)
+  PAuthLR, // Use .cfi_set_ra_state only for PAuth_LR
+  Always,  // Use .cfi_set_ra_state for both PAuth and PAuth_LR
+};
 
 /// Returns the number of bytes added by checkAuthenticatedRegister.
 unsigned getCheckerSizeInBytes(AuthCheckMethod Method);

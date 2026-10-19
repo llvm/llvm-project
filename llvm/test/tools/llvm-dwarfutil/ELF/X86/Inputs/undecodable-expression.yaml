@@ -1,0 +1,61 @@
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    Size:            0x100
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_location
+            Form:      DW_FORM_exprloc
+  debug_info:
+    - Version: 4
+      AddrSize: 8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr:  CU1
+            - Value: 0x1000
+            - Value: 0x100
+        - AbbrCode: 2
+          Values:
+            - CStr:  foo
+            - Value: 0x1000
+            - Value: 0x100
+        - AbbrCode: 3
+          Values:
+            - CStr:  var
+            - BlockData: [ 0xe9, 0x0d, 0xa5, 0x01, 0x9f ]
+        - AbbrCode: 0
+        - AbbrCode: 0
+...

@@ -549,6 +549,24 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+// Make sure we do not crash on element types without a defined byte size (i1).
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var01_i1 bind(0, 1) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i1, stride=1> [0])>, StorageBuffer>
+  spirv.GlobalVariable @var01_i32 bind(0, 1) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+
+  spirv.func @unknown_byte_size(%index: i32) -> i32 "None" {
+    %c0 = spirv.Constant 0 : i32
+    %addr = spirv.mlir.addressof @var01_i32 : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+    // expected-error@+1 {{failed to legalize operation 'spirv.AccessChain'}}
+    %ac = spirv.AccessChain %addr[%c0, %index] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<i32, StorageBuffer>
+    %value = spirv.Load "StorageBuffer" %ac : i32
+    spirv.ReturnValue %value : i32
+  }
+}
+
+// -----
+
 // Make sure we do not crash on function arguments.
 
 spirv.module Logical GLSL450 {

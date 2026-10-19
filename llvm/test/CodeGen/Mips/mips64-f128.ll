@@ -2780,9 +2780,9 @@ entry:
 define fp128 @select_LD(i32 signext %a, i64, fp128 %b, fp128 %c) {
 ; C_CC_FMT-LABEL: select_LD:
 ; C_CC_FMT:       # %bb.0: # %entry
-; C_CC_FMT-NEXT:    movn $8, $6, $4
-; C_CC_FMT-NEXT:    movn $9, $7, $4
 ; C_CC_FMT-NEXT:    move $2, $8
+; C_CC_FMT-NEXT:    movn $2, $6, $4
+; C_CC_FMT-NEXT:    movn $9, $7, $4
 ; C_CC_FMT-NEXT:    move $4, $9
 ; C_CC_FMT-NEXT:    jr $ra
 ; C_CC_FMT-NEXT:    nop

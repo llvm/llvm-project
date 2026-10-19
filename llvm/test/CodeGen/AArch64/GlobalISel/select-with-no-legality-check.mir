@@ -260,11 +260,11 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
+    ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (i8))
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[LDRBBui]]
     %2:gpr(p0) = COPY $x0
-    %0:gpr(s32) = G_LOAD %2(p0) :: (load (s8))
-    $noreg = PATCHABLE_RET %0(s32)
+    %0:gpr(i32) = G_LOAD %2(p0) :: (load (i8))
+    $noreg = PATCHABLE_RET %0(i32)
 
 ...
 # The rules that generated this test has changed. The generator should be rerun
@@ -288,14 +288,14 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (s8))
+    ; CHECK-NEXT: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (i8))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 7
     ; CHECK-NEXT: $noreg = PATCHABLE_RET [[UBFMWri]]
     %2:gpr(p0) = COPY $x0
-    %0:fpr(s8) = G_LOAD %2(p0) :: (load (s8))
-    %1:gpr(s32) = G_ZEXT %0(s8)
-    $noreg = PATCHABLE_RET %1(s32)
+    %0:fpr(i8) = G_LOAD %2(p0) :: (load (i8))
+    %1:gpr(i32) = G_ZEXT %0(i8)
+    $noreg = PATCHABLE_RET %1(i32)
 
 ...
 ---

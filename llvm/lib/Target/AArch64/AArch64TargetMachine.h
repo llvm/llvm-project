@@ -16,15 +16,20 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include <optional>
 
 namespace llvm {
 
 class AArch64TargetMachine : public CodeGenTargetMachineImpl {
+  const AArch64Options &CLOpts;
+
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<AArch64Subtarget>> SubtargetMap;
+  mutable AttributeSet LastSubtargetAttrs;
+  mutable const AArch64Subtarget *LastSubtarget = nullptr;
 
   /// Reset internal state.
   void reset() override;
@@ -37,6 +42,8 @@ public:
                        bool JIT, bool IsLittleEndian);
 
   ~AArch64TargetMachine() override;
+
+  const AArch64Options &getCLOpts() const { return CLOpts; }
   const AArch64Subtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific
@@ -67,8 +74,9 @@ public:
                                 SMRange &SourceRange) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    return getPointerSize(SrcAS) == getPointerSize(DestAS);
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override {
+    return DL.getPointerSize(SrcAS) == DL.getPointerSize(DestAS);
   }
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
@@ -81,6 +89,13 @@ public:
 
   /// Returns the optimisation level that enables GlobalISel.
   unsigned getEnableGlobalISelAtO() const;
+
+  /// This function checks whether the opt level is explicitly set to none,
+  /// or whether GlobalISel was enabled due to SDAG encountering an optnone
+  /// function. If the opt level is greater than the level we automatically
+  /// enable globalisel at, and it wasn't enabled via CLI, we know that it must
+  /// be because of an optnone function.
+  bool isGlobalISelOptNone() const;
 
 private:
   bool isLittle;

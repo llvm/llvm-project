@@ -15,9 +15,6 @@ body:             |
     ; CHECK: renamable $edx = MOVZX32rm8 renamable $eax, 1, $noreg, 0, $noreg :: (load (s8) from `ptr undef` + 20, align 4, basealign 16)
     ; CHECK: dead renamable $ecx = MOV32rm renamable $eax, 1, $noreg, 0, $noreg :: (load (s32) from `ptr undef` + 12, basealign 16)
     ; CHECK: renamable $al = MOV8rm killed renamable $eax, 1, $noreg, 0, $noreg :: (load (s8) from `ptr undef`, align 4)
-    ; CHECK: dead renamable $ecx = COPY renamable $edx
-    ; CHECK: dead renamable $ecx = COPY renamable $edx
-    ; CHECK: dead renamable $ecx = COPY renamable $edx
     ; CHECK: renamable $esi = IMPLICIT_DEF
     ; CHECK: renamable $ecx = IMPLICIT_DEF
     ; CHECK: renamable $ecx = CMOV32rr renamable $ecx, killed renamable $esi, 2, implicit undef $eflags

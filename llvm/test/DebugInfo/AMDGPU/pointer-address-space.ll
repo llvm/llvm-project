@@ -1,8 +1,8 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgpu8.03--amdhsa -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; LLVM IR generated with the following command and OpenCL source:
 ;
-; $clang -cl-std=CL2.0 -g -O0 -target amdgcn-amd-amdhsa -S -emit-llvm <path-to-file>
+; $clang -cl-std=CL2.0 -g -O0 -target amdgpu8.03-amd-amdhsa -S -emit-llvm <path-to-file>
 ;
 ; kernel void kernel1() {
 ;   global int  addrspace(5)*FuncVar0 = 0;
@@ -39,15 +39,15 @@
 
 ; CHECK:      0x[[NONE]]: DW_TAG_pointer_type
 ; CHECK-NEXT:               DW_AT_type
-; CHECK-NOT:                DW_AT_address_class
+; CHECK-NOT:                DW_AT_LLVM_address_space
 
 ; CHECK:      0x[[LOCAL]]: DW_TAG_pointer_type
 ; CHECK-NEXT:                DW_AT_type
-; CHECK-NEXT:                DW_AT_address_class [DW_FORM_data4] (0x00000002)
+; CHECK-NEXT:                DW_AT_LLVM_address_space [DW_FORM_data4] (0x00000002 "DW_ASPACE_LLVM_AMDGPU_region")
 
 ; CHECK:      0x[[PRIVATE]]: DW_TAG_pointer_type
 ; CHECK-NEXT:                  DW_AT_type
-; CHECK-NEXT:                  DW_AT_address_class [DW_FORM_data4] (0x00000001)
+; CHECK-NEXT:                  DW_AT_LLVM_address_space [DW_FORM_data4] (0x00000001 "DW_ASPACE_LLVM_AMDGPU_generic")
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 

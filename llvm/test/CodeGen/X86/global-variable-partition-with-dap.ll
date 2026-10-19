@@ -10,16 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IRCOMMON,IR
-
-;; Repeat command above, but with string literals handled in the codegen pass,
-;; with -memprof-annotate-string-literal-section-prefix=true.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
-; RUN:     -partition-static-data-sections=true \
-; RUN:     -debug-only=static-data-profile-info \
-; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     -memprof-annotate-string-literal-section-prefix=true \
-; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOGSTR,IRCOMMON,IRSTR
+; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
@@ -38,33 +29,31 @@ target triple = "x86_64-unknown-linux-gnu"
 ; LOGSTR: .str.llvm.98765 has section prefix <empty>, solely from data access profiles
 ; LOGSTR: .str.2 has section prefix hot, solely from data access profiles
 
-; IRCOMMON:          .type   hot_bss,@object
-; IRCOMMON-NEXT:     .section .bss.hot.,"aw"
-; IRCOMMON:          .type   data_unknown_hotness,@object
-; IRCOMMON-NEXT:    .section .data,"aw"
+; IR:          .type   hot_bss,@object
+; IR-NEXT:     .section .bss.hot.,"aw"
+; IR:          .type   data_unknown_hotness,@object
+; IR-NEXT:    .section .data,"aw"
 
-; IRSTR:         .section        .rodata,"a",@progbits
-; IR:            .section        .rodata.unlikely.,"a",@progbits
-; IRCOMMON-NEXT:    .L.str:
-; IRCOMMON-NEXT:    .ascii  "abcde"
+; IR:         .section        .rodata,"a",@progbits
+; IR-NEXT:    .L.str:
+; IR-NEXT:    .ascii  "abcde"
 
-; IRCOMMON:         .section        .rodata.hot.,"a"
-; IRCOMMON-NEXT:    .str.1:
-; IRCOMMON-NEXT:    .ascii  "obj.a"
+; IR:         .section        .rodata.hot.,"a"
+; IR-NEXT:    .str.1:
+; IR-NEXT:    .ascii  "obj.a"
 
-; IRCOMMON:          .type   external_relro_array,@object
-; IRCOMMON-NEXT:     .section        .data.rel.ro.unlikely.,"aw"
+; IR:          .type   external_relro_array,@object
+; IR-NEXT:     .section        .data.rel.ro.unlikely.,"aw"
 
-; IRCOMMON:         .section        .rodata,"a",@progbits
-; IRCOMMON-NEXT:    .globl  .str.llvm.98765
-; IRCOMMON-NEXT:    .str.llvm.98765:
-; IRCOMMON-NEXT:    .ascii  "Joins"
+; IR:         .section        .rodata,"a",@progbits
+; IR-NEXT:    .globl  .str.llvm.98765
+; IR-NEXT:    .str.llvm.98765:
+; IR-NEXT:    .ascii  "Joins"
 
-; IRSTR:         .section        .rodata.hot.,"a",@progbits
-; IR:            .section        .rodata,"a",@progbits
-; IRSTR-NEXT:    .globl  .str.2
-; IRSTR-NEXT:    .str.2:
-; IRSTR-NEXT:    .ascii  "*ptr != nullptr"
+; IR:         .section        .rodata.hot.,"a",@progbits
+; IR-NEXT:    .globl  .str.2
+; IR-NEXT:    .str.2:
+; IR-NEXT:    .ascii  "*ptr != nullptr"
 
 ; OFF:        .type   hot_bss,@object
 ; OFF-NEXT:   .section        .bss.hot.,"aw"

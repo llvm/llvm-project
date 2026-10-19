@@ -16,6 +16,7 @@
 #include "size_class_map.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -237,6 +238,37 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoPrimaryTest, FindNearestBlock) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  const scudo::uptr Size = 64U;
+  if (Primary::canAllocate(Size)) {
+    const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
+    void *P = SizeClassAllocator.allocate(ClassId);
+    ASSERT_NE(P, nullptr);
+
+    scudo::uptr Ptr = reinterpret_cast<scudo::uptr>(P);
+    scudo::BlockInfo Info = Allocator->findNearestBlock(Ptr);
+
+    if (Info.BlockSize != 0) {
+      EXPECT_EQ(Info.BlockBegin, Ptr);
+      EXPECT_EQ(Info.BlockSize,
+                Primary::SizeClassMap::getSizeByClassId(ClassId));
+
+      scudo::BlockInfo Info2 = Allocator->findNearestBlock(Ptr + 10);
+      EXPECT_EQ(Info2.BlockBegin, Ptr);
+    }
+
+    SizeClassAllocator.deallocate(ClassId, P);
+  }
+
+  SizeClassAllocator.destroy(nullptr);
+}
+
 struct SmallRegionsConfig {
   static const bool MaySupportMemoryTagging = false;
   template <typename> using TSDRegistryT = void;
@@ -323,7 +355,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   };
   Allocator->disable();
   Allocator->iterateOverBlocks(Lambda);
-  Allocator->enable();
+  Allocator->enable(/*IsChild*/ false);
   EXPECT_EQ(Found, V.size());
   while (!V.empty()) {
     auto Pair = V.back();
@@ -419,6 +451,52 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   EXPECT_GT(Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll), 0U);
 }
 
+SCUDO_TYPED_TEST(ScudoPrimaryTest, ConcurrentReleaseToOSAndAllocate) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+
+  scudo::GlobalStats Stats;
+  Stats.init();
+
+  const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(16384U);
+  typename Primary::SizeClassAllocatorT InitCache;
+  InitCache.init(&Stats, Allocator.get());
+  void *InitPtr = InitCache.allocate(ClassId);
+  ASSERT_NE(InitPtr, nullptr);
+  InitCache.deallocate(ClassId, InitPtr);
+  InitCache.destroy(&Stats);
+  scudo::StatCounters InitialCounters = {};
+  Stats.get(InitialCounters);
+
+  std::atomic<bool> Stop{false};
+  std::thread AllocThread([&]() {
+    typename Primary::SizeClassAllocatorT LocalCache;
+    LocalCache.init(&Stats, Allocator.get());
+    while (!Stop.load(std::memory_order_relaxed)) {
+      void *P = LocalCache.allocate(ClassId);
+      EXPECT_NE(P, nullptr);
+      LocalCache.deallocate(ClassId, P);
+      LocalCache.drain();
+    }
+    LocalCache.destroy(&Stats);
+  });
+
+  for (scudo::uptr I = 0; I < 1000U; ++I)
+    Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll);
+
+  Stop.store(true, std::memory_order_relaxed);
+  AllocThread.join();
+
+  // Only one block of ClassId is ever live at a time, so concurrent ForceAll
+  // calls should reuse the existing freelist blocks rather than mapping more.
+  scudo::StatCounters FinalCounters = {};
+  Stats.get(FinalCounters);
+  EXPECT_EQ(FinalCounters[scudo::StatMapped],
+            InitialCounters[scudo::StatMapped]);
+  EXPECT_EQ(FinalCounters[scudo::StatFree], InitialCounters[scudo::StatFree]);
+}
+
 SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
@@ -472,3 +550,68 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {
   }
   SizeClassAllocator.drain();
 }
+
+#if !defined(GWP_ASAN_HOOKS)
+// This test doesn't work when GWP-Asan is enabled.
+TEST(ScudoPrimaryTest, PushBlocksDifferentGroups) {
+  using Primary = TestAllocator<TestConfig2, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  static_assert(
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::GroupSizeLog <
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::RegionSizeLog);
+
+  const scudo::uptr GroupScale =
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::GroupSizeLog -
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::CompactPtrScale;
+  const scudo::uptr Mask = (static_cast<scudo::uptr>(1) << GroupScale) - 1;
+
+  scudo::uptr ClassId = 1;
+  for (scudo::uptr C = 1; C < Primary::SizeClassMap::NumClasses; ++C) {
+    if (Primary::SizeClassMap::getSizeByClassId(C) >= 64 * 1024) {
+      ClassId = C;
+      break;
+    }
+  }
+  EXPECT_NE(1U, ClassId);
+
+  std::vector<void *> Pointers;
+  size_t SecondGroupIndex = 0;
+  for (scudo::uptr FirstGroup = 0, I = 0; I < 100; ++I) {
+    void *P = SizeClassAllocator.allocate(ClassId);
+    EXPECT_NE(P, nullptr);
+    Pointers.push_back(P);
+    typename Primary::CompactPtrT CompactP =
+        Allocator->compactPtr(ClassId, reinterpret_cast<scudo::uptr>(P));
+    scudo::uptr Group = static_cast<scudo::uptr>(CompactP) & ~Mask;
+    if (I == 0) {
+      FirstGroup = Group;
+    } else if (Group != FirstGroup) {
+      SecondGroupIndex = I;
+      break;
+    }
+  }
+  EXPECT_NE(0U, SecondGroupIndex);
+
+  std::vector<typename Primary::CompactPtrT> Array;
+  for (void *P : Pointers) {
+    Array.push_back(
+        Allocator->compactPtr(ClassId, reinterpret_cast<scudo::uptr>(P)));
+  }
+  EXPECT_GT(Array.size(), 1U);
+
+  std::swap(Array[0], Array[SecondGroupIndex]);
+
+  Allocator->pushBlocks(&SizeClassAllocator, ClassId, Array.data(),
+                        static_cast<scudo::u32>(Array.size()));
+
+  for (size_t I = 1; I < Array.size(); I++)
+    EXPECT_LE(Array[I - 1] & ~Mask, Array[I] & ~Mask)
+        << "Array not ordered: index " << I - 1 << " is < index " << I;
+
+  SizeClassAllocator.destroy(nullptr);
+}
+#endif

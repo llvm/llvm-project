@@ -27,14 +27,12 @@
 // O2: "-bplugin_opt:-O2"
 // O3: "-bplugin_opt:-O3"
 
-// vec-extabi option
+// The vec-extabi option is emitted into the IR via the "target-abi" module flag
+//
 // RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
 // RUN:   -fuse-ld=ld -flto -mabi=vec-extabi -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=VECEXTABI %s
-// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
-// RUN:   -fuse-ld=ld -flto -### 2>&1 | FileCheck --check-prefix=NOVECEXTABI %s
+// RUN:   | FileCheck --check-prefix=NOVECEXTABI %s
 //
-// VECEXTABI: "-bplugin_opt:-vec-extabi"
 // NOVECEXTABI-NOT: "-bplugin_opt:-vec-extabi"
 
 // Test debugging options

@@ -162,7 +162,7 @@ struct NotIdenticalStatementsPredicate {
 // to ID node.
 AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
   const NotIdenticalStatementsPredicate Predicate{
-      ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
+      ID, ::clang::DynTypedNode::create(Node), &Finder->getASTContext()};
   return Builder->removeBindings(Predicate);
 }
 

@@ -1,9 +1,9 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten -mattr=+exception-handling -o %t.o %s
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten %p/Inputs/ret32.s -o %t.ret32.o
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten %p/Inputs/libsearch-dyn.s -o %t.dyn.o
-# RUN: wasm-ld --experimental-pic -shared %t.ret32.o %t.dyn.o -o %t.lib.so
-# RUN: not wasm-ld --experimental-pic -pie -o %t.wasm %t.o 2>&1 | FileCheck --check-prefix=ERROR %s
-# RUN: wasm-ld --experimental-pic -pie -o %t.wasm %t.o %t.lib.so
+# RUN: wasm-ld -shared %t.ret32.o %t.dyn.o -o %t.lib.so
+# RUN: not wasm-ld -pie -o %t.wasm %t.o 2>&1 | FileCheck --check-prefix=ERROR %s
+# RUN: wasm-ld -pie -o %t.wasm %t.o %t.lib.so
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Same again for wasm64
@@ -11,9 +11,9 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-emscripten -mattr=+exception-handling -o %t.o %s
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-emscripten %p/Inputs/ret32.s -o %t.ret32.o
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-emscripten %p/Inputs/libsearch-dyn.s -o %t.dyn.o
-# RUN: wasm-ld --experimental-pic -mwasm64 -shared %t.ret32.o %t.dyn.o -o %t.lib.so
-# RUN: not wasm-ld --experimental-pic -mwasm64 -pie -o %t.wasm %t.o 2>&1 | FileCheck --check-prefix=ERROR %s
-# RUN: wasm-ld --experimental-pic -mwasm64 -pie -o %t.wasm %t.o %t.lib.so
+# RUN: wasm-ld -mwasm64 -shared %t.ret32.o %t.dyn.o -o %t.lib.so
+# RUN: not wasm-ld -mwasm64 -pie -o %t.wasm %t.o 2>&1 | FileCheck --check-prefix=ERROR %s
+# RUN: wasm-ld -mwasm64 -pie -o %t.wasm %t.o %t.lib.so
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # ERROR: error: {{.*}}: undefined symbol: ret32
@@ -36,6 +36,7 @@ _start:
 # CHECK:      Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink.0
+# CHECK-NEXT:     TargetArch:      {{wasm32|wasm64}}
 # CHECK-NEXT:     MemorySize:      0
 # CHECK-NEXT:     MemoryAlignment: 0
 # CHECK-NEXT:     TableSize:       0

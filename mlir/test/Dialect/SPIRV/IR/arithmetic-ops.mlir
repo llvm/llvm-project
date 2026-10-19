@@ -348,9 +348,17 @@ func.func @dot(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f16 {
 // -----
 
 func.func @dot(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
-  // expected-error @+1 {{'spirv.Dot' op operand #0 must be fixed-length vector of 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16}}
+  // expected-error @+1 {{op operand #0 must be vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or fixed-length vector of BFloat16 values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xi32>'}}
   %0 = spirv.Dot %arg0, %arg1 : vector<4xi32> -> i32
   return %0 : i32
+}
+
+// -----
+
+func.func @dot(%arg0: vector<4xf8E4M3FN>, %arg1: vector<4xf8E4M3FN>) -> f8E4M3FN {
+  // expected-error @+1 {{op operand #0 must be vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or fixed-length vector of BFloat16 values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xf8E4M3FN>'}}
+  %0 = spirv.Dot %arg0, %arg1 : vector<4xf8E4M3FN> -> f8E4M3FN
+  return %0 : f8E4M3FN
 }
 
 // -----

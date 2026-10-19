@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting -polly-ignore-parameter-bounds -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting -plugin-arg=Polly,-polly-ignore-parameter-bounds -S < %s | FileCheck %s
 
 ; CHECK: polly.preload.begin:
 ; CHECK-NEXT: %global.load = load i32, ptr @global, align 4, !alias.scope !0, !noalias !3

@@ -117,7 +117,7 @@ public:
       HasODR = false;
       return;
     }
-    if (auto Lang = dwarf::toUnsigned(CUDie.find(dwarf::DW_AT_language)))
+    if (auto Lang = CUDie.getLanguage())
       HasODR = CanUseODR && (*Lang == dwarf::DW_LANG_C_plus_plus ||
                              *Lang == dwarf::DW_LANG_C_plus_plus_03 ||
                              *Lang == dwarf::DW_LANG_C_plus_plus_11 ||

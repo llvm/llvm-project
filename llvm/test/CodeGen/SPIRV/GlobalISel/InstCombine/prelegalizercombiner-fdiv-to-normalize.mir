@@ -1,0 +1,25 @@
+# RUN: llc -verify-machineinstrs -O0 -mtriple spirv-unknown-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
+---
+name:            normalize_instcombine_float4
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: normalize_instcombine_float4
+    ; CHECK-NOT: %9:_(<4 x s32>) = G_SHUFFLE_VECTOR %8, %5, shufflemask(0, 0, 0, 0)
+    ; CHECK-NOT: %10:id(<4 x s32>) = G_FDIV %2, %9
+    ; CHECK: %10:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.normalize), %2(<4 x s32>)
+    %0:type(s64) = OpTypeFloat 32
+    %1:type(s64) = OpTypeVector %0(s64), 4
+    OpName %2(<4 x s32>), 97
+    %3:type(s64) = OpTypeFunction %1(s64), %1(s64)
+    %4:iid(s64) = OpFunction %1(s64), 0, %3(s64)
+    %2:vfid(<4 x s32>) = OpFunctionParameter %1(s64)
+    %5:_(<4 x s32>) = G_IMPLICIT_DEF
+    %6:_(s64) = G_CONSTANT i64 0
+    %7:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.length), %2(<4 x s32>)
+    %8:_(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.insertelt), %5(<4 x s32>), %7(s32), %6(s64)
+    %9:_(<4 x s32>) = G_SHUFFLE_VECTOR %8(<4 x s32>), %5, shufflemask(0, 0, 0, 0)
+    %10:id(<4 x s32>) = G_FDIV %2, %9
+    OpReturnValue %10(<4 x s32>)
+...

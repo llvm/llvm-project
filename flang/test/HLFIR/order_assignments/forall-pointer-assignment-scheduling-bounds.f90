@@ -4,7 +4,7 @@
 ! by the pointer assignments, or if the forall can be lowered into a single
 ! loop without any temporary copy.
 
-! RUN: bbc -hlfir -o /dev/null -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" \
+! RUN: bbc -o /dev/null -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" \
 ! RUN: --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s
 ! REQUIRES: asserts
 module forall_pointers_bounds

@@ -373,7 +373,8 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   auto typeLen = fir::CharacterType::unknownLen();
   // If len is a constant, reflect the length in the type.
   if (auto cstLen = getIntIfConstant(len))
-    typeLen = *cstLen;
+    if (std::optional<std::int64_t> cstLen64 = cstLen->trySExtValue())
+      typeLen = *cstLen64;
   auto *ctxt = builder.getContext();
   auto charTy = fir::CharacterType::get(ctxt, kind, typeLen);
   llvm::SmallVector<mlir::Value> lenParams;

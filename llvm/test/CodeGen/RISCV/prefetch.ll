@@ -240,6 +240,34 @@ define void @test_prefetch_offsetable_8(ptr %a) nounwind {
   ret void
 }
 
+define void @test_prefetch_offsetable_10(ptr %a) nounwind {
+; CHECK-LABEL: test_prefetch_offsetable_10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 2047
+; CHECK-NEXT:    ntl.all
+; CHECK-NEXT:    prefetch.r 2016(a0)
+; CHECK-NEXT:    ret
+  %addr = getelementptr i8, ptr %a, i64 4063
+  call void @llvm.prefetch(ptr %addr, i32 0, i32 0, i32 1)
+  ret void
+}
+
+; The upper bound of the ADDI-adjustment range. 4064 = 2016 + 2048 would
+; overflow simm12 (max 2047) in the folded ADDI, so it must instead be split
+; into LUI + simm12 by selectConstantAddr.
+define void @test_prefetch_offsetable_11(ptr %a) nounwind {
+; CHECK-LABEL: test_prefetch_offsetable_11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ntl.all
+; CHECK-NEXT:    prefetch.r -32(a0)
+; CHECK-NEXT:    ret
+  %addr = getelementptr i8, ptr %a, i64 4064
+  call void @llvm.prefetch(ptr %addr, i32 0, i32 0, i32 1)
+  ret void
+}
+
 define void @test_prefetch_frameindex_0() nounwind {
 ; CHECK-LABEL: test_prefetch_frameindex_0:
 ; CHECK:       # %bb.0:

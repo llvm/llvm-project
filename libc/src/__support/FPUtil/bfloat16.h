@@ -92,7 +92,7 @@ struct BFloat16 {
     return fputil::greater_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE constexpr BFloat16 operator-() const {
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR BFloat16 operator-() const {
     fputil::FPBits<bfloat16> result(*this);
     result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
     return result.get_val();
@@ -114,8 +114,20 @@ struct BFloat16 {
     return fputil::generic::div<bfloat16>(*this, other);
   }
 
-  LIBC_INLINE constexpr BFloat16 &operator*=(const BFloat16 &other) {
+  LIBC_INLINE constexpr BFloat16 &operator*=(BFloat16 other) {
     *this = *this * other;
+    return *this;
+  }
+  LIBC_INLINE constexpr BFloat16 &operator+=(BFloat16 other) {
+    *this = *this + other;
+    return *this;
+  }
+  LIBC_INLINE constexpr BFloat16 &operator-=(BFloat16 other) {
+    *this = *this - other;
+    return *this;
+  }
+  LIBC_INLINE constexpr BFloat16 &operator/=(BFloat16 other) {
+    *this = *this / other;
     return *this;
   }
 }; // struct BFloat16

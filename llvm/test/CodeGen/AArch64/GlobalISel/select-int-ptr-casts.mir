@@ -30,7 +30,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
-    %0(s64) = COPY $x0
+    %0(i64) = COPY $x0
     %1(p0) = G_INTTOPTR %0
     $x0 = COPY %1(p0)
 ...
@@ -52,8 +52,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
     %0(p0) = COPY $x0
-    %1(s64) = G_PTRTOINT %0
-    $x0 = COPY %1(s64)
+    %1(i64) = G_PTRTOINT %0
+    $x0 = COPY %1(i64)
 ...
 
 ---
@@ -104,8 +104,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %ptr:gpr(p0) = COPY $x0
     %ptr2int:gpr(i64) = G_PTRTOINT %ptr(p0)
-    %int:gpr(s16) = G_TRUNC %ptr2int(i64)
-    $h0 = COPY %int(s16)
+    %int:gpr(i16) = G_TRUNC %ptr2int(i64)
+    $h0 = COPY %int(i16)
     RET_ReallyLR implicit $h0
 ...
 
@@ -131,8 +131,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $b0
     %ptr:gpr(p0) = COPY $x0
     %ptr2int:gpr(i64) = G_PTRTOINT %ptr(p0)
-    %int:gpr(s8) = G_TRUNC %ptr2int(i64)
-    $b0 = COPY %int(s8)
+    %int:gpr(i8) = G_TRUNC %ptr2int(i64)
+    $b0 = COPY %int(i8)
     RET_ReallyLR implicit $b0
 
 ...
@@ -179,10 +179,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
     ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %1:fpr(<2 x s64>) = COPY $q0
-    %2:fpr(<2 x p0>) = G_INTTOPTR %1(<2 x s64>)
-    %4:gpr(s64) = G_CONSTANT i64 0
-    %3:fpr(p0) = G_EXTRACT_VECTOR_ELT %2(<2 x p0>), %4(s64)
+    %1:fpr(<2 x i64>) = COPY $q0
+    %2:fpr(<2 x p0>) = G_INTTOPTR %1(<2 x i64>)
+    %4:gpr(i64) = G_CONSTANT i64 0
+    %3:fpr(p0) = G_EXTRACT_VECTOR_ELT %2(<2 x p0>), %4(i64)
     $x0 = COPY %3(p0)
     RET_ReallyLR implicit $x0
 ...
@@ -202,7 +202,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %ptr
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %ptr:fpr(<2 x p0>) = COPY $q0
-    %int:fpr(<2 x s64>) = G_PTRTOINT %ptr(<2 x p0>)
-    $q0 = COPY %int(<2 x s64>)
+    %int:fpr(<2 x i64>) = G_PTRTOINT %ptr(<2 x p0>)
+    $q0 = COPY %int(<2 x i64>)
     RET_ReallyLR implicit $q0
 ...

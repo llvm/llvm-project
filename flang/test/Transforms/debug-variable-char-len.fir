@@ -7,12 +7,12 @@ module {
     %c6_i32 = arith.constant 6 : i32
     %c0_i64 = arith.constant 0 : i64
     %1 = fir.undefined !fir.dscope
-    %2 = fircg.ext_declare %arg1 dummy_scope %1 {uniq_name = "_QFfooElen1"} : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64> loc(#loc1)
+    %2 = fircg.ext_declare %arg1 dummy_scope %1 uniq_name("_QFfooElen1") : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64> loc(#loc1)
     %3:2 = fir.unboxchar %0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
     %4 = fir.load %2 : !fir.ref<i64>
     %5 = arith.cmpi sgt, %4, %c0_i64 : i64
     %6 = arith.select %5, %4, %c0_i64 : i64
-    %7 = fircg.ext_declare %3#0 typeparams %6 dummy_scope %1 {uniq_name = "_QFfooEstr1"} : (!fir.ref<!fir.char<1,?>>, i64, !fir.dscope) -> !fir.ref<!fir.char<1,?>> loc(#loc2)
+    %7 = fircg.ext_declare %3#0 typeparams %6 dummy_scope %1 uniq_name("_QFfooEstr1") : (!fir.ref<!fir.char<1,?>>, i64, !fir.dscope) -> !fir.ref<!fir.char<1,?>> loc(#loc2)
     return
   } loc(#loc3)
 }

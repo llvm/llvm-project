@@ -75,5 +75,6 @@ public:
 // CHECK: [[META7:![0-9]+]] = !{ptr @d, [[META8:![0-9]+]]}
 // CHECK: [[META8]] = !{!"_ZTS1b"}
 // CHECK: [[META9:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// CHECK: [[META10:![0-9]+]] = !{[[META2]], [[META2]], i64 0}
+// CHECK: [[META10:![0-9]+]] = !{[[META11:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[META11]] = !{!"__libc_errno", [[META2]], i64 0}
 //.

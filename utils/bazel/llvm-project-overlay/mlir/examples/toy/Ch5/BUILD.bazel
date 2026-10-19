@@ -79,6 +79,7 @@ cc_binary(
         "//mlir:AllPassesAndDialects",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:CallOpInterfaces",
         "//mlir:CastInterfaces",

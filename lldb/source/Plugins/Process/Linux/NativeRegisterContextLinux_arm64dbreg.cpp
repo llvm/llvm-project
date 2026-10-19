@@ -9,14 +9,21 @@
 #if defined(__arm64__) || defined(__aarch64__)
 
 #include "NativeRegisterContextLinux_arm64dbreg.h"
-#include "lldb/Host/linux/Ptrace.h"
 
-#include <asm/ptrace.h>
 // System includes - They have to be included after framework includes because
-// they define some macros which collide with variable names in other modules
-#include <sys/uio.h>
-// NT_PRSTATUS and NT_FPREGSET definition
+// they define some macros which collide with variable names in other modules.
+#include <asm/ptrace.h>
 #include <elf.h>
+#include <sys/ptrace.h>
+#include <sys/uio.h>
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
 
 using namespace lldb;
 using namespace lldb_private;

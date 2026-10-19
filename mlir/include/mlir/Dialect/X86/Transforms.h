@@ -110,6 +110,16 @@ void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 // Int8).
 void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 
+// Rewrites an additive vector contraction by zeroing the accumulator input
+// and materializing the accumulation as a separate add after the contraction.
+void populateMoveAccumulatorForContractLoopPatterns(
+    RewritePatternSet &patterns);
+
+// A set of patterns that tile and unroll contractions in order to prepare them
+// for the AMX nanokernel lowerings.
+void populateVectorContractMultiLevelUnrollForAMXPatterns(
+    RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

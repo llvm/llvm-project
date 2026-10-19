@@ -15,11 +15,16 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
     SHARED_BUILD_TESTCASE = False
 
+    # On macOS >= 27 Foundation caches the path of a URL-initialized NSBundle
+    # as a native Swift String, which can only be formatted with the Swift
+    # language plugin.
+    @requiresSwiftPlugin(min_apple_os_version=27.0)
     def test_nsbundle_with_run_command(self):
         """Test formatters for NSBundle."""
         self.appkit_tester_impl(self.nsbundle_data_formatter_commands, True)
 
-    @skipUnlessDarwin
+    @requireDarwin
+    @requiresSwiftPlugin(min_apple_os_version=27.0)
     def test_nsbundle_with_run_command_no_sonct(self):
         """Test formatters for NSBundle."""
         self.appkit_tester_impl(self.nsbundle_data_formatter_commands, False)
@@ -31,7 +36,7 @@ class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
                 "(NSBundle *) bundle_string = ",
                 ' @"/System/Library/Frameworks/Accelerate.framework"',
                 "(NSBundle *) bundle_url = ",
-                ' @"/System/Library/Frameworks/Foundation.framework"',
+                '"/System/Library/Frameworks/Foundation.framework"',
                 "(NSBundle *) main_bundle = ",
                 "data-formatter-objc",
             ],

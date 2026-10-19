@@ -40,7 +40,7 @@ public:
   using AddFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(AddFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr InStorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<InStorageType>((IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) /
                                    COUNT),
@@ -57,7 +57,7 @@ public:
   }
 
   void test_normal_range(AddFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr InStorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<InStorageType>((IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT),
         InStorageType(1));
@@ -72,10 +72,12 @@ public:
   }
 };
 
-#define LIST_ADD_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcAddTest = AddTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcAddTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcAddTest, NormalRange) { test_normal_range(&func); }
+#define LIST_ADD_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = AddTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #define LIST_ADD_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \

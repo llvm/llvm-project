@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class NamespaceBreakpointTestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
@@ -45,6 +46,7 @@ class NamespaceBreakpointTestCase(TestBase):
             )
 
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_breakpoints_func_full(self):
         """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "func"
         (no namespaces)."""
@@ -74,6 +76,7 @@ class NamespaceBreakpointTestCase(TestBase):
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeFull",
             )
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_breakpoints_a_func_full(self):
         """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "A::func"."""
         self.build()
@@ -132,6 +135,7 @@ class NamespaceTestCase(TestBase):
 
     # rdar://problem/8668674
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @requireExpressionEvaluation
     def test_with_run_command(self):
         """Test that anonymous and named namespace variables display correctly."""
         self.build()

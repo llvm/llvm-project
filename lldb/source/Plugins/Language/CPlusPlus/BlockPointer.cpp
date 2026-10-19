@@ -133,8 +133,7 @@ public:
     }
 
     ValueObjectSP child_sp(struct_sp->GetSyntheticChildAtOffset(
-        child_byte_offset, child_type, true,
-        ConstString(child_name.c_str(), child_name.size())));
+        child_byte_offset, child_type, true, ConstString(child_name)));
 
     return child_sp;
   }

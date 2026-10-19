@@ -3,6 +3,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_entrypoint_object(
+  clone
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clone
+)
+
+add_entrypoint_object(
   getcpu
   ALIAS
   DEPENDS
@@ -14,6 +21,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sched_getaffinity
+)
+
+add_entrypoint_object(
+  sched_getcpu
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sched_getcpu
 )
 
 add_entrypoint_object(
@@ -80,6 +94,41 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __sched_andcpuset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_andcpuset
+)
+
+add_entrypoint_object(
+  __sched_clrcpuset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_clrcpuset
+)
+
+add_entrypoint_object(
+  __sched_cpualloc
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpualloc
+)
+
+add_entrypoint_object(
+  __sched_cpuequal
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpuequal
+)
+
+add_entrypoint_object(
+  __sched_cpufree
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpufree
+)
+
+add_entrypoint_object(
   __sched_getcpucount
   ALIAS
   DEPENDS
@@ -105,4 +154,18 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.__sched_getcpuisset
+)
+
+add_entrypoint_object(
+  __sched_orcpuset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_orcpuset
+)
+
+add_entrypoint_object(
+  __sched_xorcpuset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_xorcpuset
 )

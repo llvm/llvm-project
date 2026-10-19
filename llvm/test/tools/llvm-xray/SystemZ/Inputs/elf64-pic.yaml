@@ -1,0 +1,253 @@
+# Generated from the following source:
+# __attribute__((xray_always_instrument)) void foo() {}
+# __attribute__((xray_always_instrument)) void bar() {}
+# __attribute__((xray_always_instrument)) void jar() {}
+
+# Built with the following arguments:
+# -target s390x-linux -fxray-instrument
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2MSB
+  Type:            ET_DYN
+  Machine:         EM_S390
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .dynsym
+    LastSec:         xray_fn_idx
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .plt
+    VAddr:           0x1420
+    Align:           0x1000
+    Offset:          0x420
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .relro_padding
+    VAddr:           0x2540
+    Align:           0x1000
+    Offset:          0x540
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .got.plt
+    LastSec:         .got.plt
+    VAddr:           0x35F8
+    Align:           0x1000
+    Offset:          0x5F8
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x2540
+    Align:           0x8
+    Offset:          0x540
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .relro_padding
+    VAddr:           0x2540
+    Offset:          0x540
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+    Offset:          0x0
+Sections:
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x290
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x3
+      Shift2:          0x1A
+    BloomFilter:     [ 0x1000080004000010 ]
+    HashBuckets:     [ 0x3 ]
+    HashValues:      [ 0x6A6128EA, 0x6A5EBC3C, 0x6A631F45 ]
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2B8
+    AddressAlign:    0x1
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x300
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x35F8
+        Symbol:          __xray_FunctionEntry
+        Type:            0xB
+      - Offset:          0x3600
+        Symbol:          __xray_FunctionExit
+        Type:            0xB
+  - Name:            xray_instr_map
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_LINK_ORDER ]
+    Address:         0x330
+    Link:            .text
+    AddressAlign:    0x1
+    Content:         00000000000010F000000000000010E80001020000000000000000000000000000000000000010F200000000000010C80101020000000000000000000000000000000000000010F000000000000010E80001020000000000000000000000000000000000000010F200000000000010C80101020000000000000000000000000000000000000010F000000000000010E80001020000000000000000000000000000000000000010F200000000000010C801010200000000000000000000000000
+  - Name:            xray_fn_idx
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_LINK_ORDER ]
+    Address:         0x3F0
+    Link:            .text
+    AddressAlign:    0x8
+    Content:         FFFFFFFFFFFFFF400000000000000002FFFFFFFFFFFFFF700000000000000002FFFFFFFFFFFFFFA00000000000000002
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1420
+    AddressAlign:    0x10
+    Content:         A7F400090700C02F00000000C0E50000006AEBBFF0580024B90400BFEBBFB058000407FE47000000C02F00000000A7F400690707070707070707070707070707A7F400090700C02F00000000C0E50000004AEBBFF0580024B90400BFEBBFB058000407FE47000000C02F00000000A7F400490707070707070707070707070707A7F400090700C02F00000000C0E50000002AEBBFF0580024B90400BFEBBFB058000407FE47000000C02F00000000A7F40029
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x14E0
+    AddressAlign:    0x10
+    Content:         E310F0380024C0100000087DD207F0301008E3101010000407F1070007000700C0100000107CE3101000000407F10D10E310100C0014C0F4FFFFFFE500000000C01000001070E3101000000407F10D10E310100C0014C0F4FFFFFFD500000018
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2540
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_JMPREL
+        Value:           0x300
+      - Tag:             DT_PLTRELSZ
+        Value:           0x30
+      - Tag:             DT_PLTGOT
+        Value:           0x25E0
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_SYMTAB
+        Value:           0x200
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x2B8
+      - Tag:             DT_STRSZ
+        Value:           0x42
+      - Tag:             DT_GNU_HASH
+        Value:           0x290
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x25E0
+    AddressAlign:    0x8
+    Content:         '000000000000254000000000000000000000000000000000'
+  - Name:            .relro_padding
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x25F8
+    AddressAlign:    0x1
+    Size:            0xA08
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x35F8
+    AddressAlign:    0x8
+    Content:         000000000000150E000000000000152E
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         004C696E6B65723A204C4C442032342E302E30202868747470733A2F2F6769746875622E636F6D2F6B61626963696E2F6C6C766D2D70726F6A6563742E67697420376539373832626164313963313939356433353034313566356536386336643638333330663639662900636C616E672076657273696F6E2032332E302E30676974202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A6563742E67697420626436626662613365353033343363313132613034623633393339346162383562653137633239622900
+Symbols:
+  - Name:            test.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .Lxray_sleds_start0
+    Section:         xray_instr_map
+    Value:           0x330
+  - Name:            .Lxray_fn_idx0
+    Section:         xray_fn_idx
+    Value:           0x3F0
+  - Name:            .Lxray_sleds_start1
+    Section:         xray_instr_map
+    Value:           0x370
+  - Name:            .Lxray_fn_idx1
+    Section:         xray_fn_idx
+    Value:           0x400
+  - Name:            .Lxray_sleds_start2
+    Section:         xray_instr_map
+    Value:           0x3B0
+  - Name:            .Lxray_fn_idx2
+    Section:         xray_fn_idx
+    Value:           0x410
+  - Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x2540
+    Other:           [ STV_HIDDEN ]
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1420
+    Size:            0x32
+  - Name:            __xray_FunctionEntry
+    Binding:         STB_GLOBAL
+  - Name:            __xray_FunctionExit
+    Binding:         STB_GLOBAL
+  - Name:            _Z3barv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1460
+    Size:            0x32
+  - Name:            _Z3jarv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x14A0
+    Size:            0x32
+DynamicSymbols:
+  - Name:            __xray_FunctionEntry
+    Binding:         STB_GLOBAL
+  - Name:            __xray_FunctionExit
+    Binding:         STB_GLOBAL
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1420
+    Size:            0x32
+  - Name:            _Z3barv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1460
+    Size:            0x32
+  - Name:            _Z3jarv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x14A0
+    Size:            0x32
+...

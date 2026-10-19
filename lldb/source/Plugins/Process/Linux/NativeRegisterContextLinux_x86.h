@@ -13,7 +13,7 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_x86.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 #include <optional>
@@ -30,6 +30,10 @@ class NativeRegisterContextLinux_x86
 public:
   NativeRegisterContextLinux_x86(const ArchSpec &target_arch,
                                     NativeThreadProtocol &native_thread);
+
+  uint32_t GetRegisterCount() const override;
+
+  const RegisterInfo *GetRegisterInfoAtIndex(uint32_t reg) const override;
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -106,6 +110,7 @@ private:
   YMM m_ymm_set;
   MPX m_mpx_set;
   RegInfo m_reg_info;
+  RegisterInfo m_i386_thread_pointer_info = {};
   uint64_t m_gpr_x86_64[x86_64_with_base::k_num_gpr_registers];
   uint32_t m_fctrl_offset_in_userarea;
 
@@ -132,10 +137,16 @@ private:
 
   bool IsMPX(uint32_t reg_index) const;
 
+  bool IsThreadPointer(const RegisterInfo &reg_info) const;
+
+  Status ReadThreadPointer(RegisterValue &reg_value);
+
+  uint32_t GetRegisterInfoIndex(uint32_t lldb_reg) const;
+
   void UpdateXSTATEforWrite(uint32_t reg_index);
 
-  RegisterContextLinux_x86 &GetRegisterInfo() const {
-    return static_cast<RegisterContextLinux_x86 &>(
+  RegisterInfoLinux_x86 &GetRegisterInfo() const {
+    return static_cast<RegisterInfoLinux_x86 &>(
         *m_register_info_interface_up);
   }
 };

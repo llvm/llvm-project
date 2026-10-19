@@ -13,9 +13,25 @@
 #include "real.h"
 #include <cinttypes>
 
+// Canonical lists of supported Fortran kinds for each intrinsic type.
+#define FORTRAN_INTEGER_KINDS {1, 2, 4, 8, 16}
+#define FORTRAN_UNSIGNED_KINDS FORTRAN_INTEGER_KINDS
+#define FORTRAN_REAL_KINDS {2, 3, 4, 8, 10, 16}
+#define FORTRAN_LOGICAL_KINDS {1, 2, 4, 8}
+#define FORTRAN_CHARACTER_KINDS {1, 2, 4}
+
 namespace Fortran::common {
 
 static constexpr int maxKind{16};
+
+template <typename T, std::size_t N>
+static constexpr bool IsKindInList(const T (&kinds)[N], std::int64_t kind) {
+  for (std::size_t i{0}; i < N; ++i) {
+    if (kinds[i] == kind)
+      return true;
+  }
+  return false;
+}
 
 // A predicate that is true when a kind value is a kind that could possibly
 // be supported for an intrinsic type category on some target instruction
@@ -24,16 +40,23 @@ static constexpr bool IsValidKindOfIntrinsicType(
     TypeCategory category, std::int64_t kind) {
   switch (category) {
   case TypeCategory::Integer:
-  case TypeCategory::Unsigned:
-    return kind == 1 || kind == 2 || kind == 4 || kind == 8 || kind == 16;
+  case TypeCategory::Unsigned: {
+    constexpr int kinds[] = FORTRAN_INTEGER_KINDS;
+    return IsKindInList(kinds, kind);
+  }
   case TypeCategory::Real:
-  case TypeCategory::Complex:
-    return kind == 2 || kind == 3 || kind == 4 || kind == 8 || kind == 10 ||
-        kind == 16;
-  case TypeCategory::Character:
-    return kind == 1 || kind == 2 || kind == 4;
-  case TypeCategory::Logical:
-    return kind == 1 || kind == 2 || kind == 4 || kind == 8;
+  case TypeCategory::Complex: {
+    constexpr int kinds[] = FORTRAN_REAL_KINDS;
+    return IsKindInList(kinds, kind);
+  }
+  case TypeCategory::Character: {
+    constexpr int kinds[] = FORTRAN_CHARACTER_KINDS;
+    return IsKindInList(kinds, kind);
+  }
+  case TypeCategory::Logical: {
+    constexpr int kinds[] = FORTRAN_LOGICAL_KINDS;
+    return IsKindInList(kinds, kind);
+  }
   default:
     return false;
   }

@@ -30,7 +30,8 @@ body:             |
     liveins: $rdi
 
     ; CHECK-LABEL: name: ptrtoint_s8
-    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     %0:gpr(p0) = COPY $rdi
     %1:gpr(s8) = G_PTRTOINT %0(p0)
     $al = COPY %1(s8)
@@ -50,6 +51,8 @@ body:             |
   bb.1.entry:
     liveins: $rdi
 
+    ; CHECK-LABEL: name: ptrtoint_s32
+    ; CHECK: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
     %0:gpr(p0) = COPY $rdi
     %1:gpr(s32) = G_PTRTOINT %0(p0)
     $eax = COPY %1(s32)

@@ -607,7 +607,7 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   std::optional<int64_t> CommonOffset;
   DenseMap<const MachineInstr *, SmallVector<unsigned>>
       InlineAsmMemoryOpIndexesMap;
-  for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
+  for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(DestReg)) {
     switch (UseMI.getOpcode()) {
     default:
       LLVM_DEBUG(dbgs() << "Not a load or store instruction: " << UseMI);
@@ -710,6 +710,9 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     }
   }
 
+  if (!CommonOffset)
+    return false;
+
   // We found a common offset.
   // Update the offsets in global address lowering.
   // We may have already folded some arithmetic so we need to add to any
@@ -721,6 +724,10 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   // We can only fold simm32 offsets.
   if (!isInt<32>(NewOffset))
     return false;
+
+  // Folding changes the value represented by DestReg, so its debug users can
+  // no longer describe the same address.
+  MRI->markUsesInDebugValueAsUndef(DestReg);
 
   // If optimized by this pass successfully, MO_RELAX bitmask target-flag should
   // be removed from the pcala code sequence. Code sequence of tls-le can still
@@ -760,7 +767,7 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   // Update the immediate in the load/store instructions to add the offset.
   const LoongArchInstrInfo &TII = *ST->getInstrInfo();
   for (MachineInstr &UseMI :
-       llvm::make_early_inc_range(MRI->use_instructions(DestReg))) {
+       llvm::make_early_inc_range(MRI->use_nodbg_instructions(DestReg))) {
     if (UseMI.getOpcode() == LoongArch::INLINEASM ||
         UseMI.getOpcode() == LoongArch::INLINEASM_BR) {
       auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];

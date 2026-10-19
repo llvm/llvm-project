@@ -97,20 +97,20 @@ define float @caller(ptr %error_ref) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -16
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB1_2
 ; CHECK-O0-NEXT:  ## %bb.1: ## %cont
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
 ; CHECK-O0-NEXT:  LBB1_2: ## %handler
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $32, %rsp
@@ -201,30 +201,30 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -16
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:  LBB2_1: ## %bb_loop
 ; CHECK-O0-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
-; CHECK-O0-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movss %xmm0, 4(%rsp) ## 4-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB2_4
 ; CHECK-O0-NEXT:  ## %bb.2: ## %cont
 ; CHECK-O0-NEXT:    ## in Loop: Header=BB2_1 Depth=1
-; CHECK-O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
+; CHECK-O0-NEXT:    movss 4(%rsp), %xmm0 ## 4-byte Reload
 ; CHECK-O0-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    jbe LBB2_1
 ; CHECK-O0-NEXT:  ## %bb.3: ## %bb_end
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
 ; CHECK-O0-NEXT:  LBB2_4: ## %handler
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $32, %rsp
@@ -391,7 +391,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-NEXT:    subq $16, %rsp
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbx, -16
-; CHECK-APPLE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; CHECK-APPLE-NEXT:    movss %xmm0, 12(%rsp) ## 4-byte Spill
 ; CHECK-APPLE-NEXT:    movl %edi, %ebx
 ; CHECK-APPLE-NEXT:    movq %r12, %rax
 ; CHECK-APPLE-NEXT:  LBB4_1: ## %bb_loop
@@ -405,7 +405,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
 ; CHECK-APPLE-NEXT:  LBB4_3: ## %bb_cont
 ; CHECK-APPLE-NEXT:    ## in Loop: Header=BB4_1 Depth=1
-; CHECK-APPLE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
+; CHECK-APPLE-NEXT:    movss 12(%rsp), %xmm0 ## 4-byte Reload
 ; CHECK-APPLE-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-APPLE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-APPLE-NEXT:    jbe LBB4_1
@@ -420,16 +420,16 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0:       ## %bb.0: ## %entry
 ; CHECK-O0-NEXT:    subq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-O0-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; CHECK-O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movss %xmm0, 24(%rsp) ## 4-byte Spill
+; CHECK-O0-NEXT:    movl %edi, 28(%rsp) ## 4-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 32(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jmp LBB4_1
 ; CHECK-O0-NEXT:  LBB4_1: ## %bb_loop
 ; CHECK-O0-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx ## 4-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movl 28(%rsp), %ecx ## 4-byte Reload
+; CHECK-O0-NEXT:    movq 32(%rsp), %rax ## 8-byte Reload
 ; CHECK-O0-NEXT:    cmpl $0, %ecx
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rax, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    je LBB4_3
 ; CHECK-O0-NEXT:  ## %bb.2: ## %gen_error
 ; CHECK-O0-NEXT:    ## in Loop: Header=BB4_1 Depth=1
@@ -437,19 +437,19 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %rcx
 ; CHECK-O0-NEXT:    movb $1, 8(%rcx)
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rax, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:  LBB4_3: ## %bb_cont
 ; CHECK-O0-NEXT:    ## in Loop: Header=BB4_1 Depth=1
-; CHECK-O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
+; CHECK-O0-NEXT:    movss 24(%rsp), %xmm0 ## 4-byte Reload
 ; CHECK-O0-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 16(%rsp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rax, 32(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jbe LBB4_1
 ; CHECK-O0-NEXT:  ## %bb.4: ## %bb_end
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %r12 ## 8-byte Reload
 ; CHECK-O0-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-O0-NEXT:    addq $40, %rsp
 ; CHECK-O0-NEXT:    retq
@@ -465,7 +465,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-i386-NEXT:    .cfi_offset %esi, -12
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -8
 ; CHECK-i386-NEXT:    flds 40(%esp)
-; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
+; CHECK-i386-NEXT:    fstps 16(%esp) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:    movl 36(%esp), %esi
 ; CHECK-i386-NEXT:    movl 32(%esp), %edi
 ; CHECK-i386-NEXT:  LBB4_1: ## %bb_loop
@@ -481,7 +481,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-i386-NEXT:    movb $1, 8(%eax)
 ; CHECK-i386-NEXT:  LBB4_3: ## %bb_cont
 ; CHECK-i386-NEXT:    ## in Loop: Header=BB4_1 Depth=1
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    flds 16(%esp) ## 4-byte Folded Reload
 ; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    fxch %st(1)
 ; CHECK-i386-NEXT:    fucompp
@@ -551,15 +551,15 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-O0:       ## %bb.0: ## %entry
 ; CHECK-O0-NEXT:    subq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-O0-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movl %esi, 4(%rsp) ## 4-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 8(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $16, %edi
 ; CHECK-O0-NEXT:    callq _malloc
-; CHECK-O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi ## 4-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movl 4(%rsp), %esi ## 4-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %rax, %rcx
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %rax ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %rcx, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rcx)
 ; CHECK-O0-NEXT:    movl %esi, 4(%rdi)
@@ -652,16 +652,16 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-NEXT:    leaq 24(%rsp), %rdi
 ; CHECK-O0-NEXT:    movl $1, %esi
 ; CHECK-O0-NEXT:    callq _foo_sret
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB6_2
 ; CHECK-O0-NEXT:  ## %bb.1: ## %cont
 ; CHECK-O0-NEXT:    movq (%rsp), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
 ; CHECK-O0-NEXT:  LBB6_2: ## %handler
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $48, %rsp
@@ -777,21 +777,21 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -24
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, -40(%rbp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rsi, -32(%rbp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, -24(%rbp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB7_2
 ; CHECK-O0-NEXT:  ## %bb.1: ## %cont
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -40(%rbp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -24(%rbp), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
 ; CHECK-O0-NEXT:  LBB7_2: ## %handler
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -24(%rbp), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movq %rsp, %rax
 ; CHECK-O0-NEXT:    addq $-16, %rax
@@ -799,16 +799,16 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    callq _foo
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, -48(%rbp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
 ; CHECK-O0-NEXT:    jne LBB7_4
 ; CHECK-O0-NEXT:  ## %bb.3: ## %cont2
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -32(%rbp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -48(%rbp), %rcx ## 8-byte Reload
 ; CHECK-O0-NEXT:    movb 8(%rcx), %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
 ; CHECK-O0-NEXT:  LBB7_4: ## %handler2
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -48(%rbp), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    leaq -8(%rbp), %rsp
@@ -957,24 +957,24 @@ define void @swifterror_isel(ptr) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -24
 ; CHECK-O0-NEXT:    .cfi_offset %r13, -16
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 24(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    ## implicit-def: $al
 ; CHECK-O0-NEXT:    testb $1, %al
 ; CHECK-O0-NEXT:    ## implicit-def: $ax
 ; CHECK-O0-NEXT:    ## implicit-def: $r12
 ; CHECK-O0-NEXT:    jne LBB8_2
 ; CHECK-O0-NEXT:  LBB8_1: ## =>This Inner Loop Header: Depth=1
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
-; CHECK-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax ## 2-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movw 14(%rsp), %ax ## 2-byte Reload
+; CHECK-O0-NEXT:    movq 24(%rsp), %r13 ## 8-byte Reload
 ; CHECK-O0-NEXT:    ## implicit-def: $edi
 ; CHECK-O0-NEXT:    movw %ax, %di
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    callq *%rax
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    movw (%rax), %ax
-; CHECK-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movw %ax, 14(%rsp) ## 2-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jmp LBB8_1
 ; CHECK-O0-NEXT:  LBB8_2:
 ; CHECK-O0-NEXT:    addq $40, %rsp
@@ -1310,11 +1310,11 @@ define swiftcc void @swifterror_clobber(ptr nocapture swifterror %err) {
 ;
 ; CHECK-O0-LABEL: swifterror_clobber:
 ; CHECK-O0:       ## %bb.0:
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, -8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    ## InlineAsm Start
 ; CHECK-O0-NEXT:    nop
 ; CHECK-O0-NEXT:    ## InlineAsm End
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -8(%rsp), %r12 ## 8-byte Reload
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-i386-LABEL: swifterror_clobber:
@@ -1380,10 +1380,10 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-APPLE-NEXT:    .cfi_offset %r14, -32
 ; CHECK-APPLE-NEXT:    .cfi_offset %r15, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbp, -16
-; CHECK-APPLE-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r12, 32(%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r13, 24(%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r9, 16(%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r8, 8(%rsp) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %rcx, %rbx
 ; CHECK-APPLE-NEXT:    movq %rdx, %r14
 ; CHECK-APPLE-NEXT:    movq %rsi, %r15
@@ -1401,10 +1401,10 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-APPLE-NEXT:    movq %r15, %rsi
 ; CHECK-APPLE-NEXT:    movq %r14, %rdx
 ; CHECK-APPLE-NEXT:    movq %rbx, %rcx
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 8(%rsp), %r8 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 16(%rsp), %r9 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 24(%rsp), %r13 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 32(%rsp), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
 ; CHECK-APPLE-NEXT:    addq $48, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
@@ -1421,14 +1421,14 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-O0-NEXT:    subq $80, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-O0-NEXT:    .cfi_offset %r13, -16
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 64(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r13, 8(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r9, 56(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r8, 48(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, 40(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdx, 32(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rsi, 24(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 16(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
@@ -1440,15 +1440,15 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-O0-NEXT:    movl $6, %r9d
 ; CHECK-O0-NEXT:    movq %r12, %r13
 ; CHECK-O0-NEXT:    callq _params_in_reg2
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %r13 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 24(%rsp), %rsi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 32(%rsp), %rdx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 40(%rsp), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 48(%rsp), %r8 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 56(%rsp), %r9 ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 64(%rsp), %r12 ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _params_in_reg2
 ; CHECK-O0-NEXT:    addq $80, %rsp
 ; CHECK-O0-NEXT:    popq %r13
@@ -1551,9 +1551,9 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    .cfi_offset %r15, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-APPLE-NEXT:    movq %r12, (%rsp) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r13, 32(%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r9, 24(%rsp) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r8, 8(%rsp) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %rcx, %rbx
 ; CHECK-APPLE-NEXT:    movq %rdx, %r14
 ; CHECK-APPLE-NEXT:    movq %rsi, %r15
@@ -1567,14 +1567,14 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    xorl %r13d, %r13d
 ; CHECK-APPLE-NEXT:    xorl %r12d, %r12d
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
-; CHECK-APPLE-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-APPLE-NEXT:    movq %r12, 16(%rsp) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %rbp, %rdi
 ; CHECK-APPLE-NEXT:    movq %r15, %rsi
 ; CHECK-APPLE-NEXT:    movq %r14, %rdx
 ; CHECK-APPLE-NEXT:    movq %rbx, %rcx
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 8(%rsp), %r8 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 24(%rsp), %r9 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 32(%rsp), %r13 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    callq _params_and_return_in_reg2
 ; CHECK-APPLE-NEXT:    movq %rax, %rbx
@@ -1589,7 +1589,7 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    movl $5, %r8d
 ; CHECK-APPLE-NEXT:    movl $6, %r9d
 ; CHECK-APPLE-NEXT:    xorl %r13d, %r13d
-; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-APPLE-NEXT:    movq 16(%rsp), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
 ; CHECK-APPLE-NEXT:    movq %rbx, %rax
 ; CHECK-APPLE-NEXT:    movq %r14, %rdx
@@ -1611,67 +1611,67 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-O0-NEXT:    subq $176, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 192
 ; CHECK-O0-NEXT:    .cfi_offset %r13, -16
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 56(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %r13, (%rsp) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r9, 48(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r8, 40(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, 32(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdx, 24(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rsi, 16(%rsp) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    xorl %eax, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, 64(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $1, %edi
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, 72(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $2, %esi
-; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rsi, 80(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $3, %edx
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdx, 96(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $4, %ecx
-; CHECK-O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %rcx, 104(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $5, %r8d
-; CHECK-O0-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r8, 112(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $6, %r9d
-; CHECK-O0-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r9, 88(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %r12, %r13
 ; CHECK-O0-NEXT:    callq _params_in_reg2
 ; CHECK-O0-NEXT:    movq (%rsp), %r13 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 8(%rsp), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 16(%rsp), %rsi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 24(%rsp), %rdx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 32(%rsp), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 40(%rsp), %r8 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 48(%rsp), %r9 ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 56(%rsp), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 120(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    callq _params_and_return_in_reg2
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 64(%rsp), %r13 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 72(%rsp), %rdi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 80(%rsp), %rsi ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 88(%rsp), %r9 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 128(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rdx, %rax
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 96(%rsp), %rdx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 136(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rcx, %rax
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 104(%rsp), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 144(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %r8, %rax
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 112(%rsp), %r8 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 152(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %r12, %rax
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq 120(%rsp), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq %rax, 160(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    callq _params_in_reg2
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 128(%rsp), %rax ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 136(%rsp), %rdx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 144(%rsp), %rcx ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 152(%rsp), %r8 ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %r12, %rsi
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq 160(%rsp), %r12 ## 8-byte Reload
 ; CHECK-O0-NEXT:    addq $176, %rsp
 ; CHECK-O0-NEXT:    popq %r13
 ; CHECK-O0-NEXT:    retq
@@ -1742,13 +1742,13 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    calll _params_and_return_in_reg2
 ; CHECK-i386-NEXT:    subl $4, %esp
 ; CHECK-i386-NEXT:    movl 88(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-i386-NEXT:    movl %eax, 84(%esp) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 92(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-i386-NEXT:    movl %eax, 80(%esp) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 96(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-i386-NEXT:    movl %eax, 76(%esp) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 100(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-i386-NEXT:    movl %eax, 72(%esp) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 104(%esp), %ebp
 ; CHECK-i386-NEXT:    movl 108(%esp), %edi
 ; CHECK-i386-NEXT:    movl 112(%esp), %esi
@@ -1774,13 +1774,13 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %esi, 24(%eax)
 ; CHECK-i386-NEXT:    movl %edi, 20(%eax)
 ; CHECK-i386-NEXT:    movl %ebp, 16(%eax)
-; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-i386-NEXT:    movl 72(%esp), %ecx ## 4-byte Reload
 ; CHECK-i386-NEXT:    movl %ecx, 12(%eax)
-; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-i386-NEXT:    movl 76(%esp), %ecx ## 4-byte Reload
 ; CHECK-i386-NEXT:    movl %ecx, 8(%eax)
-; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-i386-NEXT:    movl 80(%esp), %ecx ## 4-byte Reload
 ; CHECK-i386-NEXT:    movl %ecx, 4(%eax)
-; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-i386-NEXT:    movl 84(%esp), %ecx ## 4-byte Reload
 ; CHECK-i386-NEXT:    movl %ecx, (%eax)
 ; CHECK-i386-NEXT:    addl $124, %esp
 ; CHECK-i386-NEXT:    popl %esi
@@ -1969,10 +1969,10 @@ define swiftcc ptr @testAssign2(ptr %error_ref, ptr swifterror %err) {
 ;
 ; CHECK-O0-LABEL: testAssign2:
 ; CHECK-O0:       ## %bb.0: ## %entry
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, -8(%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jmp LBB23_1
 ; CHECK-O0-NEXT:  LBB23_1: ## %a
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
+; CHECK-O0-NEXT:    movq -8(%rsp), %r12 ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %r12, %rax
 ; CHECK-O0-NEXT:    retq
 ;

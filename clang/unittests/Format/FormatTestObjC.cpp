@@ -1803,6 +1803,22 @@ TEST_F(FormatTestObjC, AttributesOnObjCProperty) {
       "@property(weak) id delegate ATTRIBUTE_MACRO(X) __attribute__((X));");
 }
 
+TEST_F(FormatTestObjC, NoCrashOnStrayMethodSign) {
+  verifyNoCrash("@interface;\n"
+                "-");
+  verifyNoCrash("@interface Foo\n"
+                "-");
+  verifyNoCrash("@interface Foo\n"
+                "+");
+  verifyNoCrash("@implementation Foo\n"
+                "-");
+  verifyNoCrash("@interface Foo\n"
+                "-\n"
+                "@end");
+  verifyNoCrash("@interface Foo\n"
+                "- ;");
+}
+
 } // end namespace
 } // namespace test
 } // end namespace format

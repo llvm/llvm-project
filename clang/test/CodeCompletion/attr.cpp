@@ -1,12 +1,10 @@
 int a [[gnu::used]];
 // RUN: %clang_cc1 -code-completion-at=%s:%(line-1):9 %s | FileCheck --check-prefix=STD %s
-// STD:     COMPLETION: Pattern : __carries_dependency__
 // STD-NOT: COMPLETION: Pattern : __convergent__
 // STD:     COMPLETION: Pattern : __gnu__::__used__
 // STD-NOT: COMPLETION: Pattern : __gnu__::used
 // STD-NOT: COMPLETION: Pattern : __used__
 // STD:     COMPLETION: Pattern : _Clang::__convergent__
-// STD:     COMPLETION: Pattern : carries_dependency
 // STD-NOT: COMPLETION: Pattern : clang::called_once
 // STD:     COMPLETION: Pattern : clang::convergent
 // STD-NOT: COMPLETION: Pattern : convergent
@@ -15,11 +13,10 @@ int a [[gnu::used]];
 // STD:     COMPLETION: Pattern : gnu::alias(<#Aliasee#>)
 // STD:     COMPLETION: Pattern : gnu::used
 // STD-NOT: COMPLETION: Pattern : used
-// RUN: %clang_cc1 -code-completion-at=%s:%(line-17):9 -xobjective-c++ %s | FileCheck --check-prefix=STD-OBJC %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-15):9 -xobjective-c++ %s | FileCheck --check-prefix=STD-OBJC %s
 // STD-OBJC: COMPLETION: Pattern : clang::called_once
-// RUN: %clang_cc1 -code-completion-at=%s:%(line-19):14 %s | FileCheck --check-prefix=STD-NS %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-17):14 %s | FileCheck --check-prefix=STD-NS %s
 // STD-NS-NOT: COMPLETION: Pattern : __used__
-// STD-NS-NOT: COMPLETION: Pattern : carries_dependency
 // STD-NS-NOT: COMPLETION: Pattern : clang::convergent
 // STD-NS-NOT: COMPLETION: Pattern : convergent
 // STD-NS-NOT: COMPLETION: Pattern : gnu::used
@@ -33,21 +30,18 @@ int c [[using gnu: used]];
 // RUN: %clang_cc1 -code-completion-at=%s:%(line-1):15 %s | FileCheck --check-prefix=STD-USING %s
 // STD-USING:     COMPLETION: __gnu__
 // STD-USING:     COMPLETION: _Clang
-// STD-USING-NOT: COMPLETION: Pattern : carries_dependency
 // STD-USING:     COMPLETION: clang
 // STD-USING-NOT: COMPLETION: Pattern : clang::
 // STD-USING-NOT: COMPLETION: Pattern : gnu::
 // STD-USING:     COMPLETION: gnu
-// RUN: %clang_cc1 -code-completion-at=%s:%(line-9):20 %s | FileCheck --check-prefix=STD-NS %s
+// RUN: %clang_cc1 -code-completion-at=%s:%(line-8):20 %s | FileCheck --check-prefix=STD-NS %s
 
 int d __attribute__((used));
 // RUN: %clang_cc1 -code-completion-at=%s:%(line-1):22 %s | FileCheck --check-prefix=GNU %s
-// GNU:     COMPLETION: Pattern : __carries_dependency__
 // GNU:     COMPLETION: Pattern : __convergent__
 // GNU-NOT: COMPLETION: Pattern : __gnu__::__used__
 // GNU:     COMPLETION: Pattern : __used__
 // GNU-NOT: COMPLETION: Pattern : _Clang::__convergent__
-// GNU:     COMPLETION: Pattern : carries_dependency
 // GNU-NOT: COMPLETION: Pattern : clang::convergent
 // GNU:     COMPLETION: Pattern : convergent
 // GNU-NOT: COMPLETION: Pattern : gnu::used

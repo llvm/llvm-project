@@ -19,6 +19,7 @@ static_library("CAS") {
     "OnDiskGraphDB.cpp",
     "OnDiskKeyValueDB.cpp",
     "OnDiskTrieRawHashMap.cpp",
+    "PluginCAS.cpp",
     "UnifiedOnDiskCache.cpp",
   ]
 }

@@ -1,3 +1,10 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("CodeGenOptions") {
+  visibility = [ ":CodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("CodeGen") {
   output_name = "LLVMCodeGen"
   public_deps = [
@@ -5,7 +12,9 @@ static_library("CodeGen") {
     "//llvm/include/llvm/Config:llvm-config",
   ]
   deps = [
+    ":CodeGenOptions",
     "//llvm/include/llvm/CodeGen:GenVT",
+    "//llvm/include/llvm/CodeGen:RegAllocEvictModels",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
@@ -13,6 +22,7 @@ static_library("CodeGen") {
     "//llvm/lib/CodeGenTypes",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
@@ -42,6 +52,7 @@ static_library("CodeGen") {
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenCommonISel.cpp",
+    "CodeGenOptions.cpp",
     "CodeGenPrepare.cpp",
     "CodeGenTargetMachineImpl.cpp",
     "CommandFlags.cpp",
@@ -142,7 +153,7 @@ static_library("CodeGen") {
     "MachineFunctionAnalysis.cpp",
     "MachineFunctionPass.cpp",
     "MachineFunctionPrinterPass.cpp",
-    "MachineFunctionSplitter.cpp",
+    "MachineIDFSSAUpdater.cpp",
     "MachineInstr.cpp",
     "MachineInstrBundle.cpp",
     "MachineLICM.cpp",
@@ -243,7 +254,6 @@ static_library("CodeGen") {
     "TargetInstrInfo.cpp",
     "TargetLoweringBase.cpp",
     "TargetLoweringObjectFileImpl.cpp",
-    "TargetOptionsImpl.cpp",
     "TargetPassConfig.cpp",
     "TargetRegisterInfo.cpp",
     "TargetSchedule.cpp",

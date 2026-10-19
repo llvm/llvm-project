@@ -54,6 +54,12 @@ uint4 test_bitreverse_uint4(uint4 p0)
 	return reversebits(p0);
 }
 
+// CHECK: define hidden noundef <5 x i32> @
+// CHECK: call <5 x i32> @llvm.bitreverse.v5i32
+vector<uint, 5> test_bitreverse_uint5(vector<uint, 5> p0) {
+	return reversebits(p0);
+}
+
 // CHECK: define hidden noundef i64 @
 // CHECK: call i64 @llvm.bitreverse.i64(
 uint64_t test_bitreverse_long(uint64_t p0)

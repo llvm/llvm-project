@@ -1,8 +1,10 @@
 add_subdirectory(ByteCode)
 
 add_clang_unittest(ASTTests
+  APValueTest.cpp
   ASTContextParentMapTest.cpp
   ASTDumperTest.cpp
+  StringLiteral.cpp
   ASTExprTest.cpp
   ASTImporterFixtures.cpp
   ASTImporterTest.cpp
@@ -34,6 +36,7 @@ add_clang_unittest(ASTTests
   SourceLocationTest.cpp
   StmtPrinterTest.cpp
   StructuralEquivalenceTest.cpp
+  SubobjectVisitorTest.cpp
   TemplateNameTest.cpp
   TypePrinterTest.cpp
   UnresolvedSetTest.cpp

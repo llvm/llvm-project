@@ -96,9 +96,9 @@ public:
   }
 };
 
-#define LIST_FREXP_TESTS(T, func)                                              \
-  using LlvmLibcFrexpTest = FrexpTest<T>;                                      \
-  TEST_F(LlvmLibcFrexpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcFrexpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }         \
+#define LIST_FREXP_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = FrexpTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SomeIntegers) { testSomeIntegers(&func); }      \
   static_assert(true, "Require semicolon.")

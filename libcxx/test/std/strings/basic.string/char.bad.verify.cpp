@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <string>
 //   ... manipulating sequences of any non-array trivial standard-layout types.
 

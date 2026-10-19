@@ -29,6 +29,10 @@ using VocabMap = std::map<std::string, ir2vec::Embedding>;
 
 namespace {
 
+// Defaults of -mir2vec-*-weight.
+constexpr float OpcWeight = 1.0f, CommonOperandWeight = 1.0f,
+                RegOperandWeight = 1.0f;
+
 TEST(MIR2VecTest, RegexExtraction) {
   // Test simple instruction names
   EXPECT_EQ(MIRVocabulary::extractBaseOpcodeName("NOP"), "NOP");
@@ -86,7 +90,7 @@ protected:
     }
 
     // Set the data layout to match the target machine
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     // Create a dummy function to get subtarget info
     FunctionType *FT = FunctionType::get(Type::getVoidTy(*Ctx), false);
@@ -422,7 +426,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, TestSymbolicEmbedder) {
   auto TrapEmb = Embedder->getMInstVector(*TrapInst);
 
   // Verify embeddings match expected values (accounting for weight scaling)
-  float ExpectedWeight = mir2vec::OpcWeight; // Global weight from command line
+  float ExpectedWeight = OpcWeight;
   EXPECT_TRUE(NoopEmb.approximatelyEquals(Embedding(4, 1.0f * ExpectedWeight)));
   EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(4, 2.0f * ExpectedWeight)));
   EXPECT_TRUE(TrapEmb.approximatelyEquals(Embedding(4, 3.0f * ExpectedWeight)));
@@ -466,7 +470,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, MultipleBasicBlocks) {
   auto MBB1Vector = Embedder->getMBBVector(*MBB1);
   auto MBB2Vector = Embedder->getMBBVector(*MBB2);
 
-  float ExpectedWeight = mir2vec::OpcWeight;
+  float ExpectedWeight = OpcWeight;
   // BB1: NOOP + NOOP = 2 * ([1, 1] * weight)
   Embedding ExpectedMBB1Vector(2, 2.0f * ExpectedWeight);
   EXPECT_TRUE(MBB1Vector.approximatelyEquals(ExpectedMBB1Vector));
@@ -547,7 +551,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, UnknownOpcodes) {
   auto AddVector = Embedder->getMInstVector(*AddInstr);
   auto SubVector = Embedder->getMInstVector(*SubInstr);
 
-  float ExpectedWeight = mir2vec::OpcWeight;
+  float ExpectedWeight = OpcWeight;
   // ADD should have the embedding from vocabulary
   EXPECT_TRUE(
       AddVector.approximatelyEquals(Embedding(2, 1.0f * ExpectedWeight)));
@@ -657,14 +661,14 @@ TEST_F(MIR2VecEmbeddingTestFixture, InvalidRegisterHandling) {
   EXPECT_EQ(InstEmb.size(), 3u);
 
   // Test the expected embedding value
-  Embedding ExpectedOpcodeContribution(3, MOVValue * mir2vec::OpcWeight);
+  Embedding ExpectedOpcodeContribution(3, MOVValue * OpcWeight);
   auto ExpectedOperandContribution =
-      Embedding(3, PhyRegValue * mir2vec::RegOperandWeight)   // Base
-      + Embedding(3, ImmValue * mir2vec::CommonOperandWeight) // Scale
-      + Embedding(3, 0.0f)                                    // noreg
-      + Embedding(3, ImmValue * mir2vec::CommonOperandWeight) // displacement
-      + Embedding(3, 0.0f)                                    // noreg
-      + Embedding(3, (PhyRegValue + 0.1f) * mir2vec::RegOperandWeight); // Value
+      Embedding(3, PhyRegValue * RegOperandWeight)             // Base
+      + Embedding(3, ImmValue * CommonOperandWeight)           // Scale
+      + Embedding(3, 0.0f)                                     // noreg
+      + Embedding(3, ImmValue * CommonOperandWeight)           // displacement
+      + Embedding(3, 0.0f)                                     // noreg
+      + Embedding(3, (PhyRegValue + 0.1f) * RegOperandWeight); // Value
   auto ExpectedEmb = ExpectedOpcodeContribution + ExpectedOperandContribution;
   EXPECT_TRUE(InstEmb.approximatelyEquals(ExpectedEmb))
       << "MOV instruction embedding should match expected embedding";
@@ -725,10 +729,10 @@ TEST_F(MIR2VecEmbeddingTestFixture, PhysicalAndVirtualRegisterHandling) {
   EXPECT_EQ(InstEmb.size(), 4u);
 
   // Test the expected embedding value
-  Embedding ExpectedOpcodeContribution(4, MOVValue * mir2vec::OpcWeight);
+  Embedding ExpectedOpcodeContribution(4, MOVValue * OpcWeight);
   auto ExpectedOperandContribution =
-      Embedding(4, PhyRegValue * mir2vec::RegOperandWeight) // dst (physical)
-      + Embedding(4, VirtRegValue * mir2vec::RegOperandWeight); // src (virtual)
+      Embedding(4, PhyRegValue * RegOperandWeight)     // dst (physical)
+      + Embedding(4, VirtRegValue * RegOperandWeight); // src (virtual)
   auto ExpectedEmb = ExpectedOpcodeContribution + ExpectedOperandContribution;
   EXPECT_TRUE(InstEmb.approximatelyEquals(ExpectedEmb))
       << "MOV32rr instruction embedding should match expected embedding";
@@ -757,7 +761,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, EmbeddingCalculation) {
 
   // For NOOP with no operands, the embedding should be exactly the opcode
   // embedding
-  float ExpectedWeight = mir2vec::OpcWeight;
+  float ExpectedWeight = OpcWeight;
   Embedding ExpectedEmb(2, 2.0f * ExpectedWeight);
 
   EXPECT_TRUE(InstEmb.approximatelyEquals(ExpectedEmb))

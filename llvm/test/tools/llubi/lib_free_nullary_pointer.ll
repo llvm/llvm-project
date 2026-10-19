@@ -10,6 +10,8 @@ define i32 @main() {
   ret i32 0
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %p = getelementptr i8, ptr null, i64 42 => ptr 0x2A [dangling]
+; CHECK-NEXT:   %p = getelementptr i8, ptr null, i64 42 => ptr 0x2A [nullary]
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @free(ptr %p) at @main <stdin>:8
 ; CHECK-NEXT: Immediate UB detected: freeing a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

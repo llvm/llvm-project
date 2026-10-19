@@ -27,7 +27,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <type_traits>
+#include <concepts>
 
 #include "test_macros.h"
 
@@ -35,7 +35,7 @@
 
 template <class Mapping, class... Indices>
 concept operator_constraints = requires(Mapping m, Indices... idxs) {
-  { std::is_same_v<decltype(m(idxs...)), typename Mapping::index_type> };
+  { m(idxs...) } noexcept -> std::same_as<typename Mapping::index_type>;
 };
 
 template <class Mapping, class... Indices>

@@ -62,11 +62,11 @@ omp.private {type = private} @multi_block.privatizer2 : f32 init {
 
 llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   %arg0_map = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.ptr)
-        map_clauses(is_device_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
+        map_clauses(is_device_ptr) capture(ByRef) name("") -> !llvm.ptr
   %arg1_map = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.ptr)
-        map_clauses(is_device_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
+        map_clauses(is_device_ptr) capture(ByRef) name("") -> !llvm.ptr
 
-  omp.target map_entries(%arg0_map -> %arg0_arg, %arg1_map -> %arg1_arg : !llvm.ptr, !llvm.ptr) {
+  omp.target kernel_type(generic) map_entries(%arg0_map -> %arg0_arg, %arg1_map -> %arg1_arg : !llvm.ptr, !llvm.ptr) {
   omp.parallel private(@multi_block.privatizer %arg0_arg -> %arg2,
                        @multi_block.privatizer2 %arg1_arg -> %arg3 : !llvm.ptr, !llvm.ptr) {
     %0 = llvm.load %arg2 : !llvm.ptr -> f32

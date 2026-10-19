@@ -79,6 +79,7 @@ public:
   /// Visit an instruction, or a TBAA node itself as part of a metadata, and
   /// return true if it is valid, return false if an invalid TBAA is attached.
   LLVM_ABI bool visitTBAAMetadata(const Instruction *I, const MDNode *MD);
+  LLVM_ABI bool visitTBAAStructMetadata(const Instruction *I, const MDNode *MD);
 };
 
 /// Check a function for errors, useful for use when debugging a
@@ -118,7 +119,6 @@ public:
 
   LLVM_ABI Result run(Module &M, ModuleAnalysisManager &);
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &);
-  static bool isRequired() { return true; }
 };
 
 /// Create a verifier pass.
@@ -131,7 +131,7 @@ public:
 ///
 /// Note that this creates a pass suitable for the legacy pass manager. It has
 /// nothing to do with \c VerifierPass.
-class VerifierPass : public PassInfoMixin<VerifierPass> {
+class VerifierPass : public RequiredPassInfoMixin<VerifierPass> {
   bool FatalErrors;
 
 public:
@@ -139,7 +139,6 @@ public:
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

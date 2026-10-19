@@ -21,6 +21,7 @@
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cassert>
 #include <tuple>
 #include <vector>
 
@@ -46,7 +47,12 @@ public:
   LocateExample(llvm::StringRef AnnotatedCode)
       : Target(AnnotatedCode), AST([this] {
           TestInputs Inputs(Target.code());
-          Inputs.ExtraArgs.push_back("-std=c++17");
+          if (Target.code().starts_with("@")) {
+            Inputs.ExtraArgs.push_back("-x");
+            Inputs.ExtraArgs.push_back("objective-c");
+          } else {
+            Inputs.ExtraArgs.push_back("-std=c++17");
+          }
           return Inputs;
         }()) {}
 
@@ -161,9 +167,13 @@ TEST(LocateSymbol, CompleteSymbolHint) {
   {
     // Completeness is only absent in cases that matters.
     const llvm::StringLiteral Cases[] = {
+        "enum ^foo : int; enum ^foo : int {};",
+        "enum class ^foo; enum class ^foo {};",
         "struct ^foo; struct ^foo {};",
         "template <typename> struct ^foo; template <typename> struct ^foo {};",
         "template <typename> void ^foo(); template <typename> void ^foo() {};",
+        "@class ^foo; @interface ^foo @end",
+        "@protocol ^foo; @protocol ^foo @end",
     };
     for (auto &Case : Cases) {
       SCOPED_TRACE(Case);

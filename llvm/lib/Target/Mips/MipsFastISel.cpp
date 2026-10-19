@@ -20,7 +20,6 @@
 #include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -72,8 +71,6 @@
 #define DEBUG_TYPE "mips-fastisel"
 
 using namespace llvm;
-
-extern cl::opt<bool> EmitJalrReloc;
 
 namespace {
 
@@ -239,9 +236,7 @@ private:
                        unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
 
-  const MipsABIInfo &getABI() const {
-    return static_cast<const MipsTargetMachine &>(TM).getABI();
-  }
+  const MipsABIInfo &getABI() const { return Subtarget->getABI(); }
 
 public:
   // Backend specific FastISel code.
@@ -285,6 +280,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
   llvm_unreachable("should not be called");
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
 CCAssignFn *MipsFastISel::CCAssignFnForCall(CallingConv::ID CC) const {
@@ -336,8 +332,7 @@ Register MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i32 &&
          "Alloca should always return a pointer.");
 
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&Mips::GPR32RegClass);
@@ -365,10 +360,10 @@ unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
 
   if (isInt<16>(Imm)) {
     unsigned Opc = Mips::ADDiu;
-    emitInst(Opc, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Opc, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   } else if (isUInt<16>(Imm)) {
-    emitInst(Mips::ORi, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Mips::ORi, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   }
   unsigned Lo = Imm & 0xFFFF;
@@ -420,8 +415,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
-  if ((GV->hasInternalLinkage() ||
-       (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
+  if (GV->hasLocalLinkage()) {
     Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)
@@ -527,8 +521,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -656,7 +649,7 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   case CmpInst::ICMP_NE: {
     Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::XOR, TempReg).addReg(LeftReg).addReg(RightReg);
-    emitInst(Mips::SLTu, ResultReg).addReg(Mips::ZERO).addReg(TempReg);
+    emitInst(Mips::SLTu, ResultReg).addReg(Mips::R0).addReg(TempReg);
     break;
   }
   case CmpInst::ICMP_UGT:
@@ -738,8 +731,8 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     }
     Register RegWithZero = createResultReg(&Mips::GPR32RegClass);
     Register RegWithOne = createResultReg(&Mips::GPR32RegClass);
-    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::ZERO).addImm(0);
-    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
+    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::R0).addImm(0);
+    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::R0).addImm(1);
     emitInst(Opc).addReg(Mips::FCC0, RegState::Define).addReg(LeftReg)
                  .addReg(RightReg);
     emitInst(CondMovOpc, ResultReg)
@@ -986,7 +979,8 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
 
   BuildMI(*BrBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::BGTZ))
       .addReg(ZExtCondReg)
-      .addMBB(TBB);
+      .addMBB(TBB)
+      .setOperandDead(2); // implicit-def $at
   finishCondBranch(BI->getParent(), TBB, FBB);
   return true;
 }
@@ -1196,16 +1190,16 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
         VA.isMemLoc()) {
       switch (VA.getLocMemOffset()) {
       case 0:
-        VA.convertToReg(Mips::A0);
+        VA.convertToReg(getABI().getArgReg(0, false));
         break;
       case 4:
-        VA.convertToReg(Mips::A1);
+        VA.convertToReg(getABI().getArgReg(1, false));
         break;
       case 8:
-        VA.convertToReg(Mips::A2);
+        VA.convertToReg(getABI().getArgReg(2, false));
         break;
       case 12:
-        VA.convertToReg(Mips::A3);
+        VA.convertToReg(getABI().getArgReg(3, false));
         break;
       default:
         break;
@@ -1341,8 +1335,7 @@ bool MipsFastISel::fastLowerArguments() {
     return false;
   }
 
-  std::array<MCPhysReg, 4> GPR32ArgRegs = {{Mips::A0, Mips::A1, Mips::A2,
-                                           Mips::A3}};
+  ArrayRef<MCPhysReg> GPR32ArgRegs = getABI().getArgRegs(false);
   std::array<MCPhysReg, 2> FGR32ArgRegs = {{Mips::F12, Mips::F14}};
   std::array<MCPhysReg, 2> AFGR64ArgRegs = {{Mips::D6, Mips::D7}};
   auto NextGPR32 = GPR32ArgRegs.begin();
@@ -1480,9 +1473,9 @@ bool MipsFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(Allocation[ArgNo].RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&FormalArg, ResultReg);
   }
 
@@ -1567,10 +1560,11 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
     DestAddress = materializeExternalCallSym(Symbol);
   else
     DestAddress = materializeGV(Addr.getGlobalValue(), MVT::i32);
-  emitInst(TargetOpcode::COPY, Mips::T9).addReg(DestAddress);
-  MachineInstrBuilder MIB =
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::JALR),
-              Mips::RA).addReg(Mips::T9);
+  emitInst(TargetOpcode::COPY, getABI().getTempReg(9, false))
+      .addReg(DestAddress);
+  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                    TII.get(Mips::JALR), Mips::RA)
+                                .addReg(getABI().getTempReg(9, false));
 
   // Add implicit physical register uses to the call.
   for (auto Reg : CLI.OutRegs)
@@ -1582,14 +1576,13 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   CLI.Call = MIB;
 
-  if (EmitJalrReloc && !Subtarget->inMips16Mode()) {
+  if (Subtarget->getMCCLOpts().jalr_reloc && !Subtarget->inMips16Mode()) {
     // Attach callee address to the instruction, let asm printer emit
     // .reloc R_MIPS_JALR.
     if (Symbol)
       MIB.addSym(Symbol, MipsII::MO_JALR);
     else
-      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
-	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+      MIB.addSym(TM.getSymbol(Addr.getGlobalValue()), MipsII::MO_JALR);
   }
 
   // Finish off the call including any return values.
@@ -1954,9 +1947,10 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  if (!isa<ConstantInt>(I->getOperand(1)) ||
-      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
-    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  if (!Subtarget->getMCCLOpts().mno_check_zero_division &&
+      (!isa<ConstantInt>(I->getOperand(1)) ||
+       dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::R0).addImm(7);
   }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);
@@ -2150,10 +2144,10 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
     Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
     Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-      .addReg(Op0)
-      .addReg(Op1)
-      .addReg(Mips::HI0, RegState::ImplicitDefine | RegState::Dead)
-      .addReg(Mips::LO0, RegState::ImplicitDefine | RegState::Dead);
+        .addReg(Op0)
+        .addReg(Op1)
+        .setOperandDead(3)  // implicit-def $hi0
+        .setOperandDead(4); // implicit-def $lo0
     return ResultReg;
   }
 

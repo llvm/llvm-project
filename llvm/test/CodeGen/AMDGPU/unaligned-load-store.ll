@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=+unaligned-access-mode < %s | FileCheck -check-prefixes=SI,MUBUF,UNALIGNED %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=SI,FLATSCR,ALIGNED %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
+; RUN: llc -mtriple=amdgpu7.04 -mattr=+unaligned-access-mode < %s | FileCheck -check-prefixes=SI,MUBUF,UNALIGNED %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=SI,FLATSCR,ALIGNED %s
 
 ; SI-LABEL: {{^}}local_unaligned_load_store_i16:
 ; SI: ds_read_u8

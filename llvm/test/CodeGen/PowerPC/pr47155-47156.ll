@@ -6,15 +6,13 @@
 define void @pr47155() {
 ; CHECK-LABEL: Machine code for function pr47155
 ; CHECK: *** Final schedule for %bb.0 ***
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-NEXT: pr47155:%bb.0 entry
-; CHECK:      SU(0):   INLINEASM &"mtlr 31"{{.*}}implicit-def early-clobber $lr
+; CHECK:      SU(0):   INLINEASM &"mtlr 31"{{.*}}implicit-def dead early-clobber $lr
 ; CHECK:      Successors:
-; CHECK-NEXT:   SU(1): Out  Latency=0
 ; CHECK-NEXT:   SU(1): Ord  Latency=0 Barrier
-; CHECK-NEXT: SU(1):   INLINEASM &"mtlr 31"{{.*}}implicit-def early-clobber $lr8
+; CHECK-NEXT: SU(1):   INLINEASM &"mtlr 31"{{.*}}implicit-def dead early-clobber $lr8
 ; CHECK:      Predecessors:
-; CHECK-NEXT:   SU(0): Out  Latency=0
 ; CHECK-NEXT:   SU(0): Ord  Latency=0 Barrier
 ; CHECK-NEXT: ExitSU:
 entry:
@@ -26,9 +24,9 @@ entry:
 define void @pr47156(ptr %fn) {
 ; CHECK-LABEL: Machine code for function pr47156
 ; CHECK: *** Final schedule for %bb.0 ***
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-NEXT: pr47156:%bb.0 entry
-; CHECK:      SU(0):   INLINEASM &"mtctr 31"{{.*}}implicit-def early-clobber $ctr
+; CHECK:      SU(0):   INLINEASM &"mtctr 31"{{.*}}implicit-def dead early-clobber $ctr
 ; CHECK:      Successors:
 ; CHECK-NEXT:   SU(1): Out  Latency=0
 ; CHECK-NEXT: SU(1):   MTCTR8 renamable $x3, implicit-def $ctr8

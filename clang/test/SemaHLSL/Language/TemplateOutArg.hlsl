@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header %s -ast-dump | FileCheck %s
 
 // Case 1: Template declaration with a call to an inout or out argument that is
 // resolved based on the template parameter. For this case the template decl

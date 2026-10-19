@@ -2,8 +2,7 @@
 # REQUIRES: asserts
 
 # CHECK: 2 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
-# CHECK: 2 machine-outliner - Invisible instructions skipped during mapping
-# CHECK: 4 machine-outliner - Outlinable instructions mapped
+# CHECK: 3 machine-outliner - Outlinable instructions mapped
 # CHECK: 1 machine-outliner - Sentinel values inserted during mapping
 # CHECK: 5 machine-outliner - Total number of instructions mapped and saved to mapping vector
 

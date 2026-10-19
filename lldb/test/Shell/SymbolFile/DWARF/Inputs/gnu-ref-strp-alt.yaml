@@ -5,6 +5,13 @@ FileHeader:
   Type:            ET_DYN
   Machine:         EM_X86_64
   Entry:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    Size:            0x100
 DWARF:
   debug_str:
     - ''

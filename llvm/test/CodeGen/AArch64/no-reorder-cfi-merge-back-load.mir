@@ -40,13 +40,11 @@ machineFunctionInfo:
 body:             |
   bb.0.entry:
     liveins: $w0, $lr, $x1
-    ;
     ; Test a load instruction is merged backwards into an SP update
-    ;
     ; CHECK-LABEL: name: f
     ; CHECK: liveins: $w0, $lr, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber $sp, $x0 = frame-setup LDRXpre $sp, -32
+    ; CHECK-NEXT: early-clobber $sp, $x0 = frame-setup LDRXpre $sp, -32 :: (load (s64))
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
     ; CHECK-NEXT: frame-setup STRXui killed $fp, $sp, 0 :: (store (s64) into %stack.1)
     ; CHECK-NEXT: frame-setup STRXui killed $x1, $sp, 1
@@ -64,7 +62,7 @@ body:             |
     ; CHECK-NEXT: RET undef $lr, implicit $w0
     $sp = frame-setup SUBXri $sp, 32, 0
     frame-setup CFI_INSTRUCTION def_cfa_offset 32
-    $x0 = frame-setup LDRXui $sp, 0
+    $x0 = frame-setup LDRXui $sp, 0 :: (load (s64))
     frame-setup STRXui killed $fp, $sp, 0 :: (store (s64) into %stack.1)
     frame-setup STRXui killed $x1, $sp, 1
     frame-setup STRXui killed $lr, $sp, 2 :: (store (s64) into %stack.0)

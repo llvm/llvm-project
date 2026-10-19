@@ -17,7 +17,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_powerpc.h"
 
 #include <array>
 #include <optional>
@@ -64,7 +64,7 @@ private:
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);
 
-  RegisterContextFreeBSD_powerpc &GetRegisterInfo() const;
+  RegisterInfoFreeBSD_powerpc &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

@@ -12,7 +12,7 @@ from lldbsuite.test.decorators import *
 class TestMachExceptionData(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_exc_bad_access(self):
         """Test that we get type 1, code 1 and the right address for
         a EXC_BAD_ACCESS mach exception."""

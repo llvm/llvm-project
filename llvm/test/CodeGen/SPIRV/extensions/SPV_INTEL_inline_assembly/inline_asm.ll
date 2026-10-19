@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_inline_assembly -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_inline_assembly -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_inline_assembly -o - -filetype=obj | spirv-val %}
 
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; CHECK-ERROR: Inline assembly instructions require the following SPIR-V extension: SPV_INTEL_inline_assembly
@@ -38,7 +38,7 @@
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#DoubleTy:]] 42
 
 ; CHECK-DAG: %[[#Dialect:]] = OpAsmTargetINTEL "spirv64-unknown-unknown"
-; CHECK-NO: OpAsmTargetINTEL
+; CHECK-NOT: OpAsmTargetINTEL
 
 ; CHECK-DAG: %[[#Asm1:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" ""
 ; CHECK-DAG: %[[#Asm2:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "nop" ""
@@ -54,7 +54,7 @@
 ; CHECK-DAG: %[[#Asm12:]] = OpAsmINTEL %[[#StructTy]] %[[#Fun9Ty]] %[[#Dialect]] "cmdext $0 $4 $5\n cmdext $1 $5 $6\n cmdext $2 $4 $6" "=&r,=&r,=&r,r,r,r"
 ; CHECK-DAG: %[[#Asm13:]] = OpAsmINTEL %[[#Int32Ty]] %[[#Fun10Ty]] %[[#Dialect]] "icmdext $0 $2 $3"
 ; CHECK-DAG: %[[#Asm14:]] = OpAsmINTEL %[[#StructTy1]] %[[#Fun11Ty]] %[[#Dialect]] "cmdext $0 $3 $4\n cmdext $1 $3 $4\n $2 $3 $4" "=r,=&r,=*m, r, r"
-; CHECK-NO: OpAsmINTEL
+; CHECK-NOT: OpAsmINTEL
 
 ; CHECK: OpFunction
 ; CHECK: OpAsmCallINTEL %[[#VoidTy]] %[[#Asm1]]
@@ -76,7 +76,7 @@
 ; CHECK: %[[#StructRet1:]] = OpAsmCallINTEL %[[#StructTy1]] %[[#Asm14]]
 ; CHECK-NEXT: OpCompositeExtract %[[#Int32Ty]] %[[#StructRet1]] 0
 ; CHECK-NEXT: OpCompositeExtract %[[#FloatTy]] %[[#StructRet1]] 1
-; CHECK-NO: OpAsmCallINTEL
+; CHECK-NOT: OpAsmCallINTEL
 
 define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_float, ptr addrspace(1) %_arg_half, i64 %_lng) {
   %i1 = load i32, ptr addrspace(1) %_arg_int

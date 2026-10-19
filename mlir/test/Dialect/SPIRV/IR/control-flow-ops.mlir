@@ -165,7 +165,12 @@ spirv.module Logical GLSL450 {
     spirv.FunctionCall @f_2() : () -> ()
     // CHECK: {{%.*}} = spirv.FunctionCall @f_3({{%.*}}) : (i32) -> i32
     %1 = spirv.FunctionCall @f_3(%arg2) : (i32) -> i32
-    spirv.ReturnValue %1 : i32
+    // CHECK: {{%.*}} = spirv.FunctionCall @f_3({{%.*}}) arg_attrs = [{{.*}}] res_attrs = [{{.*}}] : (i32) -> i32
+    %2 = spirv.FunctionCall @f_3(%arg2)
+        arg_attrs = [{spirv.decoration = #spirv.decoration<RelaxedPrecision>}]
+        res_attrs = [{spirv.decoration = #spirv.decoration<RelaxedPrecision>}]
+        : (i32) -> i32
+    spirv.ReturnValue %2 : i32
   }
 
   spirv.func @f_0(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -> (vector<4xf32>) "None" {
@@ -1137,6 +1142,22 @@ func.func @switch_operands(%selector : i32, %operand : i32) {
   spirv.Branch ^merge
 
 ^case1(%arg1 : i32):
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
+func.func @switch_targets_no_literals(%selector: i32) -> () {
+  // CHECK: spirv.Switch {{%.*}} : i32, [
+  // CHECK-NEXT: default: ^bb1
+  "spirv.Switch"(%selector)[^default, ^target]
+    {case_operand_segments = array<i32: 0>,
+     operandSegmentSizes = array<i32: 1, 0, 0>} : (i32) -> ()
+^default:
+  spirv.Branch ^merge
+
+^target:
   spirv.Branch ^merge
 
 ^merge:

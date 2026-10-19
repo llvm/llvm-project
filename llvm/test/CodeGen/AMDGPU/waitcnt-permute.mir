@@ -1,9 +1,9 @@
-# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu8.03 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 
 ...
 # CHECK-LABEL: name: waitcnt-permute{{$}}
 # CHECK: DS_BPERMUTE_B32
-# CHECK-NEXT: S_WAITCNT 127
+# CHECK-NEXT: S_WAITCNT .Lgkmcnt_0
 
 name:            waitcnt-permute
 liveins:

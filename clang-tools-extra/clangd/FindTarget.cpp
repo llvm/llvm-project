@@ -128,6 +128,14 @@ bool shouldSkipTypedef(const TypedefNameDecl *TD) {
 //      template<class X> using pvec = vector<x*>; pvec<int> x;
 //    There's no Decl `pvec<int>`, we must choose `pvec<X>` or `vector<int*>`
 //    and both are lossy. We must know upfront what the caller ultimately wants.
+
+static const TemplateDecl *getReferencedConcept(const ConceptReference *CR) {
+  TemplateName TN = CR->getNamedConcept();
+  if (const TemplateDecl *TD = TN.getAsTemplateDecl())
+    return TD;
+  return TN.getAsTemplateTemplateParmDecl();
+}
+
 struct TargetFinder {
   using RelSet = DeclRelationSet;
   using Rel = DeclRelation;
@@ -294,17 +302,6 @@ public:
             break;
           }
       }
-      void VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
-        for (unsigned I = OOE->getNumComponents(); I != 0; --I) {
-          const OffsetOfNode &Component = OOE->getComponent(I - 1);
-          if (Component.getKind() == OffsetOfNode::Field) {
-            Outer.add(Component.getField(), Flags);
-            // We don't know which component was intended, we assume the
-            // innermost.
-            break;
-          }
-        }
-      }
       void VisitGotoStmt(const GotoStmt *Goto) {
         if (auto *LabelDecl = Goto->getLabel())
           Outer.add(LabelDecl, Flags);
@@ -400,14 +397,20 @@ public:
         if (const auto *USD = DTST->getTemplateName().getAsUsingShadowDecl())
           Outer.add(USD, Flags);
 
-        // FIXME: This is a workaround for https://llvm.org/PR42914,
-        // which is causing DTST->getDeducedType() to be empty. We
-        // fall back to the template pattern and miss the instantiation
-        // even when it's known in principle. Once that bug is fixed,
-        // the following code can be removed (the existing handling in
-        // VisitDeducedType() is sufficient).
-        if (auto *TD = DTST->getTemplateName().getAsTemplateDecl())
+        // Template template parameters have no templated decl, so they must
+        // refer to the parameter itself.
+        if (const auto *Parm =
+                DTST->getTemplateName().getAsTemplateTemplateParmDecl()) {
+          Outer.add(Parm, Flags);
+        } else if (auto *TD = DTST->getTemplateName().getAsTemplateDecl()) {
+          // FIXME: This is a workaround for https://llvm.org/PR42914,
+          // which is causing DTST->getDeducedType() to be empty. We
+          // fall back to the template pattern and miss the instantiation
+          // even when it's known in principle. Once that bug is fixed,
+          // the following code can be removed (the existing handling in
+          // VisitDeducedType() is sufficient).
           Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
+        }
       }
       void VisitDependentNameType(const DependentNameType *DNT) {
         if (Outer.Resolver) {
@@ -451,8 +454,7 @@ public:
         // specializations of template template parameters aren't instantiated
         // into decls, so they must refer to the parameter itself.
         else if (const auto *Parm =
-                     llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
-                         TST->getTemplateName().getAsTemplateDecl()))
+                     TST->getTemplateName().getAsTemplateTemplateParmDecl())
           Outer.add(Parm, Flags);
         // class template specializations have a (specialized) CXXRecordDecl.
         else if (const CXXRecordDecl *RD = TST->getAsCXXRecordDecl())
@@ -530,7 +532,7 @@ public:
   }
 
   void add(const ConceptReference *CR, RelSet Flags) {
-    add(CR->getNamedConcept(), Flags);
+    add(getReferencedConcept(CR), Flags);
   }
 };
 
@@ -563,6 +565,10 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(PL->getProtocol(), Flags);
   else if (const ConceptReference *CR = N.get<ConceptReference>())
     Finder.add(CR, Flags);
+  else if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
+    if (OON->getKind() == OffsetOfNode::Field)
+      Finder.add(OON->getField(), Flags);
+  }
   return Finder.takeDecls();
 }
 
@@ -826,17 +832,6 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
       }
     }
 
-    void VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
-      for (unsigned I = 0, N = OOE->getNumComponents(); I < N; ++I) {
-        const OffsetOfNode &Component = OOE->getComponent(I);
-        if (Component.getKind() == OffsetOfNode::Field)
-          Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                      Component.getEndLoc(),
-                                      /*IsDecl=*/false,
-                                      {Component.getField()}});
-      }
-    }
-
     void VisitGotoStmt(const GotoStmt *GS) {
       Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                   GS->getLabelLoc(),
@@ -1041,6 +1036,11 @@ public:
     return true;
   }
 
+  bool VisitOffsetOfNode(const OffsetOfNode *N) {
+    visitNode(DynTypedNode::create(*N));
+    return true;
+  }
+
 private:
   /// Obtain information about a reference directly defined in \p N. Does not
   /// recurse into child nodes, e.g. do not expect references for constructor
@@ -1094,7 +1094,15 @@ private:
       return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
                            CR->getConceptNameLoc(),
                            /*IsDecl=*/false,
-                           {CR->getNamedConcept()}}};
+                           {getReferencedConcept(CR)}}};
+    if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Field)
+        return {ReferenceLoc{NestedNameSpecifierLoc(),
+                             OON->getEndLoc(),
+                             /*IsDecl=*/false,
+                             {OON->getField()}}};
+      return {};
+    }
 
     // We do not have location information for other nodes (QualType, etc)
     return {};

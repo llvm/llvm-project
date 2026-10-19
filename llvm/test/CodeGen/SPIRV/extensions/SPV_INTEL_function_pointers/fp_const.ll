@@ -21,8 +21,8 @@
 ; CHECK: %[[Cast1:.*]] = OpBitcast %[[TyPtrPtrFun]] %[[Var]]
 ; CHECK: %[[Cast2:.*]] = OpBitcast %[[TyPtrPtrFunCodeSection]] %[[Cast1]]
 ; CHECK: OpStore %[[Cast2]] %[[ConstFunFp]] Aligned 4
-; CHECK: %[[Cast3:.*]] = OpBitcast %[[TyPtrPtrFun]] %[[Var]]
-; CHECK: %[[FP:.*]] = OpLoad %[[TyPtrFun]] %[[Cast3]] Aligned 4
+; CHECK: %[[Cast3:.*]] = OpBitcast %[[TyPtrPtrFunCodeSection]] %[[Var]]
+; CHECK: %[[FP:.*]] = OpLoad %[[TyPtrFunCodeSection]] %[[Cast3]] Aligned 4
 ; CHECK: OpFunctionPointerCallINTEL %[[TyInt64]] %[[FP]] %[[#]]
 ; CHECK: OpFunctionEnd
 

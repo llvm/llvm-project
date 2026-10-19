@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/ObjectYAML/BBAddrMapYAML.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -29,8 +30,8 @@
 namespace llvm {
 namespace ELFYAML {
 
-StringRef dropUniqueSuffix(StringRef S);
-std::string appendUniqueSuffix(StringRef Name, const Twine& Msg);
+LLVM_ABI StringRef dropUniqueSuffix(StringRef S);
+LLVM_ABI std::string appendUniqueSuffix(StringRef Name, const Twine &Msg);
 
 // These types are invariant across 32/64-bit ELF, so for simplicity just
 // directly give them their exact sizes. We don't need to worry about
@@ -156,63 +157,6 @@ struct DynamicEntry {
   llvm::yaml::Hex64 Val;
 };
 
-struct BBAddrMapEntry {
-  struct BBEntry {
-    uint32_t ID;
-    llvm::yaml::Hex64 AddressOffset;
-    llvm::yaml::Hex64 Size;
-    llvm::yaml::Hex64 Metadata;
-    std::optional<std::vector<llvm::yaml::Hex64>> CallsiteEndOffsets;
-    std::optional<llvm::yaml::Hex64> Hash;
-  };
-  uint8_t Version;
-  llvm::yaml::Hex16 Feature;
-
-  struct BBRangeEntry {
-    llvm::yaml::Hex64 BaseAddress;
-    std::optional<uint64_t> NumBlocks;
-    std::optional<std::vector<BBEntry>> BBEntries;
-  };
-
-  std::optional<uint64_t> NumBBRanges;
-  std::optional<std::vector<BBRangeEntry>> BBRanges;
-
-  llvm::yaml::Hex64 getFunctionAddress() const {
-    if (!BBRanges || BBRanges->empty())
-      return 0;
-    return BBRanges->front().BaseAddress;
-  }
-
-  // Returns if any BB entries have non-empty callsite offsets.
-  bool hasAnyCallsiteEndOffsets() const {
-    if (!BBRanges)
-      return false;
-    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *BBRanges) {
-      if (!BBR.BBEntries)
-        continue;
-      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries)
-        if (BBE.CallsiteEndOffsets && !BBE.CallsiteEndOffsets->empty())
-          return true;
-    }
-    return false;
-  }
-};
-
-struct PGOAnalysisMapEntry {
-  struct PGOBBEntry {
-    struct SuccessorEntry {
-      uint32_t ID;
-      llvm::yaml::Hex32 BrProb;
-      std::optional<uint32_t> PostLinkBrFreq;
-    };
-    std::optional<uint64_t> BBFreq;
-    std::optional<uint32_t> PostLinkBBFreq;
-    std::optional<std::vector<SuccessorEntry>> Successors;
-  };
-  std::optional<uint64_t> FuncEntryCount;
-  std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
-};
-
 struct StackSizeEntry {
   llvm::yaml::Hex64 Address;
   llvm::yaml::Hex64 Size;
@@ -224,7 +168,7 @@ struct NoteEntry {
   ELF_NT Type;
 };
 
-struct Chunk {
+struct LLVM_ABI Chunk {
   enum class ChunkKind {
     Dynamic,
     Group,
@@ -359,8 +303,8 @@ struct SectionHeaderTable : Chunk {
 };
 
 struct BBAddrMapSection : Section {
-  std::optional<std::vector<BBAddrMapEntry>> Entries;
-  std::optional<std::vector<PGOAnalysisMapEntry>> PGOAnalyses;
+  std::optional<std::vector<BBAddrMapYAML::BBAddrMapEntry>> Entries;
+  std::optional<std::vector<BBAddrMapYAML::PGOAnalysisMapEntry>> PGOAnalyses;
 
   BBAddrMapSection() : Section(ChunkKind::BBAddrMap) {}
 
@@ -769,24 +713,17 @@ struct Object {
     llvm_unreachable("the section header table chunk must always be present");
   }
 
-  ELF_ELFOSABI getOSAbi() const;
-  unsigned getMachine() const;
+  LLVM_ABI ELF_ELFOSABI getOSAbi() const;
+  LLVM_ABI unsigned getMachine() const;
 };
 
-bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
-                             const NoBitsSection &S);
+LLVM_ABI bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
+                                      const NoBitsSection &S);
 
 } // end namespace ELFYAML
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBRangeEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(
-    llvm::ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
@@ -806,226 +743,200 @@ namespace llvm {
 namespace yaml {
 
 template <> struct ScalarTraits<ELFYAML::YAMLIntUInt> {
-  static void output(const ELFYAML::YAMLIntUInt &Val, void *Ctx,
-                     raw_ostream &Out);
-  static StringRef input(StringRef Scalar, void *Ctx,
-                         ELFYAML::YAMLIntUInt &Val);
+  LLVM_ABI static void output(const ELFYAML::YAMLIntUInt &Val, void *Ctx,
+                              raw_ostream &Out);
+  LLVM_ABI static StringRef input(StringRef Scalar, void *Ctx,
+                                  ELFYAML::YAMLIntUInt &Val);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_ET> {
-  static void enumeration(IO &IO, ELFYAML::ELF_ET &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_ET &Value);
 };
 
 template <> struct ScalarEnumerationTraits<ELFYAML::ELF_PT> {
-  static void enumeration(IO &IO, ELFYAML::ELF_PT &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_PT &Value);
 };
 
 template <> struct ScalarEnumerationTraits<ELFYAML::ELF_NT> {
-  static void enumeration(IO &IO, ELFYAML::ELF_NT &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_NT &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_EM> {
-  static void enumeration(IO &IO, ELFYAML::ELF_EM &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_EM &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_ELFCLASS> {
-  static void enumeration(IO &IO, ELFYAML::ELF_ELFCLASS &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_ELFCLASS &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_ELFDATA> {
-  static void enumeration(IO &IO, ELFYAML::ELF_ELFDATA &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_ELFDATA &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_ELFOSABI> {
-  static void enumeration(IO &IO, ELFYAML::ELF_ELFOSABI &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_ELFOSABI &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<ELFYAML::ELF_EF> {
-  static void bitset(IO &IO, ELFYAML::ELF_EF &Value);
+  LLVM_ABI static void bitset(IO &IO, ELFYAML::ELF_EF &Value);
 };
 
 template <> struct ScalarBitSetTraits<ELFYAML::ELF_PF> {
-  static void bitset(IO &IO, ELFYAML::ELF_PF &Value);
+  LLVM_ABI static void bitset(IO &IO, ELFYAML::ELF_PF &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_SHT> {
-  static void enumeration(IO &IO, ELFYAML::ELF_SHT &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_SHT &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<ELFYAML::ELF_SHF> {
-  static void bitset(IO &IO, ELFYAML::ELF_SHF &Value);
+  LLVM_ABI static void bitset(IO &IO, ELFYAML::ELF_SHF &Value);
 };
 
 template <> struct ScalarEnumerationTraits<ELFYAML::ELF_SHN> {
-  static void enumeration(IO &IO, ELFYAML::ELF_SHN &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_SHN &Value);
 };
 
 template <> struct ScalarEnumerationTraits<ELFYAML::ELF_STB> {
-  static void enumeration(IO &IO, ELFYAML::ELF_STB &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_STB &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_STT> {
-  static void enumeration(IO &IO, ELFYAML::ELF_STT &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_STT &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_REL> {
-  static void enumeration(IO &IO, ELFYAML::ELF_REL &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_REL &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG> {
-  static void enumeration(IO &IO, ELFYAML::ELF_DYNTAG &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_DYNTAG &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_RSS> {
-  static void enumeration(IO &IO, ELFYAML::ELF_RSS &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::ELF_RSS &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::MIPS_AFL_REG> {
-  static void enumeration(IO &IO, ELFYAML::MIPS_AFL_REG &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::MIPS_AFL_REG &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::MIPS_ABI_FP> {
-  static void enumeration(IO &IO, ELFYAML::MIPS_ABI_FP &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::MIPS_ABI_FP &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::MIPS_AFL_EXT> {
-  static void enumeration(IO &IO, ELFYAML::MIPS_AFL_EXT &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::MIPS_AFL_EXT &Value);
 };
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::MIPS_ISA> {
-  static void enumeration(IO &IO, ELFYAML::MIPS_ISA &Value);
+  LLVM_ABI static void enumeration(IO &IO, ELFYAML::MIPS_ISA &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<ELFYAML::MIPS_AFL_ASE> {
-  static void bitset(IO &IO, ELFYAML::MIPS_AFL_ASE &Value);
+  LLVM_ABI static void bitset(IO &IO, ELFYAML::MIPS_AFL_ASE &Value);
 };
 
 template <>
 struct ScalarBitSetTraits<ELFYAML::MIPS_AFL_FLAGS1> {
-  static void bitset(IO &IO, ELFYAML::MIPS_AFL_FLAGS1 &Value);
+  LLVM_ABI static void bitset(IO &IO, ELFYAML::MIPS_AFL_FLAGS1 &Value);
 };
 
 template <>
 struct MappingTraits<ELFYAML::FileHeader> {
-  static void mapping(IO &IO, ELFYAML::FileHeader &FileHdr);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::FileHeader &FileHdr);
 };
 
 template <> struct MappingTraits<ELFYAML::SectionHeader> {
-  static void mapping(IO &IO, ELFYAML::SectionHeader &SHdr);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::SectionHeader &SHdr);
 };
 
 template <> struct MappingTraits<ELFYAML::ProgramHeader> {
-  static void mapping(IO &IO, ELFYAML::ProgramHeader &FileHdr);
-  static std::string validate(IO &IO, ELFYAML::ProgramHeader &FileHdr);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::ProgramHeader &FileHdr);
+  LLVM_ABI static std::string validate(IO &IO, ELFYAML::ProgramHeader &FileHdr);
 };
 
 template <>
 struct MappingTraits<ELFYAML::Symbol> {
-  static void mapping(IO &IO, ELFYAML::Symbol &Symbol);
-  static std::string validate(IO &IO, ELFYAML::Symbol &Symbol);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::Symbol &Symbol);
+  LLVM_ABI static std::string validate(IO &IO, ELFYAML::Symbol &Symbol);
 };
 
 template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
-  static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry &E);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBRangeEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBRangeEntry &E);
-};
-
-template <> struct MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry> {
-  static void mapping(IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E);
-};
-
-template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry> {
-  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry &Rel);
-};
-
-template <> struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry> {
-  static void mapping(IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &Rel);
-};
-
-template <>
-struct MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry> {
-  static void
-  mapping(IO &IO,
-          ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &Rel);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::GnuHashHeader> {
-  static void mapping(IO &IO, ELFYAML::GnuHashHeader &Rel);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::GnuHashHeader &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::DynamicEntry> {
-  static void mapping(IO &IO, ELFYAML::DynamicEntry &Rel);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::DynamicEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::NoteEntry> {
-  static void mapping(IO &IO, ELFYAML::NoteEntry &N);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::NoteEntry &N);
 };
 
 template <> struct MappingTraits<ELFYAML::VerdefEntry> {
-  static void mapping(IO &IO, ELFYAML::VerdefEntry &E);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::VerdefEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::VerneedEntry> {
-  static void mapping(IO &IO, ELFYAML::VerneedEntry &E);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::VerneedEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::VernauxEntry> {
-  static void mapping(IO &IO, ELFYAML::VernauxEntry &E);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::VernauxEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::LinkerOption> {
-  static void mapping(IO &IO, ELFYAML::LinkerOption &Sym);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::LinkerOption &Sym);
 };
 
 template <> struct MappingTraits<ELFYAML::CallGraphEntryWeight> {
-  static void mapping(IO &IO, ELFYAML::CallGraphEntryWeight &E);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::CallGraphEntryWeight &E);
 };
 
 template <> struct MappingTraits<ELFYAML::Relocation> {
-  static void mapping(IO &IO, ELFYAML::Relocation &Rel);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::Relocation &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::ARMIndexTableEntry> {
-  static void mapping(IO &IO, ELFYAML::ARMIndexTableEntry &E);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::ARMIndexTableEntry &E);
 };
 
 template <> struct MappingTraits<std::unique_ptr<ELFYAML::Chunk>> {
-  static void mapping(IO &IO, std::unique_ptr<ELFYAML::Chunk> &C);
-  static std::string validate(IO &io, std::unique_ptr<ELFYAML::Chunk> &C);
+  LLVM_ABI static void mapping(IO &IO, std::unique_ptr<ELFYAML::Chunk> &C);
+  LLVM_ABI static std::string validate(IO &io,
+                                       std::unique_ptr<ELFYAML::Chunk> &C);
 };
 
 template <>
 struct MappingTraits<ELFYAML::Object> {
-  static void mapping(IO &IO, ELFYAML::Object &Object);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::Object &Object);
 };
 
 template <> struct MappingTraits<ELFYAML::SectionOrType> {
-  static void mapping(IO &IO, ELFYAML::SectionOrType &sectionOrType);
+  LLVM_ABI static void mapping(IO &IO, ELFYAML::SectionOrType &sectionOrType);
 };
 
 } // end namespace yaml

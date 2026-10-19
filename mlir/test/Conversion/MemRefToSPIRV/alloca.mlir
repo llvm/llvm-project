@@ -48,6 +48,25 @@ module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader
 // -----
 
 module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @nested_alloca(%condition: i1, %index: index) {
+    scf.if %condition {
+      %array = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+      %value = memref.load %array[%index] : memref<4xf32, #spirv.storage_class<Function>>
+      memref.store %value, %array[%index] : memref<4xf32, #spirv.storage_class<Function>>
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: func @nested_alloca
+// CHECK: %[[ARRAY:.+]] = spirv.Variable
+// CHECK: scf.if
+// CHECK: spirv.Load "Function" {{.*}} : f32
+// CHECK: spirv.Store "Function" {{.*}} : f32
+
+// -----
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader], []>, #spirv.resource_limits<>>} {
   // CHECK-LABEL: func @alloc_dynamic_size
   func.func @alloc_dynamic_size(%arg0 : index) -> f32 {
     // CHECK: memref.alloca

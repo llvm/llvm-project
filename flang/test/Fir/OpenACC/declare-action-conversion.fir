@@ -20,14 +20,14 @@ module {
   func.func private @_QMmmEarr_acc_declare_update_desc_post_alloc() {
     return
   }
-// CHECK: func.func private @_QMmmEarr_acc_declare_update_desc_post_alloc() attributes {acc.declare_action}
+// CHECK: func.func private @_QMmmEarr_acc_declare_update_desc_post_alloc() attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMmmEarr_acc_declare_update_desc_post_alloc>}
 // CHECK-LABEL: func.func @_QMmmPsub
   func.func @_QMmmPsub() {
     %c100 = arith.constant 100 : index
     %c0 = arith.constant 0 : index
     %0 = fir.dummy_scope : !fir.dscope
     %1 = fir.address_of(@_QMmmEarr) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %2 = fir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmmEarr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %2 = fir.declare %1 uniq_name("_QMmmEarr") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %3 = fir.allocmem !fir.array<?xf32>, %c100 {fir.must_be_heap = true, uniq_name = "_QMmmEarr.alloc"}
     %4 = fir.shape %c100 : (index) -> !fir.shape<1>
     %5 = fir.embox %3(%4) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
@@ -47,7 +47,7 @@ module {
   }
   func.func @_QPdeclare() {
     %1 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {uniq_name = "_QFdeclareEap"}
-    %2 = fir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdeclareEap"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %2 = fir.declare %1 uniq_name("_QFdeclareEap") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %3 = fir.convert %2 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
     %f = arith.constant 0 : i1
     %absent = fir.absent !fir.box<none>
@@ -77,7 +77,7 @@ module {
  func.func private @_QMmmFsubEarr_acc_declare_update_desc_post_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
    return
  }
-// CHECK: func.func private @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%{{.*}}) attributes {acc.declare_action}
+// CHECK: func.func private @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%{{.*}}) attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMmmFsubEarr_acc_declare_update_desc_post_alloc>}
 // CHECK-LABEL: func.func @_QMmmPsub
   func.func @_QMmmPsub() {
     %c100 = arith.constant 100 : index
@@ -86,7 +86,7 @@ module {
     %2 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
     %3 = fir.shape %c0 : (index) -> !fir.shape<1>
     %4 = fir.embox %2(%3) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
-    %5 = fir.declare %1 {acc.declare = #acc.declare<dataClause =  acc_copyin>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmmFsubEarr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %5 = fir.declare %1 uniq_name("_QMmmFsubEarr") fortran_attrs<allocatable> {acc.declare = #acc.declare<dataClause =  acc_copyin>} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %8 = fir.allocmem !fir.array<?xf32>, %c100 {fir.must_be_heap = true, uniq_name = "_QMmmFsubEarr.alloc"}
     %9 = fir.shape %c100 : (index) -> !fir.shape<1>
     %10 = fir.embox %8(%9) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
@@ -123,11 +123,11 @@ module {
 
   func.func @_QPsupported_runtime_calls() {
     %pbox = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {uniq_name = "_QFdeclareEap"}
-    %pdecl = fir.declare %pbox {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdeclareEap"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %pdecl = fir.declare %pbox uniq_name("_QFdeclareEap") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %pcvt = fir.convert %pdecl : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 
     %abox = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {uniq_name = "_QFdeclareEaa"}
-    %adecl = fir.declare %abox {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFdeclareEaa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %adecl = fir.declare %abox uniq_name("_QFdeclareEaa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %acvt = fir.convert %adecl : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 
     %f = arith.constant false
@@ -171,3 +171,50 @@ module {
   func.func private @_FortranAAllocatableDeallocate(!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   func.func private @_FortranAAllocatableDeallocatePolymorphic(!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 }
+
+// -----
+
+// Test declare_action on CUF allocation and deallocation operations.
+module {
+  func.func private @_QFpre_alloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFpost_alloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFpre_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFpost_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+
+  func.func @_QPcuf_declare_actions(%box: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    %0 = cuf.allocate %box : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<preAlloc = @_QFpre_alloc, postAlloc = @_QFpost_alloc>} -> i32
+    %1 = cuf.deallocate %box : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<preDealloc = @_QFpre_dealloc, postDealloc = @_QFpost_dealloc>} -> i32
+    return
+  }
+
+// CHECK-LABEL: func.func @_QPcuf_declare_actions(
+// CHECK-SAME: %[[BOX:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+// CHECK: fir.call @_QFpre_alloc(%[[BOX]])
+// CHECK-NEXT: %{{.*}} = cuf.allocate %[[BOX]]
+// CHECK-NEXT: fir.call @_QFpost_alloc(%[[BOX]])
+// CHECK: fir.call @_QFpre_dealloc(%[[BOX]])
+// CHECK-NEXT: %{{.*}} = cuf.deallocate %[[BOX]]
+// CHECK-NEXT: fir.call @_QFpost_dealloc(%[[BOX]])
+}
+
+// -----
+
+// A recipe names itself in the slot of the action it carries out, which states
+// what the recipe does. Only the operations that allocate or deallocate the
+// object ask for a call of it.
+module {
+  func.func private @_QMmmEarr_acc_declare_post_alloc() attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMmmEarr_acc_declare_post_alloc>} {
+    return
+  }
+}
+
+// CHECK-LABEL: func.func private @_QMmmEarr_acc_declare_post_alloc
+// CHECK-NOT: fir.call

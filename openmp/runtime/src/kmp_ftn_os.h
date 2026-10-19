@@ -21,26 +21,33 @@
 #if KMP_FTN_ENTRIES == KMP_FTN_PLAIN
 
 #define FTN_SET_STACKSIZE kmp_set_stacksize
+#define FTN_SET_STACKSIZE_8 kmp_set_stacksize_8
 #define FTN_SET_STACKSIZE_S kmp_set_stacksize_s
 #define FTN_GET_STACKSIZE kmp_get_stacksize
 #define FTN_GET_STACKSIZE_S kmp_get_stacksize_s
 #define FTN_SET_BLOCKTIME kmp_set_blocktime
+#define FTN_SET_BLOCKTIME_8 kmp_set_blocktime_8
 #define FTN_GET_BLOCKTIME kmp_get_blocktime
 #define FTN_SET_LIBRARY_SERIAL kmp_set_library_serial
 #define FTN_SET_LIBRARY_TURNAROUND kmp_set_library_turnaround
 #define FTN_SET_LIBRARY_THROUGHPUT kmp_set_library_throughput
 #define FTN_SET_LIBRARY kmp_set_library
+#define FTN_SET_LIBRARY_8 kmp_set_library_8
 #define FTN_GET_LIBRARY kmp_get_library
 #define FTN_SET_DEFAULTS kmp_set_defaults
 #define FTN_SET_DISP_NUM_BUFFERS kmp_set_disp_num_buffers
+#define FTN_SET_DISP_NUM_BUFFERS_8 kmp_set_disp_num_buffers_8
 #define FTN_SET_AFFINITY kmp_set_affinity
 #define FTN_GET_AFFINITY kmp_get_affinity
 #define FTN_GET_AFFINITY_MAX_PROC kmp_get_affinity_max_proc
 #define FTN_CREATE_AFFINITY_MASK kmp_create_affinity_mask
 #define FTN_DESTROY_AFFINITY_MASK kmp_destroy_affinity_mask
 #define FTN_SET_AFFINITY_MASK_PROC kmp_set_affinity_mask_proc
+#define FTN_SET_AFFINITY_MASK_PROC_8 kmp_set_affinity_mask_proc_8
 #define FTN_UNSET_AFFINITY_MASK_PROC kmp_unset_affinity_mask_proc
+#define FTN_UNSET_AFFINITY_MASK_PROC_8 kmp_unset_affinity_mask_proc_8
 #define FTN_GET_AFFINITY_MASK_PROC kmp_get_affinity_mask_proc
+#define FTN_GET_AFFINITY_MASK_PROC_8 kmp_get_affinity_mask_proc_8
 
 #define FTN_MALLOC kmp_malloc
 #define FTN_ALIGNED_MALLOC kmp_aligned_malloc
@@ -51,6 +58,7 @@
 #define FTN_GET_NUM_KNOWN_THREADS kmp_get_num_known_threads
 
 #define FTN_SET_NUM_THREADS omp_set_num_threads
+#define FTN_SET_NUM_THREADS_8 kmp_set_num_threads_8
 #define FTN_GET_NUM_THREADS omp_get_num_threads
 #define FTN_GET_MAX_THREADS omp_get_max_threads
 #define FTN_GET_THREAD_NUM omp_get_thread_num
@@ -62,13 +70,18 @@
 #define FTN_IN_PARALLEL omp_in_parallel
 #define FTN_GET_THREAD_LIMIT omp_get_thread_limit
 #define FTN_SET_SCHEDULE omp_set_schedule
+#define FTN_SET_SCHEDULE_8 kmp_set_schedule_8
 #define FTN_GET_SCHEDULE omp_get_schedule
+#define FTN_GET_SCHEDULE_8 kmp_get_schedule_8
 #define FTN_SET_MAX_ACTIVE_LEVELS omp_set_max_active_levels
+#define FTN_SET_MAX_ACTIVE_LEVELS_8 kmp_set_max_active_levels_8
 #define FTN_GET_MAX_ACTIVE_LEVELS omp_get_max_active_levels
 #define FTN_GET_ACTIVE_LEVEL omp_get_active_level
 #define FTN_GET_LEVEL omp_get_level
 #define FTN_GET_ANCESTOR_THREAD_NUM omp_get_ancestor_thread_num
+#define FTN_GET_ANCESTOR_THREAD_NUM_8 kmp_get_ancestor_thread_num_8
 #define FTN_GET_TEAM_SIZE omp_get_team_size
+#define FTN_GET_TEAM_SIZE_8 kmp_get_team_size_8
 #define FTN_IN_FINAL omp_in_final
 #define FTN_GET_PROC_BIND omp_get_proc_bind
 #define FTN_GET_NUM_TEAMS omp_get_num_teams
@@ -97,6 +110,7 @@
 #define FTN_GET_NUM_DEVICES omp_get_num_devices
 #define FTN_GET_DEFAULT_DEVICE omp_get_default_device
 #define FTN_SET_DEFAULT_DEVICE omp_set_default_device
+#define FTN_SET_DEFAULT_DEVICE_8 kmp_set_default_device_8
 #define FTN_IS_INITIAL_DEVICE omp_is_initial_device
 
 #define FTN_GET_CANCELLATION omp_get_cancellation
@@ -105,10 +119,13 @@
 #define FTN_GET_MAX_TASK_PRIORITY omp_get_max_task_priority
 #define FTN_GET_NUM_PLACES omp_get_num_places
 #define FTN_GET_PLACE_NUM_PROCS omp_get_place_num_procs
+#define FTN_GET_PLACE_NUM_PROCS_8 kmp_get_place_num_procs_8
 #define FTN_GET_PLACE_PROC_IDS omp_get_place_proc_ids
+#define FTN_GET_PLACE_PROC_IDS_8 kmp_get_place_proc_ids_8
 #define FTN_GET_PLACE_NUM omp_get_place_num
 #define FTN_GET_PARTITION_NUM_PLACES omp_get_partition_num_places
 #define FTN_GET_PARTITION_PLACE_NUMS omp_get_partition_place_nums
+#define FTN_GET_PARTITION_PLACE_NUMS_8 kmp_get_partition_place_nums_8
 #define FTN_GET_INITIAL_DEVICE omp_get_initial_device
 #ifdef KMP_STUB
 #define FTN_TARGET_ALLOC omp_target_alloc
@@ -147,14 +164,17 @@
 #define FTN_DISPLAY_AFFINITY omp_display_affinity
 #define FTN_CAPTURE_AFFINITY omp_capture_affinity
 #define FTN_PAUSE_RESOURCE omp_pause_resource
+#define FTN_PAUSE_RESOURCE_8 kmp_pause_resource_8
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels
 #define FTN_DISPLAY_ENV omp_display_env
 #define FTN_IN_EXPLICIT_TASK omp_in_explicit_task
 #define FTN_FULFILL_EVENT omp_fulfill_event
 #define FTN_SET_NUM_TEAMS omp_set_num_teams
+#define FTN_SET_NUM_TEAMS_8 kmp_set_num_teams_8
 #define FTN_GET_MAX_TEAMS omp_get_max_teams
 #define FTN_SET_TEAMS_THREAD_LIMIT omp_set_teams_thread_limit
+#define FTN_SET_TEAMS_THREAD_LIMIT_8 kmp_set_teams_thread_limit_8
 #define FTN_GET_TEAMS_THREAD_LIMIT omp_get_teams_thread_limit
 
 #define FTN_GET_NUM_INTEROP_PROPERTIES omp_get_num_interop_properties
@@ -172,26 +192,33 @@
 #if KMP_FTN_ENTRIES == KMP_FTN_APPEND
 
 #define FTN_SET_STACKSIZE kmp_set_stacksize_
+#define FTN_SET_STACKSIZE_8 kmp_set_stacksize_8_
 #define FTN_SET_STACKSIZE_S kmp_set_stacksize_s_
 #define FTN_GET_STACKSIZE kmp_get_stacksize_
 #define FTN_GET_STACKSIZE_S kmp_get_stacksize_s_
 #define FTN_SET_BLOCKTIME kmp_set_blocktime_
+#define FTN_SET_BLOCKTIME_8 kmp_set_blocktime_8_
 #define FTN_GET_BLOCKTIME kmp_get_blocktime_
 #define FTN_SET_LIBRARY_SERIAL kmp_set_library_serial_
 #define FTN_SET_LIBRARY_TURNAROUND kmp_set_library_turnaround_
 #define FTN_SET_LIBRARY_THROUGHPUT kmp_set_library_throughput_
 #define FTN_SET_LIBRARY kmp_set_library_
+#define FTN_SET_LIBRARY_8 kmp_set_library_8_
 #define FTN_GET_LIBRARY kmp_get_library_
 #define FTN_SET_DEFAULTS kmp_set_defaults_
 #define FTN_SET_DISP_NUM_BUFFERS kmp_set_disp_num_buffers_
+#define FTN_SET_DISP_NUM_BUFFERS_8 kmp_set_disp_num_buffers_8_
 #define FTN_SET_AFFINITY kmp_set_affinity_
 #define FTN_GET_AFFINITY kmp_get_affinity_
 #define FTN_GET_AFFINITY_MAX_PROC kmp_get_affinity_max_proc_
 #define FTN_CREATE_AFFINITY_MASK kmp_create_affinity_mask_
 #define FTN_DESTROY_AFFINITY_MASK kmp_destroy_affinity_mask_
 #define FTN_SET_AFFINITY_MASK_PROC kmp_set_affinity_mask_proc_
+#define FTN_SET_AFFINITY_MASK_PROC_8 kmp_set_affinity_mask_proc_8_
 #define FTN_UNSET_AFFINITY_MASK_PROC kmp_unset_affinity_mask_proc_
+#define FTN_UNSET_AFFINITY_MASK_PROC_8 kmp_unset_affinity_mask_proc_8_
 #define FTN_GET_AFFINITY_MASK_PROC kmp_get_affinity_mask_proc_
+#define FTN_GET_AFFINITY_MASK_PROC_8 kmp_get_affinity_mask_proc_8_
 
 #define FTN_MALLOC kmp_malloc_
 #define FTN_ALIGNED_MALLOC kmp_aligned_malloc_
@@ -202,6 +229,7 @@
 #define FTN_GET_NUM_KNOWN_THREADS kmp_get_num_known_threads_
 
 #define FTN_SET_NUM_THREADS omp_set_num_threads_
+#define FTN_SET_NUM_THREADS_8 kmp_set_num_threads_8_
 #define FTN_GET_NUM_THREADS omp_get_num_threads_
 #define FTN_GET_MAX_THREADS omp_get_max_threads_
 #define FTN_GET_THREAD_NUM omp_get_thread_num_
@@ -213,13 +241,18 @@
 #define FTN_IN_PARALLEL omp_in_parallel_
 #define FTN_GET_THREAD_LIMIT omp_get_thread_limit_
 #define FTN_SET_SCHEDULE omp_set_schedule_
+#define FTN_SET_SCHEDULE_8 kmp_set_schedule_8_
 #define FTN_GET_SCHEDULE omp_get_schedule_
+#define FTN_GET_SCHEDULE_8 kmp_get_schedule_8_
 #define FTN_SET_MAX_ACTIVE_LEVELS omp_set_max_active_levels_
+#define FTN_SET_MAX_ACTIVE_LEVELS_8 kmp_set_max_active_levels_8_
 #define FTN_GET_MAX_ACTIVE_LEVELS omp_get_max_active_levels_
 #define FTN_GET_ACTIVE_LEVEL omp_get_active_level_
 #define FTN_GET_LEVEL omp_get_level_
 #define FTN_GET_ANCESTOR_THREAD_NUM omp_get_ancestor_thread_num_
+#define FTN_GET_ANCESTOR_THREAD_NUM_8 kmp_get_ancestor_thread_num_8_
 #define FTN_GET_TEAM_SIZE omp_get_team_size_
+#define FTN_GET_TEAM_SIZE_8 kmp_get_team_size_8_
 #define FTN_IN_FINAL omp_in_final_
 #define FTN_GET_PROC_BIND omp_get_proc_bind_
 #define FTN_GET_NUM_TEAMS omp_get_num_teams_
@@ -248,6 +281,7 @@
 #define FTN_GET_NUM_DEVICES omp_get_num_devices_
 #define FTN_GET_DEFAULT_DEVICE omp_get_default_device_
 #define FTN_SET_DEFAULT_DEVICE omp_set_default_device_
+#define FTN_SET_DEFAULT_DEVICE_8 kmp_set_default_device_8_
 #define FTN_IS_INITIAL_DEVICE omp_is_initial_device_
 
 #define FTN_GET_CANCELLATION omp_get_cancellation_
@@ -256,10 +290,13 @@
 #define FTN_GET_MAX_TASK_PRIORITY omp_get_max_task_priority_
 #define FTN_GET_NUM_PLACES omp_get_num_places_
 #define FTN_GET_PLACE_NUM_PROCS omp_get_place_num_procs_
+#define FTN_GET_PLACE_NUM_PROCS_8 kmp_get_place_num_procs_8_
 #define FTN_GET_PLACE_PROC_IDS omp_get_place_proc_ids_
+#define FTN_GET_PLACE_PROC_IDS_8 kmp_get_place_proc_ids_8_
 #define FTN_GET_PLACE_NUM omp_get_place_num_
 #define FTN_GET_PARTITION_NUM_PLACES omp_get_partition_num_places_
 #define FTN_GET_PARTITION_PLACE_NUMS omp_get_partition_place_nums_
+#define FTN_GET_PARTITION_PLACE_NUMS_8 kmp_get_partition_place_nums_8_
 #define FTN_GET_INITIAL_DEVICE omp_get_initial_device_
 #ifdef KMP_STUB
 #define FTN_TARGET_ALLOC omp_target_alloc_
@@ -298,14 +335,17 @@
 #define FTN_DISPLAY_AFFINITY omp_display_affinity_
 #define FTN_CAPTURE_AFFINITY omp_capture_affinity_
 #define FTN_PAUSE_RESOURCE omp_pause_resource_
+#define FTN_PAUSE_RESOURCE_8 kmp_pause_resource_8_
 #define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all_
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS omp_get_supported_active_levels_
 #define FTN_DISPLAY_ENV omp_display_env_
 #define FTN_IN_EXPLICIT_TASK omp_in_explicit_task_
 #define FTN_FULFILL_EVENT omp_fulfill_event_
 #define FTN_SET_NUM_TEAMS omp_set_num_teams_
+#define FTN_SET_NUM_TEAMS_8 kmp_set_num_teams_8_
 #define FTN_GET_MAX_TEAMS omp_get_max_teams_
 #define FTN_SET_TEAMS_THREAD_LIMIT omp_set_teams_thread_limit_
+#define FTN_SET_TEAMS_THREAD_LIMIT_8 kmp_set_teams_thread_limit_8_
 #define FTN_GET_TEAMS_THREAD_LIMIT omp_get_teams_thread_limit_
 
 #define FTN_GET_NUM_INTEROP_PROPERTIES omp_get_num_interop_properties_
@@ -323,26 +363,33 @@
 #if KMP_FTN_ENTRIES == KMP_FTN_UPPER
 
 #define FTN_SET_STACKSIZE KMP_SET_STACKSIZE
+#define FTN_SET_STACKSIZE_8 KMP_SET_STACKSIZE_8
 #define FTN_SET_STACKSIZE_S KMP_SET_STACKSIZE_S
 #define FTN_GET_STACKSIZE KMP_GET_STACKSIZE
 #define FTN_GET_STACKSIZE_S KMP_GET_STACKSIZE_S
 #define FTN_SET_BLOCKTIME KMP_SET_BLOCKTIME
+#define FTN_SET_BLOCKTIME_8 KMP_SET_BLOCKTIME_8
 #define FTN_GET_BLOCKTIME KMP_GET_BLOCKTIME
 #define FTN_SET_LIBRARY_SERIAL KMP_SET_LIBRARY_SERIAL
 #define FTN_SET_LIBRARY_TURNAROUND KMP_SET_LIBRARY_TURNAROUND
 #define FTN_SET_LIBRARY_THROUGHPUT KMP_SET_LIBRARY_THROUGHPUT
 #define FTN_SET_LIBRARY KMP_SET_LIBRARY
+#define FTN_SET_LIBRARY_8 KMP_SET_LIBRARY_8
 #define FTN_GET_LIBRARY KMP_GET_LIBRARY
 #define FTN_SET_DEFAULTS KMP_SET_DEFAULTS
 #define FTN_SET_DISP_NUM_BUFFERS KMP_SET_DISP_NUM_BUFFERS
+#define FTN_SET_DISP_NUM_BUFFERS_8 KMP_SET_DISP_NUM_BUFFERS_8
 #define FTN_SET_AFFINITY KMP_SET_AFFINITY
 #define FTN_GET_AFFINITY KMP_GET_AFFINITY
 #define FTN_GET_AFFINITY_MAX_PROC KMP_GET_AFFINITY_MAX_PROC
 #define FTN_CREATE_AFFINITY_MASK KMP_CREATE_AFFINITY_MASK
 #define FTN_DESTROY_AFFINITY_MASK KMP_DESTROY_AFFINITY_MASK
 #define FTN_SET_AFFINITY_MASK_PROC KMP_SET_AFFINITY_MASK_PROC
+#define FTN_SET_AFFINITY_MASK_PROC_8 KMP_SET_AFFINITY_MASK_PROC_8
 #define FTN_UNSET_AFFINITY_MASK_PROC KMP_UNSET_AFFINITY_MASK_PROC
+#define FTN_UNSET_AFFINITY_MASK_PROC_8 KMP_UNSET_AFFINITY_MASK_PROC_8
 #define FTN_GET_AFFINITY_MASK_PROC KMP_GET_AFFINITY_MASK_PROC
+#define FTN_GET_AFFINITY_MASK_PROC_8 KMP_GET_AFFINITY_MASK_PROC_8
 
 #define FTN_MALLOC KMP_MALLOC
 #define FTN_ALIGNED_MALLOC KMP_ALIGNED_MALLOC
@@ -353,6 +400,7 @@
 #define FTN_GET_NUM_KNOWN_THREADS KMP_GET_NUM_KNOWN_THREADS
 
 #define FTN_SET_NUM_THREADS OMP_SET_NUM_THREADS
+#define FTN_SET_NUM_THREADS_8 KMP_SET_NUM_THREADS_8
 #define FTN_GET_NUM_THREADS OMP_GET_NUM_THREADS
 #define FTN_GET_MAX_THREADS OMP_GET_MAX_THREADS
 #define FTN_GET_THREAD_NUM OMP_GET_THREAD_NUM
@@ -364,13 +412,18 @@
 #define FTN_IN_PARALLEL OMP_IN_PARALLEL
 #define FTN_GET_THREAD_LIMIT OMP_GET_THREAD_LIMIT
 #define FTN_SET_SCHEDULE OMP_SET_SCHEDULE
+#define FTN_SET_SCHEDULE_8 KMP_SET_SCHEDULE_8
 #define FTN_GET_SCHEDULE OMP_GET_SCHEDULE
+#define FTN_GET_SCHEDULE_8 KMP_GET_SCHEDULE_8
 #define FTN_SET_MAX_ACTIVE_LEVELS OMP_SET_MAX_ACTIVE_LEVELS
+#define FTN_SET_MAX_ACTIVE_LEVELS_8 KMP_SET_MAX_ACTIVE_LEVELS_8
 #define FTN_GET_MAX_ACTIVE_LEVELS OMP_GET_MAX_ACTIVE_LEVELS
 #define FTN_GET_ACTIVE_LEVEL OMP_GET_ACTIVE_LEVEL
 #define FTN_GET_LEVEL OMP_GET_LEVEL
 #define FTN_GET_ANCESTOR_THREAD_NUM OMP_GET_ANCESTOR_THREAD_NUM
+#define FTN_GET_ANCESTOR_THREAD_NUM_8 KMP_GET_ANCESTOR_THREAD_NUM_8
 #define FTN_GET_TEAM_SIZE OMP_GET_TEAM_SIZE
+#define FTN_GET_TEAM_SIZE_8 KMP_GET_TEAM_SIZE_8
 #define FTN_IN_FINAL OMP_IN_FINAL
 #define FTN_GET_PROC_BIND OMP_GET_PROC_BIND
 #define FTN_GET_NUM_TEAMS OMP_GET_NUM_TEAMS
@@ -399,6 +452,7 @@
 #define FTN_GET_NUM_DEVICES OMP_GET_NUM_DEVICES
 #define FTN_GET_DEFAULT_DEVICE OMP_GET_DEFAULT_DEVICE
 #define FTN_SET_DEFAULT_DEVICE OMP_SET_DEFAULT_DEVICE
+#define FTN_SET_DEFAULT_DEVICE_8 KMP_SET_DEFAULT_DEVICE_8
 #define FTN_IS_INITIAL_DEVICE OMP_IS_INITIAL_DEVICE
 
 #define FTN_GET_CANCELLATION OMP_GET_CANCELLATION
@@ -407,10 +461,13 @@
 #define FTN_GET_MAX_TASK_PRIORITY OMP_GET_MAX_TASK_PRIORITY
 #define FTN_GET_NUM_PLACES OMP_GET_NUM_PLACES
 #define FTN_GET_PLACE_NUM_PROCS OMP_GET_PLACE_NUM_PROCS
+#define FTN_GET_PLACE_NUM_PROCS_8 KMP_GET_PLACE_NUM_PROCS_8
 #define FTN_GET_PLACE_PROC_IDS OMP_GET_PLACE_PROC_IDS
+#define FTN_GET_PLACE_PROC_IDS_8 KMP_GET_PLACE_PROC_IDS_8
 #define FTN_GET_PLACE_NUM OMP_GET_PLACE_NUM
 #define FTN_GET_PARTITION_NUM_PLACES OMP_GET_PARTITION_NUM_PLACES
 #define FTN_GET_PARTITION_PLACE_NUMS OMP_GET_PARTITION_PLACE_NUMS
+#define FTN_GET_PARTITION_PLACE_NUMS_8 KMP_GET_PARTITION_PLACE_NUMS_8
 #define FTN_GET_INITIAL_DEVICE OMP_GET_INITIAL_DEVICE
 #ifdef KMP_STUB
 #define FTN_TARGET_ALLOC OMP_TARGET_ALLOC
@@ -447,14 +504,17 @@
 #define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY
 #define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE
+#define FTN_PAUSE_RESOURCE_8 KMP_PAUSE_RESOURCE_8
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS
 #define FTN_DISPLAY_ENV OMP_DISPLAY_ENV
 #define FTN_IN_EXPLICIT_TASK OMP_IN_EXPLICIT_TASK
 #define FTN_FULFILL_EVENT OMP_FULFILL_EVENT
 #define FTN_SET_NUM_TEAMS OMP_SET_NUM_TEAMS
+#define FTN_SET_NUM_TEAMS_8 KMP_SET_NUM_TEAMS_8
 #define FTN_GET_MAX_TEAMS OMP_GET_MAX_TEAMS
 #define FTN_SET_TEAMS_THREAD_LIMIT OMP_SET_TEAMS_THREAD_LIMIT
+#define FTN_SET_TEAMS_THREAD_LIMIT_8 KMP_SET_TEAMS_THREAD_LIMIT_8
 #define FTN_GET_TEAMS_THREAD_LIMIT OMP_GET_TEAMS_THREAD_LIMIT
 
 #define FTN_GET_NUM_INTEROP_PROPERTIES OMP_GET_NUM_INTEROP_PROPERTIES
@@ -472,26 +532,33 @@
 #if KMP_FTN_ENTRIES == KMP_FTN_UAPPEND
 
 #define FTN_SET_STACKSIZE KMP_SET_STACKSIZE_
+#define FTN_SET_STACKSIZE_8 KMP_SET_STACKSIZE_8_
 #define FTN_SET_STACKSIZE_S KMP_SET_STACKSIZE_S_
 #define FTN_GET_STACKSIZE KMP_GET_STACKSIZE_
 #define FTN_GET_STACKSIZE_S KMP_GET_STACKSIZE_S_
 #define FTN_SET_BLOCKTIME KMP_SET_BLOCKTIME_
+#define FTN_SET_BLOCKTIME_8 KMP_SET_BLOCKTIME_8_
 #define FTN_GET_BLOCKTIME KMP_GET_BLOCKTIME_
 #define FTN_SET_LIBRARY_SERIAL KMP_SET_LIBRARY_SERIAL_
 #define FTN_SET_LIBRARY_TURNAROUND KMP_SET_LIBRARY_TURNAROUND_
 #define FTN_SET_LIBRARY_THROUGHPUT KMP_SET_LIBRARY_THROUGHPUT_
 #define FTN_SET_LIBRARY KMP_SET_LIBRARY_
+#define FTN_SET_LIBRARY_8 KMP_SET_LIBRARY_8_
 #define FTN_GET_LIBRARY KMP_GET_LIBRARY_
 #define FTN_SET_DEFAULTS KMP_SET_DEFAULTS_
 #define FTN_SET_DISP_NUM_BUFFERS KMP_SET_DISP_NUM_BUFFERS_
+#define FTN_SET_DISP_NUM_BUFFERS_8 KMP_SET_DISP_NUM_BUFFERS_8_
 #define FTN_SET_AFFINITY KMP_SET_AFFINITY_
 #define FTN_GET_AFFINITY KMP_GET_AFFINITY_
 #define FTN_GET_AFFINITY_MAX_PROC KMP_GET_AFFINITY_MAX_PROC_
 #define FTN_CREATE_AFFINITY_MASK KMP_CREATE_AFFINITY_MASK_
 #define FTN_DESTROY_AFFINITY_MASK KMP_DESTROY_AFFINITY_MASK_
 #define FTN_SET_AFFINITY_MASK_PROC KMP_SET_AFFINITY_MASK_PROC_
+#define FTN_SET_AFFINITY_MASK_PROC_8 KMP_SET_AFFINITY_MASK_PROC_8_
 #define FTN_UNSET_AFFINITY_MASK_PROC KMP_UNSET_AFFINITY_MASK_PROC_
+#define FTN_UNSET_AFFINITY_MASK_PROC_8 KMP_UNSET_AFFINITY_MASK_PROC_8_
 #define FTN_GET_AFFINITY_MASK_PROC KMP_GET_AFFINITY_MASK_PROC_
+#define FTN_GET_AFFINITY_MASK_PROC_8 KMP_GET_AFFINITY_MASK_PROC_8_
 
 #define FTN_MALLOC KMP_MALLOC_
 #define FTN_ALIGNED_MALLOC KMP_ALIGNED_MALLOC_
@@ -502,6 +569,7 @@
 #define FTN_GET_NUM_KNOWN_THREADS KMP_GET_NUM_KNOWN_THREADS_
 
 #define FTN_SET_NUM_THREADS OMP_SET_NUM_THREADS_
+#define FTN_SET_NUM_THREADS_8 KMP_SET_NUM_THREADS_8_
 #define FTN_GET_NUM_THREADS OMP_GET_NUM_THREADS_
 #define FTN_GET_MAX_THREADS OMP_GET_MAX_THREADS_
 #define FTN_GET_THREAD_NUM OMP_GET_THREAD_NUM_
@@ -513,13 +581,18 @@
 #define FTN_IN_PARALLEL OMP_IN_PARALLEL_
 #define FTN_GET_THREAD_LIMIT OMP_GET_THREAD_LIMIT_
 #define FTN_SET_SCHEDULE OMP_SET_SCHEDULE_
+#define FTN_SET_SCHEDULE_8 KMP_SET_SCHEDULE_8_
 #define FTN_GET_SCHEDULE OMP_GET_SCHEDULE_
+#define FTN_GET_SCHEDULE_8 KMP_GET_SCHEDULE_8_
 #define FTN_SET_MAX_ACTIVE_LEVELS OMP_SET_MAX_ACTIVE_LEVELS_
+#define FTN_SET_MAX_ACTIVE_LEVELS_8 KMP_SET_MAX_ACTIVE_LEVELS_8_
 #define FTN_GET_MAX_ACTIVE_LEVELS OMP_GET_MAX_ACTIVE_LEVELS_
 #define FTN_GET_ACTIVE_LEVEL OMP_GET_ACTIVE_LEVEL_
 #define FTN_GET_LEVEL OMP_GET_LEVEL_
 #define FTN_GET_ANCESTOR_THREAD_NUM OMP_GET_ANCESTOR_THREAD_NUM_
+#define FTN_GET_ANCESTOR_THREAD_NUM_8 KMP_GET_ANCESTOR_THREAD_NUM_8_
 #define FTN_GET_TEAM_SIZE OMP_GET_TEAM_SIZE_
+#define FTN_GET_TEAM_SIZE_8 KMP_GET_TEAM_SIZE_8_
 #define FTN_IN_FINAL OMP_IN_FINAL_
 #define FTN_GET_PROC_BIND OMP_GET_PROC_BIND_
 #define FTN_GET_NUM_TEAMS OMP_GET_NUM_TEAMS_
@@ -548,6 +621,7 @@
 #define FTN_GET_NUM_DEVICES OMP_GET_NUM_DEVICES_
 #define FTN_GET_DEFAULT_DEVICE OMP_GET_DEFAULT_DEVICE_
 #define FTN_SET_DEFAULT_DEVICE OMP_SET_DEFAULT_DEVICE_
+#define FTN_SET_DEFAULT_DEVICE_8 KMP_SET_DEFAULT_DEVICE_8_
 #define FTN_IS_INITIAL_DEVICE OMP_IS_INITIAL_DEVICE_
 
 #define FTN_GET_CANCELLATION OMP_GET_CANCELLATION_
@@ -556,10 +630,13 @@
 #define FTN_GET_MAX_TASK_PRIORITY OMP_GET_MAX_TASK_PRIORITY_
 #define FTN_GET_NUM_PLACES OMP_GET_NUM_PLACES_
 #define FTN_GET_PLACE_NUM_PROCS OMP_GET_PLACE_NUM_PROCS_
+#define FTN_GET_PLACE_NUM_PROCS_8 KMP_GET_PLACE_NUM_PROCS_8_
 #define FTN_GET_PLACE_PROC_IDS OMP_GET_PLACE_PROC_IDS_
+#define FTN_GET_PLACE_PROC_IDS_8 KMP_GET_PLACE_PROC_IDS_8_
 #define FTN_GET_PLACE_NUM OMP_GET_PLACE_NUM_
 #define FTN_GET_PARTITION_NUM_PLACES OMP_GET_PARTITION_NUM_PLACES_
 #define FTN_GET_PARTITION_PLACE_NUMS OMP_GET_PARTITION_PLACE_NUMS_
+#define FTN_GET_PARTITION_PLACE_NUMS_8 KMP_GET_PARTITION_PLACE_NUMS_8_
 #define FTN_GET_INITIAL_DEVICE OMP_GET_INITIAL_DEVICE_
 #ifdef KMP_STUB
 #define FTN_TARGET_ALLOC OMP_TARGET_ALLOC_
@@ -598,14 +675,17 @@
 #define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY_
 #define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY_
 #define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE_
+#define FTN_PAUSE_RESOURCE_8 KMP_PAUSE_RESOURCE_8_
 #define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL_
 #define FTN_GET_SUPPORTED_ACTIVE_LEVELS OMP_GET_SUPPORTED_ACTIVE_LEVELS_
 #define FTN_DISPLAY_ENV OMP_DISPLAY_ENV_
 #define FTN_IN_EXPLICIT_TASK OMP_IN_EXPLICIT_TASK_
 #define FTN_FULFILL_EVENT OMP_FULFILL_EVENT_
 #define FTN_SET_NUM_TEAMS OMP_SET_NUM_TEAMS_
+#define FTN_SET_NUM_TEAMS_8 KMP_SET_NUM_TEAMS_8_
 #define FTN_GET_MAX_TEAMS OMP_GET_MAX_TEAMS_
 #define FTN_SET_TEAMS_THREAD_LIMIT OMP_SET_TEAMS_THREAD_LIMIT_
+#define FTN_SET_TEAMS_THREAD_LIMIT_8 KMP_SET_TEAMS_THREAD_LIMIT_8_
 #define FTN_GET_TEAMS_THREAD_LIMIT OMP_GET_TEAMS_THREAD_LIMIT_
 
 #define FTN_GET_NUM_INTEROP_PROPERTIES OMP_GET_NUM_INTEROP_PROPERTIES_

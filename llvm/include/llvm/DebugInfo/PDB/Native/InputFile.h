@@ -55,9 +55,9 @@ class InputFile {
   getOrCreateTypeCollection(TypeCollectionKind Kind);
 
 public:
-  InputFile(PDBFile *Pdb);
-  InputFile(object::COFFObjectFile *Obj);
-  InputFile(MemoryBuffer *Buffer);
+  LLVM_ABI InputFile(PDBFile *Pdb);
+  LLVM_ABI InputFile(object::COFFObjectFile *Obj);
+  LLVM_ABI InputFile(MemoryBuffer *Buffer);
   LLVM_ABI ~InputFile();
   InputFile(InputFile &&Other) = default;
 

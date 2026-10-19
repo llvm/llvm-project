@@ -13,7 +13,7 @@
 #include "mlir/Conversion/ShardToMPI/ShardToMPI.h"
 #include "mlir/Dialect/Shard/Transforms/Transforms.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -1212,13 +1212,17 @@ struct ConvertShardToMPIPass
     populateCallOpTypeConversionPattern(patterns, typeConverter);
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
-    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns)))) {
+      return signalPassFailure();
+    }
 
     // Folding patterns cannot be mixed with conversion patterns -> extra pass.
     patterns.clear();
     SymbolTableCollection symbolTableCollection;
     mlir::shard::populateFoldingPatterns(patterns, symbolTableCollection);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      return signalPassFailure();
   }
 };
 

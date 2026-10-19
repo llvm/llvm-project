@@ -108,8 +108,7 @@ using ConstMap = DenseMap<Value *, Constant *>;
 // Specialization signature, used to uniquely designate a specialization within
 // a function.
 struct SpecSig {
-  // Hashing support, used to distinguish between ordinary, empty, or tombstone
-  // keys.
+  // Hashing support, used to distinguish between ordinary and empty keys.
   unsigned Key = 0;
   SmallVector<ArgInfo, 4> Args;
 

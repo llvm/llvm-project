@@ -7,8 +7,10 @@ option(CLANG_TIDY_ENABLE_STATIC_ANALYZER
   "Include static analyzer checks in clang-tidy" ON)
 option(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
   "Enable query-based custom checks in clang-tidy" ON)
+option(CLANG_TOOLS_EXTRA_INCLUDE_TESTS
+  "Generate build targets for Clang Extra Tools tests." ON)
 
-if(CLANG_INCLUDE_TESTS)
+if(CLANG_INCLUDE_TESTS AND CLANG_TOOLS_EXTRA_INCLUDE_TESTS)
   umbrella_lit_testsuite_begin(check-clang-tools)
 
   option(CLANG_TOOLS_TEST_USE_VG "Run Clang tools' tests under Valgrind" OFF)
@@ -45,7 +47,7 @@ if (CLANG_ENABLE_CLANGD)
 endif()
 
 # Add the common testsuite after all the tools.
-if(CLANG_INCLUDE_TESTS)
+if(CLANG_INCLUDE_TESTS AND CLANG_TOOLS_EXTRA_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
   umbrella_lit_testsuite_end(check-clang-tools)

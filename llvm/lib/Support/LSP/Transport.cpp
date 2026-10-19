@@ -83,6 +83,23 @@ void Reply::operator()(llvm::Expected<llvm::json::Value> Reply) {
 // MessageHandler
 //===----------------------------------------------------------------------===//
 
+// Keep handleParseError out of every parse<T> instantiation.
+LLVM_ATTRIBUTE_NOINLINE llvm::Error
+MessageHandler::handleParseError(const llvm::json::Value &Raw,
+                                 StringRef PayloadName, StringRef PayloadKind,
+                                 const llvm::json::Path::Root &Root) {
+  // Dump the relevant parts of the broken message.
+  std::string Context;
+  llvm::raw_string_ostream Os(Context);
+  Root.printErrorContext(Raw, Os);
+
+  // Report the error (e.g. to the client).
+  return llvm::make_error<LSPError>(
+      llvm::formatv("failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
+                    fmt_consume(Root.getError())),
+      ErrorCode::InvalidParams);
+}
+
 bool MessageHandler::onNotify(llvm::StringRef Method, llvm::json::Value Value) {
   Logger::info("--> {0}", Method);
 

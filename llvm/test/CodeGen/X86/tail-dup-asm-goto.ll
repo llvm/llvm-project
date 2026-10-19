@@ -36,7 +36,7 @@ define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-NEXT:   successors: %bb.5(0x80000000), %bb.4(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY]], %bb.2, [[MOV64rm]], %bb.1
-  ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", sideeffect mayload attdialect, imm, 42, imm, 0, imm, %bb.4, clobber, implicit-def early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def early-clobber $eflags
+  ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", sideeffect mayload attdialect, imm, 42, imm, 0, imm, %bb.4, clobber, implicit-def dead early-clobber $df, clobber, implicit-def dead early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.bb17.i.i.i (inlineasm-br-indirect-target):
@@ -96,10 +96,10 @@ define void @ceph_con_v2_try_read(i32 %__trans_tmp_3.sroa.0.0.copyload, i1 %tobo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0.skip.i.i, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   $rdi = COPY [[LEA64r]]
-  ; CHECK-NEXT:   CALL64r killed [[SUBREG_TO_REG]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+  ; CHECK-NEXT:   CALL64r [[SUBREG_TO_REG]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $eax
   ; CHECK-NEXT:   TEST8ri [[COPY2]], 1, implicit-def $eflags

@@ -222,6 +222,17 @@ define i64 @test_ptrauth_nop_ds_constant() {
   ret i64 %authed
 }
 
+define i64 @test_ptrauth_auth_call_no_args() {
+; CHECK-LABEL: @test_ptrauth_auth_call_no_args(
+; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo()
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[CALL]], i32 1, i64 1234)
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %call = call i64 @foo()
+  %authed = call i64 @llvm.ptrauth.auth(i64 %call, i32 1, i64 1234)
+  ret i64 %authed
+}
+
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign(i64, i32, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)

@@ -35,7 +35,7 @@ bb2:
 ; CHECK-LABEL: @simple_switch(
 define i32 @simple_switch(i32 %arg1) {
   ; CHECK: llvm.switch
-  ; CHECK: {branch_weights = array<i32: 42, 3, 5>}
+  ; CHECK: weights([42, 3, 5])
   switch i32 %arg1, label %bbd [
     i32 0, label %bb1
     i32 9, label %bb2
@@ -55,7 +55,7 @@ bbd:
 ; CHECK-LABEL: @simple_switch_expected(
 define i32 @simple_switch_expected(i32 %arg1) {
   ; CHECK: llvm.switch
-  ; CHECK: {branch_weights = array<i32: 1, 1, 2000>}
+  ; CHECK: weights([1, 1, 2000])
   switch i32 %arg1, label %bbd [
     i32 0, label %bb1
     i32 9, label %bb2

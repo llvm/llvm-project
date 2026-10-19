@@ -1,18 +1,24 @@
-//===-- Linux implementation of sigaltstack -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of sigaltstack.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/signal/sigaltstack.h"
+
+#include "hdr/signal_macros.h"
 #include "hdr/types/stack_t.h"
+#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/signal/linux/signal_utils.h"
-
-#include "src/__support/common.h"
 
 #include <sys/syscall.h>
 
@@ -21,15 +27,13 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, sigaltstack,
                    (const stack_t *__restrict ss, stack_t *__restrict oss)) {
   if (ss != nullptr) {
-    unsigned not_ss_disable = ~unsigned(SS_DISABLE);
-    if ((unsigned(ss->ss_flags) & not_ss_disable) != 0) {
-      // Flags cannot have anything other than SS_DISABLE set.
-      // We do the type-casting to unsigned because the |ss_flags|
-      // field of stack_t is of type "int".
+    if (ss->ss_flags != 0 && ss->ss_flags != SS_DISABLE) {
       libc_errno = EINVAL;
       return -1;
     }
-    if (ss->ss_size < MINSIGSTKSZ) {
+    // ss_size is only validated if the alternate stack is being enabled.
+    // When disabling (SS_DISABLE), ss_size and ss_sp are ignored.
+    if (ss->ss_flags != SS_DISABLE && ss->ss_size < MINSIGSTKSZ) {
       libc_errno = ENOMEM;
       return -1;
     }

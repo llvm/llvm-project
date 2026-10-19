@@ -742,7 +742,7 @@ define void @memcpy_1_al41(ptr %d, ptr %s) {
 ; strb  r1, [r0]
 ;
 ; COMMON-LABEL: 'memcpy_1_al41'
-; COMMON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 1 %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %d, ptr align 1 %s, i32 1, i1 false)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 entry:

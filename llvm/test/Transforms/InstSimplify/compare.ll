@@ -3579,5 +3579,187 @@ declare i64 @llvm.vscale.i64()
 
 ; TODO: Add coverage for global aliases, link once, etc..
 
+; Test dereferenceable(N) arguments when folding pointer equalities.
+
+define i1 @icmp_eq_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_ne_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_ne_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 true
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp ne ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_null_valid_and_alloca(ptr dereferenceable(24) %p) null_pointer_is_valid {
+; CHECK-LABEL: @icmp_eq_arg_derefable_null_valid_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 8
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_negative_offset(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_negative_offset(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 -8
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+%struct.S = type { [3 x double] }
+
+define i1 @icmp_eq_arg_derefable_and_byval_arg(ptr byval(%struct.S) %p, ptr dereferenceable(24) %q) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_byval_arg(
+; CHECK-NEXT:    ret i1 false
+;
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+; Negative tests.
+
+define i1 @icmp_eq_no_arg_derefable(ptr %p) {
+; CHECK-LABEL: @icmp_eq_no_arg_derefable(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_past_one(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_past_one(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 24
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 24
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+; %p2 = %p - 32 may equal %q if %p happens to point just past the alloca.
+define i1 @icmp_eq_gep_of_arg_derefable_negative_offset_2(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_negative_offset_2(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 -32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %p2 = getelementptr i8, ptr %p, i64 -32
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_alloca_past_one(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_alloca_past_one(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [10 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i8, ptr [[Q]], i64 80
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [10 x double], align 8
+  call void @escape(ptr %q)
+  %q2 = getelementptr i8, ptr %q, i64 80
+  %c  = icmp eq ptr %p, %q2
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_alloca_negative_offset(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_alloca_negative_offset(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    ret i1 false
+;
+  %q  = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %q2 = getelementptr i8, ptr %q, i64 -8
+  %c  = icmp eq ptr %p, %q2
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_or_null_and_alloca(ptr dereferenceable_or_null(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_or_null_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    call void @escape(ptr [[Q]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  call void @escape(ptr %q)
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_two_args_derefable(ptr dereferenceable(24) %p, ptr dereferenceable(24) %q) {
+; CHECK-LABEL: @icmp_eq_two_args_derefable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+@g = global [3 x double] zeroinitializer
+
+define i1 @icmp_eq_arg_derefable_and_global(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_global(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], @g
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp eq ptr %p, @g
+  ret i1 %c
+}
+
+declare void @escape(ptr)
 
 attributes #0 = { null_pointer_is_valid }

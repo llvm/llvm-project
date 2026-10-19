@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 -fsyntax-only -fcuda-is-device -verify %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1251 -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple amdgpu12.51-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
 
 #define __device__ __attribute__((device))
 

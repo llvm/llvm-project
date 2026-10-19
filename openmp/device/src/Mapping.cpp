@@ -27,8 +27,8 @@ extern const inline uint32_t __oclc_ABI_version = 500;
 #endif
 
 static bool isInLastWarp() {
-  uint32_t MainTId = (mapping::getNumberOfThreadsInBlock() - 1) &
-                     ~(mapping::getWarpSize() - 1);
+  uint32_t MainTId = utils::alignDown(mapping::getNumberOfThreadsInBlock() - 1,
+                                      mapping::getWarpSize());
   return mapping::getThreadIdInBlock() == MainTId;
 }
 
@@ -97,7 +97,7 @@ uint32_t mapping::getWarpSize() { return __gpu_num_lanes(); }
 
 uint32_t mapping::getMaxTeamThreads(bool IsSPMD) {
   uint32_t BlockSize = mapping::getNumberOfThreadsInBlock();
-  // If we are in SPMD mode, remove one warp.
+  // Generic mode reserves the first warp for the main thread.
   return BlockSize - (!IsSPMD * mapping::getWarpSize());
 }
 uint32_t mapping::getMaxTeamThreads() {
@@ -131,8 +131,8 @@ uint32_t mapping::getBlockIdInKernel(int32_t Dim) {
 }
 
 uint32_t mapping::getNumberOfWarpsInBlock() {
-  return (mapping::getNumberOfThreadsInBlock() + mapping::getWarpSize() - 1) /
-         mapping::getWarpSize();
+  return utils::roundUp(mapping::getNumberOfThreadsInBlock(),
+                        mapping::getWarpSize());
 }
 
 uint32_t mapping::getNumberOfBlocksInKernel(int32_t Dim) {
@@ -174,6 +174,12 @@ extern "C" {
 
 [[gnu::noinline]] uint32_t __kmpc_get_warp_size() {
   return mapping::getWarpSize();
+}
+
+// The mode is a parameter because callers reach this before the barrier that
+// would make the shared IsSPMDMode visible to them.
+[[gnu::noinline]] uint32_t __kmpc_get_max_team_threads(int32_t IsSPMD) {
+  return mapping::getMaxTeamThreads(IsSPMD);
 }
 }
 

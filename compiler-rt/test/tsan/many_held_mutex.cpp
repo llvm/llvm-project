@@ -1,8 +1,8 @@
 // RUN: %clangxx_tsan -O1 %s %link_libcxx_tsan -fsanitize=thread -o %t
 // RUN: %run %t 128
 
+#include <cstdlib>
 #include <mutex>
-#include <string>
 #include <vector>
 
 int main(int argc, char *argv[]) {

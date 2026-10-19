@@ -28,6 +28,10 @@ public:
 
   LLVM_ABI explicit RegisterTargetPassConfigCallback(PassConfigCallback &&C);
   LLVM_ABI ~RegisterTargetPassConfigCallback();
+  RegisterTargetPassConfigCallback(const RegisterTargetPassConfigCallback &) =
+      delete;
+  RegisterTargetPassConfigCallback &
+  operator=(const RegisterTargetPassConfigCallback &) = delete;
 };
 
 LLVM_ABI void

@@ -31,10 +31,10 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(Obj.getFileName().str(), std::move(SSP),
-                                    createTripleWithCOFFFormat(std::move(TT)),
-                                    std::move(Features),
-                                    std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(
+          Obj.getFileName().str(), std::move(SSP),
+          createTripleWithCOFFFormat(std::move(TT)), Obj.getBytesInAddress(),
+          std::move(Features), std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
            << "\"\n";
@@ -628,24 +628,6 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
   DefinedSymbols[SymbolName] = GSym;
   PendingComdatExport = std::nullopt;
   return GSym;
-}
-
-Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
-  if (ImageBase)
-    return *ImageBase;
-
-  auto IBN = G.intern(ImageBaseName);
-  ImageBase = G.findExternalSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-  ImageBase = G.findAbsoluteSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-  ImageBase = G.findDefinedSymbolByName(IBN);
-  if (*ImageBase)
-    return *ImageBase;
-
-  return nullptr;
 }
 
 } // namespace jitlink

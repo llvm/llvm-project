@@ -48,11 +48,9 @@ public:
   }
 };
 
-#define LIST_ISCANONICAL_TESTS(T, func)                                        \
-  using LlvmLibcIsCanonicalTest = IsCanonicalTest<T>;                          \
-  TEST_F(LlvmLibcIsCanonicalTest, SpecialNumbers) {                            \
-    testSpecialNumbers(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcIsCanonicalTest, RoundedNubmers) { testRoundedNumbers(&func); }
+#define LIST_ISCANONICAL_TESTS(Name, T, func)                                  \
+  using LlvmLibc##Name##Test = IsCanonicalTest<T>;                             \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ISCANONICALTEST_H

@@ -33,7 +33,7 @@ struct MDProfLabels {
   LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+extern LLVM_ABI cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 /// Profile-based loop metadata that should be accessed only by using
 /// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.

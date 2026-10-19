@@ -119,6 +119,19 @@ void scoped_atomic_exchange_n(int *ptr, int value) {
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
 }
 
+void scoped_atomic_exchange_n_volatile(volatile int *ptr, int value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_exchange_n_volatile
+  // CIR-LABEL: @scoped_atomic_exchange_n_volatile
+  // LLVM-LABEL: @scoped_atomic_exchange_n_volatile
+  // OGCG-LABEL: @scoped_atomic_exchange_n_volatile
+
+  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) volatile %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) volatile %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // LLVM: %{{.+}} = atomicrmw volatile xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw volatile xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+}
+
 void scoped_atomic_cmpxchg(int *ptr, int *expected, int *desired) {
   // CIR-BEFORE-TL-LABEL: @scoped_atomic_cmpxchg
   // CIR-LABEL: @scoped_atomic_cmpxchg
@@ -347,6 +360,90 @@ void scoped_atomic_max_fetch(int *ptr, int *value) {
   // CIR: cir.atomic.fetch max seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+}
+
+void scoped_atomic_fetch_fminimum(float *ptr, float value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_fetch_fminimum
+  // CIR-LABEL: @scoped_atomic_fetch_fminimum
+  // LLVM-LABEL: @scoped_atomic_fetch_fminimum
+  // OGCG-LABEL: @scoped_atomic_fetch_fminimum
+
+  __scoped_atomic_fetch_fminimum(ptr, value, __ATOMIC_SEQ_CST,
+                                 __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+
+  __scoped_atomic_fetch_fminimum(ptr, value, __ATOMIC_SEQ_CST,
+                                 __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+}
+
+void scoped_atomic_fetch_fmaximum(float *ptr, float value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_fetch_fmaximum
+  // CIR-LABEL: @scoped_atomic_fetch_fmaximum
+  // LLVM-LABEL: @scoped_atomic_fetch_fmaximum
+  // OGCG-LABEL: @scoped_atomic_fetch_fmaximum
+
+  __scoped_atomic_fetch_fmaximum(ptr, value, __ATOMIC_SEQ_CST,
+                                 __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+
+  __scoped_atomic_fetch_fmaximum(ptr, value, __ATOMIC_SEQ_CST,
+                                 __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+}
+
+void scoped_atomic_fetch_fminimum_num(float *ptr, float value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_fetch_fminimum_num
+  // CIR-LABEL: @scoped_atomic_fetch_fminimum_num
+  // LLVM-LABEL: @scoped_atomic_fetch_fminimum_num
+  // OGCG-LABEL: @scoped_atomic_fetch_fminimum_num
+
+  __scoped_atomic_fetch_fminimum_num(ptr, value, __ATOMIC_SEQ_CST,
+                                     __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum_num seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+
+  __scoped_atomic_fetch_fminimum_num(ptr, value, __ATOMIC_SEQ_CST,
+                                     __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+}
+
+void scoped_atomic_fetch_fmaximum_num(float *ptr, float value) {
+  // CIR-BEFORE-TL-LABEL: @scoped_atomic_fetch_fmaximum_num
+  // CIR-LABEL: @scoped_atomic_fetch_fmaximum_num
+  // LLVM-LABEL: @scoped_atomic_fetch_fmaximum_num
+  // OGCG-LABEL: @scoped_atomic_fetch_fmaximum_num
+
+  __scoped_atomic_fetch_fmaximum_num(ptr, value, __ATOMIC_SEQ_CST,
+                                     __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum_num seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+
+  __scoped_atomic_fetch_fmaximum_num(ptr, value, __ATOMIC_SEQ_CST,
+                                     __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // CIR: cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+  // LLVM: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_and(int *ptr, int *value) {

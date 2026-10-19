@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -start-after=si-load-store-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-after=si-load-store-opt %s -o - | FileCheck %s
 
 # CHECK: misaligned_regsequence:
 # CHECK: ; %bb.0:
@@ -15,6 +15,8 @@
 ---
 name: misaligned_regsequence
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
     liveins: $sgpr4_sgpr5

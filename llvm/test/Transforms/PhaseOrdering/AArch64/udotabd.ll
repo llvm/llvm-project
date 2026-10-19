@@ -7,7 +7,7 @@ target triple = "aarch64"
 
 define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, i32 noundef %s_p2) #0 {
 ; CHECK-O3-LABEL: define dso_local i32 @test(
-; CHECK-O3-SAME: ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-O3-SAME: ptr nofree noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr nofree noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-O3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-O3-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[S_P2]] to i64
 ; CHECK-O3-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[S_P1]] to i64
@@ -187,7 +187,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    ret i32 [[OP_RDX_15]]
 ;
 ; CHECK-LTO-LABEL: define dso_local i32 @test(
-; CHECK-LTO-SAME: ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-LTO-SAME: ptr nofree noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr nofree noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-LTO-NEXT:  [[ENTRY:.*:]]
 ; CHECK-LTO-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[S_P2]] to i64
 ; CHECK-LTO-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[S_P1]] to i64

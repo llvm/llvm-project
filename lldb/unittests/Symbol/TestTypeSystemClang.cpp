@@ -349,6 +349,7 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
   EXPECT_FALSE(ast.GetIntTypeFromBitSize(8, /*is_signed=*/false));
   EXPECT_FALSE(ast.GetPointerDiffType(/*is_signed=*/true));
   EXPECT_FALSE(ast.GetPointerDiffType(/*is_signed=*/false));
+  EXPECT_FALSE(ast.GetSizeType());
 
   CompilerType record_type =
       ast.CreateRecordType(nullptr, OptionalClangModuleID(), "Record",
@@ -374,6 +375,12 @@ TEST_F(TestTypeSystemClang, TestGetPointerDiffType) {
   EXPECT_EQ(
       llvm::expectedToOptional(uptrdiff_t.GetByteSize(nullptr)).value_or(0),
       m_ast->GetPointerByteSize());
+}
+
+TEST_F(TestTypeSystemClang, TestGetSizeType) {
+  CompilerType size_type = m_ast->GetSizeType();
+  EXPECT_EQ(size_type.GetDisplayTypeName(), "__size_t");
+  EXPECT_FALSE(size_type.IsSigned());
 }
 
 TEST_F(TestTypeSystemClang, TestGetBuiltinTypeByName_BitInt) {

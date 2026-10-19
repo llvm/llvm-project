@@ -1,4 +1,7 @@
 // REQUIRES: asserts
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // RUN: mlir-opt %s -verify-each=true -pass-pipeline='builtin.module(func.func(test-stats-pass,test-stats-pass))' -mlir-pass-statistics -mlir-pass-statistics-display=list 2>&1 | FileCheck -check-prefix=LIST %s
 // RUN: mlir-opt %s -verify-each=true -pass-pipeline='builtin.module(func.func(test-stats-pass,test-stats-pass))' -mlir-pass-statistics -mlir-pass-statistics-display=pipeline 2>&1 | FileCheck -check-prefix=PIPELINE %s
 

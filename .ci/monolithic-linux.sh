@@ -9,8 +9,7 @@
 
 #
 # This script performs a monolithic build of the monorepo and runs the tests of
-# most projects on Linux. This should be replaced by per-project scripts that
-# run only the relevant tests.
+# most projects on Linux.
 #
 
 source .ci/utils.sh

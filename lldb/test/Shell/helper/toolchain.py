@@ -11,6 +11,8 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+import lldbflakes
+
 import posixpath
 
 def _get_lldb_init_path(config):
@@ -49,10 +51,10 @@ def get_lldb_args(config, suffix=""):
 
 
 class ShTestLldb(ShTest):
-    def __init__(
-        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
-    ):
-        super().__init__(execute_external, extra_substitutions, preamble_commands)
+    def __init__(self, extra_substitutions=[], preamble_commands=[]):
+        super().__init__(
+            extra_substitutions=extra_substitutions, preamble_commands=preamble_commands
+        )
 
     def execute(self, test, litConfig):
         # Run each Shell test in a separate directory (on remote).
@@ -84,7 +86,9 @@ class ShTestLldb(ShTest):
                         cmd.replace(args_def, args_unique),
                     )
                 break
-        return super().execute(test, litConfig)
+        return lldbflakes.execute_with_reruns(
+            lambda: ShTest.execute(self, test, litConfig)
+        )
 
 
 def use_lldb_substitutions(config):
@@ -160,18 +164,9 @@ def use_lldb_substitutions(config):
             extra_args=["platform"],
             unresolved="ignore",
         ),
-        ToolSubst(
-            "%lldb-rpc-gen",
-            command=FindTool("lldb-rpc-gen"),
-            # We need the LLDB build directory root to pass into the tool, not the test build root.
-            extra_args=[
-                "-p " + config.lldb_build_directory + "/..",
-                '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
-            ],
-            unresolved="ignore",
-        ),
         "lldb-test",
         "lldb-dap",
+        "lldb-mcp",
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),

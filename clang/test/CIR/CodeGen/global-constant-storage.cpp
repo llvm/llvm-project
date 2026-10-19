@@ -52,27 +52,27 @@ const C c;
 
 // CIR checks before LoweringPrepare transformation - globals have ctor regions
 // Test case 'a' - before LoweringPrepare
-// CIR-BEFORE-LPP: cir.global external @a = ctor : !rec_A {
+// CIR-BEFORE-LPP: cir.global external @a = #cir.zero : !rec_A ctor {
 // CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @a : !cir.ptr<!rec_A>
 // CIR-BEFORE-LPP:   cir.call @_ZN1AC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR-BEFORE-LPP:   %[[OBJ2:.*]] = cir.get_global @a : !cir.ptr<!rec_A>
 // CIR-BEFORE-LPP: }
 
 // Test case 'a2' - before LoweringPrepare
-// CIR-BEFORE-LPP: cir.global external @a2 = ctor : !rec_A2 {
+// CIR-BEFORE-LPP: cir.global external @a2 = #cir.zero : !rec_A2 ctor {
 // CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @a2 : !cir.ptr<!rec_A2>
 // CIR-BEFORE-LPP:   cir.call @_ZN2A2C1Ev(%[[OBJ]]) : (!cir.ptr<!rec_A2> {{.*}}) -> ()
 // CIR-BEFORE-LPP:   %[[OBJ2:.*]] = cir.get_global @a2 : !cir.ptr<!rec_A2>
 // CIR-BEFORE-LPP: }
 
 // Test case 'b' - before LoweringPrepare
-// CIR-BEFORE-LPP: cir.global external @b = ctor : !rec_B {
+// CIR-BEFORE-LPP: cir.global external @b = #cir.zero : !rec_B ctor {
 // CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @b : !cir.ptr<!rec_B>
 // CIR-BEFORE-LPP:   cir.call @_ZN1BC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_B> {{.*}}) -> ()
 // CIR-BEFORE-LPP: }
 
 // Test case 'c' - before LoweringPrepare (internal linkage)
-// CIR-BEFORE-LPP: cir.global {{.*}} internal {{.*}} @_ZL1c = ctor : !rec_C {
+// CIR-BEFORE-LPP: cir.global {{.*}} internal {{.*}} @_ZL1c = #cir.zero : !rec_C ctor {
 // CIR-BEFORE-LPP:   %[[OBJ:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>
 // CIR-BEFORE-LPP:   cir.call @_ZN1CC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_C> {{.*}}) -> ()
 // CIR-BEFORE-LPP:   %[[OBJ2:.*]] = cir.get_global @_ZL1c : !cir.ptr<!rec_C>

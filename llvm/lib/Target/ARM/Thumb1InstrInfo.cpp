@@ -62,10 +62,14 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     UsedRegs.addLiveOuts(MBB);
 
     auto InstUpToI = MBB.end();
-    while (InstUpToI != I)
+    while (InstUpToI != I) {
       // The pre-decrement is on purpose here.
       // We want to have the liveness right before I.
-      UsedRegs.stepBackward(*--InstUpToI);
+      --InstUpToI;
+      if (InstUpToI->isDebugInstr())
+        continue;
+      UsedRegs.stepBackward(*InstUpToI);
+    }
 
     if (UsedRegs.available(ARM::CPSR)) {
       BuildMI(MBB, I, DL, get(ARM::tMOVSr), DestReg)
@@ -79,7 +83,7 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BitVector Allocatable = RegInfo->getAllocatableSet(
         MF, RegInfo->getRegClass(ARM::hGPRRegClassID));
 
-    Register TmpReg = ARM::NoRegister;
+    Register TmpReg;
     // Prefer R12 as it is known to not be preserved anyway
     if (UsedRegs.available(ARM::R12) && Allocatable.test(ARM::R12)) {
       TmpReg = ARM::R12;

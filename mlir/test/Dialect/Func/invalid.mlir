@@ -13,7 +13,7 @@ func.func private @return_i32_f32() -> (i32, f32)
 func.func @call() {
   // expected-error @+3 {{op result type mismatch at index 0}}
   // expected-note @+2 {{op result types: 'f32', 'i32'}}
-  // expected-note @+1 {{function result types: 'i32', 'f32'}}
+  // expected-note @+1 {{callee result types: 'i32', 'f32'}}
   %0:2 = call @return_i32_f32() : () -> (f32, i32)
   return
 }

@@ -14,21 +14,21 @@ body:             |
     ; CHECK-LABEL: name: f64_faddp
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C]](i64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(f64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f64>), [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C1]](i64)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[EVEC]], [[EVEC1]]
-    ; CHECK-NEXT: $d0 = COPY [[FADD]](s64)
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(f64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f64>), [[C1]](i64)
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[EVEC]], [[EVEC1]]
+    ; CHECK-NEXT: $d0 = COPY [[FADD]](f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:_(<2 x s64>) = COPY $q0
-    %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %5:_(s64) = G_CONSTANT i64 0
-    %1:_(<2 x s64>) = G_SHUFFLE_VECTOR %0(<2 x s64>), %2, shufflemask(1, undef)
-    %3:_(<2 x s64>) = G_FADD %1, %0
-    %4:_(s64) = G_EXTRACT_VECTOR_ELT %3(<2 x s64>), %5(s64)
-    $d0 = COPY %4(s64)
+    %0:_(<2 x f64>) = COPY $q0
+    %2:_(<2 x f64>) = G_IMPLICIT_DEF
+    %5:_(i64) = G_CONSTANT i64 0
+    %1:_(<2 x f64>) = G_SHUFFLE_VECTOR %0(<2 x f64>), %2, shufflemask(1, undef)
+    %3:_(<2 x f64>) = G_FADD %1, %0
+    %4:_(f64) = G_EXTRACT_VECTOR_ELT %3(<2 x f64>), %5(i64)
+    $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -46,21 +46,21 @@ body:             |
     ; CHECK-LABEL: name: f64_faddp_commuted
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C]](i64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(f64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f64>), [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C1]](i64)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[EVEC]], [[EVEC1]]
-    ; CHECK-NEXT: $d0 = COPY [[FADD]](s64)
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(f64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f64>), [[C1]](i64)
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[EVEC]], [[EVEC1]]
+    ; CHECK-NEXT: $d0 = COPY [[FADD]](f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:_(<2 x s64>) = COPY $q0
-    %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %5:_(s64) = G_CONSTANT i64 0
-    %1:_(<2 x s64>) = G_SHUFFLE_VECTOR %0(<2 x s64>), %2, shufflemask(1, undef)
-    %3:_(<2 x s64>) = G_FADD %0, %1
-    %4:_(s64) = G_EXTRACT_VECTOR_ELT %3(<2 x s64>), %5(s64)
-    $d0 = COPY %4(s64)
+    %0:_(<2 x f64>) = COPY $q0
+    %2:_(<2 x f64>) = G_IMPLICIT_DEF
+    %5:_(i64) = G_CONSTANT i64 0
+    %1:_(<2 x f64>) = G_SHUFFLE_VECTOR %0(<2 x f64>), %2, shufflemask(1, undef)
+    %3:_(<2 x f64>) = G_FADD %0, %1
+    %4:_(f64) = G_EXTRACT_VECTOR_ELT %3(<2 x f64>), %5(i64)
+    $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -78,21 +78,21 @@ body:             |
     ; CHECK-LABEL: name: f32_faddp
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s32>), [[C]](i64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(f32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f32>), [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s32>), [[C1]](i64)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[EVEC]], [[EVEC1]]
-    ; CHECK-NEXT: $s0 = COPY [[FADD]](s32)
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(f32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f32>), [[C1]](i64)
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f32) = G_FADD [[EVEC]], [[EVEC1]]
+    ; CHECK-NEXT: $s0 = COPY [[FADD]](f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %0:_(<2 x s32>) = COPY $d0
-    %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %5:_(s64) = G_CONSTANT i64 0
-    %1:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %2, shufflemask(1, undef)
-    %3:_(<2 x s32>) = G_FADD %1, %0
-    %4:_(s32) = G_EXTRACT_VECTOR_ELT %3(<2 x s32>), %5(s64)
-    $s0 = COPY %4(s32)
+    %0:_(<2 x f32>) = COPY $d0
+    %2:_(<2 x f32>) = G_IMPLICIT_DEF
+    %5:_(i64) = G_CONSTANT i64 0
+    %1:_(<2 x f32>) = G_SHUFFLE_VECTOR %0(<2 x f32>), %2, shufflemask(1, undef)
+    %3:_(<2 x f32>) = G_FADD %1, %0
+    %4:_(f32) = G_EXTRACT_VECTOR_ELT %3(<2 x f32>), %5(i64)
+    $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -110,21 +110,21 @@ body:             |
     ; CHECK-LABEL: name: f32_faddp_commuted
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s32>), [[C]](i64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(f32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f32>), [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s32>), [[C1]](i64)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[EVEC]], [[EVEC1]]
-    ; CHECK-NEXT: $s0 = COPY [[FADD]](s32)
+    ; CHECK-NEXT: [[EVEC1:%[0-9]+]]:_(f32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f32>), [[C1]](i64)
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f32) = G_FADD [[EVEC]], [[EVEC1]]
+    ; CHECK-NEXT: $s0 = COPY [[FADD]](f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %0:_(<2 x s32>) = COPY $d0
-    %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %5:_(s64) = G_CONSTANT i64 0
-    %1:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %2, shufflemask(1, undef)
-    %3:_(<2 x s32>) = G_FADD %0, %1
-    %4:_(s32) = G_EXTRACT_VECTOR_ELT %3(<2 x s32>), %5(s64)
-    $s0 = COPY %4(s32)
+    %0:_(<2 x f32>) = COPY $d0
+    %2:_(<2 x f32>) = G_IMPLICIT_DEF
+    %5:_(i64) = G_CONSTANT i64 0
+    %1:_(<2 x f32>) = G_SHUFFLE_VECTOR %0(<2 x f32>), %2, shufflemask(1, undef)
+    %3:_(<2 x f32>) = G_FADD %0, %1
+    %4:_(f32) = G_EXTRACT_VECTOR_ELT %3(<2 x f32>), %5(i64)
+    $s0 = COPY %4(f32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -142,21 +142,21 @@ body:             |
     ; CHECK-LABEL: name: wrong_extract_idx
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<2 x s64>), [[DEF]], shufflemask(1, undef)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x s64>) = G_FADD [[SHUF]], [[COPY]]
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[FADD]](<2 x s64>), [[C]](s64)
-    ; CHECK-NEXT: $d0 = COPY [[EVEC]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x f64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x f64>) = G_SHUFFLE_VECTOR [[COPY]](<2 x f64>), [[DEF]], shufflemask(1, undef)
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x f64>) = G_FADD [[SHUF]], [[COPY]]
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(f64) = G_EXTRACT_VECTOR_ELT [[FADD]](<2 x f64>), [[C]](i64)
+    ; CHECK-NEXT: $d0 = COPY [[EVEC]](f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:_(<2 x s64>) = COPY $q0
-    %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %5:_(s64) = G_CONSTANT i64 1
-    %1:_(<2 x s64>) = G_SHUFFLE_VECTOR %0(<2 x s64>), %2, shufflemask(1, undef)
-    %3:_(<2 x s64>) = G_FADD %1, %0
-    %4:_(s64) = G_EXTRACT_VECTOR_ELT %3(<2 x s64>), %5(s64)
-    $d0 = COPY %4(s64)
+    %0:_(<2 x f64>) = COPY $q0
+    %2:_(<2 x f64>) = G_IMPLICIT_DEF
+    %5:_(i64) = G_CONSTANT i64 1
+    %1:_(<2 x f64>) = G_SHUFFLE_VECTOR %0(<2 x f64>), %2, shufflemask(1, undef)
+    %3:_(<2 x f64>) = G_FADD %1, %0
+    %4:_(f64) = G_EXTRACT_VECTOR_ELT %3(<2 x f64>), %5(i64)
+    $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -174,21 +174,21 @@ body:             |
     ; CHECK-LABEL: name: wrong_shuffle_mask
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY]](<2 x s64>), [[DEF]], shufflemask(0, undef)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x s64>) = G_FADD [[SHUF]], [[COPY]]
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[FADD]](<2 x s64>), [[C]](s64)
-    ; CHECK-NEXT: $d0 = COPY [[EVEC]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x f64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x f64>) = G_SHUFFLE_VECTOR [[COPY]](<2 x f64>), [[DEF]], shufflemask(0, undef)
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x f64>) = G_FADD [[SHUF]], [[COPY]]
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(f64) = G_EXTRACT_VECTOR_ELT [[FADD]](<2 x f64>), [[C]](i64)
+    ; CHECK-NEXT: $d0 = COPY [[EVEC]](f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:_(<2 x s64>) = COPY $q0
-    %2:_(<2 x s64>) = G_IMPLICIT_DEF
-    %5:_(s64) = G_CONSTANT i64 0
-    %1:_(<2 x s64>) = G_SHUFFLE_VECTOR %0(<2 x s64>), %2, shufflemask(0, undef)
-    %3:_(<2 x s64>) = G_FADD %1, %0
-    %4:_(s64) = G_EXTRACT_VECTOR_ELT %3(<2 x s64>), %5(s64)
-    $d0 = COPY %4(s64)
+    %0:_(<2 x f64>) = COPY $q0
+    %2:_(<2 x f64>) = G_IMPLICIT_DEF
+    %5:_(i64) = G_CONSTANT i64 0
+    %1:_(<2 x f64>) = G_SHUFFLE_VECTOR %0(<2 x f64>), %2, shufflemask(0, undef)
+    %3:_(<2 x f64>) = G_FADD %1, %0
+    %4:_(f64) = G_EXTRACT_VECTOR_ELT %3(<2 x f64>), %5(i64)
+    $d0 = COPY %4(f64)
     RET_ReallyLR implicit $d0
 
 ...

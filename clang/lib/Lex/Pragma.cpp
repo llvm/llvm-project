@@ -288,10 +288,10 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
 
   // Make and enter a lexer object so that we lex and expand the tokens just
   // like any others.
-  Lexer *TL = Lexer::Create_PragmaLexer(TokLoc, PragmaLoc, RParenLoc,
-                                        StrVal.size(), *this);
+  std::unique_ptr<Lexer> TL = Lexer::Create_PragmaLexer(
+      TokLoc, PragmaLoc, RParenLoc, StrVal.size(), *this);
 
-  EnterSourceFileWithLexer(TL, nullptr);
+  EnterSourceFileWithLexer(std::move(TL), nullptr);
 
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective({PIK__Pragma, PragmaLoc});
@@ -779,7 +779,7 @@ static bool LexModuleNameComponent(Preprocessor &PP, Token &Tok,
                                    bool First) {
   PP.LexUnexpandedToken(Tok);
   if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
-    StringLiteralParser Literal(Tok, PP);
+    StringLiteralParser Literal(Tok, PP, StringLiteralEvalMethod::Unevaluated);
     if (Literal.hadError)
       return true;
     ModuleNameComponent = IdentifierLoc(
@@ -911,6 +911,47 @@ void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
   }
   if (usingPCHWithPragmaHdrStop())
     SkippingUntilPragmaHdrStop = false;
+}
+
+bool Preprocessor::isPragmaSetPPStateMacro(IdentifierInfo *MacroName) {
+  return MacroName == Ident__GLIBCXX__;
+}
+
+void Preprocessor::HandlePragmaSetPPState(PragmaIntroducer Introducer,
+                                          Token &Tok) {
+  // Lex the macro name we want to set.
+  LexUnexpandedToken(Tok);
+  if (!Tok.getIdentifierInfo()) {
+    Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_name);
+    return;
+  }
+
+  IdentifierInfo *MacroName = Tok.getIdentifierInfo();
+  if (!isPragmaSetPPStateMacro(MacroName)) {
+    Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_invalid_arg)
+        << MacroName;
+    return;
+  }
+
+  // Lex the integer argument.
+  Lex(Tok);
+  std::uint64_t Value;
+  if (!Tok.is(tok::numeric_constant) ||
+      !parseSimpleIntegerLiteral(Tok, Value)) {
+    Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_int_after)
+        // Don't pass an IdentifierInfo* here to avoid quoting.
+        << MacroName->getName();
+    return;
+  }
+
+  // Update the state.
+  if (MacroName->getName() == "__GLIBCXX__")
+    setStdLibCxxVersion(Value);
+  else
+    llvm_unreachable("forgot to handle a possible argument to __set_pp_state");
+
+  if (Callbacks)
+    Callbacks->PragmaSetPPState(Introducer.Loc, MacroName, Value);
 }
 
 /// AddPragmaHandler - Add the specified pragma handler to the preprocessor.
@@ -1074,19 +1115,15 @@ struct PragmaDebugHandler : public PragmaHandler {
         LLVM_BUILTIN_TRAP;
     } else if (II->isStr("parser_crash")) {
       if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash) {
-        Token Crasher;
-        Crasher.startToken();
-        Crasher.setKind(tok::annot_pragma_parser_crash);
-        Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
+        Token Crasher = Token::createAnnotation(tok::annot_pragma_parser_crash,
+                                                Tok.getLocation());
         PP.EnterToken(Crasher, /*IsReinject*/ false);
       }
     } else if (II->isStr("sleep")) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } else if (II->isStr("dump")) {
-      Token DumpAnnot;
-      DumpAnnot.startToken();
-      DumpAnnot.setKind(tok::annot_pragma_dump);
-      DumpAnnot.setAnnotationRange(SourceRange(Tok.getLocation()));
+      Token DumpAnnot =
+          Token::createAnnotation(tok::annot_pragma_dump, Tok.getLocation());
       PP.EnterToken(DumpAnnot, /*IsReinject*/false);
     } else if (II->isStr("diag_mapping")) {
       Token DiagName;
@@ -1246,9 +1283,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     SourceLocation NameLoc = Tok.getLocation();
     MutableArrayRef<Token> Toks(
         PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
-    Toks[0].startToken();
-    Toks[0].setKind(tok::annot_pragma_captured);
-    Toks[0].setLocation(NameLoc);
+    Toks[0] = Token::createAnnotation(tok::annot_pragma_captured, NameLoc);
 
     PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
                         /*IsReinject=*/false);
@@ -2148,6 +2183,25 @@ struct PragmaFinalHandler : public PragmaHandler {
   }
 };
 
+/// "\#pragma clang __set_pp_state ..."
+///
+/// This pragma takes an identifier+value pair and sets some internal state in
+/// the compiler; it is intended primarily to preserve preprocessor state that
+/// is required for compilation to function properly across preprocessor runs
+/// if '-E' is used. This is an internal pragma that should not be used by
+/// users.
+///
+/// The syntax is
+/// \code
+///   #pragma clang __set_pp_state glibcxx_version INTEGER
+/// \endcode
+struct PragmaSetPPStateHandler : PragmaHandler {
+  PragmaSetPPStateHandler() : PragmaHandler("__set_pp_state") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override {
+    PP.HandlePragmaSetPPState(Introducer, Tok);
+  }
+};
 } // namespace
 
 /// RegisterBuiltinPragmas - Install the standard preprocessor pragmas:
@@ -2179,6 +2233,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaDeprecatedHandler());
   AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
   AddPragmaHandler("clang", new PragmaFinalHandler());
+  AddPragmaHandler("clang", new PragmaSetPPStateHandler());
 
   // #pragma clang module ...
   auto *ModuleHandler = new PragmaNamespace("module");

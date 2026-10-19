@@ -145,9 +145,8 @@ static llvm::StringRef getFileName(const ModuleSpec &module_spec,
   // Check if the URL path requests an executable file or a symbol file
   bool is_executable = url_path.find("debuginfo") == std::string::npos;
   if (is_executable)
-    return module_spec.GetFileSpec().GetFilename().GetStringRef();
-  llvm::StringRef symbol_file =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
+    return module_spec.GetFileSpec().GetFilename();
+  llvm::StringRef symbol_file = module_spec.GetSymbolFileSpec().GetFilename();
   // Remove llvmcache- prefix and hash, keep origin file name
   if (symbol_file.starts_with("llvmcache-")) {
     size_t pos = symbol_file.rfind('-');
@@ -173,8 +172,11 @@ GetFileForModule(const ModuleSpec &module_spec,
   PluginProperties &plugin_props = GetGlobalPluginProperties();
   llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
   // A cache location is *required*.
-  if (!cache_path_or_err)
+  if (!cache_path_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), cache_path_or_err.takeError(),
+                   "debuginfod cache path unavailable: {0}");
     return {};
+  }
   std::string cache_path = *cache_path_or_err;
   llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();

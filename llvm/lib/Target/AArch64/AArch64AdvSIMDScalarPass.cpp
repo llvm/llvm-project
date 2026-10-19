@@ -35,25 +35,18 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-simd-scalar"
-
-// Allow forcing all i64 operations with equivalent SIMD instructions to use
-// them. For stress-testing the transformation function.
-static cl::opt<bool>
-TransformAll("aarch64-simd-scalar-force-all",
-             cl::desc("Force use of AdvSIMD scalar instructions everywhere"),
-             cl::init(false), cl::Hidden);
 
 STATISTIC(NumScalarInsnsUsed, "Number of scalar instructions used");
 STATISTIC(NumCopiesDeleted, "Number of cross-class copies deleted");
@@ -80,6 +73,7 @@ private:
   // processMachineBasicBlock - Main optimization loop.
   bool processMachineBasicBlock(MachineBasicBlock *MBB);
 
+  const AArch64Options *CLOpts;
   MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
 };
@@ -282,7 +276,7 @@ bool AArch64AdvSIMDScalarImpl::isProfitableToTransform(
 
   // Finally, even if we otherwise wouldn't transform, check if we're forcing
   // transformation of everything.
-  return TransformAll;
+  return CLOpts->simd_scalar_force_all;
 }
 
 static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr &MI,
@@ -413,8 +407,10 @@ bool AArch64AdvSIMDScalarImpl::run(MachineFunction &MF) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "***** AArch64AdvSIMDScalar *****\n");
 
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  CLOpts = &ST.getCLOpts();
   MRI = &MF.getRegInfo();
-  TII = MF.getSubtarget().getInstrInfo();
+  TII = ST.getInstrInfo();
 
   // Just check things on a one-block-at-a-time basis.
   for (MachineBasicBlock &MBB : MF)

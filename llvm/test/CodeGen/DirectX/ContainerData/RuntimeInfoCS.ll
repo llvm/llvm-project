@@ -30,6 +30,10 @@ attributes #0 = { "hlsl.numthreads"="8,8,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:      NumThreadsZ:     1
 ; DXC-NEXT:      EntryName:       cs_main
 ; DXC-NEXT:      ResourceStride:  24
+; DXC-NEXT:      RuntimeInfoSize: 52
+; DXC-NEXT:      StringTable:
+; DXC-NEXT:      - String: cs_main
+; DXC-NEXT:      Offset: 1
 ; DXC-NEXT:      Resources:       []
 ; DXC-NEXT:      SigInputElements: []
 ; DXC-NEXT:      SigOutputElements: []

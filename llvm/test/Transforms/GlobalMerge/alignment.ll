@@ -9,13 +9,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @a = internal alias [5 x i8], ptr @_MergedGlobals
 @a = internal global [5 x i8] [i8 1, i8 1, i8 1, i8 1, i8 1], align 4
 
-; CHECK: @b = internal alias [2 x i32], getelementptr inbounds (<{ [5 x i8], [3 x i8], [2 x i32] }>, ptr @_MergedGlobals, i32 0, i32 2)
+; CHECK: @b = internal alias [2 x i32], getelementptr inbounds (i8, ptr @_MergedGlobals, i64 8)
 @b = internal global [2 x i32] [i32 2, i32 2]
 
 define void @use() {
   ; CHECK: load i32, ptr @_MergedGlobals
   %x = load i32, ptr @a
-  ; CHECK: load i32, ptr getelementptr inbounds (<{ [5 x i8], [3 x i8], [2 x i32] }>, ptr @_MergedGlobals, i32 0, i32 2)
+  ; CHECK: load i32, ptr getelementptr inbounds (i8, ptr @_MergedGlobals, i64 8)
   %y = load i32, ptr @b
   ret void
 }

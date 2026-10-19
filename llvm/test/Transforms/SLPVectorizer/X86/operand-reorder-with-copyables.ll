@@ -17,17 +17,17 @@ define void @test(ptr %p0, ptr %p1, ptr %dst, i32 %a0, i32 %a1, i32 %a2, i32 %a3
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
 ; CHECK-NEXT:    [[RES2:%.*]] = udiv i32 [[C2]], [[A2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[RES2]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[RES2]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[Y3]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[Y3]], i64 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP13]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub <4 x i32> [[TMP9]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[A1]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[A3]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[A1]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[A3]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP15]], [[TMP12]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
@@ -87,17 +87,17 @@ define void @test_baseline(ptr %p0, ptr %p1, ptr %dst, i32 %a0, i32 %a1, i32 %a2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
 ; CHECK-NEXT:    [[RES2:%.*]] = udiv i32 [[C2]], [[A2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[RES2]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[RES2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[Y3]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[Y3]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[A1]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[A3]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[A1]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[A3]], i64 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void

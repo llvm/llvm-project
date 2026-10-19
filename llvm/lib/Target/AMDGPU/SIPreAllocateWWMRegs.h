@@ -13,8 +13,10 @@
 
 namespace llvm {
 
+bool isPreallocateSGPRSpillVGPRsEnabled(const MachineFunction &MF);
+
 class SIPreAllocateWWMRegsPass
-    : public PassInfoMixin<SIPreAllocateWWMRegsPass> {
+    : public RequiredPassInfoMixin<SIPreAllocateWWMRegsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

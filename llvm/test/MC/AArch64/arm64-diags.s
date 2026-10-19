@@ -121,7 +121,7 @@ ldr    q1, [x3, w3, sxtw #1]
 ; CHECK-ERRORS: error: expected 'uxtw' or 'sxtw' with optional shift of #0 or #3
 ; CHECK-ERRORS:   str    d1, [x3, w3, sxtx #3]
 ; CHECK-ERRORS:                       ^
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: invalid operand for instruction
 ; CHECK-ERRORS:   ldr    s1, [x3, d3, sxtx #2]
 ; CHECK-ERRORS:                   ^
 
@@ -368,6 +368,9 @@ subs x20, x30, sym@PAGEOFF
 
 add w3, w5, sym@PAGEOFF - 3-2
 ; CHECK-ERRORS: [[#@LINE-1]]:28: error: unexpected token in argument list
+
+add x3, x5, :lo12:sym@PAGEOFF
+; CHECK-ERRORS: [[#@LINE-1]]:22: error: unexpected token in argument list
 
 tbl v0.8b, { v1 }, v0.8b
 tbl v0.16b, { v1.8b, v2.8b, v3.8b }, v0.16b

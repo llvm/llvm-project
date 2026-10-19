@@ -29,6 +29,19 @@ def riscv_st_rv32 : RVSDNode<"SD_RV32", SDT_RISCV_SD_RV32,
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
+def GPRPairNoX0RV32Operand : AsmOperandClass {
+  let Name = "GPRPairNoX0RV32";
+  let ParserMethod = "parseGPRPair<false>";
+  let PredicateMethod = "isGPRPairNoX0";
+  let RenderMethod = "addRegOperands";
+  let DiagnosticType = "InvalidGPRPairNoX0RV32";
+  let DiagnosticString = "register pair must start with an even GPR other than x0";
+}
+
+def GPRPairNoX0RV32 : RegisterOperand<GPRPairNoX0> {
+  let ParserMatchClass = GPRPairNoX0RV32Operand;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -44,13 +57,13 @@ def SD_RV32 : Store_rri<0b011, "sd", GPRPairRV32>,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZilsd, IsRV32] in {
-def PseudoLD_RV32 : PseudoLoad<"ld", GPRPairRV32>;
+def PseudoLD_RV32 : PseudoLoad<"ld", GPRPairNoX0RV32>;
 def PseudoSD_RV32 : PseudoStore<"sd", GPRPairRV32>;
 
 // Pseudo instructions for load/store optimization with 2 separate registers
 def PseudoLD_RV32_OPT :
     Pseudo<(outs GPR:$rd1, GPR:$rd2),
-           (ins GPR:$rs1, simm12_lo:$imm12), [], "", ""> {
+           (ins GPR:$rs1, simm12_lo_optional:$imm12), [], "", ""> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -58,12 +71,9 @@ def PseudoLD_RV32_OPT :
 
 def PseudoSD_RV32_OPT :
     Pseudo<(outs),
-           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3, simm12_lo:$imm12), [], "", ""> {
+           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3, simm12_lo_optional:$imm12), [], "", ""> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 1;
 }
-
-def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, GPR:$rs1, 0), 0>;
-def : InstAlias<"sd $rs2, (${rs1})", (SD_RV32 GPRPairRV32:$rs2, GPR:$rs1, 0), 0>;
 }

@@ -53,8 +53,10 @@
   !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
   !2 = !DIFile(filename: "bees.cpp", directory: "")
   !3 = !DILocalVariable(name: "bees", scope: !4)
-  !4 = distinct !DISubprogram(name: "nope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1)
+  !4 = distinct !DISubprogram(name: "nope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, type: !7)
   !5 = !DILocation(line: 0, scope: !4)
+  !6 = !{null}
+  !7 = !DISubroutineType(types: !6)
 
 ...
 ---

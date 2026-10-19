@@ -10,26 +10,22 @@ define void @foo(ptr nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %loop
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    movl 16(%rdi), %ecx
-; X64-NEXT:    leal 1(%rax,%rcx), %edx
-; X64-NEXT:    movl %edx, 12(%rdi)
+; X64-NEXT:    movl (%rdi), %ecx
+; X64-NEXT:    movl 16(%rdi), %eax
+; X64-NEXT:    leal 1(%rcx,%rax), %ecx
+; X64-NEXT:    movl %ecx, 12(%rdi)
 ; X64-NEXT:    decl %esi
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %exit
-; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    leal 1(%rcx,%rax), %eax
-; X64-NEXT:    movl %eax, 16(%rdi)
+; X64-NEXT:    addl %eax, %ecx
+; X64-NEXT:    movl %ecx, 16(%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    .p2align 4
@@ -37,17 +33,14 @@ define void @foo(ptr nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    movl 16(%eax), %esi
-; X86-NEXT:    leal 1(%edx,%esi), %edi
-; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    leal 1(%edx,%esi), %edx
+; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %exit
 ; X86-NEXT:    addl %esi, %edx
-; X86-NEXT:    leal 1(%esi,%edx), %ecx
-; X86-NEXT:    movl %ecx, 16(%eax)
+; X86-NEXT:    movl %edx, 16(%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
  entry:

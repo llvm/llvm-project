@@ -27,6 +27,12 @@
 extern "C" {
 #endif
 
+static inline bool hsa_flag_isset64(uint8_t *value, uint32_t bit) {
+  unsigned int index = bit / 8;
+  unsigned int subBit = bit % 8;
+  return ((uint8_t *)value)[index] & (1 << subBit);
+}
+
 typedef struct hsa_amd_memory_pool_s {
   uint64_t handle;
 } hsa_amd_memory_pool_t;
@@ -74,7 +80,12 @@ typedef enum hsa_amd_agent_info_s {
   HSA_AMD_AGENT_INFO_COOPERATIVE_QUEUES = 0xA010,
   HSA_AMD_AGENT_INFO_UUID = 0xA011,
   HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY = 0xA016,
+  HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES = 0xA114,
 } hsa_amd_agent_info_t;
+
+typedef enum hsa_amd_agent_memory_properties_s {
+  HSA_AMD_MEMORY_PROPERTY_AGENT_IS_APU = (1 << 0),
+} hsa_amd_agent_memory_properties_t;
 
 hsa_status_t hsa_amd_memory_pool_get_info(hsa_amd_memory_pool_t memory_pool,
                                           hsa_amd_memory_pool_info_t attribute,
@@ -96,6 +107,17 @@ hsa_status_t hsa_amd_memory_async_copy(void *dst, hsa_agent_t dst_agent,
                                        size_t size, uint32_t num_dep_signals,
                                        const hsa_signal_t *dep_signals,
                                        hsa_signal_t completion_signal);
+
+typedef enum hsa_amd_sdma_engine_id {
+  HSA_AMD_SDMA_ENGINE_0 = 0x1,
+  HSA_AMD_SDMA_ENGINE_1 = 0x2,
+} hsa_amd_sdma_engine_id_t;
+
+hsa_status_t hsa_amd_memory_async_copy_on_engine(
+    void *dst, hsa_agent_t dst_agent, const void *src, hsa_agent_t src_agent,
+    size_t size, uint32_t num_dep_signals, const hsa_signal_t *dep_signals,
+    hsa_signal_t completion_signal, hsa_amd_sdma_engine_id_t engine_id,
+    bool force_copy_on_sdma);
 
 hsa_status_t hsa_amd_agent_memory_pool_get_info(
     hsa_agent_t agent, hsa_amd_memory_pool_t memory_pool,
@@ -161,6 +183,8 @@ typedef struct hsa_amd_pointer_info_s {
   void* agentBaseAddress;
   void* hostBaseAddress;
   size_t sizeInBytes;
+  void *userData;
+  hsa_agent_t agentOwner;
 } hsa_amd_pointer_info_t;
 
 typedef enum {

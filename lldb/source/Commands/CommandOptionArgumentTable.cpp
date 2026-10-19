@@ -49,7 +49,10 @@ llvm::StringRef BreakpointIDHelpTextCallback() {
          "major "
          "number, or the major number followed by a dot and the location "
          "number (e.g. "
-         "3 or 3.2 could both be valid breakpoint IDs.)";
+         "3 or 3.2 could both be valid breakpoint IDs.)\n"
+         "\n"
+         "You can use . to refer to the breakpoint location(s) at which the "
+         "current thread is stopped.";
 }
 
 llvm::StringRef BreakpointIDRangeHelpTextCallback() {
@@ -294,7 +297,7 @@ llvm::StringRef arch_helper() {
     StringList archs;
 
     ArchSpec::ListSupportedArchNames(archs);
-    g_archs_help.Printf("These are the supported architecture names:\n");
+    g_archs_help.PutCString("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }
   return g_archs_help.GetString();

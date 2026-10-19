@@ -10,10 +10,10 @@ body:             |
     ; CHECK-LABEL: name: test_combine_ptrtoint
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: $x1 = COPY [[COPY]](s64)
-    %0:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](i64)
+    %0:_(i64) = COPY $x0
     %1:_(p64) = G_INTTOPTR %0
-    %2:_(s64) = G_PTRTOINT %1
+    %2:_(i64) = G_PTRTOINT %1
     $x1 = COPY %2
 ...

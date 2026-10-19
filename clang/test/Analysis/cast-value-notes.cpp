@@ -1,13 +1,13 @@
-// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgcn-unknown-unknown \
+// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgpu-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN: -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK
 //
-// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgcn-unknown-unknown \
+// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgpu-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-config suppress-dereferences-from-any-address-space=false\
 // RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK
 //
-// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgcn-unknown-unknown \
+// RUN: %clang_analyze_cc1 -std=c++14 -triple amdgpu-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-config suppress-dereferences-from-any-address-space=true\
 // RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK

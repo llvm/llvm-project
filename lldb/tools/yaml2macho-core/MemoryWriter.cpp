@@ -46,6 +46,10 @@ void create_memory_bytes(const CoreSpec &spec, const MemoryRegion &memory,
     for (uint8_t byte : memory.bytes)
       buf.push_back(byte);
 
+  if (memory.type == MemoryType::UInt16)
+    for (uint16_t halfword : memory.halfwords)
+      add_uint16(buf, halfword);
+
   if (memory.type == MemoryType::UInt32)
     for (uint32_t word : memory.words)
       add_uint32(buf, word);

@@ -14,13 +14,13 @@ define void @multiply_diff_addr_spaces(ptr addrspace(1) %A, ptr addrspace(1) %B,
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP1]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[TMP0]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP0]], ptr addrspace(1) align 8 [[B]], i64 16, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr addrspace(1) [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP1]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr addrspace(1) [[TMP2]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP2]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr addrspace(1) [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr addrspace(1) [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP0]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr addrspace(1) [[TMP3]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP3]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr addrspace(1) [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[COL_LOAD2]], i64 0
@@ -76,9 +76,9 @@ define void @multiply_diff_addr_spaces(ptr addrspace(1) %A, ptr addrspace(1) %B,
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd <1 x float> [[TMP26]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <1 x float> [[TMP29]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x float> [[TMP24]], <2 x float> [[TMP30]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr float, ptr addrspace(2) [[C]], i64 0
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[C]], i64 0
 ; CHECK-NEXT:    store <2 x float> [[TMP17]], ptr addrspace(2) [[TMP32]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr float, ptr addrspace(2) [[TMP32]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[TMP32]], i64 2
 ; CHECK-NEXT:    store <2 x float> [[TMP31]], ptr addrspace(2) [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[TMP0]])
@@ -102,13 +102,13 @@ define void @multiply_all_diff_addr_spaces(ptr addrspace(1) %A, ptr addrspace(3)
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP0]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p3(ptr addrspace(3) [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) align 4 [[TMP1]], ptr addrspace(3) align 8 [[B]], i64 16, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr addrspace(1) [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP0]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr addrspace(1) [[TMP2]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP2]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr addrspace(1) [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr addrspace(3) [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[TMP1]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x float>, ptr addrspace(3) [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr addrspace(3) [[TMP3]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[TMP3]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr addrspace(3) [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[COL_LOAD2]], i64 0
@@ -164,9 +164,9 @@ define void @multiply_all_diff_addr_spaces(ptr addrspace(1) %A, ptr addrspace(3)
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd <1 x float> [[TMP26]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <1 x float> [[TMP29]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x float> [[TMP24]], <2 x float> [[TMP30]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr float, ptr addrspace(2) [[C]], i64 0
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[C]], i64 0
 ; CHECK-NEXT:    store <2 x float> [[TMP17]], ptr addrspace(2) [[TMP32]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr float, ptr addrspace(2) [[TMP32]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[TMP32]], i64 2
 ; CHECK-NEXT:    store <2 x float> [[TMP31]], ptr addrspace(2) [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[TMP0]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p3(ptr addrspace(3) [[TMP1]])
@@ -200,16 +200,16 @@ define void @multiply_first_load_same_addr_space(ptr addrspace(1) %A, ptr addrsp
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 [[TMP2]], ptr addrspace(1) align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[NO_ALIAS]]
 ; CHECK:       [[NO_ALIAS]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr addrspace(1) [ [[A]], %[[ENTRY]] ], [ [[A]], %[[ALIAS_CONT]] ], [ [[TMP2]], %[[COPY]] ]
+; CHECK-NEXT:    [[TMP36:%.*]] = phi ptr addrspace(1) [ [[A]], %[[ENTRY]] ], [ [[A]], %[[ALIAS_CONT]] ], [ [[TMP2]], %[[COPY]] ]
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p2(ptr addrspace(2) [[TMP4]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p2.p2.i64(ptr addrspace(2) align 4 [[TMP4]], ptr addrspace(2) align 8 [[B]], i64 16, i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr addrspace(1) [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP36]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr addrspace(1) [[TMP5]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP5]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr addrspace(1) [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr addrspace(2) [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[TMP4]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x float>, ptr addrspace(2) [[TMP6]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr addrspace(2) [[TMP6]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[TMP6]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr addrspace(2) [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[COL_LOAD2]], i64 0
@@ -265,9 +265,9 @@ define void @multiply_first_load_same_addr_space(ptr addrspace(1) %A, ptr addrsp
 ; CHECK-NEXT:    [[TMP32:%.*]] = fadd <1 x float> [[TMP29]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <1 x float> [[TMP32]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <2 x float> [[TMP27]], <2 x float> [[TMP33]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr float, ptr addrspace(1) [[C]], i64 0
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 0
 ; CHECK-NEXT:    store <2 x float> [[TMP20]], ptr addrspace(1) [[TMP35]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr float, ptr addrspace(1) [[TMP35]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP35]], i64 2
 ; CHECK-NEXT:    store <2 x float> [[TMP34]], ptr addrspace(1) [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[TMP2]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p2(ptr addrspace(2) [[TMP4]])
@@ -304,13 +304,13 @@ define void @multiply_second_load_same_addr_space(ptr addrspace(2) %A, ptr addrs
 ; CHECK-NEXT:    br label %[[NO_ALIAS]]
 ; CHECK:       [[NO_ALIAS]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr addrspace(1) [ [[B]], %[[ENTRY]] ], [ [[B]], %[[ALIAS_CONT]] ], [ [[TMP3]], %[[COPY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr addrspace(2) [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[TMP0]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr addrspace(2) [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr addrspace(2) [[TMP5]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[TMP5]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr addrspace(2) [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr addrspace(1) [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP4]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x float>, ptr addrspace(1) [[TMP6]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr addrspace(1) [[TMP6]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP6]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr addrspace(1) [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[COL_LOAD2]], i64 0
@@ -366,9 +366,9 @@ define void @multiply_second_load_same_addr_space(ptr addrspace(2) %A, ptr addrs
 ; CHECK-NEXT:    [[TMP32:%.*]] = fadd <1 x float> [[TMP29]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <1 x float> [[TMP32]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <2 x float> [[TMP27]], <2 x float> [[TMP33]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr float, ptr addrspace(1) [[C]], i64 0
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 0
 ; CHECK-NEXT:    store <2 x float> [[TMP20]], ptr addrspace(1) [[TMP35]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr float, ptr addrspace(1) [[TMP35]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP35]], i64 2
 ; CHECK-NEXT:    store <2 x float> [[TMP34]], ptr addrspace(1) [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p2(ptr addrspace(2) [[TMP0]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[TMP3]])

@@ -8,28 +8,39 @@ types:
   - type_name: siginfo_t
   - type_name: struct_rusage
   - type_name: pid_t
+  - type_name: id_t
+  - type_name: idtype_t
 enums: []
 objects: []
 functions:
   - name: wait
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: int *
   - name: wait4
     standards:
-      - BSDExtensions
-      - POSIX
+      - bsd
+      - posix
     return_type: pid_t
     arguments:
       - type: pid_t
       - type: int *
       - type: int
       - type: struct rusage *
+  - name: waitid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: idtype_t
+      - type: id_t
+      - type: siginfo_t *
+      - type: int
   - name: waitpid
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: pid_t

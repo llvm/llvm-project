@@ -11,8 +11,6 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
-#include "flang/Parser/char-block.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -763,6 +761,9 @@ bool Designator<T>::operator==(const Designator<T> &that) const {
 bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
   return field_ == that.field_ && base_ == that.base_ &&
       dimension_ == that.dimension_;
+}
+bool RankOneBoundElement::operator==(const RankOneBoundElement &that) const {
+  return dimension_ == that.dimension_ && base_ == that.base_;
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

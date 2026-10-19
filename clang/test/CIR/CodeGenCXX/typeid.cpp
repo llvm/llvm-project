@@ -34,7 +34,7 @@ extern A &a;
 
 // CIR-AFTER: cir.global external @_ZN5Test14a_tiE = #cir.ptr<null> : !cir.ptr<!rec_std3A3Atype_info>
 
-// CIR-BEFORE: cir.global external @_ZN5Test14a_tiE = ctor : !cir.ptr<!rec_std3A3Atype_info> {
+// CIR-BEFORE: cir.global external @_ZN5Test14a_tiE = #cir.ptr<null> : !cir.ptr<!rec_std3A3Atype_info> ctor {
 // CIR-AFTER: cir.func{{.*}}@__cxx_global_var_init() {
 //
 // CIR-NEXT: %[[GET_GLOB_ATI:.*]] = cir.get_global @_ZN5Test14a_tiE : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
@@ -60,14 +60,12 @@ const std::type_info &a_ti = typeid(a);
 // LLVM: @_ZN5Test18A10_c_tiE ={{.*}} constant ptr @_ZTIA10_c, align 8
 const std::type_info &A10_c_ti = typeid(char const[10]);
 
-// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn}
-
 // CIR-LABEL: cir.func{{.*}} @_ZN5Test11fEPv
 // CIR-SAME:  personality(@__gxx_personality_v0)
 // LLVM-LABEL: define{{.*}} ptr @_ZN5Test11fEPv
 // LLVM-SAME:  personality ptr @__gxx_personality_v0
 const char *f(void *arg) {
-  // CIR: %[[ARG:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["arg", init]
+  // CIR: %[[ARG:.*]] = cir.alloca "arg" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
   try {
     // CIR: %[[ARG_VALUE:.*]] = cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
     // CIR-NEXT: %[[ARG_CAST:.*]] = cir.cast bitcast %[[ARG_VALUE]] : !cir.ptr<!void> -> !cir.ptr<!rec_Test13A3AA>
@@ -100,5 +98,7 @@ const char *f(void *arg) {
 
   return 0;
 }
+
+// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn}
 
 }

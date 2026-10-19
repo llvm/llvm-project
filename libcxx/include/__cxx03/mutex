@@ -320,7 +320,7 @@ bool recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Dur
 }
 
 template <class _L0, class _L1>
-_LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
   unique_lock<_L0> __u0(__l0, try_to_lock_t());
   if (__u0.owns_lock()) {
     if (__l1.try_lock()) {
@@ -333,7 +333,8 @@ _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
 }
 
 template <class _L0, class _L1>
-_LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1)
+    _LIBCPP_ACQUIRE_CAPABILITY(__l0, __l1) {
   while (true) {
     {
       unique_lock<_L0> __u0(__l0);

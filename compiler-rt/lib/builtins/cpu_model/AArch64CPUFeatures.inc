@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef AARCH64_CPU_FEATURS_INC_H
-#define AARCH64_CPU_FEATURS_INC_H
+#ifndef AARCH64_CPU_FEATURES_INC_H
+#define AARCH64_CPU_FEATURES_INC_H
 
 // Function Multi Versioning CPU features.
 enum CPUFeatures {

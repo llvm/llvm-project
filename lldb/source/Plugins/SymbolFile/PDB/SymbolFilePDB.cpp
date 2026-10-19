@@ -906,7 +906,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         if (source_file.empty())
           continue;
         FileSpec this_spec(source_file, FileSpec::Style::windows);
-        bool need_full_match = !file_spec.GetDirectory().IsEmpty();
+        bool need_full_match = !file_spec.GetDirectory().empty();
         if (FileSpec::Compare(file_spec, this_spec, need_full_match) != 0)
           continue;
       }

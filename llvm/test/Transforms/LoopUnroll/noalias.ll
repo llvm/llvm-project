@@ -6,22 +6,22 @@ define void @test_inside(ptr %addr1, ptr %addr2) {
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[ADDR1:%.*]], align 4, !alias.scope !0
-; CHECK-NEXT:    store i32 [[X]], ptr [[ADDR2:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[ADDR1:%.*]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    store i32 [[X]], ptr [[ADDR2:%.*]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    [[ADDR1I_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR1]], i32 1
 ; CHECK-NEXT:    [[ADDR2I_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR2]], i32 1
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !3)
-; CHECK-NEXT:    [[X_1:%.*]] = load i32, ptr [[ADDR1I_1]], align 4, !alias.scope !3
-; CHECK-NEXT:    store i32 [[X_1]], ptr [[ADDR2I_1]], align 4, !noalias !3
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !5)
-; CHECK-NEXT:    [[X_2:%.*]] = load i32, ptr [[ADDR1]], align 4, !alias.scope !5
-; CHECK-NEXT:    store i32 [[X_2]], ptr [[ADDR2]], align 4, !noalias !5
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
+; CHECK-NEXT:    [[X_1:%.*]] = load i32, ptr [[ADDR1I_1]], align 4, !alias.scope [[META3]]
+; CHECK-NEXT:    store i32 [[X_1]], ptr [[ADDR2I_1]], align 4, !noalias [[META3]]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META5:![0-9]+]])
+; CHECK-NEXT:    [[X_2:%.*]] = load i32, ptr [[ADDR1]], align 4, !alias.scope [[META5]]
+; CHECK-NEXT:    store i32 [[X_2]], ptr [[ADDR2]], align 4, !noalias [[META5]]
 ; CHECK-NEXT:    [[ADDR1I_3:%.*]] = getelementptr inbounds i32, ptr [[ADDR1]], i32 1
 ; CHECK-NEXT:    [[ADDR2I_3:%.*]] = getelementptr inbounds i32, ptr [[ADDR2]], i32 1
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !7)
-; CHECK-NEXT:    [[X_3:%.*]] = load i32, ptr [[ADDR1I_3]], align 4, !alias.scope !7
-; CHECK-NEXT:    store i32 [[X_3]], ptr [[ADDR2I_3]], align 4, !noalias !7
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META7:![0-9]+]])
+; CHECK-NEXT:    [[X_3:%.*]] = load i32, ptr [[ADDR1I_3]], align 4, !alias.scope [[META7]]
+; CHECK-NEXT:    store i32 [[X_3]], ptr [[ADDR2I_3]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    ret void
 ;
 start:
@@ -48,21 +48,21 @@ end:
 define void @test_outside(ptr %addr1, ptr %addr2) {
 ; CHECK-LABEL: @test_outside(
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[ADDR1:%.*]], align 4, !alias.scope !0
-; CHECK-NEXT:    store i32 [[X]], ptr [[ADDR2:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[ADDR1:%.*]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    store i32 [[X]], ptr [[ADDR2:%.*]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    [[ADDR1I_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR1]], i32 1
 ; CHECK-NEXT:    [[ADDR2I_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR2]], i32 1
-; CHECK-NEXT:    [[X_1:%.*]] = load i32, ptr [[ADDR1I_1]], align 4, !alias.scope !0
-; CHECK-NEXT:    store i32 [[X_1]], ptr [[ADDR2I_1]], align 4, !noalias !0
-; CHECK-NEXT:    [[X_2:%.*]] = load i32, ptr [[ADDR1]], align 4, !alias.scope !0
-; CHECK-NEXT:    store i32 [[X_2]], ptr [[ADDR2]], align 4, !noalias !0
+; CHECK-NEXT:    [[X_1:%.*]] = load i32, ptr [[ADDR1I_1]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    store i32 [[X_1]], ptr [[ADDR2I_1]], align 4, !noalias [[META0]]
+; CHECK-NEXT:    [[X_2:%.*]] = load i32, ptr [[ADDR1]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    store i32 [[X_2]], ptr [[ADDR2]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    [[ADDR1I_3:%.*]] = getelementptr inbounds i32, ptr [[ADDR1]], i32 1
 ; CHECK-NEXT:    [[ADDR2I_3:%.*]] = getelementptr inbounds i32, ptr [[ADDR2]], i32 1
-; CHECK-NEXT:    [[X_3:%.*]] = load i32, ptr [[ADDR1I_3]], align 4, !alias.scope !0
-; CHECK-NEXT:    store i32 [[X_3]], ptr [[ADDR2I_3]], align 4, !noalias !0
+; CHECK-NEXT:    [[X_3:%.*]] = load i32, ptr [[ADDR1I_3]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    store i32 [[X_3]], ptr [[ADDR2I_3]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    ret void
 ;
 start:
@@ -88,13 +88,13 @@ end:
 
 declare void @llvm.experimental.noalias.scope.decl(metadata)
 
-!0 = distinct !{!0}
+!0 = distinct !{!0, i1 false}
 !1 = distinct !{!1, !0}
 !2 = !{!1}
 
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2}
-; CHECK: !2 = distinct !{!2}
+; CHECK: !2 = distinct !{!2, i1 false}
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !2, !"It1"}
 ; CHECK: !5 = !{!6}

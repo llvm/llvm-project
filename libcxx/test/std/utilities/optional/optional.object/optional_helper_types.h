@@ -21,8 +21,9 @@ struct ReferenceConversion {
   constexpr ReferenceConversion(T lval, T rval) : lvalue(lval), rvalue(rval) {}
 
   constexpr operator T&() & noexcept { return lvalue; }
-
+  constexpr operator const T&() const& noexcept { return lvalue; }
   constexpr operator T&() && noexcept { return rvalue; }
+  constexpr operator const T&() const&& noexcept { return rvalue; }
 };
 
 template <typename T>
@@ -42,6 +43,14 @@ struct ReferenceConversionThrows {
     return lvalue;
   }
 
+  constexpr operator const T&() const& {
+    if (throws) {
+      TEST_THROW(1);
+    }
+
+    return lvalue;
+  }
+
   constexpr operator T&() && {
     if (throws) {
       TEST_THROW(2);
@@ -49,6 +58,34 @@ struct ReferenceConversionThrows {
 
     return rvalue;
   }
+
+  constexpr operator const T&() const&& {
+    if (throws) {
+      TEST_THROW(2);
+    }
+
+    return rvalue;
+  }
+};
+
+template <typename T>
+struct LValueOnly {
+  T val{};
+
+  constexpr operator T&() & noexcept { return val; }
+  constexpr operator T&() const&  = delete;
+  constexpr operator T&() &&      = delete;
+  constexpr operator T&() const&& = delete;
+};
+
+template <typename T>
+struct ConstRValueOnly {
+  mutable T val{};
+
+  constexpr operator T&() &      = delete;
+  constexpr operator T&() const& = delete;
+  constexpr operator T&() &&     = delete;
+  constexpr operator T&() const&& { return val; };
 };
 
 #endif

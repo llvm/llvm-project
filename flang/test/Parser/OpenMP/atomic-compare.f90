@@ -18,7 +18,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update
 !PARSE-TREE: | | OmpClause -> Compare
 !PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
@@ -56,7 +56,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update
 !PARSE-TREE: | | OmpClause -> Compare
 !PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
@@ -110,7 +110,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update
 !PARSE-TREE: | | OmpClause -> Compare
 !PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
@@ -147,7 +147,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update
 !PARSE-TREE: | | OmpClause -> Capture
 !PARSE-TREE: | | OmpClause -> Compare
 !PARSE-TREE: | | Flags = {}
@@ -199,7 +199,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update
 !PARSE-TREE: | | OmpClause -> Capture
 !PARSE-TREE: | | OmpClause -> Compare
 !PARSE-TREE: | | Flags = {}
@@ -256,7 +256,7 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Update
 !PARSE-TREE: | | OmpClause -> Capture
 !PARSE-TREE: | | OmpClause -> Compare
 !PARSE-TREE: | | Flags = {}

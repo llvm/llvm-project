@@ -118,7 +118,7 @@ bb:
 }
 
 attributes #0 = { optsize "frame-pointer"="non-leaf" }
-attributes #1 = { optsize "target-cpu"="apple-m1" }
+attributes #1 = { optsize }
 attributes #2 = { optsize alwaysinline }
 
 !llvm.module.flags = !{!0, !1, !30, !31, !32, !36, !37}

@@ -83,7 +83,7 @@ void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
 /// `unrealized_conversion_cast`s added by this pass.
 static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
   Operation *definingOp = illegalMemref.getDefiningOp();
-  if (!definingOp || !definingOp->hasAttr(kSVELegalizerTag))
+  if (!definingOp || !definingOp->hasDiscardableAttr(kSVELegalizerTag))
     return failure();
   auto unrealizedConversion =
       llvm::cast<UnrealizedConversionCastOp>(definingOp);
@@ -95,7 +95,7 @@ static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
 /// explicitly adds a reasonable alignment to allocas of scalable types.
 struct RelaxScalableVectorAllocaAlignment
     : public OpRewritePattern<memref::AllocaOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::AllocaOp allocaOp,
                                 PatternRewriter &rewriter) const override {
@@ -178,7 +178,7 @@ struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
 /// ```
 struct LegalizeSVEMaskTypeCastConversion
     : public OpRewritePattern<vector::TypeCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TypeCastOp typeCastOp,
                                 PatternRewriter &rewriter) const override {
@@ -221,7 +221,7 @@ struct LegalizeSVEMaskTypeCastConversion
 /// ```
 struct LegalizeSVEMaskStoreConversion
     : public OpRewritePattern<memref::StoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::StoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -268,7 +268,7 @@ struct LegalizeSVEMaskStoreConversion
 /// %reload = arm_sve.convert_from_svbool %reload : vector<[4]xi1>
 /// ```
 struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -319,7 +319,7 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
 /// %1 = vector.shape_cast %0 : vector<2x[64]xi8> to vector<2x[4]x2x8xi8>
 /// ```
 struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -464,7 +464,7 @@ struct LegalizeVectorStorage
     ConversionTarget target(getContext());
     target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
         [](UnrealizedConversionCastOp unrealizedConversion) {
-          return !unrealizedConversion->hasAttr(kSVELegalizerTag);
+          return !unrealizedConversion->hasDiscardableAttr(kSVELegalizerTag);
         });
     // This detects if we failed to completely legalize the IR.
     if (failed(applyPartialConversion(getOperation(), target, {})))

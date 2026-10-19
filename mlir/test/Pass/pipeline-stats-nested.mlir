@@ -1,4 +1,7 @@
 // REQUIRES: asserts
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // Check that statistics in nested pipelines are not ignored and that this works with and without threading.
 // RUN: mlir-opt %s -verify-each=true -pass-pipeline='builtin.module(builtin.module(func.func(test-stats-pass,test-stats-pass)))' -mlir-pass-statistics -mlir-pass-statistics-display=list -mlir-disable-threading 2>&1 | FileCheck -check-prefix=LIST %s
 // RUN: mlir-opt %s -verify-each=true -pass-pipeline='builtin.module(builtin.module(func.func(test-stats-pass,test-stats-pass)))' -mlir-pass-statistics -mlir-pass-statistics-display=list                         2>&1 | FileCheck -check-prefix=LIST %s

@@ -20,10 +20,9 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>

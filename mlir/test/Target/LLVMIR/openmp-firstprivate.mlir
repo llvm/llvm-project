@@ -27,7 +27,7 @@ omp.private {type = firstprivate} @x.privatizer : f32 copy {
 // CHECK: }
 
 // CHECK-LABEL: void @parallel_op_firstprivate..omp_par
-// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[ARG:.*]])
+// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %[[ARG:.*]])
 // CHECK: %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 

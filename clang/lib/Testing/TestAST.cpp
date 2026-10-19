@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Testing/TestAST.h"
+
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnostic.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
-
 #include "gtest/gtest.h"
 #include <string>
 

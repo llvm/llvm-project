@@ -22,6 +22,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <atomic>
 #include <optional>
 
 using namespace mlir;
@@ -84,8 +85,9 @@ void DiagnosticArgument::print(raw_ostream &os) const {
 
 /// Convert a Twine to a StringRef. Memory used for generating the StringRef is
 /// stored in 'strings'.
-static StringRef twineToStrRef(const Twine &val,
-                               std::vector<std::unique_ptr<char[]>> &strings) {
+static StringRef
+twineToStrRef(const Twine &val,
+              SmallVectorImpl<std::unique_ptr<char[]>> &strings) {
   // Allocate memory to hold this string.
   SmallString<64> data;
   auto strRef = val.toStringRef(data);
@@ -162,8 +164,24 @@ Diagnostic &Diagnostic::operator<<(Value val) {
 }
 
 /// Outputs this diagnostic to a stream.
-void Diagnostic::print(raw_ostream &os) const {
-  for (auto &arg : getArguments())
+void Diagnostic::print(raw_ostream &os,
+                       std::optional<int64_t> messagePartIndex) const {
+  if (!messagePartIndex.has_value()) {
+    for (auto &arg : getArguments())
+      arg.print(os);
+    return;
+  }
+
+  assert(0 <= *messagePartIndex &&
+         *messagePartIndex <= static_cast<int64_t>(messagePartEnds.size()));
+  size_t argumentStart =
+      *messagePartIndex == 0 ? 0 : messagePartEnds[*messagePartIndex - 1];
+  size_t argumentEnd =
+      *messagePartIndex == static_cast<int64_t>(messagePartEnds.size())
+          ? arguments.size()
+          : messagePartEnds[*messagePartIndex];
+  for (auto &arg :
+       getArguments().slice(argumentStart, argumentEnd - argumentStart))
     arg.print(os);
 }
 
@@ -173,6 +191,24 @@ std::string Diagnostic::str() const {
   llvm::raw_string_ostream os(str);
   print(os);
   return str;
+}
+
+/// Converts each message part to a separate string.
+SmallVector<std::string> Diagnostic::strs() const {
+  SmallVector<std::string> strs;
+  size_t numMessageParts = messagePartEnds.size();
+
+  // Include the current message part if there are no completed parts or if it
+  // contains arguments after the last completed part.
+  if (messagePartEnds.empty() || messagePartEnds.back() != arguments.size())
+    ++numMessageParts;
+  for (size_t i = 0; i < numMessageParts; ++i) {
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    print(os, i);
+    strs.push_back(str);
+  }
+  return strs;
 }
 
 /// Attaches a note to this diagnostic. A new location may be optionally
@@ -195,6 +231,15 @@ Diagnostic &Diagnostic::attachNote(std::optional<Location> noteLoc) {
 
 /// Allow a diagnostic to be converted to 'failure'.
 Diagnostic::operator LogicalResult() const { return failure(); }
+
+/// Starts a new message part.
+void Diagnostic::startNewMessagePart() {
+  if (arguments.empty())
+    return;
+  if (!messagePartEnds.empty() && messagePartEnds.back() == arguments.size())
+    return;
+  messagePartEnds.push_back(arguments.size());
+}
 
 //===----------------------------------------------------------------------===//
 // InFlightDiagnostic
@@ -505,11 +550,13 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
 
   // If the location stack is empty, use the initial location.
   if (locationStack.empty()) {
-    emitDiagnostic(diag.getLocation(), diag.str(), diag.getSeverity());
+    for (const std::string &str : diag.strs())
+      emitDiagnostic(diag.getLocation(), str, diag.getSeverity());
 
     // Otherwise, use the location stack.
   } else {
-    emitDiagnostic(locationStack.front().first, diag.str(), diag.getSeverity());
+    for (const std::string &str : diag.strs())
+      emitDiagnostic(locationStack.front().first, str, diag.getSeverity());
     for (auto &it : llvm::drop_begin(locationStack))
       emitDiagnostic(it.first, it.second, DiagnosticSeverity::Note);
   }
@@ -833,7 +880,10 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
     (void)impl->computeExpectedDiags(out, mgr, mgr.getMemoryBuffer(i + 1));
 
-  registerInContext(ctx);
+  // The base class registered a handler that prints every diagnostic. The
+  // verifier takes its place: it consumes diagnostics and reports unexpected
+  // ones itself.
+  setHandler([this](Diagnostic &diag) { process(diag); });
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
@@ -866,20 +916,18 @@ LogicalResult SourceMgrDiagnosticVerifierHandler::verify() {
   return impl->status;
 }
 
-void SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
-  ctx->getDiagEngine().registerHandler([&](Diagnostic &diag) {
-    // Process the main diagnostics.
-    process(diag);
-
-    // Process each of the notes.
-    for (auto &note : diag.getNotes())
-      process(note);
-  });
+std::unique_ptr<ScopedDiagnosticHandler>
+SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
+  return std::make_unique<ScopedDiagnosticHandler>(
+      ctx, [this](Diagnostic &diag) { process(diag); });
 }
 
-/// Process a single diagnostic.
+/// Process a diagnostic and its notes.
 void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
-  return process(diag.getLocation(), diag.str(), diag.getSeverity());
+  for (const std::string &str : diag.strs())
+    process(diag.getLocation(), str, diag.getSeverity());
+  for (auto &note : diag.getNotes())
+    process(note);
 }
 
 /// Process a diagnostic at a certain location.
@@ -944,6 +992,35 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
 
 namespace mlir {
 namespace detail {
+/// Unique ids for parallel diagnostic handlers, so the thread-local slot
+/// below can name a handler without holding a raw pointer to it: a handler
+/// may be destroyed while a thread that skipped its erase still names it.
+static std::atomic<uint64_t> nextHandlerUniqueID{1};
+
+/// One entry of the thread-local nesting stack: the handler an element
+/// belongs to and its order id. Plain data so the thread-locals below stay
+/// trivially destructible.
+struct ThreadOrderEntry {
+  uint64_t handlerID;
+  size_t orderID;
+};
+
+/// How many nested parallel loops one thread tracks without a lock. Past
+/// this the handler's map is the overflow.
+constexpr unsigned kMaxThreadOrderEntries = 4;
+
+/// The order ids for the current thread, one entry per enclosing parallel
+/// loop, innermost last. A parallel loop sets and erases a thread's order id
+/// once per element, and doing that under the handler's mutex made the mutex
+/// the most contended lock of a loop over many small elements. A thread
+/// processes one element at a time for each handler, so a small stack covers
+/// every realistic nesting depth. Erases are LIFO, matching loop nesting.
+/// Reentrant use of the same handler on one thread remains unsupported, as
+/// before.
+static LLVM_THREAD_LOCAL ThreadOrderEntry
+    threadOrderStack[kMaxThreadOrderEntries];
+static LLVM_THREAD_LOCAL unsigned threadOrderDepth = 0;
+
 struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   struct ThreadDiagnostic {
     ThreadDiagnostic(size_t id, Diagnostic diag)
@@ -961,16 +1038,25 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   ParallelDiagnosticHandlerImpl(MLIRContext *ctx) : context(ctx) {
     handlerID = ctx->getDiagEngine().registerHandler([this](Diagnostic &diag) {
+      // Fast path: scan the thread-local stack for this handler, no lock.
+      // Appending below still locks.
+      for (unsigned i = threadOrderDepth; i > 0; --i) {
+        if (threadOrderStack[i - 1].handlerID == handlerUniqueID) {
+          llvm::sys::SmartScopedLock<true> lock(mutex);
+          diagnostics.emplace_back(threadOrderStack[i - 1].orderID,
+                                   std::move(diag));
+          return success();
+        }
+      }
+      // Slow path: nested past the stack, consult the map. If this
+      // thread is not tracked, return failure to let another handler
+      // process this diagnostic.
       uint64_t tid = llvm::get_threadid();
       llvm::sys::SmartScopedLock<true> lock(mutex);
-
-      // If this thread is not tracked, then return failure to let another
-      // handler process this diagnostic.
-      if (!threadToOrderID.count(tid))
+      auto it = threadToOrderID.find(tid);
+      if (it == threadToOrderID.end())
         return failure();
-
-      // Append a new diagnostic.
-      diagnostics.emplace_back(threadToOrderID[tid], std::move(diag));
+      diagnostics.emplace_back(it->second, std::move(diag));
       return success();
     });
   }
@@ -1003,6 +1089,15 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// Set the order id for the current thread.
   void setOrderIDForThread(size_t orderID) {
+    if (threadOrderDepth > 0 &&
+        threadOrderStack[threadOrderDepth - 1].handlerID == handlerUniqueID) {
+      threadOrderStack[threadOrderDepth - 1].orderID = orderID;
+      return;
+    }
+    if (threadOrderDepth < kMaxThreadOrderEntries) {
+      threadOrderStack[threadOrderDepth++] = {handlerUniqueID, orderID};
+      return;
+    }
     uint64_t tid = llvm::get_threadid();
     llvm::sys::SmartScopedLock<true> lock(mutex);
     threadToOrderID[tid] = orderID;
@@ -1010,6 +1105,11 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// Remove the order id for the current thread.
   void eraseOrderIDForThread() {
+    if (threadOrderDepth > 0 &&
+        threadOrderStack[threadOrderDepth - 1].handlerID == handlerUniqueID) {
+      --threadOrderDepth;
+      return;
+    }
     uint64_t tid = llvm::get_threadid();
     llvm::sys::SmartScopedLock<true> lock(mutex);
     threadToOrderID.erase(tid);
@@ -1050,7 +1150,11 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   /// A smart mutex to lock access to the internal state.
   llvm::sys::SmartMutex<true> mutex;
 
-  /// A mapping between the thread id and the current order id.
+  /// Order ids, keyed by thread id, for threads nested past what the
+  /// thread-local stack holds: more enclosing parallel loops on one thread
+  /// than entries. Guarded by `mutex`. A thread in neither the stack nor
+  /// this map is not tracked, and its diagnostics pass on to the next
+  /// handler.
   DenseMap<uint64_t, size_t> threadToOrderID;
 
   /// An unordered list of diagnostics that were emitted.
@@ -1058,6 +1162,10 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// The unique id for the parallel handler.
   DiagnosticEngine::HandlerID handlerID = 0;
+
+  /// Unique id naming this handler in the thread-local order-id stack.
+  const uint64_t handlerUniqueID =
+      nextHandlerUniqueID.fetch_add(1, std::memory_order_relaxed);
 
   /// The context to emit the diagnostics to.
   MLIRContext *context;

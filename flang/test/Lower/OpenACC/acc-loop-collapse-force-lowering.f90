@@ -31,4 +31,4 @@ end subroutine
 ! CHECK: hlfir.assign
 ! CHECK: arith.constant 7.300000e+00
 ! CHECK: hlfir.assign
-! CHECK: collapse = [2]
+! CHECK: collapse([2])

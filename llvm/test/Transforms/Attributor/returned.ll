@@ -510,13 +510,13 @@ entry:
 define ptr @rt1(ptr %a) #0 {
 ; TUNIT: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@rt1
-; TUNIT-SAME: (ptr nofree nonnull readnone align 4 captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR4:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree nonnull readnone align 4 captures(none) [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret ptr undef
 ;
 ; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@rt1
-; CGSCC-SAME: (ptr nofree nonnull readnone align 4 captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree nonnull readnone align 4 captures(none) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    ret ptr undef
 ;

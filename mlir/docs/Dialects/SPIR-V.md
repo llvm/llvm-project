@@ -242,6 +242,73 @@ decorated for memory layouting purpose (e.g., `ArrayStride`, `Offset`, etc.);
 scalar/vector types are required to be uniqued in SPIR-V. Therefore, we can just
 encode them directly in the dialect-specific type.
 
+### Function parameter and return decorations
+
+Decorations on `OpFunctionParameter` are represented by argument attributes on
+`spirv.func`. In addition to `spirv.decoration`, function parameters support:
+
+* `spirv.alignment`: a signless `i32` integer attribute holding the unsigned
+  32-bit `Alignment` literal. The parameter must have a SPIR-V pointer type.
+  Values with the high bit set print using a negative spelling without changing
+  the bit pattern.
+* `spirv.func_param_attr`: a non-empty array of
+  `#spirv.function_parameter_attribute<...>` enum attributes. Each element
+  represents one `FuncParamAttr` decoration. The supported core values are `Zext`,
+  `Sext`, `ByVal`, `Sret`, `NoAlias`, `NoCapture`, `NoWrite`, and `NoReadWrite`.
+
+For example, a pointer parameter can carry alignment, aliasing, and access
+information together:
+
+```mlir
+spirv.func @read(%p: !spirv.ptr<f32, CrossWorkgroup> {
+  spirv.alignment = 16 : i32,
+  spirv.decoration = #spirv.decoration<Restrict>,
+  spirv.func_param_attr = [#spirv.function_parameter_attribute<NoCapture>,
+                           #spirv.function_parameter_attribute<NoWrite>]
+}) "None" {
+  spirv.Return
+}
+```
+
+Serialization emits a separate `OpDecorate` for each function parameter
+attribute and preserves their order. Deserialization rejects unsupported
+parameter decorations, even when supported decorations are also present.
+
+`FuncParamAttr` on an `OpFunction` result id describes its return value. It is
+represented by a `spirv.func_param_attr` result attribute on `spirv.func`, stored
+in `res_attrs`, and serialized as a decoration of the function id. Only `Zext`
+and `Sext` are supported on results; both require an integer result. For example:
+
+```mlir
+spirv.func @extend(%v: i8) ->
+    (i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Zext>]}) "None" {
+  spirv.ReturnValue %v : i8
+}
+```
+
+Parameter and result decorations are preserved on both function definitions and
+declarations. A `FuncParamAttr` decoration on a void function or a target other
+than `OpFunctionParameter` or `OpFunction` is diagnosed.
+
+The [SPIR-V specification, section 3.2.18](
+https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_a_id_function_parameter_attribute_a_function_parameter_attribute)
+explicitly states: "Only one of Zext and Sext can be used to decorate the same
+&lt;id&gt;" and "no attribute may be used multiple times". The verifier therefore
+rejects duplicate attributes and the combination of `Zext` with `Sext` on either
+a parameter or a result. The dialect requires integer parameters for `Zext` and
+`Sext`. The other supported attributes require pointer parameters, cannot appear
+on results, and `Sret` additionally requires the first parameter.
+
+`Alignment` is also preserved on module-scope and function-local variables, using
+an unprefixed `alignment` attribute on `spirv.GlobalVariable` and `spirv.Variable`:
+
+```mlir
+spirv.GlobalVariable @buffer {alignment = 16 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+
+// Inside a function:
+%local = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+```
+
 ## Types
 
 Theoretically we can define all SPIR-V types using MLIR extensible type system,

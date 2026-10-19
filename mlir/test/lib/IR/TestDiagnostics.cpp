@@ -51,7 +51,8 @@ struct TestDiagnosticFilterPass
 
     // Emit a diagnostic for every operation with a valid loc.
     getOperation()->walk([&](Operation *op) {
-      if (LocationAttr locAttr = op->getAttrOfType<LocationAttr>("test.loc"))
+      if (LocationAttr locAttr =
+              op->getDiscardableAttrOfType<LocationAttr>("test.loc"))
         emitError(locAttr, "test diagnostic");
     });
   }

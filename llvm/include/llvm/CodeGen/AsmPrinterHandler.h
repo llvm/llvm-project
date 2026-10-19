@@ -26,9 +26,6 @@ class MachineInstr;
 class MCSymbol;
 class Module;
 
-typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm,
-                                          const MachineBasicBlock *MBB);
-
 /// Collects and handles AsmPrinter objects required to build debug
 /// or EH information.
 class LLVM_ABI AsmPrinterHandler {

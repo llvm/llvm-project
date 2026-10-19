@@ -33,7 +33,6 @@ add_tablegen(mlir-tblgen MLIR
   PassGen.cpp
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
-  TosaUtilsGen.cpp
   CppGenUtilities.cpp
   )
 

@@ -155,8 +155,7 @@ static MCInstrInfo *createPPCMCInstrInfo() {
 }
 
 static MCRegisterInfo *createPPCMCRegisterInfo(const Triple &TT) {
-  bool isPPC64 =
-      (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
+  bool isPPC64 = TT.isPPC64();
   unsigned Flavour = isPPC64 ? 0 : 1;
   unsigned RA = isPPC64 ? PPC::LR8 : PPC::LR;
 
@@ -183,14 +182,13 @@ static MCSubtargetInfo *createPPCMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
-  bool isPPC64 = (TheTriple.getArch() == Triple::ppc64 ||
-                  TheTriple.getArch() == Triple::ppc64le);
+  bool isPPC64 = TheTriple.isPPC64();
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatXCOFF())
-    MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple);
+    MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple, Options);
   else
-    MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple);
+    MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple, Options);
 
   // Initial state of the frame pointer is R1.
   unsigned Reg = isPPC64 ? PPC::X1 : PPC::R1;
@@ -226,7 +224,7 @@ public:
           Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
           Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << S.getName() << "@"
-           << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
+           << getContext().getAsmInfo().getSpecifierName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << S.getName() << '\n';
 
@@ -251,12 +249,12 @@ public:
   }
 
   void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) override {
-    const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+    const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
 
     OS << "\t.localentry\t";
     S->print(OS, MAI);
     OS << ", ";
-    MAI->printExpr(OS, *LocalOffset);
+    MAI.printExpr(OS, *LocalOffset);
     OS << '\n';
   }
 };
@@ -396,8 +394,8 @@ public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
   void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
-    const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
-    const unsigned PointerSize = MAI->getCodePointerSize();
+    const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
+    const unsigned PointerSize = MAI.getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
     Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
                        PointerSize);

@@ -884,3 +884,50 @@ void ABISysV_arm64::Initialize() {
 void ABISysV_arm64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
+
+std::optional<ABISysV_arm64::MemoryPermissions>
+ABISysV_arm64::GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+                                    unsigned protection_key,
+                                    uint32_t original_permissions) {
+  // The presence of the POR register means we have the Permission Overlay
+  // Extension.
+  // See Arm Architecture Reference manual "POR_EL0, Permission Overlay Register
+  // 0 (EL0)".
+  const RegisterInfo *por_el0_info = reg_ctx.GetRegisterInfoByName("por_el0");
+  if (!por_el0_info)
+    return std::nullopt;
+
+  uint64_t por_el0_value =
+      reg_ctx.ReadRegisterAsUnsigned(por_el0_info, LLDB_INVALID_ADDRESS);
+  if (por_el0_value == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  // por_el0 contains 16, 4-bit permission sets (though Linux limits this to 8
+  // useable sets).
+  if (protection_key >= 16)
+    return std::nullopt;
+
+  // Bit 3 - reserved, bit 2 - write, bit 1 - execute, bit 0 - read.
+  const uint64_t por_el0_permissions =
+      (por_el0_value >> (protection_key * 4)) & 0xf;
+  uint32_t overlay = 0;
+  if (por_el0_permissions & 4)
+    overlay |= lldb::ePermissionsWritable;
+  if (por_el0_permissions & 2)
+    overlay |= lldb::ePermissionsExecutable;
+  if (por_el0_permissions & 1)
+    overlay |= lldb::ePermissionsReadable;
+
+  uint32_t effective = original_permissions;
+
+  // Permission overlays cannot add permissions, they can only keep, or disable,
+  // what was originally set.
+  if (!(overlay & lldb::ePermissionsWritable))
+    effective &= ~lldb::ePermissionsWritable;
+  if (!(overlay & lldb::ePermissionsExecutable))
+    effective &= ~lldb::ePermissionsExecutable;
+  if (!(overlay & lldb::ePermissionsReadable))
+    effective &= ~lldb::ePermissionsReadable;
+
+  return MemoryPermissions{overlay, effective};
+}

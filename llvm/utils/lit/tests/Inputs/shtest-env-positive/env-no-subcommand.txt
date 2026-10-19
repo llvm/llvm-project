@@ -1,5 +1,4 @@
 ## Tests the env command in various scenarios: without arguments, setting, unsetting, and mixing envrionment variables.
-# FIXME: All of these tests are broken and will not even call FileCheck.
 
 ## Check default environment.
 # RUN: env | FileCheck -check-prefix=NO-ARGS %s
@@ -30,7 +29,7 @@
 # MIXED-SET-UNSET: QUX=3
 
 ## Mixed set and unset with additional variable.
-# RUN: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4 | FileCheck -check-prefix=MIXED-SET-UNSET-ADD-3 %s
+# RUN: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4 | FileCheck -check-prefix=MIXED-SET-UNSET-ADD %s
 #
 # MIXED-SET-UNSET-ADD-NOT: BAR
 # MIXED-SET-UNSET-ADD: BAZ=4

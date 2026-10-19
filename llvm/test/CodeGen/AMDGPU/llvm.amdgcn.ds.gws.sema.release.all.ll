@@ -1,19 +1,19 @@
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-SDAG %s
-; RUN: not llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-GISEL %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu6.00-mesa-mesa3d -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-SDAG %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu6.00-mesa-mesa3d -o - < %s 2>&1 | FileCheck -check-prefix=GFX6ERR-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.01-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.01-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.03-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.03-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.10-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-mesa-mesa3d -o - < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
 
 ; GFX6ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.gws.sema.release.all
-; GFX6ERR-GISEL: LLVM ERROR: cannot select: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.release.all), %{{[0-9]+}}:sgpr(s32) :: (store (s32) into custom "GWSResource") (in function: gws_sema_release_all_offset0)
+; GFX6ERR-GISEL: LLVM ERROR: cannot select: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.release.all), %{{[0-9]+}}:sgpr(i32) :: (store (i32) into custom "GWSResource") (in function: gws_sema_release_all_offset0)
 
 ; GCN-LABEL: {{^}}gws_sema_release_all_offset0:
 ; NOLOOP-DAG: s_mov_b32 m0, 0{{$}}

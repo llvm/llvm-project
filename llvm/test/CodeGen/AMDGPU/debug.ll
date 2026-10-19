@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde -mattr=dumpcode -filetype=obj | FileCheck --check-prefix=SI %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=dumpcode -filetype=obj | FileCheck --check-prefix=SI %s
+; RUN: llc < %s -mtriple=amdgpu6.01 -mattr=dumpcode -filetype=obj | FileCheck --check-prefix=SI %s
+; RUN: llc < %s -mtriple=amdgpu8.02 -mattr=dumpcode -filetype=obj | FileCheck --check-prefix=SI %s
 
 ; Test for a crash in the custom assembly dump code.
 

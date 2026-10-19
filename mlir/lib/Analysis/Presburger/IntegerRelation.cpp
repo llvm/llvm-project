@@ -2573,6 +2573,9 @@ void IntegerRelation::compose(const IntegerRelation &rel) {
 
   // Project out B in R1.
   convertVarKind(VarKind::Range, 0, numBVars, VarKind::Local);
+
+  // Eliminate local variables
+  removeRedundantLocalVars();
 }
 
 void IntegerRelation::applyDomain(const IntegerRelation &rel) {

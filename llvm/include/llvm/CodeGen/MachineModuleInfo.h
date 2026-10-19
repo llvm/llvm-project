@@ -31,6 +31,8 @@
 #define LLVM_CODEGEN_MACHINEMODULEINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
@@ -107,6 +109,12 @@ class MachineModuleInfo {
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
   MachineFunction *LastResult = nullptr; ///< Used for shortcut/cache.
 
+  // MachineFunctions are freed only when all the functions in the same
+  // deletion grouping have been finalized.
+  EquivalenceClasses<const Function *> MFDeletionGrouping;
+  // Add to this set once a function has been fully processed.
+  DenseSet<const Function *> FinalizedMFs;
+
   MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
 
 public:
@@ -145,8 +153,20 @@ public:
   /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   LLVM_ABI MachineFunction *getMachineFunction(const Function &F) const;
 
+  /// Group two IR functions so their MachineFunctions are deleted together once
+  /// both functions have been finalized.
+  void groupMachineFunctionsForDeletion(const Function &F1,
+                                        const Function &F2) {
+    if (FinalizedMFs.count(&F1) || FinalizedMFs.count(&F2))
+      return;
+    MFDeletionGrouping.unionSets(&F1, &F2);
+  }
+
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to
-  /// Machine Function map.
+  /// Machine Function map. When a function is not grouped with any other
+  /// function, its MF gets deleted right away. When a function is grouped with
+  /// other functions, its MF gets deleted when all functions in the same group
+  /// have been finalized.
   LLVM_ABI void deleteMachineFunctionFor(Function &F);
 
   /// Add an externally created MachineFunction \p MF for \p F.

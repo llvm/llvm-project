@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 
 class TestStackCorefile(TestBase):
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote
     def test(self):
         corefile = self.getBuildArtifact("process.core")

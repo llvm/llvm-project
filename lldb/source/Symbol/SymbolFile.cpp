@@ -210,8 +210,11 @@ CompUnitSP SymbolFileCommon::GetCompileUnitAtIndex(uint32_t idx) {
   if (idx >= num)
     return nullptr;
   lldb::CompUnitSP &cu_sp = (*m_compile_units)[idx];
-  if (!cu_sp)
+  if (!cu_sp) {
     cu_sp = ParseCompileUnitAtIndex(idx);
+    if (cu_sp)
+      cu_sp->SetIndex(idx);
+  }
   return cu_sp;
 }
 
@@ -229,6 +232,8 @@ void SymbolFileCommon::SetCompileUnitAtIndex(uint32_t idx,
   // unit.
   assert((*m_compile_units)[idx] == nullptr);
   (*m_compile_units)[idx] = cu_sp;
+  if (cu_sp)
+    cu_sp->SetIndex(idx);
 }
 
 llvm::Expected<TypeSystemSP>

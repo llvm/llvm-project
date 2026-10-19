@@ -13,7 +13,6 @@
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -42,6 +41,101 @@ public:
 // Translate Entry Point
 //===----------------------------------------------------------------------===//
 
+static LogicalResult mlirTranslateMainImpl(
+    std::unique_ptr<llvm::MemoryBuffer> input, llvm::raw_ostream &output,
+    ArrayRef<const Translation *> translations,
+    const MlirTranslateMainConfig &config, TimingScope timing) {
+  if (translations.empty()) {
+    llvm::errs() << "no translation requested\n";
+    return failure();
+  }
+
+  // Processes the memory buffer with a new MLIRContext.
+  auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
+                           raw_ostream &os) {
+    // Many of the translations expect a null-terminated buffer while splitting
+    // the buffer does not guarantee null-termination. Make a copy of the buffer
+    // to ensure null-termination.
+    if (!ownedBuffer->getBuffer().ends_with('\0')) {
+      ownedBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+          ownedBuffer->getBuffer(), ownedBuffer->getBufferIdentifier());
+    }
+    // Temporary buffers for chained translation processing.
+    std::string dataIn;
+    std::string dataOut;
+    LogicalResult result = LogicalResult::success();
+
+    for (const auto [index, translationRequested] :
+         llvm::enumerate(translations)) {
+      llvm::raw_ostream *stream;
+      llvm::raw_string_ostream dataStream(dataOut);
+
+      if (index == translations.size() - 1) {
+        // Output last translation to output.
+        stream = &os;
+      } else {
+        // Output translation to temporary data buffer.
+        stream = &dataStream;
+      }
+
+      TimingScope translationTiming =
+          timing.nest(translationRequested->getDescription());
+
+      MLIRContext context;
+      context.allowUnregisteredDialects(
+          config.shouldAllowUnregisteredDialects());
+      context.printOpOnDiagnostic(
+          config.getVerifyDiagnosticsLevel() ==
+          SourceMgrDiagnosticVerifierHandler::Level::None);
+      auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+      sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
+
+      if (config.getVerifyDiagnosticsLevel() !=
+          SourceMgrDiagnosticVerifierHandler::Level::None) {
+        // In the diagnostic verification flow, we ignore whether the
+        // translation failed (in most cases, it is expected to fail) and we do
+        // not filter non-error diagnostics even if `errorDiagnosticsOnly` is
+        // set. Instead, we check if the diagnostics were produced as expected.
+        SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+            *sourceMgr, &context, config.getVerifyDiagnosticsLevel());
+        (void)(*translationRequested)(sourceMgr, os, &context);
+        result = sourceMgrHandler.verify();
+      } else if (config.shouldEmitErrorDiagnosticsOnly()) {
+        SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
+        ErrorDiagnosticFilter diagnosticFilter(&context);
+        result = (*translationRequested)(sourceMgr, *stream, &context);
+      } else {
+        SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
+        result = (*translationRequested)(sourceMgr, *stream, &context);
+      }
+      if (failed(result))
+        return result;
+
+      if (index < translations.size() - 1) {
+        // If there are further translations, create a new buffer with the
+        // output data.
+        dataIn = dataOut;
+        dataOut.clear();
+        ownedBuffer = llvm::MemoryBuffer::getMemBuffer(dataIn);
+      }
+    }
+    return result;
+  };
+
+  return splitAndProcessBuffer(std::move(input), processBuffer, output,
+                               config.getInputSplitMarker(),
+                               config.getOutputSplitMarker());
+}
+
+LogicalResult
+mlir::mlirTranslateMain(std::unique_ptr<llvm::MemoryBuffer> input,
+                        llvm::raw_ostream &output,
+                        ArrayRef<const Translation *> translations,
+                        const MlirTranslateMainConfig &config) {
+  return mlirTranslateMainImpl(std::move(input), output, translations, config,
+                               TimingScope());
+}
+
 LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
                                       llvm::StringRef toolName) {
 
@@ -55,7 +149,8 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
   static llvm::cl::opt<bool> allowUnregisteredDialects(
       "allow-unregistered-dialect",
-      llvm::cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"),
+      llvm::cl::desc("Allow operation with no registered dialects "
+                     "(discouraged: testing only!)"),
       llvm::cl::init(false));
 
   static llvm::cl::opt<std::string> inputSplitMarker{
@@ -98,8 +193,6 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       llvm::cl::desc("Split marker to use for merging the ouput"),
       llvm::cl::init(""));
 
-  llvm::InitLLVM y(argc, argv);
-
   // Add flags for all the registered translations.
   llvm::cl::list<const Translation *, bool, TranslationParser>
       translationsRequested("", llvm::cl::desc("Translations to perform"),
@@ -132,77 +225,18 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
     return failure();
   }
 
-  // Processes the memory buffer with a new MLIRContext.
-  auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
-                           raw_ostream &os) {
-    // Many of the translations expect a null-terminated buffer while splitting
-    // the buffer does not guarantee null-termination. Make a copy of the buffer
-    // to ensure null-termination.
-    if (!ownedBuffer->getBuffer().ends_with('\0')) {
-      ownedBuffer = llvm::MemoryBuffer::getMemBufferCopy(
-          ownedBuffer->getBuffer(), ownedBuffer->getBufferIdentifier());
-    }
-    // Temporary buffers for chained translation processing.
-    std::string dataIn;
-    std::string dataOut;
-    LogicalResult result = LogicalResult::success();
+  MlirTranslateMainConfig config;
+  config.allowUnregisteredDialects(allowUnregisteredDialects)
+      .errorDiagnosticsOnly(errorDiagnosticsOnly)
+      .outputSplitMarker(outputSplitMarker);
+  if (inputSplitMarker.getNumOccurrences())
+    config.splitInputFile(inputSplitMarker);
+  if (verifyDiagnostics.getNumOccurrences())
+    config.verifyDiagnostics(verifyDiagnostics);
 
-    for (size_t i = 0, e = translationsRequested.size(); i < e; ++i) {
-      llvm::raw_ostream *stream;
-      llvm::raw_string_ostream dataStream(dataOut);
-
-      if (i == e - 1) {
-        // Output last translation to output.
-        stream = &os;
-      } else {
-        // Output translation to temporary data buffer.
-        stream = &dataStream;
-      }
-
-      const Translation *translationRequested = translationsRequested[i];
-      TimingScope translationTiming =
-          timing.nest(translationRequested->getDescription());
-
-      MLIRContext context;
-      context.allowUnregisteredDialects(allowUnregisteredDialects);
-      context.printOpOnDiagnostic(verifyDiagnostics.getNumOccurrences() == 0);
-      auto sourceMgr = std::make_shared<llvm::SourceMgr>();
-      sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
-
-      if (verifyDiagnostics.getNumOccurrences()) {
-        // In the diagnostic verification flow, we ignore whether the
-        // translation failed (in most cases, it is expected to fail) and we do
-        // not filter non-error diagnostics even if `errorDiagnosticsOnly` is
-        // set. Instead, we check if the diagnostics were produced as expected.
-        SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
-            *sourceMgr, &context, verifyDiagnostics);
-        (void)(*translationRequested)(sourceMgr, os, &context);
-        result = sourceMgrHandler.verify();
-      } else if (errorDiagnosticsOnly) {
-        SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
-        ErrorDiagnosticFilter diagnosticFilter(&context);
-        result = (*translationRequested)(sourceMgr, *stream, &context);
-      } else {
-        SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
-        result = (*translationRequested)(sourceMgr, *stream, &context);
-      }
-      if (failed(result))
-        return result;
-
-      if (i < e - 1) {
-        // If there are further translations, create a new buffer with the
-        // output data.
-        dataIn = dataOut;
-        dataOut.clear();
-        ownedBuffer = llvm::MemoryBuffer::getMemBuffer(dataIn);
-      }
-    }
-    return result;
-  };
-
-  if (failed(splitAndProcessBuffer(std::move(input), processBuffer,
-                                   output->os(), inputSplitMarker,
-                                   outputSplitMarker)))
+  if (failed(mlirTranslateMainImpl(std::move(input), output->os(),
+                                   translationsRequested, config,
+                                   std::move(timing))))
     return failure();
 
   output->keep();

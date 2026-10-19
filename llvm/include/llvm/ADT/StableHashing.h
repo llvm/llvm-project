@@ -18,7 +18,9 @@
 #ifndef LLVM_ADT_STABLEHASHING_H
 #define LLVM_ADT_STABLEHASHING_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 
 namespace llvm {
@@ -28,25 +30,36 @@ namespace llvm {
 using stable_hash = uint64_t;
 
 inline stable_hash stable_hash_combine(ArrayRef<stable_hash> Buffer) {
-  const uint8_t *Ptr = reinterpret_cast<const uint8_t *>(Buffer.data());
-  size_t Size = Buffer.size() * sizeof(stable_hash);
-  return xxh3_64bits(ArrayRef<uint8_t>(Ptr, Size));
+  return xxh3_64bits(reinterpret_cast<const uint8_t *>(Buffer.data()),
+                     Buffer.size() * sizeof(stable_hash));
 }
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B) {
-  stable_hash Hashes[2] = {A, B};
+  stable_hash Hashes[2] = {
+      support::endian::byte_swap(A, llvm::endianness::little),
+      support::endian::byte_swap(B, llvm::endianness::little),
+  };
   return stable_hash_combine(Hashes);
 }
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
                                        stable_hash C) {
-  stable_hash Hashes[3] = {A, B, C};
+  stable_hash Hashes[3] = {
+      support::endian::byte_swap(A, llvm::endianness::little),
+      support::endian::byte_swap(B, llvm::endianness::little),
+      support::endian::byte_swap(C, llvm::endianness::little),
+  };
   return stable_hash_combine(Hashes);
 }
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
                                        stable_hash C, stable_hash D) {
-  stable_hash Hashes[4] = {A, B, C, D};
+  stable_hash Hashes[4] = {
+      support::endian::byte_swap(A, llvm::endianness::little),
+      support::endian::byte_swap(B, llvm::endianness::little),
+      support::endian::byte_swap(C, llvm::endianness::little),
+      support::endian::byte_swap(D, llvm::endianness::little),
+  };
   return stable_hash_combine(Hashes);
 }
 

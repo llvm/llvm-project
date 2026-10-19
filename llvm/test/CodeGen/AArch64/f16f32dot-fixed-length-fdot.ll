@@ -52,7 +52,7 @@ define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
 ; CHECK-EXPAND-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-EXPAND-NEXT:    fmul v1.4s, v1.4s, v2.4s
 ; CHECK-EXPAND-NEXT:    fadd v0.2s, v0.2s, v1.2s
-; CHECK-EXPAND-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-EXPAND-NEXT:    mov d1, v1.d[1]
 ; CHECK-EXPAND-NEXT:    fadd v0.2s, v1.2s, v0.2s
 ; CHECK-EXPAND-NEXT:    ret
 ;

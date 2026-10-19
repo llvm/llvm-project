@@ -120,7 +120,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     10.5   0.0    0.0       madd	x0, x1, x2, x0
 # CHECK-NEXT: 2.     2     13.0   0.0    0.0       madd	x0, x1, x2, x0
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       madd	x0, x0, x0, x0
-# CHECK-NEXT:        2     11.9   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.9   0.1    0.0       <total>
 
 # CHECK:      [1] Code Region - fmadd
 
@@ -164,7 +164,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       fmul	d0, d0, d0
 # CHECK-NEXT: 4.     2     19.5   0.0    0.0       fmadd	d0, d1, d2, d0
 # CHECK-NEXT: 5.     2     23.5   0.0    0.0       fmadd	d0, d0, d1, d2
-# CHECK-NEXT:        2     15.7   0.1    0.0       <total>
+# CHECK-NEXT:        12    15.7   0.1    0.0       <total>
 
 # CHECK:      [2] Code Region - smaddl
 
@@ -202,7 +202,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     7.5    0.0    0.0       smaddl	x0, w1, w2, x0
 # CHECK-NEXT: 2.     2     8.0    0.0    0.0       smaddl	x0, w1, w2, x0
 # CHECK-NEXT: 3.     2     9.5    0.0    0.0       smaddl	x0, w0, w0, x0
-# CHECK-NEXT:        2     7.4    0.1    0.0       <total>
+# CHECK-NEXT:        8     7.4    0.1    0.0       <total>
 
 # CHECK:      [3] Code Region - saba
 
@@ -240,7 +240,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       saba	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 2.     2     12.0   0.0    0.0       saba	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 3.     2     16.0   0.0    0.0       saba	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [4] Code Region - mla
 
@@ -278,7 +278,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     11.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 2.     2     12.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 3.     2     16.5   0.0    0.0       mla	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
+# CHECK-NEXT:        8     12.0   0.1    0.0       <total>
 
 # CHECK:      [5] Code Region - sadalp
 
@@ -316,7 +316,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       sadalp	v0.2d, v1.4s
 # CHECK-NEXT: 2.     2     12.0   0.0    0.0       sadalp	v0.2d, v1.4s
 # CHECK-NEXT: 3.     2     16.0   0.0    0.0       sadalp	v0.2d, v0.4s
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [6] Code Region - ssra
 
@@ -354,7 +354,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     12.0   0.0    0.0       ssra	v0.2d, v1.2d, #1
 # CHECK-NEXT: 2.     2     12.0   0.0    0.0       ssra	v0.2d, v1.2d, #1
 # CHECK-NEXT: 3.     2     16.0   0.0    0.0       ssra	v0.2d, v0.2d, #1
-# CHECK-NEXT:        2     11.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     11.8   0.1    0.0       <total>
 
 # CHECK:      [7] Code Region - fmla
 
@@ -398,7 +398,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 3.     2     14.5   0.0    0.0       fadd	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT: 4.     2     16.5   0.0    0.0       fmla	v0.2d, v1.2d, v2.2d
 # CHECK-NEXT: 5.     2     20.5   0.0    0.0       fmla	v0.2d, v0.2d, v1.2d
-# CHECK-NEXT:        2     13.5   0.1    0.0       <total>
+# CHECK-NEXT:        12    13.5   0.1    0.0       <total>
 
 # CHECK:      [8] Code Region - fmlal
 
@@ -442,7 +442,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 3.     2     20.0   0.0    0.0       fadd	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT: 4.     2     22.0   0.0    0.0       fmlal	v0.4s, v1.4h, v2.4h
 # CHECK-NEXT: 5.     2     27.0   0.0    0.0       fmlal	v0.4s, v0.4h, v1.4h
-# CHECK-NEXT:        2     18.3   0.1    0.0       <total>
+# CHECK-NEXT:        12    18.3   0.1    0.0       <total>
 
 # CHECK:      [9] Code Region - crc32
 
@@ -480,7 +480,7 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     6.0    0.0    0.0       crc32cb	w0, w0, w1
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       crc32cb	w0, w0, w1
 # CHECK-NEXT: 3.     2     8.0    0.0    0.0       crc32cb	w0, w0, w0
-# CHECK-NEXT:        2     6.1    0.1    0.0       <total>
+# CHECK-NEXT:        8     6.1    0.1    0.0       <total>
 
 # CHECK:      [10] Code Region - smulh
 
@@ -518,4 +518,4 @@ smulh x0, x0, x0
 # CHECK-NEXT: 1.     2     14.0   0.0    0.0       smulh	x0, x0, x1
 # CHECK-NEXT: 2.     2     18.5   0.0    0.0       smulh	x0, x0, x1
 # CHECK-NEXT: 3.     2     23.0   0.0    0.0       smulh	x0, x0, x0
-# CHECK-NEXT:        2     16.4   0.1    0.0       <total>
+# CHECK-NEXT:        8     16.4   0.1    0.0       <total>

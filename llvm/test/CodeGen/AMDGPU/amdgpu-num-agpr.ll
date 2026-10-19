@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck --implicit-check-not=warning -check-prefix=WARN %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -filetype=null %s 2>&1 | FileCheck --implicit-check-not=warning -check-prefix=WARN %s
 
 ; Check the effect that amdgpu-agpr-alloc has on register reservations.
 ;

@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx906 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgpu9.06-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefixes=FUN,CHECK,SAFEIR %s
 
-// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx906 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgpu9.06-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics | FileCheck -check-prefixes=FUN,CHECK,UNSAFEIR %s
 
-// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx1100 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgpu11.00-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefixes=FUN,SAFE %s
 
-// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx942 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgpu9.42-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics \
 // RUN:   | FileCheck -check-prefixes=FUN,UNSAFE %s
 
@@ -31,7 +31,7 @@ __global__ void ffp1(float *p) {
   // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
   // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[FADDMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+, !amdgpu.ignore.denormal.mode ![0-9]+$]]
+  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[FADDMD:!atomic.ignore.denormal.mode ![0-9]+, !amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
   // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 4, [[DEFMD]]
   // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 4, [[DEFMD]]
@@ -164,7 +164,7 @@ __device__ double ffp4(double *p, float f) {
 
 __device__ double ffp5(double *p, int i) {
   // FUN-LABEL: @_Z4ffp5Pdi
-  // CHECK: sitofp i32 {{.*}} to double
+  // CHECK: sitofp contract i32 {{.*}} to double
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
   __atomic_fetch_sub(p, i, memory_order_relaxed);

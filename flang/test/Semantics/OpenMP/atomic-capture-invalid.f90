@@ -1,9 +1,6 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! Semantic checks on invalid atomic capture clause
 
-use omp_lib
     logical x
     complex y
     !$omp atomic capture

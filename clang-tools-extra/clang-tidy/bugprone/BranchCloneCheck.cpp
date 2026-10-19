@@ -125,7 +125,7 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
       return false;
     // If either expression comes from a macro then don't warn even if
     // the expressions are identical.
-    if ((Expr1->getExprLoc().isMacroID()) || (Expr2->getExprLoc().isMacroID()))
+    if (Expr1->getExprLoc().isMacroID() || Expr2->getExprLoc().isMacroID())
       return false;
 
     // If all children of two expressions are identical, return true.
@@ -402,7 +402,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         Branches.back().push_back(S);
     }
 
-    auto *End = Branches.end();
+    const auto *End = Branches.end();
     auto *BeginCurrent = Branches.begin();
     while (BeginCurrent < End) {
       if (isFallthroughSwitchBranch(*BeginCurrent)) {

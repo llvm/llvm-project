@@ -1,0 +1,9 @@
+// RUN: cir-opt %s --split-input-file --cir-to-llvm -verify-diagnostics
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{cannot lower a global with a language address space}}
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external lang_address_space(offload_global) @global = #cir.int<1> : !s32i
+}

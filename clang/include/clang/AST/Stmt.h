@@ -18,8 +18,8 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtIterator.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/CapturedStmt.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -27,7 +27,6 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -670,6 +669,7 @@ protected:
   };
 
   class InitListExprBitfields {
+    friend class ASTStmtReader;
     friend class InitListExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
@@ -679,6 +679,9 @@ protected:
     /// designator in it. This is a temporary marker used by CodeGen.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HadArrayRangeDesignator : 1;
+    // Whether this list is explicitly written in the source (with braces).
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsExplicit : 1;
   };
 
   class ParenListExprBitfields {
@@ -992,6 +995,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsBooleanTypeTrait : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsComparisonResult : 1;
 
     /// If this expression is a non value-dependent boolean trait,
     /// this indicates whether the trait evaluated true or false.

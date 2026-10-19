@@ -2,10 +2,10 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
-    %0 = llvm.mlir.constant(39 : index) : i64
-    %1 = llvm.mlir.constant(0 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = llvm.mlir.constant(40 : index) : i64
+    %0 = llvm.mlir.constant(39 : i64) : i64
+    %1 = llvm.mlir.constant(0 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.mlir.constant(40 : i64) : i64
     %4 = llvm.mlir.addressof @_QFEa : !llvm.ptr
     %5 = llvm.mlir.addressof @_QFEb : !llvm.ptr
     %6 = llvm.mlir.constant(1 : i64) : i64
@@ -43,15 +43,15 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
       omp.terminator
     }
     %9 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%0 : i64) extent(%3 : i64) stride(%2 : i64) start_idx(%2 : i64)
-    %10 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(to) capture(ByRef) bounds(%9) -> !llvm.ptr {name = "a"}
-    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%9) -> !llvm.ptr {name = "b"}
-    %12 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %13 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-      %14 = llvm.mlir.constant(0 : index) : i64
+    %10 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(to) capture(ByRef) bounds(%9) name("a") -> !llvm.ptr
+    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%9) name("b") -> !llvm.ptr
+    %12 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr
+    %13 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+      %14 = llvm.mlir.constant(0 : i64) : i64
       %15 = llvm.mlir.constant(10 : i32) : i32
-      %16 = llvm.mlir.constant(1 : index) : i64
-      %17 = llvm.mlir.constant(40 : index) : i64
+      %16 = llvm.mlir.constant(1 : i64) : i64
+      %17 = llvm.mlir.constant(40 : i64) : i64
       %18 = llvm.load %arg3 : !llvm.ptr -> i32
       %19 = llvm.sext %18 : i32 to i64
       %20 = llvm.trunc %16 : i64 to i32

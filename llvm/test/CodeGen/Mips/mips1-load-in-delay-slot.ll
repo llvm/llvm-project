@@ -11,8 +11,7 @@ define internal fastcc void @test() unnamed_addr #0 {
 ; MIPS1-PSX-NEXT:    addu $1, $2, $25
 ; MIPS1-PSX-NEXT:    lw $2, %got(data)($1)
 ; MIPS1-PSX-NEXT:    nop
-; MIPS1-PSX-NEXT:    addiu $1, $2, %lo(data)
-; MIPS1-PSX-NEXT:    lbu $1, 2($1)
+; MIPS1-PSX-NEXT:    lbu $1, %lo(data+2)($2)
 ; MIPS1-PSX-NEXT:    addiu $3, $zero, 2
 ; MIPS1-PSX-NEXT:    bne $1, $3, $BB0_2
 ; MIPS1-PSX-NEXT:    nop

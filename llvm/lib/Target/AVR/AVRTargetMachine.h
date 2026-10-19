@@ -50,13 +50,14 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAs, unsigned DestAs) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAs,
+                           unsigned DestAs) const override {
     // While AVR has different address spaces, they are all represented by
     // 16-bit pointers that can be freely casted between (of course, a pointer
     // must be cast back to its original address space to be dereferenceable).
     // To be safe, also check the pointer size in case we implement __memx
     // pointers.
-    return getPointerSize(SrcAs) == getPointerSize(DestAs);
+    return DL.getPointerSize(SrcAs) == DL.getPointerSize(DestAs);
   }
 
 private:

@@ -1518,7 +1518,7 @@ define void @PR16651.2(<2 x float> %val, i1 %c1) {
 ;
 ; CHECK-MODIFY-CFG-LABEL: @PR16651.2(
 ; CHECK-MODIFY-CFG-NEXT:  entry:
-; CHECK-MODIFY-CFG-NEXT:    [[TV1_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VAL:%.*]], i32 0
+; CHECK-MODIFY-CFG-NEXT:    [[TV1_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
 ; CHECK-MODIFY-CFG-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_THEN:%.*]], label [[ENTRY_CONT:%.*]]
 ; CHECK-MODIFY-CFG:       entry.then:
 ; CHECK-MODIFY-CFG-NEXT:    [[COND105_I_I_THEN_VAL:%.*]] = load float, ptr null, align 8

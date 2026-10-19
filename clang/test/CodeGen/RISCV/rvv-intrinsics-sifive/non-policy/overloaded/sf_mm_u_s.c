@@ -13,6 +13,6 @@
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_mm_u_s_w4_u8m8_i8m8(vuint8m8_t vs2, vint8m8_t vs1, size_t tm, size_t tn, size_t tk) {
-  return __riscv_sf_mm_u_s(0, vs2, vs1, tm, tn, tk);
+  return __riscv_sf_mm_w4(0, vs2, vs1, tm, tn, tk);
 }
 

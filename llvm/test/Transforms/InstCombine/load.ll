@@ -21,7 +21,7 @@ define i32 @test1() {
 
 define float @test2() {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret float 0x3FF3B2FEC0000000
+; CHECK-NEXT:    ret float 1.231200e+00
 ;
   %A = getelementptr [2 x { i32, float }], ptr @Y, i64 0, i64 1, i32 1		; <ptr> [#uses=1]
   %B = load float, ptr %A		; <float> [#uses=1]
@@ -414,13 +414,13 @@ define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
   ret i16 %v
 }
 
-declare ptr @llvm.strip.invariant.group.p0(ptr %p)
+declare ptr @llvm.launder.invariant.group.p0(ptr %p)
 
-define i32 @load_via_strip_invariant_group() {
-; CHECK-LABEL: @load_via_strip_invariant_group(
+define i32 @load_via_launder_invariant_group() {
+; CHECK-LABEL: @load_via_launder_invariant_group(
 ; CHECK-NEXT:    ret i32 37
 ;
-  %a = call ptr @llvm.strip.invariant.group.p0(ptr @Y)
+  %a = call ptr @llvm.launder.invariant.group.p0(ptr @Y)
   %b = getelementptr i8, ptr %a, i64 8
   %d = load i32, ptr %b
   ret i32 %d

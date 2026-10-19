@@ -1924,7 +1924,7 @@ private:
 
   /// The optional owning source manager, which when present may be used to
   /// extend the lifetime of the input buffer.
-  const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef;
+  const std::shared_ptr<llvm::SourceMgr> bufferOwnerRef;
 };
 
 LogicalResult BytecodeReader::Impl::read(

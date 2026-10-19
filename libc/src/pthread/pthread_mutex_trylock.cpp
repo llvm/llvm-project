@@ -16,9 +16,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// The implementation currently handles only plain mutexes.
 LLVM_LIBC_FUNCTION(int, pthread_mutex_trylock, (pthread_mutex_t * mutex)) {
-  if (reinterpret_cast<Mutex *>(mutex)->try_lock() == MutexError::BUSY)
+  MutexError err = reinterpret_cast<Mutex *>(mutex)->try_lock();
+  if (err == MutexError::DEADLOCK)
+    return EDEADLK;
+  if (err == MutexError::BUSY)
     return EBUSY;
   return 0;
 }

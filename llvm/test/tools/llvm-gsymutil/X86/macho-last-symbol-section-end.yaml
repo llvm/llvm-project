@@ -1,0 +1,127 @@
+## Test that the last function info, which has no size, does not get a size
+## that extends past the end of the section that contains it.
+##
+## Mach-O symbols have no size, so the size of the last function info gets
+## filled in during GsymCreator::finalize() using the valid text ranges. This
+## file has two adjacent code sections, __text [0x100000f90 - 0x100000fb0) and
+## __text_cold [0x100000fb0 - 0x100000fd0), which get combined into the single
+## valid text range [0x100000f90 - 0x100000fd0). The only symbol is "_main" at
+## the start of __text and __text_cold deliberately has no symbols in it, so
+## "main" is the last function info and it has no size. Its size must be
+## limited to the end of __text and must not cover any of __text_cold.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
+# RUN: llvm-gsymutil --address=0x100000f90 --address=0x100000faf --address=0x100000fb0 --address=0x100000fcf %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDR
+# RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
+
+# CONVERT: Input file: {{.*\.yaml\.tmp}}
+# CONVERT: Output file (x86_64): {{.*\.yaml\.tmp\.gsym}}
+# CONVERT: Loaded 1 functions from symbol table.
+# CONVERT: Pruned 0 functions, ended with 1 total
+
+## The last byte of __text resolves to "main", but the first byte of
+## __text_cold must not. If the size was taken from the end of the valid text
+## range instead of the end of the section, the last two lookups would both
+## incorrectly resolve to "main".
+# ADDR:      Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
+# ADDR-NEXT: 0x0000000100000f90: main
+# ADDR-NEXT: 0x0000000100000faf: main + 31
+# ADDR-NEXT: 0x0000000100000fb0: error: address 0x100000fb0 is not in GSYM
+# ADDR-NEXT: 0x0000000100000fcf: error: address 0x100000fcf is not in GSYM
+
+## The range must end at 0x100000fb0, the end of __text, not at 0x100000fd0,
+## the end of the valid text range.
+# DUMP: FunctionInfo @ 0x{{[0-9a-f]+}}: [0x0000000100000f90 - 0x0000000100000fb0) "main"
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           5
+  sizeofcmds:      424
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000F90
+        size:            32
+        offset:          0xF90
+        align:           4
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         'C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3'
+      - sectname:        __text_cold
+        segname:         __TEXT
+        addr:            0x100000FB0
+        size:            32
+        offset:          0xFB0
+        align:           4
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '9090909090909090909090909090909090909090909090909090909090909090'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        24
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           1
+    stroff:          4112
+    strsize:         8
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            11111111-2222-3333-4444-555555555555
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971280
+  StringTable:
+    - ' '
+    - _main
+...

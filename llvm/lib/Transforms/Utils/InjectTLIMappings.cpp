@@ -92,6 +92,10 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   if (CI.isNoBuiltin() || !CI.getCalledFunction())
     return;
 
+  // Skip variadic function calls as they are not supported (like 'int pow();')
+  if (CI.getFunctionType()->isVarArg())
+    return;
+
   StringRef ScalarName = CI.getCalledFunction()->getName();
 
   // Nothing to be done if the TLI thinks the function is not

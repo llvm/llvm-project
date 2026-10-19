@@ -5,7 +5,7 @@ if(LLVM_USE_SANITIZER)
   return()
 endif()
 
-add_libc_unittest(
+add_libc_test(
   setjmp_test
   SUITE
     libc_setjmp_unittests
@@ -18,7 +18,7 @@ add_libc_unittest(
     libc.src.setjmp.setjmp
 )
 
-add_libc_unittest(
+add_libc_test(
   sigsetjmp_test
   SUITE
     libc_setjmp_unittests

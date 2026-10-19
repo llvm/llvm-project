@@ -94,6 +94,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// multiple pointer variables reference the same constant.
   DenseMap<std::pair<const DIType *, int64_t>, DIE *> ImplicitPointerDIEs;
 
+  // Set of scope nodes referenced by global variables in this CU.
+  SmallPtrSet<const MDNode *, 4> GlobalVarScopes;
+
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
 
@@ -156,6 +159,9 @@ class DwarfCompileUnit final : public DwarfUnit {
       return FinalizedAbstractSubprograms;
     return DU->getFinalizedAbstractSubprograms();
   }
+
+  /// \returns true if \ref ScopeNode contains a GlobalVariable.
+  bool hasGlobalVariableInScope(const DILocalScope *ScopeNode);
 
   void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
 

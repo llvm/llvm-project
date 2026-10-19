@@ -5,8 +5,8 @@
 module {
 
   cir.func @gotoFromIf(%arg0: !s32i) -> !s32i {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
-    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i
@@ -41,7 +41,7 @@ module {
 // MLIR:    llvm.store %[[#Zero]], %[[#Ret_val_addr:]] {{.*}}: i32, !llvm.ptr
 // MLIR:    llvm.br ^bb[[#RETURN:]]
 // MLIR:  ^bb[[#RETURN]]:
-// MLIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] {alignment = 4 : i64} : !llvm.ptr -> i32
+// MLIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] <alignment = 4> : !llvm.ptr -> i32
 // MLIR:    llvm.return %[[#Ret_val]] : i32
 // MLIR:  ^bb[[#GOTO_BLK]]:
 // MLIR:    llvm.store %[[#Minus_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr

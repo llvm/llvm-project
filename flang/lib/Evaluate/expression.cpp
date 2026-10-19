@@ -7,19 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/expression.h"
-#include "int-power.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/variable.h"
-#include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <string>
 #include <type_traits>
 
 using namespace Fortran::parser::literals;

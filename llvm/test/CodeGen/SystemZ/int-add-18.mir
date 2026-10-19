@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=postrapseudos \
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=post-ra-pseudos \
 # RUN:   %s -o - | FileCheck %s
 #
 # Test that an AHIMuxK pseudo does not result in a COPY (risbhg) if the

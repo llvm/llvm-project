@@ -1,0 +1,79 @@
+# Unterminated symbol names must not read past the string table bounds.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -o "target modules dump symtab" 2>&1 | FileCheck %s
+
+# CHECK: error: symbol[1] has invalid or unterminated string table offset 0xd
+# CHECK: Symtab
+# CHECK: good_symbol
+# CHECK-NOT: AAAAAAAA
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000002
+  ncmds:           3
+  sizeofcmds:      248
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000F00
+        size:            4
+        offset:          0x00000F00
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        53
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           2
+    stroff:          4128
+    strsize:         21
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971136
+    - n_strx:          13
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971140
+  StringTable:
+    - ''
+    - good_symbol
+    - AAAAAAAA
+...

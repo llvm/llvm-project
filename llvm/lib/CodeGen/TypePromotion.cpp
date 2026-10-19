@@ -9,9 +9,9 @@
 /// \file
 /// This is an opcode based type promotion pass for small types that would
 /// otherwise be promoted during legalisation. This works around the limitations
-/// of selection dag for cyclic regions. The search begins from icmp
-/// instructions operands where a tree, consisting of non-wrapping or safe
-/// wrapping instructions, is built, checked and promoted if possible.
+/// of selection dag for cyclic regions. The search begins from operands of icmp
+/// and scalar trunc-to-i1 instructions. A tree consisting of non-wrapping or
+/// safe wrapping instructions is then built, checked and promoted if possible.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -102,6 +102,7 @@ static cl::opt<bool> DisablePromotion("disable-type-promotion", cl::Hidden,
 
 namespace {
 class IRPromoter {
+  Module &M;
   LLVMContext &Ctx;
   unsigned PromotedWidth = 0;
   SetVector<Value *> &Visited;
@@ -122,12 +123,13 @@ class IRPromoter {
   void Cleanup();
 
 public:
-  IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
+  IRPromoter(Module &M, unsigned Width, SetVector<Value *> &visited,
              SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
              SmallPtrSetImpl<Instruction *> &wrap,
              SmallPtrSetImpl<Instruction *> &instsToRemove)
-      : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
-        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove) {
+      : M(M), Ctx(M.getContext()), PromotedWidth(Width), Visited(visited),
+        Sources(sources), Sinks(sinks), SafeWrap(wrap),
+        InstsToRemove(instsToRemove) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -137,6 +139,7 @@ public:
 class TypePromotionImpl {
   unsigned TypeSize = 0;
   const TargetLowering *TLI = nullptr;
+  Module *M = nullptr;
   LLVMContext *Ctx = nullptr;
   unsigned RegisterBitWidth = 0;
   SmallPtrSet<Value *, 16> AllVisited;
@@ -156,6 +159,8 @@ class TypePromotionImpl {
   bool isSource(Value *V);
   // Should V be a root in the promotion tree?
   bool isSink(Value *V);
+  // Is V a supported truncation to i1?
+  bool isSupportedTruncToI1(Value *V);
   // Should we change the result type of V? It will result in the users of V
   // being visited.
   bool shouldPromote(Value *V);
@@ -188,7 +193,6 @@ public:
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesCFG();
-    AU.addPreserved<LoopInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -202,6 +206,11 @@ static bool GenerateSignBits(Instruction *I) {
   unsigned Opc = I->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SExt;
+}
+
+static bool isTruncToI1(Value *V) {
+  auto *Trunc = dyn_cast<TruncInst>(V);
+  return Trunc && Trunc->getType()->isIntegerTy(1);
 }
 
 bool TypePromotionImpl::EqualTypeSize(Value *V) {
@@ -269,6 +278,10 @@ bool TypePromotionImpl::isSink(Value *V) {
     return ICmp->isSigned() || LessThanTypeSize(ICmp->getOperand(0));
 
   return isa<CallInst>(V);
+}
+
+bool TypePromotionImpl::isSupportedTruncToI1(Value *V) {
+  return isTruncToI1(V) && EqualTypeSize(cast<TruncInst>(V)->getOperand(0));
 }
 
 /// Return whether this instruction can safely wrap.
@@ -390,7 +403,7 @@ bool TypePromotionImpl::shouldPromote(Value *V) {
   if (!I)
     return false;
 
-  if (isa<ICmpInst>(I))
+  if (isa<ICmpInst>(I) || isSupportedTruncToI1(I))
     return false;
 
   return true;
@@ -434,7 +447,7 @@ void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
 }
 
 void IRPromoter::ExtendSources() {
-  IRBuilder<> Builder{Ctx};
+  IRBuilder<> Builder(M);
 
   auto InsertZExt = [&](Value *V, BasicBlock::iterator InsertPt) {
     assert(V->getType() != ExtTy && "zext already extends to i32");
@@ -489,6 +502,10 @@ void IRPromoter::PromoteTree() {
       if ((Op->getType() == ExtTy) || !isa<IntegerType>(Op->getType()))
         continue;
 
+      // Skip the condition operand of select.
+      if (isa<SelectInst>(I) && i == 0)
+        continue;
+
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
         // For subtract, we only need to zext the constant. We only put it in
         // SafeWrap because SafeWrap.size() is used elsewhere.
@@ -520,6 +537,16 @@ void IRPromoter::PromoteTree() {
       }
     }
 
+    // A trunc to i1 keeps its type while its operand is zero extended.
+    // Drop nsw if nuw is not also set since we might zero-extend an all-ones
+    // operand. nuw still holds, as does nuw nsw, which implies a zero operand.
+    if (isTruncToI1(I)) {
+      auto *Trunc = cast<TruncInst>(I);
+      if (!Trunc->hasNoUnsignedWrap())
+        Trunc->setHasNoSignedWrap(false);
+      continue;
+    }
+
     // Mutate the result type, unless this is an icmp or switch.
     if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
       I->mutateType(ExtTy);
@@ -531,7 +558,7 @@ void IRPromoter::PromoteTree() {
 void IRPromoter::TruncateSinks() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Fixing up the sinks:\n");
 
-  IRBuilder<> Builder{Ctx};
+  IRBuilder<> Builder(M);
 
   auto InsertTrunc = [&](Value *V, Type *TruncTy) -> Instruction * {
     if (!isa<Instruction>(V) || !isa<IntegerType>(V->getType()))
@@ -636,10 +663,10 @@ void IRPromoter::Cleanup() {
 
 void IRPromoter::ConvertTruncs() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Converting truncs..\n");
-  IRBuilder<> Builder{Ctx};
+  IRBuilder<> Builder(M);
 
   for (auto *V : Visited) {
-    if (!isa<TruncInst>(V) || Sources.count(V))
+    if (!isa<TruncInst>(V) || isTruncToI1(V) || Sources.count(V))
       continue;
 
     auto *Trunc = cast<TruncInst>(V);
@@ -678,7 +705,7 @@ void IRPromoter::Mutate() {
     }
   }
   for (auto *V : Visited) {
-    if (!isa<TruncInst>(V) || Sources.count(V))
+    if (!isa<TruncInst>(V) || isTruncToI1(V) || Sources.count(V))
       continue;
     auto *Trunc = cast<TruncInst>(V);
     TruncTysMap[Trunc].push_back(Trunc->getDestTy());
@@ -739,8 +766,9 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
     case Instruction::Select:
     case Instruction::Ret:
     case Instruction::Load:
-    case Instruction::Trunc:
       return isSupportedType(I);
+    case Instruction::Trunc:
+      return isSupportedTruncToI1(I) || isSupportedType(I);
     case Instruction::BitCast:
       return I->getOperand(0)->getType() == I->getType();
     case Instruction::ZExt:
@@ -858,6 +886,9 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
       if (auto *I = dyn_cast<Instruction>(V)) {
         // Visit operands of any instruction visited.
         for (auto &U : I->operands()) {
+          // Skip condition of selects.
+          if (isa<SelectInst>(I) && U.getOperandNo() == 0)
+            continue;
           if (!AddLegalInst(U))
             return false;
         }
@@ -913,7 +944,7 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
       (ToPromote < 2 || (Blocks.size() == 1 && NonFreeArgs > SafeWrap.size())))
     return false;
 
-  IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
+  IRPromoter Promoter(*M, PromotedWidth, CurrentVisited, Sources, Sinks,
                       SafeWrap, InstsToRemove);
   Promoter.Mutate();
   return true;
@@ -936,6 +967,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
+  M = F.getParent();
   Ctx = &F.getContext();
 
   // Return the preferred integer width of the instruction, or zero if we
@@ -1005,6 +1037,16 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
             }
           }
         }
+      } else if (isTruncToI1(&I)) {
+        // Like an unsigned icmp, a scalar trunc to i1 is a boolean boundary.
+        auto *Trunc = cast<TruncInst>(&I);
+        LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *Trunc
+                          << "\n");
+
+        if (auto *OpI = dyn_cast<Instruction>(Trunc->getOperand(0))) {
+          if (auto PromotedWidth = GetPromoteWidth(OpI))
+            MadeChange |= TryToPromote(OpI, PromotedWidth, LI);
+        }
       }
     }
     if (!InstsToRemove.empty()) {
@@ -1058,6 +1100,5 @@ PreservedAnalyses TypePromotionPass::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LoopAnalysis>();
   return PA;
 }

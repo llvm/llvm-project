@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementations of file I/O utility functions
+/// used in clang-doc.
+///
+//===----------------------------------------------------------------------===//
 #include "File.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"

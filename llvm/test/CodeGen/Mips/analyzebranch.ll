@@ -55,16 +55,14 @@ define double @foo(double %a, double %b) nounwind readnone {
 ; MIPS32r6-NEXT:    mtc1 $zero, $f1
 ; MIPS32r6-NEXT:    mthc1 $zero, $f1
 ; MIPS32r6-NEXT:    cmp.lt.d $f1, $f1, $f12
-; MIPS32r6-NEXT:    mfc1 $1, $f1
-; MIPS32r6-NEXT:    andi $1, $1, 1
-; MIPS32r6-NEXT:    bnezc $1, $BB0_2
+; MIPS32r6-NEXT:    bc1nez $f1, $BB0_2
+; MIPS32r6-NEXT:    nop
 ; MIPS32r6-NEXT:  # %bb.1: # %if.else
 ; MIPS32r6-NEXT:    mtc1 $zero, $f0
 ; MIPS32r6-NEXT:    mthc1 $zero, $f0
 ; MIPS32r6-NEXT:    cmp.ule.d $f1, $f14, $f0
-; MIPS32r6-NEXT:    mfc1 $1, $f1
-; MIPS32r6-NEXT:    andi $1, $1, 1
-; MIPS32r6-NEXT:    bnezc $1, $BB0_3
+; MIPS32r6-NEXT:    bc1nez $f1, $BB0_3
+; MIPS32r6-NEXT:    nop
 ; MIPS32r6-NEXT:  $BB0_2: # %if.end6
 ; MIPS32r6-NEXT:    sub.d $f0, $f14, $f0
 ; MIPS32r6-NEXT:    add.d $f0, $f0, $f0
@@ -127,18 +125,15 @@ define double @foo(double %a, double %b) nounwind readnone {
 ;
 ; MIPS64R6-LABEL: foo:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    mov.d $f0, $f12
 ; MIPS64R6-NEXT:    dmtc1 $zero, $f1
 ; MIPS64R6-NEXT:    cmp.lt.d $f1, $f1, $f12
-; MIPS64R6-NEXT:    mfc1 $1, $f1
-; MIPS64R6-NEXT:    andi $1, $1, 1
-; MIPS64R6-NEXT:    bnezc $1, .LBB0_2
+; MIPS64R6-NEXT:    bc1nez $f1, .LBB0_2
+; MIPS64R6-NEXT:    mov.d $f0, $f12
 ; MIPS64R6-NEXT:  # %bb.1: # %if.else
 ; MIPS64R6-NEXT:    dmtc1 $zero, $f0
 ; MIPS64R6-NEXT:    cmp.ule.d $f1, $f13, $f0
-; MIPS64R6-NEXT:    mfc1 $1, $f1
-; MIPS64R6-NEXT:    andi $1, $1, 1
-; MIPS64R6-NEXT:    bnezc $1, .LBB0_3
+; MIPS64R6-NEXT:    bc1nez $f1, .LBB0_3
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  .LBB0_2: # %if.end6
 ; MIPS64R6-NEXT:    sub.d $f0, $f13, $f0
 ; MIPS64R6-NEXT:    add.d $f0, $f0, $f0
@@ -206,9 +201,7 @@ define void @f1(float %f) nounwind {
 ; MIPS32r6-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32r6-NEXT:    mtc1 $zero, $f0
 ; MIPS32r6-NEXT:    cmp.eq.s $f0, $f12, $f0
-; MIPS32r6-NEXT:    mfc1 $1, $f0
-; MIPS32r6-NEXT:    andi $1, $1, 1
-; MIPS32r6-NEXT:    beqzc $1, $BB1_2
+; MIPS32r6-NEXT:    bc1eqz $f0, $BB1_2
 ; MIPS32r6-NEXT:    nop
 ; MIPS32r6-NEXT:  # %bb.1: # %if.end
 ; MIPS32r6-NEXT:    jal f2
@@ -280,9 +273,7 @@ define void @f1(float %f) nounwind {
 ; MIPS64R6-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; MIPS64R6-NEXT:    mtc1 $zero, $f0
 ; MIPS64R6-NEXT:    cmp.eq.s $f0, $f12, $f0
-; MIPS64R6-NEXT:    mfc1 $1, $f0
-; MIPS64R6-NEXT:    andi $1, $1, 1
-; MIPS64R6-NEXT:    beqzc $1, .LBB1_2
+; MIPS64R6-NEXT:    bc1eqz $f0, .LBB1_2
 ; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.1: # %if.end
 ; MIPS64R6-NEXT:    jal f2

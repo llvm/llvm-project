@@ -11,12 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
-#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/JSONFormat.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,7 +42,15 @@ namespace {
 // Summary Type
 //===----------------------------------------------------------------------===//
 
-enum class SummaryType { TU, LU, WPA };
+enum class SummaryType {
+  Auto,
+  TU,
+  LU,
+  StaticLibrary,
+  MultiArchStaticLibrary,
+  MultiArchSharedLibrary,
+  WPA
+};
 
 //===----------------------------------------------------------------------===//
 // Command-Line Options
@@ -52,15 +63,28 @@ cl::list<std::string> LoadPlugins("load",
                                   cl::value_desc("path"),
                                   cl::cat(SsafFormatCategory));
 
-// --type and the input file are required for convert/validateInput operations
-// but must be optional at the cl layer so that --list can be used standalone.
+// Defaults to 'auto', which inspects the file's self-describing 'type'
+// field and dispatches to the matching reader/writer. Explicit values
+// force the use of the corresponding kind-specific reader/writer.
 cl::opt<SummaryType> Type(
-    "type", cl::desc("Summary type (required unless --list is given)"),
-    cl::values(clEnumValN(SummaryType::TU, "tu", "Translation unit summary"),
+    "type",
+    cl::desc("Summary type (defaults to 'auto', which uses the file's "
+             "self-describing 'type' field)"),
+    cl::values(clEnumValN(SummaryType::Auto, "auto",
+                          "Detect type from the file's 'type' field"),
+               clEnumValN(SummaryType::TU, "tu", "Translation unit summary"),
                clEnumValN(SummaryType::LU, "lu", "Link unit summary"),
+               clEnumValN(SummaryType::StaticLibrary, "static-library",
+                          "Static library of translation unit summaries"),
+               clEnumValN(SummaryType::MultiArchStaticLibrary,
+                          "multi-arch-static-library",
+                          "Multi-architecture static library"),
+               clEnumValN(SummaryType::MultiArchSharedLibrary,
+                          "multi-arch-shared-library",
+                          "Multi-architecture shared library"),
                clEnumValN(SummaryType::WPA, "wpa",
                           "Whole-program analysis suite")),
-    cl::cat(SsafFormatCategory));
+    cl::init(SummaryType::Auto), cl::cat(SsafFormatCategory));
 
 cl::opt<std::string> InputPath(cl::Positional, cl::desc("<input file>"),
                                cl::cat(SsafFormatCategory));
@@ -222,12 +246,6 @@ FormatInput validateInput() {
 
   FormatInput FI;
 
-  // Validate Type explicitly since we don't want to specify it if --list is
-  // provided.
-  if (!Type.getNumOccurrences()) {
-    fail("'--type' option is required");
-  }
-
   // Validate the input path.
   {
     if (InputPath.empty()) {
@@ -269,6 +287,15 @@ void run(const FormatInput &FI, ReadFn Read, WriteFn Write) {
 
 void convert(const FormatInput &FI) {
   switch (Type) {
+  case SummaryType::Auto:
+    if (UseEncoding) {
+      run(FI, &SerializationFormat::readArtifactEncoding,
+          &SerializationFormat::writeArtifactEncoding);
+    } else {
+      run(FI, &SerializationFormat::readArtifact,
+          &SerializationFormat::writeArtifact);
+    }
+    return;
   case SummaryType::TU:
     if (UseEncoding) {
       run(FI, &SerializationFormat::readTUSummaryEncoding,
@@ -286,6 +313,26 @@ void convert(const FormatInput &FI) {
       run(FI, &SerializationFormat::readLUSummary,
           &SerializationFormat::writeLUSummary);
     }
+    return;
+  case SummaryType::StaticLibrary:
+    // StaticLibrary has only an encoded representation, so --encoding is a
+    // no-op here: both paths route to readStaticLibrary / writeStaticLibrary.
+    run(FI, &SerializationFormat::readStaticLibrary,
+        &SerializationFormat::writeStaticLibrary);
+    return;
+  case SummaryType::MultiArchStaticLibrary:
+    // MultiArchStaticLibrary has only an encoded representation, so
+    // --encoding is a no-op here: both paths route to
+    // readMultiArchStaticLibrary / writeMultiArchStaticLibrary.
+    run(FI, &SerializationFormat::readMultiArchStaticLibrary,
+        &SerializationFormat::writeMultiArchStaticLibrary);
+    return;
+  case SummaryType::MultiArchSharedLibrary:
+    // MultiArchSharedLibrary has only an encoded representation, so
+    // --encoding is a no-op here: both paths route to
+    // readMultiArchSharedLibrary / writeMultiArchSharedLibrary.
+    run(FI, &SerializationFormat::readMultiArchSharedLibrary,
+        &SerializationFormat::writeMultiArchSharedLibrary);
     return;
   case SummaryType::WPA:
     run(FI, &SerializationFormat::readWPASuite,

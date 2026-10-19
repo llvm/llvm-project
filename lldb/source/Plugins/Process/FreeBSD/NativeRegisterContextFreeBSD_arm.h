@@ -18,7 +18,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
+#include "Plugins/Process/Utility/RegisterInfo_arm.h"
 
 #include <array>
 
@@ -57,7 +57,7 @@ private:
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);
 
-  RegisterInfoPOSIX_arm &GetRegisterInfo() const;
+  RegisterInfo_arm &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

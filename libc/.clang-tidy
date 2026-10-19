@@ -1,5 +1,5 @@
 InheritParentConfig: false
-Checks: 'readability-identifier-naming'
+Checks: '-*,readability-identifier-naming'
 HeaderFilterRegex: '.*'
 CheckOptions:
   - key:             readability-identifier-naming.ClassCase

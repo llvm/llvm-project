@@ -17,7 +17,7 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR float ceilf(float x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    !defined(LIBC_HAS_CONSTANT_EVALUATION)
+    !defined(LIBC_USE_CONSTEXPR)
   return __builtin_ceilf(x);
 #else
   return fputil::ceil(x);

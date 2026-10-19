@@ -24,6 +24,13 @@ tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PreLegalizerCombiner")
 tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PostLegalizerCombiner")
+
+set(LLVM_TARGET_DEFINITIONS X86Options.td)
+tablegen(LLVM X86Options.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/X86MCOptions.td)
+tablegen(LLVM X86MCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
@@ -69,6 +76,7 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86CompressEVEX.cpp
+  X86LFIRewritePass.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp
@@ -90,6 +98,7 @@ set(sources
   X86TargetTransformInfo.cpp
   X86WinEHState.cpp
   X86WinEHUnwindV2.cpp
+  X86WinEHUnwindV3.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
   GISel/X86LegalizerInfo.cpp
@@ -107,12 +116,12 @@ add_llvm_target(X86CodeGen ${sources}
   CodeGenTypes
   Core
   GlobalISel
-  IRPrinter
   Instrumentation
   MC
   ObjCARC
+  Option
+  Passes
   ProfileData
-  Scalar
   SelectionDAG
   Support
   Target

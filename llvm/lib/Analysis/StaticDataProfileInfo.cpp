@@ -4,6 +4,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 
@@ -11,13 +12,17 @@
 
 using namespace llvm;
 
+cl::opt<bool> PreserveHotDataSectionPrefix(
+    "preserve-hot-data-section-prefix", cl::Hidden, cl::init(true),
+    cl::desc("If true, hot data section prefixes are preserved"));
+
 namespace llvm {
 // FIXME: This option is added for incremental rollout purposes.
 // After the option, string literal partitioning should be implied by
 // AnnotateStaticDataSectionPrefix in MemProfUse.cpp and this option should be
 // cleaned up.
 cl::opt<bool> AnnotateStringLiteralSectionPrefix(
-    "memprof-annotate-string-literal-section-prefix", cl::init(false),
+    "memprof-annotate-string-literal-section-prefix", cl::init(true),
     cl::Hidden,
     cl::desc("If true, annotate the string literal data section prefix"));
 namespace memprof {
@@ -107,7 +112,7 @@ StringRef StaticDataProfileInfo::hotnessToStr(StaticDataHotness Hotness) const {
   case StaticDataHotness::Cold:
     return "unlikely";
   case StaticDataHotness::Hot:
-    return "hot";
+    return PreserveHotDataSectionPrefix ? "hot" : "";
   default:
     return "";
   }
@@ -188,12 +193,17 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
   return hotnessToStr(getConstantHotnessUsingProfileCount(C, PSI, *Count));
 }
 
-bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
+static std::unique_ptr<StaticDataProfileInfo>
+computeStaticDataProfileInfo(Module &M) {
   bool EnableDataAccessProf = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("EnableDataAccessProf")))
     EnableDataAccessProf = MD->getZExtValue();
-  Info.reset(new StaticDataProfileInfo(EnableDataAccessProf));
+  return std::make_unique<StaticDataProfileInfo>(EnableDataAccessProf);
+}
+
+bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
+  Info = computeStaticDataProfileInfo(M);
   return false;
 }
 
@@ -209,3 +219,10 @@ StaticDataProfileInfoWrapperPass::StaticDataProfileInfoWrapperPass()
     : ImmutablePass(ID) {}
 
 char StaticDataProfileInfoWrapperPass::ID = 0;
+
+StaticDataProfileInfoAnalysis::Result
+StaticDataProfileInfoAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  return StaticDataProfileInfoAnalysis::Result(computeStaticDataProfileInfo(M));
+}
+
+AnalysisKey llvm::StaticDataProfileInfoAnalysis::Key;

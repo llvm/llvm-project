@@ -94,9 +94,7 @@ class GPU_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
   let cppNamespace = "::mlir::gpu";
 }
 class GPU_I32EnumAttr<string mnemonic, GPU_I32Enum enumInfo> :
-    EnumAttr<GPU_Dialect, enumInfo, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<GPU_Dialect, enumInfo, mnemonic>;
 
 def GPU_AddressSpaceGlobal : I32EnumAttrCase<"Global", 1, "global">;
 def GPU_AddressSpaceWorkgroup : I32EnumAttrCase<"Workgroup", 2, "workgroup">;
@@ -114,6 +112,22 @@ def GPU_AddressSpaceAttr :
   GPU_I32EnumAttr<"address_space", GPU_AddressSpaceEnum>;
 
 def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
+
+def GPU_BarrierScopeSubgroup  : I32EnumCase<"Subgroup",  1, "subgroup">;
+def GPU_BarrierScopeWorkgroup : I32EnumCase<"Workgroup", 2, "workgroup">;
+def GPU_BarrierScopeCluster   : I32EnumCase<"Cluster",   3, "cluster">;
+
+def GPU_BarrierScopeEnum : I32Enum<
+  "BarrierScope", "barrier execution scope", [
+    GPU_BarrierScopeSubgroup,
+    GPU_BarrierScopeWorkgroup,
+    GPU_BarrierScopeCluster
+  ]> {
+  let cppNamespace = "::mlir::gpu";
+}
+
+def GPU_BarrierScopeAttr :
+    EnumAttr<GPU_Dialect, GPU_BarrierScopeEnum, "barrier_scope">;
 
 def GPU_Dimension : GPU_I32Enum<"Dimension",
     "a dimension, either 'x', 'y', or 'z'",
@@ -169,6 +183,11 @@ def GPU_SparseDnTensorHandle : GPU_SparseHandle<"SparseDnTensorHandleType", "den
 def GPU_SparseSpGEMMOpHandle : GPU_SparseHandle<"SparseSpGEMMOpHandleType", "SpGEMM operation">;
 def GPU_SparseSpMatHandle : GPU_SparseHandle<"SparseSpMatHandleType", "sparse matrix">;
 
+def GPU_NamedBarrier : DialectType<
+  GPU_Dialect,
+  CPred<"::llvm::isa<::mlir::gpu::NamedBarrierType>($_self)">,
+  "named barrier type">,
+  BuildableType<"mlir::gpu::NamedBarrierType::get($_builder.getContext())">;
 
 //===----------------------------------------------------------------------===//
 // GPU Interfaces.

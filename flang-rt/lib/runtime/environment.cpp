@@ -17,10 +17,12 @@
 
 #ifdef _WIN32
 #include <stdlib.h>
-#elif defined(__FreeBSD__) || RT_GPU_TARGET
+#elif defined(__FreeBSD__)
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined
 // See https://reviews.freebsd.org/D30842#840642
+#include <dlfcn.h>
+#elif RT_GPU_TARGET
 // GPU targets do not provide environ.
 #else
 extern char **environ;
@@ -95,6 +97,168 @@ common::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
 }
 RT_OFFLOAD_API_GROUP_END
 
+bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
+  bool success{true};
+  char *envStr{strdup(cenvStr)};
+
+  if (nullptr == envStr) {
+    Terminator{__FILE__, __LINE__}.Crash(
+        "FORT_CONVERT_UNIT: could not allocate memory");
+  }
+
+  char *exceptionSvptr{nullptr};
+  // Pass the string only on the first call; some libcs (e.g. AIX) set the
+  // save pointer to nullptr after the last token.
+  char *nextStr{envStr};
+  char *exceptionStr;
+  char *unitListStr;
+  bool firstException{true};
+  Convert gblConversion{conversion};
+
+  // Flang's FORT_CONVERT_UNIT syntax follows NVIDIA's FORT_CONVERT_UNIT and
+  // GNU's gfortran GFORTRAN_CONVERT_UNIT.
+  //
+  // FORT_CONVERT_UNIT: mode | mode ';' exception | exception ;
+  // mode: 'native' | 'swap' | 'big_endian' | 'little_endian' ;
+  // exception: mode ':' unit_list | unit_list ;
+  // unit_list: unit_spec | unit_list ',' unit_spec ;
+  // unit_spec: INTEGER | INTEGER '-' INTEGER ;
+
+  while (success) {
+#if _WIN32
+    exceptionStr = strtok_s(nextStr, ";", &exceptionSvptr);
+#else
+    exceptionStr = strtok_r(nextStr, ";", &exceptionSvptr);
+#endif
+    nextStr = nullptr;
+    if (nullptr == exceptionStr) {
+      break;
+    }
+
+    // unitList is not yet correct, might be nullptr or pointing to ':'.
+    unitListStr = std::strchr(exceptionStr, ':');
+
+    if (firstException && (nullptr == unitListStr) &&
+        !isdigit(exceptionStr[0])) {
+      // if first pass extracting an exception, and exceptionStr does not
+      // contain a ':' this becomes the global setting.
+      // Akin to specifying FORT_CONVERT=<mode>.
+      if (auto convert{
+              GetConvertFromString(exceptionStr, std::strlen(exceptionStr))}) {
+        gblConversion = *convert;
+      } else {
+        success = false;
+        break;
+      }
+      firstException = false;
+      continue;
+    }
+
+    // mode ';' exception | exception
+    char *unitListSvptr{nullptr};
+    // For the case where <mode> is unspecified
+    Convert conversion{Convert::BigEndian};
+
+    // If unitListStr != nullptr extract mode from modeStr[:unitListStr-1].
+    if (nullptr != unitListStr) {
+      *unitListStr++ = '\0'; // Advance unitListStr
+      if (auto convert{
+              GetConvertFromString(exceptionStr, std::strlen(exceptionStr))}) {
+        conversion = *convert;
+      } else {
+        success = false;
+        break;
+      }
+    } else {
+      unitListStr = exceptionStr;
+    }
+
+    unitListSvptr = nullptr;
+
+    // Loop over unit list extracting individual or ranges of units, separated
+    // by commas.
+
+    while (success) {
+      char *units;
+      int lb, ub;
+      char remStr[2];
+      int nread;
+      int nexpected;
+
+      lb = ub = -1;
+#if _WIN32
+      units = strtok_s(unitListStr, ",", &unitListSvptr);
+#else
+      units = strtok_r(unitListStr, ",", &unitListSvptr);
+#endif
+      unitListStr = nullptr;
+      if (nullptr == units) {
+        break;
+      }
+
+      // single unit or range of units.
+      // If hyphen is detected in units, assume range
+      if (std::strchr(units, '-')) {
+        nexpected = 2;
+        nread = std::sscanf(units, "%u-%u%1s", &lb, &ub, remStr);
+      } else {
+        nexpected = 1;
+        nread = std::sscanf(units, "%u%1s", &lb, remStr);
+        ub = lb;
+      }
+      if (nread != nexpected || (lb < 0) || (ub < 0) || (lb > ub)) {
+        success = false;
+        break;
+      }
+
+      // Resize convertUnits on each iteration.  This is a small array.
+      // Overhead of resizing convertUnits on each call is negligible.
+      ConvertUnit *tmpConvertUnits{(ConvertUnit *)std::realloc(
+          convertUnits, (numConvertUnits + 1) * sizeof(*convertUnits))};
+      if (!tmpConvertUnits) {
+        success = false;
+        break;
+      }
+      convertUnits = tmpConvertUnits;
+      convertUnits[numConvertUnits].conversion = conversion;
+      convertUnits[numConvertUnits].startUnit = lb;
+      convertUnits[numConvertUnits].endUnit = ub;
+      ++numConvertUnits;
+    }
+  }
+
+  std::free(envStr); // from strdup()
+
+  if (success) {
+    conversion = gblConversion;
+  } else {
+    // Failure(s) - backout anything that could be permanent.
+    std::free(convertUnits);
+    convertUnits = nullptr; // avoid a double free in ExternalFileUnit::CloseAll
+    numConvertUnits = 0;
+  }
+  return success;
+}
+
+// ExecutionEnvironment::UnitRtConvert
+// Scan linear array ExecutionEnvironment::convertUnits for unitNumber, and if
+// found, return user specified (runtime) I/O conversion for unformatted
+// files.
+
+Convert ExecutionEnvironment::UnitRtConvert(int unitNumber) {
+  Convert convertReturn{Convert::Unknown};
+  // convertUnits is a small array, but still iterate backwards.
+  for (auto i = numConvertUnits; i != 0;) {
+    --i;
+    if (unitNumber >= convertUnits[i].startUnit &&
+        unitNumber <= convertUnits[i].endUnit) {
+      convertReturn = convertUnits[i].conversion;
+      break;
+    }
+  }
+  return convertReturn;
+}
+
 void ExecutionEnvironment::Configure(int ac, const char *av[],
     const char *env[], const EnvironmentDefaultList *envDefaults) {
   argc = ac;
@@ -127,7 +291,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("FORT_FMT_RECL")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
-    if (n > 0 && n < std::numeric_limits<int>::max() && *end == '\0') {
+    if (n > 0 && n < common::numeric_limits<int>::max() && *end == '\0') {
       listDirectedOutputLineLengthLimit = n;
     } else {
       std::fprintf(
@@ -141,6 +305,13 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(
           stderr, "Fortran runtime: FORT_CONVERT=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_CONVERT_UNIT")}) {
+    if (!ParseFortConvertUnit(x)) {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_CONVERT_UNIT=%s is invalid; ignored\n", x);
     }
   }
 
@@ -163,6 +334,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(stderr,
           "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FLANG_TIMEF_IN_MILLISECONDS")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      timefInMillisec = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_TIMEF_IN_MILLISECONDS=%s is invalid; "
+          "ignored\n",
+          x);
     }
   }
 
@@ -190,6 +374,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FLANG_RT_COPYOUT_MODIFIED_ONLY")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      copyOutModifiedOnly = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_RT_COPYOUT_MODIFIED_ONLY=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
   if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
     internalDebugging = std::strtol(x, nullptr, 10);
   }
@@ -197,7 +394,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
-    if (n > 0 && n != std::numeric_limits<unsigned long>::max() &&
+    if (n > 0 && n != common::numeric_limits<unsigned long>::max() &&
         *end == '\0') {
       cudaStackLimit = n;
     } else {

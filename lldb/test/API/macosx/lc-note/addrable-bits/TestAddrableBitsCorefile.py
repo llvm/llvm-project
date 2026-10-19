@@ -20,7 +20,7 @@ class TestAddrableBitsCorefile(TestBase):
         self.corefile = self.getBuildArtifact("corefile")
 
     @skipIf(archs=no_match(["arm64e"]))
-    @skipUnlessDarwin
+    @requireDarwin
     def test_lc_note_addrable_bits(self):
         self.initial_setup()
 

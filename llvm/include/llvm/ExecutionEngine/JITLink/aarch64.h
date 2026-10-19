@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
 
 namespace llvm {
 namespace jitlink {
@@ -493,6 +494,11 @@ inline unsigned getMoveWide16Shift(uint32_t Instr) {
 }
 
 /// Apply fixup expression for edge to block content.
+///
+/// \tparam Endianness the target endianness applied to data fixups. In BE8
+///        mode instructions remain little-endian (the A64 ISA is
+///        word-invariant), so only data fixups use this value.
+template <llvm::endianness Endianness>
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
   using namespace support;
@@ -504,14 +510,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   switch (E.getKind()) {
   case Pointer64: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    *(ulittle64_t *)FixupPtr = Value;
+    endian::write64<Endianness>(FixupPtr, Value);
     break;
   }
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (Value > std::numeric_limits<uint32_t>::max())
       return makeTargetOutOfRangeError(G, B, E);
-    *(ulittle32_t *)FixupPtr = Value;
+    endian::write32<Endianness>(FixupPtr, Value);
     break;
   }
   case Delta32:
@@ -528,9 +534,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
         return makeTargetOutOfRangeError(G, B, E);
-      *(little32_t *)FixupPtr = Value;
+      endian::write32<Endianness>(FixupPtr, static_cast<uint32_t>(Value));
     } else
-      *(little64_t *)FixupPtr = Value;
+      endian::write64<Endianness>(FixupPtr, static_cast<uint64_t>(Value));
     break;
   }
   case Branch26PCRel: {
@@ -870,7 +876,10 @@ public:
   }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getKind() == aarch64::Branch26PCRel && !E.getTarget().isDefined()) {
+    // Don't route edges with nonzero addends through stubs: the addend applies
+    // to the target, not the stub.
+    if (E.getKind() == aarch64::Branch26PCRel && E.getAddend() == 0 &&
+        !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
                << B->getFixupAddress(E) << " (" << B->getAddress() << " + "

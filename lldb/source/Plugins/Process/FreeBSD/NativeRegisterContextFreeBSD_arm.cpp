@@ -15,7 +15,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
+#include "Plugins/Process/Utility/RegisterInfo_arm.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -36,11 +36,11 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 NativeRegisterContextFreeBSD_arm::NativeRegisterContextFreeBSD_arm(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm(target_arch)) {}
+          native_thread, new RegisterInfo_arm(target_arch)) {}
 
-RegisterInfoPOSIX_arm &
+RegisterInfo_arm &
 NativeRegisterContextFreeBSD_arm::GetRegisterInfo() const {
-  return static_cast<RegisterInfoPOSIX_arm &>(*m_register_info_interface_up);
+  return static_cast<RegisterInfo_arm &>(*m_register_info_interface_up);
 }
 
 uint32_t NativeRegisterContextFreeBSD_arm::GetRegisterSetCount() const {
@@ -61,26 +61,26 @@ uint32_t NativeRegisterContextFreeBSD_arm::GetUserRegisterCount() const {
 
 Status NativeRegisterContextFreeBSD_arm::ReadRegisterSet(uint32_t set) {
   switch (set) {
-  case RegisterInfoPOSIX_arm::GPRegSet:
+  case RegisterInfo_arm::GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
                                                m_reg_data.data());
-  case RegisterInfoPOSIX_arm::FPRegSet:
+  case RegisterInfo_arm::FPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(
         PT_GETVFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfoPOSIX_arm::GPR));
+        m_reg_data.data() + sizeof(RegisterInfo_arm::GPR));
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_arm::ReadRegisterSet");
 }
 
 Status NativeRegisterContextFreeBSD_arm::WriteRegisterSet(uint32_t set) {
   switch (set) {
-  case RegisterInfoPOSIX_arm::GPRegSet:
+  case RegisterInfo_arm::GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
                                                m_reg_data.data());
-  case RegisterInfoPOSIX_arm::FPRegSet:
+  case RegisterInfo_arm::FPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(
         PT_SETVFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfoPOSIX_arm::GPR));
+        m_reg_data.data() + sizeof(RegisterInfo_arm::GPR));
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_arm::WriteRegisterSet");
 }
@@ -143,11 +143,11 @@ Status NativeRegisterContextFreeBSD_arm::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
-  error = ReadRegisterSet(RegisterInfoPOSIX_arm::GPRegSet);
+  error = ReadRegisterSet(RegisterInfo_arm::GPRegSet);
   if (error.Fail())
     return error;
 
-  error = ReadRegisterSet(RegisterInfoPOSIX_arm::FPRegSet);
+  error = ReadRegisterSet(RegisterInfo_arm::FPRegSet);
   if (error.Fail())
     return error;
 
@@ -188,11 +188,11 @@ Status NativeRegisterContextFreeBSD_arm::WriteAllRegisterValues(
   }
   ::memcpy(m_reg_data.data(), src, m_reg_data.size());
 
-  error = WriteRegisterSet(RegisterInfoPOSIX_arm::GPRegSet);
+  error = WriteRegisterSet(RegisterInfo_arm::GPRegSet);
   if (error.Fail())
     return error;
 
-  return WriteRegisterSet(RegisterInfoPOSIX_arm::FPRegSet);
+  return WriteRegisterSet(RegisterInfo_arm::FPRegSet);
 }
 
 llvm::Error NativeRegisterContextFreeBSD_arm::CopyHardwareWatchpointsFrom(

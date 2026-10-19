@@ -13,9 +13,9 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
@@ -76,16 +76,15 @@ void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
 /// Collect a set of patterns to lower `gpu.subgroup_reduce` into `amdgpu.dpp`
 /// ops over scalar types. Assumes that the subgroup has
 /// `subgroupSize` lanes. Applicable only to AMD GPUs.
-void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
-                                                 unsigned subgroupSize,
-                                                 amdgpu::Chipset chipset,
-                                                 PatternBenefit benefit = 1);
+void populateGpuLowerSubgroupReduceToDPPPatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    const ROCDL::TargetInfo &target, PatternBenefit benefit = 1);
 
 /// Disjoint counterpart of `populateGpuLowerSubgroupReduceToDPPPatterns`
 /// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
 void populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
-    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
-    PatternBenefit benefit = 1);
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    const ROCDL::TargetInfo &target, PatternBenefit benefit = 1);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
@@ -115,7 +114,7 @@ void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);
 
 /// Tries to promote `gpu.shuffle`s to specialized AMDGPU intrinsics.
 void populateGpuPromoteShuffleToAMDGPUPatterns(
-    RewritePatternSet &patterns, std::optional<amdgpu::Chipset> maybeChipset);
+    RewritePatternSet &patterns, std::optional<ROCDL::TargetInfo> target);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION

@@ -23,6 +23,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 namespace llvm {
 
@@ -60,8 +61,8 @@ public:
 //   Kills: a bit vector which contains a set of indices of blocks that can
 //          reach block 'i' but there is a path crossing a suspend point
 //          not repeating 'i' (path to 'i' without cycles containing 'i').
-//   Suspend: a boolean indicating whether block 'i' contains a suspend point.
-//   End: a boolean indicating whether block 'i' contains a coro.end intrinsic.
+//   AlwaysKill: a boolean indicating whether block 'i' always propagate kills.
+//   NeverKill: a boolean indicating whether block 'i' never propagate kills.
 //   KillLoop: There is a path from 'i' to 'i' not otherwise repeating 'i' that
 //             crosses a suspend point.
 //
@@ -71,10 +72,24 @@ class SuspendCrossingInfo {
   struct BlockData {
     BitVector Consumes;
     BitVector Kills;
-    bool Suspend = false;
-    bool End = false;
     bool KillLoop = false;
     bool Changed = false;
+
+  private:
+    bool AlwaysKill = false;
+    bool NeverKill = false;
+
+  public:
+    bool isAlwaysKill() const { return AlwaysKill; }
+    bool isNeverKill() const { return NeverKill; }
+    void setAlwaysKill() {
+      AlwaysKill = true;
+      NeverKill = false;
+    }
+    void setNeverKill() {
+      AlwaysKill = false;
+      NeverKill = true;
+    }
   };
   SmallVector<BlockData, 32> Block;
 
@@ -104,9 +119,7 @@ public:
 #endif
 
   LLVM_ABI
-  SuspendCrossingInfo(Function &F,
-                      const SmallVectorImpl<AnyCoroSuspendInst *> &CoroSuspends,
-                      const SmallVectorImpl<AnyCoroEndInst *> &CoroEnds);
+  SuspendCrossingInfo(Function &F, const coro::Shape &Shape);
 
   /// Returns true if there is a path from \p From to \p To crossing a suspend
   /// point without crossing \p From a 2nd time.

@@ -31,8 +31,8 @@ namespace llvm::vfs {
 ///
 /// If virtual functions are added here, also add them to \a
 /// ProxyOutputBackend.
-class OutputBackend : public RefCountedBase<OutputBackend> {
-  LLVM_ABI virtual void anchor();
+class LLVM_ABI OutputBackend : public RefCountedBase<OutputBackend> {
+  virtual void anchor();
 
 public:
   /// Get a backend that points to the same destination as this one but that
@@ -47,7 +47,7 @@ public:
   /// have been customized).
   ///
   /// Thread-safe.
-  LLVM_ABI Expected<OutputFile>
+  Expected<OutputFile>
   createFile(const Twine &Path,
              std::optional<OutputConfig> Config = std::nullopt);
 

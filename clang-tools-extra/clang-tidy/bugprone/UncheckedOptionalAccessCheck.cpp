@@ -27,7 +27,7 @@ static constexpr StringRef FuncID = "fun";
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto HasOptionalCallDescendant = hasDescendant(callExpr(
+  const auto HasOptionalCallDescendant = hasDescendant(callExpr(
       anyOf(UncheckedOptionalAccessModel::memberCallToOptionalClass(),
             UncheckedOptionalAccessModel::operatorCallToOptionalClass())));
   Finder->addMatcher(

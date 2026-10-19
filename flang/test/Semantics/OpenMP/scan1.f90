@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=50
 
 subroutine test_scan()
  integer x, y, k, z
@@ -8,7 +8,7 @@ subroutine test_scan()
  !$omp scan inclusive(x)
  !$omp parallel do simd
  do k = 1, n
- !ERROR: UNTIED clause is not allowed on the SCAN directive
+ !ERROR: UNTIED clause is not allowed on SCAN directive
    !$omp scan untied
  end do
 

@@ -13,9 +13,9 @@ define void @matmul(ptr %a, ptr %b, ptr %c) {
 ; SPLIT_REMAINDER-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD:%.*]] = load <3 x float>, ptr [[A]], align 4
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD1:%.*]] = load <3 x float>, ptr [[B]], align 4
-; SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[B]], i64 3
+; SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD2:%.*]] = load <3 x float>, ptr [[VEC_GEP]], align 4
-; SPLIT_REMAINDER-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr [[B]], i64 6
+; SPLIT_REMAINDER-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 6
 ; SPLIT_REMAINDER-NEXT:    [[COL_LOAD4:%.*]] = load <3 x float>, ptr [[VEC_GEP3]], align 4
 ; SPLIT_REMAINDER-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x float> [[COL_LOAD1]], <3 x float> poison, <2 x i32> <i32 0, i32 1>
 ; SPLIT_REMAINDER-NEXT:    [[TMP1:%.*]] = extractelement <3 x float> [[COL_LOAD]], i64 0
@@ -62,9 +62,9 @@ define void @matmul(ptr %a, ptr %b, ptr %c) {
 ; NO_SPLIT_REMAINDER-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD:%.*]] = load <3 x float>, ptr [[A]], align 4
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD1:%.*]] = load <3 x float>, ptr [[B]], align 4
-; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[B]], i64 3
+; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD2:%.*]] = load <3 x float>, ptr [[VEC_GEP]], align 4
-; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP3:%.*]] = getelementptr float, ptr [[B]], i64 6
+; NO_SPLIT_REMAINDER-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 6
 ; NO_SPLIT_REMAINDER-NEXT:    [[COL_LOAD4:%.*]] = load <3 x float>, ptr [[VEC_GEP3]], align 4
 ; NO_SPLIT_REMAINDER-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x float> [[COL_LOAD1]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; NO_SPLIT_REMAINDER-NEXT:    [[TMP1:%.*]] = extractelement <3 x float> [[COL_LOAD]], i64 0

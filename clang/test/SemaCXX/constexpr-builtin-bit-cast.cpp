@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char
 // RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s
 
+// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple x86_64-apple-macosx10.14.0 %s -fno-signed-char -fexperimental-new-constant-interpreter -DBYTECODE
+// RUN: %clang_cc1 -verify -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s -fexperimental-new-constant-interpreter -DBYTECODE
+
+
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #  define LITTLE_END 1
 #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -132,6 +137,9 @@ void test_partially_initialized() {
   static_assert(fine.x == 1 && fine.y == 5);
 }
 
+/// This works in the bytecode interpreter and is tested
+/// in test/AST/ByteCode/builtin-bit-cast-bitfields.cpp
+#ifndef BYTECODE
 void no_bitfields() {
   // FIXME!
   struct S {
@@ -147,6 +155,7 @@ void no_bitfields() {
   // expected-note@+1 {{constexpr bit_cast involving bit-field is not yet supported}}
   constexpr G g = __builtin_bit_cast(G, s);
 }
+#endif
 
 void array_members() {
   struct S {

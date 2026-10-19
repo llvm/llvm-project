@@ -498,7 +498,7 @@ define i16 @combine_i16_srem_pow2(i16 %x) {
 ; CHECK-NEXT:    leal 15(%rax), %ecx
 ; CHECK-NEXT:    testw %ax, %ax
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-16, %ecx
+; CHECK-NEXT:    andl $65520, %ecx # imm = 0xFFF0
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
 ; CHECK-NEXT:    retq
@@ -513,7 +513,7 @@ define i16 @combine_i16_srem_negpow2(i16 %x) {
 ; CHECK-NEXT:    leal 255(%rax), %ecx
 ; CHECK-NEXT:    testw %ax, %ax
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-256, %ecx
+; CHECK-NEXT:    andl $65280, %ecx # imm = 0xFF00
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
 ; CHECK-NEXT:    retq

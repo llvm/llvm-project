@@ -29,8 +29,8 @@ namespace llvm {
       return MVT::i8;
     }
 
-    MVT::SimpleValueType getCmpLibcallReturnType() const override {
-      return MVT::i16;
+    IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const override {
+      return Type::getInt16Ty(Ctx);
     }
 
     /// LowerOperation - Provide custom lowering hooks for some operations.

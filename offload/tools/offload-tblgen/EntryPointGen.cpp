@@ -82,10 +82,12 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   }
   OS << ") {\n";
 
-  // Check offload is initialized
-  if (F.getName() != "olInit") {
+  // Check offload is initialized. olShutDown checks this itself as the context
+  // may have been released at process exit.
+  if (F.getName() != "olInit" && F.getName() != "olShutDown")
     OS << "if (!llvm::offload::isOffloadInitialized()) return &UninitError;";
 
+  if (F.getName() != "olInit") {
     // Emit pre-call prints
     // Postpone pre-calls for olInit as tracing requires liboffload to be initialized
     OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";

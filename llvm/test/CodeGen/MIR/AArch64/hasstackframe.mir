@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=prologepilog -mtriple arm64-apple-ios -o - -simplify-mir \
+# RUN: llc -run-pass=prolog-epilog -mtriple arm64-apple-ios -o - -simplify-mir \
 # RUN:    -verify-machineinstrs %s | FileCheck %s
 
 # CHECK:  hasStackFrame:   true

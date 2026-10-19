@@ -16,6 +16,7 @@
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -44,7 +45,7 @@ public:
       std::unique_ptr<EmulateInstruction> emulator_up)
       : m_emulator_up{std::move(emulator_up)} {}
 
-  virtual BreakpointLocations GetBreakpointLocations(Status &status);
+  virtual llvm::Expected<BreakpointLocations> GetBreakpointLocations();
 
   virtual llvm::Expected<unsigned>
   GetBreakpointSize([[maybe_unused]] lldb::addr_t bp_addr) {
@@ -58,10 +59,10 @@ protected:
   // in the binary file. Essentially, it reads the value of the PC register,
   // determines the size of the current instruction (where the PC is pointing),
   // and returns the sum of these two values.
-  lldb::addr_t GetNextInstructionAddress(Status &error);
+  llvm::Expected<lldb::addr_t> GetNextInstructionAddress();
 
-  lldb::addr_t GetBreakpointLocationAddress(lldb::addr_t entry_pc,
-                                            Status &error);
+  llvm::Expected<lldb::addr_t>
+  GetBreakpointLocationAddress(lldb::addr_t entry_pc);
 
   std::unique_ptr<EmulateInstruction> m_emulator_up;
   bool m_emulation_result = false;
