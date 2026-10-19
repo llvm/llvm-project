@@ -314,9 +314,6 @@ static LogicalResult verifyLifetimeOp(LifetimeOpTy op) {
   if (ptrType.getStorageClass() != spirv::StorageClass::Function)
     return op.emitOpError("pointer must have the Function storage class");
 
-  if (op.getSize() != 0)
-    return op.emitOpError("size must be 0 for a pointer to a non-void type");
-
   return success();
 }
 

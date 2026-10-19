@@ -429,7 +429,7 @@ def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
 
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
-    I32Attr:$size
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
   );
 
   let results = (outs);
@@ -473,7 +473,7 @@ def SPIRV_LifetimeStopOp : SPIRV_Op<"LifetimeStop", [InFunctionScope]> {
 
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
-    I32Attr:$size
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
   );
 
   let results = (outs);
