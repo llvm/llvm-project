@@ -1653,7 +1653,7 @@ static IntegerType *getIntTy(IRBuilderBase &B, const TargetLibraryInfo *TLI) {
 }
 
 static IntegerType *getSizeTTy(IRBuilderBase &B, const TargetLibraryInfo *TLI) {
-  const Module *M = B.GetInsertBlock()->getModule();
+  const Module *M = B.getModule();
   return B.getIntNTy(TLI->getSizeTSize(*M));
 }
 
@@ -1662,7 +1662,7 @@ static Value *emitLibCall(LibFunc TheLibFunc, Type *ReturnType,
                           ArrayRef<Value *> Operands, IRBuilderBase &B,
                           const TargetLibraryInfo *TLI,
                           bool IsVaArgs = false) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, TheLibFunc))
     return nullptr;
 
@@ -1751,7 +1751,7 @@ Value *llvm::emitStpNCpy(Value *Dst, Value *Src, Value *Len, IRBuilderBase &B,
 Value *llvm::emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                            IRBuilderBase &B, const DataLayout &DL,
                            const TargetLibraryInfo *TLI) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, LibFunc_memcpy_chk))
     return nullptr;
 
@@ -1930,7 +1930,7 @@ static Value *emitUnaryFloatFnCallHelper(Value *Op, LibFunc TheLibFunc,
                                          const TargetLibraryInfo *TLI) {
   assert((Name != "") && "Must specify Name to emitUnaryFloatFnCall");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   FunctionCallee Callee = getOrInsertLibFunc(M, *TLI, TheLibFunc, Op->getType(),
                                              Op->getType());
   CallInst *CI = B.CreateCall(Callee, Op, Name);
@@ -1962,7 +1962,7 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
                                   LibFunc LongDoubleFn, IRBuilderBase &B,
                                   const AttributeList &Attrs) {
   // Get the name of the function according to TLI.
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   LibFunc TheLibFunc;
   StringRef Name = getFloatFn(M, TLI, Op->getType(), DoubleFn, FloatFn,
                               LongDoubleFn, TheLibFunc);
@@ -1977,7 +1977,7 @@ static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
                                           const TargetLibraryInfo *TLI) {
   assert((Name != "") && "Must specify Name to emitBinaryFloatFnCall");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   FunctionCallee Callee = getOrInsertLibFunc(M, *TLI, TheLibFunc, Op1->getType(),
                                              Op1->getType(), Op2->getType());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
@@ -2014,7 +2014,7 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
                                    LibFunc LongDoubleFn, IRBuilderBase &B,
                                    const AttributeList &Attrs) {
   // Get the name of the function according to TLI.
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   LibFunc TheLibFunc;
   StringRef Name = getFloatFn(M, TLI, Op1->getType(), DoubleFn, FloatFn,
                               LongDoubleFn, TheLibFunc);
@@ -2075,7 +2075,7 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                          const TargetLibraryInfo *TLI,
                                          LibFunc SizeFeedbackNewFunc,
                                          Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
@@ -2100,7 +2100,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
                                                 const TargetLibraryInfo *TLI,
                                                 LibFunc SizeFeedbackNewFunc,
                                                 Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
@@ -2123,7 +2123,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
 Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
                             const TargetLibraryInfo *TLI, LibFunc NewFunc,
                             Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
@@ -2143,7 +2143,7 @@ Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
 Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
                                    const TargetLibraryInfo *TLI,
                                    LibFunc NewFunc, Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
@@ -2163,7 +2163,7 @@ Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
 Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
                                    const TargetLibraryInfo *TLI,
                                    LibFunc NewFunc, Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 
@@ -2184,7 +2184,7 @@ Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
                                           Value *NoThrow, IRBuilderBase &B,
                                           const TargetLibraryInfo *TLI,
                                           LibFunc NewFunc, Value *HotCold) {
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
 

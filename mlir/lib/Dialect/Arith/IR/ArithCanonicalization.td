@@ -42,8 +42,19 @@ def OrIntAttrs : NativeCodeCall<"orIntegerAttrs($_builder, $0, $1, $2)">;
 // Bitwise-xor two integer attributes and create a new one with the result.
 def XorIntAttrs : NativeCodeCall<"xorIntegerAttrs($_builder, $0, $1, $2)">;
 
-// Merge overflow flags from 2 ops, selecting the most conservative combination.
+// Intersect overflow flags. Callers must ensure the common flags remain valid
+// after rewriting.
 def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
+
+// For fixed-width integers, retain common flags only if the constant arithmetic
+// does not overflow in their respective signedness. Pass constants in folding
+// order.
+class MergeOverflowForReassociation<string op> : NativeCodeCall<
+    "mergeOverflowFlagsForReassociation($0, $1, $2, $3, " #
+    "&APInt::s" # op # "_ov, &APInt::u" # op # "_ov)">;
+def MergeOverflowForAdd : MergeOverflowForReassociation<"add">;
+def MergeOverflowForSub : MergeOverflowForReassociation<"sub">;
+def MergeOverflowForMul : MergeOverflowForReassociation<"mul">;
 
 // Default overflow flag (all wraparounds allowed).
 defvar DefOverflow = ConstantEnumCase<Arith_IntegerOverflowAttr, "none">;
@@ -69,13 +80,17 @@ def IsEqualityCmpIPredicate :
 // addi is commutative and will be canonicalized to have its constants appear
 // as the second operand.
 
+// Constant reassociation preserves the modular result, but combining the
+// constants may overflow even when the original operations do not. Check the
+// constant arithmetic before retaining common overflow flags.
+
 // addi(addi(x, c0), c1) -> addi(x, c0 + c1)
 def AddIAddConstant :
     Pat<(Arith_AddIOp:$res
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 // addi(subi(x, c0), c1) -> addi(x, c1 - c0)
 def AddISubConstantRHS :
@@ -83,7 +98,7 @@ def AddISubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c1, $c0))>;
 
 // addi(subi(c0, x), c1) -> subi(c0 + c1, x)
 def AddISubConstantLHS :
@@ -91,7 +106,7 @@ def AddISubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 def IsScalarOrSplatNegativeOne :
     Constraint<And<[
@@ -120,7 +135,7 @@ def MulIMulIConstant :
           (Arith_MulIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2)),
+            (MergeOverflowForMul $ovf1, $ovf2, $c0, $c1)),
              [(IntAttrTypeMatchesResult $res, $c0),
               (IntAttrTypeMatchesResult $res, $c1)]>;
 
@@ -164,7 +179,7 @@ def SubILHSAddConstant :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c1, $c0))>;
 
 // subi(subi(x, c0), c1) -> subi(x, c0 + c1)
 def SubIRHSSubConstantRHS :
@@ -172,7 +187,7 @@ def SubIRHSSubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 // subi(subi(c0, x), c1) -> subi(c0 - c1, x)
 def SubIRHSSubConstantLHS :
@@ -180,7 +195,7 @@ def SubIRHSSubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c0, $c1))>;
 
 // subi(c1, subi(x, c0)) -> subi(c0 + c1, x)
 def SubILHSSubConstantRHS :
@@ -188,7 +203,7 @@ def SubILHSSubConstantRHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 // subi(c1, subi(c0, x)) -> addi(x, c1 - c0)
 def SubILHSSubConstantLHS :
@@ -196,7 +211,7 @@ def SubILHSSubConstantLHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c1, $c0))>;
 
 // subi(subi(a, b), a) -> subi(0, b)
 def SubISubILHSRHSLHS :

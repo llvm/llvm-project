@@ -3181,32 +3181,48 @@ struct FormatStyle {
   /// \version 13
   std::vector<std::string> IfMacros;
 
-  /// Specify whether access modifiers should have their own indentation level.
-  ///
-  /// When `false`, access modifiers are indented (or outdented) relative to
-  /// the record members, respecting the `AccessModifierOffset`. Record
-  /// members are indented one level below the record.
-  /// When `true`, access modifiers get their own indentation level. As a
-  /// consequence, record members are always indented 2 levels below the record,
-  /// regardless of the access modifier presence. Value of the
-  /// `AccessModifierOffset` is ignored.
-  /// \code
-  ///    false:                                 true:
-  ///    class C {                      vs.     class C {
-  ///      class D {                                class D {
-  ///        void bar();                                void bar();
-  ///      protected:                                 protected:
-  ///        D();                                       D();
-  ///      };                                       };
-  ///    public:                                  public:
-  ///      C();                                     C();
-  ///    };                                     };
-  ///    void foo() {                           void foo() {
-  ///      return 1;                              return 1;
-  ///    }                                      }
-  /// \endcode
+  /// Modes for indenting access modifiers and record members.
+  enum IndentAccessModifierStyle : int8_t {
+    /// Use `AccessModifierOffset` for access modifiers and indent members one
+    /// level below the record.
+    /// \code
+    ///   struct S {
+    ///     int before;
+    ///
+    ///   public:
+    ///     int after;
+    ///   };
+    /// \endcode
+    IAMS_Never,
+    /// Give access modifiers their own indentation level and indent all
+    /// members two levels below the record. Value of the `AccessModifierOffset`
+    /// is ignored.
+    /// \code
+    ///   struct S {
+    ///       int before;
+    ///
+    ///     public:
+    ///       int after;
+    ///   };
+    /// \endcode
+    IAMS_Always,
+    /// In C, C++, and Objective-C, indent members one level until the first
+    /// explicit access modifier, then two levels. Other languages use the
+    /// `Always` behavior. Value of the `AccessModifierOffset` is ignored.
+    /// \code
+    ///   struct S {
+    ///     int before;
+    ///
+    ///     public:
+    ///       int after;
+    ///   };
+    /// \endcode
+    IAMS_AfterFirstAccessModifier,
+  };
+
+  /// Specify how access modifiers and record members are indented.
   /// \version 13
-  bool IndentAccessModifiers;
+  IndentAccessModifierStyle IndentAccessModifiers;
 
   /// Indent case label blocks one level from the case label.
   ///

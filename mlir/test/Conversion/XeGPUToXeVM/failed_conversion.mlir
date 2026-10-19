@@ -135,3 +135,97 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+
+// Xe3p has no minimum width and accepts the same source, see
+// create_nd_tdesc.mlir.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_too_narrow(%src: memref<8x8xf16, strided<[16, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface width must be at least 32 bytes on this target, got 16 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[16, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+// A f16 row of 33 elements is past the Xe2 32 byte minimum, but not 4 byte
+// aligned.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_misaligned(%src: memref<8x33xf16>) kernel {
+    // expected-error@+2 {{2D block surface width must be a multiple of 4 bytes on this target, got 66 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x33xf16> -> !xegpu.tensor_desc<8x16xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_pitch_misaligned_xe2(%src: memref<8x16xf32, strided<[17, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface pitch must be a multiple of 16 bytes on this target, got 68 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[17, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// The width and the pitch are checked independently, so a dynamic pitch does
+// not excuse a static width.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_narrow_width_dynamic_pitch(%src: memref<8x8xf16, strided<[?, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface width must be at least 32 bytes on this target, got 16 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[?, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+// The mirror case: a dynamic width does not excuse a static pitch.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_dynamic_width_misaligned_pitch(%src: memref<8x?xf32, strided<[17, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface pitch must be a multiple of 16 bytes on this target, got 68 bytes.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x?xf32, strided<[17, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A sub-byte element type can leave the width on a fraction of a byte, which
+// satisfies no byte alignment at all and is rejected on every target.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_partial_byte(%src: memref<8x67xi4>) kernel {
+    // expected-error@+2 {{2D block surface width must be a multiple of 4 bytes on this target, got 268 bits.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x67xi4> -> !xegpu.tensor_desc<8x16xi4>
+    gpu.return
+  }
+}
+
+// -----
+
+// Both the width and the pitch pass their own limits here, but the rows would
+// overlap.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_pitch_below_width(%src: memref<8x16xf32, strided<[8, 1]>>) kernel {
+    // expected-error@+2 {{2D block surface pitch must be at least the surface width, got a pitch of 32 bytes for a surface 64 bytes wide.}}
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[8, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}

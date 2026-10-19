@@ -698,6 +698,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.IgnoreOOMs = Flags.ignore_ooms;
   Options.IgnoreCrashes = Flags.ignore_crashes;
   Options.MaxTotalTimeSec = Flags.max_total_time;
+  Options.StaleCorpusTimeoutSec = Flags.stale_corpus_timeout;
   Options.DoCrossOver = Flags.cross_over;
   Options.CrossOverUniformDist = Flags.cross_over_uniform_dist;
   Options.MutateDepth = Flags.mutate_depth;
@@ -924,8 +925,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   F->Loop(CorporaFiles);
 
   if (Flags.verbosity)
-    Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),
-           F->secondsSinceProcessStartUp());
+    Printf("Done %zd runs in %zd second(s), %zd second(s) without new corpus\n",
+           F->getTotalNumberOfRuns(), F->secondsSinceProcessStartUp(),
+           F->secondsSinceLastNewCorpus());
   F->PrintFinalStats();
 
   exit(0);  // Don't let F destroy itself.

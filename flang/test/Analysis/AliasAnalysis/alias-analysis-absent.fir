@@ -73,7 +73,7 @@ func.func @test_null_zero_bits() {
   %z2 = fir.zero_bits !fir.ref<i32>
   %n2 = fir.convert %z2 {test.ptr = "null_b"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %a = fir.alloca i32 {uniq_name = "_QFEnull_heap"}
-  %d = fir.declare %a {uniq_name = "_QFEnull_heap", test.ptr = "heap"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %a uniq_name("_QFEnull_heap") {test.ptr = "heap"} : (!fir.ref<i32>) -> !fir.ref<i32>
   return
 }
 

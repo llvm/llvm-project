@@ -167,10 +167,6 @@ static constexpr CustomOperand WaitEventOperands[] = {
 };
 // clang-format on
 
-int64_t getWaitEventMask(StringRef Name, const MCSubtargetInfo &STI) {
-  return getEncodingFromOperandTable(WaitEventOperands, Name, STI);
-}
-
 StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI) {
   return getNameFromOperandTable(WaitEventOperands, Encoding, STI);
 }

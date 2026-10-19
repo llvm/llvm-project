@@ -68,12 +68,12 @@ body:             |
 # CHECK:      SU(34):
 #
 # CHECK:      Move SU(5) into Available Q
-# CHECK:      Queue BotQ.A: 39 5
+# CHECK:      Queue BotQ.A: SU(39) SU(5)
 # CHECK-NOT:  Cand SU(5) REG-EXCESS
 # CHECK-NOT:  Scheduling SU(5)
 # CHECK:      Scheduling SU(39)
 #
-# CHECK:      Queue BotQ.A: 33 5
+# CHECK:      Queue BotQ.A: SU(33) SU(5)
 # CHECK:      Pick Bot Cand SU(5) BOT-HEIGHT [pre-RA]
 # CHECK-NEXT: Scheduling SU(5)
 #
@@ -168,12 +168,12 @@ body:             |
 # CHECK:      SU(36):   %36:gr64bit = AGFI %35:gr64bit(tied-def 0), 1, implicit-def dead $cc
 # CHECK:      Height             : 0
 #
-# CHECK:      Queue BotQ.A: 36 2
+# CHECK:      Queue BotQ.A: SU(36) SU(2)
 # CHECK-NOT:  Cand SU(2) REG-EXCESS
 # CHECK-NOT:  Scheduling SU(2)
 # CHECK:      Pick Bot Cand SU(36) FIRST [pre-RA]
 # CHECK-NEXT: Scheduling SU(36)
-# CHECK:      Queue BotQ.A: 2 32
+# CHECK:      Queue BotQ.A: SU(2) SU(32)
 # CHECK:      Pick Bot Cand SU(2) REG-EXCESS [pre-RA]
 # CHECK-NEXT: Scheduling SU(2)
 #
@@ -256,7 +256,7 @@ body:             |
 # CHECK:      Height             : 0
 # CHECK:      Pressure Diff      : {{$}}
 #
-# CHECK:      Queue BotQ.A: 37 3
+# CHECK:      Queue BotQ.A: SU(37) SU(3)
 # CHECK:      Scheduling SU(37)
 # CHECK-NOT:  BOT-HEIGHT [pre-RA]
 # CHECK-NOT:  REG-EXCESS [pre-RA]
@@ -344,13 +344,13 @@ body:             |
 # CHECK:      SU(38):   %M9:vr64bit = nofpexcept WFMDB %M7:vr64bit, %M7:vr64bit, implicit $fpc
 # CHECK:      Height             : 6
 #
-# CHECK:      Queue BotQ.A: 27 38 36 34 33 32 31 30
+# CHECK:      Queue BotQ.A: SU(27) SU(38) SU(36) SU(34) SU(33) SU(32) SU(31) SU(30)
 # CHECK:      Pick Bot Cand SU(38) ORDER      [pre-RA]
 # CHECK-NEXT: Scheduling SU(38)
-# CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31 37
+# CHECK:      Queue BotQ.A: SU(27) SU(30) SU(36) SU(34) SU(33) SU(32) SU(31) SU(37)
 # CHECK:      Pick Bot Cand SU(36) BOT-HEIGHT [pre-RA]
 # CHECK-NEXT: Scheduling SU(36)
-# CHECK:      Queue BotQ.A: 27 30 37 34 33 32 31 35
+# CHECK:      Queue BotQ.A: SU(27) SU(30) SU(37) SU(34) SU(33) SU(32) SU(31) SU(35)
 # CHECK:      Pick Bot Cand SU(30) REG-EXCESS [pre-RA]
 # CHECK-NEXT: Scheduling SU(30)
 #
@@ -438,15 +438,15 @@ body:             |
 # CHECK:      Current Schedule Region
 # CHECK-NEXT: fun5:%bb.0
 #
-# CHECK:      Queue BotQ.A: 27 38 36 34 33 32 31 30
+# CHECK:      Queue BotQ.A: SU(27) SU(38) SU(36) SU(34) SU(33) SU(32) SU(31) SU(30)
 # CHECK:      Scheduling SU(38)
-# CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31 37
+# CHECK:      Queue BotQ.A: SU(27) SU(30) SU(36) SU(34) SU(33) SU(32) SU(31) SU(37)
 # CHECK:      Scheduling SU(37)
-# CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31
+# CHECK:      Queue BotQ.A: SU(27) SU(30) SU(36) SU(34) SU(33) SU(32) SU(31)
 # CHECK:      Scheduling SU(36)
-# CHECK:      Queue BotQ.A: 27 30 31 34 33 32 35
+# CHECK:      Queue BotQ.A: SU(27) SU(30) SU(31) SU(34) SU(33) SU(32) SU(35)
 # CHECK:      Scheduling SU(35)
-# CHECK:      Queue BotQ.A: 27 30 31 34 33 32
+# CHECK:      Queue BotQ.A: SU(27) SU(30) SU(31) SU(34) SU(33) SU(32)
 # CHECK:      Pick Bot Cand SU(30) REG-EXCESS [pre-RA]
 # CHECK-NEXT: Scheduling SU(30)
 #
@@ -550,10 +550,10 @@ body:             |
 # CHECK:      Height             : 3
 # CHECK:      Pressure Diff      : {{$}}
 #
-# CHECK:      Queue BotQ.A: 37 36 35 34
+# CHECK:      Queue BotQ.A: SU(37) SU(36) SU(35) SU(34)
 # CHECK:      Cand SU(37) FIRST
 # CHECK:      Scheduling SU(37)
-# CHECK:      Queue BotQ.A: 34 36 35 0
+# CHECK:      Queue BotQ.A: SU(34) SU(36) SU(35) SU(0)
 # CHECK:      Cand SU(35) REG-EXCESS
 # CHECK:      Scheduling SU(35)
 #

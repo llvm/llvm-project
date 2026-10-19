@@ -456,8 +456,11 @@ static bool hasDistinctMetadataIntrinsic(const Function &F) {
 
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
+  // Oracle functions of llvm.speculative.load may only be referenced by
+  // llvm.speculative.load, so they can neither become thunks nor be called.
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
          !F.hasFnAttribute(Attribute::NoIPA) &&
+         !F.hasFnAttribute("oracle-function") &&
          !hasDistinctMetadataIntrinsic(F);
 }
 
@@ -973,7 +976,7 @@ static bool isODR(const Function *F) {
 
 static uint64_t getBlockCountForMerging(const BlockFrequencyInfo &BFI,
                                         const BasicBlock *BB) {
-  if (auto Count = BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true))
+  if (auto Count = BFI.getBlockProfileCount(BB))
     return *Count;
   return 1;
 }

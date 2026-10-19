@@ -4,12 +4,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 kind.s -o kind.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 parent.s -o parent.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 far.s -o far.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 end.s -o end.o
 
 ## f1 and f2 reach "foo" from different offsets in different files, and so do
 ## the section symbols g1 and g2. f3 reaches another string, f4 another offset.
-# RUN: ld.lld a.o b.o -o ab --icf=all --print-icf-sections | \
+# RUN: ld.lld a.o b.o --icf=all --print-icf-sections | \
 # RUN:   FileCheck %s --implicit-check-not=section
 # CHECK-DAG: selected section {{.*}}a.o:(.text.f1)
 # CHECK-DAG:   removing identical section {{.*}}b.o:(.text.f2)
@@ -17,12 +18,15 @@
 # CHECK-DAG:   removing identical section {{.*}}b.o:(.text.g2)
 
 ## A reference into a merge section never equals one into a regular section.
-# RUN: ld.lld kind.o -o kind --icf=all --print-icf-sections | count 0
+# RUN: ld.lld kind.o --icf=all --print-icf-sections | count 0
+
+## References into merge sections in different output sections are not equal.
+# RUN: ld.lld parent.o --icf=all --print-icf-sections | count 0
 
 ## A section symbol's addend is not validated until getSymVA.
 # RUN: not ld.lld far.o --icf=all 2>&1 | FileCheck %s --check-prefix=FAR --implicit-check-not=error:
 # FAR: error: far.o:(.rodata.str1.1): offset 0xfffffffffffffffc is outside the section
-# RUN: ld.lld end.o -o end --icf=all
+# RUN: ld.lld end.o --icf=all
 
 #--- a.s
 .globl _start
@@ -74,6 +78,23 @@ rodata:
 
 .section .text.bar,"ax"
 .quad _start
+
+#--- parent.s
+.globl _start
+_start:
+  ret
+
+.section .merge1,"aM",@progbits,8
+.quad 42
+
+.section .merge2,"aM",@progbits,8
+.quad 42
+
+.section .text.foo,"ax"
+.quad .merge1
+
+.section .text.bar,"ax"
+.quad .merge2
 
 #--- far.s
 .globl _start

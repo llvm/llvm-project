@@ -1067,8 +1067,6 @@ unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
 
 unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
 
-unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
-
 VersionTuple AMDGPUPALMetadata::getPALVersion() {
   return VersionTuple(getPALVersion(0), getPALVersion(1));
 }

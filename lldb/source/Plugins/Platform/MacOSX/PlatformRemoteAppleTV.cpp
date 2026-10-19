@@ -154,8 +154,9 @@ std::vector<ArchSpec> PlatformRemoteAppleTV::GetSupportedArchitectures(
   }
 }
 
-llvm::StringRef PlatformRemoteAppleTV::GetDeviceSupportDirectoryName() {
-  return "tvOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteAppleTV::GetDeviceSupportDirectoryNames() {
+  return {"tvOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteAppleTV::GetPlatformName() {

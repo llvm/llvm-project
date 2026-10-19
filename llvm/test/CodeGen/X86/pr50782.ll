@@ -20,7 +20,7 @@ define void @h(float %i) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    subl $32, %esp
+; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    movl %esp, %esi
 ; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    flds 8(%ebp)
