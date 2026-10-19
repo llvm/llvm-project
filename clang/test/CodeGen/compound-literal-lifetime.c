@@ -76,12 +76,18 @@ void test_order(void) {
   side_effect3();
 }
 
-// Verify that lifetime markers are not emitted when a label has been seen in the
-// current scope, matching VarDecl behavior to avoid miscompilation on backward jumps.
+// Verify that when a backward goto jumps over a compound literal within its
+// enclosing block, lifetime markers are emitted at the enclosing block's entry
+// and exit so that the lifetime encompasses the entire block and dominates the
+// backward jump target.
 // CHECK-LABEL: define dso_local i32 @test_backward_goto()
-// CHECK-NOT: call void @llvm.lifetime.start
-// CHECK-NOT: call void @llvm.lifetime.end
-// CHECK: ret i32
+// CHECK: entry:
+// CHECK-NEXT: %[[CL:.*]] = alloca i32, align 4
+// CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL]])
+// CHECK: if.then:
+// CHECK-NEXT: %[[VAL:.*]] = load i32, ptr %p.0
+// CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+// CHECK-NEXT: ret i32 %[[VAL]]
 int test_backward_goto(void) {
   int *p = 0;
 label:
@@ -89,6 +95,32 @@ label:
     return *p;
   p = &(int){10};
   goto label;
+}
+
+// Verify that labels inside GNU statement expressions do not suppress lifetime
+// markers for subsequent compound literals in the enclosing function.
+// CHECK-LABEL: define dso_local void @test_stmt_expr_label()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL:.*]])
+// CHECK: call void @bar(ptr noundef nonnull %[[CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+void test_stmt_expr_label(void) {
+  int x = ({
+    __label__ l;
+  l:
+    42;
+  });
+  bar(&(struct foo){.x = x});
+}
+
+// Verify that a label in the current scope without a backward jump over the
+// compound literal does not suppress tight lifetime markers.
+// CHECK-LABEL: define dso_local void @test_label_without_backward_goto()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL:.*]])
+// CHECK: call void @bar(ptr noundef nonnull %[[CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+void test_label_without_backward_goto(void) {
+label:
+  bar(&(struct foo){.x = 42});
 }
 
 int callee(int);

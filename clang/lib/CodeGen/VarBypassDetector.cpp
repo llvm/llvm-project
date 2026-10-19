@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -31,6 +32,10 @@ static bool hasJumpStmts(const Stmt *Body) {
     case Stmt::SwitchStmtClass:
     case Stmt::IndirectGotoStmtClass:
       return true;
+    case Stmt::GCCAsmStmtClass:
+      if (cast<GCCAsmStmt>(S)->isAsmGoto())
+        return true;
+      break;
     default:
       break;
     }
@@ -46,15 +51,21 @@ void VarBypassDetector::Init(CodeGenModule &CGM, const Stmt *Body) {
   FromScopes.clear();
   ToScopes.clear();
   Bypasses.clear();
+  BypassedStmts.clear();
+  BackwardBypassedVars.clear();
+  BackwardBypassedCLs.clear();
+  BackwardBypassedCLsInBlock.clear();
   BypassedVarsAtSource.clear();
-  Scopes = {{~0U, nullptr}};
+  Scopes = {{~0U, nullptr, nullptr, nullptr, 0}};
+  CurEnclosingBlock = nullptr;
+  CurEnclosingBlockScope = 0;
   AlwaysBypassed = false;
   if (!hasJumpStmts(Body))
     return;
   unsigned ParentScope = 0;
   AlwaysBypassed = !BuildScopeInformation(CGM, Body, ParentScope);
   if (!AlwaysBypassed)
-    Detect();
+    Detect(CGM);
 }
 
 /// Build scope information for a declaration that is part of a DeclStmt.
@@ -64,7 +75,8 @@ bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Decl *D,
                                               unsigned &ParentScope) {
   const VarDecl *VD = dyn_cast<VarDecl>(D);
   if (VD && VD->hasLocalStorage()) {
-    Scopes.push_back({ParentScope, VD});
+    Scopes.push_back(
+        {ParentScope, VD, nullptr, CurEnclosingBlock, CurEnclosingBlockScope});
     ParentScope = Scopes.size() - 1;
   }
 
@@ -89,11 +101,42 @@ bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
       ((isa<Expr>(S) && !isa<StmtExpr>(S)) ? origParentScope
                                            : independentParentScope);
 
+  const CompoundStmt *PrevBlock = CurEnclosingBlock;
+  unsigned PrevBlockScope = CurEnclosingBlockScope;
+  llvm::scope_exit RestoreBlock([&] {
+    CurEnclosingBlock = PrevBlock;
+    CurEnclosingBlockScope = PrevBlockScope;
+  });
+
   unsigned StmtsToSkip = 0u;
 
   switch (S->getStmtClass()) {
   case Stmt::IndirectGotoStmtClass:
     return false;
+
+  case Stmt::CompoundStmtClass: {
+    const auto *CS = cast<CompoundStmt>(S);
+    Scopes.push_back({ParentScope, nullptr, nullptr, CS, ParentScope});
+    ParentScope = Scopes.size() - 1;
+    CurEnclosingBlock = CS;
+    CurEnclosingBlockScope = ParentScope;
+    break;
+  }
+
+  case Stmt::CompoundLiteralExprClass: {
+    const auto *CLE = cast<CompoundLiteralExpr>(S);
+    if (!CGM.getLangOpts().CPlusPlus && !CLE->isFileScope()) {
+      Scopes.push_back({origParentScope, nullptr, CLE, CurEnclosingBlock,
+                        CurEnclosingBlockScope});
+      origParentScope = Scopes.size() - 1;
+    }
+    break;
+  }
+
+  case Stmt::GCCAsmStmtClass:
+    if (cast<GCCAsmStmt>(S)->isAsmGoto())
+      FromScopes.push_back({S, ParentScope});
+    break;
 
   case Stmt::SwitchStmtClass:
     if (const Stmt *Init = cast<SwitchStmt>(S)->getInit()) {
@@ -166,39 +209,60 @@ bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
 }
 
 /// Checks each jump and stores each variable declaration they bypass.
-void VarBypassDetector::Detect() {
+void VarBypassDetector::Detect(CodeGenModule &CGM) {
   for (const auto &S : FromScopes) {
     const Stmt *St = S.first;
     unsigned from = S.second;
     if (const GotoStmt *GS = dyn_cast<GotoStmt>(St)) {
       if (const LabelStmt *LS = GS->getLabel()->getStmt())
-        Detect(from, ToScopes[LS], GS);
+        Detect(CGM, from, ToScopes[LS], GS);
     } else if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(St)) {
       // Keyed by the switch, not by each case: the dispatch is the jump
       // source, and that is where the initialization is emitted.
       for (const SwitchCase *SC = SS->getSwitchCaseList(); SC;
            SC = SC->getNextSwitchCase()) {
-        Detect(from, ToScopes[SC], SS);
+        Detect(CGM, from, ToScopes[SC], SS);
       }
+    } else if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(St)) {
+      for (const AddrLabelExpr *L : GAS->labels())
+        if (const LabelStmt *LS = L->getLabel()->getStmt())
+          Detect(CGM, from, ToScopes[LS], GAS);
     } else {
-      llvm_unreachable("goto or switch was expected");
+      llvm_unreachable("goto, switch, or asm goto was expected");
     }
   }
 }
 
-/// Checks the jump and stores each variable declaration it bypasses.
-void VarBypassDetector::Detect(unsigned From, unsigned To, const Stmt *Source) {
+/// Checks the jump and stores each variable declaration or compound literal it
+/// bypasses.
+void VarBypassDetector::Detect(CodeGenModule &CGM, unsigned From, unsigned To,
+                               const Stmt *Source) {
   while (From != To) {
     if (From < To) {
-      assert(Scopes[To].first < To);
-      const auto &ScopeTo = Scopes[To];
-      To = ScopeTo.first;
-      Bypasses.insert(ScopeTo.second);
-      if (ScopeTo.second)
-        BypassedVarsAtSource[Source].insert(ScopeTo.second);
+      assert(Scopes[To].ParentScope < To);
+      const ScopeEntry &ScopeTo = Scopes[To];
+      To = ScopeTo.ParentScope;
+      if (ScopeTo.VD) {
+        Bypasses.insert(ScopeTo.VD);
+        BypassedVarsAtSource[Source].insert(ScopeTo.VD);
+      }
+      if (ScopeTo.CLE)
+        BypassedStmts.insert(ScopeTo.CLE);
+      if (ScopeTo.Block)
+        BypassedStmts.insert(ScopeTo.Block);
     } else {
-      assert(Scopes[From].first < From);
-      From = Scopes[From].first;
+      assert(Scopes[From].ParentScope < From);
+      const ScopeEntry &ScopeFrom = Scopes[From];
+      if (!CGM.getLangOpts().CPlusPlus && ScopeFrom.EnclosingBlockScope <= To) {
+        if (ScopeFrom.VD)
+          BackwardBypassedVars.insert(ScopeFrom.VD);
+        if (ScopeFrom.CLE && ScopeFrom.Block &&
+            !ScopeFrom.CLE->getType()->isVariablyModifiedType()) {
+          BackwardBypassedCLs.insert(ScopeFrom.CLE);
+          BackwardBypassedCLsInBlock[ScopeFrom.Block].insert(ScopeFrom.CLE);
+        }
+      }
+      From = ScopeFrom.ParentScope;
     }
   }
 }
