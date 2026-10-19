@@ -1343,6 +1343,7 @@ int32_t GenericPluginTy::initialize_record_replay(
   return OFFLOAD_SUCCESS;
 }
 
+<<<<<<< HEAD
 int32_t GenericPluginTy::load_binary(int32_t DeviceId,
                                      __tgt_device_image *TgtImage,
                                      __tgt_device_binary *Binary,
@@ -1373,6 +1374,8 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
   return R;
 }
 
+=======
+>>>>>>> 44ca5ac54d18
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind,
                                   GenericProfilerTy *ProfilerPtr) {
@@ -1694,6 +1697,7 @@ void GenericPluginTy::set_coarse_grain_mem(int32_t DeviceId, const void *ptr,
   return;
 }
 
+<<<<<<< HEAD
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
                                     const char *Name, void **DevicePtr) {
   auto T = logger::log<int32_t>(__func__, Binary.handle, Size, Name, DevicePtr);
@@ -1781,6 +1785,8 @@ int32_t GenericPluginTy::zero_copy_sanity_checks_and_diag(
   return R;
 }
 
+=======
+>>>>>>> 44ca5ac54d18
 /// Create OpenMP interop with the given interop context
 omp_interop_val_t *
 GenericPluginTy::create_interop(int32_t ID, int32_t InteropContext,

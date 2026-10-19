@@ -1821,11 +1821,6 @@ public:
                                    const char *ReportFilename,
                                    const char *OutputDirPath);
 
-  /// Loads the associated binary into the plugin and returns a handle to it.
-  int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
-                      __tgt_device_binary *Binary,
-                      GenericProfilerTy *ProfilerPtr = nullptr);
-
   /// Allocates memory that is accessively to the given device.
   void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind,
                    GenericProfilerTy *ProfilerPtr = nullptr);
@@ -1888,6 +1883,7 @@ public:
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
+<<<<<<< HEAD
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
                      const char *Name, void **DevicePtr);
@@ -1902,6 +1898,8 @@ public:
                                            bool isAutoZeroCopy,
                                            bool isEagerMaps);
 
+=======
+>>>>>>> 44ca5ac54d18
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.
   interop_spec_t select_interop_preference(int32_t ID, int32_t InteropType,
