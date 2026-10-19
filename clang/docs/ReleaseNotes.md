@@ -275,7 +275,7 @@ features cannot lower the translation-unit ABI level;
 
 - Clang no longer crashes on unknown command-line argument when
   `-fdiagnostics-format=sarif` is passed
-  ([#233241](https://github.com/llvm/llvm-project/issues/233241)).
+  (#GH233241).
 
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
