@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TreeTransform.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -71,6 +72,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
+#include <functional>
 #include <optional>
 #include <unordered_map>
 
@@ -3769,6 +3771,90 @@ static void adjustDeclContextForDeclaratorDecl(DeclaratorDecl *NewD,
     FixSemaDC(VD->getDescribedVarTemplate());
 }
 
+/// Diagnose if \p New and \p Old have conflicting counts in their parameter
+/// types. Return true if they are compatible.
+static bool diagnoseFunctionConflictWithDynamicBoundTypes(FunctionDecl *New,
+                                                          FunctionDecl *Old,
+                                                          Sema &Self) {
+  // Report only the first conflict.
+  bool Reported = false;
+  auto ReportCountConflict = [&](SourceLocation NewLoc,
+                                 const CountAttributedType *DCPTy) {
+    if (!Reported)
+      Self.Diag(NewLoc, diag::err_count_attr_conflicting_redeclaration)
+          << DCPTy->getKind();
+    Reported = true;
+  };
+
+  // Only a chain of pointers is followed, so a count below anything else, such
+  // as an _Atomic pointer or a callback's function type, is not compared:
+  //   void f(void (*cb)(int m, int *__counted_by(m) p));
+  //   void f(void (*cb)(int m, int *p)); // not diagnosed
+  std::function<bool(QualType, QualType, SourceLocation)>
+      checkCompatibleDynamicBoundTypes =
+          [&](QualType NewTy, QualType OldTy, SourceLocation NewLoc) -> bool {
+    if (!NewTy->isPointerType() || !OldTy->isPointerType())
+      return true;
+    const auto *NewDCPTy = NewTy->getAs<CountAttributedType>();
+    const auto *OldDCPTy = OldTy->getAs<CountAttributedType>();
+
+    if (NewDCPTy && !OldDCPTy) {
+      ReportCountConflict(NewLoc, NewDCPTy);
+      return false;
+    }
+
+    if (!NewDCPTy && OldDCPTy) {
+      ReportCountConflict(NewLoc, OldDCPTy);
+      return false;
+    }
+
+    if (NewDCPTy && OldDCPTy) {
+      // A parameter compares by its position and type, so the declarations may
+      // rename their parameters, but `const int n` differs from `int n`.
+      assert(NewDCPTy->getCountExpr() && OldDCPTy->getCountExpr());
+      if (!Self.Context.hasSameExpr(NewDCPTy->getCountExpr(),
+                                    OldDCPTy->getCountExpr())) {
+        ReportCountConflict(NewLoc, NewDCPTy);
+        return false;
+      }
+      // '__sized_by' and '__counted_by'
+      if (NewDCPTy->isCountInBytes() != OldDCPTy->isCountInBytes()) {
+        // The size of an incomplete pointee is unknown.
+        QualType Pointee = NewDCPTy->getPointeeType();
+        if (!NewDCPTy->isVoidPointerType() &&
+            (Pointee->isIncompleteType() ||
+             !Self.Context.getTypeSizeInChars(Pointee).isOne())) {
+          ReportCountConflict(NewLoc, NewDCPTy);
+          return false;
+        }
+      }
+      // '__counted_by_or_null' and '__counted_by'
+      if (NewDCPTy->isOrNull() != OldDCPTy->isOrNull()) {
+        ReportCountConflict(NewLoc, NewDCPTy);
+        return false;
+      }
+    }
+    return checkCompatibleDynamicBoundTypes(NewTy->getPointeeType(),
+                                            OldTy->getPointeeType(), NewLoc);
+  };
+
+  bool Compatible = true;
+  auto MinNumParams = std::min(New->getNumParams(), Old->getNumParams());
+  for (unsigned i = 0; i < MinNumParams; ++i) {
+    auto *OldParam = Old->getParamDecl(i);
+    auto *NewParam = New->getParamDecl(i);
+    Compatible &= checkCompatibleDynamicBoundTypes(
+        NewParam->getType(), OldParam->getType(), NewParam->getBeginLoc());
+  }
+
+  if (!Compatible)
+    Self.Diag(Old->getBeginLoc(), diag::note_previous_declaration);
+
+  // New->getNumParams() != Old->getNumParams() should be handled in the other
+  // logic.
+  return Compatible;
+}
+
 bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
                              bool MergeTypeWithOld, bool NewDeclIsDefn) {
   // Verify the old decl was also a function.
@@ -4067,6 +4153,14 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     Diag(OldLocation, PrevDiag) << Old << Old->getType();
     return true;
   }
+
+  // Counts are part of the function's interface, so a redeclaration has to
+  // repeat those on its parameters' pointers. Functions declared in system
+  // headers are exempt: a program may redeclare them with counts.
+  if (!SourceMgr.isInSystemHeader(Old->getLocation()) &&
+      !SourceMgr.isInSystemHeader(New->getLocation()) &&
+      !diagnoseFunctionConflictWithDynamicBoundTypes(New, Old, *this))
+    return true;
 
   QualType OldQTypeForComparison = OldQType;
   if (Context.hasAnyFunctionEffects()) {
@@ -10270,6 +10364,86 @@ void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
     FD->addAttr(Existing[I]);
 }
 
+/// Make the counts in the parameter types of \p FD, a function declared with a
+/// typedef or `__typeof__`, name \p FD's own parameters instead of those of the
+/// prototype its type was written with.
+static void rebuildBoundAttributedTypes(Sema &S, FunctionDecl *FD) {
+  struct ReplaceParams : TreeTransform<ReplaceParams> {
+    using BaseTransform = TreeTransform<ReplaceParams>;
+    FunctionDecl *FD;
+
+    ReplaceParams(Sema &SemaRef, FunctionDecl *FD)
+        : BaseTransform(SemaRef), FD(FD) {}
+
+    bool AlwaysRebuild() { return true; }
+
+    ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+      const auto *OldParam = dyn_cast<ParmVarDecl>(E->getDecl());
+      if (!OldParam || isEnclosingBodyParam(OldParam))
+        return BaseTransform::TransformDeclRefExpr(E);
+      assert(OldParam->getFunctionScopeIndex() < FD->getNumParams());
+      ParmVarDecl *NewParam =
+          FD->getParamDecl(OldParam->getFunctionScopeIndex());
+      // The synthesized parameter is unnamed; name it after the one the count
+      // was written with, so that the count prints and is diagnosed by name.
+      if (!NewParam->getDeclName())
+        NewParam->setDeclName(OldParam->getDeclName());
+      return SemaRef.BuildDeclRefExpr(NewParam, E->getType(), E->getValueKind(),
+                                      E->getNameInfo());
+    }
+
+    // A parameter of a function, block or method whose body encloses FD's
+    // declaration keeps naming that parameter. The parameters of a prototype
+    // written in that body, such as a typedef's, have the same context, so
+    // check that it is one of the body's own.
+    bool isEnclosingBodyParam(const ParmVarDecl *PVD) const {
+      const DeclContext *DC = PVD->getDeclContext();
+      ArrayRef<ParmVarDecl *> Params;
+      if (const auto *F = dyn_cast<FunctionDecl>(DC))
+        Params = F->parameters();
+      else if (const auto *B = dyn_cast<BlockDecl>(DC))
+        Params = B->parameters();
+      else if (const auto *M = dyn_cast<ObjCMethodDecl>(DC))
+        Params = M->parameters();
+      return llvm::is_contained(Params, PVD) &&
+             DC->LexicallyEncloses(FD->getLexicalDeclContext());
+    }
+  } Transform(S, FD);
+
+  // Only a parameter's own count and one on the pointer it points to, as for
+  // an out parameter, can name the parameters.
+  auto HasCount = [](QualType Ty) {
+    return Ty->isCountAttributedType() ||
+           (Ty->isPointerType() &&
+            Ty->getPointeeType()->isCountAttributedType());
+  };
+  if (llvm::none_of(FD->parameters(), [&](const ParmVarDecl *Param) {
+        return HasCount(Param->getType());
+      }))
+    return;
+
+  // As in ActOnParamDeclarator, keep the parameters in the translation unit
+  // while the counts are rebuilt; a reference to a parameter of another
+  // function would otherwise be diagnosed as a capture.
+  for (ParmVarDecl *Param : FD->parameters())
+    Param->setDeclContext(S.Context.getTranslationUnitDecl());
+  SmallVector<QualType> NewParamTys;
+  for (ParmVarDecl *Param : FD->parameters()) {
+    QualType Ty = Param->getType();
+    if (HasCount(Ty)) {
+      Ty = Transform.TransformType(Ty);
+      Param->setType(Ty);
+    }
+    NewParamTys.push_back(Ty);
+  }
+  for (ParmVarDecl *Param : FD->parameters())
+    Param->setDeclContext(FD);
+
+  const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
+  FD->setType(S.Context.getFunctionType(FPT->getReturnType(), NewParamTys,
+                                        FPT->getExtProtoInfo()));
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -10841,6 +11015,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Finally, we know we have the right number of parameters, install them.
   NewFD->setParams(Params);
+
+  // The parameters synthesized for a typedef or `__typeof__` are this
+  // function's own, so make the counts in its type name them.
+  if (!D.isFunctionDeclarator() && R->isFunctionProtoType())
+    rebuildBoundAttributedTypes(*this, NewFD);
 
   // If this declarator is a declaration and not a definition, its parameters
   // will not be pushed onto a scope chain. That means we will not issue any

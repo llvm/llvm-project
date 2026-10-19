@@ -71,3 +71,20 @@ void both_counted(int n, int m, int *__counted_by(n) *__counted_by(m) buf);
 // CHECK: FunctionDecl {{.*}} knr 'void (int, int *)'
 // expected-warning@+1{{a function definition without a prototype is deprecated}}
 void knr(count, buf) int count; int *__counted_by(count) buf; {}
+
+// A function declared with a typedef gets parameters of its own, and the counts
+// in its type are rebuilt to name them.
+typedef void fn_type(int count, int *__counted_by(count) buf);
+// CHECK: FunctionDecl {{.*}} from_typedef 'void (int, int * __counted_by(count))'
+// CHECK-NEXT: ParmVarDecl {{.*}} implicit used count 'int'
+// CHECK-NEXT: ParmVarDecl {{.*}} implicit 'int * __counted_by(count)':'int *'
+fn_type from_typedef;
+
+// A count naming a parameter of the enclosing function keeps naming it.
+void enclosing(int a, int b, int count) {
+  typedef void local_fn_type(int n, int *__counted_by(count) buf);
+  // CHECK: FunctionDecl {{.*}} local_from_typedef 'void (int, int * __counted_by(count))'
+  // CHECK-NEXT: ParmVarDecl {{.*}} implicit 'int'
+  // CHECK-NEXT: ParmVarDecl {{.*}} implicit 'int * __counted_by(count)':'int *'
+  local_fn_type local_from_typedef;
+}
