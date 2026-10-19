@@ -45,6 +45,7 @@ namespace llvm {
   class Comdat;
   class MDString;
   class MDNode;
+  class MDFunctionLocalContext;
   struct SlotMapping;
 
   /// ValID - Represents a reference of a definition of some sort with no type.
@@ -187,6 +188,13 @@ namespace llvm {
         PendingDbgRecords;
     SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
         PendingDbgInsts;
+
+    DenseMap<MDFunctionLocalContext *,
+             SmallVector<std::pair<uint32_t, TrackingMDNodeRef>>>
+        FLForwardRefScopes;
+    DenseMap<MDFunctionLocalContext *,
+             SmallVector<std::pair<uint32_t, TrackingMDNodeRef>>>
+        FLForwardRefFLMDs;
 
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
@@ -627,6 +635,12 @@ namespace llvm {
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool parseOptionalFunctionMetadata(Function &F);
 
+    template <class FLMDTy>
+    bool parseFLMDEntry(LocTy Loc, FLMDTy &Result, uint32_t Index,
+                        MDFunctionLocalContext *Context);
+    template <class FLMDTy>
+    bool parseFLMDStorage(LocTy Loc, SmallVectorImpl<FLMDTy> &Result,
+                          MDFunctionLocalContext *Context);
     template <class FieldTy>
     bool parseMDField(LocTy Loc, StringRef Name, FieldTy &Result);
     template <class FieldTy> bool parseMDField(StringRef Name, FieldTy &Result);
