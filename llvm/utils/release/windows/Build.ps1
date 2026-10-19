@@ -95,7 +95,6 @@ function Invoke-Tests {
     }
 }
 
-
 #===============================================================================
 # Main build stages
 #===============================================================================
@@ -114,6 +113,8 @@ function Build-Stage {
         [string[]]$CMakeFlags,
         [Parameter(Mandatory)]
         [string]$LLVMSrc,
+        [Parameter(Mandatory)]
+        [string]$StaticCache,
         [string[]]$ExtraCMakeFlags = @(),
         [string[]]$InitialBuildTargets = @(),
         [switch]$SkipFullBuild,
@@ -127,7 +128,8 @@ function Build-Stage {
         $allFlags = $CMakeFlags + $ExtraCMakeFlags
         $cache = Write-CMakeCacheFile -Flags $allFlags
         $otherFlags = $cache.OtherFlags
-        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
+        # The static cache is last so its fixed settings override the shared flags.
+        Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile -C $StaticCache @otherFlags "$LLVMSrc/llvm"
         if ($InitialBuildTargets.Count -gt 0) {
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs @InitialBuildTargets
         }
@@ -168,7 +170,6 @@ function Build-Architecture {
         [string]$CommonCompilerFlags,
         [Parameter(Mandatory)]
         [string[]]$Stage2CMakeFlags,
-        [string[]]$CommonLLDBFlags = @(),
         [switch]$UseFastBuild
     )
 
@@ -224,6 +225,10 @@ function Build-Architecture {
     $swigConfig = Find-Swig
     # CMake and Ninja subprocesses need the library when invoking SWIG.
     $env:SWIG_LIB = $swigConfig.LibraryDirectory
+
+    $releaseWindowsDir = Join-Path $script:ReleaseScriptRoot 'windows'
+    $stage1Cache = Join-Path $releaseWindowsDir 'stage1-cache.cmake'
+    $stage2Cache = Join-Path $releaseWindowsDir 'stage2-cache.cmake'
 
     # Directory names (always computed, used by multiple steps)
     $stage1Name = "build_${Arch}_stage1"
@@ -300,13 +305,11 @@ function Build-Architecture {
         }
         $skipStage1FullBuild = $UseFastBuild
         $stage1Tests = @('check-llvm', 'check-clang', 'check-lld', 'check-runtimes')
-        $stage1Extra = @("LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON",
-                         "LLVM_TARGETS_TO_BUILD=Native")
 
         Build-Stage -Name $stage1Name -Description 'stage 1 bootstrap compiler' `
             -CMakeFlags $cmakeFlags `
             -LLVMSrc $LLVMSrc `
-            -ExtraCMakeFlags $stage1Extra `
+            -StaticCache $stage1Cache `
             -InitialBuildTargets $stage1InitialTargets `
             -SkipFullBuild:$skipStage1FullBuild `
             -TestTargets $stage1Tests
@@ -373,14 +376,11 @@ function Build-Architecture {
 
     #-------------------------------------------------------------------
     # Step: stage 2 self-hosted compiler
+    # Fixed project, runtime, and LLDB settings are in stage2-cache.cmake.
     #-------------------------------------------------------------------
-    $stage2Projects = '"clang;clang-tools-extra;lld;lldb;flang;mlir"'
-
     $stage2Extra = @(
-        "LLVM_ENABLE_PROJECTS=$stage2Projects"
-        'LLVM_ENABLE_RUNTIMES="compiler-rt;openmp"'
         "PYTHON_HOME=$env:PYTHONHOME"
-    ) + $CommonLLDBFlags + $Stage2CMakeFlags + @(
+    ) + $Stage2CMakeFlags + @(
         "SWIG_EXECUTABLE=$($swigConfig.Executable)"
         "SWIG_DIR=$($swigConfig.LibraryDirectory)"
     ) + $profileFlags
@@ -395,6 +395,7 @@ function Build-Architecture {
         Build-Stage -Name $stage2Name -Description 'stage 2 self-hosted compiler' `
             -CMakeFlags $stage2Flags `
             -LLVMSrc $LLVMSrc `
+            -StaticCache $stage2Cache `
             -ExtraCMakeFlags $stage2Extra `
             -TestTargets $stage2Tests
     } else {
@@ -420,7 +421,7 @@ function Build-Architecture {
                 $packageFlags = $stage2Flags + $stage2Extra
                 $cache = Write-CMakeCacheFile -Flags $packageFlags -FileName 'package_cache.cmake'
                 $otherFlags = $cache.OtherFlags
-                Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
+                Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile -C $stage2Cache @otherFlags "$LLVMSrc/llvm"
                 Remove-Item -LiteralPath $tarballConfigMarker -Force -ErrorAction SilentlyContinue
             } else {
                 Write-SubStep 'Stage2 is already configured for packaging; skipping CMake reconfigure.'
@@ -465,7 +466,7 @@ function Build-Architecture {
             # restores the stage2 settings before invoking CPack.
             Set-Content -LiteralPath '.llvm_release_tarball_configured' `
                 -Value 'LLVM_INSTALL_TOOLCHAIN_ONLY=OFF' -Encoding ASCII
-            Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile @otherFlags "$LLVMSrc/llvm"
+            Invoke-NativeCommand cmake -G Ninja -C $cache.CacheFile -C $stage2Cache @otherFlags "$LLVMSrc/llvm"
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
 
             # Verify llvm-config works
@@ -482,4 +483,3 @@ function Build-Architecture {
         Write-Step "Skipping tarball (-StartAt $($script:StartAtStep))"
     }
 }
-
