@@ -33,10 +33,10 @@
 ## --ignore-data-address-equality.
 # RUN: ld.lld data.o --icf=all --print-icf-sections | count 0
 # RUN: ld.lld data.o --icf=all --ignore-data-address-equality --print-icf-sections | FileCheck %s --check-prefix=DATA --implicit-check-not=section
-# DATA:      selected section data.o:(.data.rel.ro)
-# DATA-NEXT:   removing identical section data.o:(.data.rel.ro.foo)
-# DATA-NEXT: selected section data.o:(.rodata.d1)
+# DATA:      selected section data.o:(.rodata.d1)
 # DATA-NEXT:   removing identical section data.o:(.rodata.d2)
+# DATA-NEXT: selected section data.o:(.data.rel.ro)
+# DATA-NEXT:   removing identical section data.o:(.data.rel.ro.foo)
 
 #--- fold.s
 .globl _start
