@@ -1882,13 +1882,13 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
   return adjustThreshold;
 }
 
-static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
+static TypeSize getCallArgsTotalAllocaSize(const CallBase *CB,
                                            const DataLayout &DL) {
   // If we have a pointer to a private array passed into a function
   // it will not be optimized out, leaving scratch usage.
   // This function calculates the total size in bytes of the memory that would
   // end in scratch if the call was not inlined.
-  unsigned AllocaSize = 0;
+  TypeSize AllocaSize = TypeSize::getFixed(0);
   SmallPtrSet<const AllocaInst *, 8> AIVisited;
   for (Value *PtrArg : CB->args()) {
     PointerType *Ty = dyn_cast<PointerType>(PtrArg->getType());
@@ -1905,7 +1905,7 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
       continue;
 
     if (auto Size = AI->getAllocationSize(DL))
-      AllocaSize += static_cast<unsigned>(Size->getFixedValue());
+      AllocaSize += *Size;
   }
   return AllocaSize;
 }
@@ -1920,8 +1920,8 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 
   // Private object passed as arguments may end up in scratch usage if the call
   // is not inlined. Increase the inline threshold to promote inlining.
-  unsigned AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
-  if (AllocaSize > 0)
+  TypeSize AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
+  if (AllocaSize.getFixedValue() > 0)
     Threshold += ArgAllocaCost;
   return Threshold;
 }
@@ -1931,7 +1931,7 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
 
   // Below the cutoff, assume that the private memory objects would be
   // optimized
-  auto AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
+  auto AllocaSize = getCallArgsTotalAllocaSize(CB, DL).getFixedValue();
   if (AllocaSize <= ArgAllocaCutoff)
     return 0;
 
