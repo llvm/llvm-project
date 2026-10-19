@@ -14,9 +14,7 @@
 
 namespace mlir {
 namespace tosa {
-
 namespace {
-
 constexpr TypeInfo boolT = {ComplianceTypeKind::Integer, 1};
 constexpr TypeInfo i4T = {ComplianceTypeKind::Integer, 4};
 constexpr TypeInfo i8T = {ComplianceTypeKind::Integer, 8};
@@ -76,7 +74,6 @@ lookupComplianceInfos(ArrayRef<OpComplianceInfo<T>> table, StringRef opName) {
     ++end;
   return ArrayRef<OpComplianceInfo<T>>(begin, end);
 }
-
 } // namespace
 
 TosaProfileCompliance::TosaProfileCompliance() {
@@ -603,8 +600,7 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
           continue;
         const int matches = llvm::count_if(
             llvm::zip_equal(current, typeInfos), [&](const auto zipType) {
-              return isSameTypeInfo(std::get<0>(zipType),
-                                    std::get<1>(zipType));
+              return isSameTypeInfo(std::get<0>(zipType), std::get<1>(zipType));
             });
         if (matches > maxMatches) {
           maxMatches = matches;

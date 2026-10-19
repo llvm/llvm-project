@@ -22,7 +22,6 @@
 
 namespace mlir {
 namespace tosa {
-
 //===----------------------------------------------------------------------===//
 // Type Compilance Definition
 //===----------------------------------------------------------------------===//
@@ -248,7 +247,6 @@ private:
   FailureOr<SmallVector<OpComplianceInfo<T>>>
   getOperatorMatchedEntries(Operation *op);
 };
-
 } // namespace tosa
 } // namespace mlir
 
