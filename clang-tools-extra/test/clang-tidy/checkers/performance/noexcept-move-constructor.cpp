@@ -2,7 +2,6 @@
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,ERR %s performance-noexcept-move-constructor %t \
 // RUN:                   -- --fix-errors -- -fexceptions -DENABLE_ERROR
 
-#include <string>
 #include <utility>
 
 namespace std
@@ -208,7 +207,7 @@ struct Q {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: move assignment operators should be marked noexcept [performance-noexcept-move-constructor]
   // CHECK-FIXES: Q &operator=(Q &&)  noexcept = default;
 
-  std::string additional_field;
+  ThrowOnAnything additional_field[1];
   ThrowOnAnything field;
 };
 
