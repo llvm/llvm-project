@@ -3507,7 +3507,7 @@ let mayLoad = true, mayStore = true, hasSideEffects = true,
   def ATOM_CAS_B128 :
     NVPTXInst<
         (outs B64:$dst0, B64:$dst1),
-        (ins ADDR:$addr, B64:$cmp0, B64:$cmp1, B64:$swap0, B64:$swap1,
+        (ins ADDR:$addr, B64Op:$cmp0, B64Op:$cmp1, B64Op:$swap0, B64Op:$swap1,
              AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
         "{{\n\t"
         ".reg .b128 cmp, swap, dst;\n\t"
@@ -3520,7 +3520,7 @@ let mayLoad = true, mayStore = true, hasSideEffects = true,
   def ATOM_EXCH_B128 :
     NVPTXInst<
         (outs B64:$dst0, B64:$dst1),
-        (ins ADDR:$addr, B64:$amt0, B64:$amt1,
+        (ins ADDR:$addr, B64Op:$amt0, B64Op:$amt1,
              AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
              EvictionAndPrefetchHint:$evictionAndPrefetchHint,
              CachePolicy:$policy),
