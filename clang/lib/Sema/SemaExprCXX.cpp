@@ -2414,17 +2414,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                          << (*ArraySize)->getSourceRange());
       }
 
-      if (!AllocType->isDependentType()) {
-        unsigned ActiveSizeBits =
-            ConstantArrayType::getNumAddressingBits(Context, AllocType, *Value);
-        if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
-          return ExprError(
-              Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10, Value->isSigned(),
-                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                          /*InsertSeparators=*/true)
-              << (*ArraySize)->getSourceRange());
-      }
+      if (checkArrayTooLarge(AllocType, *Value, (*ArraySize)->getBeginLoc(),
+                             (*ArraySize)->getSourceRange()))
+        return ExprError();
 
       KnownArraySize = Value->getZExtValue();
     } else if (TypeIdParens.isValid()) {
@@ -7556,11 +7548,10 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
-                              DS.getBeginLoc(), DS.getEllipsisLoc());
-    TLB.pushTrivial(getASTContext(),
-                    cast<PackIndexingType>(T.getTypePtr())->getPattern(),
-                    DS.getBeginLoc());
+    TypeSourceInfo *TSI = nullptr;
+    T = GetTypeFromParser(DS.getRepAsType(), &TSI);
+    T = ActOnPackIndexingType(T, DS.getPackIndexingExpr(), DS.getBeginLoc());
+    TLB.pushFullCopy(TSI->getTypeLoc());
     PackIndexingTypeLoc PITL = TLB.push<PackIndexingTypeLoc>(T);
     PITL.setEllipsisLoc(DS.getEllipsisLoc());
     break;

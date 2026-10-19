@@ -198,7 +198,7 @@ public:
                    DominatorTree *DT, const Loop *L,
                    const SymbolicStrideMap &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits,
-                   std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
+                   ScalarEvolution::LoopGuards &LoopGuards)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
         SymbolicStrides(SymbolicStrides),
         MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
@@ -421,8 +421,8 @@ private:
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
-  /// Cache for the loop guards of InnermostLoop.
-  std::optional<ScalarEvolution::LoopGuards> &LoopGuards;
+  /// The loop guards of InnermostLoop, collected on first use.
+  ScalarEvolution::LoopGuards &LoopGuards;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -583,7 +583,7 @@ public:
   };
 
   RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
-                         std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
+                         ScalarEvolution::LoopGuards &LoopGuards)
       : DC(DC), SE(SE), LoopGuards(LoopGuards) {}
 
   /// Reset the state of the pointer runtime information.
@@ -698,8 +698,8 @@ private:
   /// Holds a pointer to the ScalarEvolution analysis.
   ScalarEvolution *SE;
 
-  /// Cache for the loop guards of the loop.
-  std::optional<ScalarEvolution::LoopGuards> &LoopGuards;
+  /// The loop guards of the loop, collected on first use.
+  ScalarEvolution::LoopGuards &LoopGuards;
 
   /// Set of run-time checks required to establish independence of
   /// otherwise may-aliasing pointers in the loop.
@@ -875,8 +875,8 @@ private:
 
   Loop *TheLoop;
 
-  /// Cache for the loop guards of TheLoop.
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  /// The loop guards of TheLoop, collected on first use.
+  ScalarEvolution::LoopGuards LoopGuards;
 
   /// Determines whether we should generate partial runtime checks when not all
   /// memory accesses could be analyzed.
@@ -952,15 +952,6 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              bool ShouldCheckWrap = true,
              SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
-/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
-/// \p PSE. The \p Assume parameter indicates whether such additional run-time
-/// assumptions are allowed.
-LLVM_ABI std::optional<int64_t>
-getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp, const DominatorTree &DT,
-             const SymbolicStrideMap &StridesMap, bool Assume,
-             bool ShouldCheckWrap = true);
-
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This
 /// is a simple API that does not depend on the analysis pass.
@@ -1012,14 +1003,14 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
+    ScalarEvolution::LoopGuards &LoopGuards);
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
     const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
+    ScalarEvolution::LoopGuards &LoopGuards);
 
 class LoopAccessInfoManager {
   /// The cache.

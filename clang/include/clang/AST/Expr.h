@@ -779,6 +779,10 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of an object with static storage duration. The object
+    /// is not destroyed, and undefined behavior is folded through like
+    /// isConstantInitializer allows.
+    Initializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does

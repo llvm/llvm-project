@@ -111,6 +111,15 @@ llvm::Type *IRTypeMapper::convertTupleType(const abi::TupleType *TT) {
 }
 
 llvm::Type *IRTypeMapper::convertRecordType(const abi::RecordType *RT) {
+  // A packed record is a sequence of fields with no alignment padding. Pure
+  // scalable aggregates use one as the unpadded coerce-and-expand type, and
+  // its fields may be scalable vectors.
+  if (RT->getPacking() == StructPacking::Packed) {
+    SmallVector<llvm::Type *, 8> FieldTypes;
+    for (const FieldInfo &Field : RT->getFields())
+      FieldTypes.push_back(convertType(Field.FieldType));
+    return llvm::StructType::get(Context, FieldTypes, /*isPacked=*/true);
+  }
   return createStructFromFields(RT->getFields(), RT->getSizeInBits(),
                                 RT->getAlignment(), RT->isUnion());
 }
