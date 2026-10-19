@@ -2076,6 +2076,17 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
       SE->properlyDominates(AddRec->getStepRecurrence(*SE), L->getHeader()) &&
       "Loop header phi recurrence inputs do not dominate the loop");
 
+  // The step is expanded in the loop header. If it contains a division that
+  // may trap, this is only safe if the narrow step is computed before the
+  // loop. Otherwise the division may be guarded by a condition in the loop.
+  if (!Rewriter.isSafeToExpand(AddRec->getStepRecurrence(*SE))) {
+    BinaryOperator *BO;
+    Value *Start, *Step;
+    if (!matchSimpleRecurrence(OrigPhi, BO, Start, Step) ||
+        !L->isLoopInvariant(Step))
+      return nullptr;
+  }
+
   // Iterate over IV uses (including transitive ones) looking for IV increments
   // of the form 'add nsw %iv, <const>'. For each increment and each use of
   // the increment calculate control-dependent range information basing on
