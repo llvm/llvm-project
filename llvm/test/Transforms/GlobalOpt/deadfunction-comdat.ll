@@ -5,6 +5,10 @@ target triple = "x86_64-pc-windows-msvc"
 
 $foo = comdat any
 $trulydead = comdat any
+$aliasleader = comdat any
+
+; CHECK: @aliasleader
+@aliasleader = internal alias void (), ptr @aliasee
 
 ; CHECK: @foo
 define internal void @foo() comdat {
@@ -29,6 +33,16 @@ define internal void @trulydead() comdat {
 ; CHECK-NOT: @trulydead2
 define internal void @trulydead2() comdat($trulydead) {
   ret void
+}
+
+; CHECK: define internal void @aliasee
+define internal void @aliasee() comdat($aliasleader) {
+    ret void
+}
+
+define void @call_aliasee() { 
+    call void @aliasee()
+    ret void
 }
 
 define i32 @main() {
