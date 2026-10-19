@@ -291,6 +291,11 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
 
+namespace llvm::offload::tmp {
+llvm::omp::target::plugin::DeviceImageTy *
+__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
+} // namespace llvm::offload::tmp
+
 // Load binary to device and perform global initialization if needed.
 llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   auto ProgramOrErr = ProgramTy::create(Context, DeviceHandle, Img);
@@ -299,8 +304,8 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   ProgramTy Program = std::move(*ProgramOrErr);
 
   OMPT_IF_BUILT_AND_INITIALIZED({
-    auto &Image = *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
-        Binary.handle);
+    auto &Image = *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
+        Program.getHandle());
     performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
                         /*FileOffset=*/0, /*VmaInFile=*/nullptr,
                         Image.getSize(), const_cast<void *>(Image.getStart()),

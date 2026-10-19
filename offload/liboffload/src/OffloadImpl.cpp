@@ -1584,6 +1584,10 @@ __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
 GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
   return std::get<GenericKernelTy *>(Symbol->PluginImpl);
 }
+
+DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
+  return Program->Image;
+}
 } // namespace tmp
 
 } // namespace offload
