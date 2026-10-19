@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/InstructionCost.h"
 
 #include <tuple>
