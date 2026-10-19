@@ -14,14 +14,16 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LANE_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP1]]), !nosanitize [[META2:![0-9]+]]
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[HANDLER_INVALID_BUILTIN:.*]], !prof [[PROF3:![0-9]+]], !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP3]]), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 0, !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP5]], label %[[CONT:.*]], label %[[HANDLER_INVALID_BUILTIN:.*]], !prof [[PROF3:![0-9]+]], !nosanitize [[META2]]
 // CHECK:       [[HANDLER_INVALID_BUILTIN]]:
 // CHECK-NEXT:    call void @__ubsan_handle_invalid_builtin_abort(ptr addrspacecast (ptr addrspace(1) @[[GLOB0:[0-9]+]] to ptr)) #[[ATTR6:[0-9]+]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[TMP0]], i32 [[TMP1]])
-// CHECK-NEXT:    ret i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[TMP0]], i32 [[TMP1]])
+// CHECK-NEXT:    ret i32 [[TMP6]]
 int check_readlane(int x, int lane) {
   return __builtin_amdgcn_readlane(x, lane);
 }
