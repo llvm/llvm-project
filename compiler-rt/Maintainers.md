@@ -99,7 +99,9 @@ isanbard@gmail.com (email), [isanbard](https://github.com/isanbard) (GitHub)
 ### SCUDO
 
 Christopher Ferris \
-cferris@google.com (email), [cferris1000](https://github.com/cferris1000) (GitHub)
+cferris@google.com (email), [cferris1000](https://github.com/cferris1000) (GitHub) \
+Sadaf Ebrahimi \
+sadafebrahimi@google.com (email), [sadafebrahimi](https://github.com/sadafebrahimi) (GitHub)
 
 ## Inactive Maintainers
 
