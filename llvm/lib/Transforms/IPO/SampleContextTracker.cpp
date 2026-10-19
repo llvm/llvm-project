@@ -195,10 +195,7 @@ ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
 }
 
 // Profiler tracker than manages profiles and its associated context
-SampleContextTracker::SampleContextTracker(
-    SampleProfileMap &Profiles,
-    const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap)
-    : GUIDToFuncNameMap(GUIDToFuncNameMap) {
+SampleContextTracker::SampleContextTracker(SampleProfileMap &Profiles) {
   for (auto &FuncSample : Profiles) {
     FunctionSamples *FSamples = &FuncSample.second;
     SampleContext Context = FuncSample.second.getContext();
@@ -449,13 +446,6 @@ SampleContextTracker::getContextString(ContextTrieNode *Node) const {
 #endif
 
 void SampleContextTracker::dump() { RootContext.dumpTree(); }
-
-StringRef SampleContextTracker::getFuncNameFor(ContextTrieNode *Node) const {
-  if (!FunctionSamples::UseMD5)
-    return Node->getFuncName().stringRef();
-  assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
-  return GUIDToFuncNameMap->lookup(Node->getFuncName().getHashCode());
-}
 
 ContextTrieNode *
 SampleContextTracker::getContextFor(const SampleContext &Context) {
