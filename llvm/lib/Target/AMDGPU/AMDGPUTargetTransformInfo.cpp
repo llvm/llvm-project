@@ -1583,8 +1583,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
-  unsigned ScalarSize =
-      static_cast<unsigned>(DL.getTypeSizeInBits(SrcTy->getElementType()));
+  TypeSize ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
@@ -1606,7 +1605,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
         return 0;
     }
 
-    unsigned EltsPerReg = 32 / ScalarSize;
+    unsigned EltsPerReg = 32 / static_cast<unsigned>(ScalarSize);
     switch (Kind) {
     case TTI::SK_Broadcast:
       // A single v_perm_b32 can be re-used for all destination registers.
