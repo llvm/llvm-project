@@ -2125,6 +2125,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned PnReg = AFI->getPredicateRegForFillSpill();
 
     if (!PTrueCreated && RGI.isPaired() && RGI.isScalable()) {
+      [[maybe_unused]] const AArch64Subtarget &Subtarget =
+          MF.getSubtarget<AArch64Subtarget>();
       assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
       PTrueCreated = true;
@@ -2141,8 +2143,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     if (RGI.isPaired() && RGI.isScalable()) {
       assert(!isTargetWindows(MF) &&
              "Scalable register groups are not supported by Windows WinCFI");
-      [[maybe_unused]] const AArch64Subtarget &Subtarget =
-          MF.getSubtarget<AArch64Subtarget>();
 #ifdef EXPENSIVE_CHECKS
       auto IsPPR = [](const RegGroupInfo &c) {
         return c.Type == RegGroupInfo::PPR;
