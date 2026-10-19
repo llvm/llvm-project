@@ -25,8 +25,11 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <cstdint> // std::uintptr_t
+#include <limits>
 #include <memory>
+#include <new>
 #include <utility>
 
 #include "min_allocator.h"
@@ -38,6 +41,28 @@ template <class T, class ...Args>
 concept CanAllocateShared = requires(Args&& ...args) {
   { std::allocate_shared<T>(std::forward<Args>(args)...) } -> std::same_as<std::shared_ptr<T>>;
 };
+
+// Make sure we throw an exception derived from std::bad_alloc when the number of bytes to
+// allocate isn't representable as a std::size_t.
+template <class Array, class Alloc>
+void check_size_overflow([[maybe_unused]] Alloc const& alloc, [[maybe_unused]] std::size_t n) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  try {
+    std::shared_ptr<Array> ptr = std::allocate_shared<Array>(alloc, n);
+    assert(false); // expected an exception to be thrown
+  } catch (std::bad_alloc const&) {
+    // expected
+  }
+
+  try {
+    std::remove_extent_t<Array> init{};
+    std::shared_ptr<Array> ptr = std::allocate_shared<Array>(alloc, n, init);
+    assert(false); // expected an exception to be thrown
+  } catch (std::bad_alloc const&) {
+    // expected
+  }
+#endif
+}
 
 int main(int, char**) {
   // Check behavior for a zero-sized array
@@ -461,6 +486,19 @@ int main(int, char**) {
     static_assert( CanAllocateShared<T[], std::allocator<T[]>, std::size_t, T>);
     static_assert(!CanAllocateShared<T[], std::allocator<T[]>, std::size_t, T, int>); // too many arguments
     static_assert(!CanAllocateShared<T[], std::allocator<T[]>, std::size_t, int>); // T not constructible from int
+  }
+
+  // Check that requesting a number of elements that overflows the computation of the allocation
+  // size is diagnosed instead of leading to an undersized allocation.
+  {
+    constexpr std::size_t max = std::numeric_limits<std::size_t>::max();
+    check_size_overflow<char[]>(std::allocator<char[]>(), max);
+    check_size_overflow<int[]>(std::allocator<int[]>(), max);
+    check_size_overflow<int[]>(std::allocator<int[]>(), max / sizeof(int) + 2);
+    check_size_overflow<int[][3]>(std::allocator<int[][3]>(), max / sizeof(int[3]) + 2);
+
+    // Also check with an allocator that isn't std::allocator
+    check_size_overflow<int[]>(min_allocator<int[]>(), max);
   }
 
   return 0;

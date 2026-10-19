@@ -27,6 +27,7 @@ struct Generate<NothrowMoveConstructible> {
 };
 
 int main(int argc, char** argv) {
+  support::sequence_container_benchmarks<std::vector<char>>("std::vector<char>");
   support::sequence_container_benchmarks<std::vector<int>>("std::vector<int>");
   support::sequence_container_benchmarks<std::vector<std::string>>("std::vector<std::string>");
   support::sequence_container_benchmarks<std::vector<NothrowMoveConstructible>>(

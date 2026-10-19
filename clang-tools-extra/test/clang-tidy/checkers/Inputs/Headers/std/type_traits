@@ -5,6 +5,8 @@
 
 namespace std {
 
+constexpr bool is_constant_evaluated() noexcept { return true; }
+
 template <typename T, T V>
 struct integral_constant {
   static constexpr T value = V;

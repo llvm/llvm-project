@@ -8325,6 +8325,7 @@ zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle("tag")]])
 
 def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "unsafe_buffer_usage";
   let Content = [{
 The attribute `[[clang::unsafe_buffer_usage]]` should be placed on functions
 that need to be avoided as they are prone to buffer overflows or unsafe buffer
@@ -8425,6 +8426,44 @@ alternatives, though the attribute can be used even when the fix can't be automa
 
   Here, every read/write to the fields `ptr1`, `ptr2`, `buf` and `sz` will trigger a warning
   that the field has been explicitly marked as unsafe due to unsafe-buffer operations.
+
+- Attribute attached to container constructors and factory functions: The
+  spellings `[[clang::unsafe_buffer_usage_in_container]]` and
+  `[[clang::unsafe_buffer_usage("container")]]` are equivalent and can be
+  placed on two-parameter constructors and factory functions of container or
+  view types (such as custom span types taking a `(pointer, size)` or
+  `(begin, end)` pair) to opt them in to `-Wunsafe-buffer-usage-in-container`.
+
+  Unlike the general `[[clang::unsafe_buffer_usage]]` attribute, which warns on
+  every call, this form suppresses the warning when the argument pair is
+  provably safe -- for example, when constructing from `c.data(), c.size()` or
+  `c.begin(), c.end()` on the same container object `c`, a constant-sized array
+  with a matching bound, `&var, 1`, or a `0` size:
+
+  ```c++
+  template <typename T>
+  class CustomSpan {
+  public:
+    [[clang::unsafe_buffer_usage_in_container]]
+    CustomSpan(T *ptr, size_t size);
+
+    template <typename It>
+    [[clang::unsafe_buffer_usage("container")]]
+    CustomSpan(It first, It last);
+  };
+
+  template <typename T>
+  [[clang::unsafe_buffer_usage("container")]]
+  CustomSpan<T> MakeCustomSpan(T *ptr, size_t size);
+
+  void example(int *p, size_t n, MyVector<int> &v) {
+    CustomSpan<int> s1(p, n);                     // warning: decoupled pointer and size
+    auto s2 = MakeCustomSpan(p, n);               // warning: decoupled pointer and size
+    CustomSpan<int> s3(v.data(), v.size());       // no warning
+    CustomSpan<int> s4(v.begin(), v.end());       // no warning
+    auto s5 = MakeCustomSpan(v.data(), v.size()); // no warning
+  }
+  ```
 
   }];
 }

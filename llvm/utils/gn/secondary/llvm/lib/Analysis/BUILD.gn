@@ -9,6 +9,7 @@ static_library("Analysis") {
     "//llvm/include/llvm/Config:llvm-config",
   ]
   deps = [
+    "//llvm/include/llvm/Analysis:InlinerModels",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Frontend/HLSL",

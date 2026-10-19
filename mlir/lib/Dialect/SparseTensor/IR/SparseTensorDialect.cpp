@@ -2446,7 +2446,7 @@ LogicalResult ExtractValOp::verify() {
 }
 
 struct RemoveUnusedLvlCrds : public OpRewritePattern<IterateOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IterateOp iterateOp,
                                 PatternRewriter &rewriter) const override {

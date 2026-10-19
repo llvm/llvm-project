@@ -44,6 +44,7 @@ class VPRegionBlock;
 class VPlan;
 class VPSlotTracker;
 class Value;
+struct VectorizeOptions;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -307,6 +308,7 @@ struct VPTransformState {
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
+  const VectorizeOptions &Opts;
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
   LLVMContext &LLVMCtx;
