@@ -283,9 +283,9 @@ private:
 
 /// Class holding an HSA memory pool.
 struct AMDGPUMemoryPoolTy {
-  /// Create a memory pool from an HSA memory pool owned by \p Agent.
-  AMDGPUMemoryPoolTy(hsa_amd_memory_pool_t MemoryPool, hsa_agent_t Agent)
-      : MemoryPool(MemoryPool), Agent(Agent), GlobalFlags(0) {}
+  /// Create a memory pool from an HSA memory pool.
+  AMDGPUMemoryPoolTy(hsa_amd_memory_pool_t MemoryPool)
+      : MemoryPool(MemoryPool), GlobalFlags(0) {}
 
   /// Initialize the memory pool retrieving its properties.
   Error init() {
@@ -304,9 +304,6 @@ struct AMDGPUMemoryPoolTy {
 
   /// Getter of the HSA memory pool.
   hsa_amd_memory_pool_t get() const { return MemoryPool; }
-
-  /// Getter of the agent owning the memory pool.
-  hsa_agent_t getAgent() const { return Agent; }
 
   /// Indicate the segment which belongs to.
   bool isGlobal() const { return (Segment == HSA_AMD_SEGMENT_GLOBAL); }
@@ -437,9 +434,6 @@ struct AMDGPUMemoryPoolTy {
 private:
   /// The HSA memory pool.
   hsa_amd_memory_pool_t MemoryPool;
-
-  /// The agent owning the memory pool.
-  hsa_agent_t Agent;
 
   /// The segment where the memory pool belongs to.
   hsa_amd_segment_t Segment;
@@ -2171,16 +2165,14 @@ protected:
   llvm::SmallVector<AMDGPUMemoryPoolTy *> ArgsMemoryPools;
 };
 
-/// Class representing the host device. This host device may have more than one
-/// HSA host agent. We aggregate all its resources into the same instance.
+/// Class representing a host device, which corresponds to a single HSA host
+/// agent. The plugin creates one host device per host agent, and each GPU
+/// device uses the host device nearest to it.
 struct AMDHostDeviceTy : public AMDGenericDeviceTy {
-  /// Create a host device from an array of host agents.
-  AMDHostDeviceTy(AMDGPUPluginTy &Plugin,
-                  const llvm::SmallVector<hsa_agent_t> &HostAgents)
-      : AMDGenericDeviceTy(), Plugin(Plugin), Agents(HostAgents),
-        PinnedMemoryManager(Plugin) {
-    assert(!HostAgents.empty() && "No host agent found");
-  }
+  /// Create a host device from a host agent.
+  AMDHostDeviceTy(AMDGPUPluginTy &Plugin, hsa_agent_t Agent)
+      : AMDGenericDeviceTy(), Agent(Agent), ArgsMemoryManager(Plugin),
+        PinnedMemoryManager(Plugin) {}
 
   /// Initialize the host device memory pools and the memory managers for
   /// kernel args and host pinned memory allocations.
@@ -2188,14 +2180,13 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
-    // Create a kernel args memory manager per host agent, so that each device
-    // can use the one nearest to it.
-    for (hsa_agent_t Agent : Agents) {
-      ArgsMemoryManagers.push_back(
-          std::make_unique<AMDGPUMemoryManagerTy>(Plugin));
-      if (auto Err = ArgsMemoryManagers.back()->init(getArgsMemoryPool(Agent)))
-        return Err;
-    }
+    // The host device cannot be used without these pools. Release the pools
+    // and leave the managers uninitialized.
+    if (!hasRequiredMemoryPools())
+      return deinitMemoryPools();
+
+    if (auto Err = ArgsMemoryManager.init(getArgsMemoryPool()))
+      return Err;
 
     if (auto Err = PinnedMemoryManager.init(getFineGrainedMemoryPool()))
       return Err;
@@ -2203,15 +2194,19 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Check whether the host agent has the kernel args and fine-grained memory
+  /// pools needed to use the host device.
+  bool hasRequiredMemoryPools() const {
+    return !ArgsMemoryPools.empty() && !FineGrainedMemoryPools.empty();
+  }
+
   /// Deinitialize memory pools and managers.
   Error deinit() {
     if (auto Err = deinitMemoryPools())
       return Err;
 
-    for (auto &ArgsMemoryManager : ArgsMemoryManagers)
-      if (auto Err = ArgsMemoryManager->deinit())
-        return Err;
-    ArgsMemoryManagers.clear();
+    if (auto Err = ArgsMemoryManager.deinit())
+      return Err;
 
     if (auto Err = PinnedMemoryManager.deinit())
       return Err;
@@ -2219,25 +2214,19 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  /// Retrieve and construct all memory pools from the host agents.
+  /// Retrieve and construct all memory pools from the host agent.
   Error retrieveAllMemoryPools() override {
-    // Iterate through the available pools across the host agents.
-    for (hsa_agent_t Agent : Agents) {
-      Error Err = hsa_utils::iterateAgentMemoryPools(
-          Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
-            AMDGPUMemoryPoolTy *MemoryPool =
-                new AMDGPUMemoryPoolTy(HSAMemoryPool, Agent);
-            AllMemoryPools.push_back(MemoryPool);
-            return HSA_STATUS_SUCCESS;
-          });
-      if (Err)
-        return Err;
-    }
-    return Plugin::success();
+    return hsa_utils::iterateAgentMemoryPools(
+        Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
+          AMDGPUMemoryPoolTy *MemoryPool =
+              new AMDGPUMemoryPoolTy(HSAMemoryPool);
+          AllMemoryPools.push_back(MemoryPool);
+          return HSA_STATUS_SUCCESS;
+        });
   }
 
-  /// Get one of the host agents. Return always the first agent.
-  hsa_agent_t getAgent() const override { return Agents[0]; }
+  /// Get the host agent.
+  hsa_agent_t getAgent() const override { return Agent; }
 
   /// Get a memory pool for fine-grained allocations.
   AMDGPUMemoryPoolTy &getFineGrainedMemoryPool() {
@@ -2252,39 +2241,25 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     return *CoarseGrainedMemoryPools[0];
   }
 
-  /// Get a memory pool for kernel args allocations owned by \p Agent. Fall back
-  /// to the first kernel args pool if \p Agent has none.
-  AMDGPUMemoryPoolTy &getArgsMemoryPool(hsa_agent_t Agent) {
+  /// Get a memory pool for kernel args allocations.
+  AMDGPUMemoryPoolTy &getArgsMemoryPool() {
     assert(!ArgsMemoryPools.empty() && "No kernelargs mempool");
-    for (AMDGPUMemoryPoolTy *Pool : ArgsMemoryPools)
-      if (Pool->getAgent().handle == Agent.handle)
-        return *Pool;
+    // Retrieve any memory pool.
     return *ArgsMemoryPools[0];
   }
 
-  /// Get the kernel args memory manager of \p Agent. Fall back to the first
-  /// agent's if \p Agent is unknown.
-  AMDGPUMemoryManagerTy &getArgsMemoryManager(hsa_agent_t Agent) {
-    for (size_t I = 0; I < Agents.size(); ++I)
-      if (Agents[I].handle == Agent.handle)
-        return *ArgsMemoryManagers[I];
-    return *ArgsMemoryManagers[0];
-  }
-
-  /// Getter for host pinned memory manager.
+  /// Getters for kernel args and host pinned memory managers.
+  AMDGPUMemoryManagerTy &getArgsMemoryManager() { return ArgsMemoryManager; }
   AMDGPUMemoryManagerTy &getPinnedMemoryManager() {
     return PinnedMemoryManager;
   }
 
 private:
-  /// Reference to the plugin.
-  AMDGPUPluginTy &Plugin;
+  /// The HSA host agent.
+  hsa_agent_t Agent;
 
-  /// Array of agents on the host side.
-  const llvm::SmallVector<hsa_agent_t> Agents;
-
-  // Memory managers for kernel arguments, one per host agent.
-  llvm::SmallVector<std::unique_ptr<AMDGPUMemoryManagerTy>> ArgsMemoryManagers;
+  // Memory manager for kernel arguments.
+  AMDGPUMemoryManagerTy ArgsMemoryManager;
 
   // Memory manager for pinned memory.
   AMDGPUMemoryManagerTy PinnedMemoryManager;
@@ -2433,14 +2408,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // detect if device is an APU.
     if (auto Err = checkIfAPU())
       return Err;
-
-    // Allocate kernel args from the host agent nearest to this device. If the
-    // attribute is missing, assume an older libhsa and use the first agent.
-    hsa_agent_t NearestCPU;
-    if (getDeviceAttrRaw(HSA_AMD_AGENT_INFO_NEAREST_CPU, NearestCPU) !=
-        HSA_STATUS_SUCCESS)
-      NearestCPU = HostDevice.getAgent();
-    ArgsMemoryManager = &HostDevice.getArgsMemoryManager(NearestCPU);
 
     // Retrieve the size of the group memory.
     for (const auto *Pool : AllMemoryPools) {
@@ -3591,11 +3558,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the device agent.
   hsa_agent_t getAgent() const override { return Agent; }
 
-  /// Get the memory manager for kernel args.
-  AMDGPUMemoryManagerTy &getArgsMemoryManager() {
-    assert(ArgsMemoryManager && "Kernel args memory manager not initialized");
-    return *ArgsMemoryManager;
-  }
+  /// Get the host device nearest to the device.
+  AMDHostDeviceTy &getHostDevice() { return HostDevice; }
 
   /// Get the signal manager.
   AMDGPUSignalManagerTy &getSignalManager() { return AMDGPUSignalManager; }
@@ -3607,7 +3571,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
           AMDGPUMemoryPoolTy *MemoryPool =
               Plugin.allocate<AMDGPUMemoryPoolTy>();
-          new (MemoryPool) AMDGPUMemoryPoolTy(HSAMemoryPool, Agent);
+          new (MemoryPool) AMDGPUMemoryPoolTy(HSAMemoryPool);
           AllMemoryPools.push_back(MemoryPool);
           return HSA_STATUS_SUCCESS;
         });
@@ -3769,9 +3733,6 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
-
-  /// Kernel args memory manager of the host agent nearest to the device.
-  AMDGPUMemoryManagerTy *ArgsMemoryManager = nullptr;
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
@@ -4061,9 +4022,7 @@ private:
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
 struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Create an AMDGPU plugin and initialize the AMDGPU driver.
-  AMDGPUPluginTy()
-      : GenericPluginTy(getTripleArch()), Initialized(false),
-        HostDevice(nullptr) {}
+  AMDGPUPluginTy() : GenericPluginTy(getTripleArch()), Initialized(false) {}
 
   /// This class should not be copied.
   AMDGPUPluginTy(const AMDGPUPluginTy &) = delete;
@@ -4128,13 +4087,22 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (HostAgents.empty())
       return Plugin::error(ErrorCode::BACKEND_FAILURE, "no AMDGPU host agents");
 
-    // Initialize the host device using host agents.
-    HostDevice = allocate<AMDHostDeviceTy>();
-    new (HostDevice) AMDHostDeviceTy(*this, HostAgents);
+    // Initialize a host device for each host agent. Skip host agents without
+    // the required memory pools, e.g., NUMA nodes without memory banks.
+    for (hsa_agent_t Agent : HostAgents) {
+      AMDHostDeviceTy *HostDevice = allocate<AMDHostDeviceTy>();
+      new (HostDevice) AMDHostDeviceTy(*this, Agent);
 
-    // Setup the memory pools of available for the host.
-    if (auto Err = HostDevice->init())
-      return std::move(Err);
+      if (auto Err = HostDevice->init())
+        return std::move(Err);
+      if (HostDevice->hasRequiredMemoryPools())
+        HostDevices.push_back(HostDevice);
+    }
+
+    if (HostDevices.empty())
+      return Plugin::error(ErrorCode::BACKEND_FAILURE,
+                           "no AMDGPU host agents with kernel args and "
+                           "fine-grained memory pools");
 
     return NumDevices;
   }
@@ -4146,7 +4114,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!Initialized)
       return Plugin::success();
 
-    if (HostDevice)
+    for (AMDHostDeviceTy *HostDevice : HostDevices)
       if (auto Err = HostDevice->deinit())
         return Err;
 
@@ -4158,8 +4126,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Creates an AMDGPU device.
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
-    return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices, getHostDevice(),
-                              getKernelAgent(DeviceId));
+    hsa_agent_t Agent = getKernelAgent(DeviceId);
+    return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices,
+                              getNearestHostDevice(Agent), Agent);
   }
 
   Expected<std::unique_ptr<PluginContextTy>>
@@ -4206,10 +4175,20 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return true;
   }
 
-  /// Get the host device instance.
-  AMDHostDeviceTy &getHostDevice() {
-    assert(HostDevice && "Host device not initialized");
-    return *HostDevice;
+  /// Get the host device nearest to \p KernelAgent. If the runtime cannot
+  /// report the nearest host agent (e.g., an older libhsa) or the agent has no
+  /// host device, use the first host device.
+  AMDHostDeviceTy &getNearestHostDevice(hsa_agent_t KernelAgent) {
+    assert(!HostDevices.empty() && "Host devices not initialized");
+    hsa_agent_t NearestCPU;
+    if (hsa_agent_get_info(KernelAgent,
+                           (hsa_agent_info_t)HSA_AMD_AGENT_INFO_NEAREST_CPU,
+                           &NearestCPU) == HSA_STATUS_SUCCESS) {
+      for (AMDHostDeviceTy *HostDevice : HostDevices)
+        if (HostDevice->getAgent().handle == NearestCPU.handle)
+          return *HostDevice;
+    }
+    return *HostDevices[0];
   }
 
   /// Get the kernel agent with the corresponding agent id.
@@ -4361,8 +4340,8 @@ private:
   AMDGPUSignalTy RPCSignal;
   std::mutex RPCSignalMutex;
 
-  /// The device representing all HSA host agents.
-  AMDHostDeviceTy *HostDevice;
+  /// The host devices, one per HSA host agent.
+  llvm::SmallVector<AMDHostDeviceTy *> HostDevices;
 };
 
 Expected<void *> AMDGPUPluginContextTy::allocate(
@@ -4429,7 +4408,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
   AMDGPUMemoryManagerTy &ArgsMemoryManager =
-      AMDGPUDevice.getArgsMemoryManager();
+      AMDGPUDevice.getHostDevice().getArgsMemoryManager();
 
   void *AllArgs = nullptr;
   if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
