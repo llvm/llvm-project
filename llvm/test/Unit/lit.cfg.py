@@ -67,3 +67,7 @@ if sys.platform == "win32" and "SYSTEMDRIVE" in os.environ:
 # The unit tests on z/OS need auto-conversion turned on.
 if sys.platform == "zos":
     config.environment["_BPXK_AUTOCVT"] = "ON"
+    config.environment["_TAG_REDIR_IN"] = "TXT"
+    config.environment["_TAG_REDIR_OUT"] = "TXT"
+    config.environment["_TAG_REDIR_ERR"] = "TXT"
+    config.environment["_CEE_RUNOPTS"] = "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)"
