@@ -1167,10 +1167,6 @@ static Instruction *foldAddIntoDotAccumulator(IntrinsicInst &II,
   if (!match(AccumUser, m_c_Add(m_Specific(&II), m_Value(AccumDelta))))
     return nullptr;
 
-  // Avoid sinking the dot into a loop or other block.
-  if (AccumUser->getParent() != II.getParent())
-    return nullptr;
-
   Value *NewAcc = nullptr;
   const APInt *AccumDeltaC = nullptr;
   if (Acc->isZero())
@@ -1183,7 +1179,8 @@ static Instruction *foldAddIntoDotAccumulator(IntrinsicInst &II,
   Instruction *NewII =
       IC.InsertNewInstWith(II.clone(), AccumUser->getIterator());
   NewII->setOperand(AccIdx, NewAcc);
-
+  NewII->dropPoisonGeneratingAnnotations();
+  NewII->dropUBImplyingAttrsAndMetadata();
   IC.replaceInstUsesWith(*AccumUser, NewII);
   IC.eraseInstFromFunction(*AccumUser);
   return &II;

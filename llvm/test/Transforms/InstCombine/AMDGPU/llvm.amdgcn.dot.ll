@@ -417,16 +417,14 @@ define i32 @sdot4_zero_acc_add_x_multi_use(i32 %a, i32 %b, i32 %x) {
   ret i32 %r
 }
 
-; Negative test - folding would sink the dot into the loop.
 define void @sdot4_zero_acc_add_x_loop(i32 %a, i32 %b, ptr %p, i1 %c) {
 ; CHECK-LABEL: define void @sdot4_zero_acc_add_x_loop(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr [[P:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 0, i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 [[X]], i1 false)
 ; CHECK-NEXT:    store i32 [[R]], ptr [[P]], align 4
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -453,6 +451,17 @@ define void @sdot4_no_use(i32 %a, i32 %b) {
 ;
   call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 7, i1 false)
   ret void
+}
+
+define i32 @sdot4_zero_acc_add_x_attrs(i32 %a, i32 %b, i32 %x) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x_attrs(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %dot = call noundef range(i32 0, 100) i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  %result = add i32 %dot, %x
+  ret i32 %result
 }
 
 define i32 @udot4_add(i32 %a, i32 %b) {
