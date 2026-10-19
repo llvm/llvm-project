@@ -1056,9 +1056,6 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // also become the break target.
   JumpDest LoopExit = getJumpDestInCurrentScope("while.end");
 
-  // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(S, LoopExit, LoopHeader));
-
   // C++ [stmt.while]p2:
   //   When the condition of a while statement is a declaration, the
   //   scope of the variable that is declared extends from its point
@@ -1124,6 +1121,9 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
         << SourceRange(S.getWhileLoc(), S.getRParenLoc());
   }
 
+  // Break and continue target this loop only within its body.
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, LoopHeader));
+
   // Emit the loop body.  We have to emit this in a cleanup scope
   // because it might be a singleton DeclStmt.
   {
@@ -1181,6 +1181,9 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
     EmitStmt(S.getBody());
   }
 
+  // Break and continue target this loop only within its body.
+  BreakContinueStack.pop_back();
+
   EmitBlock(LoopCond.getBlock());
 
   // C99 6.8.5.2: "The evaluation of the controlling expression takes place
@@ -1190,8 +1193,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // C99 6.8.5p2/p4: The first substatement is executed if the expression
   // compares unequal to 0.  The condition must be a scalar type.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-
-  BreakContinueStack.pop_back();
 
   // "do {} while (0)" is common in macros, avoid extra blocks.  Be sure
   // to correctly handle break/continue though.
@@ -1256,8 +1257,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     EmitStmt(S.getInit());
 
   // Start the loop with a block that tests the condition.
-  // If there's an increment, the continue scope will be overwritten
-  // later.
   JumpDest CondDest = getJumpDestInCurrentScope("for.cond");
   llvm::BasicBlock *CondBlock = CondDest.getBlock();
   EmitBlock(CondBlock);
@@ -1274,31 +1273,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   // Create a cleanup scope for the condition variable cleanups.
   LexicalScope ConditionScope(*this, S.getSourceRange());
 
-  // If the for loop doesn't have an increment we can just use the condition as
-  // the continue block. Otherwise, if there is no condition variable, we can
-  // form the continue block now. If there is a condition variable, we can't
-  // form the continue block until after we've emitted the condition, because
-  // the condition is in scope in the increment, but Sema's jump diagnostics
-  // ensure that there are no continues from the condition variable that jump
-  // to the loop increment.
-  JumpDest Continue;
-  if (!S.getInc())
-    Continue = CondDest;
-  else if (!S.getConditionVariable())
-    Continue = getJumpDestInCurrentScope("for.inc");
-  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
-
   if (S.getCond()) {
     // If the for statement has a condition scope, emit the local variable
     // declaration.
-    if (S.getConditionVariable()) {
+    if (S.getConditionVariable())
       EmitDecl(*S.getConditionVariable());
-
-      // We have entered the condition variable's scope, so we're now able to
-      // jump to the continue block.
-      Continue = S.getInc() ? getJumpDestInCurrentScope("for.inc") : CondDest;
-      BreakContinueStack.back().ContinueBlock = Continue;
-    }
 
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
@@ -1343,6 +1322,13 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     PGO->markStmtAsUsed(true, &S);
   }
 
+  // Continue in a for loop must branch to the increment if there is one.
+  JumpDest Continue =
+      S.getInc() ? getJumpDestInCurrentScope("for.inc") : CondDest;
+
+  // Break and continue target this loop only within its body.
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
+
   incrementProfileCounter(UseExecPath, &S);
 
   {
@@ -1351,6 +1337,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     RunCleanupsScope BodyScope(*this);
     EmitStmt(S.getBody());
   }
+
+  BreakContinueStack.pop_back();
 
   // The last block in the loop's body (which unconditionally branches to the
   // `inc` block if there is one).
@@ -1361,8 +1349,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     EmitBlock(Continue.getBlock());
     EmitStmt(S.getInc());
   }
-
-  BreakContinueStack.pop_back();
 
   ConditionScope.ForceCleanup();
 
