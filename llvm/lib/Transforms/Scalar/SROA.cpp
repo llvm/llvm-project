@@ -4966,21 +4966,26 @@ public:
 
   /// An iterator which iterates over the sub-slices that we want to split the
   /// slice into.
-  struct Iterator {
+  struct Iterator
+      : public iterator_facade_base<Iterator, std::forward_iterator_tag,
+                                    Iterator> {
     SliceSplitter &SS;
     unsigned Idx;
     Iterator(SliceSplitter &SS, bool IsEnd) : SS(SS) {
       Idx = IsEnd ? SS.Splits.size() + 1 : 0;
     }
-    bool operator!=(const Iterator &Other) { return Idx != Other.Idx; }
-    uint64_t getOffset() { return Idx == 0 ? 0 : SS.Splits[Idx - 1]; }
-    uint64_t getSize() {
+    bool operator==(const Iterator &Other) const { return Idx == Other.Idx; }
+    uint64_t getOffset() const { return Idx == 0 ? 0 : SS.Splits[Idx - 1]; }
+    uint64_t getSize() const {
       uint64_t NextOffset =
           Idx < SS.Splits.size() ? SS.Splits[Idx] : SS.SliceSize;
       return NextOffset - getOffset();
     }
-    void operator++() { ++Idx; }
-    Iterator &operator*() { return *this; }
+    Iterator &operator++() {
+      ++Idx;
+      return *this;
+    }
+    const Iterator &operator*() const { return *this; }
   };
 
   Iterator begin() { return Iterator(*this, false); }
