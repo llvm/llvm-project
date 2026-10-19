@@ -80,6 +80,9 @@ static const signed char conditional_array[] __attribute__((unused)) = {
   // An enclosing unselected operand also suppresses nested conversions.
   0 ? (1 ? 128 : 1) : 1,
   1 ? 1 : (0 ? 1 : 128),
+  // Selected nested operands must still warn.
+  1 ? (1 ? 128 : 1) : 1, // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  0 ? 1 : (0 ? 1 : 128), // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
 };
 
 void GH223923(int condition) {
