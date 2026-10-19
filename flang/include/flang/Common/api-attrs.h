@@ -204,11 +204,11 @@
 #if defined(_MSC_VER) && !defined(__clang__)
 #define RT_FORCE_INLINE_ATTR __forceinline
 #elif defined(__has_attribute)
-#  if __has_attribute(always_inline)
-#    define RT_FORCE_INLINE_ATTR inline __attribute__((always_inline))
-#  else
-#    define RT_FORCE_INLINE_ATTR inline
-#  endif
+#if __has_attribute(always_inline)
+#define RT_FORCE_INLINE_ATTR inline __attribute__((always_inline))
+#else
+#define RT_FORCE_INLINE_ATTR inline
+#endif
 #else
 #define RT_FORCE_INLINE_ATTR inline
 #endif
