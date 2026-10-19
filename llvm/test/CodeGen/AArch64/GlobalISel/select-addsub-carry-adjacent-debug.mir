@@ -28,7 +28,7 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY $x3
     ; CHECK-NEXT: [[ADDSXrr:%[0-9]+]]:gpr64 = ADDSXrr [[COPY]], [[COPY2]], implicit-def $nzcv
-    ; CHECK-NEXT: DBG_VALUE {{.*}}, $noreg, {{.*}}
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !0, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !1)
     ; CHECK-NEXT: [[ADCSXr:%[0-9]+]]:gpr64 = ADCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[ADDSXrr]]
     ; CHECK-NEXT: $x1 = COPY [[ADCSXr]]
@@ -72,7 +72,7 @@ body:             |
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32sp = COPY $w4
     ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY4]], 1, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[ADCSXr:%[0-9]+]]:gpr64 = ADCSXr [[COPY]], [[COPY2]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: DBG_VALUE {{.*}}, $noreg, {{.*}}
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !0, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !1)
     ; CHECK-NEXT: [[ADCSXr1:%[0-9]+]]:gpr64 = ADCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[ADCSXr]]
     ; CHECK-NEXT: $x1 = COPY [[ADCSXr1]]
@@ -115,7 +115,7 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY $x3
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY2]], implicit-def $nzcv
-    ; CHECK-NEXT: DBG_VALUE {{.*}}, $noreg, {{.*}}
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !0, !DIExpression(), debug-location !DILocation(line: 3, column: 1, scope: !1)
     ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SUBSXrr]]
     ; CHECK-NEXT: $x1 = COPY [[SBCSXr]]
@@ -159,7 +159,7 @@ body:             |
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $w4
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr $wzr, [[COPY4]], implicit-def $nzcv
     ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY]], [[COPY2]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: DBG_VALUE {{.*}}, $noreg, {{.*}}
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !0, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !1)
     ; CHECK-NEXT: [[SBCSXr1:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SBCSXr]]
     ; CHECK-NEXT: $x1 = COPY [[SBCSXr1]]
@@ -203,9 +203,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY $x3
     ; CHECK-NEXT: [[ADDSXrr:%[0-9]+]]:gpr64 = ADDSXrr [[COPY]], [[COPY2]], implicit-def $nzcv
-    ; CHECK-NEXT: DBG_VALUE {{.*}}, $noreg, {{.*}}
-    ; CHECK-NEXT: DBG_LABEL {{.*}}
-    ; CHECK-NEXT: DBG_VALUE {{.*}}, $noreg, {{.*}}
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !0, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !1)
+    ; CHECK-NEXT: DBG_LABEL !7, debug-location !DILocation(line: 5, column: 1, scope: !1)
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !0, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !1)
     ; CHECK-NEXT: [[ADCSXr:%[0-9]+]]:gpr64 = ADCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[ADDSXrr]]
     ; CHECK-NEXT: $x1 = COPY [[ADCSXr]]
@@ -253,8 +253,8 @@ body:             |
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   DBG_VALUE [[CSINCWr]], $noreg, {{.*}}
-  ; CHECK-NEXT:   DBG_LABEL {{.*}}
+  ; CHECK-NEXT:   DBG_VALUE [[CSINCWr]], $noreg, !0, !DIExpression(), debug-location !DILocation(line: 6, column: 1, scope: !1)
+  ; CHECK-NEXT:   DBG_LABEL !7, debug-location !DILocation(line: 6, column: 1, scope: !1)
   ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[ADCSXr:%[0-9]+]]:gpr64 = ADCSXr [[COPY1]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
   ; CHECK-NEXT:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
