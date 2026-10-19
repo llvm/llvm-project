@@ -843,7 +843,9 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     assert(GetConvertInput(capture.rhs) &&
         IsSameAtomicVariable(*GetConvertInput(capture.rhs), atom) &&
         "This cannot be a capture assignment");
-    // Lowering can't handle v and x being the same, so make it an error.
+    // [6.0:194:32-33]
+    // None of v, x, d, r, expr, and expr-list (as applicable) may access the
+    // same storage location as any other symbol in the list.
     CheckStorageOverlap(atom, {cap}, source, /*isError=*/true);
   }
 }
@@ -861,7 +863,9 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     } else {
       CheckAtomicVariable(
           atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
-      // Lowering can't handle v and x being the same, so make it an error.
+      // [6.0:194:32-33]
+      // None of v, x, d, r, expr, and expr-list (as applicable) may access the
+      // same storage location as any other symbol in the list.
       CheckStorageOverlap(atom, {read.lhs}, source, /*isError=*/true);
     }
   } else {
@@ -1409,7 +1413,8 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
     const SomeExpr &atom{maybeWrite->lhs};
     CheckAtomicWriteAssignment(*maybeWrite, update.ift.source);
     if (auto maybeCapture{GetEvaluateAssignment(capture.stmt())}) {
-      // CheckAtomicCaptureAssignment expects the capture to read x.
+      // [6.0:192:26-28], [6.0:193:9-14]
+      // The capture statement has the form v = x or v => x.
       if (auto rhs{GetConvertInput(maybeCapture->rhs)};
           !rhs || !IsSameAtomicVariable(*rhs, atom)) {
         context_.Say(capture.source,
@@ -1426,8 +1431,9 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
         return;
       }
 
-      // Since OpenMP 5.2, v and e must be different when v gets the
-      // original value of x.
+      // [6.0:195:1-2] (since OpenMP 5.2)
+      // In forms that capture the original value of x in v, v may not access
+      // the same storage location as e.
       llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
       if (version >= 52 && captureFirst && captureAlways) {
         auto top{GetTopLevelOperationIgnoreResizing(update.cond)};
