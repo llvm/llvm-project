@@ -104,7 +104,7 @@ public:
     return Pointer(getLocalBlock(Offset));
   }
   Block *getLocalBlock(unsigned Offset) const {
-    Block *B = reinterpret_cast<Block *>(locals() + Offset - sizeof(Block));
+    Block *B = localBlock(Offset);
     if (LLVM_UNLIKELY(!B->isInitialized())) {
       B->invokeCtor();
       new (localInlineDesc(Offset)) InlineDescriptor(B->getDescriptor());
