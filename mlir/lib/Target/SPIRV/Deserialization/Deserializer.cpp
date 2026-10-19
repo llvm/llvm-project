@@ -525,7 +525,9 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
       continue;
     }
     if (!isa<UnitAttr>(decAttr.getValue()))
-      continue;
+      return emitError(unknownLoc, "unhandled decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
 
     // TODO: Support multiple decorations per function parameter.
     if (foundDecorationAttr)

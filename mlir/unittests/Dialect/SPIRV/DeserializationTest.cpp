@@ -269,10 +269,17 @@ class UnsupportedParameterDecorationTest
 TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
   addHeader();
   auto argID = nextID++;
-  addInstruction(spirv::Opcode::OpDecorate,
-                 {argID, static_cast<uint32_t>(GetParam())});
+  SmallVector<uint32_t> operands = {argID, static_cast<uint32_t>(GetParam())};
+  if (GetParam() == spirv::Decoration::Alignment)
+    operands.push_back(16);
+  else if (GetParam() == spirv::Decoration::FuncParamAttr)
+    operands.push_back(
+        static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoWrite));
+  addInstruction(spirv::Opcode::OpDecorate, operands);
   addInstruction(spirv::Opcode::OpDecorate,
                  {argID, static_cast<uint32_t>(spirv::Decoration::Constant)});
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {argID, static_cast<uint32_t>(spirv::Decoration::Volatile)});
 
   auto voidType = addVoidType();
   auto intType = addIntType(32);
@@ -295,8 +302,31 @@ TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
 
 INSTANTIATE_TEST_SUITE_P(
     SPIRV, UnsupportedParameterDecorationTest,
-    ::testing::Values(spirv::Decoration::Restrict,
+    ::testing::Values(spirv::Decoration::Alignment,
+                      spirv::Decoration::FuncParamAttr,
+                      spirv::Decoration::Restrict,
                       spirv::Decoration::RelaxedPrecision));
+
+TEST_F(DeserializationTest, NonUnitParameterDecoration) {
+  addHeader();
+  auto argID = nextID++;
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {argID, static_cast<uint32_t>(spirv::Decoration::Location), 0});
+
+  auto voidType = addVoidType();
+  auto intType = addIntType(32);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, argID});
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unhandled decoration 'location' on function argument with "
+                   "result <id> 1");
+}
 
 TEST_F(DeserializationTest, AlignmentMissingOperand) {
   addHeader();
