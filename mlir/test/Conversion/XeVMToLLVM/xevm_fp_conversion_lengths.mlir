@@ -2,7 +2,8 @@
 
 // The fp8 and fp4 conversions are provided as one builtin per vector length.
 // This file covers the SPIR-V vector lengths other than 16, which
-// xevm_mx-to-llvm.mlir covers.
+// xevm_mx-to-llvm.mlir covers, and the case where the element type attribute
+// and the operand's element type disagree.
 
 // CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv2_Dh(vector<2xf16>) -> vector<2xi8>
 // CHECK-LABEL: llvm.func @truncf_f16_to_bf8_v2
