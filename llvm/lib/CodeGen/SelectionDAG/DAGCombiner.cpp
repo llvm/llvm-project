@@ -17349,9 +17349,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
                           LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
                           LN0->getAAInfo());
 
-  // Replace the old load's chain with the new load's chain.
   WorklistRemover DeadNodes(*this);
-  DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
 
   // If we looked through a freeze, rewrap the narrowed result and add an
   // Assert node so downstream analyses can see the range.
@@ -17389,13 +17387,16 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
   }
 
-  // Replace old load value for multi-use freeze so all users benefit. Replace
-  // N first, since replacing the load can CSE N into an existing node.
+  // Replace the old load for multi-use freeze so all users benefit. Replace N
+  // first, since replacing the load can CSE N into an existing node.
   if (FreezeNode && !FreezeNode.hasOneUse()) {
     CombineTo(N, Result);
     CombineTo(LN0, Load, Load.getValue(1));
     return SDValue(N, 0);
   }
+
+  // Replace the old load's chain with the new load's chain.
+  DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
 
   // Return the new loaded value.
   return Result;
