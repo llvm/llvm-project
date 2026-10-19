@@ -31,6 +31,10 @@ STATISTIC(PreInlNumCSInlinedHitMaxLimit,
 STATISTIC(
     PreInlNumCSInlinedHitGrowthLimit,
     "Number of functions with FDO inline stopped due to growth size limit");
+STATISTIC(PreInlNumCSInlinedAlwaysInline,
+          "Number of functions inlined due to always_inline attribute");
+STATISTIC(PreInlNumCSNotInlinedNoInline,
+          "Number of functions not inlined due to noinline attribute");
 
 // The switches specify inline thresholds used in SampleProfileLoader inlining.
 // TODO: the actual threshold to be tuned here because the size here is based
@@ -56,6 +60,16 @@ static cl::opt<int> CSPreinlMultiplierForPrevInl(
     cl::init(100),
     cl::desc(
         "Multiplier to bump up callsite threshold for previous inlining."));
+
+static cl::opt<bool> CSPreinlUseInlineAttributes(
+    "preinliner-use-inline-attributes", cl::Hidden, cl::init(false),
+    cl::desc("Honor always_inline/noinline attributes from pseudo probe "
+             "descriptors in the CS pre-inliner."));
+
+static cl::opt<bool> ChargeAlwaysInlineSize(
+    "preinliner-charge-always-inline-size", cl::Hidden, cl::init(false),
+    cl::desc("Charge the size of always_inline callees to the caller's "
+             "per-function size budget."));
 
 CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
                            ProfiledBinary &Binary, ProfileSummary *Summary)
@@ -159,6 +173,19 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   if (SamplePreInlineReplay)
     return WasInlined;
 
+  if (Candidate.CalleeSamples->getContext().hasAttribute(ContextNoInline)) {
+    ++PreInlNumCSNotInlinedNoInline;
+    LLVM_DEBUG(dbgs() << "  Noinline attribute for: "
+                      << Candidate.CalleeSamples->getFunction() << "\n");
+    return false;
+  }
+  if (Candidate.CalleeSamples->getContext().hasAttribute(ContextAlwaysInline)) {
+    ++PreInlNumCSInlinedAlwaysInline;
+    LLVM_DEBUG(dbgs() << "  AlwaysInline attribute for: "
+                      << Candidate.CalleeSamples->getFunction() << "\n");
+    return true;
+  }
+
   unsigned int SampleThreshold = SampleColdCallSiteThreshold;
   uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
       (Summary->getDetailedSummary()));
@@ -214,7 +241,12 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   ProfiledCandidateQueue CQueue;
   getInlineCandidates(CQueue, FSamples);
 
-  while (!CQueue.empty() && FuncFinalSize < SizeLimit) {
+  while (!CQueue.empty()) {
+    // Inlines always_inline callees regardless of the budget.
+    if (FuncFinalSize >= SizeLimit &&
+        !CQueue.top().CalleeSamples->getContext().hasAttribute(
+            ContextAlwaysInline))
+      break;
     ProfiledInlineCandidate Candidate = CQueue.top();
     CQueue.pop();
     bool ShouldInline = false;
@@ -225,7 +257,10 @@ void CSPreInliner::processFunction(const FunctionId Name) {
       ContextTracker.markContextSamplesInlined(Candidate.CalleeSamples);
       Candidate.CalleeSamples->getContext().setAttribute(
           ContextShouldBeInlined);
-      FuncFinalSize += Candidate.SizeCost;
+      bool IsAlwaysInline = Candidate.CalleeSamples->getContext().hasAttribute(
+          ContextAlwaysInline);
+      if (ChargeAlwaysInlineSize || !IsAlwaysInline)
+        FuncFinalSize += Candidate.SizeCost;
       getInlineCandidates(CQueue, Candidate.CalleeSamples);
     } else {
       ++PreInlNumCSNotInlined;
@@ -289,6 +324,27 @@ void CSPreInliner::run() {
 
   LLVM_DEBUG(printProfileNames(ContextTracker, true));
 
+  // Stamp always_inline/noinline attributes from pseudo probe descriptors
+  // onto the corresponding FunctionSamples' contexts. A binary without
+  // pseudo probes has no descriptors, so nothing is stamped.
+  if (CSPreinlUseInlineAttributes) {
+    auto &FuncProfiles = ContextTracker.getFuncToCtxtProfiles();
+    for (const MCPseudoProbeFuncDesc &FuncDesc : Binary.getGUID2FuncDescMap()) {
+      if (!FuncDesc.Attributes)
+        continue;
+      uint32_t CtxAttr = 0;
+      if (FuncDesc.Attributes &
+          (uint8_t)PseudoProbeDescAttributes::AlwaysInline)
+        CtxAttr |= ContextAlwaysInline;
+      if (FuncDesc.Attributes & (uint8_t)PseudoProbeDescAttributes::NoInline)
+        CtxAttr |= ContextNoInline;
+      FunctionId FuncId(FunctionSamples::getCanonicalFnName(FuncDesc.FuncName));
+      auto It = FuncProfiles.find(FuncId);
+      if (It != FuncProfiles.end())
+        for (auto *FSamples : It->second)
+          FSamples->getContext().setAttribute((ContextAttributeMask)CtxAttr);
+    }
+  }
   // Execute global pre-inliner to estimate a global top-down inline
   // decision and merge profiles accordingly. This helps with profile
   // merge for ThinLTO otherwise we won't be able to merge profiles back

@@ -1,0 +1,109 @@
+; Test that the CS pre-inliner honors the always_inline and noinline attributes
+; encoded in the pseudo probe descriptors (-preinliner-use-inline-attributes).
+;
+; main inlines ai (always_inline) and ord, and calls ni (noinline). ai is the
+; hottest candidate, then ni, then ord; main is 178 bytes and ai 78 (source at
+; the end).
+;
+; Without the option all three callees are inlined.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=DEFAULT
+
+; DEFAULT:      main:4219:0
+; DEFAULT:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
+; DEFAULT:        !Attributes: 3
+; DEFAULT-NEXT:  7: ni:19
+; DEFAULT:        !Attributes: 2
+; DEFAULT-NEXT:  10: _ZL3ordi.__uniq.{{[0-9]+}}:6
+; DEFAULT:        !Attributes: 3
+
+; With the option ni stays a call and its profile is marked noinline (16), and
+; ai is marked always_inline (8 + inlined 3).
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes
+; RUN: FileCheck %s --input-file %t --check-prefix=ATTR
+
+; ATTR:      main:4222:0
+; ATTR:       7: 22 ni:22
+; ATTR:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
+; ATTR:        !Attributes: 11
+; ATTR-NEXT:  10: _ZL3ordi.__uniq.{{[0-9]+}}:6
+; ATTR:        !Attributes: 3
+; ATTR:      ni:22:22
+; ATTR-NEXT:  1: 22
+; ATTR-NEXT:  !CFGChecksum:
+; ATTR-NEXT:  !Attributes: 16
+
+; With no size budget and a size threshold of 1 byte, ai is still inlined, since
+; the compiler inlines it anyway: neither the exhausted budget nor shouldInline()
+; may stop it. ord is not inlined. Without the option nothing is inlined.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes --sample-profile-inline-limit-min=0 --sample-profile-inline-limit-max=0 --sample-profile-hot-inline-threshold=0 --csspgo-preinliner-multiplier-for-previous-inlining=1
+; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET-ATTR
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --sample-profile-inline-limit-min=0 --sample-profile-inline-limit-max=0 --sample-profile-hot-inline-threshold=0 --csspgo-preinliner-multiplier-for-previous-inlining=1
+; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET
+
+; NOBUDGET-ATTR:      main:4222:0
+; NOBUDGET-ATTR:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
+; NOBUDGET-ATTR:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
+; NOBUDGET-ATTR:        !Attributes: 11
+; NOBUDGET-ATTR:      _ZL3ordi.__uniq.{{[0-9]+}}:6:6
+
+; NOBUDGET:      _ZL2aii.__uniq.{{[0-9]+}}:3996:34
+; NOBUDGET:      main:260:0
+; NOBUDGET:       5: 34 _ZL2aii.__uniq.{{[0-9]+}}:34
+; NOBUDGET:       7: 22 ni:22
+; NOBUDGET:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
+; NOBUDGET-NOT:  !Attributes: {{[23]}}{{$}}
+
+; A 250-byte budget against main's 178 bytes: ai is free by default, so ord
+; still fits. -preinliner-charge-always-inline-size charges ai's 78 bytes, which
+; uses the budget up, so ord is no longer inlined.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes --sample-profile-inline-limit-min=250 --sample-profile-inline-limit-max=250
+; RUN: FileCheck %s --input-file %t --check-prefix=FREE
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes --sample-profile-inline-limit-min=250 --sample-profile-inline-limit-max=250 --preinliner-charge-always-inline-size
+; RUN: FileCheck %s --input-file %t --check-prefix=CHARGED
+
+; FREE:      main:4222:0
+; FREE:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
+; FREE:       10: _ZL3ordi.__uniq.{{[0-9]+}}:6
+; FREE-NEXT:   1: 6
+
+; CHARGED:      main:4222:0
+; CHARGED:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
+; CHARGED:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
+; CHARGED:      _ZL3ordi.__uniq.{{[0-9]+}}:6:6
+
+; Inputs/cs-preinline-inline-attributes.perfbin and .perfscript were made from
+; the source below (the compiler must encode the inline attributes in the
+; pseudo probe descriptors) with
+;   clang -O2 -fno-pie -no-pie -fpseudo-probe-for-profiling -fno-omit-frame-pointer
+;         -mno-omit-leaf-frame-pointer -fno-unroll-loops -g test.c
+;   perf record -e cycles:u -j any,u -c 100003 --call-graph fp
+;   perf script -F ip,brstack --show-mmap-events --no-inline
+; keeping 27 samples and the 16 newest LBR entries of each.
+;
+; volatile int sink;
+;
+; // Hot and tiny, but never inlined.
+; __attribute__((noinline)) int ni(int x) { return x * 3 + 1; }
+;
+; // Always inlined; its loop gives the inlined copy samples and a size.
+; __attribute__((always_inline)) static inline int ai(int n) {
+;   int s = 0;
+;   for (int i = 0; i < n; i++)
+;     s += (i * 7) ^ n;
+;   return s;
+; }
+;
+; // An ordinary callee, inlined by the compiler.
+; static int ord(int x) { return (x * x) ^ (x >> 3); }
+;
+; int main() {
+;   for (int k = 0; k < 4000000; k++) {
+;     sink += ai(32 + (k & 7));
+;     if (k & 1)
+;       sink += ni(k);
+;     if ((k & 3) == 0)
+;       sink += ord(k);
+;   }
+;   return 0;
+; }
