@@ -1,5 +1,6 @@
 # RUN: yaml2obj --docnum=1 %s -o %t.elf-x86-64
 # RUN: yaml2obj --docnum=2 %s -o %t2.elf-x86-64
+# RUN: yaml2obj --docnum=3 %s -o %t-toc64-unsorted.a
 
 --- !ELF
 FileHeader:
@@ -45,6 +46,31 @@ Symbols:
     Section: .text
     Binding: STB_GLOBAL
     Value:   0x0000000000000016
+
+## A Darwin archive with a __.SYMDEF_64 symbol table whose strings are stored as
+## "_a\0_c\0_b\0" while the ranlib_64 entries are ordered _a, _b, _c.
+## The symbol table member uses the BSD long name form "#1/12", so its content
+## starts with the 12-byte name "__.SYMDEF_64". The rest is little-endian
+## uint64_t fields:
+##   ranlib_64 byte count: 0x30 (3 entries)
+##   { strx 0x0 (_a), member offset 0xa0  (a.o) }
+##   { strx 0x6 (_b), member offset 0xdc  (b.o) }
+##   { strx 0x3 (_c), member offset 0x118 (c.o) }
+##   string table byte count: 0x10
+##   string table: "_a\0_c\0_b\0", zero-padded to 16 bytes
+## The members are empty: 8 (magic) + 60 (header) + 92 = 0xa0 for a.o, then 60
+## per member.
+--- !Arch
+Members:
+  - Name:    '#1/12'
+    Size:    '92'
+    Content: '5F5F2E53594D4445465F363430000000000000000000000000000000A0000000000000000600000000000000DC000000000000000300000000000000180100000000000010000000000000005F61005F63005F620000000000000000'
+  - Name:    'a.o'
+    Size:    '0'
+  - Name:    'b.o'
+    Size:    '0'
+  - Name:    'c.o'
+    Size:    '0'
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar rcsU %t.a %t.elf-x86-64 %t2.elf-x86-64
@@ -233,3 +259,12 @@ Symbols:
 # RUN: rm -f %t.a
 # RUN: llvm-ar rcs --format=darwin %t.a
 # RUN: grep -q '__\.SYMDEF' %t.a
+
+## The __.SYMDEF_64 string table does not have to be in ranlib_64 entry order.
+# RUN: llvm-nm --print-armap %t-toc64-unsorted.a | FileCheck --check-prefix=DARWIN64-UNSORTED %s
+
+# DARWIN64-UNSORTED:      Archive map
+# DARWIN64-UNSORTED-NEXT: _a in a.o
+# DARWIN64-UNSORTED-NEXT: _b in b.o
+# DARWIN64-UNSORTED-NEXT: _c in c.o
+# DARWIN64-UNSORTED-EMPTY:
