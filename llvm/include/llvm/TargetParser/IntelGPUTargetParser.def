@@ -35,9 +35,7 @@
 // every revision of a device shares one name and one IGCA target.
 //
 // Products that share a major and a minor version have one row, named after
-// the product the offload-arch utility prints. The exception is "xe-pvc-sdv":
-// it has the same major and minor version as "xe-pvc", but the AOT compiler
-// generates different code for it, so it gets its own row.
+// the product the offload-arch utility prints.
 //
 // Devices without a published name are left out on purpose; offload-arch names
 // them by GPU IP version, as "xe_*.*.*". A device gets a row only once it has
@@ -64,7 +62,6 @@ INTEL_GPU("xe-mtl-h",    XE_MTL_H,    12, 71,  30, Render)
 INTEL_GPU("xe-mtl-u",    XE_MTL_U,    12, 70,  30, Render)
 INTEL_GPU("xe-pvc-vg",   XE_PVC_VG,   12, 61,  20, ComputeExact)
 INTEL_GPU("xe-pvc",      XE_PVC,      12, 60,  20, ComputeExact)
-INTEL_GPU("xe-pvc-sdv",  XE_PVC_SDV,  12, 60,  20, ComputeExact)
 INTEL_GPU("xe-acm-g12",  XE_ACM_G12,  12, 57,  15, RenderExact)
 INTEL_GPU("xe-acm-g11",  XE_ACM_G11,  12, 56,  15, RenderExact)
 INTEL_GPU("xe-acm-g10",  XE_ACM_G10,  12, 55,  15, RenderExact)
