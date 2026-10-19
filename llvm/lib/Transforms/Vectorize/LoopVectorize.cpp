@@ -5601,6 +5601,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 1. Create the scalar preheader; all other blocks are created during VPlan
   // execution.
   State.CFG.PrevBB = OrigLoop->getLoopPreheader();
+  assert(State.CFG.PrevBB && "Invalid loop structure");
   BasicBlock *ScalarPHBB = SplitBlock(
       State.CFG.PrevBB, State.CFG.PrevBB->getTerminator(), DT, LI, nullptr,
       EpilogueVecKind == EpilogueVectorizationKind::Epilogue
@@ -7000,32 +7001,37 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
 
-  // For each of the scalar loop's header phis, create a ResumeForEpilogue for
-  // the main loop's resume value and its bypass value, to keep them alive for
-  // the epilogue plan, which merges them in its vector and scalar preheaders.
-  // Remove the resume phi merging them; until the epilogue plan executes, the
-  // scalar loop resumes at its start value.
+  // Create ResumeForEpilogue instructions for the resume phis of the
+  // VPIRPhis and their bypass values in the scalar header of the main plan and
+  // return them so they can be used as resume values when vectorizing the
+  // epilogue.
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
   MiddleBuilder.setInsertPoint(
       MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
-  // Multiple header phis may share the same resume phi.
-  SmallVector<VPInstruction *> ResumeValues;
-  SmallSetVector<VPPhi *, 4> ResumePhis;
-  for (VPRecipeBase &R : MainPlan.getScalarHeader()->phis()) {
-    auto *ResumePhi = cast<VPPhi>(R.getOperand(0));
-    assert(ResumePhi->getNumIncoming() == 2 &&
-           ResumePhi->getIncomingBlock(0) == MiddleVPBB &&
-           "expected resume phi merging middle block and bypass value");
-    ResumeValues.push_back(MiddleBuilder.createNaryOp(
-        VPInstruction::ResumeForEpilogue,
-        {ResumePhi->getOperand(0), ResumePhi->getOperand(1)}));
-    ResumePhis.insert(ResumePhi);
-  }
-  for (VPPhi *ResumePhi : ResumePhis) {
+  auto ResumeValues = to_vector(
+      map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
+        auto *ResumePhi = cast<VPPhi>(R.getOperand(0));
+        assert(ResumePhi->getNumIncoming() == 2 &&
+               ResumePhi->getIncomingBlock(0) == MiddleVPBB &&
+               "expected resume phi merging middle block and bypass value");
+        return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
+                                          ResumePhi->operands());
+      }));
+  return {VectorTCMarker, std::move(ResumeValues)};
+}
+
+/// Replace the resume phis in \p MainPlan's scalar preheader by their bypass
+/// values. The epilogue plan creates them after \p MainPlan executed.
+static void removeScalarResumePhis(VPlan &MainPlan) {
+  for (VPRecipeBase &R :
+       make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
+    auto *ResumePhi = cast<VPPhi>(&R);
+    assert(ResumePhi->getIncomingBlock(0) == MainPlan.getMiddleBlock() &&
+           all_equal(drop_begin(ResumePhi->operands())) &&
+           "expected resume phi merging middle block and bypass values");
     ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
     ResumePhi->eraseFromParent();
   }
-  return {VectorTCMarker, std::move(ResumeValues)};
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -7035,6 +7041,13 @@ static void preparePlanForEpilogueVectorLoop(
     ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
     LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
     ScalarEvolution &SE, const MainPlanResumeMarkers &Markers) {
+  // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
+  // from the main plan.
+  // TODO: Replace the IR PHI key.
+  DenseMap<PHINode *, VPInstruction *> IRPhiToResumeForEpi;
+  for (auto [HeaderPhi, ResumeForEpi] :
+       zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
+    IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
   VPIRBasicBlock *EpilogueCheck = RUN_VPLAN_PASS(
       VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
@@ -7071,7 +7084,8 @@ static void preparePlanForEpilogueVectorLoop(
 
   VPValue *IV = VectorLoop->getCanonicalIV();
   // When vectorizing the epilogue loop, the canonical induction needs to start
-  // at the resume value from the main vector loop. Add this resume value as an
+  // at the resume value from the main vector loop. Find the resume value
+  // created during execution of the main VPlan. Add this resume value as an
   // offset to the canonical IV of the epilogue loop.
   VPValue *VPV = GetResumeValue(Markers.VectorTC, "vec.epilog.resume.val");
   assert(all_of(IV->users(),
@@ -7104,14 +7118,6 @@ static void preparePlanForEpilogueVectorLoop(
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
-
-  // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
-  // from the main plan.
-  // TODO: Replace the IR PHI key.
-  DenseMap<PHINode *, VPInstruction *> IRPhiToResumeForEpi;
-  for (auto [HeaderPhi, ResumeForEpi] :
-       zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
-    IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
 
   // Resume values must be created in the vector preheader.
   VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
@@ -7729,6 +7735,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
                    L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                    PSE);
+    removeScalarResumePhis(BestMainPlan);
 
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
