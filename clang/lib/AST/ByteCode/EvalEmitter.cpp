@@ -157,13 +157,7 @@ Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  Desc.Desc = D;
-  Desc.Offset = sizeof(InlineDescriptor);
-  Desc.IsActive = false;
-  Desc.IsBase = false;
-  Desc.IsFieldMutable = false;
-  Desc.IsConst = false;
-  Desc.IsInitialized = false;
+  new (&Desc) InlineDescriptor(D);
 
   // Register the local.
   unsigned Off = Locals.size();
