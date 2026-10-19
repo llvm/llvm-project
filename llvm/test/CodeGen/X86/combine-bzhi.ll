@@ -85,7 +85,6 @@ define i64 @test_bzhi64_range(i64 %arg) nounwind readnone {
 define i32 @test_bzhi32_control_upper_bits(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_bzhi32_control_upper_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    bzhil %esi, %edi, %eax
 ; CHECK-NEXT:    retq
   %control = or i32 %b, 256
@@ -96,7 +95,6 @@ define i32 @test_bzhi32_control_upper_bits(i32 %a, i32 %b) nounwind {
 define i64 @test_bzhi64_control_upper_bits(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_bzhi64_control_upper_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orq $256, %rsi # imm = 0x100
 ; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %control = or i64 %b, 256
@@ -109,7 +107,7 @@ define i64 @test_bzhi64_control_upper_bits(i64 %a, i64 %b) nounwind {
 define i32 @test_bzhi32_constant_control_upper_bits(i32 %a) nounwind {
 ; CHECK-LABEL: test_bzhi32_constant_control_upper_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $272, %eax # imm = 0x110
+; CHECK-NEXT:    movl $16, %eax
 ; CHECK-NEXT:    bzhil %eax, %edi, %eax
 ; CHECK-NEXT:    retq
   %result = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 272)
@@ -119,7 +117,7 @@ define i32 @test_bzhi32_constant_control_upper_bits(i32 %a) nounwind {
 define i64 @test_bzhi64_constant_control_upper_bits(i64 %a) nounwind {
 ; CHECK-LABEL: test_bzhi64_constant_control_upper_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $272, %eax # imm = 0x110
+; CHECK-NEXT:    movl $16, %eax
 ; CHECK-NEXT:    bzhiq %rax, %rdi, %rax
 ; CHECK-NEXT:    retq
   %result = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 272)
@@ -129,7 +127,6 @@ define i64 @test_bzhi64_constant_control_upper_bits(i64 %a) nounwind {
 define i32 @test_bzhi32_src_upper_bits(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_bzhi32_src_upper_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl $65536, %edi # imm = 0x10000
 ; CHECK-NEXT:    andl $15, %esi
 ; CHECK-NEXT:    bzhil %esi, %edi, %eax
 ; CHECK-NEXT:    retq
@@ -142,7 +139,6 @@ define i32 @test_bzhi32_src_upper_bits(i32 %a, i32 %b) nounwind {
 define i64 @test_bzhi64_src_upper_bits(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_bzhi64_src_upper_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orq $65536, %rdi # imm = 0x10000
 ; CHECK-NEXT:    andl $15, %esi
 ; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
@@ -155,7 +151,6 @@ define i64 @test_bzhi64_src_upper_bits(i64 %a, i64 %b) nounwind {
 define i32 @test_bzhi32_user_demanded(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_bzhi32_user_demanded:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl $256, %edi # imm = 0x100
 ; CHECK-NEXT:    bzhil %esi, %edi, %eax
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
@@ -168,7 +163,6 @@ define i32 @test_bzhi32_user_demanded(i32 %a, i32 %b) nounwind {
 define i64 @test_bzhi64_user_demanded(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_bzhi64_user_demanded:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orq $256, %rdi # imm = 0x100
 ; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
