@@ -2674,10 +2674,13 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
         PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
     }
   } else if (const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI)) {
+    assert(RVFI->useSaveRestoreLibCalls(*MF) &&
+           "Expected restore with libcall to use save restore libcalls");
+
     // Restore is not compatible with shadow stacks, so do the restore manually.
     // This ensures we still get the code size saving of `__riscv_save_<N>`.
     if (RVFI->hasShadowStack(*MF)) {
-      loadRegFromStackSlot(CSI);
+      loadRegFromStackSlot(getPushOrLibCallsSavedInfo(*MF, CSI));
       return true;
     }
 

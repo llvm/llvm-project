@@ -1328,8 +1328,6 @@ define float @caller_sw_float(float %x, float %y, float %z) shadowcallstack {
 ; RV32D-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
 ; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, -4
 ; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore gp
-; RV32D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; RV32D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_sw_float:
@@ -1485,8 +1483,6 @@ define float @caller_sw_float(float %x, float %y, float %z) shadowcallstack {
 ; RV64D-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
 ; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, -8
 ; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore gp
-; RV64D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; RV64D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; RV64D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV64-ZCMP-LABEL: caller_sw_float:
@@ -2652,8 +2648,6 @@ define float @caller_hw_float(float %x, float %y, float %z) "hw-shadow-stack" {
 ; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 32
 ; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV32D-SAVE-RESTORE-NEXT:    sspopchk ra
-; RV32D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; RV32D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_hw_float:
@@ -2785,8 +2779,6 @@ define float @caller_hw_float(float %x, float %y, float %z) "hw-shadow-stack" {
 ; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 32
 ; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV64D-SAVE-RESTORE-NEXT:    sspopchk ra
-; RV64D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; RV64D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; RV64D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV64-ZCMP-LABEL: caller_hw_float:
