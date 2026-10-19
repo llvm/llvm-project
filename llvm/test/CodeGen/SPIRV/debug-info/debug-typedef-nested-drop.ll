@@ -1,11 +1,8 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL %}
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; A typedef of a typedef (Bar -> Foo -> int) does not pass spirv-val: it
-; requires a DebugTypedef Base Type to be a DebugTypeBasic, although the
-; NonSemantic.Shader.DebugInfo.100 spec allows any debug type.
-
-; VAL: DebugTypedef: expected operand Base Type must be a result id of DebugTypeBasic
+; Bar is a typedef of the typedef Foo (Bar -> Foo -> int). Foo is emitted
+; first, so Bar uses it as its Base Type.
 
 ; CHECK-SPIRV: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-SPIRV-DAG: [[void:%[0-9]+]] = OpTypeVoid
