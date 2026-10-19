@@ -128,10 +128,13 @@ define i32 @freeze(i32 %v) {
   ret i32 %r
 }
 
-define i32 @undef_select(i1 %c) {
-; CHECK-LABEL: define i32 @undef_select(
-; CHECK: select i1 %c, i32 undef, i32 poison
-  %s = select i1 %c, i3 undef, i3 poison
+define i32 @poison_select(i1 %c, i32 %v) {
+; CHECK-LABEL: define i32 @poison_select(
+; CHECK: [[S:%.*]] = select i1 %c, i32 poison, i32 %v
+; CHECK-NEXT: [[R:%.*]] = and i32 [[S]], 7
+; CHECK-NEXT: ret i32 [[R]]
+  %n = trunc i32 %v to i3
+  %s = select i1 %c, i3 poison, i3 %n
   %r = zext i3 %s to i32
   ret i32 %r
 }
