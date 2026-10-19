@@ -3034,6 +3034,8 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                                     elements);
   }
 
+  assert(!cir::MissingFeatures::scalableVectors());
+
   if (e->getType()->isVoidType())
     return {};
 
