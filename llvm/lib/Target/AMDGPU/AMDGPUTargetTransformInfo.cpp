@@ -621,9 +621,9 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
 
     return LT.first * NElts * getFullRateInstrCost();
   case ISD::MUL: {
-    const int QuarterRateCost = getQuarterRateInstrCost(CostKind);
+    const InstructionCost QuarterRateCost = getQuarterRateInstrCost(CostKind);
     if (SLT == MVT::i64) {
-      const int FullRateCost = getFullRateInstrCost();
+      const InstructionCost FullRateCost = getFullRateInstrCost();
       return (4 * QuarterRateCost + (2 * 2) * FullRateCost) * LT.first * NElts;
     }
 
@@ -672,9 +672,9 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // FIXME: frem should be handled separately. The fdiv in it is most of it,
     // but the current lowering is also not entirely correct.
     if (SLT == MVT::f64) {
-      int Cost = 7 * get64BitInstrCost(CostKind) +
-                 getQuarterRateInstrCost(CostKind) +
-                 3 * getHalfRateInstrCost(CostKind);
+      InstructionCost Cost = 7 * get64BitInstrCost(CostKind) +
+                             getQuarterRateInstrCost(CostKind) +
+                             3 * getHalfRateInstrCost(CostKind);
       // Add cost of workaround.
       if (!ST->hasUsableDivScaleConditionOutput())
         Cost += 3 * getFullRateInstrCost();
@@ -696,7 +696,8 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       // f32 fmul
       // v_cvt_f16_f32
       // f16 div_fixup
-      int Cost = 4 * getFullRateInstrCost() + 2 * getTransInstrCost(CostKind);
+      InstructionCost Cost =
+          4 * getFullRateInstrCost() + 2 * getTransInstrCost(CostKind);
       return LT.first * Cost * NElts;
     }
 
@@ -704,14 +705,16 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
-      int Cost = getTransInstrCost(CostKind) + getFullRateInstrCost();
+      InstructionCost Cost =
+          getTransInstrCost(CostKind) + getFullRateInstrCost();
       return LT.first * Cost * NElts;
     }
 
     if (SLT == MVT::f32 || SLT == MVT::f16) {
       // 4 more v_cvt_* insts without f16 insts support
-      int Cost = (SLT == MVT::f16 ? 14 : 10) * getFullRateInstrCost() +
-                 1 * getTransInstrCost(CostKind);
+      InstructionCost Cost =
+          (SLT == MVT::f16 ? 14 : 10) * getFullRateInstrCost() +
+          1 * getTransInstrCost(CostKind);
 
       if (!HasFP32Denormals) {
         // FP mode switches.
@@ -933,7 +936,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   // TODO: Get more refined intrinsic costs?
-  unsigned InstRate = getQuarterRateInstrCost(CostKind);
+  InstructionCost InstRate = getQuarterRateInstrCost(CostKind);
 
   switch (ICA.getID()) {
   case Intrinsic::fma:
@@ -964,7 +967,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         NumOps = 1;
     }
 
-    unsigned BaseRate =
+    InstructionCost BaseRate =
         SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
     InstRate = BaseRate * NumOps;
     break;
@@ -2096,11 +2099,13 @@ void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   CommonTTI.getPeelingPreferences(L, SE, PP);
 }
 
-int GCNTTIImpl::getTransInstrCost(TTI::TargetCostKind CostKind) const {
+InstructionCost
+GCNTTIImpl::getTransInstrCost(TTI::TargetCostKind CostKind) const {
   return getQuarterRateInstrCost(CostKind);
 }
 
-int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
+InstructionCost
+GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
   return ST->hasFullRate64Ops()
              ? getFullRateInstrCost()
              : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
