@@ -13570,7 +13570,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Acc = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
     SDValue Rs2 = Op.getOperand(3);
-    MVT XLenVT = Subtarget.getXLenVT();
 
     if (Subtarget.is64Bit()) {
       // Per the spec decomposition table: a single zip16p puts the
