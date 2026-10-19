@@ -183,7 +183,6 @@ CompilerType
 TypeSystemFortran::GetCanonicalType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return CompilerType();
-
   return CompilerType(weak_from_this(), type);
 }
 
