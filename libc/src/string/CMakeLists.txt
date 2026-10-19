@@ -499,6 +499,12 @@ elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   add_memcpy(memcpy_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
     MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
   add_memcpy(memcpy MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+elseif(LIBC_TARGET_ARCHITECTURE_IS_ARM)
+  # Vectorizing the word by word copy only increases code size, disable it.
+  set(LIBC_ARM_MEMCPY_COMPILE_OPTIONS -fno-tree-slp-vectorize)
+  add_memcpy(memcpy_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+    ${LIBC_ARM_MEMCPY_COMPILE_OPTIONS})
+  add_memcpy(memcpy COMPILE_OPTIONS ${LIBC_ARM_MEMCPY_COMPILE_OPTIONS})
 elseif(LIBC_TARGET_OS_IS_GPU)
   add_memcpy(memcpy)
 else()
@@ -533,6 +539,11 @@ elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   add_memmove(memmove_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
     MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
   add_memmove(memmove MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+elseif(LIBC_TARGET_ARCHITECTURE_IS_ARM)
+  # memmove inlines memcpy for disjoint buffers, see memcpy above.
+  add_memmove(memmove_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+    ${LIBC_ARM_MEMCPY_COMPILE_OPTIONS})
+  add_memmove(memmove COMPILE_OPTIONS ${LIBC_ARM_MEMCPY_COMPILE_OPTIONS})
 elseif(LIBC_TARGET_OS_IS_GPU)
   add_memmove(memmove)
 else()
