@@ -4404,7 +4404,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                                       m_SMin(m_Value(X), NegPat),
                                       m_UMin(m_Value(X), NegPat))))) {
       unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
-      if (hasOperation(NewOpc, VT))
+      // If the type is legal and the existing min/max isn't supported go ahead
+      // and do the conversion. The expansion of the new min/max will likely be
+      // similar to the old.
+      if (hasOperation(NewOpc, VT) ||
+          (isTypeLegal(VT) && !hasOperation(N1->getOpcode(), VT)))
         return DAG.getNode(NewOpc, DL, VT, X, S0);
     }
 
@@ -6422,6 +6426,11 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
     return SDValue();
 
   unsigned BW = (C1 + 1).exactLogBase2();
+  // When BW is 0, there is no equivalent i0 VT. And since an unsigned value is
+  // never < 0, the result is always 0.
+  if (BW == 0)
+    return DAG.getConstant(0, SDLoc(N0), N3.getValueType());
+
   EVT FPVT = N0.getOperand(0).getValueType();
   EVT NewVT = FPVT.changeElementType(*DAG.getContext(),
                                      EVT::getIntegerVT(*DAG.getContext(), BW));

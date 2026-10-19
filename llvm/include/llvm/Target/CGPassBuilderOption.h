@@ -58,6 +58,9 @@ struct CGPassBuilderOption {
   bool EnableBlockPlacementStats = false;
   bool EnableGlobalMergeFunc = false;
   bool EnableSinkAndFold = false;
+  /// Run the machine scheduler while still in SSA, just before PHI
+  /// elimination.
+  bool EnableSSAMachineScheduler = false;
   bool EnableTailMerge = true;
   /// Enable LoopTermFold immediately after LSR.
   bool EnableLoopTermFold = false;
