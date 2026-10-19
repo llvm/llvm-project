@@ -223,7 +223,9 @@ public:
 
   /// Print the set's internal state.
   void print(raw_ostream &os) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Construct an empty PresburgerRelation with the specified number of

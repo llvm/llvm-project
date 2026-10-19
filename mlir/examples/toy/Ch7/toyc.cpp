@@ -316,7 +316,8 @@ int main(int argc, char **argv) {
   // If we aren't exporting to non-mlir, then we are done.
   bool isOutputingMLIR = emitAction <= Action::DumpMLIRLLVM;
   if (isOutputingMLIR) {
-    module->dump();
+    module->print(llvm::errs(), mlir::OpPrintingFlags().useLocalScope());
+    llvm::errs() << "\n";
     return 0;
   }
 

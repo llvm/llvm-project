@@ -208,7 +208,9 @@ public:
   iterator end() const { return nodes.end(); }
 
   /// Dump the graph in a human readable format.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
   void print(raw_ostream &os) const;
 
 private:

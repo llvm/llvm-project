@@ -849,7 +849,9 @@ public:
   bool isFullDim();
 
   void print(raw_ostream &os) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Checks all rows of equality/inequality constraints for trivial

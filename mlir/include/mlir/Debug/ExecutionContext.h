@@ -29,7 +29,9 @@ public:
   const Action &getAction() const { return action; }
   int getDepth() const { return depth; }
   void print(raw_ostream &os, bool withContext) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
   Breakpoint *getBreakpoint() const { return breakpoint; }
   void setBreakpoint(Breakpoint *breakpoint) { this->breakpoint = breakpoint; }
 

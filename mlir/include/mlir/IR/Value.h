@@ -223,7 +223,9 @@ public:
   void print(raw_ostream &os) const;
   void print(raw_ostream &os, const OpPrintingFlags &flags) const;
   void print(raw_ostream &os, AsmState &state) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Print this value as if it were an operand.
   void printAsOperand(raw_ostream &os, AsmState &state) const;
