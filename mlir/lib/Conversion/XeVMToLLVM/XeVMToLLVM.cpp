@@ -1363,15 +1363,16 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     // and route through f32 and f16 internally, replacing the explicit
     // bftof/convert_half round trip.
     //
-    // `src_etype` says how to read the source and the verifier only checks its
-    // bitwidth, so either element type may arrive under either attribute.
-    // Coerce to what the wrapper takes, which also keeps bf16 away from
-    // mangle(), which has no code for it.
+    // `src_etype` is what says how to read the source, so the bf16 bitcast is
+    // driven by it. An operand whose element type disagrees with it is invalid
+    // IR that `TruncfOp::verify` does not reject yet, and mangle() has no code
+    // for bf16, so it asserts there. A verifier rule for that belongs with the
+    // op, not here.
     bool srcIsBF16 = srcEtype == TruncfSrcElemTypes::BF16;
-    Type argElemTy = srcIsBF16 ? cast<Type>(rewriter.getI16Type())
-                               : cast<Type>(rewriter.getF16Type());
-    src = castIfNeeded(rewriter, loc,
-                       VectorType::get(vecSrcTy.getShape(), argElemTy), src);
+    if (srcIsBF16)
+      src = LLVM::BitcastOp::create(
+          rewriter, loc,
+          VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
     StringRef convertName;
     if (dstEtype == TruncfDstElemTypes::BF8) { // Float8E5M2Type
       convertName = srcIsBF16 ? "__builtin_spirv_ConvertBF16ToE5M2EXT"

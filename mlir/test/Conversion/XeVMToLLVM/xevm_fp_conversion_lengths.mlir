@@ -2,8 +2,7 @@
 
 // The fp8 and fp4 conversions are provided as one builtin per vector length.
 // This file covers the SPIR-V vector lengths other than 16, which
-// xevm_mx-to-llvm.mlir covers, and the case where the element type attribute
-// and the operand's element type disagree.
+// xevm_mx-to-llvm.mlir covers.
 
 // CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv2_Dh(vector<2xf16>) -> vector<2xi8>
 // CHECK-LABEL: llvm.func @truncf_f16_to_bf8_v2
@@ -86,21 +85,6 @@ llvm.func @extf_hf8_to_f16_v8(%src: vector<8xi8>) -> vector<8xf16> {
   // CHECK-SAME: : (vector<8xi8>) -> vector<8xf16>
   %dst = xevm.extf %src { src_etype = f8, dst_etype = f16 } : (vector<8xi8>) -> vector<8xf16>
   llvm.return %dst : vector<8xf16>
-}
-
-// -----
-
-// The verifier only constrains the operand's bitwidth, so a bf16 vector can
-// arrive under `src_etype = f16`. It is reinterpreted as what the wrapper takes.
-// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv2_Dh(vector<2xf16>) -> vector<2xi8>
-// CHECK-LABEL: llvm.func @truncf_etype_f16_operand_bf16
-// CHECK-SAME: %[[ARG0:.*]]: vector<2xbf16>
-llvm.func @truncf_etype_f16_operand_bf16(%src: vector<2xbf16>) -> vector<2xi8> {
-  // CHECK: %[[SRC:.*]] = llvm.bitcast %[[ARG0]] : vector<2xbf16> to vector<2xf16>
-  // CHECK: llvm.call spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv2_Dh(%[[SRC]])
-  // CHECK-SAME: : (vector<2xf16>) -> vector<2xi8>
-  %dst = xevm.truncf %src { src_etype = f16, dst_etype = bf8 } : (vector<2xbf16>) -> vector<2xi8>
-  llvm.return %dst : vector<2xi8>
 }
 
 // -----
