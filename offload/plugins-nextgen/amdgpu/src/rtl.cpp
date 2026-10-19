@@ -4187,7 +4187,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         if (HostDevice->getAgent().handle == NearestCPU.handle)
           return *HostDevice;
     }
-    return *HostDevices[0];
+    return *HostDevices.front();
   }
 
   /// Get the kernel agent with the corresponding agent id.
