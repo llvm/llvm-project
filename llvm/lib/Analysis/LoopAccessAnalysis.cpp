@@ -3556,6 +3556,15 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         for (Metadata *Op : Decl->getScopeList()->operands())
           LoopAliasScopes.insert(cast<MDNode>(Op));
 
+      // Operand bundles may access memory, even if the callee does not.
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (CB && CB->hasReadingOperandBundles()) {
+        recordAnalysis("CantVectorizeInstruction", &I)
+            << "call instruction with operand bundles cannot be vectorized";
+        HasComplexMemInst = true;
+        continue;
+      }
+
       // Many math library functions read the rounding mode. We will only
       // vectorize a loop if it contains known function calls that don't set
       // the flag. Therefore, it is safe to ignore this read from memory.
