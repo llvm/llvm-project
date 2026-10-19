@@ -179,6 +179,26 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
   ret <32 x half> %r
 }
 
+define half @frem_f16_nnan_ninf(half %x, half %y) nounwind {
+; CHECK-LABEL: frem_f16_nnan_ninf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtsh2sd %xmm1, %xmm1, %xmm2
+; CHECK-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm3
+; CHECK-NEXT:    vdivsd %xmm2, %xmm3, %xmm4
+; CHECK-NEXT:    vroundsd $11, %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm4 = -(xmm2 * xmm4) + xmm3
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm4 = xmm3 ^ (m64bcst & (xmm4 ^ xmm3))
+; CHECK-NEXT:    vcvtsd2sh %xmm4, %xmm4, %xmm2
+; CHECK-NEXT:    vfpclasssh $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vfpclasssh $24, %xmm1, %k1 {%k1} # k1 {%k1} = isPositiveInfinity(xmm1) | isNegativeInfinity(xmm1)
+; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %r = frem nnan ninf half %x, %y
+  ret half %r
+}
+
 define half @frem_strict(half %x, half %y) nounwind #0 {
 ; CHECK-LABEL: frem_strict:
 ; CHECK:       # %bb.0:
