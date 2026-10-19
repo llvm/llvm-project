@@ -1405,7 +1405,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     for (VPValue *Op : R.operands()) {
       auto *DefR = Op->getDefiningRecipe();
       if (DefR && DefR->getParent()->getEnclosingLoopRegion() == LoopRegion &&
-          is_contained({Header, Latch}, DefR->getParent()))
+          !is_contained({Header, Latch}, DefR->getParent()))
         NeedsPhi[Op].push_back(&R);
     }
   };
