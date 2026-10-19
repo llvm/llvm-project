@@ -607,3 +607,32 @@ define void @loads_widened_tail(i32 %arg) {
   load <7 x i16>, ptr addrspace(5) poison, align 8
   ret void
 }
+
+define void @loads_odd_widths(i32 %arg) {
+; CHECK-LABEL: 'loads_odd_widths'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i24, ptr addrspace(1) poison, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load i48, ptr addrspace(1) poison, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load i24, ptr addrspace(1) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load i48, ptr addrspace(1) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = load i80, ptr addrspace(1) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load i112, ptr addrspace(1) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %7 = load <3 x i12>, ptr addrspace(1) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %8 = load <4 x i24>, ptr addrspace(1) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <2 x i48>, ptr addrspace(1) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %10 = load <4 x i24>, ptr addrspace(3) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = load <2 x i96>, ptr addrspace(5) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  load i24, ptr addrspace(1) poison, align 1
+  load i48, ptr addrspace(1) poison, align 2
+  load i24, ptr addrspace(1) poison, align 4
+  load i48, ptr addrspace(1) poison, align 8
+  load i80, ptr addrspace(1) poison, align 16
+  load i112, ptr addrspace(1) poison, align 16
+  load <3 x i12>, ptr addrspace(1) poison, align 4
+  load <4 x i24>, ptr addrspace(1) poison, align 4
+  load <2 x i48>, ptr addrspace(1) poison, align 8
+  load <4 x i24>, ptr addrspace(3) poison, align 4
+  load <2 x i96>, ptr addrspace(5) poison, align 16
+  ret void
+}

@@ -542,3 +542,32 @@ define void @stores_13_to_15_bytes(i32 %arg) {
   store <7 x i16> poison, ptr addrspace(5) poison, align 16
   ret void
 }
+
+define void @stores_odd_widths(i32 %arg) {
+; CHECK-LABEL: 'stores_odd_widths'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i24 poison, ptr addrspace(1) poison, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i48 poison, ptr addrspace(1) poison, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i24 poison, ptr addrspace(1) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i48 poison, ptr addrspace(1) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store i80 poison, ptr addrspace(1) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store i112 poison, ptr addrspace(1) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i12> poison, ptr addrspace(1) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <4 x i24> poison, ptr addrspace(1) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i48> poison, ptr addrspace(1) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <4 x i24> poison, ptr addrspace(3) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i96> poison, ptr addrspace(5) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  store i24 poison, ptr addrspace(1) poison, align 1
+  store i48 poison, ptr addrspace(1) poison, align 2
+  store i24 poison, ptr addrspace(1) poison, align 4
+  store i48 poison, ptr addrspace(1) poison, align 8
+  store i80 poison, ptr addrspace(1) poison, align 16
+  store i112 poison, ptr addrspace(1) poison, align 16
+  store <3 x i12> poison, ptr addrspace(1) poison, align 4
+  store <4 x i24> poison, ptr addrspace(1) poison, align 4
+  store <2 x i48> poison, ptr addrspace(1) poison, align 8
+  store <4 x i24> poison, ptr addrspace(3) poison, align 4
+  store <2 x i96> poison, ptr addrspace(5) poison, align 16
+  ret void
+}
