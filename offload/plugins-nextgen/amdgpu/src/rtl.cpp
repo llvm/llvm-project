@@ -780,6 +780,14 @@ static int32_t getOMPTeamsThreadLimit() {
   return OMP_TeamsThreadLimit;
 }
 
+/// Whether to reuse blocks rather than spawn many for long-running loops.
+/// Upstream, only libomptarget's generic launch-geometry computation reads it.
+static bool getReuseBlocksForHighTripCount() {
+  static BoolEnvar OMPX_ReuseBlocksForHighTripCount(
+      "LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
+  return OMPX_ReuseBlocksForHighTripCount;
+}
+
 /// Class implementing the AMDGPU kernel functionalities which derives from the
 /// generic kernel class.
 struct AMDGPUKernelTy : public GenericKernelTy {
@@ -1393,7 +1401,7 @@ private:
       PreferredNumBlocks = std::min(
           PreferredNumBlocks,
           OptimizeNumTeamsBaseOccupancy(GenericDevice, EffectiveNumThreads));
-    } else if (GenericDevice.getReuseBlocksForHighTripCount()) {
+    } else if (getReuseBlocksForHighTripCount()) {
       // If the loops are long running we rather reuse blocks than spawn too
       // many.
       PreferredNumBlocks = std::min(TripCountNumBlocks, AdjustedNumBlocks);
