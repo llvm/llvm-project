@@ -63,9 +63,18 @@ def AGXDst32Asm : AGXDstAsmOperand<"Dst32">;
 
 def AGXImmAsm : AGXAsmOperand<"AGXImm", "parseImm", "addImmOperands">;
 
+// Optional operands report a mismatch as a plain invalid operand, so that the
+// matcher can skip them and match the next one (a store flag without a shift).
 def AGXShiftAsm : AGXAsmOperand<"Shift", "parseShift", "addImmOperands"> {
   let IsOptional = 1;
   let DefaultMethod = "defaultZeroOperand";
+  let DiagnosticType = "";
+}
+
+def AGXStoreFlagAsm : AGXAsmOperand<"StoreFlag", "parseImm", "addImmOperands"> {
+  let IsOptional = 1;
+  let DefaultMethod = "defaultZeroOperand";
+  let DiagnosticType = "";
 }
 
 def AGXBitfieldMaskAsm : AGXAsmOperand<"BitfieldMask", "parseBitfieldMask",
@@ -177,6 +186,13 @@ def AGXShift : Operand<i32> {
   let DecoderMethod = "decodeImm";
 }
 
+// Optional trailing flag bit, printed only when set.
+def AGXStoreFlag : Operand<i32> {
+  let PrintMethod = "printStoreFlag";
+  let ParserMatchClass = AGXStoreFlagAsm;
+  let DecoderMethod = "decodeImm";
+}
+
 def AGXBitfieldMask : Operand<i32> {
   let PrintMethod = "printBitfieldMask";
   let ParserMatchClass = AGXBitfieldMaskAsm;
@@ -232,6 +248,17 @@ def AGXAtomicDst : Operand<i32> {
   let EncoderMethod = "getAtomicDstEncoding";
   let DecoderMethod = "decodeAtomicDst";
   let ParserMatchClass = AGXAtomicDstAsm;
+}
+
+// Optional threadgroup atomic result register ('_' for none): a 16-bit or
+// 32-bit register.
+def AGXLocalAtomicDstAsm : AGXAsmOperand<"LocalAtomicDst", "parseMemReg",
+                                         "addRegOperands">;
+def AGXLocalAtomicDst : Operand<i32> {
+  let PrintMethod = "printAtomicDst";
+  let EncoderMethod = "getLocalAtomicDstEncoding";
+  let DecoderMethod = "decodeLocalAtomicDst";
+  let ParserMatchClass = AGXLocalAtomicDstAsm;
 }
 
 // 64-bit device memory base: general purpose or uniform register pair.

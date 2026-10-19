@@ -156,6 +156,12 @@ void AGXInstPrinter::printShift(const MCInst *MI, unsigned OpNo,
     O << ", lsl " << S;
 }
 
+void AGXInstPrinter::printStoreFlag(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &, raw_ostream &O) {
+  if (int64_t V = MI->getOperand(OpNo).getImm())
+    O << ", " << V;
+}
+
 void AGXInstPrinter::printBitfieldMask(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &,
                                        raw_ostream &O) {

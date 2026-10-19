@@ -252,6 +252,13 @@ public:
   bool isAtomicDst() const {
     return (Kind == Register && !Reg) || isRegKind({AGX::RegKind::GPR32});
   }
+  bool isLocalAtomicDst() const {
+    return (Kind == Register && !Reg) ||
+           isRegKind({AGX::RegKind::GPR16, AGX::RegKind::GPR32});
+  }
+  bool isStoreFlag() const {
+    return Kind == Immediate && ImmKind == IK_Int && (Imm == 0 || Imm == 1);
+  }
   bool isAtomicSrc() const {
     return isRegKind({AGX::RegKind::GPR32, AGX::RegKind::GPR64});
   }
@@ -780,6 +787,21 @@ ParseStatus AGXAsmParser::parseMemIndex(OperandVector &Operands) {
 
 ParseStatus AGXAsmParser::parseBrTarget(OperandVector &Operands) {
   SMLoc S = getParser().getTok().getLoc();
+  // pc+N / pc-N: a byte offset relative to the branch, as printed.
+  const AsmToken &Tok = getParser().getTok();
+  if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier() == "pc" &&
+      (getLexer().peekTok().is(AsmToken::Plus) ||
+       getLexer().peekTok().is(AsmToken::Minus))) {
+    Parser.Lex();
+    bool Neg = getLexer().is(AsmToken::Minus);
+    Parser.Lex();
+    int64_t V;
+    if (getParser().parseAbsoluteExpression(V))
+      return ParseStatus::Failure;
+    Operands.push_back(AGXOperand::createImm(Neg ? -V : V, AGXOperand::IK_Int,
+                                             S, getLexer().getLoc()));
+    return ParseStatus::Success;
+  }
   const MCExpr *Ex;
   SMLoc E;
   if (getParser().parseExpression(Ex, E))

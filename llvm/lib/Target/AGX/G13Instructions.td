@@ -770,9 +770,11 @@ def MEMORY_BARRIER_g13 : AGXReal<"memory_barrier", (outs),
 
 // Fields shared by device memory, uniform store and stack instructions:
 // R register 15:10 + 41:40 with 32-bit flag 49; index O 23:20 + 35:32 + 63:56
-// with immediate flag 24; scoreboard slot 30; length bit 47 (always set).
+// with immediate flag 24; scoreboard slot 30; length bit 47.
+// The short (6-byte) form omits bits 48-63: 16-bit registers, mask 0 and an
+// index below 256.
 class G13DeviceMem<string mn, bits<7> op, dag outs, dag ins, string ops>
-    : AGXReal<mn, outs, ins, ops, 8> {
+    : AGXReal<mn, outs, ins, ops, 6, 8> {
   bits<1> g;
   bits<4> fmt;
   bits<4> mask;
@@ -798,12 +800,12 @@ class G13DeviceMem<string mn, bits<7> op, dag outs, dag ins, string ops>
   let Inst{41-40} = R{7-6};
   let Inst{43-42} = shift;
   let Inst{46-44} = 4;
-  let Inst{47} = 1;
   let Inst{48} = fmt{3};
   let Inst{49} = R{8};
   let Inst{51-50} = 0;
   let Inst{55-52} = mask;
   let Inst{63-56} = O{15-8};
+  let LengthBit = 47;
 }
 
 let mayLoad = 1, IsAsync = 1 in
@@ -814,13 +816,19 @@ def DEVICE_LOAD_g13
                         AGXShift:$shift),
                    "$g, $fmt, $mask, $R, $A, $O, $sgn$shift">;
 
+// Bit 44 of a store (applegpu's u6, "store order"?) is an optional trailing
+// operand; code generation leaves it clear.
 let mayStore = 1 in
 def DEVICE_STORE_g13
     : G13DeviceMem<"device_store", 0b1000101, (outs),
                    (ins AGXImm:$g, AGXMemFormat:$fmt, AGXMemMask:$mask,
                         AGXMemReg:$R, AGXMemBase:$A, AGXMemIndex:$O,
-                        AGXSignedness:$sgn, AGXShift:$shift),
-                   "$g, $fmt, $mask, $R, $A, $O, $sgn$shift">;
+                        AGXSignedness:$sgn, AGXShift:$shift,
+                        AGXStoreFlag:$u6),
+                   "$g, $fmt, $mask, $R, $A, $O, $sgn$shift$u6"> {
+  bits<1> u6;
+  let Inst{44} = u6;
+}
 
 // Initialise uniform registers from general purpose registers. The index is
 // the first 16-bit uniform register written.
@@ -924,8 +932,10 @@ def STACK_ADJUST_g13 : AGXReal<"stack_adjust", (outs), (ins AGXImm:$size),
 // Threadgroup memory
 //===----------------------------------------------------------------------===//
 
+// The short (6-byte) form omits bits 48-63 (the high bits of the index, base
+// and register).
 class G13LocalMem<string mn, bits<2> op, dag outs, dag ins>
-    : AGXReal<mn, outs, ins, "$fmt, $mask, $R, $A, $O", 8> {
+    : AGXReal<mn, outs, ins, "$fmt, $mask, $R, $A, $O", 6, 8> {
   bits<4> fmt;
   bits<4> mask;
   bits<9> R;
@@ -938,7 +948,6 @@ class G13LocalMem<string mn, bits<2> op, dag outs, dag ins>
   let Inst{7} = 0;
   let Inst{8} = R{8};
   let Inst{14-9} = R{5-0};
-  let Inst{15} = 1;
   let Inst{21-16} = A{5-0};
   let Inst{23-22} = A{9-8};
   let Inst{27-24} = fmt;
@@ -1008,14 +1017,16 @@ def ATOMIC_g13 : AGXReal<"atomic", (outs AGXAtomicDst:$R),
   let Inst{63-56} = O{15-8};
 }
 
+// The result register has a 32-bit flag (bit 8) and a presence bit (bit 38);
+// the short (6-byte) form omits bits 48-79 (r0 as the source).
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
 def THREADGROUP_ATOMIC_g13
-    : AGXReal<"threadgroup_atomic", (outs AGXAtomicDst:$R),
+    : AGXReal<"threadgroup_atomic", (outs AGXLocalAtomicDst:$R),
               (ins AGXAtomicOp:$op, AGXLocalBase:$A, AGXLocalIndex:$O,
                    AGXAtomicSrc:$S),
-              "$op, $R, $A, $O, $S", 10> {
+              "$op, $R, $A, $O, $S", 6, 10> {
   bits<4> op;
-  bits<9> R;
+  bits<10> R;
   bits<10> A;
   bits<17> O;
   bits<8> S;
@@ -1024,14 +1035,13 @@ def THREADGROUP_ATOMIC_g13
   let Inst{7-6} = 0;
   let Inst{8} = R{8};
   let Inst{14-9} = R{5-0};
-  let Inst{15} = 1;
   let Inst{21-16} = A{5-0};
   let Inst{23-22} = A{9-8};
   let Inst{27-24} = op;
   let Inst{33-28} = O{5-0};
   let Inst{34} = O{16};
   let Inst{37-35} = 0b010;
-  let Inst{38} = R{8};
+  let Inst{38} = R{9};
   let Inst{46-39} = 0;
   let Inst{47} = 1;
   let Inst{57-48} = O{15-6};

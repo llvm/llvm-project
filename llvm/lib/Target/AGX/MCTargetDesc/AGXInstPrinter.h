@@ -49,6 +49,7 @@ public:
   AGX_SRC_PRINTER(Dst)
   AGX_SRC_PRINTER(Imm)
   AGX_SRC_PRINTER(Shift)
+  AGX_SRC_PRINTER(StoreFlag)
   AGX_SRC_PRINTER(BitfieldMask)
   AGX_SRC_PRINTER(TruthTable)
   AGX_SRC_PRINTER(ICond)

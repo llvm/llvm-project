@@ -76,6 +76,10 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (Idx++ == 0 && InsertCache)
       OutMI.addOperand(MCOperand::createImm(0));
   }
+  // Trailing flag operands of the real instruction that code generation does
+  // not set.
+  if (Opcode == AGX::DEVICE_STORE_g13)
+    OutMI.addOperand(MCOperand::createImm(0));
   // Device atomics on parts with several dies must bypass the per-die
   // caches.
   if ((MI->getOpcode() == AGX::DEVICE_ATOMIC ||

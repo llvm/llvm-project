@@ -67,6 +67,7 @@ public:
   AGX_ENCODER(Dst)
   AGX_ENCODER(MemReg)
   AGX_ENCODER(AtomicDst)
+  AGX_ENCODER(LocalAtomicDst)
   AGX_ENCODER(MemBase)
   AGX_ENCODER(MemIndex)
   AGX_ENCODER(LocalBase)
@@ -246,6 +247,21 @@ void AGXMCCodeEmitter::getAtomicDstEncoding(const MCInst &MI, unsigned OpNo,
   if (Info.Kind != AGX::RegKind::GPR32)
     report(MI, "atomic results are 32-bit registers");
   setOp(Op, Info.HalfIndex | (1u << 8));
+}
+
+void AGXMCCodeEmitter::getLocalAtomicDstEncoding(
+    const MCInst &MI, unsigned OpNo, APInt &Op, SmallVectorImpl<MCFixup> &,
+    const MCSubtargetInfo &) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (!MO.getReg()) {
+    setOp(Op, 0);
+    return;
+  }
+  AGX::RegInfo Info = regInfo(MO);
+  if (Info.Kind != AGX::RegKind::GPR32 && Info.Kind != AGX::RegKind::GPR16)
+    report(MI, "threadgroup atomic results are 16-bit or 32-bit registers");
+  bool Is32 = Info.Kind == AGX::RegKind::GPR32;
+  setOp(Op, Info.HalfIndex | (uint64_t(Is32) << 8) | (1u << 9));
 }
 
 void AGXMCCodeEmitter::getMemBaseEncoding(const MCInst &MI, unsigned OpNo,
