@@ -497,6 +497,7 @@ bool matchPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
                          SmallVector<ShuffleEntry> &Entries) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  assert(Ty.getSizeInBits() == 64 || Ty.getSizeInBits() == 128);
   if (Ty.getNumElements() != 4)
     return false;
   if (!generatePerfectShuffle(MI.getOperand(3).getShuffleMask(), 4, Entries))
