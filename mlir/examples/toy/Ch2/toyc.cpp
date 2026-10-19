@@ -87,7 +87,7 @@ static int dumpMLIR() {
     if (!module)
       return 1;
 
-    module->print(llvm::errs(), mlir::OpPrintingFlags().useLocalScope());
+    module->print(llvm::errs());
     llvm::errs() << "\n";
     return 0;
   }
@@ -110,7 +110,7 @@ static int dumpMLIR() {
     return 3;
   }
 
-  module->print(llvm::errs(), mlir::OpPrintingFlags().useLocalScope());
+  module->print(llvm::errs());
   llvm::errs() << "\n";
   return 0;
 }

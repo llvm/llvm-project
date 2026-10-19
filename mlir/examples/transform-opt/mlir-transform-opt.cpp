@@ -309,7 +309,7 @@ static llvm::LogicalResult processPayloadBuffer(
 
   // If requested, dump the combined transform module.
   if (clOptions->dumpLibraryModule) {
-    transformRoot->print(os, mlir::OpPrintingFlags().useLocalScope());
+    transformRoot->print(os);
     os << "\n";
   }
 

@@ -168,7 +168,7 @@ static int dumpMLIR() {
   if (mlir::failed(pm.run(*module)))
     return 4;
 
-  module->print(llvm::errs(), mlir::OpPrintingFlags().useLocalScope());
+  module->print(llvm::errs());
   llvm::errs() << "\n";
   return 0;
 }
