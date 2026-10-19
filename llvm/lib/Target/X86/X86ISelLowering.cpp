@@ -22589,12 +22589,11 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
       SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
       APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
       PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
-                                      /*IsSigned=*/true,
-                                      APFloat::rmTowardZero);
+                                      /*IsSigned=*/true, APFloat::rmTowardZero);
       PosOvfBoundFlt.changeSign();
       SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
-      EVT SelCCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
-                                           *DAG.getContext(), DstVT);
+      EVT SelCCVT =
+          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
 
       SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
       SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
@@ -22614,8 +22613,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
         return DAG.getNode(ISD::AND, dl, DstVT, Fixed, NotNaN);
       }
 
-      SDValue IntMax =
-          DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
+      SDValue IntMax = DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
       SDValue Zero = DAG.getConstant(0, dl, DstVT);
       SDValue Fixed = DAG.getSelect(dl, DstVT, PosOvf, IntMax, Cvt);
       return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
