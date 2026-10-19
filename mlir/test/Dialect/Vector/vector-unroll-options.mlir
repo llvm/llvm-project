@@ -939,12 +939,11 @@ func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf3
 // -----
 
 #map = affine_map<(d0) -> (d0)>
-#map0 = affine_map<(d0) -> ()>
-module {
-  func.func @vector_contract_to_scalar_f32_from_1d(%a: vector<4xf32>, %b: vector<4xf32>, %acc: f32) -> f32 {
-    %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4xf32>, vector<4xf32> into f32
-    return %r : f32
-  }
+#acc = affine_map<(d0) -> ()>
+
+func.func @vector_contract_to_scalar_f32_from_1d(%a: vector<4xf32>, %b: vector<4xf32>, %acc: f32) -> f32 {
+  %r = vector.contract {indexing_maps = [#map, #map, #acc], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4xf32>, vector<4xf32> into f32
+  return %r : f32
 }
 
 // CHECK-LABEL: func @vector_contract_to_scalar_f32_from_1d(
@@ -960,12 +959,11 @@ module {
 // -----
 
 #map = affine_map<(d0) -> (d0)>
-#map0 = affine_map<(d0) -> ()>
-module {
-  func.func @vector_contract_to_scalar_f16(%a: vector<8xf16>, %b: vector<8xf16>, %acc: f16) -> f16 {
-    %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<8xf16>, vector<8xf16> into f16
-    return %r : f16
-  }
+#acc = affine_map<(d0) -> ()>
+
+func.func @vector_contract_to_scalar_f16(%a: vector<8xf16>, %b: vector<8xf16>, %acc: f16) -> f16 {
+  %r = vector.contract {indexing_maps = [#map, #map, #acc], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<8xf16>, vector<8xf16> into f16
+  return %r : f16
 }
 
 // CHECK-LABEL: func @vector_contract_to_scalar_f16(
@@ -981,12 +979,11 @@ module {
 // -----
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
-#map0 = affine_map<(d0,d1) -> ()>
-module {
-  func.func @vector_contract_to_scalar_f32_from_2d(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %acc: f32) -> f32 {
-    %r = vector.contract {indexing_maps = [#map, #map, #map0], iterator_types = ["reduction", "reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4x4xf32>, vector<4x4xf32> into f32
-    return %r : f32
-  }
+#acc = affine_map<(d0,d1) -> ()>
+
+func.func @vector_contract_to_scalar_f32_from_2d(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %acc: f32) -> f32 {
+  %r = vector.contract {indexing_maps = [#map, #map, #acc], iterator_types = ["reduction", "reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<4x4xf32>, vector<4x4xf32> into f32
+  return %r : f32
 }
 
 // CHECK-LABEL: func @vector_contract_to_scalar_f32_from_2d(
