@@ -55,7 +55,8 @@ struct Config {
   // they must outlive the lto::LTO object.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
   // Plugins that are passed by filename are loaded in lto::LTO::run(). Clients
-  // that call lto::backend() or lto::thinBackend() directly must use LoadedPassPlugins.
+  // that call lto::backend() or lto::thinBackend() directly must use
+  // LoadedPassPlugins.
   std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
