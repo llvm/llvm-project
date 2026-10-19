@@ -704,33 +704,33 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Value *Lane = EmitScalarExpr(E->getArg(1));
     // The lane index must be uniform across the wavefront.
     emitBuiltinCheck(*this, E, BCK_NonUniformLane, [&] {
-      Value *First = Builder.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane,
-                                             {Lane->getType()}, {Lane});
+      // EmitIntrinsicCall attaches a convergence token when they are enabled.
+      Value *First = EmitIntrinsicCall(Intrinsic::amdgcn_readfirstlane,
+                                       {Lane->getType()}, {Lane});
       Value *Diff = Builder.CreateICmpNE(Lane, First);
       Value *Mask =
-          Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot, {Int64Ty}, {Diff});
+          EmitIntrinsicCall(Intrinsic::amdgcn_ballot, {Int64Ty}, {Diff});
       return Builder.CreateICmpEQ(Mask, Builder.getInt64(0));
     });
-    return Builder.CreateIntrinsic(Intrinsic::amdgcn_readlane, {Src->getType()},
-                                   {Src, Lane});
+    return EmitIntrinsicCall(Intrinsic::amdgcn_readlane, {Src->getType()},
+                             {Src, Lane});
   }
   case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     Value *Idx = EmitScalarExpr(E->getArg(1));
     // The source lane, wrapped to the wavefront size, must be active.
     emitBuiltinCheck(*this, E, BCK_InactiveLane, [&] {
-      Value *Active = Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot,
-                                              {Int64Ty}, {Builder.getTrue()});
-      Value *Size =
-          Builder.CreateIntrinsic(Int32Ty, Intrinsic::amdgcn_wavefrontsize, {});
+      Value *Active = EmitIntrinsicCall(Intrinsic::amdgcn_ballot, {Int64Ty},
+                                        {Builder.getTrue()});
+      Value *Size = EmitIntrinsicCall(Intrinsic::amdgcn_wavefrontsize);
       Value *Lane =
           Builder.CreateAnd(Idx, Builder.CreateSub(Size, Builder.getInt32(1)));
       Value *Bit =
           Builder.CreateLShr(Active, Builder.CreateZExt(Lane, Int64Ty));
       return Builder.CreateTrunc(Bit, Builder.getInt1Ty());
     });
-    return Builder.CreateIntrinsic(Intrinsic::amdgcn_wave_shuffle,
-                                   {Src->getType()}, {Src, Idx});
+    return EmitIntrinsicCall(Intrinsic::amdgcn_wave_shuffle, {Src->getType()},
+                             {Src, Idx});
   }
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
