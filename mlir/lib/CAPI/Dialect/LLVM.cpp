@@ -300,12 +300,13 @@ MlirAttribute mlirLLVMDIStringTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
     uint32_t alignInBits, MlirAttribute stringLength,
     MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
-    MlirLLVMTypeEncoding encoding) {
+    MlirLLVMTypeEncoding encoding, MlirAttribute charType) {
   return wrap(DIStringTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)), sizeInBits, alignInBits,
       cast<DIVariableAttr>(unwrap(stringLength)),
       cast<DIExpressionAttr>(unwrap(stringLengthExp)),
-      cast<DIExpressionAttr>(unwrap(stringLocationExp)), encoding));
+      cast<DIExpressionAttr>(unwrap(stringLocationExp)), encoding,
+      cast<DITypeAttr>(unwrap(charType))));
 }
 
 MlirStringRef mlirLLVMDIStringTypeAttrGetName(void) {
@@ -356,11 +357,53 @@ MlirAttribute mlirLLVMDICompileUnitAttrGet(
     bool isDebugInfoForProfiling, MlirLLVMDINameTableKind nameTableKind,
     MlirAttribute splitDebugFilename, intptr_t nImportedEntities,
     MlirAttribute const *importedEntities) {
+  return mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+      ctx, recId, isRecSelf, id, sourceLanguage,
+      /*sourceLanguageDialect=*/0, file, producer, isOptimized, emissionKind,
+      isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
+      nImportedEntities, importedEntities);
+}
+
+MlirAttribute mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguage, unsigned int sourceLanguageDialect,
+    MlirAttribute file, MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities) {
   SmallVector<Attribute> importsStorage;
   importsStorage.reserve(nImportedEntities);
+  auto sourceLanguageAttr = DISourceLanguageNameAttr::get(
+      unwrap(ctx), sourceLanguage, /*name=*/0, /*version=*/std::nullopt,
+      sourceLanguageDialect);
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
-      cast<DistinctAttr>(unwrap(id)), sourceLanguage,
+      cast<DistinctAttr>(unwrap(id)), sourceLanguageAttr,
+      cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
+      isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
+      DINameTableKind(nameTableKind),
+      cast<StringAttr>(unwrap(splitDebugFilename)),
+      llvm::map_to_vector(
+          unwrapList(nImportedEntities, importedEntities, importsStorage),
+          llvm::CastTo<DINodeAttr>)));
+}
+
+MlirAttribute mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguageName, uint32_t sourceLanguageVersion,
+    unsigned int sourceLanguageDialect, MlirAttribute file,
+    MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities) {
+  SmallVector<Attribute> importsStorage;
+  importsStorage.reserve(nImportedEntities);
+  auto sourceLanguageAttr = DISourceLanguageNameAttr::get(
+      unwrap(ctx), /*language=*/0, sourceLanguageName,
+      std::optional<uint32_t>(sourceLanguageVersion), sourceLanguageDialect);
+  return wrap(DICompileUnitAttr::get(
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
+      cast<DistinctAttr>(unwrap(id)), sourceLanguageAttr,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
       isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
       DINameTableKind(nameTableKind),
@@ -590,21 +633,22 @@ MlirAttribute mlirLLVMMDConstantAttrGetValue(MlirAttribute attr) {
   return wrap((Attribute)cast<MDConstantAttr>(unwrap(attr)).getValue());
 }
 
-MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx, MlirAttribute name) {
-  return wrap(
-      MDFuncAttr::get(unwrap(ctx), cast<FlatSymbolRefAttr>(unwrap(name))));
+MlirAttribute mlirLLVMMDGlobalValueAttrGet(MlirContext ctx,
+                                           MlirAttribute name) {
+  return wrap(MDGlobalValueAttr::get(unwrap(ctx),
+                                     cast<FlatSymbolRefAttr>(unwrap(name))));
 }
 
-bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr) {
-  return isa<MDFuncAttr>(unwrap(attr));
+bool mlirLLVMAttrIsAMDGlobalValueAttr(MlirAttribute attr) {
+  return isa<MDGlobalValueAttr>(unwrap(attr));
 }
 
-MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void) {
-  return wrap(MDFuncAttr::getTypeID());
+MlirTypeID mlirLLVMMDGlobalValueAttrGetTypeID(void) {
+  return wrap(MDGlobalValueAttr::getTypeID());
 }
 
-MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr) {
-  return wrap((Attribute)cast<MDFuncAttr>(unwrap(attr)).getName());
+MlirAttribute mlirLLVMMDGlobalValueAttrGetName(MlirAttribute attr) {
+  return wrap((Attribute)cast<MDGlobalValueAttr>(unwrap(attr)).getName());
 }
 
 MlirAttribute mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,

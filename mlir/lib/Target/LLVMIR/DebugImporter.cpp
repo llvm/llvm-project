@@ -64,10 +64,20 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
               translate(static_cast<llvm::DINode *>(importedEntity)))
         imports.push_back(nodeAttr);
   }
+  llvm::DISourceLanguageName sourceLanguage = node->getSourceLanguage();
+  DISourceLanguageNameAttr sourceLanguageAttr;
+  if (sourceLanguage.hasVersionedName()) {
+    sourceLanguageAttr = DISourceLanguageNameAttr::get(
+        context, /*language=*/0, sourceLanguage.getName(),
+        sourceLanguage.getVersion(), sourceLanguage.getDialect());
+  } else {
+    sourceLanguageAttr = DISourceLanguageNameAttr::get(
+        context, sourceLanguage.getName(), /*name=*/0,
+        /*version=*/std::nullopt, sourceLanguage.getDialect());
+  }
   return DICompileUnitAttr::get(
       context, /*recId=*/DistinctAttr{}, /*isRecSelf=*/false,
-      getOrCreateDistinctID(node),
-      node->getSourceLanguage().getUnversionedName(),
+      getOrCreateDistinctID(node), sourceLanguageAttr,
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
       node->isOptimized(), emissionKind.value(),
       node->isDebugInfoForProfiling(), nameTableKind.value(),
@@ -138,7 +148,8 @@ DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
       node->getSizeInBits(), node->getAlignInBits(),
       translate(node->getStringLength()),
       translateExpression(node->getStringLengthExp()),
-      translateExpression(node->getStringLocationExp()), node->getEncoding());
+      translateExpression(node->getStringLocationExp()), node->getEncoding(),
+      translate(node->getCharType()));
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {

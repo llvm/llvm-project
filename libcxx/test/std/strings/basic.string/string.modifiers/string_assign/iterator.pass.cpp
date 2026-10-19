@@ -11,6 +11,8 @@
 // template<class InputIterator>
 //   basic_string& assign(InputIterator first, InputIterator last); // constexpr since C++20
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -23,6 +25,22 @@
 template <class S, class It>
 TEST_CONSTEXPR_CXX20 void test(S s, It first, It last, S expected) {
   s.assign(first, last);
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == expected);
+  LIBCPP_ASSERT(is_string_asan_correct(s));
+}
+
+// [data(), data() + size() + 1) includes the null terminator, so it is one element longer than capacity() when the
+// buffer is full: assigning it reallocates while the range still points into the old buffer.
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_self_referencing_range(typename S::size_type minimum_capacity) {
+  S s(minimum_capacity, 'a');
+  s.resize(s.capacity(), 'a');
+  assert(s.size() == s.capacity());
+  S expected = s + S(1, '\0');
+
+  // Note that the assignment must happen in place: copying the string first would make the range point elsewhere.
+  s.assign(s.data(), s.data() + s.size() + 1);
   LIBCPP_ASSERT(s.__invariants());
   assert(s == expected);
   LIBCPP_ASSERT(is_string_asan_correct(s));
@@ -163,10 +181,8 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   }
 
   { // regression-test assigning to self in sneaky ways
-    S sneaky = "hello";
-    sneaky.resize(sneaky.capacity(), 'x');
-    S expected = sneaky + S(1, '\0');
-    test(sneaky, sneaky.data(), sneaky.data() + sneaky.size() + 1, expected);
+    test_self_referencing_range<S>(0);  // the small buffer, which the long representation is written over
+    test_self_referencing_range<S>(64); // a heap buffer, which is released by the assignment
   }
 }
 

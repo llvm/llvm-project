@@ -243,17 +243,28 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   return &node;
 }
 
-/// Returns the memref being read/written by a memref/affine load/store op.
-static Value getMemRef(Operation *memOp) {
-  if (auto memrefLoad = dyn_cast<memref::LoadOp>(memOp))
-    return memrefLoad.getMemRef();
-  if (auto affineLoad = dyn_cast<AffineReadOpInterface>(memOp))
-    return affineLoad.getMemRef();
-  if (auto memrefStore = dyn_cast<memref::StoreOp>(memOp))
-    return memrefStore.getMemRef();
-  if (auto affineStore = dyn_cast<AffineWriteOpInterface>(memOp))
-    return affineStore.getMemRef();
-  llvm_unreachable("unexpected op");
+/// Returns true if `op` may read from or write to `memref`.
+static bool mayAccessMemRef(Operation *op, Value memref) {
+  SmallVector<Value> effectedValues;
+  getEffectedValues<MemoryEffects::Read, MemoryEffects::Write>(op,
+                                                               effectedValues);
+  if (llvm::is_contained(effectedValues, memref))
+    return true;
+
+  auto memoryEffectOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memoryEffectOp)
+    return false;
+
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  memoryEffectOp.getEffects(effects);
+  return llvm::any_of(effects, [](const auto &effect) {
+    if (!isa<MemoryEffects::Read, MemoryEffects::Write>(effect.getEffect()))
+      return false;
+
+    // Value-less read/write effects may target unknown memory. Since this is a
+    // may-analysis, conservatively assume they may access the memref.
+    return !effect.getValue();
+  });
 }
 
 /// Returns true if there may be a dependence on `memref` from srcNode's
@@ -272,17 +283,16 @@ static bool mayDependence(const Node &srcNode, const Node &dstNode,
   // true if there exists a conflicting read/write access involving such.
 
   // Check whether there is a dependence from a source read/write op to a
-  // destination read/write one; all expected to be memref/affine load/store.
+  // destination read/write op on `memref`.
   auto hasNonAffineDep = [&](ArrayRef<Operation *> srcMemOps,
                              ArrayRef<Operation *> dstMemOps) {
-    return llvm::any_of(srcMemOps, [&](Operation *srcOp) {
-      Value srcMemref = getMemRef(srcOp);
-      if (srcMemref != memref)
-        return false;
-      return llvm::find_if(dstMemOps, [&](Operation *dstOp) {
-               return srcMemref == getMemRef(dstOp);
-             }) != dstMemOps.end();
-    });
+    return llvm::any_of(srcMemOps,
+                        [&](Operation *srcOp) {
+                          return mayAccessMemRef(srcOp, memref);
+                        }) &&
+           llvm::any_of(dstMemOps, [&](Operation *dstOp) {
+             return mayAccessMemRef(dstOp, memref);
+           });
   };
 
   SmallVector<Operation *> dstOps;
@@ -1604,8 +1614,7 @@ unsigned mlir::affine::getInnermostCommonLoopDepth(
   unsigned loopDepthLimit = std::numeric_limits<unsigned>::max();
   for (unsigned i = 0; i < numOps; ++i) {
     getAffineForIVs(*ops[i], &loops[i]);
-    loopDepthLimit =
-        std::min(loopDepthLimit, static_cast<unsigned>(loops[i].size()));
+    loopDepthLimit = std::min(loopDepthLimit, (unsigned)loops[i].size());
   }
 
   unsigned loopDepth = 0;
@@ -1754,7 +1763,8 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   // Get slice bounds from slice union constraints 'sliceUnionCst'.
   sliceUnionCst.getSliceBounds(/*offset=*/0, numSliceLoopIVs,
                                opsA[0]->getContext(), &sliceUnion->lbs,
-                               &sliceUnion->ubs);
+                               &sliceUnion->ubs, /*closedUb=*/false,
+                               /*allowMultiResultUb=*/true);
 
   // Add slice bound operands of union.
   SmallVector<Value, 4> sliceBoundOperands;
@@ -1791,21 +1801,36 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   return SliceComputationResult::Success;
 }
 
-// TODO: extend this to handle multiple result maps.
+/// Returns the number of iterations the slice bounded below by `lbMap` and
+/// above by `ubMap` runs for, where that is a constant.
+///
+/// An upper bound of several results is the min of them, so each result taken
+/// against the lower bound bounds the count from above and the smallest of
+/// those that comes out constant is the tightest constant bound there is. A
+/// tiled loop clamped at the end of the data has exactly this shape --
+/// `min(%i * 64 + 64, 1000)` over `%i * 64` -- where the tile-relative result
+/// gives the 64 and the extent gives nothing constant at all.
 static std::optional<uint64_t> getConstDifference(AffineMap lbMap,
                                                   AffineMap ubMap) {
-  assert(lbMap.getNumResults() == 1 && "expected single result bound map");
-  assert(ubMap.getNumResults() == 1 && "expected single result bound map");
+  assert(lbMap.getNumResults() == 1 && "expected single result lower bound");
+  assert(ubMap.getNumResults() >= 1 && "expected at least one upper bound");
   assert(lbMap.getNumDims() == ubMap.getNumDims());
   assert(lbMap.getNumSymbols() == ubMap.getNumSymbols());
   AffineExpr lbExpr(lbMap.getResult(0));
-  AffineExpr ubExpr(ubMap.getResult(0));
-  auto loopSpanExpr = simplifyAffineExpr(ubExpr - lbExpr, lbMap.getNumDims(),
-                                         lbMap.getNumSymbols());
-  auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
-  if (!cExpr)
-    return std::nullopt;
-  return cExpr.getValue();
+  std::optional<uint64_t> tripCount;
+  for (AffineExpr ubExpr : ubMap.getResults()) {
+    AffineExpr loopSpanExpr = simplifyAffineExpr(
+        ubExpr - lbExpr, lbMap.getNumDims(), lbMap.getNumSymbols());
+    auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
+    if (!cExpr)
+      continue;
+    if (cExpr.getValue() < 0)
+      return 0;
+    tripCount =
+        std::min(tripCount.value_or(std::numeric_limits<uint64_t>::max()),
+                 (uint64_t)cExpr.getValue());
+  }
+  return tripCount;
 }
 
 // Builds a map 'tripCountMap' from AffineForOp to constant trip count for loop
@@ -1899,7 +1924,8 @@ void mlir::affine::getComputationSliceState(
 
   // Get bounds for slice IVs in terms of other IVs, symbols, and constants.
   sliceCst.getSliceBounds(offset, numSliceLoopIVs, depSourceOp->getContext(),
-                          &sliceState->lbs, &sliceState->ubs);
+                          &sliceState->lbs, &sliceState->ubs,
+                          /*closedUb=*/false, /*allowMultiResultUb=*/true);
 
   // Set up bound operands for the slice's lower and upper bounds.
   SmallVector<Value, 4> sliceBoundOperands;
@@ -1945,7 +1971,8 @@ void mlir::affine::getComputationSliceState(
   for (unsigned i = 0; i < numSliceLoopIVs; ++i) {
     Value iv = getSliceLoop(i).getInductionVar();
     if (sequentialLoops.count(iv) == 0 &&
-        getSliceLoop(i)->getAttr(kSliceFusionBarrierAttrName) == nullptr)
+        getSliceLoop(i)->getDiscardableAttr(kSliceFusionBarrierAttrName) ==
+            nullptr)
       continue;
     // Skip reset of bounds of reduction loop inserted in the destination loop
     // that meets the following conditions:
@@ -2195,13 +2222,17 @@ void mlir::affine::getSequentialLoops(
 }
 
 IntegerSet mlir::affine::simplifyIntegerSet(IntegerSet set) {
-  FlatAffineValueConstraints fac(set);
-  if (fac.isEmpty())
+  FailureOr<FlatAffineValueConstraints> fac =
+      FlatAffineValueConstraints::create(set);
+  // Semi-affine sets can't be flattened; return them as is.
+  if (failed(fac))
+    return set;
+  if (fac->isEmpty())
     return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
                                    set.getContext());
-  fac.removeTrivialRedundancy();
+  fac->removeTrivialRedundancy();
 
-  auto simplifiedSet = fac.getAsIntegerSet(set.getContext());
+  auto simplifiedSet = fac->getAsIntegerSet(set.getContext());
   assert(simplifiedSet && "guaranteed to succeed while roundtripping");
   return simplifiedSet;
 }

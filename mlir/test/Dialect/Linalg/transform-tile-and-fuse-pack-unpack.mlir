@@ -38,7 +38,7 @@ module {
       // Find and lower pack operation.
       %pack = transform.structured.match ops{["linalg.pack"]} in %arg1
         : (!transform.any_op) -> !transform.op<"linalg.pack">
-      %paded, %expanded, %transpose = transform.structured.lower_pack %pack {lowerPadLikeWithInsertSlice = false}
+      %paded, %expanded, %transpose = transform.structured.lower_pack %pack lowerPadLikeWithInsertSlice = false
         : (!transform.op<"linalg.pack">)
         -> (!transform.op<"tensor.pad">,
             !transform.op<"tensor.expand_shape">,
@@ -154,7 +154,7 @@ module {
       // Find and lower unpack operation.
       %unpack = transform.structured.match ops{["linalg.unpack"]} in %arg1
           : (!transform.any_op) -> !transform.op<"linalg.unpack">
-      transform.structured.lower_unpack %unpack {lowerUnpadLikeWithExtractSlice = false}
+      transform.structured.lower_unpack %unpack lowerUnpadLikeWithExtractSlice = false
         : (!transform.op<"linalg.unpack">)
         -> (!transform.op<"tensor.empty">,
             !transform.op<"linalg.transpose">,

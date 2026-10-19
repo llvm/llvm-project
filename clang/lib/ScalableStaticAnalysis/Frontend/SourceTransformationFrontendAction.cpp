@@ -8,6 +8,7 @@
 
 #include "clang/ScalableStaticAnalysis/Frontend/SourceTransformationFrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -97,6 +98,7 @@ enum SourceTransformationCompanion {
   STCompanion_EditFile,          // --ssaf-src-edit-file=
   STCompanion_ReportFile,        // --ssaf-transformation-report-file=
   STCompanion_CompilationUnitId, // --ssaf-compilation-unit-id=
+  STCompanion_LinkUnitId,        // --ssaf-link-unit-id=
 };
 
 /// Options that depend on `--ssaf-source-transformation=` being set. Values
@@ -133,6 +135,11 @@ static bool reportOrphanOptionMisuse(DiagnosticsEngine &Diags,
     if (Opts.CompilationUnitId.empty()) {
       Diags.Report(diag::warn_ssaf_source_transformation_requires)
           << STCompanion_CompilationUnitId;
+      Reported = true;
+    }
+    if (Opts.LinkUnitId.empty()) {
+      Diags.Report(diag::warn_ssaf_source_transformation_requires)
+          << STCompanion_LinkUnitId;
       Reported = true;
     }
   } else {
@@ -199,7 +206,7 @@ SourceTransformationRunner::SourceTransformationRunner(WPASuite Suite,
   // their lifetimes — those references are captured in its base ctor.
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(makeTransformation(Opts.SourceTransformation, this->Suite,
-                                         Edits, Report));
+                                         Opts, Edits, Report));
   assert(Consumers.front());
   MultiplexConsumer::Consumers = std::move(Consumers);
 }

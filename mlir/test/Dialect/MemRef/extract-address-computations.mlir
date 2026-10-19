@@ -42,12 +42,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME: %[[DYN_OFFSET:.*]]: index)
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 0, 8] [1, 1, 1] [1, 1, 1] : memref<2x16x16xf32> to memref<1x1x1xf32, strided<[256, 16, 1], offset: ?>>
-// CHECK: %[[LOADED_VAL:.*]] = memref.load %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {nontemporal = true} : memref<1x1x1xf32, strided<[256, 16, 1], offset: ?>>
+// CHECK: %[[LOADED_VAL:.*]] = memref.load %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] nontemporal(true) : memref<1x1x1xf32, strided<[256, 16, 1], offset: ?>>
 // CHECK: return %[[LOADED_VAL]] : f32
 func.func @test_load_nontemporal(%base : memref<2x16x16xf32>, %offset : index) -> f32 {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  %loaded_val = memref.load %base[%offset, %c0, %c8] {nontemporal = true } : memref<2x16x16xf32>
+  %loaded_val = memref.load %base[%offset, %c0, %c8] nontemporal(true) : memref<2x16x16xf32>
   return %loaded_val : f32
 }
 
@@ -104,13 +104,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: %[[CF0:.*]] = arith.constant 0.0{{0*e\+00}} : f32
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 0, 8] [1, 1, 1] [1, 1, 1] : memref<2x16x16xf32> to memref<1x1x1xf32, strided<[256, 16, 1], offset: ?>>
-// CHECK: memref.store %[[CF0]], %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {nontemporal = true} : memref<1x1x1xf32, strided<[256, 16, 1], offset: ?>>
+// CHECK: memref.store %[[CF0]], %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] nontemporal(true) : memref<1x1x1xf32, strided<[256, 16, 1], offset: ?>>
 // CHECK: return
 func.func @test_store_nontemporal(%base : memref<2x16x16xf32>, %offset : index) -> () {
   %cf0 = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  memref.store %cf0, %base[%offset, %c0, %c8] { nontemporal = true } : memref<2x16x16xf32>
+  memref.store %cf0, %base[%offset, %c0, %c8] nontemporal(true) : memref<2x16x16xf32>
   return
 }
 
@@ -278,13 +278,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: {{.*}}, {{.*}}, %[[SIZES:.*]]:2, {{.*}} = memref.extract_strided_metadata %[[BASE]]
 // CHECK-DAG: %[[DYN_SIZE:.*]] = affine.min #[[$MIN_496_MAP]]()[%[[SIZES]]#1]
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 0] [1, %[[DYN_SIZE]]] [1, 1] : memref<?x?xf16> to memref<1x?xf16, strided<[?, 1], offset: ?>>
-// CHECK: gpu.subgroup_mma_load_matrix %[[SUBVIEW]][%[[C0]], %[[C0]]] {leadDimension = 32 : index} : memref<1x?xf16, strided<[?, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "AOp">
+// CHECK: gpu.subgroup_mma_load_matrix %[[SUBVIEW]][%[[C0]], %[[C0]]] leadDimension 32 : memref<1x?xf16, strided<[?, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "AOp">
 func.func @test_gpu_subgroup_mma_dynamic_source_shape(
     %base : memref<?x?xf16>, %offset : index)
     -> !gpu.mma_matrix<16x16xf16, "AOp"> {
   %c0 = arith.constant 0 : index
   %matrix = gpu.subgroup_mma_load_matrix %base[%offset, %c0]
-      {leadDimension = 32 : index}
+      leadDimension 32
       : memref<?x?xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
   return %matrix : !gpu.mma_matrix<16x16xf16, "AOp">
 }
@@ -314,14 +314,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME: %[[DYN_OFFSET2:[^:]*]]: index)
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [1, 1, 8] [1, 1, 1] : memref<4x32x32xf16, 3> to memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3>
-// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
+// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] numTiles = 4 transpose = false : memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_ldmatrix(%base : memref<4x32x32xf16, 3>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %loaded_val = nvgpu.ldmatrix
-    %base[%offset0, %offset1, %offset2]
-    {numTiles = 4 : i32, transpose = false}
+    %base[%offset0, %offset1, %offset2] numTiles = 4 transpose = false
       : memref<4x32x32xf16, 3> -> vector<4x2xf16>
   return %loaded_val : vector<4x2xf16>
 }
@@ -351,14 +350,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: {{.*}}, {{.*}}, %[[SIZES:.*]]:3, {{.*}} = memref.extract_strided_metadata %[[BASE]]
 // CHECK-DAG: %[[DYN_SIZE:.*]] = affine.min #[[$MIN_8_MAP]]()[%[[SIZES]]#2, %[[DYN_OFFSET2]]]
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [1, 1, %[[DYN_SIZE]]] [1, 1, 1] : memref<?x?x?xf16, 3> to memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3>
-// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3> -> vector<4x2xf16>
+// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] numTiles = 4 transpose = false : memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3> -> vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_dynamic_ldmatrix(%base : memref<?x?x?xf16, 3>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %loaded_val = nvgpu.ldmatrix
-    %base[%offset0, %offset1, %offset2]
-    {numTiles = 4 : i32, transpose = false}
+    %base[%offset0, %offset1, %offset2] numTiles = 4 transpose = false
       : memref<?x?x?xf16, 3> -> vector<4x2xf16>
   return %loaded_val : vector<4x2xf16>
 }

@@ -22,6 +22,8 @@ void use() {
   s.inlineCalled();
 }
 
+// CIR: cir.func{{.*}} @_Z3usev()
+
 // CIR: cir.func{{.*}} @_Z12externCalledv
 // This shouldn't have a body.
 // CIR-NOT: cir.return
@@ -34,5 +36,3 @@ void use() {
 // CIR:   %[[THIS:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   %[[THREE:.*]] = cir.const #cir.int<3>
 // CIR:   cir.store %[[THREE]], %[[RET_ADDR:.*]]
-
-// CIR: cir.func{{.*}} @_Z3usev()

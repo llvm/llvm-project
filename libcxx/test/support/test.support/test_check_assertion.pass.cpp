@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-hardening-mode=none
+// REQUIRES: can-test-hardening-assertions-fast
 // XFAIL: availability-verbose_abort-missing
 
 #include <cassert>

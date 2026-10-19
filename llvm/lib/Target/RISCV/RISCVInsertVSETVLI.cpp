@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <queue>
 using namespace llvm;
 using namespace RISCV;
@@ -43,12 +42,6 @@ using namespace RISCV;
 
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
-
-static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
-    DEBUG_TYPE "-whole-vector-register-move-valid-vtype", cl::Hidden,
-    cl::desc("Insert vsetvlis before vmvNr.vs to ensure vtype is valid and "
-             "vill is cleared"),
-    cl::init(true));
 
 namespace {
 
@@ -109,7 +102,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
 
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
@@ -143,6 +135,9 @@ private:
                             const DemandedFields &Used,
                             MachineInstr *&AVLDefToMove) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
+  bool canMutatePriorConfigWithTWiden(const MachineInstr &PrevMI,
+                                      const MachineInstr &MI) const;
+  void coalesceVSETVLIsForTWiden(MachineBasicBlock &MBB) const;
   bool insertVSETMTK(MachineBasicBlock &MBB, TKTMMode Mode) const;
 };
 
@@ -167,7 +162,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       auto MI = BuildMI(MBB, InsertPt, DL,
                         TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
                                                   : RISCV::PseudoVSETVLIX0X0))
-                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                    .addDef(RISCV::X0, RegState::Dead)
                     .addReg(RISCV::X0, RegState::Kill)
                     .addImm(Info.encodeVTYPE())
                     .addReg(RISCV::VL, RegState::Implicit);
@@ -188,7 +183,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
               BuildMI(MBB, InsertPt, DL,
                       TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
                                                 : RISCV::PseudoVSETVLIX0X0))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                  .addDef(RISCV::X0, RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE())
                   .addReg(RISCV::VL, RegState::Implicit);
@@ -202,7 +197,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 
   if (Info.hasAVLImm()) {
     auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                  .addDef(RISCV::X0, RegState::Dead)
                   .addImm(Info.getAVLImm())
                   .addImm(Info.encodeVTYPE());
     if (LIS)
@@ -215,7 +210,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     auto MI = BuildMI(MBB, InsertPt, DL,
                       TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0
                                                 : RISCV::PseudoVSETVLIX0))
-                  .addReg(DestReg, RegState::Define | RegState::Dead)
+                  .addDef(DestReg, RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE());
     if (LIS) {
@@ -230,7 +225,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
   auto MI = BuildMI(MBB, InsertPt, DL,
                     TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNT
                                               : RISCV::PseudoVSETVLI))
-                .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                .addDef(RISCV::X0, RegState::Dead)
                 .addReg(AVLReg)
                 .addImm(Info.encodeVTYPE());
   if (LIS) {
@@ -302,7 +297,7 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
-  if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+  if (ST->getCLOpts().insert_vsetvli_whole_vector_register_move_valid_vtype &&
       RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
       (!Info.isKnown() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
@@ -542,12 +537,22 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       assert(MI.getOperand(3).getReg() == RISCV::VL &&
              MI.getOperand(4).getReg() == RISCV::VTYPE &&
              "Unexpected operands where VL and VTYPE should be");
+
+      if (LIS) {
+        // Clearing a dead flag extends that def past its previous dead-def
+        // slot, so the stale VL/VTYPE range must be dropped.
+        if (MI.getOperand(3).isDead())
+          LIS->removeAllRegUnitsForPhysReg(RISCV::VL);
+        if (MI.getOperand(4).isDead())
+          LIS->removeAllRegUnitsForPhysReg(RISCV::VTYPE);
+      }
+
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
       PrefixTransparent = false;
     }
 
-    if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+    if (ST->getCLOpts().insert_vsetvli_whole_vector_register_move_valid_vtype &&
         RISCV::isVectorCopy(ST->getRegisterInfo(), MI)) {
       if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
@@ -612,10 +617,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     }
 
     if (MI.isInlineAsm()) {
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ true,
-                                              /*isImp*/ true));
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ true,
-                                              /*isImp*/ true));
+      MI.addRegisterDefined(RISCV::VL, /*RegInfo=*/nullptr);
+      MI.addRegisterDefined(RISCV::VTYPE, /*RegInfo=*/nullptr);
     }
 
     if (MI.isCall() || MI.isInlineAsm() ||
@@ -935,6 +938,109 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   }
 }
 
+// When twiden != 0, LMUL, tail policy, and mask policy from the user are
+// ignored. The tail policy and mask policy are always treated as agnostic. The
+// normal RVV instruction will ignore the twiden parameter. This observation
+// could allow the RVV instruction and xsfmm instruction to share the same
+// configuration instruction.
+//
+// We need to make sure the AVL, SEW, and AltFmt is same between VSETVL and
+// VSETVLTN.
+//
+// For example:
+//
+// %avl = SETTM or SETTK
+// ...
+// VSETVL %avl, type1
+// VSETVLTNT %avl, type2
+//
+// ->
+//
+// %avl = SETTM or SETTK
+// ...
+// VSETVLTNT %avl, type2
+//
+bool RISCVInsertVSETVLI::canMutatePriorConfigWithTWiden(
+    const MachineInstr &PrevMI, const MachineInstr &MI) const {
+
+  if (PrevMI.getOpcode() != RISCV::PseudoVSETVLI)
+    return false;
+
+  if (MI.getOpcode() != RISCV::PseudoSF_VSETTNT)
+    return false;
+
+  auto PrevInfo = VIA.getInfoForVSETVLI(PrevMI);
+  auto CurrInfo = VIA.getInfoForVSETVLI(MI);
+
+  assert(CurrInfo.hasAVLReg() && "Invalid PseudoSF_VSETTNT without an AVLReg.");
+
+  auto AVLReg = CurrInfo.getAVLReg();
+
+  auto *AVLRegDefMI = MRI->getUniqueVRegDef(AVLReg);
+
+  if (!AVLRegDefMI)
+    return false;
+
+  if (!RISCVInstrInfo::isXSfmmVectorConfigTMTKInstr(*AVLRegDefMI))
+    return false;
+
+  auto AVLRegDefMIInfo = VIA.computeInfoForInstr(*AVLRegDefMI);
+  if (AVLRegDefMIInfo.getTWiden() != CurrInfo.getTWiden())
+    return false;
+
+  if (AVLRegDefMIInfo.getSEW() != PrevInfo.getSEW())
+    return false;
+
+  // CurrInfo twiden != 0, so TailAgnostic and MaskAgnostic bit default to 1
+  if (!PrevInfo.getTailAgnostic() || !PrevInfo.getMaskAgnostic())
+    return false;
+
+  if (!PrevInfo.hasSameAVL(CurrInfo))
+    return false;
+
+  if (PrevInfo.getSEW() != CurrInfo.getSEW())
+    return false;
+
+  if (PrevInfo.getAltFmt() != CurrInfo.getAltFmt())
+    return false;
+
+  // The PrevMI's LMUL should be at least 8/KMAX; otherwise, converting it to a
+  // tile-widening version could result in a VLMAX smaller than what AVLRegDefMI
+  // expects, causing the LMUL information from PrevMI to be lost.
+  auto [LMul, Fractional] = decodeVLMUL(PrevInfo.getVLMUL());
+  unsigned KMAX = (CurrInfo.getSEW() >= 32) ? 1 : (32 / CurrInfo.getSEW());
+
+  if (Fractional || LMul < (8 / KMAX))
+    return false;
+
+  return true;
+}
+
+void RISCVInsertVSETVLI::coalesceVSETVLIsForTWiden(
+    MachineBasicBlock &MBB) const {
+  MachineInstr *NextMI = nullptr;
+
+  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
+
+    if (!RISCVInstrInfo::isVectorConfigInstr(MI))
+      continue;
+
+    if (NextMI) {
+      // If only TWiden different. Update the MI and drop the NextMI.
+      if (canMutatePriorConfigWithTWiden(MI, *NextMI)) {
+
+        auto NextInfo = VIA.getInfoForVSETVLI(*NextMI);
+        MI.getOperand(2).setImm(NextInfo.encodeVTYPE());
+
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(*NextMI);
+        NextMI->eraseFromParent();
+      }
+    }
+    NextMI = &MI;
+  }
+}
+
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
@@ -995,7 +1101,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
     MachineOperand &Op = MI.getOperand(OpNum);
 
     auto TmpMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opcode))
-                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                     .addDef(RISCV::X0, RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
                      .addImm(CurrInfo.getTWiden());
@@ -1090,6 +1196,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // optimized away.
   for (MachineBasicBlock *MBB : post_order(&MF))
     coalesceVSETVLIs(*MBB);
+
+  if (ST->hasVendorXSfmmbase()) {
+    for (MachineBasicBlock &MBB : MF)
+      coalesceVSETVLIsForTWiden(MBB);
+  }
 
   // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
   // of VLEFF/VLSEGFF.

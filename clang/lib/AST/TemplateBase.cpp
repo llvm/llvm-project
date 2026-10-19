@@ -366,15 +366,8 @@ bool TemplateArgument::isPackExpansion() const {
 }
 
 bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
-  if (getKind() != TemplateArgument::Template)
-    return false;
-
-  if (isa_and_nonnull<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
-    return true;
-  if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
-          getAsTemplate().getAsTemplateDecl()))
-    return TTP->templateParameterKind() == TNK_Concept_template;
-  return false;
+  return getKind() == TemplateArgument::Template &&
+         getAsTemplate().isConceptName();
 }
 
 bool TemplateArgument::containsUnexpandedParameterPack() const {
@@ -790,17 +783,6 @@ ASTTemplateArgumentListInfo::Create(const ASTContext &C,
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
 
-const ASTTemplateArgumentListInfo *
-ASTTemplateArgumentListInfo::Create(const ASTContext &C,
-                                    const ASTTemplateArgumentListInfo *List) {
-  if (!List)
-    return nullptr;
-  std::size_t size =
-      totalSizeToAlloc<TemplateArgumentLoc>(List->getNumTemplateArgs());
-  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
-  return new (Mem) ASTTemplateArgumentListInfo(List);
-}
-
 ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
     const TemplateArgumentListInfo &Info) {
   LAngleLoc = Info.getLAngleLoc();
@@ -810,17 +792,6 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
-}
-
-ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
-    const ASTTemplateArgumentListInfo *Info) {
-  LAngleLoc = Info->getLAngleLoc();
-  RAngleLoc = Info->getRAngleLoc();
-  NumTemplateArgs = Info->getNumTemplateArgs();
-
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(
@@ -841,21 +812,6 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
   RAngleLoc = SourceLocation();
   this->TemplateKWLoc = TemplateKWLoc;
   NumTemplateArgs = 0;
-}
-
-void ASTTemplateKWAndArgsInfo::initializeFrom(
-    SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info,
-    TemplateArgumentLoc *OutArgArray, TemplateArgumentDependence &Deps) {
-  this->TemplateKWLoc = TemplateKWLoc;
-  LAngleLoc = Info.getLAngleLoc();
-  RAngleLoc = Info.getRAngleLoc();
-  NumTemplateArgs = Info.size();
-
-  for (unsigned i = 0; i != NumTemplateArgs; ++i) {
-    Deps |= Info[i].getArgument().getDependence();
-
-    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
-  }
 }
 
 void ASTTemplateKWAndArgsInfo::copyInto(const TemplateArgumentLoc *ArgArray,

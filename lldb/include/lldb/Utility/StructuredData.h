@@ -9,6 +9,8 @@
 #ifndef LLDB_UTILITY_STRUCTUREDDATA_H
 #define LLDB_UTILITY_STRUCTUREDDATA_H
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -407,6 +409,21 @@ public:
       }
     }
 
+    /// Like ForEach, but visits the entries in key order, for stable output.
+    void
+    ForEachSorted(std::function<bool(llvm::StringRef key, Object *object)> const
+                      &callback) const {
+      llvm::SmallVector<llvm::StringRef> keys;
+      keys.reserve(m_dict.size());
+      for (const auto &pair : m_dict)
+        keys.push_back(pair.first());
+      llvm::sort(keys);
+      for (llvm::StringRef key : keys) {
+        if (!callback(key, m_dict.lookup(key).get()))
+          break;
+      }
+    }
+
     ArraySP GetKeys() const {
       auto array_sp = std::make_shared<Array>();
       for (auto iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
@@ -584,7 +601,7 @@ public:
   static StructuredData::ObjectSP FromBoolean(bool value) {
     return std::make_shared<StructuredData::Boolean>(value);
   }
-  static StructuredData::ObjectSP FromString(std::string value) {
+  static StructuredData::ObjectSP FromString(llvm::StringRef value) {
     return std::make_shared<StructuredData::String>(value);
   }
   static StructuredData::ObjectSP FromGeneric(void *value) {

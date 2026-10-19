@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"

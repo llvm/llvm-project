@@ -569,7 +569,7 @@ X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
     if (Subtarget.isTargetFuchsia())
       return SegmentOffset(IRB, 0x10, AddressSpace);
 
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+    Module *M = IRB.getModule();
     // Specially, some users may customize the base reg and offset.
     int Offset = M->getStackProtectorGuardOffset();
     // If we don't set -stack-protector-guard-offset value:
@@ -1160,8 +1160,7 @@ SDValue X86TargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned I = 0, InsIndex = 0, E = RVLocs.size(); I != E;
-       ++I, ++InsIndex) {
+  for (unsigned I = 0, E = RVLocs.size(); I != E; ++I) {
     CCValAssign &VA = RVLocs[I];
     EVT CopyVT = VA.getLocVT();
 

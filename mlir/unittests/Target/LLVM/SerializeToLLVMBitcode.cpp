@@ -105,7 +105,8 @@ std::optional<mlir::gpu::SerializedObject>
 TargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                                   const gpu::TargetOptions &options) const {
   // Set a dummy attr to be retrieved by `createObject`.
-  module->setAttr("serialize_attr", UnitAttr::get(module->getContext()));
+  module->setDiscardableAttr("serialize_attr",
+                             UnitAttr::get(module->getContext()));
   std::string targetTriple = llvm::sys::getProcessTriple();
   LLVM::ModuleToObject serializer(
       *module, targetTriple, "", "", 3, options.getInitialLlvmIRCallback(),
@@ -124,7 +125,7 @@ TargetAttrImpl::createObject(Attribute attribute, Operation *module,
       StringAttr::get(
           module->getContext(),
           StringRef(object.getObject().data(), object.getObject().size())),
-      module->getAttrDictionary(), /*kernels=*/nullptr);
+      module->getDiscardableAttrDictionary(), /*kernels=*/nullptr);
 }
 
 // This test checks the correct functioning of `TargetAttrInterface` as an API.

@@ -92,10 +92,13 @@ void Function::convertToNewDbgValues() {
   }
 }
 
-void Function::convertFromNewDbgValues() {
+bool Function::convertFromNewDbgValues() {
+  bool Modified = false;
   for (auto &BB : *this) {
-    BB.convertFromNewDbgValues();
+    if (BB.convertFromNewDbgValues())
+      Modified = true;
   }
+  return Modified;
 }
 
 //===----------------------------------------------------------------------===//
@@ -429,9 +432,17 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                        ? "b_key"
                        : "a_key");
   }
+
+  if (auto Value = dyn_cast_if_present<MDString>(
+          M->getModuleFlag("sign-return-address-harden")))
+    B.addAttribute("sign-return-address-harden", Value->getString());
   AddAttributeIfSet("branch-target-enforcement");
   AddAttributeIfSet("branch-protection-pauth-lr");
   AddAttributeIfSet("guarded-control-stack");
+  AddAttributeIfSet("ptrauth-returns");
+  AddAttributeIfSet("ptrauth-auth-traps");
+  AddAttributeIfSet("ptrauth-indirect-gotos");
+  AddAttributeIfSet("aarch64-jump-table-hardening");
 
   F->addFnAttrs(B);
   return F;

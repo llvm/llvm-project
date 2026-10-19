@@ -171,8 +171,18 @@ def AtLeastRankOne : And<[
   IsRankedTensorTypePred,
   CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
 
+def AtLeastRankTwo : And<[
+  IsRankedTensorTypePred,
+  CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 2">]>;
+
 def IsValidBlockScaledTensorType
-    : CPred<"::mlir::succeeded(::mlir::tosa::verifyBlockScaledTensorType($_self, false))">;
+    : CPred<"::mlir::succeeded(::mlir::tosa::"
+            "verifyBlockScaledTensorType($_self))">;
+
+// Add additional 'summary' information. This is used to provide more 
+// informative error messages when a type predicate is false.
+class TosaShapedContainerType<list<Type> allowedTypes, Pred containerPred, string descr, string cppType = "::mlir::Type"> :
+    ShapedContainerType<allowedTypes, containerPred, descr, cppType, "{{::mlir::tosa::getTosaTensorTypeErrorMessage($_self)}}">;
 
 // We include unranked tensors as a supported type for all possible tosa
 // Tensors as unranked does not guarantee invalid. If unranked tensors exist
@@ -181,13 +191,13 @@ def IsValidBlockScaledTensorType
 class TosaTensorOf<list<Type> allowedTypes,
                    list<Pred> extraRankedTensorPreds = [],
                    string summary = "tosa-conformant tensor">
-    : TensorOf<allowedTypes,
-               [Or<[
+    : TosaShapedContainerType<allowedTypes,
+               And<[Or<[
                     IsUnrankedTensorTypePred, 
                     And<!listconcat([IsRankedTensorTypePred, HasNo0Dimensions], extraRankedTensorPreds)>
                 ]>,
-                IsValidBlockScaledTensorType],
-               summary>;
+                IsValidBlockScaledTensorType]>,
+               summary, "::mlir::TensorType">;
 
 class TosaTensorRankOf<list<Type> allowedTypes, list<int> ranks>
     : TosaTensorOf<allowedTypes,
@@ -250,6 +260,10 @@ def Tosa_IndexTensor2D : TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>;
 def Tosa_TensorAtLeast1D
     : TosaTensorOf<[Tosa_AnyNumber], [AtLeastRankOne],
                    "tosa-conformant tensor of at least rank 1">;
+
+def Tosa_TensorAtLeast2D
+    : TosaTensorOf<[Tosa_AnyNumber], [AtLeastRankTwo],
+                   "tosa-conformant tensor of at least rank 2">;
 
 def Tosa_MXFPDataTensor3D
     : TosaTensorRankOf<[Tosa_MXFPValue], [3]>;

@@ -1,12 +1,18 @@
-; RUN: llc -mtriple=mipsel < %s | FileCheck -check-prefix=ALL %s
+; RUN: llc -mtriple=mipsel < %s | FileCheck -check-prefix=ALL,NO-MFHC1 %s
 ; RUN: llc -mtriple=mipsel -mcpu=mips32 < %s | FileCheck -check-prefixes=ALL,NO-MFHC1 %s
 ; RUN: llc -mtriple=mipsel -mcpu=mips32r2              < %s | FileCheck -check-prefixes=ALL,HAS-MFHC1 %s
 ; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck -check-prefixes=ALL,HAS-MFHC1 %s
 
 ; $f12, $f14
 ; ALL-LABEL: testlowercall0:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       ldc1 $f14, %lo
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; NO-MFHC1-DAG:       ldc1 $f14, %lo
+; HAS-MFHC1-DAG:      lui $1, 16404
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; HAS-MFHC1-DAG:      lui $1, 16408
+; HAS-MFHC1-DAG:      mtc1 $zero, $f14
+; HAS-MFHC1-DAG:      mthc1 $1, $f14
 define void @testlowercall0() nounwind {
 entry:
   tail call void @f0(double 5.000000e+00, double 6.000000e+00) nounwind
@@ -29,8 +35,11 @@ declare void @f1(float, float)
 
 ; $f12, $f14
 ; ALL-LABEL: testlowercall2:
-; ALL-DAG:       lwc1 $f12, %lo
-; ALL-DAG:       ldc1 $f14, %lo
+; HAS-MFHC1-DAG:      lui $1, 16408
+; HAS-MFHC1-DAG:      mtc1 $zero, $f14
+; HAS-MFHC1-DAG:      mthc1 $1, $f14
+; ALL-DAG:            lwc1 $f12, %lo
+; NO-MFHC1-DAG:       ldc1 $f14, %lo
 define void @testlowercall2() nounwind {
 entry:
   tail call void @f2(float 8.000000e+00, double 6.000000e+00) nounwind
@@ -41,8 +50,11 @@ declare void @f2(float, double)
 
 ; $f12, $f14
 ; ALL-LABEL: testlowercall3:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       lwc1 $f14, %lo
+; HAS-MFHC1-DAG:      lui $1, 16404
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; ALL-DAG:            lwc1 $f14, %lo
 define void @testlowercall3() nounwind {
 entry:
   tail call void @f3(double 5.000000e+00, float 9.000000e+00) nounwind
@@ -67,10 +79,13 @@ declare void @f4(i32, i32, i32, i32)
 
 ; $f12, $6, stack
 ; ALL-LABEL: testlowercall5:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       addiu $6, $zero, 23
-; ALL-DAG:       sw ${{[a-z0-9]+}}, 16($sp)
-; ALL-DAG:       sw ${{[a-z0-9]+}}, 20($sp)
+; HAS-MFHC1-DAG:      lui $1, 16430
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; ALL-DAG:            addiu $6, $zero, 23
+; ALL-DAG:            sw ${{[a-z0-9]+}}, 16($sp)
+; ALL-DAG:            sw ${{[a-z0-9]+}}, 20($sp)
 define void @testlowercall5() nounwind {
 entry:
   tail call void @f5(double 1.500000e+01, i32 23, double 1.700000e+01) nounwind
@@ -81,9 +96,12 @@ declare void @f5(double, i32, double)
 
 ; $f12, $6, $7
 ; ALL-LABEL: testlowercall6:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       addiu $6, $zero, 33
-; ALL-DAG:       addiu $7, $zero, 24
+; HAS-MFHC1-DAG:      lui $1, 16441
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; ALL-DAG:            addiu $6, $zero, 33
+; ALL-DAG:            addiu $7, $zero, 24
 define void @testlowercall6() nounwind {
 entry:
   tail call void @f6(double 2.500000e+01, i32 33, i32 24) nounwind
@@ -201,9 +219,13 @@ declare void @f13(float, i32, float, i32)
 
 ; $f12, $f14, $7
 ; ALL-LABEL: testlowercall14:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       lwc1 $f14, %lo
-; ALL-DAG:       lui $7, 16880
+; HAS-MFHC1-DAG:      lui $1, 16449
+; HAS-MFHC1-DAG:      ori $1, $1, 32768
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; ALL-DAG:            lwc1 $f14, %lo
+; ALL-DAG:            lui $7, 16880
 define void @testlowercall14() nounwind {
 entry:
   tail call void @f14(double 3.500000e+01, float 2.900000e+01, float 3.000000e+01) nounwind
@@ -324,8 +346,12 @@ declare void @f22(float, i32, double)
 
 ; $f12, f6
 ; ALL-LABEL: testlowercall23:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       addiu $6, $zero, 123
+; HAS-MFHC1-DAG:      lui $1, 16454
+; HAS-MFHC1-DAG:      ori $1, $1, 32768
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; ALL-DAG:            addiu $6, $zero, 123
 define void @testlowercall23() nounwind {
 entry:
   tail call void @f23(double 4.500000e+01, i32 123) nounwind
@@ -336,10 +362,14 @@ declare void @f23(double, i32)
 
 ; $f12,$6, stack
 ; ALL-LABEL: testlowercall24:
-; ALL-DAG:       ldc1 $f12, %lo
-; ALL-DAG:       addiu $6, $zero, 133
-; ALL-DAG:       sw ${{[a-z0-9]+}}, 16($sp)
-; ALL-DAG:       sw ${{[a-z0-9]+}}, 20($sp)
+; HAS-MFHC1-DAG:      lui $1, 16459
+; HAS-MFHC1-DAG:      ori $1, $1, 32768
+; HAS-MFHC1-DAG:      mtc1 $zero, $f12
+; HAS-MFHC1-DAG:      mthc1 $1, $f12
+; NO-MFHC1-DAG:       ldc1 $f12, %lo
+; ALL-DAG:            addiu $6, $zero, 133
+; ALL-DAG:            sw ${{[a-z0-9]+}}, 16($sp)
+; ALL-DAG:            sw ${{[a-z0-9]+}}, 20($sp)
 define void @testlowercall24() nounwind {
 entry:
   tail call void @f24(double 5.500000e+01, i32 133, double 6.700000e+01) nounwind

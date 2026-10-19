@@ -12,26 +12,15 @@
 using namespace clang;
 using namespace clang::interp;
 
-Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
-               FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
+Record::Record(const RecordDecl *Decl, ArrayRef<Base> Bases,
+               ArrayRef<Field> Fields, ArrayRef<Base> VirtualBases,
                unsigned VirtualSize, unsigned BaseSize, bool HasPtrField)
-    : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
+    : Decl(Decl), Bases(Bases), Fields(Fields), VirtualBases(VirtualBases),
       BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
       IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()),
       HasPtrField(HasPtrField) {
-  for (Base &V : SrcVirtualBases)
-    VirtualBases.emplace_back(V.Decl, V.Desc, V.R, V.Offset + BaseSize);
-
-  for (Base &B : Bases) {
+  for (const Base &B : this->Bases)
     BaseMap[B.Decl] = &B;
-    if (!this->HasPtrField)
-      this->HasPtrField |= B.R->hasPtrField();
-  }
-  for (Base &V : VirtualBases) {
-    VirtualBaseMap[V.Decl] = &V;
-    if (!this->HasPtrField)
-      this->HasPtrField |= V.R->hasPtrField();
-  }
 }
 
 std::string Record::getName() const {
@@ -47,6 +36,15 @@ bool Record::hasTrivialDtor() const {
     return true;
   const CXXDestructorDecl *Dtor = getDestructor();
   return !Dtor || Dtor->isTrivial();
+}
+
+const Record::Field *Record::findField(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Fields,
+          [=](const Record::Field &F) -> bool { return F.Offset == Offset; });
+      It != Fields.end())
+    return &*It;
+  return nullptr;
 }
 
 const Record::Base *Record::getBase(const RecordDecl *RD) const {
@@ -65,9 +63,20 @@ const Record::Base *Record::getBase(QualType T) const {
   return nullptr;
 }
 
-const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
-  auto It = VirtualBaseMap.find(FD);
-  if (It == VirtualBaseMap.end())
-    return nullptr;
-  return It->second;
+const Record::Base *Record::findBase(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Bases,
+          [=](const Record::Base &B) -> bool { return B.Offset == Offset; });
+      It != Bases.end())
+    return &*It;
+  return nullptr;
+}
+
+const Record::Base *Record::findVirtualBase(const RecordDecl *FD) const {
+  if (auto *It = llvm::find_if(
+          VirtualBases,
+          [=](const Record::Base &B) -> bool { return B.Decl == FD; });
+      It != Bases.end())
+    return &*It;
+  return nullptr;
 }

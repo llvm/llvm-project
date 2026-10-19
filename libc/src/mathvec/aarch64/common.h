@@ -26,6 +26,38 @@ using AdvSIMDFP64Vector = LIBC_NAMESPACE::cpp::simd<double, 2>;
     __ptr;                                                                     \
   })
 
-// Helpers for declaring vector constants.
-#define V2(X) {X, X}
-#define V4(X) {X, X, X, X}
+// Helpers for declaring vector constants containing all lanes the same, in a
+// way that varies between little- and big-endian AArch64. Use as follows:
+//
+//  - define a type for the constant using V2_SPLAT_TYPE or V4_SPLAT_TYPE, with
+//    a type-prefix parameter like `float64` or `int32` which the macro will
+//    extend into a full scalar or vector type name.
+//
+//  - define the constant using V2_SPLAT_INITIALIZER or V4_SPLAT_INITIALIZER
+//
+//  - to get the actual vector, use MAKE_SPLAT_VECTOR(constant, suffix), where
+//    'suffix' is something like `f64` or `u32` which appears in the name of a
+//    NEON intrinsic to specify its element type.
+
+#if __LITTLE_ENDIAN__
+
+// Use the gcc language extension of defining a vector using an initializer
+// list, which allows the whole vector to be statically defined in const data.
+#define V2_SPLAT_TYPE(TYPE_PREFIX) TYPE_PREFIX##x2_t
+#define V2_SPLAT_INITIALIZER(LANE) {LANE, LANE}
+#define V4_SPLAT_TYPE(TYPE_PREFIX) TYPE_PREFIX##x4_t
+#define V4_SPLAT_INITIALIZER(LANE) {LANE, LANE, LANE, LANE}
+#define MAKE_SPLAT_VECTOR(VEC, FN_SUFFIX) VEC
+
+#else
+
+// Big-endian, that gcc language extension provokes a compiler diagnostic, so
+// instead we store just one copy of the data to be duplicated across lanes,
+// and perform the duplication using vdupq when loading it.
+#define V2_SPLAT_TYPE(TYPE_PREFIX) TYPE_PREFIX##_t
+#define V2_SPLAT_INITIALIZER(LANE) LANE
+#define V4_SPLAT_TYPE(TYPE_PREFIX) TYPE_PREFIX##_t
+#define V4_SPLAT_INITIALIZER(LANE) LANE
+#define MAKE_SPLAT_VECTOR(LANE, FN_SUFFIX) vdupq_n_##FN_SUFFIX(LANE)
+
+#endif

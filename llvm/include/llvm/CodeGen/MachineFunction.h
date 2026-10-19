@@ -271,20 +271,11 @@ private:
   std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
 };
 
-struct SEHHandler {
-  /// Filter or finally function. Null indicates a catch-all.
-  const Function *FilterOrFinally;
-
-  /// Address of block to recover at. Null for a finally handler.
-  const BlockAddress *RecoverBA;
-};
-
 /// This structure is used to retain landing pad info for the current function.
 struct LandingPadInfo {
   MachineBasicBlock *LandingPadBlock;      // Landing pad block.
   SmallVector<MCSymbol *, 1> BeginLabels;  // Labels prior to invoke.
   SmallVector<MCSymbol *, 1> EndLabels;    // Labels after invoke.
-  SmallVector<SEHHandler, 1> SEHHandlers;  // SEH handlers active at this lpad.
   MCSymbol *LandingPadLabel = nullptr;     // Label at beginning of landing pad.
   std::vector<int> TypeIds;                // List of type ids (filters negative).
 
@@ -433,8 +424,6 @@ class LLVM_ABI MachineFunction {
 
   /// List of the indices in FilterIds corresponding to filter terminators.
   std::vector<unsigned> FilterEnds;
-
-  EHPersonality PersonalityTypeCache = EHPersonality::Unknown;
 
   /// \}
 
@@ -805,6 +794,14 @@ public:
   MachineFrameInfo &getFrameInfo() { return *FrameInfo; }
   const MachineFrameInfo &getFrameInfo() const { return *FrameInfo; }
 
+  /// Returns true if frame pointer elimination should be disabled for this
+  /// function.
+  bool disableFramePointerElim() const;
+
+  /// Returns true if the frame pointer must always either point to a new frame
+  /// record or be un-modified in this function.
+  bool framePointerIsReserved() const;
+
   /// getJumpTableInfo - Return the jump table info object for the current
   /// function.  This object contains information about jump tables in the
   /// current function.  If the current function has no jump tables, this will
@@ -873,6 +870,14 @@ public:
 
   /// True if this function needs frame moves for debug or exceptions.
   bool needsFrameMoves() const;
+
+  /// True if this function describes its unwind information with Windows SEH
+  /// unwind opcodes (.seh_* directives, .pdata and .xdata) rather than CFI.
+  bool usesWindowsUnwindInfo() const;
+
+  /// True if this function uses SEH unwind opcodes and needs an unwind table
+  /// entry.
+  bool needsWinCFI() const;
 
   /// Get the function properties
   const MachineFunctionProperties &getProperties() const { return Properties; }
@@ -1114,35 +1119,35 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, Metadata, SSID, Ordering,
                                 FailureOrdering);
   }
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
+#include "SPIRV.h"
 #include "clang/Driver/CommonArgs.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -181,6 +182,11 @@ void SYCLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   HostTC.addClangWarningOptions(CC1Args);
 }
 
+Tool *SYCLToolChain::buildLinker() const {
+  // The SPIR-V linker dispatches to clang-sycl-linker for SYCL offloading.
+  return new tools::SPIRV::Linker(*this);
+}
+
 ToolChain::CXXStdlibType
 SYCLToolChain::GetCXXStdlibType(const ArgList &Args) const {
   return HostTC.GetCXXStdlibType(Args);
@@ -199,4 +205,9 @@ void SYCLToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                                  ArgStringList &CC1Args) const {
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+}
+
+VersionTuple SYCLToolChain::computeMSVCVersion(const Driver *D,
+                                               const ArgList &Args) const {
+  return HostTC.computeMSVCVersion(D, Args);
 }

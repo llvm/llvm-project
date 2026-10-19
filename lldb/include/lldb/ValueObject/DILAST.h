@@ -24,11 +24,13 @@ enum class NodeKind {
   eBitExtractionNode,
   eBooleanLiteralNode,
   eCastNode,
+  eConditionalNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
   eIntegerLiteralNode,
   eMemberOfNode,
+  eSizeOfNode,
   eUnaryOpNode,
 };
 
@@ -38,20 +40,41 @@ enum class UnaryOpKind {
   Deref,  ///< "*"
   Minus,  ///< "-"
   Plus,   ///< "+"
+  Not,    ///< "~"
+  LNot,   ///< "!"
 };
 
 /// The binary operators recognized by DIL.
 enum class BinaryOpKind {
-  Add,       ///< "+"
-  AddAssign, ///< "+="
   Assign,    ///< "="
-  Div,       ///< "/"
+  Add,       ///< "+"
+  Sub,       ///< "-"
   Mul,       ///< "*"
+  Div,       ///< "/"
   Rem,       ///< "%"
+  And,       ///< "&"
+  Xor,       ///< "^"
+  Or,        ///< "|"
   Shl,       ///< "<<"
   Shr,       ///< ">>"
-  Sub,       ///< "-"
+  AddAssign, ///< "+="
   SubAssign, ///< "-="
+  MulAssign, ///< "*="
+  DivAssign, ///< "/="
+  RemAssign, ///< "%="
+  AndAssign, ///< "&="
+  XorAssign, ///< "^="
+  OrAssign,  ///< "|="
+  ShlAssign, ///< "<<="
+  ShrAssign, ///< ">>="
+  LAnd,      ///< "&&"
+  LOr,       ///< "||"
+  LT,        ///< "<"
+  GT,        ///< ">"
+  LE,        ///< "<="
+  GE,        ///< ">="
+  EQ,        ///< "=="
+  NE,        ///< "!="
 };
 
 /// Translates DIL tokens to BinaryOpKind.
@@ -86,6 +109,8 @@ public:
   virtual ~ASTNode() = default;
 
   virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
+
+  virtual bool IsConstLiteral() const { return false; }
 
   uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
@@ -246,6 +271,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   const llvm::APInt &GetValue() const { return m_value; }
   uint32_t GetRadix() const { return m_radix; }
   bool IsUnsigned() const { return m_is_unsigned; }
@@ -270,6 +296,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   const llvm::APFloat &GetValue() const { return m_value; }
 
   static bool classof(const ASTNode &node) {
@@ -287,6 +314,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   bool GetValue() const & { return m_value; }
 
   static bool classof(const ASTNode &node) {
@@ -320,6 +348,53 @@ private:
   CastKind m_cast_kind;
 };
 
+class ConditionalNode : public ASTNode {
+public:
+  ConditionalNode(uint32_t location, ASTNodeUP condition, ASTNodeUP true_op,
+                  ASTNodeUP false_op)
+      : ASTNode(location, NodeKind::eConditionalNode),
+        m_condition(std::move(condition)), m_true_op(std::move(true_op)),
+        m_false_op(std::move(false_op)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode &GetCondition() const { return *m_condition; }
+  ASTNode &GetTrueOperand() const { return *m_true_op; }
+  ASTNode &GetFalseOperand() const { return *m_false_op; }
+
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eConditionalNode;
+  }
+
+private:
+  ASTNodeUP m_condition;
+  ASTNodeUP m_true_op;
+  ASTNodeUP m_false_op;
+};
+
+class SizeOfNode : public ASTNode {
+public:
+  SizeOfNode(uint32_t location, ASTNodeUP node)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_node_arg(std::move(node)) {}
+
+  SizeOfNode(uint32_t location, CompilerType type)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_type_arg(type) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode &GetNodeArg() const { return *m_node_arg; }
+  CompilerType GetTypeArg() const { return m_type_arg; }
+
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eSizeOfNode;
+  }
+
+private:
+  std::string m_name;
+  ASTNodeUP m_node_arg;
+  CompilerType m_type_arg;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -346,6 +421,9 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) = 0;
 };
 
 } // namespace lldb_private::dil

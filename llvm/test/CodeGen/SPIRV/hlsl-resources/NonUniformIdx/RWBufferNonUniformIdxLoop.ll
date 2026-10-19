@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute -verify-machineinstrs %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
 ; A non-uniform index carried across a loop through a phi creates an SSA cycle

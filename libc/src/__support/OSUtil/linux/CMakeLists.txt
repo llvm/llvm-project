@@ -18,6 +18,7 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.CPP.string_view
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
 )
 
 add_header_library(
@@ -41,12 +42,43 @@ add_header_library(
 )
 
 add_header_library(
+  network_syscall_policy
+  HDRS
+    network_syscall_policy.h
+  DEPENDS
+    libc.hdr.types.socklen_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_sockaddr
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socket
+    libc.src.__support.common
+    libc.src.__support.error_or
+)
+
+add_header_library(
   path
   HDRS
     path.h
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string_view
+)
+
+add_header_library(
+  sigmask
+  HDRS
+    sigmask.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
 )
 
 add_header_library(

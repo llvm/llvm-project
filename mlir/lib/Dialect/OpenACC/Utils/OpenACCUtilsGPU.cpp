@@ -33,8 +33,8 @@ std::optional<gpu::GPUModuleOp> getOrCreateGPUModule(ModuleOp mod, bool create,
 
   // Create a new GPU module
   auto *ctx = mod.getContext();
-  mod->setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
-               UnitAttr::get(ctx));
+  mod->setDiscardableAttr(gpu::GPUDialect::getContainerModuleAttrName(),
+                          UnitAttr::get(ctx));
 
   OpBuilder builder(ctx);
   auto gpuMod = gpu::GPUModuleOp::create(builder, mod.getLoc(), moduleName);

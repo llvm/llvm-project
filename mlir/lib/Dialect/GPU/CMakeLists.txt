@@ -12,6 +12,10 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRGPUOpsEnumsGen
   MLIRGPUOpInterfacesIncGen
   MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRParallelLoopMapperEnumsGen
+  MLIRGPUDeviceMapperEnumsGen
+  # GPU dialect sources include llvm/IR/Attributes.h.
+  intrinsics_gen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
@@ -20,6 +24,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRIR
+  MLIRLoopLikeInterface
   MLIRMathDialect
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
@@ -63,6 +68,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRAsyncDialect
   MLIRBufferizationDialect
   MLIRDataLayoutInterfaces
+  MLIRDialectUtils
   MLIRExecutionEngineUtils
   MLIRGPUDialect
   MLIRGPUUtils

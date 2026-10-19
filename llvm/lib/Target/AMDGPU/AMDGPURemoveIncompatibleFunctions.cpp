@@ -39,7 +39,7 @@ public:
   bool checkFunction(Function &F);
 
   bool run(Module &M) {
-    assert(TM->getTargetTriple().isAMDGCN());
+    assert(M.getTargetTriple().isAMDGCN());
 
     SmallVector<Function *, 4> FnsToDelete;
     for (Function &F : M) {
@@ -196,12 +196,14 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // gfx9 and below targets that don't support the mode.
   // gfx10, gfx11, gfx12 are implied to support both wave32 and 64 features.
   // They are not in the feature set. So, we need a separate check
-  if (!ST->supportsWave32() && ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+  if (!GPUFeatureBits.test(AMDGPU::FeatureSupportsWave32) &&
+      ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
     reportFunctionRemoved(F, *ST, AMDGPU::FeatureWavefrontSize32);
     return true;
   }
-  // gfx125x only support FeatureWavefrontSize32.
-  if (!ST->supportsWave64() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+
+  if (!GPUFeatureBits.test(AMDGPU::FeatureSupportsWave64) &&
+      ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     reportFunctionRemoved(F, *ST, AMDGPU::FeatureWavefrontSize64);
     return true;
   }

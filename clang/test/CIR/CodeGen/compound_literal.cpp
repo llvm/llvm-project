@@ -25,9 +25,9 @@ int foo() {
 // CIR: %[[TMP_3:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP_3]] : !s32i
 
-// LLVM: %[[RET:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[INIT:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[COMPOUND:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RET:.*]] = alloca i32, align 4
+// LLVM: %[[INIT:.*]] = alloca i32, align 4
+// LLVM: %[[COMPOUND:.*]] = alloca i32, align 4
 // LLVM: store i32 1, ptr %[[COMPOUND]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[COMPOUND]], align 4
 // LLVM: store i32 %[[TMP]], ptr %[[INIT]], align 4
@@ -55,8 +55,8 @@ void foo2() {
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[CL_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[A_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM:  %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[CL_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM:  %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[CL_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM: store { i32, i32 } { i32 1, i32 2 }, ptr %[[CL_ADDR]], align 4
 // LLVM: %[[TMP:.*]] = load { i32, i32 }, ptr %[[CL_ADDR]], align 4
 // LLVM: store { i32, i32 } %[[TMP]], ptr %[[A_ADDR]], align 4
@@ -85,7 +85,7 @@ void foo3() {
 // CIR: %[[VEC:.*]] = cir.const #cir.const_vector<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC]], %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %[[A_ADDR]], align 16
 
 // FIXME: OGCG emits a temporary compound literal in this case because it omits

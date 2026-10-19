@@ -33,7 +33,7 @@ void call_with_global_ptr() {
 // CIR:         cir.call @_Z9takes_ptrPi(%[[CAST]])
 
 // LLVM-LABEL: define{{.*}} void @_Z19call_with_local_ptrv()
-// LLVM:         %[[ALLOCA:.*]] = alloca i32, i64 1, align 4, addrspace(5)
+// LLVM:         %[[ALLOCA:.*]] = alloca i32, align 4, addrspace(5)
 // LLVM:         %[[CAST:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA]] to ptr
 // LLVM:         call void @_Z9takes_ptrPi(ptr noundef %[[CAST]])
 

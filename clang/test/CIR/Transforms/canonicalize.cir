@@ -28,6 +28,40 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  // The branch operands replace the arguments of the merged blocks.
+  cir.func @redundant_br_block_args(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    cir.br ^bb1(%arg0, %arg1 : !s32i, !s32i)
+  ^bb1(%0: !s32i, %1: !s32i):  // pred: ^bb0
+    %2 = cir.add %0, %1 : !s32i
+    cir.br ^bb2(%2 : !s32i)
+  ^bb2(%3: !s32i):  // pred: ^bb1
+    cir.return %3 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @redundant_br_block_args(%[[ARG0:.*]]: !s32i, %[[ARG1:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   %[[SUM:.*]] = cir.add %[[ARG0]], %[[ARG1]] : !s32i
+  // CHECK-NEXT:   cir.return %[[SUM]] : !s32i
+  // CHECK-NEXT: }
+
+  // In this unreachable cycle, ^header is the only predecessor of ^body and
+  // ^body the only predecessor of ^header, and ^body passes ^header's own
+  // argument back to it. ^header must not be merged into ^body: %keep would be
+  // replaced by itself, and its use in the call would outlive ^header.
+  cir.func private @use(!s32i)
+  cir.func @no_merge_self_arg_loop(%arg0: !s32i) -> !s32i {
+    cir.return %arg0 : !s32i
+  ^header(%keep: !s32i):
+    cir.call @use(%keep) : (!s32i) -> ()
+    cir.br ^body
+  ^body:
+    cir.br ^header(%keep : !s32i)
+  }
+  // CHECK:      cir.func{{.*}} @no_merge_self_arg_loop(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: ^[[HEADER:bb[0-9]+]](%[[KEEP:.*]]: !s32i):
+  // CHECK-NEXT:   cir.call @use(%[[KEEP]]) : (!s32i) -> ()
+  // CHECK-NEXT:   cir.br ^[[HEADER]](%[[KEEP]] : !s32i)
+  // CHECK-NEXT: }
+
   cir.func @scope_yield_value_fold() -> !u32i {
     %0 = cir.const #cir.int<7> : !u32i
     %1 = cir.scope {
@@ -211,6 +245,15 @@ module {
   // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s64i
   // CHECK-NEXT:   cir.return %[[P]] : !s64i
   // CHECK-NEXT: }
+
+  cir.func @cast_undef() -> !s64i {
+    %0 = cir.const #cir.undef : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_undef
+  // CHECK-NEXT:   %[[U:.+]] = cir.const #cir.undef : !s64i
+  // CHECK-NEXT:   cir.return %[[U]] : !s64i
 
   cir.func @cast_s32_s64() -> !s64i {
     %0 = cir.const #cir.int<2> : !s32i

@@ -9,35 +9,34 @@
 define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) {
 ; SSE2-LABEL: fold_srem_vec_1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = [1,0,0,65535,0,0,0,0]
-; SSE2-NEXT:    pmullw %xmm0, %xmm2
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = [44151,48623,2675,32081,0,0,0,0]
-; SSE2-NEXT:    pmulhw %xmm0, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [44151,48623,2675,32081,0,0,0,0]
+; SSE2-NEXT:    pmulhw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = [1,0,0,65535,0,0,0,0]
+; SSE2-NEXT:    pmullw %xmm0, %xmm1
 ; SSE2-NEXT:    paddw %xmm2, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psraw $8, %xmm5
+; SSE2-NEXT:    pandn %xmm5, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    psraw $8, %xmm4
-; SSE2-NEXT:    pandn %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    psraw $4, %xmm3
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm3[0],xmm2[1,2,3]
-; SSE2-NEXT:    movaps %xmm2, %xmm3
-; SSE2-NEXT:    psraw $1, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,0,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    psraw $2, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [0,65535,0,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
+; SSE2-NEXT:    psraw $4, %xmm4
+; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm4[0],xmm3[1,2,3]
+; SSE2-NEXT:    movaps %xmm3, %xmm4
+; SSE2-NEXT:    psraw $1, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [65535,0,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    psraw $2, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [0,65535,0,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm6, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm6
+; SSE2-NEXT:    por %xmm2, %xmm6
 ; SSE2-NEXT:    pand %xmm5, %xmm6
-; SSE2-NEXT:    pandn %xmm2, %xmm5
+; SSE2-NEXT:    pandn %xmm4, %xmm5
 ; SSE2-NEXT:    por %xmm6, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm5
-; SSE2-NEXT:    pandn %xmm3, %xmm4
-; SSE2-NEXT:    por %xmm5, %xmm4
 ; SSE2-NEXT:    psrlw $15, %xmm1
-; SSE2-NEXT:    paddw %xmm4, %xmm1
+; SSE2-NEXT:    paddw %xmm5, %xmm1
 ; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,65412,98,64533,u,u,u,u]
 ; SSE2-NEXT:    psubw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -263,29 +262,29 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; SSE2-LABEL: dont_fold_srem_one:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = [65535,0,65535,0,0,0,0,0]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = [0,12827,45591,12375,0,0,0,0]
-; SSE2-NEXT:    pmulhw %xmm0, %xmm2
-; SSE2-NEXT:    paddw %xmm2, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [65535,0,65535,0,0,0,0,0]
+; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,0,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    movq {{.*#+}} xmm4 = [0,12827,45591,12375,0,0,0,0]
+; SSE2-NEXT:    pmulhw %xmm0, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm1
+; SSE2-NEXT:    paddw %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-NEXT:    psraw $4, %xmm5
 ; SSE2-NEXT:    pandn %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm4, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,0,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm4, %xmm3
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    por %xmm2, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    psraw $10, %xmm5
-; SSE2-NEXT:    pandn %xmm5, %xmm4
-; SSE2-NEXT:    por %xmm3, %xmm4
+; SSE2-NEXT:    pandn %xmm5, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm3, %xmm4
-; SSE2-NEXT:    psraw $7, %xmm2
-; SSE2-NEXT:    pandn %xmm2, %xmm3
-; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    pand %xmm3, %xmm2
+; SSE2-NEXT:    psraw $7, %xmm4
+; SSE2-NEXT:    pandn %xmm4, %xmm3
+; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    psrlw $15, %xmm1
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    paddw %xmm3, %xmm1

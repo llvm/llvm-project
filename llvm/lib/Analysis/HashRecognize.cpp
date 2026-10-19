@@ -155,7 +155,8 @@ private:
 /// ConditionalRecurrence, \p SimpleRecurrence, depending on \p IsBigEndian. We
 /// check that ConditionalRecurrence.Step is a Select(Cmp()) where the compare
 /// is `>= 0` in the big-endian case, and `== 0` in the little-endian case (or
-/// the inverse, in which case the branches of the compare are swapped). We
+/// the inverse, in which case the branches of the compare are swapped). For
+/// little-endian, we also accept a trunc to i1 (extracting bit zero). We
 /// check that the LHS is (ConditionalRecurrence.Phi [xor SimpleRecurrence.Phi])
 /// in the big-endian case, and additionally check for an AND with one in the
 /// little-endian case. We then check AllowedByR against CheckAllowedByR, which
@@ -168,6 +169,22 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 const RecurrenceInfo &SimpleRecurrence,
                                 bool IsBigEndian) {
   auto *SI = cast<SelectInst>(ConditionalRecurrence.Step);
+
+  // Match predicate with or without a SimpleRecurrence (the corresponding data
+  // is LHSAux).
+  auto MatchPred = m_CombineOr(
+      m_Specific(ConditionalRecurrence.Phi),
+      m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
+              m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
+
+  BinaryOperator *BitShift = ConditionalRecurrence.BO;
+  auto MatchBitShiftXorGenPoly = m_c_Xor(
+      m_Specific(BitShift), m_SpecificInt(*ConditionalRecurrence.ExtraConst));
+  if (!IsBigEndian &&
+      match(SI, m_Select(m_Trunc(MatchPred), MatchBitShiftXorGenPoly,
+                         m_Specific(BitShift))))
+    return true;
+
   CmpPredicate Pred;
   const Value *L;
   const APInt *R;
@@ -176,12 +193,6 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                           m_Instruction(TV), m_Instruction(FV))))
     return false;
 
-  // Match predicate with or without a SimpleRecurrence (the corresponding data
-  // is LHSAux).
-  auto MatchPred = m_CombineOr(
-      m_Specific(ConditionalRecurrence.Phi),
-      m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
-              m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
   bool LWellFormed =
       IsBigEndian ? match(L, MatchPred) : match(L, m_c_And(MatchPred, m_One()));
   if (!LWellFormed)
@@ -195,15 +206,10 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 IsBigEndian ? APInt::getSignedMinValue(BW)
                                             : APInt(BW, 1));
 
-  BinaryOperator *BitShift = ConditionalRecurrence.BO;
   if (AllowedByR == CheckAllowedByR)
-    return TV == BitShift &&
-           match(FV, m_c_Xor(m_Specific(BitShift),
-                             m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
+    return TV == BitShift && match(FV, MatchBitShiftXorGenPoly);
   if (AllowedByR.inverse() == CheckAllowedByR)
-    return FV == BitShift &&
-           match(TV, m_c_Xor(m_Specific(BitShift),
-                             m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
+    return FV == BitShift && match(TV, MatchBitShiftXorGenPoly);
   return false;
 }
 
@@ -300,8 +306,8 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
   Instruction *TV, *FV;
-  if (!match(FoundStep,
-             m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
+  if (!match(FoundStep, m_Select(m_Isa<CmpInst, TruncInst>(), m_Instruction(TV),
+                                 m_Instruction(FV))))
     return false;
 
   // For a conditional recurrence, both the true and false values of the
@@ -578,15 +584,14 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
 
-  // Make sure that the computed value is used in the exit block: this should be
-  // true even if it is only really used in an outer loop's exit block, since
-  // the loop is in LCSSA form.
+  // Ensure nothing other than the computed value makes its way out of the loop.
+  // Since the loop is in LCSSA form, this is as simple as checking the PHI
+  // nodes in the exit block.
   auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence.Step);
-  if (none_of(ComputedValue->users(), [Exit](User *U) {
-        auto *UI = dyn_cast<Instruction>(U);
-        return UI && UI->getParent() == Exit;
+  if (any_of(Exit->phis(), [Latch, ComputedValue](PHINode &PN) {
+        return PN.getIncomingValueForBlock(Latch) != ComputedValue;
       }))
-    return "Unable to find use of computed value in loop exit block";
+    return "Found stray incoming values in loop exit block";
 
   assert(ConditionalRecurrence.ExtraConst &&
          "Expected ExtraConst in conditional recurrence");

@@ -27,9 +27,7 @@ define void @f(i1 %x) #0 {
 ; CHECK-NEXT:    [[ICMP_D0:%.*]] = icmp eq i64 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[ICMP_D0]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[AND0_TMP:%.*]] = and i64 [[TMP7]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[AND0_TMP]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP5]], <i64 8, i64 -1>
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <2 x i64> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP10]], ptr @a, align 8
 ; CHECK-NEXT:    br label [[IF_END]]

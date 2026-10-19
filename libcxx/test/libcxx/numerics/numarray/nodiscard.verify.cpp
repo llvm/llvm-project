@@ -53,6 +53,11 @@ void test() {
   cva[std::move(sva)]; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
+  va.begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cva.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  va.end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cva.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   va.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   va.sum(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -88,9 +93,4 @@ void test() {
   std::sqrt(va);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::tan(va);       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::tanh(va);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  std::begin(va);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::begin(cva); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::end(va);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::end(cva);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

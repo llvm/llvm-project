@@ -189,7 +189,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
-  CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentExportBlock);
@@ -238,9 +237,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExportBlock);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterNamespace);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterObjCDeclaration);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterRequiresExpression);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterStruct);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterUnion);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExternBlock);
@@ -252,6 +253,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);
+  CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfFile);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfFile);
@@ -272,6 +274,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, Enabled);
+  CHECK_PARSE_NESTED_BOOL(SortIncludes, FilesBeforeFolders);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreCase);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreExtension);
 }
@@ -1026,6 +1029,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortIfStatementsOnASingleLine,
               FormatStyle::SIS_WithoutElse);
 
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
+  CHECK_PARSE("IndentAccessModifiers: Never", IndentAccessModifiers,
+              FormatStyle::IAMS_Never);
+  CHECK_PARSE("IndentAccessModifiers: Always", IndentAccessModifiers,
+              FormatStyle::IAMS_Always);
+  CHECK_PARSE("IndentAccessModifiers: AfterFirstAccessModifier",
+              IndentAccessModifiers,
+              FormatStyle::IAMS_AfterFirstAccessModifier);
+  CHECK_PARSE("IndentAccessModifiers: false", IndentAccessModifiers,
+              FormatStyle::IAMS_Never);
+  CHECK_PARSE("IndentAccessModifiers: true", IndentAccessModifiers,
+              FormatStyle::IAMS_Always);
+
   Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
   CHECK_PARSE("IndentExternBlock: AfterExternBlock", IndentExternBlock,
               FormatStyle::IEBS_AfterExternBlock);
@@ -1167,20 +1183,28 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
   Style.SortIncludes = {};
-  CHECK_PARSE(
-      "SortIncludes: true", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: true", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
               FormatStyle::SortIncludesOptions{});
-  CHECK_PARSE(
-      "SortIncludes: CaseInsensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/true, /*IgnoreExtension=*/false}));
-  CHECK_PARSE(
-      "SortIncludes: CaseSensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/true,
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
+  CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
+  CHECK_PARSE("SortIncludes: Natural", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/true,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
               FormatStyle::SortIncludesOptions{});
 
@@ -1248,6 +1272,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("SpacesInAngles: false", SpacesInAngles, FormatStyle::SIAS_Never);
   CHECK_PARSE("SpacesInAngles: true", SpacesInAngles, FormatStyle::SIAS_Always);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  CHECK_PARSE("SpacesInBlockComments: Never", SpacesInBlockComments,
+              FormatStyle::SIBCS_Never);
+  CHECK_PARSE("SpacesInBlockComments: Always", SpacesInBlockComments,
+              FormatStyle::SIBCS_Always);
+  CHECK_PARSE("SpacesInBlockComments: Leave", SpacesInBlockComments,
+              FormatStyle::SIBCS_Leave);
 
   CHECK_PARSE("RequiresClausePosition: WithPreceding", RequiresClausePosition,
               FormatStyle::RCPS_WithPreceding);

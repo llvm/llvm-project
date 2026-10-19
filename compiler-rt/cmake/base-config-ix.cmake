@@ -41,13 +41,13 @@ endif()
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
-set_property(TARGET compiler-rt PROPERTY FOLDER "Compiler-RT/Metatargets")
+set_property(TARGET compiler-rt PROPERTY FOLDER "compiler-rt/Metatargets")
 set_property(
   TARGET
     install-compiler-rt
     install-compiler-rt-stripped
   PROPERTY
-    FOLDER "Compiler-RT/Installation"
+    FOLDER "compiler-rt/Installation"
 )
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
@@ -311,6 +311,8 @@ macro(test_targets)
       test_target_arch(avr "__AVR__" "--target=avr")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch32")
       test_target_arch(aarch32 "" "-march=armv8-a")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch64_be")
+      test_target_arch(aarch64_be "" "-march=armv8-a" "-mbig-endian")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch64")
       test_target_arch(aarch64 "" "-march=armv8-a")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "riscv32")

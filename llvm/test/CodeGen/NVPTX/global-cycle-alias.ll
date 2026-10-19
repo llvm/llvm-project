@@ -34,7 +34,6 @@ define void @alias_target() {
 ; CHECK-LABEL: alias_target(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   ret void

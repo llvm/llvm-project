@@ -1,3 +1,9 @@
+```{image} ./_static/llvm_libc_logo.svg
+:alt: The LLVM-libc logo, drawn by Jordan Abrahams-Whitehead
+:align: right
+:width: 25%
+```
+
 # The LLVM C Library
 
 LLVM-libc is a from-scratch implementation of the C standard library, built as
@@ -5,6 +11,8 @@ part of the LLVM project. It is designed to be **modular** (any piece can be
 used independently), **multiplatform** (Linux, GPU, baremetal embedded, UEFI,
 macOS, Windows), and written in modern C++ for correctness, performance, and
 safety.
+
+The logo was drawn by Jordan Abrahams-Whitehead
 
 ## What Works Today
 

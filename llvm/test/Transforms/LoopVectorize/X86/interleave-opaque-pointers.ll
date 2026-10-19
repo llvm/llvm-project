@@ -11,14 +11,14 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[START2]], [[END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[START2]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[END]], i64 [[TMP4]]

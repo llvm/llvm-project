@@ -15,6 +15,7 @@
 ; AFTER-PEI-NEXT: waveLimiter:     false
 ; AFTER-PEI-NEXT: hasSpilledSGPRs: true
 ; AFTER-PEI-NEXT: hasSpilledVGPRs: false
+; AFTER-PEI-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; AFTER-PEI-NEXT: numWaveDispatchSGPRs: 0
 ; AFTER-PEI-NEXT: numWaveDispatchVGPRs: 0
 ; AFTER-PEI-NEXT: scratchRSrcReg:  '$sgpr68_sgpr69_sgpr70_sgpr71'

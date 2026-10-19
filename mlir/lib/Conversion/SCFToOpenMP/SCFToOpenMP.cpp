@@ -204,7 +204,8 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
   auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
-                                              "__scf_reduction", type,
+                                              "__scf_reduction",
+                                              /*sym_visibility=*/nullptr, type,
                                               /*byref_element_type=*/{});
   symbolTable.insert(decl);
 
@@ -412,6 +413,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
+    if (parallelOp.getUnsignedCmp())
+      return rewriter.notifyMatchFailure(
+          parallelOp, "unsigned loop bounds are not supported");
     // Bail out early if any reduction init value has a type that is not
     // compatible with LLVM (e.g. index), since we cannot allocate a reduction
     // variable for such types.
@@ -503,11 +507,13 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         rewriter, loc,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
+        /* allocate_alignments = */ nullptr,
+        /* allocate_private_indices = */ nullptr,
         /* if_expr = */ Value{},
         /* num_threads_vars = */ numThreadsVars,
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
-        /* private_needs_barrier = */ nullptr,
+        /* private_needs_barrier = */ false,
         /* proc_bind_kind = */ omp::ClauseProcBindKindAttr{},
         /* reduction_mod = */ nullptr,
         /* reduction_vars = */ llvm::SmallVector<Value>{},

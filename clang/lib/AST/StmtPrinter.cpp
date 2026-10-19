@@ -35,7 +35,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
@@ -43,7 +43,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -780,8 +779,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
@@ -831,6 +831,11 @@ void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
 
 void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPFlattenDirective(OMPFlattenDirective *Node) {
+  Indent() << "#pragma omp flatten";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -968,9 +973,16 @@ void StmtPrinter::VisitOMPScanDirective(OMPScanDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
-void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
+void StmtPrinter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *Node) {
   Indent() << "#pragma omp ordered";
-  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
+  PrintOMPExecutableDirective(Node, true);
+}
+
+void StmtPrinter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *Node) {
+  Indent() << "#pragma omp ordered";
+  PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
@@ -1019,16 +1031,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
@@ -1369,7 +1383,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
   bool CleanUglifiedParameter = Policy.CleanUglifiedParameters &&
                                 isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD);
 
-  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter) {
+  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter &&
+      !VD->isTemplateParameter()) {
     VD->printQualifiedName(OS, Policy);
   } else {
     Node->getQualifier().print(OS, Policy);
@@ -2661,8 +2676,23 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
 }
 
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for the remaining reflection kinds.
+  OS << "^^";
+  switch (S->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    break;
+  case ReflectionKind::Type:
+    S->getTypeSourceInfo()->getType().print(OS, Policy);
+    break;
+  }
+}
+
+void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
+  Node->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
+  printTemplateArgumentList(OS, Node->template_arguments(), Policy,
+                            Node->getParameter()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
@@ -2781,7 +2811,7 @@ void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   OS << E->getFoundDecl()->getName();
   printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
                             Policy,
-                            E->getNamedConcept()->getTemplateParameters());
+                            E->getConceptDecl()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {

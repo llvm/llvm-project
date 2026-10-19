@@ -113,7 +113,6 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
-  bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
@@ -152,6 +151,7 @@ private:
   bool selectPermlaneSwapIntrin(MachineInstr &I, Intrinsic::ID IntrID) const;
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectBITOP3(MachineInstr &I) const;
+  bool selectWriteRegister(MachineInstr &MI) const;
   bool selectStackRestore(MachineInstr &MI) const;
   bool selectNamedBarrierInit(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
@@ -168,6 +168,8 @@ private:
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
                                  bool ForceVGPR = false) const;
+
+  Register widenSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
@@ -352,9 +354,8 @@ private:
                                                           bool &Matched) const;
   ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
-
-  void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx = -1) const;
+  ComplexRendererFns selectVOP3PMadMixModsExtNeg(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;

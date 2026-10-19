@@ -79,8 +79,10 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                                               Operation *op,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
-  return builder.create(loc, op->getName().getIdentifier(), operands,
-                        resultTypes, op->getAttrs());
+  OperationState state(loc, op->getName(), operands, resultTypes,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return builder.create(state);
 }
 
 /// Return the target shape for unrolling for the given `op`. Return
@@ -90,6 +92,13 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
   if (options.filterConstraint && failed(options.filterConstraint(op))) {
     LDBG() << "--no filter constraint -> BAIL";
+    return std::nullopt;
+  }
+  // Unrolling a masked op would put several ops inside its vector.mask region,
+  // and the enclosing mask would not be sliced to match them.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
+  if (maskableOp && maskableOp.isMasked()) {
+    LDBG() << "--op is masked -> BAIL";
     return std::nullopt;
   }
   assert(options.nativeShape &&
@@ -383,17 +392,23 @@ struct UnrollMultiReductionPattern
     Location loc = reductionOp.getLoc();
     auto resultType = reductionOp->getResult(0).getType();
 
+    // A target shape with fewer dimensions than the source vector applies to
+    // its trailing dimensions. Add leading unit dimensions so that it can be
+    // used to slice the source and to index its dimensions.
+    SmallVector<int64_t> adjustedTargetShape(originalSize.size(), 1);
+    llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
+
     // Handle scalar result case: all dimensions are reduced.
     // Each source tile is reduced to a scalar, and partial results are
     // chained through the accumulator operand.
     if (resultType.isIntOrFloat()) {
       Value accumulator = reductionOp.getAcc();
       for (SmallVector<int64_t> offsets :
-           StaticTileOffsetRange(originalSize, *targetShape)) {
+           StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
         SmallVector<int64_t> operandStrides(offsets.size(), 1);
         Value slicedOperand =
             rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-                loc, reductionOp.getSource(), offsets, *targetShape,
+                loc, reductionOp.getSource(), offsets, adjustedTargetShape,
                 operandStrides);
         Operation *newOp = cloneOpWithOperandsAndTypes(
             rewriter, loc, reductionOp, {slicedOperand, accumulator},
@@ -413,20 +428,20 @@ struct UnrollMultiReductionPattern
     // Stride of the ratios, this gives us the offsets of sliceCount in a basis
     // of multiples of the targetShape.
     for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalSize, *targetShape)) {
+         StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
       SmallVector<Value> operands;
       SmallVector<int64_t> operandStrides(offsets.size(), 1);
       Value slicedOperand =
           rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-              loc, reductionOp.getSource(), offsets, *targetShape,
+              loc, reductionOp.getSource(), offsets, adjustedTargetShape,
               operandStrides);
       operands.push_back(slicedOperand);
       SmallVector<int64_t> dstShape;
       SmallVector<int64_t> destOffset;
-      for (size_t i : llvm::seq(size_t(0), targetShape->size())) {
+      for (size_t i : llvm::seq(size_t(0), adjustedTargetShape.size())) {
         if (!reductionOp.isReducedDim(i)) {
           destOffset.push_back(offsets[i]);
-          dstShape.push_back((*targetShape)[i]);
+          dstShape.push_back(adjustedTargetShape[i]);
         }
       }
       Value acc;
@@ -800,16 +815,22 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
     Location loc = broadcastOp.getLoc();
     VectorType srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
     VectorType resType = broadcastOp.getResultVectorType();
+
+    SmallVector<int64_t> originalShape = *broadcastOp.getShapeForUnroll();
+    // Pad the target shape with leading unit dimensions when the broadcast
+    // result has a higher rank than the native shape.
+    SmallVector<int64_t> adjustedTargetShape(originalShape.size(), 1);
+    llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
+
     VectorType targetType =
-        resType.cloneWith(*targetShape, resType.getElementType());
+        resType.cloneWith(adjustedTargetShape, resType.getElementType());
     Value result = arith::ConstantOp::create(rewriter, loc, resType,
                                              rewriter.getZeroAttr(resType));
 
-    SmallVector<int64_t> originalShape = *broadcastOp.getShapeForUnroll();
     SmallVector<int64_t> strides(originalShape.size(), 1);
 
     for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalShape, *targetShape)) {
+         StaticTileOffsetRange(originalShape, adjustedTargetShape)) {
       Value newSrc;
       if (!srcType) {
         // Scalar to vector broadcast.
@@ -818,8 +839,8 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
         // Vector to vector broadcast.
         int64_t rank = srcType.getRank();
         SmallVector<int64_t> srcOffsets(offsets.end() - rank, offsets.end());
-        SmallVector<int64_t> srcShape(targetShape->end() - rank,
-                                      targetShape->end());
+        SmallVector<int64_t> srcShape(adjustedTargetShape.end() - rank,
+                                      adjustedTargetShape.end());
         SmallVector<int64_t> srcStrides(strides.end() - rank, strides.end());
         // adjust the offset and shape for src if the corresponding dim is 1.
         for (int64_t i = 0; i < rank; ++i) {
@@ -1718,6 +1739,13 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollBitCastPattern, UnrollInterleavePattern,
                UnrollDeinterleavePattern>(patterns.getContext(), options,
                                           benefit);
+}
+
+void mlir::vector::populateVectorContractUnrollPatterns(
+    RewritePatternSet &patterns, const UnrollVectorOptions &options,
+    PatternBenefit benefit) {
+  patterns.add<UnrollContractionPattern>(patterns.getContext(), options,
+                                         benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

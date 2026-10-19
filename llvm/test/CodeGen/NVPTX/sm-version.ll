@@ -111,9 +111,9 @@
 ; SM107: .version 9.4
 ; SM107a: .version 9.4
 ; SM107f: .version 9.4
-; SM110: .version 9.0
-; SM110a: .version 9.0
-; SM110f: .version 9.0
+; SM110: .version 8.6
+; SM110a: .version 8.6
+; SM110f: .version 8.8
 ; SM120: .version 8.7
 ; SM120a: .version 8.7
 ; SM120f: .version 8.8
@@ -152,9 +152,11 @@
 ; SM107: .target sm_107
 ; SM107a: .target sm_107a
 ; SM107f: .target sm_107f
-; SM110: .target sm_110
-; SM110a: .target sm_110a
-; SM110f: .target sm_110f
+; The sm_11x defaults predate the rename to that name, so they are spelled
+; sm_101x here. See sm-110-rename.ll.
+; SM110: .target sm_101
+; SM110a: .target sm_101a
+; SM110f: .target sm_101f
 ; SM120: .target sm_120
 ; SM120a: .target sm_120a
 ; SM120f: .target sm_120f

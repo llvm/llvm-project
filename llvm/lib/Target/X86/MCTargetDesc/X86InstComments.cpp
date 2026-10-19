@@ -1025,6 +1025,11 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
   default:
     return false;
   }
+  // The category mask can be a symbol rather than a literal, in which case its
+  // value is only known at link time and there is no category to describe.
+  if (!MI->getOperand(NumOperands - 1).isImm())
+    return false;
+
   StringRef DestName = getRegName(MI->getOperand(0).getReg());
   StringRef SrcName =
       SrcIdx != -1 ? getRegName(MI->getOperand(SrcIdx).getReg()) : "mem";

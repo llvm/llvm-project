@@ -15,12 +15,14 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
+#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -66,23 +68,22 @@ struct LinearizeConstantLike final
         typeConverter.convertType<VectorType>(op->getResult(0).getType());
     assert(resType && "expected 1-D vector type");
 
-    StringAttr attrName = rewriter.getStringAttr("value");
-    Attribute value = op->getAttr(attrName);
-    if (!value)
-      return rewriter.notifyMatchFailure(loc, "no 'value' attr");
+    Attribute value;
+    if (!matchPattern(op, m_Constant(&value)))
+      return rewriter.notifyMatchFailure(loc,
+                                         "could not fold constant-like op");
 
     FailureOr<Attribute> newValue =
         linearizeConstAttr(loc, rewriter, resType, value);
     if (failed(newValue))
       return failure();
 
-    FailureOr<Operation *> convertResult =
-        convertOpResultTypes(op, /*operands=*/{}, typeConverter, rewriter);
-    if (failed(convertResult))
-      return failure();
-
-    Operation *newOp = *convertResult;
-    newOp->setAttr(attrName, *newValue);
+    Operation *newOp = op->getDialect()->materializeConstant(
+        rewriter, *newValue, resType, loc);
+    if (!newOp)
+      return rewriter.notifyMatchFailure(
+          loc, "could not materialize linearized constant");
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.replaceOp(op, newOp);
     return success();
   }
@@ -1004,6 +1005,65 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
         // This will return true if, for all operand and result types `t`,
         // convertType(t) = t. This is true if there are no rank>=2 vectors.
         return typeConverter.isLegal(op);
+      });
+}
+
+/// Get the set of operand/result types to check for sufficiently
+/// small inner-most dimension size.
+static SmallVector<std::pair<Type, unsigned>>
+getTypeBitWidthBoundPairs(Operation *op, unsigned targetBitWidth) {
+
+  if (auto insertOp = dyn_cast<vector::InsertOp>(op)) {
+    unsigned w = targetBitWidth < std::numeric_limits<unsigned>::max()
+                     ? targetBitWidth + 1
+                     : targetBitWidth;
+    return {{insertOp.getValueToStoreType(), w}};
+  }
+
+  auto resultTypes = op->getResultTypes();
+  SmallVector<std::pair<Type, unsigned>> resultsWithBitWidth;
+  resultsWithBitWidth.reserve(resultTypes.size());
+  for (Type type : resultTypes) {
+    resultsWithBitWidth.push_back({type, targetBitWidth});
+  }
+  return resultsWithBitWidth;
+}
+
+/// Returns true if any checked vector type of op's inner-most dimension
+/// size is equal to or exceeds target bit width.
+static bool hasWideInnerDim(Operation *op, unsigned targetBitWidth) {
+  // Check on bitwidths.
+  SmallVector<std::pair<Type, unsigned>> toCheck =
+      getTypeBitWidthBoundPairs(op, targetBitWidth);
+
+  // If `type` is VectorType with trailing dimension of (bit) size greater than
+  // or equal to `targetBitWidth`, its defining op is considered legal.
+  return llvm::any_of(toCheck, [&](std::pair<Type, unsigned> typeWidth) {
+    VectorType vecType = dyn_cast<VectorType>(typeWidth.first);
+
+    // Not linearizable for reasons other than what this function checks.
+    if (!vecType || vecType.getRank() == 0)
+      return false;
+
+    // The width of the type 'index' is unbounded (and therefore potentially
+    // above the target width).
+    if (vecType.getElementType().isIndex())
+      return true;
+
+    unsigned finalDimSize = vecType.getShape().back();
+    unsigned nbBitsPerElm = vecType.getElementTypeBitWidth();
+    unsigned trailingVecDimBitWidth = finalDimSize * nbBitsPerElm;
+    return trailingVecDimBitWidth >= typeWidth.second;
+  });
+}
+
+void mlir::vector::populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &target, unsigned targetBitWidth) {
+  target.markUnknownOpDynamicallyLegal(
+      [=](Operation *op) -> std::optional<bool> {
+        if (hasWideInnerDim(op, targetBitWidth))
+          return true;
+        return std::nullopt;
       });
 }
 

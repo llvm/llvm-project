@@ -1,0 +1,15 @@
+add_libc_test(
+  sigprocmask_test
+  FULL_BUILD_ONLY
+  SUITE
+    libc-osutil-tests
+  SRCS
+    sigprocmask_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.darwin.syscall_wrappers.sigprocmask
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+)

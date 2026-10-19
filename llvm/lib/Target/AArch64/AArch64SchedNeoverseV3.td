@@ -24,6 +24,7 @@ def NeoverseV3Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
+                                                     HasSVEBFSCALE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
@@ -110,10 +111,8 @@ def V3Write_3c_1M    : SchedWriteRes<[V3UnitM]>   { let Latency = 3; }
 def V3Write_2c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 2; }
 def V3Write_3c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 3; }
 def V3Write_4c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 4; }
-def V3Write_12c_1M0  : SchedWriteRes<[V3UnitM0]>  { let Latency = 12;
-                                                    let ReleaseAtCycles = [12]; }
-def V3Write_20c_1M0  : SchedWriteRes<[V3UnitM0]>  { let Latency = 20;
-                                                    let ReleaseAtCycles = [20]; }
+def V3Write_7c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 7;
+                                                    let ReleaseAtCycles = [7]; }
 def V3Write_4c_1L    : SchedWriteRes<[V3UnitL]>   { let Latency = 4; }
 def V3Write_6c_1L    : SchedWriteRes<[V3UnitL]>   { let Latency = 6; }
 def V3Write_2c_1V    : SchedWriteRes<[V3UnitV]>   { let Latency = 2; }
@@ -176,11 +175,6 @@ def V3Write_3c_1I_1M : SchedWriteRes<[V3UnitI, V3UnitM]> {
 
 def V3Write_1c_2M : SchedWriteRes<[V3UnitM, V3UnitM]> {
   let Latency     = 1;
-  let NumMicroOps = 2;
-}
-
-def V3Write_3c_2M : SchedWriteRes<[V3UnitM, V3UnitM]> {
-  let Latency     = 3;
   let NumMicroOps = 2;
 }
 
@@ -1100,8 +1094,8 @@ def : SchedAlias<WriteImm, V3Write_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  V3Write_12c_1M0>;
-def : SchedAlias<WriteID64,  V3Write_20c_1M0>;
+def : SchedAlias<WriteID32,  V3Write_7c_1M0>;
+def : SchedAlias<WriteID64,  V3Write_7c_1M0>;
 
 def : SchedAlias<WriteIM32, V3Write_2c_1M>;
 def : SchedAlias<WriteIM64, V3Write_2c_1M>;
@@ -1647,6 +1641,7 @@ def : InstRW<[V3Write_4c_2V02], (instrs URECPEv4i32, URSQRTEv4i32)>;
 // ASIMD reciprocal and square root estimate, D-form F32 and scalar forms
 def : InstRW<[V3Write_3c_1V02], (instrs FRECPEv1f16, FRECPEv1i32,
                                         FRECPEv1i64, FRECPEv2f32,
+                                        FRECPEv2f64, FRSQRTEv2f64,
                                         FRSQRTEv1f16, FRSQRTEv1i32,
                                         FRSQRTEv1i64, FRSQRTEv2f32)>;
 
@@ -1966,9 +1961,9 @@ def : InstRW<[V3Write_2or3c_1M], (instrs BRKNS_PPzP, BRKPAS_PPzPP,
                                          BRKPBS_PPzPP)>;
 
 // Loop control, based on GPR
-def : InstRW<[V3Write_3c_2M],
+def : InstRW<[V3Write_2c_1M],
              (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]")>;
-def : InstRW<[V3Write_3c_2M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
+def : InstRW<[V3Write_2c_1M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
 
 // Loop terminate
 def : InstRW<[V3Write_1c_2M], (instregex "^CTERM(EQ|NE)_(WW|XX)")>;
@@ -2472,7 +2467,7 @@ def : InstRW<[V3Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[V3Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[V3Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

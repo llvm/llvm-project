@@ -21,6 +21,26 @@ define internal <2 x i32> @elementwise_load(ptr %p) {
   ret <2 x i32> %value
 }
 
+define internal void @whole_vector_store(ptr %p, <2 x i32> %value) {
+; CHECK-LABEL: define internal void @whole_vector_store(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[VALUE:%.*]]) {
+; CHECK-NEXT:    store atomic <2 x i32> [[VALUE]], ptr [[P]] monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic <2 x i32> %value, ptr %p monotonic, align 4
+  ret void
+}
+
+define internal void @elementwise_store(ptr %p, <2 x i32> %value) {
+; CHECK-LABEL: define internal void @elementwise_store(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[VALUE:%.*]]) {
+; CHECK-NEXT:    store atomic elementwise <2 x i32> [[VALUE]], ptr [[P]] monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic elementwise <2 x i32> %value, ptr %p monotonic, align 4
+  ret void
+}
+
 define internal <2 x i32> @whole_vector_atomicrmw(ptr %p, <2 x i32> %value) {
 ; CHECK-LABEL: define internal <2 x i32> @whole_vector_atomicrmw(
 ; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[VALUE:%.*]]) {

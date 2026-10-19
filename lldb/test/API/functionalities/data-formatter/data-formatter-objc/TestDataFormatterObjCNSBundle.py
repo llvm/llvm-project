@@ -23,7 +23,7 @@ class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
         """Test formatters for NSBundle."""
         self.appkit_tester_impl(self.nsbundle_data_formatter_commands, True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @requiresSwiftPlugin(min_apple_os_version=27.0)
     def test_nsbundle_with_run_command_no_sonct(self):
         """Test formatters for NSBundle."""

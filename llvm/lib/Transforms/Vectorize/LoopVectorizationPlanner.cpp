@@ -13,11 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
@@ -27,45 +28,6 @@ using namespace llvm;
 using namespace LoopVectorizationUtils;
 
 #define DEBUG_TYPE "loop-vectorize"
-
-extern cl::opt<bool> VPlanBuildOuterloopStressTest;
-
-static cl::opt<bool> MaximizeBandwidth(
-    "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
-    cl::desc("Maximize bandwidth when selecting vectorization factor which "
-             "will be determined by the smallest type in loop."));
-
-static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
-    "vectorizer-maximize-bandwidth-for-vector-calls", cl::init(true),
-    cl::Hidden,
-    cl::desc("Try wider VFs if they enable the use of vector variants"));
-
-static cl::opt<bool> ConsiderRegPressure(
-    "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
-    cl::desc("Discard VFs if their register pressure is too high."));
-
-static cl::opt<bool> ForceTargetSupportsScalableVectors(
-    "force-target-supports-scalable-vectors", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Pretend that scalable vectors are supported, even if the target does "
-        "not support them. This flag should only be used for testing."));
-
-cl::opt<bool> llvm::PreferInLoopReductions(
-    "prefer-inloop-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Prefer in-loop vector reductions, "
-             "overriding the targets preference."));
-
-/// Note: This currently only applies to `llvm.masked.load` and
-/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
-static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
-    "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
-    cl::desc("Assume the target supports masked memory operations (used for "
-             "testing)."));
-
-static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
-    "force-target-supports-gather-scatter-ops", cl::init(false), cl::Hidden,
-    cl::desc("Assume the target supports gather/scatter operations (used for "
-             "testing)."));
 
 /// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
 /// is passed, the message relates to that particular instruction.
@@ -137,28 +99,23 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
 bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
                                                   Align Alignment,
                                                   unsigned AddressSpace) const {
-  return ForceTargetSupportsMaskedMemoryOps ||
+  return Opts.force_target_supports_masked_memory_ops ||
          (IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
                  : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
 }
 
-bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
+bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
+                                                Align Alignment,
                                                 ElementCount VF) const {
-  bool LI = isa<LoadInst>(V);
-  bool SI = isa<StoreInst>(V);
-  if (!LI && !SI)
-    return false;
-  auto *Ty = getLoadStoreType(V);
-  Align Align = getLoadStoreAlignment(V);
-  if (VF.isVector())
-    Ty = VectorType::get(Ty, VF);
-  return ForceTargetSupportsGatherScatterOps ||
-         (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
-         (SI && TTI.isLegalMaskedScatter(Ty, Align));
+  Type *VectorTy = toVectorTy(ScalarTy, VF);
+  return Opts.force_target_supports_gather_scatter_ops ||
+         (IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
+                 : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
-  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors ||
+  return TTI.supportsScalableVectors() ||
+         Opts.force_target_supports_scalable_vectors ||
          VectorizerParams::VectorizationFactor.isScalable();
 }
 
@@ -166,15 +123,15 @@ bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
   TargetTransformInfo::RegisterKind RegKind =
       IsScalable ? TargetTransformInfo::RGK_ScalableVector
                  : TargetTransformInfo::RGK_FixedWidthVector;
-  return MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
-                               (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
-                                (UseWiderVFIfCallVariantsPresent &&
-                                 Legal->hasVectorCallVariants())));
+  return valueOr(Opts.vectorizer_maximize_bandwidth,
+                 TTI.shouldMaximizeVectorBandwidth(RegKind) ||
+                     (Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
+                      Legal->hasVectorCallVariants()));
 }
 
 bool VFSelectionContext::shouldConsiderRegPressureForVF(ElementCount VF) const {
-  if (ConsiderRegPressure.getNumOccurrences())
-    return ConsiderRegPressure;
+  if (Opts.vectorizer_consider_reg_pressure != BoolOrDefault::Default)
+    return Opts.vectorizer_consider_reg_pressure == BoolOrDefault::True;
 
   // TODO: We should eventually consider register pressure for all targets. The
   // TTI hook is temporary whilst target-specific issues are being fixed.
@@ -296,13 +253,20 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-std::optional<unsigned> llvm::getMaxVScale(const Function &F,
-                                           const TargetTransformInfo &TTI) {
-  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
-    return MaxVScale;
-
+std::optional<unsigned> llvm::getMaxVScale(const Function &F) {
   if (F.hasFnAttribute(Attribute::VScaleRange))
     return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
+
+  return std::nullopt;
+}
+
+std::optional<uint64_t>
+llvm::getMaxRuntimeElementCount(ElementCount EC, const Function &F) {
+  if (EC.isFixed())
+    return EC.getFixedValue();
+
+  if (std::optional<unsigned> MaxVScale = getMaxVScale(F))
+    return uint64_t(EC.getKnownMinValue()) * *MaxVScale;
 
   return std::nullopt;
 }
@@ -354,7 +318,7 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F, TTI)) {
+  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F)) {
     reportVectorizationInfo("The target does not provide maximum vscale value "
                             "for safe distance analysis.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
@@ -375,7 +339,7 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
   if (Legal->isSafeForAnyVectorWidth())
     return MaxScalableVF;
 
-  std::optional<unsigned> MaxVScale = getMaxVScale(F, TTI);
+  std::optional<unsigned> MaxVScale = getMaxVScale(F);
   // Limit MaxScalableVF by the maximum safe dependence distance.
   MaxScalableVF = ElementCount::getScalable(MaxSafeElements / *MaxVScale);
 
@@ -508,8 +472,9 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
-  if (ElementTypesInLoop.empty() && !Legal->getReductionVars().empty()) {
-    for (const auto &[_, RdxDesc] : Legal->getReductionVars()) {
+  if (ElementTypesInLoop.empty()) {
+    for (const RecurrenceDescriptor &RdxDesc :
+         Legal->getReductionVars().values()) {
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
       MinWidth = std::min(
@@ -527,6 +492,15 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
           MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
     }
   }
+
+  // If the loop has no loads/stores or reductions (e.g. a search loop with an
+  // early exit), MinWidth is never updated and is left at its sentinel value.
+  // Fall back to MaxWidth to keep the SmallestType <= WidestType invariant, so
+  // callers such as the max-bandwidth VF computation don't divide by the
+  // sentinel and collapse the VF to zero.
+  if (MinWidth == -1U)
+    MinWidth = MaxWidth;
+
   return {MinWidth, MaxWidth};
 }
 
@@ -554,7 +528,7 @@ void VFSelectionContext::collectElementTypesForWidening(
           continue;
         const RecurrenceDescriptor &RdxDesc =
             Legal->getRecurrenceDescriptor(PN);
-        if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
+        if (Opts.prefer_inloop_reductions || useOrderedReductions(RdxDesc) ||
             TTI.preferInLoopReduction(RdxDesc.getRecurrenceKind(),
                                       RdxDesc.getRecurrenceType()))
           continue;
@@ -663,7 +637,7 @@ void VFSelectionContext::collectInLoopReductions() {
 
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
+    if (!Opts.prefer_inloop_reductions && !useOrderedReductions(RdxDesc) &&
         !TTI.preferInLoopReduction(Kind, Phi->getType()))
       continue;
 
@@ -674,15 +648,8 @@ void VFSelectionContext::collectInLoopReductions() {
         RdxDesc.getReductionOpChain(Phi, const_cast<Loop *>(TheLoop));
     bool InLoop = !ReductionOperations.empty();
 
-    if (InLoop) {
+    if (InLoop)
       InLoopReductions.insert(Phi);
-      // Add the elements to InLoopReductionImmediateChains for cost modelling.
-      Instruction *LastChain = Phi;
-      for (auto *I : ReductionOperations) {
-        InLoopReductionImmediateChains[I] = LastChain;
-        LastChain = I;
-      }
-    }
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
@@ -697,10 +664,27 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostB = B.Cost;
 
   // When there is a hint to always prefer scalable vectors, honour that hint.
-  if (Hints.isScalableVectorizationAlwaysPreferred())
+  if (Config.getHints().isScalableVectorizationAlwaysPreferred())
     if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
         !B.Width.isScalar())
       return true;
+
+  // Favor fixed VFs for epilogue loops by scaling the costs of scalable VFs
+  // 'ScalableEpilogueVFCostScaleFactor' (default 2.0). This is intended to
+  // model that fixed VFs are more likely to be fully unrolled (or optimized
+  // out) post vectorization. TODO: Reconsider this restriction for predicated
+  // epilogues (once supported).
+  if (IsEpilogue && A.Width.isScalable() != B.Width.isScalable() &&
+      A.Cost.isValid() && B.Cost.isValid()) {
+    auto [FixedCost, ScalableCost] = std::make_pair(CostA, CostB);
+    if (B.Width.isFixed())
+      std::swap(FixedCost, ScalableCost);
+
+    ScalableCost *= Opts.scalable_epilogue_vf_cost_scale_factor;
+
+    if (FixedCost <= ScalableCost)
+      return A.Width.isFixed();
+  }
 
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
@@ -722,7 +706,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
-  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost() &&
                         A.Width.isScalable() && !B.Width.isScalable();
 
   auto CmpFn = [PreferScalable](const InstructionCost &LHS,
@@ -812,7 +796,7 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
     LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 
     // Make sure we have a VF > 1 for stress testing.
-    if (VPlanBuildOuterloopStressTest && VF.isScalar()) {
+    if (Opts.vplan_build_outerloop_stress_test && VF.isScalar()) {
       LLVM_DEBUG(dbgs() << "LV: VPlan stress testing: "
                         << "overriding computed VF.\n");
       VF = ElementCount::getFixed(4);
@@ -825,4 +809,58 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
   LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
                     << "VF " << VF << " to build VPlans.\n");
   return FixedScalableVFPair(VF);
+}
+
+/// \returns true if the VPlan contains header phi recipes that are not
+/// currently supported for epilogue vectorization.
+static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
+  return any_of(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+      [](VPRecipeBase &R) {
+        switch (R.getVPRecipeID()) {
+        case VPRecipeBase::VPFirstOrderRecurrencePHISC:
+          // TODO: Add support for fixed-order recurrences.
+          return true;
+        case VPRecipeBase::VPWidenIntOrFpInductionSC:
+          return !cast<VPWidenIntOrFpInductionRecipe>(&R)->getPHINode();
+        case VPRecipeBase::VPReductionPHISC: {
+          auto *RedPhi = cast<VPReductionPHIRecipe>(&R);
+          // TODO: Support FMinNum/FMaxNum, FindLast reductions, and reductions
+          // without underlying values.
+          RecurKind Kind = RedPhi->getRecurrenceKind();
+          if (RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) ||
+              RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
+              !RedPhi->getUnderlyingValue())
+            return true;
+          // TODO: Add support for FindIV reductions with sunk expressions: the
+          // resume value from the main loop is in expression domain (e.g.,
+          // mul(ReducedIV, 3)), but the epilogue tracks raw IV values. A sunk
+          // expression is identified by a non-VPInstruction user of
+          // ComputeReductionResult.
+          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+            return RedPhi->isExpressionSunk();
+          return false;
+        }
+        default:
+          return false;
+        };
+      });
+}
+
+bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
+    VPlan &MainPlan) const {
+  // Bail out if the plan contains header phi recipes not yet supported
+  // for epilogue vectorization.
+  if (hasUnsupportedHeaderPhiRecipe(MainPlan))
+    return false;
+
+  // Epilogue vectorization code has not been auditted to ensure it handles
+  // non-latch exits properly.  It may be fine, but it needs auditted and
+  // tested.
+  // TODO: Add support for loops with an early exit.
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Legal->hasUncountableEarlyExit())
+    return false;
+
+  return true;
 }

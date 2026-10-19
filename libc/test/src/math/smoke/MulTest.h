@@ -137,18 +137,20 @@ public:
     InFPBits x_bits = InFPBits::one();
     x_bits.set_mantissa(InFPBits::SIG_MASK);
     InType x = x_bits.get_val();
-    func(x, x);
+    [[maybe_unused]] volatile OutType res = func(x, x);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
 };
 
-#define LIST_MUL_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcMulTest = MulTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcMulTest, SpecialNumbers) { test_special_numbers(&func); }     \
-  TEST_F(LlvmLibcMulTest, InvalidOperations) {                                 \
+#define LIST_MUL_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = MulTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) {                               \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, InvalidOperations) {                            \
     test_invalid_operations(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcMulTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcMulTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibc##Name##Test, RangeErrors) { test_range_errors(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InexactResults) { test_inexact_results(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_MULTEST_H

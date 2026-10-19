@@ -5,20 +5,18 @@ declare void @cold_callee() cold
 declare void @normal_callee()
 declare coldcc void @coldcc_callee()
 
-; Check that a call to a cold callee is not marked as tail when the flag is enabled.
+; Check that a call to a cold callee inside a non-cold caller IS marked as tail.
 define void @test_cold_callee() {
 ; CHECK-LABEL: @test_cold_callee(
-; DISABLED: call void @cold_callee()
-; ENABLED: tail call void @cold_callee()
+; CHECK: tail call void @cold_callee()
   call void @cold_callee()
   ret void
 }
 
-; Check that a call to a callee with coldcc is not marked as tail when the flag is enabled.
+; Check that a call to a callee with coldcc inside a non-cold caller IS marked as tail.
 define void @test_coldcc_callee() {
 ; CHECK-LABEL: @test_coldcc_callee(
-; DISABLED: call coldcc void @coldcc_callee()
-; ENABLED: tail call coldcc void @coldcc_callee()
+; CHECK: tail call coldcc void @coldcc_callee()
   call coldcc void @coldcc_callee()
   ret void
 }
@@ -41,11 +39,10 @@ define coldcc void @test_coldcc_caller() {
   ret void
 }
 
-; Check that a callsite with coldcc is not marked as tail when the flag is enabled.
+; Check that a callsite with coldcc inside a non-cold caller IS marked as tail.
 define void @test_coldcc_callsite() {
 ; CHECK-LABEL: @test_coldcc_callsite(
-; DISABLED: call coldcc void @normal_callee()
-; ENABLED: tail call coldcc void @normal_callee()
+; CHECK: tail call coldcc void @normal_callee()
   call coldcc void @normal_callee()
   ret void
 }
@@ -78,13 +75,103 @@ if.else:
   ret i32 %call
 }
 
-; Check that a call inside a basic block verified cold via ProfileSummary and BFI (function_entry_count = 0) is not marked as tail when the flag is enabled.
+; Check that a call inside a basic block verified cold via ProfileSummary and BFI in a function with cold entry count (function_entry_count = 0) is not marked as tail when the flag is enabled.
 define void @test_profile_cold_block() !prof !14 {
 ; CHECK-LABEL: @test_profile_cold_block(
 ; DISABLED: call void @normal_callee()
 ; ENABLED: tail call void @normal_callee()
   call void @normal_callee()
   ret void
+}
+
+; Check that calling a cold callee inside a function with cold entry count is not marked as tail when the flag is enabled.
+define void @test_profile_cold_caller_cold_callee() !prof !14 {
+; CHECK-LABEL: @test_profile_cold_caller_cold_callee(
+; DISABLED: call void @cold_callee()
+; ENABLED: tail call void @cold_callee()
+  call void @cold_callee()
+  ret void
+}
+
+; Check that a call inside a cold block within a hot caller (function_entry_count = 1000) IS marked as tail.
+define void @test_hot_caller_cold_block(i1 %cond) !prof !15 {
+; CHECK-LABEL: @test_hot_caller_cold_block(
+; CHECK: tail call void @normal_callee()
+entry:
+  br i1 %cond, label %if.then, label %if.else, !prof !16
+
+if.then:
+  ret void
+
+if.else:
+  call void @normal_callee()
+  ret void
+}
+
+; Check that calling a cold callee within a hot caller (function_entry_count = 1000) IS marked as tail.
+define void @test_hot_caller_cold_callee() !prof !15 {
+; CHECK-LABEL: @test_hot_caller_cold_callee(
+; CHECK: tail call void @cold_callee()
+  call void @cold_callee()
+  ret void
+}
+
+; Check that a call inside a hot loop within a function with a cold entry count (function_entry_count = 1) IS marked as tail.
+define void @test_cold_caller_hot_loop(i32 %n) !prof !17 {
+; CHECK-LABEL: @test_cold_caller_hot_loop(
+; CHECK: tail call void @normal_callee()
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %loop.body ]
+  %inc = add i32 %i, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %loop.body, label %exit, !prof !18
+
+loop.body:
+  call void @normal_callee()
+  br label %loop
+
+exit:
+  ret void
+}
+
+; The hot attribute takes precedence over the profile, so a call inside a
+; function with a cold entry count (function_entry_count = 0) IS marked as tail
+; when the function is annotated hot.
+define void @test_hot_attr_cold_block() hot !prof !14 {
+; CHECK-LABEL: @test_hot_attr_cold_block(
+; CHECK: tail call void @normal_callee()
+  call void @normal_callee()
+  ret void
+}
+
+; Same, when the callee is cold.
+define void @test_hot_attr_cold_callee() hot !prof !14 {
+; CHECK-LABEL: @test_hot_attr_cold_callee(
+; CHECK: tail call void @cold_callee()
+  call void @cold_callee()
+  ret void
+}
+
+; Tail recursion elimination is likewise still performed in a function with a
+; cold entry count that is annotated hot.
+define i32 @test_hot_attr_recursive(i32 %X) hot !prof !14 {
+; CHECK-LABEL: @test_hot_attr_recursive(
+; CHECK: tailrecurse:
+; CHECK-NOT: call i32 @test_hot_attr_recursive(
+entry:
+  %cmp = icmp eq i32 %X, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i32 0
+
+if.else:
+  %dec = sub i32 %X, 1
+  %call = call i32 @test_hot_attr_recursive(i32 %dec)
+  ret i32 %call
 }
 
 !llvm.module.flags = !{!0}
@@ -103,3 +190,7 @@ define void @test_profile_cold_block() !prof !14 {
 !12 = !{i32 999000, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 0}
+!15 = !{!"function_entry_count", i64 1000}
+!16 = !{!"branch_weights", i32 1000, i32 0}
+!17 = !{!"function_entry_count", i64 1}
+!18 = !{!"branch_weights", i32 1000, i32 1}

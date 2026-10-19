@@ -242,6 +242,11 @@ public:
            static_cast<unsigned>(x.dimension());
   }
   static unsigned
+  getHashValue(const Fortran::evaluate::RankOneBoundElement &x) {
+    return getHashValue(x.base()) * 141u +
+           static_cast<unsigned>(x.dimension()) * 17u;
+  }
+  static unsigned
   getHashValue(const Fortran::evaluate::StructureConstructor &x) {
     // FIXME: hash the contents.
     return 149u;
@@ -547,6 +552,10 @@ public:
     return isEqual(x.base(), y.base()) && x.field() == y.field() &&
            x.dimension() == y.dimension();
   }
+  static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
+                      const Fortran::evaluate::RankOneBoundElement &y) {
+    return x.dimension() == y.dimension() && isEqual(x.base(), y.base());
+  }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
     const auto &xValues = x.values();
@@ -740,8 +749,12 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+    // Get name so later passes (e.g. MapsForPrivatizedSymbols) can report it in
+    // offload info.
+    mlir::Location boxLoc = mlir::NameLoc::get(
+        firOpBuilder.getStringAttr(sym->name().ToString()), symLoc);
     auto alloca =
-        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
+        fir::AllocaOp::create(firOpBuilder, boxLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
     fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
@@ -778,12 +791,14 @@ void privatizeSymbol(
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
       result = OpType::create(
-          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          firOpBuilder, symLoc, uniquePrivatizerName,
+          /*sym_visibility=*/nullptr, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
       result =
-          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName,
+                         /*sym_visibility=*/nullptr, allocType,
                          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
                                         : fir::LocalitySpecifierType::Local);
     }

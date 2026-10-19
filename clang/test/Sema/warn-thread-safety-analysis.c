@@ -315,8 +315,70 @@ void test_fp_ops(struct FPOps *ops) {
 }
 
 void test_fp_ops_fail(struct FPOps *ops) {
-  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex '&FPOps::mu' exclusively}}
-  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}}
+}
+
+// '&mu' names the mutex of the same object, as 'mu' does; C has no
+// pointer-to-member syntax, so it is not the wildcard '&FPOps::mu' is in C++.
+void test_fp_ops_other(struct FPOps *ops, struct FPOps *other) {
+  other->lock();
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}} \
+               // expected-note {{found near match 'other->mu'}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}} \
+                      // expected-note {{found near match 'other->mu'}}
+  other->unlock();
+}
+
+// The object may be reached without a pointer, and the field may be called
+// through an explicit dereference.
+void test_fp_ops_value(struct FPOps foo, struct FPOps *ops) {
+  foo.lock();
+  foo.a = 42;
+  (*ops->lock)();
+  ops->a = 42;
+  (*foo.unlock)();
+  foo.a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'foo.mu' exclusively}} \
+              // expected-note {{found near match 'ops->mu'}}
+  foo.requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'foo.mu' exclusively}} \
+                     // expected-note {{found near match 'ops->mu'}}
+  ops->unlock();
+}
+
+// Function pointer parameters. The attributes constrain the function reached
+// through the pointer, so they are checked where the pointer is called, and
+// must not be mistaken for requirements of the enclosing function's callers
+// (nor for scoped-lockable parameter annotations). SemaCXX's
+// warn-thread-safety-analysis.cpp covers the C++ spellings of this.
+typedef void (*visit_fn)(int);
+
+void visit_cb(int x) EXCLUSIVE_LOCKS_REQUIRED(mu1);
+void visit_all(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n);
+void visit_all_locked_fp(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n)
+    EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+  visit(n);
+}
+void visit_all_unlocked_fp(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n) {
+  visit(n); // expected-warning {{calling function 'visit' requires holding mutex 'mu1' exclusively}}
+}
+
+// Passing an annotated callee is not itself a use of the capability, so these
+// calls do not require mu1 to be held here.
+void test_fp_param(int n) {
+  visit_all(visit_cb, n);
+  visit_all(&visit_cb, n);
+  visit_all_unlocked_fp(visit_cb, n);
+  // Only visit_all_locked_fp's own attribute requires mu1.
+  visit_all_locked_fp(visit_cb, n); // expected-warning {{calling function 'visit_all_locked_fp' requires holding mutex 'mu1' exclusively}}
+}
+
+// Acquire/release on a function pointer parameter likewise describe the pointee,
+// so calling the enclosing function neither acquires nor releases mu1.
+void call_locker(void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu1));
+void test_fp_param_acquire(void) {
+  call_locker(0);
+  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_unlock(&mu1);
 }
 
 // Function pointer attributes referring to parameters.
@@ -340,6 +402,135 @@ void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
 
+// lock_returned on a function pointer, naming the pointee's parameter.
+struct Mutex *(*bdev_lock_of)(struct BDev *bdev) LOCK_RETURNED(&bdev->lock);
+struct BDevLockOps {
+  struct Mutex *(*lock_of)(struct BDev *bdev) LOCK_RETURNED(&bdev->lock);
+};
+
+void test_bdev_lock_of(struct BDevLockOps *ops, struct BDev *bdev) {
+  mutex_exclusive_lock(bdev_lock_of(bdev));
+  bdev->a = 42;
+  mutex_exclusive_unlock(ops->lock_of(bdev));
+  mutex_exclusive_lock(ops->lock_of(bdev));
+  mutex_exclusive_unlock(&bdev->lock);
+}
+
+void test_bdev_lock_of_fail(struct BDevLockOps *ops, struct BDev *bdev) {
+  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_unlock(ops->lock_of(bdev)); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  mutex_exclusive_unlock(&mu1);
+}
+
+void test_lock_of_param(struct BDev *bdev,
+                        struct Mutex *(*lock_of)(struct BDev *) LOCK_RETURNED(&bdev->lock)) {
+  mutex_exclusive_lock(lock_of(bdev));
+  bdev->a = 42;
+  mutex_exclusive_unlock(&bdev->lock);
+}
+
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct BDevSelf {
+  struct Mutex lock;
+  int a GUARDED_BY(lock);
+  struct Mutex *(*lock_of)(void) LOCK_RETURNED(lock);
+  void (*unlock)(void) UNLOCK_FUNCTION(lock);
+};
+
+void test_bdev_self(struct BDevSelf *bdev) {
+  mutex_exclusive_lock(bdev->lock_of());
+  bdev->a = 42;
+  bdev->unlock();
+}
+
+void test_bdev_self_fail(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock(other->lock_of());
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock(bdev->lock_of()); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  other->unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void test_bdev_self_deref(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock((*bdev->lock_of)());
+  bdev->a = 42;
+  (*bdev->unlock)();
+  mutex_exclusive_lock((**other->lock_of)());
+  other->a = 42;
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock((*other->lock_of)());
+}
+
+// A pointee parameter shadows a member of the same name, in both modes: the
+// release is of the argument, not of 'ops->mu'.
+struct ShadowOps {
+  void (*unlock)(struct Mutex *mu) UNLOCK_FUNCTION(mu);
+  struct Mutex mu;
+};
+
+void test_shadow_ops(struct ShadowOps *ops, struct Mutex *m) {
+  ops->unlock(m); // expected-warning {{releasing mutex 'm' that was not held}}
+}
+
+// Likewise a later parameter of the same name: 'release' releases its own
+// argument, leaving the enclosing function's 'mu' held.
+void shadow_param(void (*release)(struct Mutex *mu) UNLOCK_FUNCTION(mu),
+                  struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  release(&mu1); // expected-warning {{releasing mutex 'mu1' that was not held}}
+}
+
+// guarded_by describes the pointer itself, not a call through it, so a pointee
+// parameter of the same name does not shadow the member: reading 'cb' is
+// guarded by 'ops->mu', in both modes.
+struct GuardedOps {
+  struct Mutex mu;
+  void (*cb)(struct Mutex *mu) GUARDED_BY(mu);
+};
+
+void test_guarded_ops(struct GuardedOps *ops, struct Mutex *m) {
+  ops->cb(m); // expected-warning {{reading variable 'cb' requires holding mutex 'ops->mu'}}
+  mutex_exclusive_lock(&ops->mu);
+  ops->cb(m);
+  mutex_exclusive_unlock(&ops->mu);
+}
+
+#ifdef LATE_PARSING
+// Likewise when the member is declared after the field.
+struct GuardedOpsLater {
+  void (*cb)(struct Mutex *mu) GUARDED_BY(mu);
+  struct Mutex mu;
+};
+
+void test_guarded_ops_later(struct GuardedOpsLater *ops, struct Mutex *m) {
+  ops->cb(m); // expected-warning {{reading variable 'cb' requires holding mutex 'ops->mu'}}
+  mutex_exclusive_lock(&ops->mu);
+  ops->cb(m);
+  mutex_exclusive_unlock(&ops->mu);
+}
+#endif
+
+#ifdef LATE_PARSING
+// A requirement on a parameter may name another parameter declared later. The
+// deferred attribute has to end up on the parameter it was written on and stay
+// live, so check that the call through it is really honored rather than merely
+// accepted: the release consumes the lock, making the second one unheld.
+void late_param_cb(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                   struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) { // expected-note {{mutex acquired here}}
+  release(mu); // expected-note {{mutex released here}}
+  mutex_exclusive_unlock(mu); // expected-warning {{releasing mutex 'mu' that was not held}}
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+
+// It names 'mu', not the neighbouring parameter: only 'mu' is consumed.
+void late_param_other(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                      struct Mutex *other, struct Mutex *mu)
+    EXCLUSIVE_LOCKS_REQUIRED(mu, other) { // expected-note {{mutex acquired here}}
+  release(mu);
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+#endif
+
 // Test unusual trylock patterns
 void do_some_work(void);
 int work_data GUARDED_BY(mu1);
@@ -350,6 +541,25 @@ void test_trylock_conditional(void) {
            do_some_work();
          __builtin_expect(do_work, 0); }))
     return;
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
+// How glibc before 2.32 spells assert(): a void conditional operator whose
+// false arm does not return. There is no result to branch on later, so the
+// try-lock is acquired on the branch itself.
+void assert_fail(void) __attribute__((noreturn));
+#define assert_trylock(e) ((e) ? (void)0 : assert_fail())
+
+void test_trylock_void_conditional(void) {
+  assert_trylock(mutex_exclusive_trylock(&mu1));
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
+void test_trylock_void_conditional_via_var(void) {
+  int got = mutex_exclusive_trylock(&mu1);
+  assert_trylock(got);
   work_data = 1;
   mutex_unlock(&mu1);
 }

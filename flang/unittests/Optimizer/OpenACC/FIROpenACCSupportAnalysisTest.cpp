@@ -1,4 +1,4 @@
-//===- FIROpenACCSupportAnalysisTest.cpp --------------------------------===//
+//===- FIROpenACCSupportAnalysisTest.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -121,6 +121,20 @@ TEST_F(FIROpenACCSupportAnalysisTest, TupleWithFIRArrayMemberSizeAndAlignment) {
   ASSERT_TRUE(expected.has_value());
   EXPECT_EQ(result->first, expected->first);
   EXPECT_EQ(result->second, expected->second);
+}
+
+TEST_F(FIROpenACCSupportAnalysisTest, TupleOfReferencesSizesAsPointers) {
+  Type tupleTy = TupleType::get(&context,
+      {fir::ReferenceType::get(IntegerType::get(&context, 32)),
+          fir::ReferenceType::get(Float64Type::get(&context))});
+  std::optional<acc::TypeSizeAndAlignment> result =
+      support.getTypeSizeAndAlignment(tupleTy, module);
+  LLVM::LLVMPointerType ptrTy = LLVM::LLVMPointerType::get(&context);
+  std::optional<acc::TypeSizeAndAlignment> pointer =
+      acc::getTypeSizeAndAlignment(ptrTy, module);
+  ASSERT_TRUE(result.has_value());
+  ASSERT_TRUE(pointer.has_value());
+  EXPECT_EQ(result->first.getFixedValue(), pointer->first.getFixedValue() * 2);
 }
 
 TEST_F(FIROpenACCSupportAnalysisTest, FIRBoxTypeSizeAndAlignment) {

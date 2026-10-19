@@ -10,9 +10,9 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
-// CIR: [[Y:%.+]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow, optnone} {
 // CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: [[Y:%.+]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[YVAL:%.+]] = cir.load{{.*}} [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
@@ -26,8 +26,8 @@ int x(int y) {
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1xi(
 // LLVM-SAME: i32 {{.*}} %[[ARG0:.+]])
-// LLVM: %[[Y:.*]] = alloca i32
 // LLVM: %[[RETVAL:.*]] = alloca i32
+// LLVM: %[[Y:.*]] = alloca i32
 // LLVM: store i32 %[[ARG0]], ptr %[[Y]]
 // LLVM: %[[YVAL:.*]] = load i32, ptr %[[Y]]
 // LLVM: %[[CMP:.*]] = icmp sgt i32 %[[YVAL]], 0
@@ -52,10 +52,9 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow, optnone} {
 // CIR: [[A:%.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: [[B:%.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
-// CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
@@ -84,9 +83,9 @@ int foo(int a, int b) {
 
 // LLVM-LABEL: define{{.*}} i32 @_Z3fooii(
 // LLVM-SAME: i32 {{.*}} %[[ARG0:.*]], i32 {{.*}} %[[ARG1:.*]])
+// LLVM: %[[RETVAL:.*]] = alloca i32
 // LLVM: %[[A:.*]] = alloca i32
 // LLVM: %[[B:.*]] = alloca i32
-// LLVM: %[[RETVAL:.*]] = alloca i32
 // LLVM: store i32 %[[ARG0]], ptr %[[A]]
 // LLVM: store i32 %[[ARG1]], ptr %[[B]]
 // LLVM: br label %[[ENTRY_BB:.*]]
@@ -388,3 +387,18 @@ void ternary_void(bool b) {
 // OGCG: [[FALSE]]:
 // OGCG-NEXT: call void @_Z3barv()
 // OGCG-NEXT: br
+
+void ternary_cleanup(int *p, int n, int m) {
+  p+= ((n > 0) ? n : m) - m;
+}
+// CIR-LABEL: cir.func{{.*}}@_Z15ternary_cleanupPiii
+// CIR: %[[TERNARY:.*]] = cir.ternary(%{{.*}}, true {
+// CIR: cir.sub nsw %[[TERNARY]], %{{.*}} : !s32i loc(#loc166)
+
+// LLVM-LABEL: define {{.*}}@_Z15ternary_cleanupPiii
+// LLVM: %[[TERNARY:.*]] = phi i32
+// LLVM: sub nsw i32 %[[TERNARY]], %{{.*}}
+
+// OGCG-LABEL: define {{.*}}@_Z15ternary_cleanupPiii
+// OGCG: %[[TERNARY:.*]] = phi i32
+// OGCG: sub nsw i32 %[[TERNARY]], %{{.*}}

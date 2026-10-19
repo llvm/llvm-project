@@ -15,6 +15,8 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/JSON.h"
+#include <cmath>
+#include <limits>
 
 #define DEBUG_TYPE "dwarfdump"
 using namespace llvm;

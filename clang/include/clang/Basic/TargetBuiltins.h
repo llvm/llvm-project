@@ -51,8 +51,9 @@ namespace clang {
 #undef GET_CDE_BUILTIN_ENUMERATORS
     FirstARMBuiltin,
     LastCDEBuiltin = FirstARMBuiltin - 1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsARM.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
   }

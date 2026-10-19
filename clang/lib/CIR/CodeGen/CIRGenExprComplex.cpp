@@ -545,7 +545,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
   case CK_FloatingRealToComplex:
   case CK_IntegralRealToComplex: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op);
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, op);
     return emitScalarToComplexCast(cgf.emitScalarExpr(op), op->getType(),
                                    destTy, op->getExprLoc());
   }
@@ -554,7 +554,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   case CK_FloatingComplexToIntegralComplex:
   case CK_IntegralComplexCast:
   case CK_IntegralComplexToFloatingComplex: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op);
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, op);
     return emitComplexToComplexCast(Visit(op), op->getType(), destTy,
                                     op->getExprLoc());
   }
@@ -619,11 +619,11 @@ mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
 
 mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, op.fpFeatures);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexAdd(op.loc, op.lhs, op.rhs);
 
   auto createAdd = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -647,11 +647,11 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
 
 mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, op.fpFeatures);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexSub(op.loc, op.lhs, op.rhs);
 
   auto createSub = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -666,11 +666,17 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
     return builder.createComplexCreate(op.loc, newReal, imag);
   }
 
+  auto createNeg = [&](mlir::Location loc, mlir::Value a) {
+    return cir::isFPOrVectorOfFPType(a.getType()) ? builder.createFNeg(loc, a)
+                                                  : builder.createNeg(loc, a);
+  };
+
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
   mlir::Value newReal = createSub(op.loc, op.lhs, real);
-  return builder.createComplexCreate(op.loc, newReal, imag);
+  mlir::Value newImag = createNeg(op.loc, imag);
+  return builder.createComplexCreate(op.loc, newReal, newImag);
 }
 
 static cir::ComplexRangeKind
@@ -692,14 +698,13 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
 
 mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, op.fpFeatures);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return cir::ComplexMulOp::create(builder, op.loc, op.lhs, op.rhs,
-                                     rangeKind);
+    return builder.createComplexMul(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   auto createMul = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
@@ -726,7 +731,7 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
 
 mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, op.fpFeatures);
 
   // Handle division between two complex values. In the case of complex integer
   // types mixed with scalar integers, the scalar integer type will always be
@@ -736,8 +741,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return cir::ComplexDivOp::create(builder, op.loc, op.lhs, op.rhs,
-                                     rangeKind);
+    return builder.createComplexDiv(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   // The C99 standard (G.5.1) defines division of a complex value by a real
@@ -757,7 +761,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   mlir::Value lhs = builder.createComplexCreate(op.loc, op.lhs, nullValue);
   cir::ComplexRangeKind rangeKind =
       getComplexRangeAttr(op.fpFeatures.getComplexRange());
-  return cir::ComplexDivOp::create(builder, op.loc, lhs, op.rhs, rangeKind);
+  return builder.createComplexDiv(op.loc, lhs, op.rhs, rangeKind);
 }
 
 mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
@@ -853,7 +857,7 @@ LValue ComplexExprEmitter::emitCompoundAssignLValue(
   BinOpInfo opInfo{loc};
   opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
 
-  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, opInfo.fpFeatures);
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, opInfo.fpFeatures);
 
   // Load the RHS and LHS operands.
   // __block variables need to have the rhs evaluated first, plus this should
@@ -997,21 +1001,21 @@ mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
   // Bind the common expression if necessary.
   CIRGenFunction::OpaqueValueMapping binding(cgf, e);
 
-  CIRGenFunction::ConditionalEvaluation eval(cgf);
-
   Expr *cond = e->getCond()->IgnoreParens();
   mlir::Value condValue = cgf.evaluateExprAsBool(cond);
 
+  CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
+
   return cir::TernaryOp::create(
              builder, loc, condValue,
-             /*thenBuilder=*/
+             /*trueBuilder=*/
              [&](mlir::OpBuilder &b, mlir::Location loc) {
                eval.beginEvaluation();
                mlir::Value trueValue = Visit(e->getTrueExpr());
                cir::YieldOp::create(b, loc, trueValue);
                eval.endEvaluation();
              },
-             /*elseBuilder=*/
+             /*falseBuilder=*/
              [&](mlir::OpBuilder &b, mlir::Location loc) {
                eval.beginEvaluation();
                mlir::Value falseValue = Visit(e->getFalseExpr());

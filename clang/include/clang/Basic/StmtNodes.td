@@ -161,6 +161,7 @@ def ExprWithCleanups : StmtNode<FullExpr>;
 def CXXTemporaryObjectExpr : StmtNode<CXXConstructExpr>;
 def CXXUnresolvedConstructExpr : StmtNode<Expr>;
 def CXXDependentScopeMemberExpr : StmtNode<Expr>;
+def DependentTemplateIdExpr : StmtNode<Expr>;
 def OverloadExpr : StmtNode<Expr, 1>;
 def UnresolvedLookupExpr : StmtNode<OverloadExpr>;
 def UnresolvedMemberExpr : StmtNode<OverloadExpr>;
@@ -255,6 +256,7 @@ def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPSplitDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPInterchangeDirective
     : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPFlattenDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
 def OMPCanonicalLoopSequenceTransformationDirective
     : StmtNode<OMPExecutableDirective, 1>;
 def OMPFuseDirective
@@ -278,7 +280,8 @@ def OMPTaskgroupDirective : StmtNode<OMPExecutableDirective>;
 def OMPFlushDirective : StmtNode<OMPExecutableDirective>;
 def OMPDepobjDirective : StmtNode<OMPExecutableDirective>;
 def OMPScanDirective : StmtNode<OMPExecutableDirective>;
-def OMPOrderedDirective : StmtNode<OMPExecutableDirective>;
+def OMPOrderedStandaloneDirective : StmtNode<OMPExecutableDirective>;
+def OMPOrderedBlockAssocDirective : StmtNode<OMPExecutableDirective>;
 def OMPAtomicDirective : StmtNode<OMPExecutableDirective>;
 def OMPTargetDirective : StmtNode<OMPExecutableDirective>;
 def OMPTargetDataDirective : StmtNode<OMPExecutableDirective>;

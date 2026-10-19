@@ -10,4 +10,4 @@
 
 #include "src/math/nextup.h"
 
-LIST_NEXTUP_TESTS(double, LIBC_NAMESPACE::nextup)
+LIST_NEXTUP_TESTS(Nextup, double, LIBC_NAMESPACE::nextup)

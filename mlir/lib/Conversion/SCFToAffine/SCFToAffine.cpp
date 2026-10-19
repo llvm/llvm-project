@@ -102,20 +102,40 @@ private:
                                  PatternRewriter &rewriter) const;
 };
 
+static bool areValidAffineMapOperands(AffineMap map, ValueRange operands,
+                                      Region *scope) {
+  assert(map.getNumInputs() == operands.size() &&
+         "expected one operand per affine map input");
+  return llvm::all_of(
+             operands.take_front(map.getNumDims()),
+             [&](Value value) { return affine::isValidDim(value, scope); }) &&
+         llvm::all_of(operands.drop_front(map.getNumDims()), [&](Value value) {
+           return affine::isValidSymbol(value, scope);
+         });
+}
+
 bool indexBoundsRaisable(scf::ForOp op) {
   Value lb = op.getLowerBound();
   Value ub = op.getUpperBound();
   IntegerAttr constAttr;
+  Region *scope = affine::getAffineScope(op);
+  if (!scope)
+    return false;
 
   // The asymmetry between lb and ub comes from the fact that the step
   // normalization (for non-constant (dynamic) steps) does not work with
   // multiple *lower* bounds (max).
-  bool lbOK = affine::isValidDim(lb) ||
-              (isa_and_present<affine::AffineMaxOp>(lb.getDefiningOp()) &&
-               matchPattern(op.getStep(), m_Constant(&constAttr)));
-  bool ubOK = affine::isValidDim(ub) ||
-              isa_and_present<affine::AffineMinOp>(ub.getDefiningOp());
-  bool stepOK = affine::isValidSymbol(op.getStep());
+  auto lbMaxOp = lb.getDefiningOp<affine::AffineMaxOp>();
+  bool lbOK = affine::isValidDim(lb, scope) ||
+              (lbMaxOp && matchPattern(op.getStep(), m_Constant(&constAttr)) &&
+               areValidAffineMapOperands(lbMaxOp.getAffineMap(),
+                                         lbMaxOp->getOperands(), scope));
+  auto ubMinOp = ub.getDefiningOp<affine::AffineMinOp>();
+  bool ubOK =
+      affine::isValidDim(ub, scope) ||
+      (ubMinOp && areValidAffineMapOperands(ubMinOp.getAffineMap(),
+                                            ubMinOp->getOperands(), scope));
+  bool stepOK = affine::isValidSymbol(op.getStep(), scope);
 
   return lbOK && ubOK && stepOK;
 }

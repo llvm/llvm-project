@@ -379,6 +379,9 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     if (!mutableTypeScope.derivedTypeSpec()) {
       mutableTypeScope.set_derivedTypeSpec(*this);
     }
+    // Size the type now so that any enclosing type instantiated before the
+    // whole-program offset pass measures this component correctly.
+    ComputeOffsets(containingScope.context(), mutableTypeScope);
     return;
   }
 
@@ -1007,6 +1010,14 @@ std::string DeclTypeSpec::AsFortran() const {
       return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
     } else if (derivedTypeSpec().IsVectorType()) {
       return derivedTypeSpec().VectorTypeAsFortran();
+    } else if (derivedTypeSpec()
+                   .typeSymbol()
+                   .get<DerivedTypeDetails>()
+                   .isEnumerationType()) {
+      // Preserve the in-scope (possibly USE-renamed) spelling so the name
+      // written to a module file resolves on readback.
+      return "TYPE(" +
+          derivedTypeSpec().originalTypeSymbol().name().ToString() + ')';
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }

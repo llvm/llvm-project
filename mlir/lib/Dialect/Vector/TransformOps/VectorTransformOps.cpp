@@ -11,7 +11,8 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -42,6 +43,47 @@ transform::ApplyVectorToLLVMConversionPatternsOp::verifyTypeConverter(
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
+}
+
+void transform::ApplyVectorLinearizeConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  ConversionTarget target(*getContext());
+  vector::populateVectorLinearizeBasePatterns(typeConverter, target, patterns);
+  if (getShuffleLikeOps())
+    vector::populateVectorLinearizeShuffleLikeOpsPatterns(typeConverter, target,
+                                                          patterns);
+}
+
+void transform::ApplyVectorLinearizeConversionPatternsOp::
+    populateConversionTargetRules(const TypeConverter &typeConverter,
+                                  ConversionTarget &conversionTarget) {
+  // The legality rules need a mutable converter; they keep their own copy.
+  TypeConverter linearizer;
+  vector::populateForVectorLinearize(linearizer, conversionTarget);
+  if (std::optional<int64_t> bitwidth = getTargetVectorBitwidth())
+    vector::populateVectorLinearizeBitWidthTargetRules(conversionTarget,
+                                                       *bitwidth);
+}
+
+LogicalResult
+transform::ApplyVectorLinearizeConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() !=
+      VectorLinearizeTypeConverterOp::getTypeConverterType())
+    return emitOpError("expected VectorLinearizeTypeConverter");
+  return success();
+}
+
+std::unique_ptr<TypeConverter>
+transform::VectorLinearizeTypeConverterOp::getTypeConverter() {
+  auto typeConverter = std::make_unique<TypeConverter>();
+  ConversionTarget target(*getContext());
+  vector::populateForVectorLinearize(*typeConverter, target);
+  return typeConverter;
+}
+
+StringRef transform::VectorLinearizeTypeConverterOp::getTypeConverterType() {
+  return "VectorLinearizeTypeConverter";
 }
 
 //===----------------------------------------------------------------------===//
@@ -168,6 +210,41 @@ void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
   vector::populateVectorFromElementsUnrollPatterns(patterns);
 }
 
+void transform::ApplyUnrollContractPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  int64_t m = getM();
+  int64_t n = getN();
+  int64_t k = getK();
+
+  auto nativeShapeFn =
+      [m, n, k](Operation *op) -> std::optional<SmallVector<int64_t>> {
+    return SmallVector<int64_t>({m, n, k});
+  };
+
+  auto constraint = [](Operation *op) {
+    auto contract = dyn_cast<vector::ContractionOp>(op);
+    if (!contract)
+      return failure();
+
+    auto iterators = contract.getIteratorTypesArray();
+    if (iterators.size() != 3 ||
+        iterators[0] != vector::IteratorType::parallel ||
+        iterators[1] != vector::IteratorType::parallel ||
+        iterators[2] != vector::IteratorType::reduction)
+      return failure();
+
+    auto type = dyn_cast<VectorType>(contract.getType());
+    if (!type || type.getRank() != 2)
+      return failure();
+    return success();
+  };
+
+  vector::populateVectorContractUnrollPatterns(
+      patterns, vector::UnrollVectorOptions()
+                    .setNativeShapeFn(nativeShapeFn)
+                    .setFilterConstraint(constraint));
+}
+
 void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorToElementsUnrollPatterns(patterns);
@@ -271,6 +348,7 @@ public:
 
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();
     registerTransformOps<
 #define GET_OP_LIST

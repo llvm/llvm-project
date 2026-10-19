@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: DIVERGENT:       %Guard.bb4 = phi i1 [ true, %bb1 ], [ false, %bb2 ]
 ; CHECK: DIVERGENT:       br i1 %Guard.bb4, label %bb4, label %bb5

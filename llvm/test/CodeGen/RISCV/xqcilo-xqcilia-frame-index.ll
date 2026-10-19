@@ -111,3 +111,105 @@ define void @bare_fi_high_frame_store(i32 %x) nounwind {
   store i32 %x, ptr %small
   ret void
 }
+
+; Register-pressure regression test: bare frame-index loads from fixed stack
+; slots (incoming args on stack) must select standard LW at ISel — not QC_E_LW —
+; so that the register allocator can rematerialize them. With QC_E_LW selected,
+; isLoadFromStackSlot does not recognize it, RA cannot rematerialize, and under
+; high pressure it spills excessively.
+declare dso_local i32 @sink(i32 noundef) local_unnamed_addr
+
+define dso_local i32 @regpressure(i32 noundef %a0, i32 noundef %a1, i32 noundef %a2, i32 noundef %a3, i32 noundef %a4, i32 noundef %a5, i32 noundef %a6, i32 noundef %a7, i32 noundef %s0, i32 noundef %s1, i32 noundef %s2, i32 noundef %s3, i32 noundef %s4, i32 noundef %s5, i32 noundef %s6, i32 noundef %s7, i32 noundef %s8, i32 noundef %s9, i32 noundef %s10, i32 noundef %s11) local_unnamed_addr nounwind {
+; CHECK-LABEL: regpressure:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    c.addi16sp sp, -64
+; CHECK-NEXT:    c.swsp ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.mv s0, a7
+; CHECK-NEXT:    c.mv s1, a6
+; CHECK-NEXT:    c.mv s2, a5
+; CHECK-NEXT:    c.mv s3, a4
+; CHECK-NEXT:    c.mv s4, a3
+; CHECK-NEXT:    c.mv s5, a2
+; CHECK-NEXT:    c.mv s6, a1
+; CHECK-NEXT:    c.lwsp s8, 80(sp)
+; CHECK-NEXT:    c.lwsp s10, 76(sp)
+; CHECK-NEXT:    c.lwsp s11, 72(sp)
+; CHECK-NEXT:    c.lwsp s9, 68(sp)
+; CHECK-NEXT:    c.lwsp s7, 64(sp)
+; CHECK-NEXT:    call sink
+; CHECK-NEXT:    c.add s2, s3
+; CHECK-NEXT:    c.add s0, s1
+; CHECK-NEXT:    c.add s0, s2
+; CHECK-NEXT:    c.add s9, s11
+; CHECK-NEXT:    c.add s0, s7
+; CHECK-NEXT:    c.add s8, s10
+; CHECK-NEXT:    c.add s0, s9
+; CHECK-NEXT:    c.lwsp a1, 84(sp)
+; CHECK-NEXT:    c.add s8, a1
+; CHECK-NEXT:    c.add s0, s8
+; CHECK-NEXT:    c.lwsp a1, 92(sp)
+; CHECK-NEXT:    c.lwsp a2, 88(sp)
+; CHECK-NEXT:    c.add a1, a2
+; CHECK-NEXT:    c.lwsp a2, 108(sp)
+; CHECK-NEXT:    c.lwsp a3, 104(sp)
+; CHECK-NEXT:    c.add a2, a3
+; CHECK-NEXT:    c.lwsp a3, 96(sp)
+; CHECK-NEXT:    c.add a1, a3
+; CHECK-NEXT:    c.add a0, a2
+; CHECK-NEXT:    c.lwsp a2, 100(sp)
+; CHECK-NEXT:    c.add a1, a2
+; CHECK-NEXT:    c.add a0, s6
+; CHECK-NEXT:    c.add a1, s0
+; CHECK-NEXT:    c.add a0, s5
+; CHECK-NEXT:    c.add a0, a1
+; CHECK-NEXT:    c.add a0, s4
+; CHECK-NEXT:    c.lwsp ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 64
+; CHECK-NEXT:    c.jr ra
+entry:
+  %call = tail call i32 @sink(i32 noundef %a0)
+  %add2 = add i32 %a5, %a4
+  %add4 = add i32 %add2, %a6
+  %add6 = add i32 %add4, %a7
+  %add7 = add i32 %add6, %s0
+  %add8 = add i32 %add7, %s1
+  %add9 = add i32 %add8, %s2
+  %add10 = add i32 %add9, %s3
+  %add11 = add i32 %add10, %s4
+  %add12 = add i32 %add11, %s5
+  %add13 = add i32 %add12, %s6
+  %add14 = add i32 %add13, %s7
+  %add15 = add i32 %add14, %s8
+  %add16 = add i32 %add15, %s9
+  %add17 = add i32 %add16, %s10
+  %add18 = add i32 %add17, %s11
+  %add19 = add i32 %add18, %call
+  %add20 = add i32 %add19, %a1
+  %add21 = add i32 %add20, %a2
+  %add22 = add i32 %add21, %a3
+  ret i32 %add22
+}

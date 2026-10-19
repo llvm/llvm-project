@@ -172,7 +172,7 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP6]], 0.000000e+00
@@ -196,10 +196,10 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x float> poison, float [[TMP24]], i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x float> [[TMP28]], float [[TMP25]], i32 1
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP26]], i32 2
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP27]], i32 3
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x float> poison, float [[TMP24]], i64 0
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x float> [[TMP28]], float [[TMP25]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP26]], i64 2
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP27]], i64 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

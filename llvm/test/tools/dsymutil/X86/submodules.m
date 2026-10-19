@@ -24,7 +24,7 @@ EOF
 // RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/submodules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump -v --debug-info - \
-// RUN:     | FileCheck %s --check-prefix=CHECK
+// RUN:     | FileCheck %s --check-prefixes=CHECK,PARALLEL
 
 // ---------------------------------------------------------------------
 #ifdef CHILD_H
@@ -34,7 +34,7 @@ EOF
 // CHECK-NOT:        DW_TAG
 // CHECK:              DW_TAG_module
 // CHECK-NEXT:           DW_AT_name{{.*}}"Parent"
-// CHECK:                DW_TAG_module
+// CHECK:      0x0[[CHILD:.*]]: DW_TAG_module
 // CHECK-NEXT:             DW_AT_name{{.*}}"Child"
 // CHECK:                  DW_TAG_structure_type
 // CHECK-NOT:                DW_TAG
@@ -51,7 +51,23 @@ struct PruneMeNot;
 // CLASSIC: 0x0[[EMPTY:.*]]: DW_TAG_module
 // CLASSIC-NEXT:             DW_AT_name{{.*}}"Empty"
 
-// CLASSIC:     DW_AT_import  {{.*}}0x{{0*}}[[EMPTY]]
+// Parent.pcm describes no Empty submodule, so both linkers leave that import
+// pointing at the skeleton the importing unit emitted. Only the offsets differ,
+// because the classic linker prunes the Parent and Child skeletons next to it.
+
+// PARALLEL:                DW_TAG_module
+// PARALLEL-NEXT:             DW_AT_name{{.*}}"Parent"
+// PARALLEL:                  DW_TAG_module
+// PARALLEL-NEXT:               DW_AT_name{{.*}}"Child"
+// PARALLEL:      0x0[[EMPTY:.*]]: DW_TAG_module
+// PARALLEL-NEXT:               DW_AT_name{{.*}}"Empty"
+
+// A submodule which is described elsewhere is imported through the module
+// unit's DIE, not through the skeleton the importing unit emits for it.
+
+// CHECK:       DW_AT_import  {{.*}}0x{{0*}}[[CHILD]]
+
+// CHECK:       DW_AT_import  {{.*}}0x{{0*}}[[EMPTY]]
 @import Parent.Child;
 @import Parent.Empty;
 int main(int argc, char **argv) { return 0; }

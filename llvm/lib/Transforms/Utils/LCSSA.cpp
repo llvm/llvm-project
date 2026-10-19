@@ -519,7 +519,6 @@ struct LCSSAWrapperPass : public FunctionPass {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreservedID(LoopSimplifyID);
     AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
     AU.addPreserved<SCEVAAWrapperPass>();
@@ -565,9 +564,6 @@ PreservedAnalyses LCSSAPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  // BPI maps terminators to probabilities, since we don't modify the CFG, no
-  // updates are needed to preserve it.
-  PA.preserve<BranchProbabilityAnalysis>();
   PA.preserve<MemorySSAAnalysis>();
   return PA;
 }

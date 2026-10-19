@@ -159,6 +159,7 @@ enum {
   FUNCTION_INST_CMP_FLAGS_ABBREV,
   FUNCTION_DEBUG_RECORD_VALUE_ABBREV,
   FUNCTION_DEBUG_LOC_ABBREV,
+  FUNCTION_DEBUG_LOC_LAYERS_ABBREV,
 };
 
 /// Abstract class to manage the bitcode writing, subclassed for each bitcode
@@ -307,6 +308,11 @@ class ModuleBitcodeWriter : public ModuleBitcodeWriterBase {
   /// The start bit of the identification block.
   uint64_t BitcodeStartBit;
 
+  /// Abbrev for DILocations that carry an irlayers operand. Locations without
+  /// layers use the shorter abbrev threaded through writeDILocation's \p
+  /// Abbrev parameter, so they pay nothing for a field they do not use.
+  unsigned DILocationLayersAbbrev = 0;
+
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
@@ -337,9 +343,13 @@ private:
                             SmallVectorImpl<uint64_t> &Record);
   void writeMDTuple(const MDTuple *N, SmallVectorImpl<uint64_t> &Record,
                     unsigned Abbrev);
-  unsigned createDILocationAbbrev();
+  unsigned createDILocationAbbrev(bool WithIRLayers);
   void writeDILocation(const DILocation *N, SmallVectorImpl<uint64_t> &Record,
                        unsigned &Abbrev);
+  void writeDILayerLoc(const DILayerLoc *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
+  void writeDILayerLocList(const DILayerLocList *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   unsigned createGenericDINodeAbbrev();
   void writeGenericDINode(const GenericDINode *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned &Abbrev);
@@ -410,6 +420,8 @@ private:
                                        unsigned Abbrev);
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -577,12 +589,12 @@ public:
   void forEachSummary(Functor Callback) {
     if (ModuleToSummariesForIndex) {
       for (auto &M : *ModuleToSummariesForIndex)
-        for (auto &Summary : M.second) {
-          Callback(Summary, false);
+        for (auto &[GUID, GVS] : M.second) {
+          Callback({GUID, GVS}, false);
           // Ensure aliasee is handled, e.g. for assigning a valueId,
           // even if we are not importing the aliasee directly (the
           // imported alias will contain a copy of aliasee).
-          if (auto *AS = dyn_cast<AliasSummary>(Summary.getSecond()))
+          if (auto *AS = dyn_cast<AliasSummary>(GVS))
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
@@ -866,6 +878,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
     return bitc::ATTR_KIND_NOFREE;
+  case Attribute::NoFreeObj:
+    return bitc::ATTR_KIND_NOFREEOBJ;
   case Attribute::NoImplicitFloat:
     return bitc::ATTR_KIND_NO_IMPLICIT_FLOAT;
   case Attribute::NoInline:
@@ -1855,6 +1869,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
     if (ICmp->hasSameSign())
       Flags |= 1 << bitc::ICMP_SAME_SIGN;
+  } else if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(V)) {
+    if (ASC->hasNonNull())
+      Flags |= 1 << bitc::ASCI_NON_NULL;
   }
 
   return Flags;
@@ -1885,9 +1902,12 @@ void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
   Record.clear();
 }
 
-unsigned ModuleBitcodeWriter::createDILocationAbbrev() {
+unsigned ModuleBitcodeWriter::createDILocationAbbrev(bool WithIRLayers) {
   // Assume the column is usually under 128, and always output the inlined-at
   // location (it's never more expensive than building an array size 1).
+  //
+  // Separate abbrev so a location without layers does not spend a VBR chunk
+  // encoding a zero; writeDILocation picks between the two per record.
   auto Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_LOCATION));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isDistinct
@@ -1898,6 +1918,8 @@ unsigned ModuleBitcodeWriter::createDILocationAbbrev() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isImplicitCode
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // atomGroup
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // atomRank
+  if (WithIRLayers)
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // irlayers
   return Stream.EmitAbbrev(std::move(Abbv));
 }
 
@@ -1905,7 +1927,7 @@ void ModuleBitcodeWriter::writeDILocation(const DILocation *N,
                                           SmallVectorImpl<uint64_t> &Record,
                                           unsigned &Abbrev) {
   if (!Abbrev)
-    Abbrev = createDILocationAbbrev();
+    Abbrev = createDILocationAbbrev(/*WithIRLayers=*/false);
 
   Record.push_back(N->isDistinct());
   Record.push_back(N->getLine());
@@ -1915,7 +1937,38 @@ void ModuleBitcodeWriter::writeDILocation(const DILocation *N,
   Record.push_back(N->isImplicitCode());
   Record.push_back(N->getAtomGroup());
   Record.push_back(N->getAtomRank());
-  Stream.EmitRecord(bitc::METADATA_LOCATION, Record, Abbrev);
+
+  unsigned AbbrevToUse = Abbrev;
+  if (DILayerLocList *IRLayers = N->getIRLayers()) {
+    if (!DILocationLayersAbbrev)
+      DILocationLayersAbbrev = createDILocationAbbrev(/*WithIRLayers=*/true);
+    AbbrevToUse = DILocationLayersAbbrev;
+    Record.push_back(VE.getMetadataOrNullID(IRLayers));
+  }
+
+  Stream.EmitRecord(bitc::METADATA_LOCATION, Record, AbbrevToUse);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDILayerLoc(const DILayerLoc *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(N->getLine());
+  Record.push_back(N->getColumn());
+  Record.push_back(VE.getMetadataID(N->getRawFile()));
+  Record.push_back(VE.getMetadataID(N->getRawKind()));
+  Stream.EmitRecord(bitc::METADATA_LAYERLOC, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDILayerLocList(const DILayerLocList *N,
+                                              SmallVectorImpl<uint64_t> &Record,
+                                              unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  for (const MDOperand &Op : N->layers())
+    Record.push_back(VE.getMetadataID(Op.get()));
+  Stream.EmitRecord(bitc::METADATA_LAYERLOCLIST, Record, Abbrev);
   Record.clear();
 }
 
@@ -2058,6 +2111,7 @@ void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawCharType()));
 
   Stream.EmitRecord(bitc::METADATA_STRING_TYPE, Record, Abbrev);
   Record.clear();
@@ -2510,6 +2564,20 @@ void ModuleBitcodeWriter::writeDIObjCProperty(const DIObjCProperty *N,
   Record.clear();
 }
 
+void ModuleBitcodeWriter::writeDIProperty(const DIProperty *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  Record.push_back(VE.getMetadataOrNullID(N->getBackingStorage()));
+
+  Stream.EmitRecord(bitc::METADATA_PROPERTY, Record, Abbrev);
+  Record.clear();
+}
+
 void ModuleBitcodeWriter::writeDIImportedEntity(
     const DIImportedEntity *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -2655,7 +2723,9 @@ void ModuleBitcodeWriter::writeModuleMetadata() {
   std::vector<unsigned> MDAbbrevs;
 
   MDAbbrevs.resize(MetadataAbbrev::LastPlusOne);
-  MDAbbrevs[MetadataAbbrev::DILocationAbbrevID] = createDILocationAbbrev();
+  MDAbbrevs[MetadataAbbrev::DILocationAbbrevID] =
+      createDILocationAbbrev(/*WithIRLayers=*/false);
+  DILocationLayersAbbrev = createDILocationAbbrev(/*WithIRLayers=*/true);
   MDAbbrevs[MetadataAbbrev::GenericDINodeAbbrevID] =
       createGenericDINodeAbbrev();
 
@@ -2746,6 +2816,9 @@ void ModuleBitcodeWriter::writeFunctionMetadata(const Function &F) {
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
+  // New block, new abbrev id space. Unlike the module block this one is not
+  // randomly accessed, so the irlayers abbrev can be created on first use.
+  DILocationLayersAbbrev = 0;
   SmallVector<uint64_t, 64> Record;
   writeMetadataStrings(VE.getMDStrings(), Record);
   writeMetadataRecords(VE.getNonMDStrings(), Record);
@@ -3315,6 +3388,18 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     pushValue(I.getOperand(1), InstID, Vals);
     pushValueAndType(I.getOperand(2), InstID, Vals);
     break;
+  case Instruction::BitExtract:
+    Code = bitc::FUNC_CODE_INST_BITEXTRACT;
+    Vals.push_back(VE.getTypeID(I.getType()));
+    pushValueAndType(I.getOperand(0), InstID, Vals);
+    pushValueAndType(I.getOperand(1), InstID, Vals);
+    break;
+  case Instruction::BitInsert:
+    Code = bitc::FUNC_CODE_INST_BITINSERT;
+    pushValueAndType(I.getOperand(0), InstID, Vals);
+    pushValueAndType(I.getOperand(1), InstID, Vals);
+    pushValueAndType(I.getOperand(2), InstID, Vals);
+    break;
   case Instruction::ShuffleVector:
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);
@@ -3590,8 +3675,9 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     break;
   }
 
-  case Instruction::Store:
-    if (cast<StoreInst>(I).isAtomic()) {
+  case Instruction::Store: {
+    const auto &SI = cast<StoreInst>(I);
+    if (SI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_STOREATOMIC;
     } else {
       Code = bitc::FUNC_CODE_INST_STORE;
@@ -3601,14 +3687,17 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       AbbrevToUse = 0;
     if (pushValueAndType(I.getOperand(0), InstID, Vals)) // valty + val
       AbbrevToUse = 0;
-    Vals.push_back(getEncodedAlign(cast<StoreInst>(I).getAlign()));
-    Vals.push_back(cast<StoreInst>(I).isVolatile());
-    if (cast<StoreInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<StoreInst>(I).getOrdering()));
-      Vals.push_back(
-          getEncodedSyncScopeID(cast<StoreInst>(I).getSyncScopeID()));
+    Vals.push_back(getEncodedAlign(SI.getAlign()));
+    Vals.push_back(SI.isVolatile());
+    if (SI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(SI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(SI.getSyncScopeID()));
+      if (SI.isElementwise())
+        Vals.push_back(1);
     }
     break;
+  }
+
   case Instruction::AtomicCmpXchg:
     Code = bitc::FUNC_CODE_INST_CMPXCHG;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
@@ -3873,8 +3962,14 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.push_back(DL->isImplicitCode());
           Vals.push_back(DL->getAtomGroup());
           Vals.push_back(DL->getAtomRank());
-          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals,
-                            FUNCTION_DEBUG_LOC_ABBREV);
+
+          unsigned DLAbbrev = FUNCTION_DEBUG_LOC_ABBREV;
+          if (DILayerLocList *IRLayers = DL->getIRLayers()) {
+            DLAbbrev = FUNCTION_DEBUG_LOC_LAYERS_ABBREV;
+            Vals.push_back(VE.getMetadataOrNullID(IRLayers));
+          }
+
+          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals, DLAbbrev);
           Vals.clear();
           LastDL = DL;
         }
@@ -3911,7 +4006,7 @@ void ModuleBitcodeWriter::writeFunction(
         // Write out non-instruction debug information attached to this
         // instruction. Write it after the instruction so that it's easy to
         // re-attach to the instruction reading the records in.
-        for (DbgRecord &DR : I.DebugMarker->getDbgRecordRange()) {
+        for (DbgRecord &DR : I.getDbgMarker()->getDbgRecordRange()) {
           if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
             Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
             Vals.push_back(VE.getMetadataID(DLR->getLabel()));
@@ -4283,6 +4378,23 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 3)); // Atom rank.
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_DEBUG_LOC_ABBREV)
+      llvm_unreachable("Unexpected abbrev ordering!");
+  }
+  { // DEBUG_LOC abbrev for FUNCTION_BLOCK, irlayers variant.
+    // Separate abbrev so a location without layers does not spend a VBR chunk
+    // encoding a zero; writeInstruction picks between the two per record.
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_DEBUG_LOC));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Atom group.
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 3)); // Atom rank.
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // irlayers.
+    if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
+        FUNCTION_DEBUG_LOC_LAYERS_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
   }
   Stream.ExitBlock();

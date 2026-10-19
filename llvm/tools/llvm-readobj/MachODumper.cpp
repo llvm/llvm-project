@@ -47,6 +47,7 @@ public:
   // MachO-specific.
   void printMachODataInCode() override;
   void printMachOVersionMin() override;
+  void printMachOTargetTriple() override;
   void printMachODysymtab() override;
   void printMachOSegment() override;
   void printMachOIndirectSymbols() override;
@@ -189,6 +190,7 @@ constexpr EnumStringDef<uint32_t> MachOHeaderCpuSubtypesARM64Defs[] = {
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_ALL),
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_V8),
     LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E_X1),
 };
 constexpr auto MachOHeaderCpuSubtypesARM64 =
     BUILD_ENUM_STRINGS(MachOHeaderCpuSubtypesARM64Defs);
@@ -490,6 +492,8 @@ void MachODumper::printFileHeaders(const MachHeader &Header) {
   default:
     W.printHex("CpuSubType", subtype);
   }
+  W.printHex("CpuCapabilities",
+             (Header.cpusubtype & MachO::CPU_SUBTYPE_MASK) >> 24);
   W.printEnum("FileType", Header.filetype, EnumStrings(MachOHeaderFileTypes));
   W.printNumber("NumOfLoadCommands", Header.ncmds);
   W.printNumber("SizeOfLoadCommands", Header.sizeofcmds);
@@ -823,7 +827,6 @@ void MachODumper::printNeededLibraries() {
 
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_LOAD_DYLIB ||
-        Command.C.cmd == MachO::LC_ID_DYLIB ||
         Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||
         Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
         Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||
@@ -925,6 +928,21 @@ void MachODumper::printMachOVersionMin() {
         SDK += "." + utostr(MachOObjectFile::getVersionMinUpdate(VMC, true));
     }
     W.printString("SDK", SDK);
+  }
+}
+
+void MachODumper::printMachOTargetTriple() {
+  for (const auto &Load : Obj->load_commands()) {
+    if (Load.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      DictScope Group(W, "TargetTriple");
+      MachO::target_triple_command TTC = Obj->getTargetTripleLoadCommand(Load);
+      W.printString("Cmd", "LC_TARGET_TRIPLE");
+      W.printNumber("Size", TTC.cmdsize);
+      if (TTC.triple < TTC.cmdsize)
+        W.printString("Triple", Load.Ptr + TTC.triple);
+      else
+        W.printNumber("Triple ?(bad offset)", TTC.triple);
+    }
   }
 }
 

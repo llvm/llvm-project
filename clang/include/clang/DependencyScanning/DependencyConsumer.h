@@ -41,6 +41,8 @@ public:
   virtual void handleVisibleModule(std::string ModuleName) = 0;
 
   virtual void handleContextHash(std::string Hash) = 0;
+
+  virtual void finishQuery(StringRef ModuleName, bool Success) {}
 };
 } // namespace clang::dependencies
 

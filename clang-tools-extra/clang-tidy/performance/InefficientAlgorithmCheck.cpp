@@ -35,7 +35,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto Matcher =
       callExpr(
-          callee(functionDecl(Algorithms)),
+          callee(functionDecl(Algorithms)), argumentCountAtLeast(3),
           hasArgument(
               0, cxxMemberCallExpr(
                      callee(cxxMethodDecl(hasName("begin"))),
@@ -48,8 +48,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               1, cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))),
                                    on(declRefExpr(hasDeclaration(
-                                       equalsBoundNode("IneffContObj")))))),
-          hasArgument(2, expr().bind("AlgParam")))
+                                       equalsBoundNode("IneffContObj")))))))
           .bind("IneffAlg");
 
   Finder->addMatcher(Matcher, this);
@@ -100,7 +99,6 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   if (Unordered && AlgDecl->getName().contains("bound"))
     return;
 
-  const auto *AlgParam = Result.Nodes.getNodeAs<Expr>("AlgParam");
   const auto *IneffContExpr = Result.Nodes.getNodeAs<Expr>("IneffContExpr");
   FixItHint Hint;
 
@@ -132,13 +130,18 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
         CharSourceRange::getTokenRange(IneffContExpr->getSourceRange()), SM,
         LangOpts);
     const StringRef ParamText = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(AlgParam->getSourceRange()), SM,
-        LangOpts);
-    const std::string ReplacementText =
-        (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
-         AlgDecl->getName() + "(" + ParamText + ")")
-            .str();
-    Hint = FixItHint::CreateReplacement(CallRange, ReplacementText);
+        CharSourceRange::getTokenRange(AlgCall->getArg(2)->getSourceRange()),
+        SM, LangOpts);
+    // There is no source text for an expression that covers only part of a
+    // macro expansion. Building the replacement from an empty string would
+    // incorrectly drop the container or the value.
+    if (!ContainerText.empty() && !ParamText.empty()) {
+      const std::string ReplacementText =
+          (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
+           AlgDecl->getName() + "(" + ParamText + ")")
+              .str();
+      Hint = FixItHint::CreateReplacement(CallRange, ReplacementText);
+    }
   }
 
   diag(AlgCall->getBeginLoc(),

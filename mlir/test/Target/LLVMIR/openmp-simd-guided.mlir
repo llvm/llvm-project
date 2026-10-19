@@ -9,11 +9,11 @@ llvm.func @test_simd_guided() {
   %c4_i32 = llvm.mlir.constant (4 : i32) : i32
   %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
   omp.wsloop schedule(guided = %c4_i32 : i32, simd) {
-    omp.simd linear(%1 : !llvm.ptr = %c1_i32 : i32) {
+    omp.simd linear(%1 : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
       omp.loop_nest (%arg1) : i32 = (%c0_i32) to (%c64_i32) inclusive step (%c1_i32) {
         omp.yield
       }
-    } {linear_var_types = [i32], omp.composite}
+    } {omp.composite}
   } {omp.composite}
   llvm.return
 }

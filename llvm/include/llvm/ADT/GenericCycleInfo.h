@@ -28,6 +28,7 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -228,7 +229,7 @@ public:
 
   ArrayRef<BlockT *> getEntries(CycleRef C) const {
     const CycleT &Cyc = deref(C);
-    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
+    return ArrayRef<BlockT *>(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
   }
   bool isEntry(CycleRef C, const BlockT *Block) const {
     return is_contained(getEntries(C), Block);

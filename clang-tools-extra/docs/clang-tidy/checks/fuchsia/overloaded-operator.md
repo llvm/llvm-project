@@ -15,4 +15,4 @@ B &operator=(const B &Other);  // No warning
 B &operator=(B &&Other) // No warning
 ```
 
-See the features disallowed in Fuchsia at <https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx?hl=en>
+See the features disallowed in Fuchsia at <https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx>

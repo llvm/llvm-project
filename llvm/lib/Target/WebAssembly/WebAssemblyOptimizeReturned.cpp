@@ -41,7 +41,6 @@ class WebAssemblyOptimizeReturnedLegacy final : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -50,8 +49,6 @@ class WebAssemblyOptimizeReturnedLegacy final : public FunctionPass {
 public:
   static char ID;
   WebAssemblyOptimizeReturnedLegacy() : FunctionPass(ID) {}
-
-  void visitCallBase(CallBase &CB);
 };
 } // End anonymous namespace
 

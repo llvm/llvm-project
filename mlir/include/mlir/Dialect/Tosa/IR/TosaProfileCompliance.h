@@ -16,9 +16,8 @@
 
 #include "mlir/Support/TypeID.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
-
+namespace mlir {
+namespace tosa {
 //===----------------------------------------------------------------------===//
 // Type Compilance Definition
 //===----------------------------------------------------------------------===//
@@ -141,9 +140,8 @@ public:
   LogicalResult checkInvalid(Operation *op);
 
   template <typename T>
-  LogicalResult checkProfileOrExtension(
-      Operation *op, const tosa::TargetEnv &targetEnv,
-      const SmallVector<ArrayRef<T>> &specDefinedProfileSet);
+  LogicalResult checkProfileOrExtension(Operation *op,
+                                        const tosa::TargetEnv &targetEnv);
 
   bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
     return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
@@ -175,5 +173,7 @@ private:
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H

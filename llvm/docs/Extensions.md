@@ -679,6 +679,18 @@ This indicates that `ball` calls `foo`, `bar` and `baz` directly;
 `ball` indirectly calls functions whose types are `4524972987496481828`,
 `3498816979441845844` and `8646233951371320954`.
 
+#### `SHT_LLVM_DYNDBG_ELF` Section (Dynamic Debugging ELF)
+
+This section is used to embed a dynamic debugging ELF object. The section is
+created by the compiler when dynamic debugging is enabled. The content of this
+section is an ELF object with code that is compiled unoptimized and compatible
+with the optimized ELF object in which it is embedded. The linker combines
+embedded dynamic debugging ELF objects into a single embedded dynamic debugging
+ELF object in the linker output. The unoptimized code within the embedded
+dynamic debugging object can be used by a debugger to replace the optimized
+equivalent during debugging. See {doc}`DynamicDebugging` for further
+details.
+
 ### CodeView-Dependent
 
 #### `.cv_file` Directive

@@ -16,6 +16,7 @@
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
+; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT: numWaveDispatchSGPRs: 0
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'

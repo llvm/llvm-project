@@ -632,8 +632,10 @@ def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
 // misaligned load faults.
 // Defs: R6/R7 default scratch (R8 fallback if AddrReg conflicts), P0 for
 // compare, D13 for the crash load.
+// Size is the worst case: two extenders in the load packet, an uncompounded
+// compare/jump, and the extended crash load.
 let hasSideEffects = 1, mayLoad = 1, isPseudo = 1, isCodeGenOnly = 1,
-    Defs = [R6, R7, R8, P0, D13], Size = 28 in
+    Defs = [R6, R7, R8, P0, D13], Size = 32 in
 def KCFI_CHECK : InstHexagon<(outs), (ins IntRegs:$ptr, i32imm:$type),
                               "", [], "", PSEUDO, TypePSEUDO>;
 

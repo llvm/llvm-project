@@ -44,7 +44,7 @@ AST_MATCHER(Expr, isUnsafeTemporaryRangeInit) {
 namespace tidy::readability {
 
 void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
-  auto Returns = [](bool V) {
+  const auto Returns = [](bool V) {
     return returnStmt(hasReturnValue(cxxBoolLiteral(equals(V))));
   };
 
