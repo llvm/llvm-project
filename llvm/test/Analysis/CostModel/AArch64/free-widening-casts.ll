@@ -1192,7 +1192,7 @@ define <2 x i128> @fcmp_v2f128(<2 x fp128> %a, <2 x fp128> %b) {
 
 define <8 x i16> @ushll_8h(<8 x i8> %a) {
 ; COST-LABEL: 'ushll_8h'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp1 = shl <8 x i16> %tmp0, splat (i16 2)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %tmp1
 ;
@@ -1207,7 +1207,7 @@ define <8 x i16> @ushll_8h(<8 x i8> %a) {
 
 define <4 x i32> @sshll_4s(<4 x i16> %a) {
 ; COST-LABEL: 'sshll_4s'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = sext <4 x i16> %a to <4 x i32>
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp0 = sext <4 x i16> %a to <4 x i32>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp1 = shl <4 x i32> %tmp0, splat (i32 3)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %tmp1
 ;

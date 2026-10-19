@@ -4092,9 +4092,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         }
       }
 
+      if (!isa<ZExtInst, SExtInst>(I))
+        return std::nullopt;
+
       // The cast will be free for the s/urhadd instructions
-      if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
-          isExtPartOfAvgExpr(Usr, Dst, Src))
+      if (isExtPartOfAvgExpr(Usr, Dst, Src))
+        return 0;
+
+      // [US]SHLL/SHLL fold a doubling extend into a shift left by a splat
+      // immediate of at most the source element width.
+      const APInt *ShAmt;
+      unsigned SrcBits = Src->getScalarSizeInBits();
+      if (match(Usr, m_Shl(m_Specific(I), m_APInt(ShAmt))) &&
+          ShAmt->ule(SrcBits) && useNeonVector(Dst) &&
+          Dst->getScalarSizeInBits() == 2 * SrcBits &&
+          getTypeLegalizationCost(Src).second.getScalarSizeInBits() == SrcBits)
         return 0;
 
       return std::nullopt;
