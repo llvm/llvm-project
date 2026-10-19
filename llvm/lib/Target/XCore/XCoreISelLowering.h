@@ -80,17 +80,15 @@ namespace llvm {
 
     // Lower Operand helpers
     SDValue LowerCCCArguments(SDValue Chain, CallingConv::ID CallConv,
-                              bool isVarArg,
-                              const SmallVectorImpl<ISD::InputArg> &Ins,
+                              bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                               const SDLoc &dl, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &InVals) const;
     SDValue LowerCCCCallTo(SDValue Chain, SDValue Callee,
                            CallingConv::ID CallConv, bool isVarArg,
-                           bool isTailCall,
-                           const SmallVectorImpl<ISD::OutputArg> &Outs,
+                           bool isTailCall, llvm::ArrayRef<ISD::OutputArg> Outs,
                            const SmallVectorImpl<SDValue> &OutVals,
-                           const SmallVectorImpl<ISD::InputArg> &Ins,
-                           const SDLoc &dl, SelectionDAG &DAG,
+                           llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                           SelectionDAG &DAG,
                            SmallVectorImpl<SDValue> &InVals) const;
     SDValue getGlobalAddressWrapper(SDValue GA, const GlobalValue *GV,
                                     SelectionDAG &DAG) const;
@@ -139,8 +137,8 @@ namespace llvm {
 
     SDValue
     LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                         const SmallVectorImpl<ISD::InputArg> &Ins,
-                         const SDLoc &dl, SelectionDAG &DAG,
+                         llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                         SelectionDAG &DAG,
                          SmallVectorImpl<SDValue> &InVals) const override;
 
     SDValue
@@ -148,13 +146,12 @@ namespace llvm {
                 SmallVectorImpl<SDValue> &InVals) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        llvm::ArrayRef<ISD::OutputArg> Outs,
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                        bool isVarArg,
-                        const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
+                        bool isVarArg, llvm::ArrayRef<ISD::OutputArg> ArgsFlags,
                         LLVMContext &Context, const Type *RetTy) const override;
   };
 }

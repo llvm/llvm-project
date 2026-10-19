@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -115,7 +116,7 @@ public:
     ArgInfo OrigRet;
 
     /// List of descriptors of the arguments passed to the function.
-    SmallVector<ArgInfo, 32> OrigArgs;
+    llvm::SmallVectorWithFlags<ArgInfo, 32, 2> OrigArgs;
 
     /// Valid if the call has a swifterror inout parameter, and contains the
     /// vreg that the swifterror should be copied into after the call.
@@ -159,10 +160,12 @@ public:
     const ConstantInt *CFIType = nullptr;
 
     /// True if this call results in convergent operations.
-    bool IsConvergent = true;
+    bool getIsConvergent() const { return !OrigArgs.getFlag(0); }
+    void setIsConvergent(bool Value) { OrigArgs.setFlag(0, !Value); }
 
     /// True if this call must not be merged with other calls.
-    bool NoMerge = false;
+    bool getNoMerge() const { return OrigArgs.getFlag(1); }
+    void setNoMerge(bool Value) { OrigArgs.setFlag(1, Value); }
 
     GlobalValue *DeactivationSymbol = nullptr;
   };

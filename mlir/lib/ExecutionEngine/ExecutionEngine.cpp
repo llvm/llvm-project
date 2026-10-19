@@ -307,7 +307,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     auto destroyFn = reinterpret_cast<LibraryDestroyFn>(destroySim);
     destroyFns.push_back(destroyFn);
   }
-  engine->destroyFns = std::move(destroyFns);
+  engine->destroyFns.assign(std::move(destroyFns));
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
@@ -451,8 +451,8 @@ Error ExecutionEngine::invokePacked(StringRef name,
 }
 
 void ExecutionEngine::initialize() {
-  if (isInitialized)
+  if (getIsInitialized())
     return;
   cantFail(jit->initialize(jit->getMainJITDylib()));
-  isInitialized = true;
+  setIsInitialized(true);
 }

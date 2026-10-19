@@ -99,7 +99,7 @@ DefaultVLIWScheduler::DefaultVLIWScheduler(MachineFunction &MF,
                                            MachineLoopInfo &MLI,
                                            AAResults *AA)
     : ScheduleDAGInstrs(MF, &MLI), AA(AA) {
-  CanHandleTerminators = true;
+  setCanHandleTerminators(true);
 }
 
 /// Apply each ScheduleDAGMutation step in order.

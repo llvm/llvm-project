@@ -54,6 +54,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -125,11 +126,19 @@ std::optional<DestSourcePair> isCopyInstr(const MachineInstr &MI,
 
 class CopyTracker {
   struct CopyInfo {
+    CopyInfo() = default;
+    CopyInfo(MachineInstr *MI, bool Avail)
+        : MI(MI), DefRegs(decltype(this->DefRegs)::withFlags(unsigned(Avail))) {
+    }
     MachineInstr *MI = nullptr;
     MachineInstr *LastSeenUseInCopy = nullptr;
     SmallPtrSet<MachineInstr *, 4> SrcUsers;
-    SmallVector<MCRegister, 4> DefRegs;
-    bool Avail = false;
+    llvm::SmallVectorWithFlags<MCRegister, 4> DefRegs;
+    bool getAvail() const { return DefRegs.getFlag(0); }
+    bool setAvail(bool Value) {
+      DefRegs.setFlag(0, Value);
+      return Value;
+    }
   };
 
   DenseMap<MCRegUnit, CopyInfo> Copies;
@@ -167,7 +176,7 @@ public:
       for (MCRegUnit Unit : TRI.regunits(Reg)) {
         auto CI = Copies.find(Unit);
         if (CI != Copies.end())
-          CI->second.Avail = false;
+          CI->second.setAvail(false);
       }
     }
   }
@@ -321,7 +330,7 @@ public:
 
     // Remember Dst is defined by the copy.
     for (MCRegUnit Unit : TRI.regunits(Dst))
-      Copies[Unit] = {MI, nullptr, {}, {}, true};
+      Copies[Unit] = CopyInfo(MI, true);
 
     // Remember source that's copied to Dst. Once it's clobbered, then
     // it's no longer available for copy propagation.
@@ -343,7 +352,7 @@ public:
     auto CI = Copies.find(RegUnit);
     if (CI == Copies.end())
       return nullptr;
-    if (MustBeAvailable && !CI->second.Avail)
+    if (MustBeAvailable && !CI->second.getAvail())
       return nullptr;
     return CI->second.MI;
   }
@@ -422,7 +431,7 @@ public:
                                       bool UseCopyInstr) {
     MCRegUnit RU = *TRI.regunits(Reg).begin();
     auto CI = Copies.find(RU);
-    if (CI == Copies.end() || !CI->second.Avail)
+    if (CI == Copies.end() || !CI->second.getAvail())
       return nullptr;
 
     MachineInstr *DefCopy = CI->second.MI;
@@ -455,7 +464,7 @@ public:
         for (MCRegUnit DstUnit : TRI.regunits(DstReg)) {
           if (!PreservedRegUnits.test(static_cast<unsigned>(DstUnit))) {
             if (auto CI = Copies.find(DstUnit); CI != Copies.end()) {
-              CI->second.Avail = false;
+              CI->second.setAvail(false);
             }
           }
         }

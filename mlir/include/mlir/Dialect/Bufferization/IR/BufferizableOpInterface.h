@@ -14,6 +14,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <optional>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationEnums.h.inc"
@@ -361,7 +362,12 @@ struct BufferizationOptions {
   /// `functionArgTypeConverterFn`.
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
-  bool inferFunctionResultLayout = true;
+  bool getInferFunctionResultLayout() const {
+    return !stateInitializers.getFlag(0);
+  }
+  void setInferFunctionResultLayout(bool Value) {
+    stateInitializers.setFlag(0, !Value);
+  }
 
   /// Type conversion from tensors to memrefs. This type conversion is used if
   /// no memref type could be inferred during bufferization. By default, returns
@@ -402,7 +408,7 @@ struct BufferizationOptions {
 
   /// Initializer functions for analysis state. These can be used to
   /// initialize dialect-specific analysis state.
-  SmallVector<AnalysisStateInitFn> stateInitializers;
+  llvm::SmallVectorWithFlags<AnalysisStateInitFn> stateInitializers;
 };
 
 /// Traversal parameters for `findValueInReverseUseDefChain`.

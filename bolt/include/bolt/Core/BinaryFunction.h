@@ -39,6 +39,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -236,6 +237,24 @@ private:
   bool HadNegateRAState{false};
   bool InitialRAState{false};
 
+  /// False if the function is too complex to reconstruct its control
+  /// flow graph.
+  /// In relocation mode we still disassemble and re-assemble such functions.
+  bool IsSimple{true};
+
+  /// Indication that the function should be ignored for optimization purposes.
+  /// If we can skip emission of some functions, then ignored functions could
+  /// be not fully disassembled and will not be emitted.
+  bool IsIgnored{false};
+
+  /// Pseudo functions should not be disassembled or emitted.
+  bool IsPseudo{false};
+
+  /// True if the original function code has all necessary relocations to track
+  /// addresses of functions emitted to new locations. Typically set for
+  /// functions that we are not going to emit.
+  bool HasExternalRefRelocations{false};
+
   /// A list of symbols associated with the function entry point.
   ///
   /// Multiple symbols would typically result from identical code-folding
@@ -245,7 +264,7 @@ private:
 
   /// The list of names this function is known under. Used for fuzzy-matching
   /// the function to its name in a profile, command line, etc.
-  SmallVector<std::string, 0> Aliases;
+  SmallVectorWithFlags<std::string, 0, 4> Aliases;
 
   /// Containing section in the input file.
   BinarySection *OriginSection = nullptr;
@@ -315,67 +334,23 @@ private:
   /// is a global symbol corresponding to an external entry point.
   DenseMap<const MCSymbol *, MCSymbol *> SecondaryEntryPoints;
 
-  /// False if the function is too complex to reconstruct its control
-  /// flow graph.
-  /// In relocation mode we still disassemble and re-assemble such functions.
-  bool IsSimple{true};
-
-  /// Indication that the function should be ignored for optimization purposes.
-  /// If we can skip emission of some functions, then ignored functions could
-  /// be not fully disassembled and will not be emitted.
-  bool IsIgnored{false};
-
-  /// Pseudo functions should not be disassembled or emitted.
-  bool IsPseudo{false};
-
-  /// True if the original function code has all necessary relocations to track
-  /// addresses of functions emitted to new locations. Typically set for
-  /// functions that we are not going to emit.
-  bool HasExternalRefRelocations{false};
-
-  /// True if the function has an indirect branch with unknown destination.
-  bool HasUnknownControlFlow{false};
-
-  /// The code from inside the function references one of the code locations
-  /// from the same function as a data, i.e. it's possible the label is used
-  /// inside an address calculation or could be referenced from outside.
-  bool HasInternalLabelReference{false};
-
-  /// In AArch64, preserve nops to maintain code equal to input (assuming no
-  /// optimizations are done).
-  bool PreserveNops{false};
-
-  /// Indicate if this function has associated exception handling metadata.
-  bool HasEHRanges{false};
-
-  /// True if the function uses DW_CFA_GNU_args_size CFIs.
-  bool UsesGnuArgsSize{false};
-
-  /// True if the function might have a profile available externally.
-  /// Used to check if processing of the function is required under certain
-  /// conditions.
-  bool HasProfileAvailable{false};
-
-  bool HasMemoryProfile{false};
-
-  /// Execution halts whenever this function is entered.
-  bool TrapsOnEntry{false};
+  bool getHasMemoryProfileFlag() const { return Aliases.getFlag(0); }
+  void setHasMemoryProfileFlag(bool Value) { Aliases.setFlag(0, Value); }
 
   /// True if the function is a fragment of another function. This means that
   /// this function could only be entered via its parent or one of its sibling
   /// fragments. It could be entered at any basic block. It can also return
   /// the control to any basic block of its parent or its sibling.
-  bool IsFragment{false};
+  bool getIsFragmentFlag() const { return Aliases.getFlag(1); }
+  void setIsFragmentFlag(bool Value) { Aliases.setFlag(1, Value); }
 
   /// Indicate that the function body has SDT marker
-  bool HasSDTMarker{false};
+  bool getHasSDTMarkerFlag() const { return Aliases.getFlag(2); }
+  void setHasSDTMarkerFlag(bool Value) { Aliases.setFlag(2, Value); }
 
   /// Indicate that the function body has Pseudo Probe
-  bool HasPseudoProbe{BC.getUniqueSectionByName(".pseudo_probe_desc") &&
-                      BC.getUniqueSectionByName(".pseudo_probe")};
-
-  /// True if the function uses ORC format for stack unwinding.
-  bool HasORC{false};
+  bool getHasPseudoProbeFlag() const { return Aliases.getFlag(3); }
+  void setHasPseudoProbeFlag(bool Value) { Aliases.setFlag(3, Value); }
 
   /// True if the function contains explicit or implicit indirect branch to its
   /// split fragments, e.g., split jump table, landing pad in split fragment
@@ -450,6 +425,24 @@ private:
   /// been adjusted by the profile inference algorithm.
   bool HasInferredProfile{false};
 
+  /// True if the function has an indirect branch with unknown destination.
+  bool HasUnknownControlFlow{false};
+
+  /// The code from inside the function references one of the code locations
+  /// from the same function as a data, i.e. it's possible the label is used
+  /// inside an address calculation or could be referenced from outside.
+  bool HasInternalLabelReference{false};
+
+  /// In AArch64, preserve nops to maintain code equal to input (assuming no
+  /// optimizations are done).
+  bool PreserveNops{false};
+
+  /// Indicate if this function has associated exception handling metadata.
+  bool HasEHRanges{false};
+
+  /// True if the function uses DW_CFA_GNU_args_size CFIs.
+  bool UsesGnuArgsSize{false};
+
   /// For functions with mismatched profile we store all call profile
   /// information at a function level (as opposed to tying it to
   /// specific call sites).
@@ -485,6 +478,17 @@ private:
 
   /// Function is referenced by a non-control flow instruction.
   bool HasAddressTaken{false};
+
+  /// True if the function might have a profile available externally.
+  /// Used to check if processing of the function is required under certain
+  /// conditions.
+  bool HasProfileAvailable{false};
+
+  /// Execution halts whenever this function is entered.
+  bool TrapsOnEntry{false};
+
+  /// True if the function uses ORC format for stack unwinding.
+  bool HasORC{false};
 
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
@@ -716,7 +720,8 @@ private:
   /// parent fragment to \p BF.
   void addParentFragment(BinaryFunction &BF) {
     assert(this != &BF);
-    assert(IsFragment && "function must be a fragment to have a parent");
+    assert(getIsFragmentFlag() &&
+           "function must be a fragment to have a parent");
     ParentFragments.insert(&BF);
   }
 
@@ -770,7 +775,11 @@ private:
   /// Creation should be handled by RewriteInstance or BinaryContext
   BinaryFunction(const std::string &Name, BinarySection &Section,
                  uint64_t Address, uint64_t Size, BinaryContext &BC)
-      : OriginSection(&Section), Address(Address), Size(Size), BC(BC),
+      : Aliases(decltype(Aliases)::withFlags(
+            (unsigned(bool(BC.getUniqueSectionByName(".pseudo_probe_desc") &&
+                           BC.getUniqueSectionByName(".pseudo_probe")))
+             << 3))),
+        OriginSection(&Section), Address(Address), Size(Size), BC(BC),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
@@ -778,7 +787,12 @@ private:
   /// This constructor is used to create an injected function, i.e. a function
   /// that didn't originate in the input file.
   BinaryFunction(const std::string &Name, BinaryContext &BC, bool IsSimple)
-      : Address(0), Size(0), BC(BC), IsSimple(IsSimple),
+      : IsSimple(IsSimple),
+        Aliases(decltype(Aliases)::withFlags(
+            (unsigned(bool(BC.getUniqueSectionByName(".pseudo_probe_desc") &&
+                           BC.getUniqueSectionByName(".pseudo_probe")))
+             << 3))),
+        Address(0), Size(0), BC(BC),
         CodeSectionName(BC.getInjectedCodeSectionName()),
         ColdCodeSectionName(BC.getInjectedColdCodeSectionName()),
         FunctionNumber(++Count) {
@@ -1498,7 +1512,7 @@ public:
   /// but not yet populated into the function.
   bool hasProfileAvailable() const { return HasProfileAvailable; }
 
-  bool hasMemoryProfile() const { return HasMemoryProfile; }
+  bool hasMemoryProfile() const { return getHasMemoryProfileFlag(); }
 
   /// Return true if the body of the function was merged into another function.
   bool isFolded() const { return FoldedIntoFunction != nullptr; }
@@ -1525,10 +1539,10 @@ public:
   bool hasJumpTables() const { return !JumpTables.empty(); }
 
   /// Return true if the function has SDT marker
-  bool hasSDTMarker() const { return HasSDTMarker; }
+  bool hasSDTMarker() const { return getHasSDTMarkerFlag(); }
 
   /// Return true if the function has Pseudo Probe
-  bool hasPseudoProbe() const { return HasPseudoProbe; }
+  bool hasPseudoProbe() const { return getHasPseudoProbeFlag(); }
 
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
@@ -1964,7 +1978,7 @@ public:
     IsAnonymous = V;
   }
 
-  void setHasSDTMarker(bool V) { HasSDTMarker = V; }
+  void setHasSDTMarker(bool V) { setHasSDTMarkerFlag(V); }
 
   /// Mark the function as using ORC format for stack unwinding.
   void setHasORC(bool V) { HasORC = V; }
@@ -2032,7 +2046,7 @@ public:
   }
 
   /// Return true if the function is a secondary fragment of another function.
-  bool isFragment() const { return IsFragment; }
+  bool isFragment() const { return getIsFragmentFlag(); }
 
   /// Returns if this function is a child of \p Other function.
   bool isChildOf(const BinaryFunction &Other) const {

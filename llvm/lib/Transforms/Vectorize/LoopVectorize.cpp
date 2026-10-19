@@ -1338,7 +1338,7 @@ public:
     // TODO: We need to estimate the cost of alias-masking in
     // GeneratedRTChecks::getCost(). We can't check the MemCheckBlock as the
     // alias-mask is generated later in VPlan.
-    if (RtPtrChecking.Need && !LoopUsesPartialAliasMasking) {
+    if (RtPtrChecking.needsChecking() && !LoopUsesPartialAliasMasking) {
       auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
@@ -2643,7 +2643,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return Config.computeVPlanOuterloopVF(UserVF);
   }
 
-  if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
+  if (Legal->getRuntimePointerChecking()->needsChecking() &&
+      TTI.hasBranchDivergence()) {
     // TODO: It may be useful to do since it's still likely to be dynamically
     // uniform if the target can skip.
     reportVectorizationFailure(
@@ -3640,7 +3641,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
          return Legal->blockNeedsPredication(BB);
        }));
   bool ScalarInterleavingRequiresRuntimePointerCheck =
-      (VF.isScalar() && Legal->getRuntimePointerChecking()->Need);
+      (VF.isScalar() && Legal->getRuntimePointerChecking()->needsChecking());
 
   // We want to interleave small loops in order to reduce the loop overhead and
   // potentially expose ILP opportunities.

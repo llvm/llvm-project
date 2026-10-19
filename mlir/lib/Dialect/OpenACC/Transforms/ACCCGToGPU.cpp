@@ -88,6 +88,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -468,8 +469,15 @@ public:
 
   gpu::LaunchOp getLaunch() const { return launch; }
 
-  bool hasFailed = false;
-  bool insideAccumulateGridStride = false;
+  bool getHasFailed() const { return deferredBarrierSeqLoops.getFlag(0); }
+  void setHasFailed(bool Value) { deferredBarrierSeqLoops.setFlag(0, Value); }
+  bool getInsideAccumulateGridStride() const {
+    return deferredBarrierSeqLoops.getFlag(1);
+  }
+  bool setInsideAccumulateGridStride(bool Value) {
+    deferredBarrierSeqLoops.setFlag(1, Value);
+    return Value;
+  }
   Value reductionSharedBuf;
   // Reduction-accumulator slot (memref) -> the block-reduced value stored into
   // it; lets a block combine use the register instead of reloading.
@@ -703,19 +711,45 @@ private:
   const ACCCGToGPUOptions &options;
   gpu::LaunchOp launch;
   IRMapping mapping;
-  llvm::SmallVector<scf::ParallelOp> loopReductions;
+  llvm::SmallVectorWithFlags<
+      scf::ParallelOp,
+      llvm::CalculateSmallVectorDefaultInlinedElements<scf::ParallelOp>::value,
+      3>
+      loopReductions;
   llvm::DenseMap<gpu::Processor, Value> threadIdMap;
   llvm::DenseMap<gpu::Processor, Value> dimensionMap;
   // True if ThreadY reduction exists, which triggers subgroup alignment
-  bool hasThreadYReduction = false;
+  bool getHasThreadYReduction() const {
+    return deferredBarrierSeqLoops.getFlag(2);
+  }
+  void setHasThreadYReduction(bool Value) {
+    deferredBarrierSeqLoops.setFlag(2, Value);
+  }
   // True if a ThreadX reduction exists, whose shuffles stay inside a row
-  bool hasThreadXReduction = false;
+  bool getHasThreadXReduction() const {
+    return deferredBarrierSeqLoops.getFlag(3);
+  }
+  void setHasThreadXReduction(bool Value) {
+    deferredBarrierSeqLoops.setFlag(3, Value);
+  }
   // True if an array reduction spans any thread dimension
-  bool hasThreadLevelArrayReduction = false;
+  bool getHasThreadLevelArrayReduction() const {
+    return loopReductions.getFlag(0);
+  }
+  bool setHasThreadLevelArrayReduction(bool Value) {
+    loopReductions.setFlag(0, Value);
+    return Value;
+  }
   // True if any ThreadX routine call exists in the kernel
-  bool hasThreadLevelRoutineCall = false;
+  bool getHasThreadLevelRoutineCall() const {
+    return loopReductions.getFlag(1);
+  }
+  void setHasThreadLevelRoutineCall(bool Value) {
+    loopReductions.setFlag(1, Value);
+  }
   // True when a per-row ThreadY barrier is emitted
-  bool hasThreadYBarrier = false;
+  bool getHasThreadYBarrier() const { return loopReductions.getFlag(2); }
+  void setHasThreadYBarrier(bool Value) { loopReductions.setFlag(2, Value); }
 
   // Reusable privatize broadcast slots per type; disabled for kernels.
   llvm::DenseMap<Type, Value> privatizeBroadcastCache;
@@ -737,8 +771,8 @@ private:
   /// a row may sit anywhere in a subgroup. Array accumulates use atomics
   /// instead and still need alignment.
   bool isWorkerOnlyShuffleLaunch() const {
-    return hasThreadYReduction && !hasThreadXReduction &&
-           !hasThreadLevelArrayReduction && staticBlockDimZ == 1 &&
+    return getHasThreadYReduction() && !getHasThreadXReduction() &&
+           !getHasThreadLevelArrayReduction() && staticBlockDimZ == 1 &&
            staticBlockDimY > 1 && staticBlockDimY <= options.subgroupSize &&
            options.subgroupSize % staticBlockDimX == 0;
   }
@@ -747,7 +781,7 @@ private:
   SharedMemoryBudget sharedMemBudget;
   SmallVector<std::string> sharedMemPrivateVarNames;
   SmallVector<std::string> threadPrivateVarNames;
-  llvm::SmallVector<Operation *, 4> deferredBarrierSeqLoops;
+  llvm::SmallVectorWithFlags<Operation *, 4, 4> deferredBarrierSeqLoops;
 
   Value getThreadId(Location loc, gpu::Dimension dim) {
     return gpu::ThreadIdOp::create(rewriter, loc, rewriter.getIndexType(), dim);
@@ -890,7 +924,7 @@ ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
   FailureOr<bool> isCandidate = isPrivateLocalSharedMemoryCandidate(
       privateLocal, computeRegion, module, defaultPolicy, &accSupport);
   if (failed(isCandidate)) {
-    hasFailed = true;
+    setHasFailed(true);
     return std::nullopt;
   }
   if (!isCandidate.value())
@@ -943,14 +977,16 @@ LogicalResult ACCCGToGPULowering::rewrite() {
   // ThreadX is tracked too, to tell worker-only reductions from row shuffles.
   computeRegion->walk([&](acc::ReductionAccumulateOp op) {
     for (auto parDim : op.getParDimsAttr().getArray()) {
-      hasThreadXReduction |= parDim.isThreadX();
-      hasThreadYReduction |= parDim.isThreadY();
+      setHasThreadXReduction(int(getHasThreadXReduction()) |
+                             (parDim.isThreadX()));
+      setHasThreadYReduction(int(getHasThreadYReduction()) |
+                             (parDim.isThreadY()));
     }
   });
   computeRegion->walk([&](acc::ReductionAccumulateArrayOp op) {
     for (auto parDim : op.getParDimsAttr().getArray()) {
       if (!parDim.isAnyBlock())
-        hasThreadLevelArrayReduction = true;
+        setHasThreadLevelArrayReduction(true);
     }
   });
 
@@ -962,7 +998,7 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     if (mlir::acc::GPUParallelDimAttr parDim =
             getAccRoutineCallParDim(callOp, defaultPolicy)) {
       if (parDim.isThreadX() || parDim.isThreadY()) {
-        hasThreadLevelRoutineCall = true;
+        setHasThreadLevelRoutineCall(true);
         return WalkResult::interrupt();
       }
     }
@@ -1212,11 +1248,11 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // work, so keep its shape instead.
     if (isSingleThreadWorkerLaunch())
       skipAlign = true;
-    if (needsThreadYAlign && !needsThreadXAlign && !hasThreadYBarrier &&
+    if (needsThreadYAlign && !needsThreadXAlign && !getHasThreadYBarrier() &&
         isWorkerOnlyShuffleLaunch())
       skipAlign = true;
 
-    if ((isShuffleEnabled || hasThreadYBarrier) && !skipAlign) {
+    if ((isShuffleEnabled || getHasThreadYBarrier()) && !skipAlign) {
       rewriter.setInsertionPoint(launch);
 
       Value curBlockDimX = launch.getBlockSizeX();
@@ -1303,7 +1339,7 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     }
   }
 
-  if (hasFailed)
+  if (getHasFailed())
     return failure();
 
   if (!threadPrivateVarNames.empty()) {
@@ -1730,7 +1766,7 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
             diagnosticOp->getLoc(),
             "operations in the same predicate region require incompatible "
             "ThreadY predication");
-        hasFailed = true;
+        setHasFailed(true);
         return {};
       }
       mlir::acc::insertParDim(ancestorParDims, threadY);
@@ -1815,7 +1851,7 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
     return;
   }
 
-  hasThreadYBarrier = true;
+  setHasThreadYBarrier(true);
 
   if (staticBlockDimX <= options.subgroupSize) {
     emitGPUBarrierSubgroup(rewriter, loc);
@@ -2340,7 +2376,7 @@ bool ACCCGToGPULowering::needsInLoopReuseBarrier(Operation *loopOp) {
   // workgroup thread reaches such a call and the callee synchronizes
   // internally, so threads leave it in no particular order and can then be
   // running different iterations of this loop at the same time.
-  if (!hasThreadLevelRoutineCall)
+  if (!getHasThreadLevelRoutineCall())
     return false;
   bool callsThreadLevelRoutine = false;
   loopOp->walk([&](CallOpInterface callOp) -> WalkResult {
@@ -2408,7 +2444,7 @@ void ACCCGToGPULowering::processPredicateRegion(
             SmallVector<mlir::acc::GPUParallelDimAttr>>
       parDimsPair = computeActiveAndInactiveParDims(
           interOp, &interOp.getRegion().front());
-  if (hasFailed)
+  if (getHasFailed())
     return;
 
   // If ThreadY reduction exists, subgroup alignment is applied
@@ -2418,7 +2454,7 @@ void ACCCGToGPULowering::processPredicateRegion(
   // routine call, all ThreadX threads must reach the call so the routine's
   // workgroup-wide barriers (e.g. shared memory alloca sync) converge.
   // A single-thread worker launch is left unaligned, so it has no such lanes.
-  if (hasThreadYReduction && !isSingleThreadWorkerLaunch()) {
+  if (getHasThreadYReduction() && !isSingleThreadWorkerLaunch()) {
     MLIRContext *ctx = computeRegion->getContext();
     mlir::acc::GPUParallelDimAttr threadXParDim =
         mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
@@ -2435,7 +2471,7 @@ void ACCCGToGPULowering::processPredicateRegion(
     // We use the pre-computed hasThreadLevelRoutineCall as an early-out
     // optimization.
     bool regionHasThreadLevelRoutineCall = false;
-    if (hasThreadLevelRoutineCall) {
+    if (getHasThreadLevelRoutineCall()) {
       interOp.getRegion().walk([&](CallOpInterface callOp) {
         if (mlir::acc::GPUParallelDimAttr parDim =
                 getAccRoutineCallParDim(callOp, defaultPolicy)) {
@@ -3330,7 +3366,7 @@ void ACCCGToGPULowering::processParallelOp(scf::ParallelOp parallelOp) {
 
   mlir::acc::GPUParallelDimAttr parDim = pDimsAttr.getArray().front();
 
-  bool savedGridStrideFlag = insideAccumulateGridStride;
+  bool savedGridStrideFlag = getInsideAccumulateGridStride();
   Value savedReductionBuf = reductionSharedBuf;
   if (parDim.isThreadX()) {
     bool found = false;
@@ -3350,7 +3386,7 @@ void ACCCGToGPULowering::processParallelOp(scf::ParallelOp parallelOp) {
       return WalkResult::advance();
     });
     if (found)
-      insideAccumulateGridStride = true;
+      setInsideAccumulateGridStride(true);
   }
 
   // common loop body processing for both par0 and 1+
@@ -3399,7 +3435,7 @@ void ACCCGToGPULowering::processParallelOp(scf::ParallelOp parallelOp) {
         }
       }
     }
-    if (insideAccumulateGridStride || hasAccumulateSibling) {
+    if (getInsideAccumulateGridStride() || hasAccumulateSibling) {
       for (auto launchArg : computeRegion.getLaunchArgs()) {
         if (acc::ParWidthOp pw = launchArg.getDefiningOp<acc::ParWidthOp>()) {
           if (pw.getParDim().isThreadX()) {
@@ -3480,8 +3516,8 @@ void ACCCGToGPULowering::processParallelOp(scf::ParallelOp parallelOp) {
     });
     loopReductions.push_back(parallelOp);
   }
-  insideAccumulateGridStride = savedGridStrideFlag;
-  if (!insideAccumulateGridStride && !savedReductionBuf)
+  setInsideAccumulateGridStride(savedGridStrideFlag);
+  if (!getInsideAccumulateGridStride() && !savedReductionBuf)
     reductionSharedBuf = Value();
 }
 

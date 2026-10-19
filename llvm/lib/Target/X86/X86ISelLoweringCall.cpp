@@ -667,10 +667,11 @@ Value *X86TargetLowering::getSafeStackPointerLocation(
 //               Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-bool X86TargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool X86TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                       MachineFunction &MF, bool isVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       LLVMContext &Context,
+                                       const Type *RetTy) const {
   // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
   // This logic exists for libcalls, a frontend should explicitly use sret
   // rather than rely on the sret demotion here.
@@ -778,12 +779,12 @@ static void Passv64i1ArgInRegs(
   RegsToPass.push_back(std::make_pair(NextVA.getLocReg(), Hi));
 }
 
-SDValue
-X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               const SmallVectorImpl<SDValue> &OutVals,
-                               const SDLoc &dl, SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                       bool isVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       const SmallVectorImpl<SDValue> &OutVals,
+                                       const SDLoc &dl,
+                                       SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
@@ -1148,9 +1149,8 @@ static SDValue getPopFromX87Reg(SelectionDAG &DAG, SDValue Chain,
 ///
 SDValue X86TargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
-    uint32_t *RegMask) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals, uint32_t *RegMask) const {
 
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   // Assign locations to each value returned by this call.
@@ -1246,11 +1246,12 @@ SDValue X86TargetLowering::LowerCallResult(
 /// set of incoming args of a call, contains an sret pointer that the callee
 /// pops. This happens on most x86-32, System V platforms, unless register
 /// parameters are in use (-mregparm=1+, regcallcc, etc).
-template <typename T>
-static bool hasCalleePopSRet(const SmallVectorImpl<T> &Args,
+template <typename ArgRangeT>
+static bool hasCalleePopSRet(const ArgRangeT &Args,
                              const SmallVectorImpl<CCValAssign> &ArgLocs,
                              const X86Subtarget &Subtarget) {
   // Not C++20 (yet), so no concepts available.
+  using T = typename ArgRangeT::value_type;
   static_assert(std::is_same_v<T, ISD::OutputArg> ||
                     std::is_same_v<T, ISD::InputArg>,
                 "requires ISD::OutputArg or ISD::InputArg");
@@ -1329,12 +1330,10 @@ bool X86TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return true;
 }
 
-SDValue
-X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
-                                    const SmallVectorImpl<ISD::InputArg> &Ins,
-                                    const SDLoc &dl, SelectionDAG &DAG,
-                                    const CCValAssign &VA,
-                                    MachineFrameInfo &MFI, unsigned i) const {
+SDValue X86TargetLowering::LowerMemArgument(
+    SDValue Chain, CallingConv::ID CallConv, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &dl, SelectionDAG &DAG, const CCValAssign &VA,
+    MachineFrameInfo &MFI, unsigned i) const {
   // Create the nodes corresponding to a load from this parameter slot.
   ISD::ArgFlagsTy Flags = Ins[i].Flags;
   bool AlwaysUseMutable = shouldGuaranteeTCO(
@@ -1709,8 +1708,8 @@ void VarArgsLoweringHelper::lowerVarArgsParameters(SDValue &Chain,
 
 SDValue X86TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
@@ -2089,14 +2088,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
   SDValue Callee                        = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool &isTailCall                      = CLI.IsTailCall;
-  bool isVarArg                         = CLI.IsVarArg;
+  bool isVarArg = CLI.getIsVarArg();
   const auto *CB                        = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -2118,7 +2116,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsNoTrackIndirectCall = IsIndirectCall && CB->doesNoCfCheck() &&
                                M->getModuleFlag("cf-protection-branch");
   if (IsNoTrackIndirectCall)
-    isTailCall = false;
+    CLI.setIsTailCall(false);
 
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
@@ -2150,9 +2148,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // We cannot guarantee TCO for mismatched calling conventions.
-  if (isTailCall && ShouldGuaranteeTCO) {
+  if (CLI.getIsTailCall() && ShouldGuaranteeTCO) {
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
-    isTailCall = (CallConv == CallerCC);
+    CLI.setIsTailCall((CallConv == CallerCC));
   }
 
   // Check if this tail call is a "sibling" call, which is loosely defined to
@@ -2161,15 +2159,15 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // sibling calls to avoid unnecessary argument copies.
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   bool IsSibcall = false;
-  if (isTailCall) {
+  if (CLI.getIsTailCall()) {
     IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
-    isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
+    CLI.setIsTailCall(IsSibcall || IsMustTail || ShouldGuaranteeTCO);
   }
 
-  if (isTailCall)
+  if (CLI.getIsTailCall())
     ++NumTailCalls;
 
-  if (IsMustTail && !isTailCall)
+  if (IsMustTail && !CLI.getIsTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
@@ -2187,7 +2185,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
-  if (isTailCall && ShouldGuaranteeTCO && !IsSibcall) {
+  if (CLI.getIsTailCall() && ShouldGuaranteeTCO && !IsSibcall) {
     // Lower arguments at fp - stackoffset + fpdiff.
     unsigned NumBytesCallerPushed = X86Info->getBytesToPopOnReturn();
 
@@ -2215,7 +2213,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // temporary storage, and letting the register allocator spill if needed.
   SmallVector<SDValue, 8> ByValTemporaries;
   SDValue ByValTempChain;
-  if (isTailCall) {
+  if (CLI.getIsTailCall()) {
     // Use null SDValue to mean "no temporary recorded for this arg index".
     ByValTemporaries.assign(OutVals.size(), SDValue());
 
@@ -2288,7 +2286,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (ArgLocs.back().getLocMemOffset() != 0)
       report_fatal_error("any parameter with the inalloca attribute must be "
                          "the only memory argument");
-  } else if (CLI.IsPreallocated) {
+  } else if (CLI.getIsPreallocatedFlag()) {
     assert(ArgLocs.back().isMemLoc() &&
            "cannot use preallocated attribute on a register "
            "parameter");
@@ -2311,9 +2309,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SDValue RetAddrFrIdx;
   // Load return address for tail calls.
-  if (isTailCall && FPDiff)
-    Chain = EmitTailCallLoadRetAddr(DAG, RetAddrFrIdx, Chain, isTailCall,
-                                    Is64Bit, FPDiff, dl);
+  if (CLI.getIsTailCall() && FPDiff)
+    Chain = EmitTailCallLoadRetAddr(DAG, RetAddrFrIdx, Chain,
+                                    CLI.getIsTailCall(), Is64Bit, FPDiff, dl);
 
   SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
@@ -2414,7 +2412,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         if (ShadowReg)
           RegsToPass.push_back(std::make_pair(ShadowReg, Arg));
       }
-    } else if (!IsSibcall && (!isTailCall || (isByVal && !IsMustTail))) {
+    } else if (!IsSibcall &&
+               (!CLI.getIsTailCall() || (isByVal && !IsMustTail))) {
       assert(VA.isMemLoc());
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(),
@@ -2430,7 +2429,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
     // GOT pointer.
-    if (!isTailCall) {
+    if (!CLI.getIsTailCall()) {
       // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
       // EBX. Indirect calls through a register or an absolute address do not
       // go through the PLT and do not need EBX to hold the GOT base.
@@ -2492,7 +2491,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // For tail calls lower the arguments to the 'real' stack slots.  Sibcalls
   // don't need this because the eligibility check rejects calls that require
   // shuffling arguments passed in memory.
-  if (isTailCall && !IsSibcall) {
+  if (CLI.getIsTailCall() && !IsSibcall) {
     // Force all the incoming stack arguments to be loaded from the stack
     // before any new outgoing arguments or the return address are stored to the
     // stack, because the outgoing stack slots may alias the incoming argument
@@ -2608,7 +2607,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<SDValue, 8> Ops;
 
-  if (!IsSibcall && isTailCall && !IsMustTail) {
+  if (!IsSibcall && CLI.getIsTailCall() && !IsMustTail) {
     Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, 0, InGlue, dl);
     InGlue = Chain.getValue(1);
   }
@@ -2616,7 +2615,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Chain);
   Ops.push_back(Callee);
 
-  if (isTailCall)
+  if (CLI.getIsTailCall())
     Ops.push_back(DAG.getSignedTargetConstant(FPDiff, dl, MVT::i32));
 
   // Add argument registers to the end of the list so that they are known live
@@ -2700,7 +2699,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
-  if (isTailCall) {
+  if (CLI.getIsTailCall()) {
     // We used to do:
     //// If this is the first return lowered for this function, add the regs
     //// to the liveout set for the function.
@@ -2715,7 +2714,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
-    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.getNoMerge());
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
@@ -2732,7 +2731,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Calls with a "clang.arc.attachedcall" bundle are special. They should be
     // expanded to the call, directly followed by a special marker sequence and
     // a call to a ObjC library function. Use the CALL_RVMARKER to do that.
-    assert(!isTailCall &&
+    assert(!CLI.getIsTailCall() &&
            "tail calls cannot be marked with clang.arc.attachedcall");
     assert(Is64Bit && "clang.arc.attachedcall is only supported in 64bit mode");
 
@@ -2751,7 +2750,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
   InGlue = Chain.getValue(1);
-  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.getNoMerge());
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
   // Save heapallocsite metadata.
@@ -2977,12 +2976,12 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
     SmallVectorImpl<CCValAssign> &ArgLocs) const {
   SelectionDAG &DAG = CLI.DAG;
-  const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  const auto &Outs = CLI.Outs;
   const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  const SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  const auto &Ins = CLI.Ins;
   SDValue Callee = CLI.Callee;
   CallingConv::ID CalleeCC = CLI.CallConv;
-  bool isVarArg = CLI.IsVarArg;
+  bool isVarArg = CLI.getIsVarArg();
 
   if (!mayTailCallThisCC(CalleeCC))
     return false;

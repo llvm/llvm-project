@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
@@ -284,7 +285,8 @@ public:
 
 protected:
   // Dominators always have a single root, postdominators can have more.
-  SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
+  // Mutable only so const queries can update the DFS-valid flag.
+  mutable SmallVectorWithFlags<NodeT *, IsPostDom ? 4 : 1> Roots;
 
   using DomTreeNodeStorageTy = SmallVector<DomTreeNodeBase<NodeT> *>;
   DomTreeNodeStorageTy DomTreeNodes;
@@ -300,7 +302,8 @@ protected:
                        /*GrowthDelay=*/2>
       NodeAllocator;
 
-  mutable bool DFSInfoValid = false;
+  bool isDFSInfoValid() const { return Roots.getFlag(0); }
+  void setDFSInfoValid(bool Value) const { Roots.setFlag(0, Value); }
   mutable unsigned int SlowQueries = 0;
   unsigned BlockNumberEpoch = 0;
 
@@ -483,12 +486,12 @@ public:
     // Compare the result of the tree walk and the dfs numbers, if expensive
     // checks are enabled.
 #ifdef EXPENSIVE_CHECKS
-    assert((!DFSInfoValid ||
+    assert((!isDFSInfoValid() ||
             (dominatedBySlowTreeWalk(A, B) == B->DominatedBy(A))) &&
            "Tree walk disagrees with dfs numbers!");
 #endif
 
-    if (DFSInfoValid)
+    if (isDFSInfoValid())
       return B->DominatedBy(A);
 
     // If we end up with too many slow queries, just update the
@@ -650,7 +653,7 @@ public:
     assert(getNode(BB) == nullptr && "Block already in dominator tree!");
     DomTreeNodeBase<NodeT> *IDomNode = getNode(DomBB);
     assert(IDomNode && "Not immediate dominator specified for block!");
-    DFSInfoValid = false;
+    setDFSInfoValid(false);
     return createNode(BB, IDomNode);
   }
 
@@ -663,7 +666,7 @@ public:
     assert(getNode(BB) == nullptr && "Block already in dominator tree!");
     assert(!this->isPostDominator() &&
            "Cannot change root of post-dominator tree");
-    DFSInfoValid = false;
+    setDFSInfoValid(false);
     DomTreeNodeBase<NodeT> *NewNode = createNode(BB);
     if (Roots.empty()) {
       addRoot(BB);
@@ -685,7 +688,7 @@ public:
   void changeImmediateDominator(DomTreeNodeBase<NodeT> *N,
                                 DomTreeNodeBase<NodeT> *NewIDom) {
     assert(N && NewIDom && "Cannot change null node pointers!");
-    DFSInfoValid = false;
+    setDFSInfoValid(false);
     N->setIDom(NewIDom);
   }
 
@@ -702,7 +705,7 @@ public:
     assert(Node && "Removing node that isn't in dominator tree.");
     assert(Node->isLeaf() && "Node is not a leaf node.");
 
-    DFSInfoValid = false;
+    setDFSInfoValid(false);
 
     // Remove node from immediate dominator's children list.
     if (DomTreeNodeBase<NodeT> *IDom = Node->getIDom())
@@ -737,7 +740,7 @@ public:
       O << "Inorder PostDominator Tree: ";
     else
       O << "Inorder Dominator Tree: ";
-    if (!DFSInfoValid)
+    if (!isDFSInfoValid())
       O << "DFSNumbers invalid: " << SlowQueries << " slow queries.";
     O << "\n";
 
@@ -755,7 +758,7 @@ public:
   /// updateDFSNumbers - Assign In and Out numbers to the nodes while walking
   /// dominator tree in dfs order.
   void updateDFSNumbers() const {
-    if (DFSInfoValid) {
+    if (isDFSInfoValid()) {
       SlowQueries = 0;
       return;
     }
@@ -796,7 +799,7 @@ public:
     }
 
     SlowQueries = 0;
-    DFSInfoValid = true;
+    setDFSInfoValid(true);
   }
 
 private:
@@ -845,7 +848,7 @@ public:
     Roots.clear();
     RootNode = nullptr;
     Parent = nullptr;
-    DFSInfoValid = false;
+    setDFSInfoValid(false);
     NodeAllocator.Reset();
     SlowQueries = 0;
   }

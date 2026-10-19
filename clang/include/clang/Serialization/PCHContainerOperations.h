@@ -11,6 +11,7 @@
 
 #include "clang/Basic/Module.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
@@ -26,8 +27,9 @@ class CompilerInstance;
 
 struct PCHBuffer {
   ASTFileSignature Signature;
-  llvm::SmallVector<char, 0> Data;
-  bool IsComplete;
+  llvm::SmallVectorWithFlags<char, 0> Data;
+  bool getIsComplete() const { return Data.getFlag(0); }
+  void setIsComplete(bool Value) { Data.setFlag(0, Value); }
 };
 
 /// This abstract interface provides operations for creating

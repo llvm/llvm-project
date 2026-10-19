@@ -2881,7 +2881,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // inlining, the context-sensitive inlinee profile doesn't need to be
     // subtracted from callee profile, and the inlined clone also doesn't need
     // to be scaled based on call site count.
-    if (IFI.UpdateProfile) {
+    if (IFI.getUpdateProfile()) {
       if (IFI.CallerBFI != nullptr && IFI.CalleeBFI != nullptr)
         // Update the BFI of blocks cloned into the caller.
         updateCallerBFI(OrigBB, VMap, IFI.CallerBFI, IFI.CalleeBFI,

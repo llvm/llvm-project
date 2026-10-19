@@ -21,6 +21,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
@@ -68,8 +69,9 @@ struct SourceLocationRef {
 struct DataAccessProfRecordRef {
   DataAccessProfRecordRef(uint64_t SymbolID, uint64_t AccessCount,
                           bool IsStringLiteral)
-      : SymbolID(SymbolID), AccessCount(AccessCount),
-        IsStringLiteral(IsStringLiteral) {}
+      : SymbolID(SymbolID), AccessCount(AccessCount) {
+    Locations.setFlag(0, IsStringLiteral);
+  }
 
   // Represents a data symbol. The semantic comes in two forms: a symbol index
   // for symbol name if `IsStringLiteral` is false, or the hash of a string
@@ -85,10 +87,10 @@ struct DataAccessProfRecordRef {
 
   // True iff this is a record for string literal (symbols with name pattern
   // `.str.*` in the symbol table). Required.
-  bool IsStringLiteral;
+  bool isStringLiteral() const { return Locations.getFlag(0); }
 
   // The locations of data in the source code. Optional.
-  llvm::SmallVector<SourceLocationRef, 0> Locations;
+  llvm::SmallVectorWithFlags<SourceLocationRef, 0> Locations;
 };
 } // namespace internal
 

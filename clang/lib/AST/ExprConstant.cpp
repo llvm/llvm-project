@@ -61,6 +61,7 @@
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/CRC.h"
@@ -512,7 +513,7 @@ namespace {
     unsigned Index;
 
     /// The stack of integers for tracking version numbers for temporaries.
-    SmallVector<unsigned, 2> TempVersionStack = {1};
+    llvm::SmallVectorWithFlags<unsigned, 2> TempVersionStack = {1};
     unsigned CurTempVersion = TempVersionStack.back();
 
     unsigned getTempVersion() const { return TempVersionStack.back(); }
@@ -596,7 +597,10 @@ namespace {
 
     /// Whether we're in a context where [[msvc::constexpr]] evaluation is
     /// permitted. See MSConstexprDocs for description of permitted contexts.
-    bool CanEvalMSConstexpr = false;
+    bool getCanEvalMSConstexpr() const { return TempVersionStack.getFlag(0); }
+    void setCanEvalMSConstexpr(bool Value) {
+      TempVersionStack.setFlag(0, Value);
+    }
 
   private:
     APValue &createLocal(APValue::LValueBase Base, const void *Key, QualType T,
@@ -638,11 +642,11 @@ namespace {
     CallStackFrame &Frame;
     bool OldValue;
     explicit MSConstexprContextRAII(CallStackFrame &Frame, bool Value)
-        : Frame(Frame), OldValue(Frame.CanEvalMSConstexpr) {
-      Frame.CanEvalMSConstexpr = Value;
+        : Frame(Frame), OldValue(Frame.getCanEvalMSConstexpr()) {
+      Frame.setCanEvalMSConstexpr(Value);
     }
 
-    ~MSConstexprContextRAII() { Frame.CanEvalMSConstexpr = OldValue; }
+    ~MSConstexprContextRAII() { Frame.setCanEvalMSConstexpr(OldValue); }
   };
 }
 
@@ -6591,8 +6595,9 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 
   // Can we evaluate this function call?
   if (Definition && Body &&
-      (Definition->isConstexpr() || (Info.CurrentCall->CanEvalMSConstexpr &&
-                                        Definition->hasAttr<MSConstexprAttr>())))
+      (Definition->isConstexpr() ||
+       (Info.CurrentCall->getCanEvalMSConstexpr() &&
+        Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
@@ -7982,17 +7987,18 @@ class BitCastBuffer {
   // FIXME: Its possible under the C++ standard for 'char' to not be 8 bits, but
   // we don't support a host or target where that is the case. Still, we should
   // use a more generic type in case we ever do.
-  SmallVector<std::optional<unsigned char>, 32> Bytes;
+  llvm::SmallVectorWithFlags<std::optional<unsigned char>, 32> Bytes;
 
   static_assert(std::numeric_limits<unsigned char>::digits >= 8,
                 "Need at least 8 bit unsigned char");
 
-  bool TargetIsLittleEndian;
+  bool getTargetIsLittleEndian() const { return Bytes.getFlag(0); }
+  void setTargetIsLittleEndian(bool Value) { Bytes.setFlag(0, Value); }
 
 public:
   BitCastBuffer(CharUnits Width, bool TargetIsLittleEndian)
-      : Bytes(Width.getQuantity()),
-        TargetIsLittleEndian(TargetIsLittleEndian) {}
+      : Bytes(decltype(this->Bytes)::withFlags(unsigned(TargetIsLittleEndian),
+                                               Width.getQuantity())) {}
 
   [[nodiscard]] bool readObject(CharUnits Offset, CharUnits Width,
                                 SmallVectorImpl<unsigned char> &Output) const {
@@ -8003,13 +8009,13 @@ public:
         return false;
       Output.push_back(*Bytes[I.getQuantity()]);
     }
-    if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
+    if (llvm::sys::IsLittleEndianHost != getTargetIsLittleEndian())
       std::reverse(Output.begin(), Output.end());
     return true;
   }
 
   void writeObject(CharUnits Offset, SmallVectorImpl<unsigned char> &Input) {
-    if (llvm::sys::IsLittleEndianHost != TargetIsLittleEndian)
+    if (llvm::sys::IsLittleEndianHost != getTargetIsLittleEndian())
       std::reverse(Input.begin(), Input.end());
 
     size_t Index = 0;
@@ -11113,7 +11119,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
   if (OperatorNew->isReservedGlobalPlacementOperator()) {
     if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26 ||
-        (Info.CurrentCall->CanEvalMSConstexpr &&
+        (Info.CurrentCall->getCanEvalMSConstexpr() &&
          OperatorNew->hasAttr<MSConstexprAttr>())) {
       if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
         return false;

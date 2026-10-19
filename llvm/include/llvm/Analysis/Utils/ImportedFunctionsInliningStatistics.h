@@ -13,6 +13,7 @@
 #define LLVM_ANALYSIS_UTILS_IMPORTEDFUNCTIONSINLININGSTATISTICS_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -51,14 +52,16 @@ private:
     InlineGraphNode(InlineGraphNode &&) = default;
     InlineGraphNode &operator=(InlineGraphNode &&) = default;
 
-    llvm::SmallVector<InlineGraphNode *, 8> InlinedCallees;
+    llvm::SmallVectorWithFlags<InlineGraphNode *, 8, 2> InlinedCallees;
     /// Incremented every direct inline.
     int32_t NumberOfInlines = 0;
     /// Number of inlines into non imported function (possibly indirect via
     /// intermediate inlines). Computed based on graph search.
     int32_t NumberOfRealInlines = 0;
-    bool Imported = false;
-    bool Visited = false;
+    bool getImported() const { return InlinedCallees.getFlag(0); }
+    void setImported(bool Value) { InlinedCallees.setFlag(0, Value); }
+    bool getVisited() const { return InlinedCallees.getFlag(1); }
+    void setVisited(bool Value) { InlinedCallees.setFlag(1, Value); }
   };
 
 public:

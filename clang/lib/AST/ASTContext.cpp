@@ -333,9 +333,9 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
     if (Loc.isInvalid() || !Loc.isFileID())
       continue;
 
-    if (ExternalSource && !CommentsLoaded) {
+    if (ExternalSource && !getCommentsLoaded()) {
       ExternalSource->ReadComments();
-      CommentsLoaded = true;
+      setCommentsLoaded(true);
     }
 
     if (Comments.empty())
@@ -1281,7 +1281,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   this->AuxTarget = AuxTarget;
 
   ABI.reset(createCXXABI(Target));
-  AddrSpaceMapMangling = isAddrSpaceMapManglingEnabled(Target, LangOpts);
+  setAddrSpaceMapMangling(isAddrSpaceMapManglingEnabled(Target, LangOpts));
 
   // C99 6.2.5p19.
   InitBuiltinType(VoidTy,              BuiltinType::Void);
@@ -5277,7 +5277,7 @@ QualType ASTContext::getFunctionTypeInternal(
   if (!Unique)
     FunctionProtoTypes.insert(FTP, Token);
   if (!EPI.FunctionEffects.empty())
-    AnyFunctionEffects = true;
+    setAnyFunctionEffects(true);
   return QualType(FTP, 0);
 }
 

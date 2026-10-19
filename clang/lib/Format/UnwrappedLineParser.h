@@ -17,6 +17,7 @@
 
 #include "Macros.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <stack>
 
 namespace clang {
@@ -299,7 +300,8 @@ private:
 
   // For recursive macro expansions, trigger reconstruction only on the
   // outermost expansion.
-  bool InExpansion = false;
+  bool getInExpansion() const { return NestedLambdas.getFlag(0); }
+  void setInExpansion(bool Value) { NestedLambdas.setFlag(0, Value); }
 
   // Set while we reconstruct a macro call.
   // For reconstruction, we feed the expanded lines into the reconstructor
@@ -333,7 +335,8 @@ private:
   llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
-  bool IsCpp;
+  bool getIsCpp() const { return NestedLambdas.getFlag(1); }
+  void setIsCpp(bool Value) { NestedLambdas.setFlag(1, Value); }
   LangOptions LangOpts;
   const AdditionalKeywords &Keywords;
 
@@ -350,11 +353,14 @@ private:
 
   // Keeps a stack of the states of nested lambdas (true if the return type of
   // the lambda is `decltype(auto)`).
-  SmallVector<bool, 4> NestedLambdas;
+  llvm::SmallVectorWithFlags<bool, 4, 3> NestedLambdas;
 
   // Whether the parser is parsing the body of a function whose return type is
   // `decltype(auto)`.
-  bool IsDecltypeAutoFunction = false;
+  bool getIsDecltypeAutoFunction() const { return NestedLambdas.getFlag(2); }
+  void setIsDecltypeAutoFunction(bool Value) {
+    NestedLambdas.setFlag(2, Value);
+  }
 
   // Represents preprocessor branch type, so we can find matching
   // #if/#else/#endif directives.
@@ -409,7 +415,7 @@ private:
     SmallVector<int, 8> LevelBranchIndex;
 
     // Contains the maximum number of branches at each nesting level.
-    SmallVector<int, 8> LevelBranchCount;
+    llvm::SmallVectorWithFlags<int, 8> LevelBranchCount;
 
     // Contains the number of branches per nesting level we are currently
     // in while parsing a preprocessor branch sequence.
@@ -425,7 +431,11 @@ private:
     FormatToken *IncludeGuardToken = nullptr;
 
     // Has just finished parsing a preprocessor line.
-    bool AtEndOfPPLine = false;
+    bool getAtEndOfPPLine() const { return LevelBranchCount.getFlag(0); }
+    bool setAtEndOfPPLine(bool Value) {
+      LevelBranchCount.setFlag(0, Value);
+      return Value;
+    }
   } PP;
 
   // The hash tokens of the parsed preprocessor directives. The lines of a

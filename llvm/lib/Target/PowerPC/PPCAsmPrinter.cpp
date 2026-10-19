@@ -2462,7 +2462,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   if (FrameReg == (Subtarget->isPPC64() ? PPC::X31 : PPC::R31))
     FirstHalfOfMandatoryField |= TracebackTable::IsAllocaUsedMask;
 
-  const SmallVectorImpl<Register> &MustSaveCRs = FI->getMustSaveCRs();
+  ArrayRef<Register> MustSaveCRs = FI->getMustSaveCRs();
   if (!MustSaveCRs.empty())
     FirstHalfOfMandatoryField |= TracebackTable::IsCRSavedMask;
 

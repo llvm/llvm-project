@@ -236,17 +236,11 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    loadJobs.push_back({mbref,
-                        path,
-                        LoadJob::Binary,
+    loadJobs.push_back({mbref, path, LoadJob::Binary,
                         /*inWholeArchive=*/false,
                         /*lazy=*/false,
                         /*asNeeded=*/false,
-                        /*withLOption=*/false,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
+                        /*withLOption=*/false, nextGroupId});
   } else {
     auto magic = identify_magic(mbref.getBuffer());
     if (magic == file_magic::unknown) {
@@ -275,17 +269,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       Err(ctx) << path << ": unknown file type";
       return;
     }
-    loadJobs.push_back({mbref,
-                        path,
-                        kind,
-                        inWholeArchive,
-                        inLib,
-                        ctx.arg.asNeeded,
-                        withLOption,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
+    loadJobs.push_back({mbref, path, kind, inWholeArchive, inLib,
+                        ctx.arg.asNeeded, withLOption, nextGroupId});
   }
   if (!isInGroup)
     ++nextGroupId;
@@ -334,7 +319,7 @@ static void checkOptions(Ctx &ctx) {
       if (!ctx.arg.cmseOutputLib.empty())
         ErrAlways(ctx) << "--out-implib may not be used without --cmse-implib";
     }
-    if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
+    if (ctx.arg.fixCortexA8 && !ctx.arg.getIsLE())
       ErrAlways(ctx)
           << "--fix-cortex-a8 is not supported on big endian targets";
   } else {
@@ -346,7 +331,7 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "--out-implib is only supported on ARM targets";
     if (ctx.arg.fixCortexA8)
       ErrAlways(ctx) << "--fix-cortex-a8 is only supported on ARM targets";
-    if (ctx.arg.armBe8)
+    if (ctx.arg.getArmBe8())
       ErrAlways(ctx) << "--be8 is only supported on ARM targets";
   }
 
@@ -355,9 +340,9 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "--execute-only is only supported on AArch64 targets";
     if (ctx.arg.fixCortexA53Errata843419)
       ErrAlways(ctx) << "--fix-cortex-a53-843419 is only supported on AArch64";
-    if (ctx.arg.zPacPlt)
+    if (ctx.arg.getZPacPlt())
       ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
-    if (ctx.arg.zForceBti)
+    if (ctx.arg.getZForceBti())
       ErrAlways(ctx) << "-z force-bti only supported on AArch64";
     if (ctx.arg.zBtiReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z bti-report only supported on AArch64";
@@ -377,15 +362,15 @@ static void checkOptions(Ctx &ctx) {
         << "-z execute-only-report only supported on AArch64 and ARM";
 
   if (ctx.arg.emachine != EM_PPC64) {
-    if (ctx.arg.tocOptimize)
+    if (ctx.arg.getTocOptimize())
       ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
-    if (ctx.arg.pcRelOptimize)
+    if (ctx.arg.getPcRelOptimize())
       ErrAlways(ctx)
           << "--pcrel-optimize is only supported on PowerPC64 targets";
   }
 
   if (ctx.arg.emachine != EM_RISCV) {
-    if (ctx.arg.relaxGP)
+    if (ctx.arg.getRelaxGP())
       ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
     if (ctx.arg.zZicfilpUnlabeledReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z zicfilip-unlabeled-report is only supported on "
@@ -405,56 +390,56 @@ static void checkOptions(Ctx &ctx) {
       ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
-  if (ctx.arg.zMarkPlt) {
+  if (ctx.arg.getZMarkPlt()) {
     if (ctx.arg.emachine != EM_X86_64)
       ErrAlways(ctx) << "-z mark-plt only supported on X86_64";
     // The PLT entry address is stored in the JUMP_SLOT relocation's addend, so
     // -z mark-plt requires RELA relocations. REL relocations have no addend
     // field and the .got.plt entry is already occupied by the lazy-binding
     // address, so the information would be silently lost.
-    else if (!ctx.arg.isRela)
+    else if (!ctx.arg.getIsRela())
       ErrAlways(ctx) << "-z mark-plt requires -z rela";
   }
 
-  if (ctx.arg.pie && ctx.arg.shared)
+  if (ctx.arg.getPie() && ctx.arg.getShared())
     ErrAlways(ctx) << "-shared and -pie may not be used together";
 
-  if (!ctx.arg.shared && !ctx.arg.filterList.empty())
+  if (!ctx.arg.getShared() && !ctx.arg.filterList.empty())
     ErrAlways(ctx) << "-F may not be used without -shared";
 
-  if (!ctx.arg.shared && !ctx.arg.auxiliaryList.empty())
+  if (!ctx.arg.getShared() && !ctx.arg.auxiliaryList.empty())
     ErrAlways(ctx) << "-f may not be used without -shared";
 
   if (ctx.arg.strip == StripPolicy::All && ctx.arg.emitRelocs)
     ErrAlways(ctx) << "--strip-all and --emit-relocs may not be used together";
 
-  if (ctx.arg.zText && ctx.arg.zIfuncNoplt)
+  if (ctx.arg.getZText() && ctx.arg.getZIfuncNoplt())
     ErrAlways(ctx) << "-z text and -z ifunc-noplt may not be used together";
 
-  if (ctx.arg.relocatable) {
-    if (ctx.arg.shared)
+  if (ctx.arg.getRelocatable()) {
+    if (ctx.arg.getShared())
       ErrAlways(ctx) << "-r and -shared may not be used together";
     if (ctx.arg.gdbIndex)
       ErrAlways(ctx) << "-r and --gdb-index may not be used together";
     if (ctx.arg.icf != ICFLevel::None)
       ErrAlways(ctx) << "-r and --icf may not be used together";
-    if (ctx.arg.pie)
+    if (ctx.arg.getPie())
       ErrAlways(ctx) << "-r and -pie may not be used together";
     if (ctx.arg.exportDynamic)
       ErrAlways(ctx) << "-r and --export-dynamic may not be used together";
     if (ctx.arg.debugNames)
       ErrAlways(ctx) << "-r and --debug-names may not be used together";
-    if (!ctx.arg.zSectionHeader)
+    if (!ctx.arg.getZSectionHeader())
       ErrAlways(ctx) << "-r and -z nosectionheader may not be used together";
   }
 
   if (ctx.arg.executeOnly) {
-    if (ctx.arg.singleRoRx && !ctx.script->hasSectionsCommand)
+    if (ctx.arg.getSingleRoRx() && !ctx.script->getHasSectionsCommand())
       ErrAlways(ctx)
           << "--execute-only and --no-rosegment cannot be used together";
   }
 
-  if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
+  if (ctx.arg.getZRetpolineplt() && ctx.arg.getZForceIbt())
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
 }
 
@@ -640,6 +625,14 @@ constexpr const char *saveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
     "opt",        "precodegen", "prelink", "combinedindex"};
 
+LoadJob::LoadJob(MemoryBufferRef mbref, StringRef path, Kind kind,
+                 bool inWholeArchive, bool lazy, bool asNeeded,
+                 bool withLOption, uint32_t groupId)
+    : mbref(mbref), path(path), kind(kind), groupId(groupId),
+      tarEntries(decltype(this->tarEntries)::withFlags(
+          unsigned(inWholeArchive) | (unsigned(lazy) << 1) |
+          (unsigned(asNeeded) << 2) | (unsigned(withLOption) << 3))) {}
+
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
 void LinkerDriver::waitForLTOCleanup() {
@@ -682,7 +675,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     Msg(ctx) << getLLDVersion() << " (compatible with GNU linkers)";
 
-  if (const char *path = getReproduceOption(args); !ctx.inDynDbgLink && path) {
+  if (const char *path = getReproduceOption(args);
+      !ctx.getInDynDbgLink() && path) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
@@ -711,7 +705,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return;
 
   // Initialize time trace profiler.
-  if (ctx.arg.timeTraceEnabled)
+  if (ctx.arg.getTimeTraceEnabled())
     timeTraceProfilerInitialize(ctx.arg.timeTraceGranularity, ctx.arg.progName);
 
   {
@@ -734,7 +728,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // writing the time trace data.
   waitForLTOCleanup();
 
-  if (ctx.arg.timeTraceEnabled) {
+  if (ctx.arg.getTimeTraceEnabled()) {
     checkError(ctx.e, timeTraceProfilerWrite(
                           args.getLastArgValue(OPT_time_trace_eq).str(),
                           ctx.arg.outputFile));
@@ -756,7 +750,7 @@ static void setUnresolvedSymbolPolicy(Ctx &ctx, opt::InputArgList &args) {
                                      : UnresolvedPolicy::Warn;
   // -shared implies --unresolved-symbols=ignore-all because missing
   // symbols are likely to be resolved at runtime.
-  bool diagRegular = !ctx.arg.shared, diagShlib = !ctx.arg.shared;
+  bool diagRegular = !ctx.arg.getShared(), diagShlib = !ctx.arg.getShared();
 
   for (const opt::Arg *arg : args) {
     switch (arg->getOption().getID()) {
@@ -890,13 +884,13 @@ static void parsePackageMetadata(Ctx &ctx, const opt::Arg &arg) {
       return;
     }
   }
-  ctx.arg.packageMetadata = std::move(decoded);
+  ctx.arg.packageMetadata.assign(std::move(decoded));
 }
 
 static StripPolicy getStrip(Ctx &ctx, opt::InputArgList &args) {
   if (args.hasArg(OPT_relocatable))
     return StripPolicy::None;
-  if (!ctx.arg.zSectionHeader)
+  if (!ctx.arg.getZSectionHeader())
     return StripPolicy::All;
 
   auto *arg = args.getLastArg(OPT_strip_all, OPT_strip_debug);
@@ -1071,14 +1065,14 @@ processCallGraphRelocations(Ctx &ctx, SmallVector<uint32_t, 32> &symbolIndices,
         ArrayRef<typename ELFT::Rela> relas =
             CHECK(obj.relas(sec), "could not retrieve cg profile rela section");
         for (const typename ELFT::Rela &rel : relas)
-          symbolIndices.push_back(rel.getSymbol(ctx.arg.isMips64EL));
+          symbolIndices.push_back(rel.getSymbol(ctx.arg.getIsMips64EL()));
         break;
       }
       if (sec.sh_type == SHT_REL) {
         ArrayRef<typename ELFT::Rel> rels =
             CHECK(obj.rels(sec), "could not retrieve cg profile rel section");
         for (const typename ELFT::Rel &rel : rels)
-          symbolIndices.push_back(rel.getSymbol(ctx.arg.isMips64EL));
+          symbolIndices.push_back(rel.getSymbol(ctx.arg.getIsMips64EL()));
         break;
       }
     }
@@ -1170,7 +1164,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
         [&](StringRef s) { return pat->match(s); });
   }
 
-  ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
+  ctx.setLtoAllVtablesHaveTypeInfos(vtableSymbolsWithNoRTTI.empty());
   // Check for unmatched RTTI symbols
   for (StringRef s : vtableSymbolsWithNoRTTI) {
     Msg(ctx) << "--lto-validate-all-vtables-have-type-infos: RTTI missing for "
@@ -1244,12 +1238,12 @@ static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef s = arg->getValue();
     if (s == "function") {
-      ctx.arg.bpFunctionOrderForCompression = true;
+      ctx.arg.setBpFunctionOrderForCompression(true);
     } else if (s == "data") {
-      ctx.arg.bpDataOrderForCompression = true;
+      ctx.arg.setBpDataOrderForCompression(true);
     } else if (s == "both") {
-      ctx.arg.bpFunctionOrderForCompression = true;
-      ctx.arg.bpDataOrderForCompression = true;
+      ctx.arg.setBpFunctionOrderForCompression(true);
+      ctx.arg.setBpDataOrderForCompression(true);
     } else if (s != "none") {
       ErrAlways(ctx) << arg->getSpelling()
                      << ": expected [none|function|data|both]";
@@ -1261,7 +1255,7 @@ static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_bp_startup_sort)) {
     StringRef s = arg->getValue();
     if (s == "function") {
-      ctx.arg.bpStartupFunctionSort = true;
+      ctx.arg.setBpStartupFunctionSort(true);
     } else if (s != "none") {
       ErrAlways(ctx) << arg->getSpelling() << ": expected [none|function]";
     }
@@ -1270,17 +1264,18 @@ static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
                         "--call-graph-ordering-file";
   }
 
-  ctx.arg.bpCompressionSortStartupFunctions =
+  ctx.arg.setBpCompressionSortStartupFunctions(
       args.hasFlag(OPT_bp_compression_sort_startup_functions,
-                   OPT_no_bp_compression_sort_startup_functions, false);
-  ctx.arg.bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+                   OPT_no_bp_compression_sort_startup_functions, false));
+  ctx.arg.setBpVerboseSectionOrderer(
+      args.hasArg(OPT_verbose_bp_section_orderer));
 
   ctx.arg.irpgoProfilePath = args.getLastArgValue(OPT_irpgo_profile);
   if (ctx.arg.irpgoProfilePath.empty()) {
-    if (ctx.arg.bpStartupFunctionSort)
+    if (ctx.arg.getBpStartupFunctionSort())
       ErrAlways(ctx) << "--bp-startup-sort=function must be used with "
                         "--irpgo-profile";
-    if (ctx.arg.bpCompressionSortStartupFunctions)
+    if (ctx.arg.getBpCompressionSortStartupFunctions())
       ErrAlways(ctx)
           << "--bp-compression-sort-startup-functions must be used with "
              "--irpgo-profile";
@@ -1410,8 +1405,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.fatLTOObjects =
       args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
   ctx.arg.memtagMode = getMemtagMode(ctx, args);
-  ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
-  ctx.arg.armBe8 = args.hasArg(OPT_be8);
+  ctx.arg.auxiliaryList.assign(args::getStrings(args, OPT_auxiliary));
+  ctx.arg.setArmBe8(args.hasArg(OPT_be8));
   if (opt::Arg *arg = args.getLastArg(
           OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
           OPT_Bsymbolic_functions, OPT_Bsymbolic_non_weak, OPT_Bsymbolic)) {
@@ -1426,16 +1421,16 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.callGraphProfileSort = getCGProfileSortKind(ctx, args);
   parseBPOrdererOptions(ctx, args);
-  ctx.arg.checkSections =
-      args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
+  ctx.arg.setCheckSections(
+      args.hasFlag(OPT_check_sections, OPT_no_check_sections, true));
   ctx.arg.chroot = args.getLastArgValue(OPT_chroot);
   if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
     ctx.arg.compressDebugSections =
         getCompressionType(ctx, arg->getValue(), "--compress-debug-sections");
   }
-  ctx.arg.cref = args.hasArg(OPT_cref);
-  ctx.arg.optimizeBBJumps =
-      args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
+  ctx.arg.setCref(args.hasArg(OPT_cref));
+  ctx.arg.setOptimizeBBJumps(
+      args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false));
   ctx.arg.debugNames = args.hasFlag(OPT_debug_names, OPT_no_debug_names, false);
   ctx.arg.demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   ctx.arg.dependencyFile = args.getLastArgValue(OPT_dependency_file);
@@ -1444,13 +1439,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.discard = getDiscard(args);
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
-  ctx.arg.dtltoDistributorArgs =
-      args::getStrings(args, OPT_thinlto_distributor_arg);
+  ctx.arg.dtltoDistributorArgs.assign(
+      args::getStrings(args, OPT_thinlto_distributor_arg));
   ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
-  ctx.arg.dtltoCompilerPrependArgs =
-      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
-  ctx.arg.dtltoCompilerArgs =
-      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
+  ctx.arg.dtltoCompilerPrependArgs.assign(
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg));
+  ctx.arg.dtltoCompilerArgs.assign(
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg));
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =
@@ -1470,7 +1465,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false) ||
       args.hasArg(OPT_shared);
-  ctx.arg.filterList = args::getStrings(args, OPT_filter);
+  ctx.arg.filterList.assign(args::getStrings(args, OPT_filter));
   ctx.arg.fini = args.getLastArgValue(OPT_fini, "_fini");
   ctx.arg.fixCortexA53Errata843419 =
       args.hasArg(OPT_fix_cortex_a53_843419) && !args.hasArg(OPT_relocatable);
@@ -1529,9 +1524,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mmapOutputFile =
       args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
-  ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
-  ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
-  ctx.arg.omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
+  ctx.arg.setNostdlib(args.hasArg(OPT_nostdlib));
+  ctx.arg.setOFormatBinary(isOutputFormatBinary(ctx, args));
+  ctx.arg.setOmagic(args.hasFlag(OPT_omagic, OPT_no_omagic, false));
   ctx.arg.optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
   ctx.arg.optStatsFilename = args.getLastArgValue(OPT_plugin_opt_stats_file);
 
@@ -1547,16 +1542,16 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   ctx.arg.optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
-  ctx.arg.optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  ctx.arg.setOptRemarksWithHotness(args.hasArg(OPT_opt_remarks_with_hotness));
   ctx.arg.optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
   ctx.arg.orphanHandling = getOrphanHandling(ctx, args);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
   if (auto *arg = args.getLastArg(OPT_package_metadata))
     parsePackageMetadata(ctx, *arg);
-  ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
-  ctx.arg.printIcfSections =
-      args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
+  ctx.arg.setPie(args.hasFlag(OPT_pie, OPT_no_pie, false));
+  ctx.arg.setPrintIcfSections(
+      args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false));
   if (auto *arg =
           args.getLastArg(OPT_print_gc_sections, OPT_no_print_gc_sections,
                           OPT_print_gc_sections_eq)) {
@@ -1565,16 +1560,16 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (arg->getOption().matches(OPT_print_gc_sections_eq))
       ctx.arg.printGcSections = arg->getValue();
   }
-  ctx.arg.printMemoryUsage = args.hasArg(OPT_print_memory_usage);
+  ctx.arg.setPrintMemoryUsage(args.hasArg(OPT_print_memory_usage));
   ctx.arg.printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   ctx.arg.printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
-  ctx.arg.rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
-  ctx.arg.relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
-  ctx.arg.relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
+  ctx.arg.setRejectMismatch(!args.hasArg(OPT_no_warn_mismatch));
+  ctx.arg.setRelax(args.hasFlag(OPT_relax, OPT_no_relax, true));
+  ctx.arg.setRelaxGP(args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false));
   ctx.arg.rpath = getRpath(args);
-  ctx.arg.relocatable = args.hasArg(OPT_relocatable);
-  ctx.arg.resolveGroups =
-      !args.hasArg(OPT_relocatable) || args.hasArg(OPT_force_group_allocation);
+  ctx.arg.setRelocatable(args.hasArg(OPT_relocatable));
+  ctx.arg.setResolveGroups(!args.hasArg(OPT_relocatable) ||
+                           args.hasArg(OPT_force_group_allocation));
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
@@ -1589,23 +1584,23 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     }
   }
 
-  ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
+  ctx.arg.searchPaths.assign(args::getStrings(args, OPT_library_path));
   ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
-  ctx.arg.shared = args.hasArg(OPT_shared);
+  ctx.arg.setShared(args.hasArg(OPT_shared));
   if (args.hasArg(OPT_randomize_section_padding))
     ctx.arg.randomizeSectionPadding =
         args::getInteger(args, OPT_randomize_section_padding, 0);
-  ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
-  ctx.arg.singleXoRx = !args.hasFlag(OPT_xosegment, OPT_no_xosegment, false);
+  ctx.arg.setSingleRoRx(!args.hasFlag(OPT_rosegment, OPT_no_rosegment, true));
+  ctx.arg.setSingleXoRx(!args.hasFlag(OPT_xosegment, OPT_no_xosegment, false));
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
   ctx.arg.splitStackAdjustSize =
       args::getInteger(args, OPT_split_stack_adjust_size, 16384);
-  ctx.arg.zSectionHeader =
-      getZFlag(args, "sectionheader", "nosectionheader", true);
+  ctx.arg.setZSectionHeader(
+      getZFlag(args, "sectionheader", "nosectionheader", true));
   ctx.arg.strip = getStrip(ctx, args); // needs zSectionHeader
   ctx.arg.sysroot = args.getLastArgValue(OPT_sysroot);
-  ctx.arg.target1Rel = args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
+  ctx.arg.setTarget1Rel(args.hasFlag(OPT_target1_rel, OPT_target1_abs, false));
   ctx.arg.target2 = getTarget2(ctx, args);
   ctx.arg.thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
   ctx.arg.thinLTOCachePolicy = CHECK(
@@ -1615,15 +1610,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.thinLTOEmitIndexFiles = args.hasArg(OPT_thinlto_emit_index_files) ||
                                   args.hasArg(OPT_thinlto_index_only) ||
                                   args.hasArg(OPT_thinlto_index_only_eq);
-  ctx.arg.thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
-                             args.hasArg(OPT_thinlto_index_only_eq);
+  ctx.arg.setThinLTOIndexOnly(args.hasArg(OPT_thinlto_index_only) ||
+                              args.hasArg(OPT_thinlto_index_only_eq));
   ctx.arg.thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   ctx.arg.thinLTOObjectSuffixReplace =
       getOldNewOptions(ctx, args, OPT_thinlto_object_suffix_replace_eq);
   std::tie(ctx.arg.thinLTOPrefixReplaceOld, ctx.arg.thinLTOPrefixReplaceNew,
            ctx.arg.thinLTOPrefixReplaceNativeObject) =
       getOldNewOptionsExtra(ctx, args, OPT_thinlto_prefix_replace_eq);
-  if (ctx.arg.thinLTOEmitIndexFiles && !ctx.arg.thinLTOIndexOnly) {
+  if (ctx.arg.thinLTOEmitIndexFiles && !ctx.arg.getThinLTOIndexOnly()) {
     if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
       ErrAlways(ctx) << "--thinlto-object-suffix-replace is not supported with "
                         "--thinlto-emit-index-files";
@@ -1637,21 +1632,21 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         << "--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
            "--thinlto-index-only=";
   }
-  ctx.arg.thinLTOModulesToCompile =
-      args::getStrings(args, OPT_thinlto_single_module_eq);
-  ctx.arg.timeTraceEnabled =
-      args.hasArg(OPT_time_trace_eq) && !ctx.e.disableOutput;
+  ctx.arg.thinLTOModulesToCompile.assign(
+      args::getStrings(args, OPT_thinlto_single_module_eq));
+  ctx.arg.setTimeTraceEnabled(args.hasArg(OPT_time_trace_eq) &&
+                              !ctx.e.disableOutput);
   ctx.arg.timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity, 500);
-  ctx.arg.trace = args.hasArg(OPT_trace);
-  ctx.arg.undefined = args::getStrings(args, OPT_undefined);
-  ctx.arg.undefinedVersion =
-      args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, false);
-  ctx.arg.unique = args.hasArg(OPT_unique);
-  ctx.arg.useAndroidRelrTags = args.hasFlag(
-      OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
-  ctx.arg.warnBackrefs =
-      args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
+  ctx.arg.setTrace(args.hasArg(OPT_trace));
+  ctx.arg.undefined.assign(args::getStrings(args, OPT_undefined));
+  ctx.arg.setUndefinedVersion(
+      args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, false));
+  ctx.arg.setUnique(args.hasArg(OPT_unique));
+  ctx.arg.setUseAndroidRelrTags(args.hasFlag(
+      OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false));
+  ctx.arg.setWarnBackrefs(
+      args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false));
   ctx.arg.warnCommon = args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   ctx.arg.warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
@@ -1667,52 +1662,52 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
-  ctx.arg.zForceBti = hasZOption(args, "force-bti");
-  ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
+  ctx.arg.setZForceBti(hasZOption(args, "force-bti"));
+  ctx.arg.setZForceIbt(hasZOption(args, "force-ibt"));
   ctx.arg.zZicfilp = getZZicfilp(ctx, args);
   ctx.arg.zZicfiss = getZZicfiss(ctx, args);
   ctx.arg.zGcs = getZGcs(ctx, args);
-  ctx.arg.zGlobal = hasZOption(args, "global");
+  ctx.arg.setZGlobal(hasZOption(args, "global"));
   ctx.arg.zGnustack = getZGnuStack(args);
-  ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
-  ctx.arg.zIfuncNoplt = hasZOption(args, "ifunc-noplt");
-  ctx.arg.zInitfirst = hasZOption(args, "initfirst");
-  ctx.arg.zInterpose = hasZOption(args, "interpose");
-  ctx.arg.zKeepDataSectionPrefix = getZFlag(
-      args, "keep-data-section-prefix", "nokeep-data-section-prefix", false);
-  ctx.arg.zKeepTextSectionPrefix = getZFlag(
-      args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
-  ctx.arg.zLrodataAfterBss =
-      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
-  ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
-  ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
-  ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
-  ctx.arg.zNodelete = hasZOption(args, "nodelete");
-  ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
-  ctx.arg.zNow = getZFlag(args, "now", "lazy", false);
-  ctx.arg.zOrigin = hasZOption(args, "origin");
-  ctx.arg.zPacPlt = getZFlag(args, "pac-plt", "nopac-plt", false);
-  ctx.arg.zRelro = getZFlag(args, "relro", "norelro", true);
-  ctx.arg.zRetpolineplt = hasZOption(args, "retpolineplt");
-  ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
+  ctx.arg.setZHazardplt(hasZOption(args, "hazardplt"));
+  ctx.arg.setZIfuncNoplt(hasZOption(args, "ifunc-noplt"));
+  ctx.arg.setZInitfirst(hasZOption(args, "initfirst"));
+  ctx.arg.setZInterpose(hasZOption(args, "interpose"));
+  ctx.arg.setZKeepDataSectionPrefix(getZFlag(
+      args, "keep-data-section-prefix", "nokeep-data-section-prefix", false));
+  ctx.arg.setZKeepTextSectionPrefix(getZFlag(
+      args, "keep-text-section-prefix", "nokeep-text-section-prefix", false));
+  ctx.arg.setZLrodataAfterBss(
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false));
+  ctx.arg.setZMarkPlt(getZFlag(args, "mark-plt", "nomark-plt", false));
+  ctx.arg.setZNoBtCfi(hasZOption(args, "nobtcfi"));
+  ctx.arg.setZNodefaultlib(hasZOption(args, "nodefaultlib"));
+  ctx.arg.setZNodelete(hasZOption(args, "nodelete"));
+  ctx.arg.setZNodlopen(hasZOption(args, "nodlopen"));
+  ctx.arg.setZNow(getZFlag(args, "now", "lazy", false));
+  ctx.arg.setZOrigin(hasZOption(args, "origin"));
+  ctx.arg.setZPacPlt(getZFlag(args, "pac-plt", "nopac-plt", false));
+  ctx.arg.setZRelro(getZFlag(args, "relro", "norelro", true));
+  ctx.arg.setZRetpolineplt(hasZOption(args, "retpolineplt"));
+  ctx.arg.setZRodynamic(hasZOption(args, "rodynamic"));
   ctx.arg.zSeparate = getZSeparate(args);
-  ctx.arg.zShstk = hasZOption(args, "shstk");
+  ctx.arg.setZShstk(hasZOption(args, "shstk"));
   ctx.arg.zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
-  ctx.arg.zStartStopGC =
-      getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
+  ctx.arg.setZStartStopGC(
+      getZFlag(args, "start-stop-gc", "nostart-stop-gc", true));
   ctx.arg.zStartStopVisibility = getZStartStopVisibility(ctx, args);
-  ctx.arg.zText = getZFlag(args, "text", "notext", true);
-  ctx.arg.zWxneeded = hasZOption(args, "wxneeded");
+  ctx.arg.setZText(getZFlag(args, "text", "notext", true));
+  ctx.arg.setZWxneeded(hasZOption(args, "wxneeded"));
   setUnresolvedSymbolPolicy(ctx, args);
-  ctx.arg.power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
-  ctx.arg.branchToBranch = args.hasFlag(
-      OPT_branch_to_branch, OPT_no_branch_to_branch, ctx.arg.optimize >= 2);
+  ctx.arg.setPower10Stubs(args.getLastArgValue(OPT_power10_stubs_eq) != "no");
+  ctx.arg.setBranchToBranch(args.hasFlag(
+      OPT_branch_to_branch, OPT_no_branch_to_branch, ctx.arg.optimize >= 2));
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
-      ctx.arg.optEB = true;
+      ctx.arg.setOptEB(true);
     else
-      ctx.arg.optEL = true;
+      ctx.arg.setOptEL(true);
   }
 
   for (opt::Arg *arg : args.filtered(OPT_remap_inputs)) {
@@ -1749,7 +1744,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  if (ctx.arg.zForceBti) {
+  if (ctx.arg.getZForceBti()) {
     ctx.arg.zBtiReport = ReportPolicy::Warning;
     ctx.arg.zBtiReportSource = "-z force-bti";
   }
@@ -1873,7 +1868,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                      << arg->getValue() << "'";
   }
 
-  ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+  ctx.arg.passPlugins.assign(args::getStrings(args, OPT_load_pass_plugins));
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {
@@ -1947,11 +1942,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_hash_style)) {
     StringRef s = arg->getValue();
     if (s == "sysv")
-      ctx.arg.sysvHash = true;
+      ctx.arg.setSysvHash(true);
     else if (s == "gnu")
       ctx.arg.gnuHash = true;
     else if (s == "both")
-      ctx.arg.sysvHash = ctx.arg.gnuHash = true;
+      ctx.arg.setSysvHash(ctx.arg.gnuHash = true);
     else
       ErrAlways(ctx) << "unknown --hash-style: " << s;
   }
@@ -1962,13 +1957,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   // Page alignment can be disabled by the -n (--nmagic) and -N (--omagic).
   // As PT_GNU_RELRO relies on Paging, do not create it when we have disabled
   // it. Also disable RELRO for -r.
-  if (ctx.arg.nmagic || ctx.arg.omagic || ctx.arg.relocatable)
-    ctx.arg.zRelro = false;
+  if (ctx.arg.nmagic || ctx.arg.getOmagic() || ctx.arg.getRelocatable())
+    ctx.arg.setZRelro(false);
 
   std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(ctx, args);
 
   if (getZFlag(args, "pack-relative-relocs", "nopack-relative-relocs", false)) {
-    ctx.arg.relrGlibc = true;
+    ctx.arg.setRelrGlibc(true);
     ctx.arg.relrPackDynRelocs = true;
   } else {
     std::tie(ctx.arg.androidPackDynRelocs, ctx.arg.relrPackDynRelocs) =
@@ -2019,8 +2014,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   // --export-dynamic-symbol-list specifies a list of --export-dynamic-symbol
   // patterns. --dynamic-list is --export-dynamic-symbol-list plus -Bsymbolic
   // like semantics.
-  ctx.arg.symbolic =
-      ctx.arg.bsymbolic == BsymbolicKind::All || args.hasArg(OPT_dynamic_list);
+  ctx.arg.setSymbolic(ctx.arg.bsymbolic == BsymbolicKind::All ||
+                      args.hasArg(OPT_dynamic_list));
   for (auto *arg :
        args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (std::optional<MemoryBufferRef> buffer = readFile(ctx, arg->getValue()))
@@ -2043,14 +2038,14 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   ELFKind k = ctx.arg.ekind;
   uint16_t m = ctx.arg.emachine;
 
-  ctx.arg.copyRelocs = (ctx.arg.relocatable || ctx.arg.emitRelocs);
-  ctx.arg.is64 = (k == ELF64LEKind || k == ELF64BEKind);
-  ctx.arg.isLE = (k == ELF32LEKind || k == ELF64LEKind);
-  ctx.arg.endianness = ctx.arg.isLE ? endianness::little : endianness::big;
-  ctx.arg.isMips64EL = (k == ELF64LEKind && m == EM_MIPS);
-  ctx.arg.isPic = ctx.arg.pie || ctx.arg.shared;
-  ctx.arg.picThunk = args.hasArg(OPT_pic_veneer, ctx.arg.isPic);
-  ctx.arg.wordsize = ctx.arg.is64 ? 8 : 4;
+  ctx.arg.setCopyRelocs((ctx.arg.getRelocatable() || ctx.arg.emitRelocs));
+  ctx.arg.setIs64((k == ELF64LEKind || k == ELF64BEKind));
+  ctx.arg.setIsLE((k == ELF32LEKind || k == ELF64LEKind));
+  ctx.arg.endianness = ctx.arg.getIsLE() ? endianness::little : endianness::big;
+  ctx.arg.setIsMips64EL((k == ELF64LEKind && m == EM_MIPS));
+  ctx.arg.setIsPic(ctx.arg.getPie() || ctx.arg.getShared());
+  ctx.arg.setPicThunk(args.hasArg(OPT_pic_veneer, ctx.arg.getIsPic()));
+  ctx.arg.wordsize = ctx.arg.getIs64() ? 8 : 4;
 
   // ELF defines two different ways to store relocation addends as shown below:
   //
@@ -2066,7 +2061,7 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   // We pick the format for dynamic relocations according to the psABI for each
   // processor, but a contrary choice can be made if the dynamic loader
   // supports.
-  ctx.arg.isRela = getIsRela(ctx, args);
+  ctx.arg.setIsRela(getIsRela(ctx, args));
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
@@ -2075,7 +2070,7 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   // any standard conforming tool can find it in r_addend.
   ctx.arg.writeAddends = args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
-                         !ctx.arg.isRela;
+                         !ctx.arg.getIsRela();
   // Validation of dynamic relocation addends is on by default for assertions
   // builds and disabled otherwise. This check is enabled when writeAddends is
   // true.
@@ -2084,26 +2079,27 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
 #else
   bool checkDynamicRelocsDefault = false;
 #endif
-  ctx.arg.checkDynamicRelocs =
-      args.hasFlag(OPT_check_dynamic_relocations,
-                   OPT_no_check_dynamic_relocations, checkDynamicRelocsDefault);
-  ctx.arg.tocOptimize =
-      args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
-  ctx.arg.pcRelOptimize =
-      args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
+  ctx.arg.setCheckDynamicRelocs(args.hasFlag(OPT_check_dynamic_relocations,
+                                             OPT_no_check_dynamic_relocations,
+                                             checkDynamicRelocsDefault));
+  ctx.arg.setTocOptimize(
+      args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64));
+  ctx.arg.setPcRelOptimize(
+      args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64));
 
   if (!args.hasArg(OPT_hash_style)) {
     if (ctx.arg.emachine == EM_MIPS)
-      ctx.arg.sysvHash = true;
+      ctx.arg.setSysvHash(true);
     else
-      ctx.arg.sysvHash = ctx.arg.gnuHash = true;
+      ctx.arg.setSysvHash(ctx.arg.gnuHash = true);
   }
 
   // Set default entry point and output file if not specified by command line or
   // linker scripts.
   ctx.arg.warnMissingEntry =
-      (!ctx.arg.entry.empty() || (!ctx.arg.shared && !ctx.arg.relocatable));
-  if (ctx.arg.entry.empty() && !ctx.arg.relocatable)
+      (!ctx.arg.entry.empty() ||
+       (!ctx.arg.getShared() && !ctx.arg.getRelocatable()));
+  if (ctx.arg.entry.empty() && !ctx.arg.getRelocatable())
     ctx.arg.entry = ctx.arg.emachine == EM_MIPS ? "__start" : "_start";
   if (ctx.arg.outputFile.empty())
     ctx.arg.outputFile = "a.out";
@@ -2159,7 +2155,7 @@ void LinkerDriver::loadFiles() {
                                    job.kind == LoadJob::Bitcode
                                        ? file_magic::bitcode
                                        : file_magic::elf_relocatable,
-                                   "", 0, job.lazy));
+                                   "", 0, job.getLazy()));
         break;
       case LoadJob::Archive: {
         // Scan all archive members rather than using the archive symbol
@@ -2169,11 +2165,11 @@ void LinkerDriver::loadFiles() {
         // --warn-backrefs.
         auto members = getArchiveMembers(ctx, job);
         job.out.reserve(members.size());
-        bool lazy = !job.inWholeArchive;
+        bool lazy = !job.getInWholeArchive();
         for (const auto &[mb, offset] : members) {
           auto mm = identify_magic(mb.getBuffer());
           if (mm == file_magic::elf_relocatable || mm == file_magic::bitcode ||
-              job.inWholeArchive)
+              job.getInWholeArchive())
             job.out.push_back(makeFile(mb, mm, job.path, offset, lazy));
           else
             Warn(ctx) << job.path << ": archive member '"
@@ -2189,9 +2185,9 @@ void LinkerDriver::loadFiles() {
         StringRef bufPath = job.mbref.getBufferIdentifier();
         auto f = std::make_unique<SharedFile>(
             ctx, job.mbref,
-            job.withLOption ? path::filename(bufPath) : bufPath);
+            job.getWithLOption() ? path::filename(bufPath) : bufPath);
         f->init();
-        f->isNeeded = !job.asNeeded;
+        f->isNeeded = !job.getAsNeeded();
         job.out.push_back(std::move(f));
         break;
       }
@@ -2229,7 +2225,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // -r implies -Bstatic and has precedence over -Bdynamic.
-  ctx.arg.isStatic = ctx.arg.relocatable;
+  ctx.arg.isStatic = ctx.arg.getRelocatable();
 
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
@@ -2281,7 +2277,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       ctx.arg.isStatic = true;
       break;
     case OPT_Bdynamic:
-      if (!ctx.arg.relocatable)
+      if (!ctx.arg.getRelocatable())
         ctx.arg.isStatic = false;
       break;
     case OPT_whole_archive:
@@ -2293,7 +2289,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     case OPT_just_symbols:
       if (std::optional<MemoryBufferRef> mb = readFile(ctx, arg->getValue())) {
         files.push_back(createObjFile(ctx, *mb));
-        files.back()->justSymbols = true;
+        files.back()->setJustSymbols(true);
       }
       break;
     case OPT_in_implib:
@@ -2384,7 +2380,7 @@ static uint64_t getMaxPageSize(Ctx &ctx, opt::InputArgList &args) {
     ErrAlways(ctx) << "max-page-size: value isn't a power of 2";
     return ctx.target->defaultMaxPageSize;
   }
-  if (ctx.arg.nmagic || ctx.arg.omagic) {
+  if (ctx.arg.nmagic || ctx.arg.getOmagic()) {
     if (val != ctx.target->defaultMaxPageSize)
       Warn(ctx)
           << "-z max-page-size set, but paging disabled by omagic or nmagic";
@@ -2402,7 +2398,7 @@ static uint64_t getCommonPageSize(Ctx &ctx, opt::InputArgList &args) {
     ErrAlways(ctx) << "common-page-size: value isn't a power of 2";
     return ctx.target->defaultCommonPageSize;
   }
-  if (ctx.arg.nmagic || ctx.arg.omagic) {
+  if (ctx.arg.nmagic || ctx.arg.getOmagic()) {
     if (val != ctx.target->defaultCommonPageSize)
       Warn(ctx)
           << "-z common-page-size set, but paging disabled by omagic or nmagic";
@@ -2833,7 +2829,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
 
     // For defined symbols in non-relocatable output,
     // compute isExported and parse '@'.
-    if (!ctx.arg.relocatable)
+    if (!ctx.arg.getRelocatable())
       for (Symbol *sym : obj->getGlobalSymbols()) {
         if (!sym->isDefined())
           continue;
@@ -3109,9 +3105,10 @@ static void readSecurityNotes(Ctx &ctx) {
                      "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED";
     }
 
-    if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
+    if (ctx.arg.getZForceBti() &&
+        !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-    } else if (ctx.arg.zForceIbt &&
+    } else if (ctx.arg.getZForceIbt() &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == ReportPolicy::None)
         Warn(ctx) << f
@@ -3119,8 +3116,9 @@ static void readSecurityNotes(Ctx &ctx) {
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
     }
-    if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
-                             (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
+    if (ctx.arg.getZPacPlt() &&
+        !(hasValidPauthAbiCoreInfo ||
+          (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
       Warn(ctx) << f
                 << ": -z pac-plt: file does not have "
                    "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property and no valid "
@@ -3160,7 +3158,7 @@ static void readSecurityNotes(Ctx &ctx) {
   }
 
   // Force enable Shadow Stack.
-  if (ctx.arg.zShstk)
+  if (ctx.arg.getZShstk())
     ctx.arg.andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 
   // Force enable/disable GCS
@@ -3255,8 +3253,8 @@ static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
                     ctx.e.disableOutput);
   initContext(dctx, script, ctx.arg.progName);
-  dctx.inDynDbgLink = true;
-  dctx.dynDbgRelocatable = !ctx.arg.relocatable;
+  dctx.setInDynDbgLink(true);
+  dctx.setDynDbgRelocatable(!ctx.arg.getRelocatable());
 
   for (auto *file : ctx.objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
@@ -3274,7 +3272,7 @@ static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   std::vector<const char *> args{
       dctx.arg.progName.data(), "-r", "-o", "-",
       saveArg(Twine("-O") + Twine(ctx.arg.optimize))};
-  if (ctx.arg.resolveGroups)
+  if (ctx.arg.getResolveGroups())
     args.push_back("--force-group-allocation");
   for (const auto &ws : wrapped)
     args.push_back(saveArg(Twine("--wrap=") + ws.sym->getName()));
@@ -3308,22 +3306,22 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // ICF is incompatible with dynamic debugging: the inner ELF references outer
   // symbols that folding would merge away.
-  if (ctx.hasDynDbg && ctx.arg.icf != ICFLevel::None) {
+  if (ctx.getHasDynDbg() && ctx.arg.icf != ICFLevel::None) {
     Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
                  "debugging";
     ctx.arg.icf = ICFLevel::None;
   }
 
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
-  ctx.arg.exportDynamic &= ctx.hasDynsym;
+  ctx.setHasDynsym(!ctx.sharedFiles.empty() || ctx.arg.getIsPic());
+  ctx.arg.exportDynamic &= ctx.getHasDynsym();
 
   // Preemptibility of undefined symbols when ctx.hasDynsym is true. Default is
   // true for dynamic linking.
   ctx.arg.zDynamicUndefined =
       getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak",
-               ctx.sharedFiles.size() || ctx.arg.shared) &&
-      ctx.hasDynsym;
+               ctx.sharedFiles.size() || ctx.arg.getShared()) &&
+      ctx.getHasDynsym();
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
@@ -3417,7 +3415,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   ctx.out.elfHeader = std::make_unique<OutputSection>(ctx, "", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.getRelocatable())
     addReservedSymbols(ctx);
 
   // Apply version scripts.
@@ -3425,7 +3423,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // For a relocatable output, version scripts don't make sense, and
   // parsing a symbol version string (e.g. dropping "@ver1" from a symbol
   // name "foo@ver1") rather do harm, so we don't call this if -r is given.
-  if (!ctx.arg.relocatable) {
+  if (!ctx.arg.getRelocatable()) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
     ctx.symtab->scanVersionScript();
 
@@ -3439,8 +3437,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // --plugin-opt=emit-asm create output files in bitcode or assembly code,
   // respectively. When only certain thinLTO modules are specified for
   // compilation, the intermediate object file are the expected output.
-  const bool skipLinkedOutput = ctx.arg.thinLTOIndexOnly || ctx.arg.emitLLVM ||
-                                ctx.arg.ltoEmitAsm ||
+  const bool skipLinkedOutput = ctx.arg.getThinLTOIndexOnly() ||
+                                ctx.arg.emitLLVM || ctx.arg.ltoEmitAsm ||
                                 !ctx.arg.thinLTOModulesToCompile.empty();
 
   // Handle --lto-validate-all-vtables-have-type-infos.
@@ -3574,7 +3572,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   ctx.arg.imageBase = getImageBase(ctx, args);
 
   // This adds a .comment section containing a version string.
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.getRelocatable())
     ctx.inputSections.push_back(createCommentSection(ctx));
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
@@ -3588,7 +3586,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     createTaggedSymbols(ctx);
   }
 
-  if (ctx.hasDynDbg) {
+  if (ctx.getHasDynDbg()) {
     llvm::TimeTraceScope timeScope("Link dynamic debugging");
     linkDynamicDebug<ELFT>(ctx, wrapped);
     if (errCount(ctx))
@@ -3602,7 +3600,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.getRelocatable())
     combineEhSections(ctx);
 
   // Merge .hexagon.attributes sections.

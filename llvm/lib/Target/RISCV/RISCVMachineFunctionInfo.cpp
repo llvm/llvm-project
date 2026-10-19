@@ -31,7 +31,7 @@ RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(const Function &F,
                                                    const RISCVSubtarget *STI) {
   if (const auto *CFB = mdconst::extract_or_null<ConstantInt>(
           F.getParent()->getModuleFlag("cf-protection-branch")))
-    CFProtectionBranch = CFB->getZExtValue() != 0;
+    setCFProtectionBranch(CFB->getZExtValue() != 0);
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the

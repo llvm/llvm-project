@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
@@ -42,19 +43,20 @@ protected:
   struct TestConfig {
     Triple::EnvironmentType ShaderStage;
     IOType IOTy;
-    bool UseNative16BitTypes;
-    SmallVector<ElementConfig> Elements;
+    bool getUseNative16BitTypes() const { return Elements.getFlag(0); }
+    void setUseNative16BitTypes(bool Value) { Elements.setFlag(0, Value); }
+    llvm::SmallVectorWithFlags<ElementConfig> Elements;
 
     TestConfig(Triple::EnvironmentType ShaderStage, IOType IOTy,
                std::initializer_list<ElementConfig> Elements)
-        : ShaderStage(ShaderStage), IOTy(IOTy), UseNative16BitTypes(false),
-          Elements(Elements) {}
+        : ShaderStage(ShaderStage), IOTy(IOTy), Elements(Elements) {}
 
     TestConfig(Triple::EnvironmentType ShaderStage, IOType IOTy,
                bool UseNative16BitTypes,
                std::initializer_list<ElementConfig> Elements)
         : ShaderStage(ShaderStage), IOTy(IOTy),
-          UseNative16BitTypes(UseNative16BitTypes), Elements(Elements) {}
+          Elements(decltype(this->Elements)::withFlags(
+              unsigned(UseNative16BitTypes), Elements)) {}
   };
 
   enum class PackingMethod {
@@ -95,10 +97,11 @@ protected:
       return packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy);
     case PackingMethod::PrefixStable:
       return packSignaturePrefixStable(Elements, Config.ShaderStage,
-                                       Config.IOTy, Config.UseNative16BitTypes);
+                                       Config.IOTy,
+                                       Config.getUseNative16BitTypes());
     case PackingMethod::Optimized:
       return packSignatureOptimized(Elements, Config.ShaderStage, Config.IOTy,
-                                    Config.UseNative16BitTypes);
+                                    Config.getUseNative16BitTypes());
     }
     llvm_unreachable("invalid packing method");
   }

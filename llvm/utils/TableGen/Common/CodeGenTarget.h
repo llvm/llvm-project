@@ -24,6 +24,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include <cassert>
@@ -62,11 +63,16 @@ class CodeGenTarget {
       InstructionMap;
   mutable std::unique_ptr<CodeGenRegBank> RegBank;
   mutable ArrayRef<const Record *> RegAltNameIndices;
-  mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
+  mutable llvm::SmallVectorWithFlags<ValueTypeByHwMode, 8> LegalValueTypes;
   mutable std::optional<std::vector<const Record *>> RegClassByHwModeList;
   CodeGenHwModes CGH;
   ArrayRef<const Record *> MacroFusions;
-  mutable bool HasVariableLengthEncodings = false;
+  bool getHasVariableLengthEncodings() const {
+    return LegalValueTypes.getFlag(0);
+  }
+  void setHasVariableLengthEncodings(bool Value) const {
+    LegalValueTypes.setFlag(0, Value);
+  }
 
   void ReadInstructions() const;
   void ReadLegalValueTypes() const;
@@ -238,7 +244,9 @@ public:
   }
 
   /// Return whether instructions have variable length encodings on this target.
-  bool hasVariableLengthEncodings() const { return HasVariableLengthEncodings; }
+  bool hasVariableLengthEncodings() const {
+    return getHasVariableLengthEncodings();
+  }
 
   /// isLittleEndianEncoding - are instruction bit patterns defined as  [0..n]?
   ///

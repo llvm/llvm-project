@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/OpenMP.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "Atomic.h"
 #include "ClauseProcessor.h"
@@ -334,17 +335,17 @@ public:
   ///          evaluated in the host device.
   bool apply(mlir::omp::LoopNestOperands &clauseOps,
              llvm::SmallVectorImpl<const semantics::Symbol *> &ivOut) {
-    if (iv.empty() || loopNestApplied) {
-      loopNestApplied = true;
+    if (iv.empty() || getLoopNestApplied()) {
+      setLoopNestApplied(true);
       return false;
     }
 
-    loopNestApplied = true;
+    setLoopNestApplied(true);
     clauseOps.loopLowerBounds = ops.loopLowerBounds;
     clauseOps.loopUpperBounds = ops.loopUpperBounds;
     clauseOps.loopSteps = ops.loopSteps;
     clauseOps.collapseNumLoops = ops.collapseNumLoops;
-    ivOut.append(iv);
+    ivOut.append(iv.begin(), iv.end());
     return true;
   }
 
@@ -354,12 +355,12 @@ public:
   /// \returns whether an update was performed. If not, these clauses were not
   ///          evaluated in the host device.
   bool apply(mlir::omp::ParallelOperands &clauseOps) {
-    if (ops.numThreadsVars.empty() || parallelApplied) {
-      parallelApplied = true;
+    if (ops.numThreadsVars.empty() || getParallelApplied()) {
+      setParallelApplied(true);
       return false;
     }
 
-    parallelApplied = true;
+    setParallelApplied(true);
     clauseOps.numThreadsVars = ops.numThreadsVars;
     return true;
   }
@@ -382,8 +383,15 @@ public:
 
 private:
   mlir::omp::HostEvaluatedOperands ops;
-  llvm::SmallVector<const semantics::Symbol *> iv;
-  bool loopNestApplied = false, parallelApplied = false;
+  llvm::SmallVectorWithFlags<const semantics::Symbol *,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 const semantics::Symbol *>::value,
+                             2>
+      iv;
+  bool getLoopNestApplied() const { return iv.getFlag(0); }
+  void setLoopNestApplied(bool Value) { iv.setFlag(0, Value); }
+  bool getParallelApplied() const { return iv.getFlag(1); }
+  void setParallelApplied(bool Value) { iv.setFlag(1, Value); }
 };
 
 /// A base class to help iterate over OpenMP constructs based on an expected
@@ -629,10 +637,14 @@ protected:
     case OMPD_distribute:
     case OMPD_distribute_simd:
     case OMPD_do:
-    case OMPD_do_simd:
+    case OMPD_do_simd: {
+      llvm::SmallVector<const semantics::Symbol *> InductionVariables;
+      InductionVariables = std::move(hostEvalInfo.iv);
       cp.processCollapse(loc, eval, hostEvalInfo.ops, hostEvalInfo.ops,
-                         hostEvalInfo.iv);
+                         InductionVariables);
+      hostEvalInfo.iv.assign(std::move(InductionVariables));
       return {};
+    }
 
     case OMPD_teams:
       cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
@@ -646,11 +658,15 @@ protected:
       cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
       [[fallthrough]];
     case OMPD_target_teams_distribute:
-    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_simd: {
+      llvm::SmallVector<const semantics::Symbol *> InductionVariables;
+      InductionVariables = std::move(hostEvalInfo.iv);
       cp.processCollapse(loc, eval, hostEvalInfo.ops, hostEvalInfo.ops,
-                         hostEvalInfo.iv);
+                         InductionVariables);
+      hostEvalInfo.iv.assign(std::move(InductionVariables));
       cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
       return {};
+    }
 
     case OMPD_teams_loop:
       cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
@@ -658,10 +674,14 @@ protected:
     case OMPD_target_teams_loop:
       cp.processNumTeams(stmtCtx, hostEvalInfo.ops);
       [[fallthrough]];
-    case OMPD_loop:
+    case OMPD_loop: {
+      llvm::SmallVector<const semantics::Symbol *> InductionVariables;
+      InductionVariables = std::move(hostEvalInfo.iv);
       cp.processCollapse(loc, eval, hostEvalInfo.ops, hostEvalInfo.ops,
-                         hostEvalInfo.iv);
+                         InductionVariables);
+      hostEvalInfo.iv.assign(std::move(InductionVariables));
       return {};
+    }
 
     case OMPD_teams_workdistribute:
       cp.processThreadLimit(stmtCtx, hostEvalInfo.ops);
@@ -7058,23 +7078,23 @@ struct SplicedAssociatedEvaluations {
     // A saved successor may also have been spliced. Restore in reverse order
     // so every insertion point is back in the parent list before it is used.
     for (auto &entry : llvm::reverse(evaluations)) {
-      entry.first->skipNextLowering = true;
+      entry.first->setSkipNextLowering(true);
       parentList->splice(entry.second, nested, entry.first);
     }
     if (entryEvaluation) {
-      entryEvaluation->isNewBlock = true;
+      entryEvaluation->setIsNewBlock(true);
       entryEvaluation->block = entryBlock;
     }
   }
 
   void suppressEntryBlock(lower::pft::Evaluation &evaluation) {
-    assert(!entryEvaluation && evaluation.isNewBlock && evaluation.block &&
+    assert(!entryEvaluation && evaluation.getIsNewBlock() && evaluation.block &&
            "invalid associated entry evaluation");
     // Do not let either cloned loop arm enter a function-region block. The
     // metadirective selection will be placed in this block for an active ENTRY.
     entryEvaluation = &evaluation;
     entryBlock = evaluation.block;
-    evaluation.isNewBlock = false;
+    evaluation.setIsNewBlock(false);
     evaluation.block = nullptr;
   }
 
@@ -7199,13 +7219,13 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
     auto entryIt =
         llvm::find_if(llvm::make_range(firstAssociatedIt, loopIt),
                       [](lower::pft::Evaluation &candidate) {
-                        return candidate.isNewBlock && candidate.block;
+                        return candidate.getIsNewBlock() && candidate.block;
                       });
     if (entryIt != loopIt) {
       splicedEvaluations->suppressEntryBlock(*entryIt);
     } else {
       lower::pft::Evaluation &doStmt = loopIt->getFirstNestedEvaluation();
-      if (doStmt.isNewBlock && doStmt.block)
+      if (doStmt.getIsNewBlock() && doStmt.block)
         splicedEvaluations->suppressEntryBlock(doStmt);
     }
   }

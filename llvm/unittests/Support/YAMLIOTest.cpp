@@ -3659,3 +3659,36 @@ TYPED_TEST(YAMLIO, FixedSizeArrayMismatch) {
     EXPECT_TRUE(!!yin.error());
   }
 }
+
+TEST(YAMLIO, SmallVectorWithFlagsSequence) {
+  llvm::SmallVectorWithFlags<int, 2, 3> Values;
+  Values.setFlags(5);
+  llvm::SmallVectorWithFlagsImpl<int, 3> &Base = Values;
+  Input In("[1, 2, 3, 4, 5]");
+  In >> Base;
+  EXPECT_FALSE(In.error());
+  EXPECT_THAT(Values, ::testing::ElementsAre(1, 2, 3, 4, 5));
+  EXPECT_EQ(Values.getFlags(), 5u);
+
+  auto Serialize = [](auto &Sequence) {
+    std::string Text;
+    {
+      llvm::raw_string_ostream Stream(Text);
+      Output Out(Stream);
+      Out << Sequence;
+    }
+    return Text;
+  };
+  llvm::SmallVector<int, 2> Plain(Values.begin(), Values.end());
+  EXPECT_EQ(Serialize(Values), Serialize(Plain));
+  EXPECT_EQ(Serialize(Base), Serialize(Plain));
+  EXPECT_EQ(Values.getFlags(), 5u);
+
+  Values.clear();
+  EXPECT_EQ(Values.getFlags(), 5u);
+  Input Replacement("[9]");
+  Replacement >> Values;
+  EXPECT_FALSE(Replacement.error());
+  EXPECT_THAT(Values, ::testing::ElementsAre(9));
+  EXPECT_EQ(Values.getFlags(), 5u);
+}

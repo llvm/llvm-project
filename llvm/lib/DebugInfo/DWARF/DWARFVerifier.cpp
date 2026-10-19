@@ -1207,7 +1207,7 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
   ErrorCategory.ShowDetail(this->DumpOpts.Verbose ||
-                           !this->DumpOpts.ShowAggregateErrors);
+                           !this->DumpOpts.showAggregateErrors());
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();
@@ -2389,7 +2389,7 @@ void OutputCategoryAggregator::EnumerateDetailedResultsFor(
 }
 
 void DWARFVerifier::summarize() {
-  if (DumpOpts.ShowAggregateErrors && ErrorCategory.GetNumCategories()) {
+  if (DumpOpts.showAggregateErrors() && ErrorCategory.GetNumCategories()) {
     error() << "Aggregated error counts:\n";
     ErrorCategory.EnumerateResults([&](StringRef s, unsigned count) {
       error() << formatv("{0} occurred {1} time(s).\n", s, count);

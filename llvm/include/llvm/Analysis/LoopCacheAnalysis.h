@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_LOOPCACHEANALYSIS_H
 #define LLVM_ANALYSIS_LOOPCACHEANALYSIS_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/InstructionCost.h"
@@ -55,7 +56,7 @@ public:
   LLVM_ABI IndexedReference(Instruction &StoreOrLoadInst, const LoopInfo &LI,
                             ScalarEvolution &SE);
 
-  bool isValid() const { return IsValid; }
+  bool isValid() const { return getIsValid(); }
   const SCEV *getBasePointer() const { return BasePointer; }
   size_t getNumSubscripts() const { return Subscripts.size(); }
   const SCEV *getSubscript(unsigned SubNum) const {
@@ -137,7 +138,8 @@ private:
 
 private:
   /// True if the reference can be delinearized, false otherwise.
-  bool IsValid = false;
+  bool getIsValid() const { return Sizes.getFlag(0); }
+  void setIsValid(bool Value) { Sizes.setFlag(0, Value); }
 
   /// Represent the memory reference instruction.
   Instruction &StoreOrLoadInst;
@@ -149,7 +151,7 @@ private:
   SmallVector<const SCEV *, 3> Subscripts;
 
   /// The dimensions of the memory reference.
-  SmallVector<const SCEV *, 3> Sizes;
+  llvm::SmallVectorWithFlags<const SCEV *, 3> Sizes;
 
   ScalarEvolution &SE;
 };

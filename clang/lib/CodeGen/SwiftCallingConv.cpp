@@ -468,7 +468,7 @@ bool SwiftAggLowering::shouldMergeEntries(const StorageEntry &first,
 
 void SwiftAggLowering::finish() {
   if (Entries.empty()) {
-    Finished = true;
+    setFinished(true);
     return;
   }
 
@@ -495,12 +495,12 @@ void SwiftAggLowering::finish() {
   // The rest of the algorithm leaves non-opaque entries alone, so if we
   // have no opaque entries, we're done.
   if (!hasOpaqueEntries) {
-    Finished = true;
+    setFinished(true);
     return;
   }
 
   // Okay, move the entries to a temporary and rebuild Entries.
-  auto orig = std::move(Entries);
+  auto orig = SmallVector<StorageEntry, 4>(std::move(Entries));
   assert(Entries.empty());
 
   for (size_t i = 0, e = orig.size(); i != e; ++i) {
@@ -554,11 +554,11 @@ void SwiftAggLowering::finish() {
   }
 
   // Okay, finally finished.
-  Finished = true;
+  setFinished(true);
 }
 
 void SwiftAggLowering::enumerateComponents(EnumerationCallback callback) const {
-  assert(Finished && "haven't yet finished lowering");
+  assert(getFinished() && "haven't yet finished lowering");
 
   for (auto &entry : Entries) {
     callback(entry.Begin, entry.End, entry.Type);
@@ -567,7 +567,7 @@ void SwiftAggLowering::enumerateComponents(EnumerationCallback callback) const {
 
 std::pair<llvm::StructType*, llvm::Type*>
 SwiftAggLowering::getCoerceAndExpandTypes() const {
-  assert(Finished && "haven't yet finished lowering");
+  assert(getFinished() && "haven't yet finished lowering");
 
   auto &ctx = CGM.getLLVMContext();
 
@@ -624,7 +624,7 @@ SwiftAggLowering::getCoerceAndExpandTypes() const {
 }
 
 bool SwiftAggLowering::shouldPassIndirectly(bool asReturnValue) const {
-  assert(Finished && "haven't yet finished lowering");
+  assert(getFinished() && "haven't yet finished lowering");
 
   // Empty types don't need to be passed indirectly.
   if (Entries.empty()) return false;

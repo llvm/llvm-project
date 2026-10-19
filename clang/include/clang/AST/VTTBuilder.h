@@ -21,6 +21,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <cstdint>
 
 namespace clang {
@@ -82,7 +83,7 @@ class VTTBuilder {
   using VTTComponentsVectorTy = SmallVector<VTTComponent, 64>;
 
   /// The VTT components.
-  VTTComponentsVectorTy VTTComponents;
+  llvm::SmallVectorWithFlagsFor<VTTComponentsVectorTy, 1> VTTComponents;
 
   /// The AST record layout of the most derived class.
   const ASTRecordLayout &MostDerivedClassLayout;
@@ -99,7 +100,8 @@ class VTTBuilder {
   llvm::DenseMap<BaseSubobject, uint64_t> SecondaryVirtualPointerIndices;
 
   /// Whether the VTT builder should generate LLVM IR for the VTT.
-  bool GenerateDefinition;
+  bool getGenerateDefinition() const { return VTTComponents.getFlag(0); }
+  void setGenerateDefinition(bool Value) { VTTComponents.setFlag(0, Value); }
 
   /// Add a vtable pointer to the VTT currently being built.
   void AddVTablePointer(BaseSubobject Base, uint64_t VTableIndex,
@@ -138,9 +140,7 @@ public:
              bool GenerateDefinition);
 
   // Returns a reference to the VTT components.
-  const VTTComponentsVectorTy &getVTTComponents() const {
-    return VTTComponents;
-  }
+  ArrayRef<VTTComponent> getVTTComponents() const { return VTTComponents; }
 
   // Returns a reference to the VTT vtables.
   const VTTVTablesVectorTy &getVTTVTables() const {

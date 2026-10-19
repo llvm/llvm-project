@@ -8920,7 +8920,8 @@ bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
   auto PredicateNotAlwaysTrue = [](const ExitNotTakenInfo &ENT) {
     return !ENT.hasAlwaysTruePredicate();
   };
-  return MaxOrZero && !any_of(ExitNotTaken, PredicateNotAlwaysTrue);
+  return ExitNotTaken.getFlag(1) &&
+         !any_of(ExitNotTaken, PredicateNotAlwaysTrue);
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
@@ -8931,7 +8932,8 @@ ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
     ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists)
     : ExactNotTaken(E), ConstantMaxNotTaken(ConstantMaxNotTaken),
-      SymbolicMaxNotTaken(SymbolicMaxNotTaken), MaxOrZero(MaxOrZero) {
+      SymbolicMaxNotTaken(SymbolicMaxNotTaken) {
+  Predicates.setFlag(0, MaxOrZero);
   // If we prove the max count is zero, so is the symbolic bound.  This happens
   // in practice due to differences in a) how context sensitive we've chosen
   // to be and b) how we reason about bounds implied by UB.
@@ -8981,7 +8983,8 @@ ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E,
 ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
     ArrayRef<ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo> ExitCounts,
     bool IsComplete, const SCEV *ConstantMax, bool MaxOrZero)
-    : ConstantMax(ConstantMax), IsComplete(IsComplete), MaxOrZero(MaxOrZero) {
+    : ConstantMax(ConstantMax) {
+  ExitNotTaken.setFlags(unsigned(IsComplete) | (unsigned(MaxOrZero) << 1));
   using EdgeExitInfo = ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo;
 
   ExitNotTaken.reserve(ExitCounts.size());
@@ -9068,7 +9071,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
         DT.dominates(ExitBB, Latch)) {
       if (!MustExitMaxBECount) {
         MustExitMaxBECount = EL.ConstantMaxNotTaken;
-        MustExitMaxOrZero = EL.MaxOrZero;
+        MustExitMaxOrZero = EL.isMaxOrZero();
       } else {
         MustExitMaxBECount = getUMinFromMismatchedTypes(MustExitMaxBECount,
                                                         EL.ConstantMaxNotTaken);

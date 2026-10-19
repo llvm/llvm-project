@@ -1573,7 +1573,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     //     enum E : int { 4 };     // bit-field
     //   };
     if (getLangOpts().CPlusPlus11 && NextToken().is(tok::l_brace)) {
-      if (ParsingGenericAssociationType) {
+      if (getParsingGenericAssociationType()) {
         RevertingTentativeParsingAction PA(*this);
         ConsumeAnyToken(); // skip keyword
         ConsumeBrace();    // skip l_brace

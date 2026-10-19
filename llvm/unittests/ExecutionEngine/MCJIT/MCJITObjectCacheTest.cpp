@@ -8,6 +8,7 @@
 
 #include "MCJITTestBase.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
@@ -22,13 +23,13 @@ namespace {
 
 class TestObjectCache : public ObjectCache {
 public:
-  TestObjectCache() : DuplicateInserted(false) { }
+  TestObjectCache() {}
 
   void notifyObjectCompiled(const Module *M, MemoryBufferRef Obj) override {
     // If we've seen this module before, note that.
     const std::string ModuleID = M->getModuleIdentifier();
     if (ObjMap.contains(ModuleID))
-      DuplicateInserted = true;
+      setDuplicateInserted(true);
     // Store a copy of the buffer in our map.
     ObjMap[ModuleID] = copyBuffer(Obj);
   }
@@ -44,7 +45,7 @@ public:
   }
 
   // Test-harness-specific functions
-  bool wereDuplicatesInserted() { return DuplicateInserted; }
+  bool wereDuplicatesInserted() { return getDuplicateInserted(); }
 
   bool wasModuleLookedUp(const Module *M) {
     return ModulesLookedUp.contains(M->getModuleIdentifier());
@@ -71,8 +72,9 @@ private:
 
   StringMap<const MemoryBuffer *> ObjMap;
   StringSet<>                     ModulesLookedUp;
-  SmallVector<std::unique_ptr<MemoryBuffer>, 2> AllocatedBuffers;
-  bool                            DuplicateInserted;
+  llvm::SmallVectorWithFlags<std::unique_ptr<MemoryBuffer>, 2> AllocatedBuffers;
+  bool getDuplicateInserted() const { return AllocatedBuffers.getFlag(0); }
+  void setDuplicateInserted(bool Value) { AllocatedBuffers.setFlag(0, Value); }
 };
 
 class MCJITObjectCacheTest : public testing::Test, public MCJITTestBase {

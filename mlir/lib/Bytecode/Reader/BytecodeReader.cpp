@@ -891,20 +891,24 @@ public:
 
   LogicalResult readAttribute(uint64_t index, Attribute &result,
                               uint64_t depth = 0) {
-    return readEntry(attributes, index, result, "attribute", depth);
+    return readEntry(MutableArrayRef(attributes.data(), attributes.size()),
+                     index, result, "attribute", depth);
   }
 
   LogicalResult readType(uint64_t index, Type &result, uint64_t depth = 0) {
-    return readEntry(types, index, result, "type", depth);
+    return readEntry(MutableArrayRef(types.data(), types.size()), index, result,
+                     "type", depth);
   }
 
   /// Resolve the attribute or type at the given index. Returns nullptr on
   /// failure.
   Attribute resolveAttribute(size_t index, uint64_t depth = 0) {
-    return resolveEntry(attributes, index, "Attribute", depth);
+    return resolveEntry(MutableArrayRef(attributes.data(), attributes.size()),
+                        index, "Attribute", depth);
   }
   Type resolveType(size_t index, uint64_t depth = 0) {
-    return resolveEntry(types, index, "Type", depth);
+    return resolveEntry(MutableArrayRef(types.data(), types.size()), index,
+                        "Type", depth);
   }
 
   Attribute getAttributeOrSentinel(size_t index) {
@@ -966,18 +970,18 @@ public:
   }
 
   /// Whether currently resolving.
-  bool isResolving() const { return resolving; }
+  bool isResolving() const { return getResolving(); }
 
 private:
   /// Resolve the given entry at `index`.
   template <typename T>
-  T resolveEntry(SmallVectorImpl<Entry<T>> &entries, uint64_t index,
+  T resolveEntry(MutableArrayRef<Entry<T>> entries, uint64_t index,
                  StringRef entryType, uint64_t depth = 0);
 
   /// Read the entry at the given index, returning failure if the entry is not
   /// yet resolved.
   template <typename T>
-  LogicalResult readEntry(SmallVectorImpl<Entry<T>> &entries, uint64_t index,
+  LogicalResult readEntry(MutableArrayRef<Entry<T>> entries, uint64_t index,
                           T &result, StringRef entryType, uint64_t depth);
 
   /// Parse an entry using the given reader that was encoded using a custom
@@ -1007,7 +1011,7 @@ private:
 
   /// The set of attribute and type entries.
   SmallVector<AttrEntry> attributes;
-  SmallVector<TypeEntry> types;
+  llvm::SmallVectorWithFlags<TypeEntry> types;
 
   /// A location used for error emission.
   Location fileLoc;
@@ -1025,7 +1029,8 @@ private:
   std::vector<std::pair<uint64_t, EntryKind>> deferredWorklist;
 
   /// Flag indicating if we are currently resolving an attribute or type.
-  bool resolving = false;
+  bool getResolving() const { return types.getFlag(0); }
+  void setResolving(bool Value) { types.setFlag(0, Value); }
 };
 
 class DialectReader : public DialectBytecodeReader {
@@ -1357,7 +1362,9 @@ LogicalResult AttrTypeReader::initialize(
   };
 
   // Process each of the attributes, and then the types.
-  if (failed(parseEntries(attributes)) || failed(parseEntries(types)))
+  if (failed(parseEntries(
+          MutableArrayRef(attributes.data(), attributes.size()))) ||
+      failed(parseEntries(MutableArrayRef(types.data(), types.size()))))
     return failure();
 
   // Ensure that we read everything from the section.
@@ -1370,12 +1377,12 @@ LogicalResult AttrTypeReader::initialize(
 }
 
 template <typename T>
-T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
+T AttrTypeReader::resolveEntry(MutableArrayRef<Entry<T>> entries,
                                uint64_t index, StringRef entryType,
                                uint64_t depth) {
-  bool oldResolving = resolving;
-  resolving = true;
-  llvm::scope_exit restoreResolving([&]() { resolving = oldResolving; });
+  bool oldResolving = getResolving();
+  setResolving(true);
+  llvm::scope_exit restoreResolving([&]() { setResolving(oldResolving); });
 
   if (index >= entries.size()) {
     emitError(fileLoc) << "invalid " << entryType << " index: " << index;
@@ -1460,7 +1467,7 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
 }
 
 template <typename T>
-LogicalResult AttrTypeReader::readEntry(SmallVectorImpl<Entry<T>> &entries,
+LogicalResult AttrTypeReader::readEntry(MutableArrayRef<Entry<T>> entries,
                                         uint64_t index, T &result,
                                         StringRef entryType, uint64_t depth) {
   if (index >= entries.size())
@@ -1595,9 +1602,10 @@ public:
   Impl(Location fileLoc, const ParserConfig &config, bool lazyLoading,
        llvm::MemoryBufferRef buffer,
        const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
-      : config(config), fileLoc(fileLoc), lazyLoading(lazyLoading),
+      : config(config), fileLoc(fileLoc),
         attrTypeReader(stringReader, resourceReader, dialectsMap, version,
                        fileLoc, config),
+        dialects(decltype(this->dialects)::withFlags(unsigned(lazyLoading))),
         // Use the builtin unrealized conversion cast operation to represent
         // forward references to values that aren't yet defined.
         forwardRefOpState(UnknownLoc::get(config.getContext()),
@@ -1745,7 +1753,8 @@ private:
     RegionReadState(MutableArrayRef<Region> regions, EncodingReader *reader,
                     bool isIsolatedFromAbove)
         : curRegion(regions.begin()), endRegion(regions.end()), reader(reader),
-          isIsolatedFromAbove(isIsolatedFromAbove) {}
+          curBlocks(decltype(this->curBlocks)::withFlags(
+              unsigned(isIsolatedFromAbove))) {}
 
     /// The current regions being read.
     MutableArrayRef<Region>::iterator curRegion, endRegion;
@@ -1760,7 +1769,7 @@ private:
     unsigned numValues = 0;
 
     /// The current blocks of the region being read.
-    SmallVector<Block *> curBlocks;
+    llvm::SmallVectorWithFlags<Block *> curBlocks;
     Region::iterator curBlock = {};
 
     /// The number of operations remaining to be read from the current block
@@ -1768,7 +1777,8 @@ private:
     uint64_t numOpsRemaining = 0;
 
     /// A flag indicating if the regions being read are isolated from above.
-    bool isIsolatedFromAbove = false;
+    bool getIsIsolatedFromAbove() const { return curBlocks.getFlag(0); }
+    void setIsIsolatedFromAbove(bool Value) { curBlocks.setFlag(0, Value); }
   };
 
   LogicalResult parseIRSection(ArrayRef<uint8_t> sectionData, Block *block);
@@ -1867,7 +1877,8 @@ private:
   Location fileLoc;
 
   /// Flag that indicates if lazyloading is enabled.
-  bool lazyLoading;
+  bool getLazyLoading() const { return dialects.getFlag(0); }
+  void setLazyLoading(bool Value) { dialects.setFlag(0, Value); }
 
   /// Keep track of operations that have been lazy loaded (their regions haven't
   /// been materialized), along with the `RegionReadState` that allows to
@@ -1886,7 +1897,7 @@ private:
   StringRef producer;
 
   /// The table of IR units referenced within the bytecode file.
-  SmallVector<std::unique_ptr<BytecodeDialect>> dialects;
+  llvm::SmallVectorWithFlags<std::unique_ptr<BytecodeDialect>> dialects;
   llvm::StringMap<BytecodeDialect *> dialectsMap;
   SmallVector<BytecodeOperationName> opNames;
 
@@ -2033,7 +2044,7 @@ LogicalResult BytecodeReader::Impl::parseVersion(EncodingReader &reader) {
   }
   // Override any request to lazy-load if the bytecode version is too old.
   if (version < bytecode::kLazyLoading)
-    lazyLoading = false;
+    setLazyLoading(false);
   return success();
 }
 
@@ -2514,7 +2525,8 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
 
             // If the user has a callback set, they have the opportunity to
             // control lazyloading as we go.
-            if (lazyLoading && (!lazyOpsCallback || !lazyOpsCallback(*op))) {
+            if (getLazyLoading() &&
+                (!lazyOpsCallback || !lazyOpsCallback(*op))) {
               lazyLoadableOps.emplace_back(*op, std::move(childState));
               lazyLoadableOpsMap.try_emplace(*op,
                                              std::prev(lazyLoadableOps.end()));
@@ -2544,7 +2556,7 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
 
   // When the regions have been fully parsed, pop them off of the read stack. If
   // the regions were isolated from above, we also pop the last value scope.
-  if (readState.isIsolatedFromAbove) {
+  if (readState.getIsIsolatedFromAbove()) {
     assert(!valueScopes.empty() && "Expect a valueScope after reading region");
     valueScopes.pop_back();
   }

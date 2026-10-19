@@ -62,6 +62,7 @@
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/ADT/AllocatorList.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -283,7 +284,7 @@ private:
   DenseMap<Instruction *, CompositeNode *> RootToNode;
 
   /// Topologically sorted root instructions
-  SmallVector<Instruction *, 1> OrderedRoots;
+  llvm::SmallVectorWithFlags<Instruction *, 1> OrderedRoots;
 
   /// When examining a basic block for complex deinterleaving, if it is a simple
   /// one-block loop, then the only incoming block is 'Incoming' and the
@@ -320,7 +321,8 @@ private:
 
   /// Set this flag to true if RealPHI and ImagPHI were reached during reduction
   /// detection.
-  bool PHIsFound = false;
+  bool getPHIsFound() const { return OrderedRoots.getFlag(0); }
+  void setPHIsFound(bool Value) { OrderedRoots.setFlag(0, Value); }
 
   /// OldToNewPHI maps the original real PHINode to a new, double-sized PHINode.
   /// The new PHINode corresponds to a vector of deinterleaved complex numbers.
@@ -1825,7 +1827,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
       RealPHI = ReductionInfo[Real].first;
       ImagPHI = ReductionInfo[Imag].first;
-      PHIsFound = false;
+      setPHIsFound(false);
       auto Node = identifyNode(Real, Imag);
       if (!Node) {
         std::swap(Real, Imag);
@@ -1836,7 +1838,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
       // If a node is identified and reduction PHINode is used in the chain of
       // operations, mark its operation instructions as used to prevent
       // re-identification and attach the node to the real part
-      if (Node && PHIsFound) {
+      if (Node && getPHIsFound()) {
         LLVM_DEBUG(dbgs() << "Identified reduction starting from instructions: "
                           << *Real << " / " << *Imag << "\n");
         Processed[i] = true;
@@ -1863,9 +1865,9 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
-    PHIsFound = false;
+    setPHIsFound(false);
     auto Node = identifyNode(Real->getOperand(0), Real->getOperand(1));
-    if (Node && PHIsFound) {
+    if (Node && getPHIsFound()) {
       LLVM_DEBUG(
           dbgs() << "Identified single reduction starting from instruction: "
                  << *Real << "/" << *ReductionInfo[Real].second << "\n");
@@ -2244,7 +2246,7 @@ ComplexDeinterleavingGraph::identifyPHINode(Instruction *Real,
   if (Real != RealPHI || (ImagPHI && Imag != ImagPHI))
     return nullptr;
 
-  PHIsFound = true;
+  setPHIsFound(true);
   CompositeNode *PlaceholderNode = prepareCompositeNode(
       ComplexDeinterleavingOperation::ReductionPHI, Real, Imag);
   return submitCompositeNode(PlaceholderNode);

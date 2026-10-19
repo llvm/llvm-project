@@ -25,7 +25,9 @@ InterpState::InterpState(const EvalSettings &Settings, Program &P,
     : State(Ctx.getASTContext(), Settings.EvalStatus), M(M),
       FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
-      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+      EvalID(Ctx.getEvalID()),
+      InitializingPtrs(decltype(this->InitializingPtrs)::withFlags(
+          unsigned(bool(StepsLeft == 0)))) {
   InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
       Settings.CheckingPotentialConstantExpression;
@@ -39,7 +41,9 @@ InterpState::InterpState(const EvalSettings &Settings, Program &P,
     : State(Ctx.getASTContext(), Settings.EvalStatus), M(nullptr),
       FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
-      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+      EvalID(Ctx.getEvalID()),
+      InitializingPtrs(decltype(this->InitializingPtrs)::withFlags(
+          unsigned(bool(StepsLeft == 0)))) {
   InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
       Settings.CheckingPotentialConstantExpression;
@@ -52,8 +56,9 @@ InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
                          SourceMapper *M)
     : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
       Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
-      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
-      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit), EvalID(Ctx.getEvalID()),
+      InitializingPtrs(decltype(this->InitializingPtrs)::withFlags(
+          unsigned(bool(StepsLeft == 0)))) {
   InConstantContext = true;
   CheckingPotentialConstantExpression = false;
   CheckingForUndefinedBehavior = true;

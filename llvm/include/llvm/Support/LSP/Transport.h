@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_LSP_TRANSPORT_H
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -88,13 +89,17 @@ class JSONTransport {
 public:
   JSONTransport(std::unique_ptr<JSONTransportInput> In, raw_ostream &Out,
                 bool PrettyOutput = false)
-      : In(std::move(In)), Out(Out), PrettyOutput(PrettyOutput) {}
+      : In(std::move(In)), OutputBuffer(decltype(this->OutputBuffer)::withFlags(
+                               unsigned(PrettyOutput))),
+        Out(Out) {}
 
   JSONTransport(std::FILE *In, raw_ostream &Out,
                 JSONStreamStyle Style = JSONStreamStyle::Standard,
                 bool PrettyOutput = false)
-      : In(std::make_unique<JSONTransportInputOverFile>(In, Style)), Out(Out),
-        PrettyOutput(PrettyOutput) {}
+      : In(std::make_unique<JSONTransportInputOverFile>(In, Style)),
+        OutputBuffer(
+            decltype(this->OutputBuffer)::withFlags(unsigned(PrettyOutput))),
+        Out(Out) {}
 
   /// The following methods are used to send a message to the LSP client.
   LLVM_ABI void notify(StringRef Method, llvm::json::Value Params);
@@ -115,11 +120,12 @@ private:
 private:
   /// The input to read a message from.
   std::unique_ptr<JSONTransportInput> In;
-  SmallVector<char, 0> OutputBuffer;
+  llvm::SmallVectorWithFlags<char, 0> OutputBuffer;
   /// The output file stream.
   raw_ostream &Out;
   /// If the output JSON should be formatted for easier readability.
-  bool PrettyOutput;
+  bool getPrettyOutput() const { return OutputBuffer.getFlag(0); }
+  void setPrettyOutput(bool Value) { OutputBuffer.setFlag(0, Value); }
 };
 
 //===----------------------------------------------------------------------===//

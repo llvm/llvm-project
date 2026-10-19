@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -88,20 +89,23 @@ private:
 
   /// Indicates whether to take into account the extended module. This is only
   /// useful for \c serializeSingleSymbolSGF.
-  bool ForceEmitToMainModule;
+  bool getForceEmitToMainModule() const { return Hierarchy.getFlag(0); }
+  void setForceEmitToMainModule(bool Value) { Hierarchy.setFlag(0, Value); }
 
   // Stores the references required to construct path components for the
   // currently visited APIRecord.
-  llvm::SmallVector<SymbolReference, 8> Hierarchy;
+  llvm::SmallVectorWithFlags<SymbolReference, 8, 3> Hierarchy;
 
   /// The list of symbols to ignore.
   ///
   /// Note: This should be consulted before emitting a symbol.
   const APIIgnoresList &IgnoresList;
 
-  const bool EmitSymbolLabelsForTesting = false;
+  bool getEmitSymbolLabelsForTesting() const { return Hierarchy.getFlag(1); }
 
-  const bool SkipSymbolsInCategoriesToExternalTypes = false;
+  bool getSkipSymbolsInCategoriesToExternalTypes() const {
+    return Hierarchy.getFlag(2);
+  }
 
   /// The object instantiated by the last call to serializeAPIRecord.
   Object *CurrentSymbol = nullptr;
@@ -274,11 +278,12 @@ public:
                         bool EmitSymbolLabelsForTesting = false,
                         bool ForceEmitToMainModule = false,
                         bool SkipSymbolsInCategoriesToExternalTypes = false)
-      : Base(API), ForceEmitToMainModule(ForceEmitToMainModule),
-        IgnoresList(IgnoresList),
-        EmitSymbolLabelsForTesting(EmitSymbolLabelsForTesting),
-        SkipSymbolsInCategoriesToExternalTypes(
-            SkipSymbolsInCategoriesToExternalTypes) {}
+      : Base(API),
+        Hierarchy(decltype(this->Hierarchy)::withFlags(
+            unsigned(ForceEmitToMainModule) |
+            (unsigned(EmitSymbolLabelsForTesting) << 1) |
+            (unsigned(SkipSymbolsInCategoriesToExternalTypes) << 2))),
+        IgnoresList(IgnoresList) {}
 };
 
 } // namespace extractapi

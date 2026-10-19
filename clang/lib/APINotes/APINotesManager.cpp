@@ -210,7 +210,7 @@ static void checkPrivateAPINotesName(DiagnosticsEngine &Diags,
     return;
 
   unsigned DiagID = diag::warn_apinotes_private_case;
-  if (M->IsSystem)
+  if (M->getIsSystem())
     DiagID = diag::warn_apinotes_private_case_system;
 
   Diags.Report(SourceLocation(), DiagID) << M->Name << RealFileName;
@@ -220,7 +220,7 @@ static void checkPrivateAPINotesName(DiagnosticsEngine &Diags,
 /// private module map
 static bool hasPrivateSubmodules(const Module *M) {
   return llvm::any_of(M->submodules(), [](const Module *Submodule) {
-    return Submodule->ModuleMapIsPrivate;
+    return Submodule->getModuleMapIsPrivate();
   });
 }
 
@@ -248,7 +248,7 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
           APINotes.push_back(*File);
     };
 
-    if (M->IsFramework) {
+    if (M->getIsFramework()) {
       // For frameworks, we search in the "Headers" or "PrivateHeaders"
       // subdirectory.
       //
@@ -260,7 +260,7 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
       //   the word "Private" in it in practice)
       llvm::SmallString<128> Path(M->Directory->getName());
 
-      if (!M->ModuleMapIsPrivate) {
+      if (!M->getModuleMapIsPrivate()) {
         unsigned PathLen = Path.size();
 
         llvm::sys::path::append(Path, "Headers");
@@ -270,11 +270,11 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
         Path.resize(PathLen);
       }
 
-      if (M->ModuleMapIsPrivate || hasPrivateSubmodules(M)) {
+      if (M->getModuleMapIsPrivate() || hasPrivateSubmodules(M)) {
         llvm::sys::path::append(Path, "PrivateHeaders");
         if (auto PrivateAPINotesDir = FM.getOptionalDirectoryRef(Path))
           tryAPINotes(*PrivateAPINotesDir,
-                      /*wantPublic=*/M->ModuleMapIsPrivate);
+                      /*wantPublic=*/M->getModuleMapIsPrivate());
       }
     } else {
       // Public modules:
@@ -284,7 +284,7 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
       // - Bar.apinotes (except that 'Bar' probably already has the word
       //   "Private" in it in practice)
       tryAPINotes(*M->Directory, /*wantPublic=*/true);
-      if (!M->ModuleMapIsPrivate && hasPrivateSubmodules(M))
+      if (!M->getModuleMapIsPrivate() && hasPrivateSubmodules(M))
         tryAPINotes(*M->Directory, /*wantPublic=*/false);
     }
 

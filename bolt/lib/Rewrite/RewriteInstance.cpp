@@ -1423,7 +1423,7 @@ void RewriteInstance::discoverFileObjects() {
           BC->errs() << '\n';
       }
       BC->HasSplitFunctions = true;
-      BF->IsFragment = true;
+      BF->setIsFragmentFlag(true);
     }
 
     if (!AlternativeName.empty())

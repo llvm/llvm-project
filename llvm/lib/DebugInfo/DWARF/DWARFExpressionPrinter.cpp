@@ -100,7 +100,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
                     DIDumpOptions DumpOpts, const DWARFExpression *Expr,
                     DWARFUnit *U) {
   if (Op->isError()) {
-    if (!DumpOpts.PrintRegisterOnly)
+    if (!DumpOpts.printRegisterOnly())
       OS << "<decoding error>";
     return false;
   }
@@ -111,7 +111,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
   // This lets clients print annotations like "i = 0" when the location is
   // a constant (e.g. DW_OP_constu/consts ... DW_OP_stack_value).
   // We continue to suppress all other non-register ops in this mode.
-  if (DumpOpts.PrintRegisterOnly) {
+  if (DumpOpts.printRegisterOnly()) {
     // First, try pretty-printing registers (existing behavior below also does
     // this, but we need to short-circuit here to avoid printing opcode names).
     if ((Op->getCode() >= DW_OP_breg0 && Op->getCode() <= DW_OP_breg31) ||
@@ -145,7 +145,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
     return true; // suppress other opcodes silently in register-only mode
   }
 
-  if (!DumpOpts.PrintRegisterOnly) {
+  if (!DumpOpts.printRegisterOnly()) {
     StringRef Name = OperationEncodingString(Op->getCode());
     assert(!Name.empty() && "DW_OP has no name!");
     OS << Name;
@@ -167,7 +167,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
                               Op->getRawOperands()))
       return true;
 
-  if (!DumpOpts.PrintRegisterOnly) {
+  if (!DumpOpts.printRegisterOnly()) {
     for (unsigned Operand = 0; Operand < Op->getDescription().Op.size();
          ++Operand) {
       unsigned Size = Op->getDescription().Op[Operand];
@@ -224,14 +224,14 @@ void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
 
   for (auto &Op : *E) {
     DumpOpts.IsEH = IsEH;
-    if (!printOp(&Op, OS, DumpOpts, E, U) && !DumpOpts.PrintRegisterOnly) {
+    if (!printOp(&Op, OS, DumpOpts, E, U) && !DumpOpts.printRegisterOnly()) {
       uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < E->getData().size())
         OS << formatv(" {0:x-2}",
                       static_cast<uint8_t>(E->getData()[FailOffset++]));
       return;
     }
-    if (!DumpOpts.PrintRegisterOnly) {
+    if (!DumpOpts.printRegisterOnly()) {
       if (Op.getCode() == DW_OP_entry_value ||
           Op.getCode() == DW_OP_GNU_entry_value) {
         OS << "(";

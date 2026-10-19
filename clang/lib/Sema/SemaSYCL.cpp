@@ -19,6 +19,7 @@
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 using namespace clang;
 
@@ -668,11 +669,12 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
 
 class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SemaSYCL &SemaSYCLRef;
-  bool IsValid = true;
+  bool getIsValid() const { return !ObjectAccessPath.getFlag(0); }
+  void setIsValid(bool Value) { ObjectAccessPath.setFlag(0, !Value); }
   using ObjectAccess =
       llvm::PointerUnion<const ParmVarDecl *, const CXXBaseSpecifier *,
                          const FieldDecl *>;
-  SmallVector<ObjectAccess, 4> ObjectAccessPath;
+  llvm::SmallVectorWithFlags<ObjectAccess, 4> ObjectAccessPath;
 
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
@@ -748,7 +750,7 @@ public:
       // kernel parameter types contained within the referenced type
       // might not be relevant once the programmer addresses the
       // invalid use of a reference.
-      IsValid = false;
+      setIsValid(false);
       return false;
     }
     return true;
@@ -759,7 +761,7 @@ public:
     ObjectAccessPath.pop_back();
   }
 
-  bool isInvalid() { return !IsValid; }
+  bool isInvalid() { return !getIsValid(); }
 };
 
 bool verifyKernelParams(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {

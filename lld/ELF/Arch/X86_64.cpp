@@ -86,7 +86,7 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_X86_64_JUMP_SLOT;
   relativeRel = R_X86_64_RELATIVE;
   iRelativeRel = R_X86_64_IRELATIVE;
-  symbolicRel = ctx.arg.is64 ? R_X86_64_64 : R_X86_64_32;
+  symbolicRel = ctx.arg.getIs64() ? R_X86_64_64 : R_X86_64_32;
   tlsDescRel = R_X86_64_TLSDESC;
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
@@ -515,7 +515,7 @@ bool X86_64::relaxOnce(int pass) const {
   // If the max VA is under 2^31, GOTPCRELX relocations cannot overflow. In
   // -pie/-shared, the condition can be relaxed to test the max VA difference as
   // there is no R_RELAX_GOT_PC_NOPIC.
-  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && ctx.arg.isPic))
+  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && ctx.arg.getIsPic()))
     return false;
 
   SmallVector<InputSection *, 0> storage;
@@ -737,13 +737,13 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     case R_X86_64_DTPOFF32:
     case R_X86_64_DTPOFF64:
-      sec.addReloc(
-          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
+      sec.addReloc({ctx.arg.getShared() ? R_DTPREL : R_TPREL, type, offset,
+                    addend, &sym});
       continue;
     case R_X86_64_TLSDESC_CALL:
       // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
       // rewrites for this relocation are identical.
-      if (!ctx.arg.shared)
+      if (!ctx.arg.getShared())
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
     case R_X86_64_GOTPC32_TLSDESC:
@@ -766,13 +766,13 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     rs.process(expr, type, offset, sym, addend);
   }
 
-  if (ctx.arg.branchToBranch)
+  if (ctx.arg.getBranchToBranch())
     llvm::stable_sort(sec.relocs(),
                       [](auto &l, auto &r) { return l.offset < r.offset; });
 }
 
 void X86_64::scanSection(InputSectionBase &sec, unsigned shard) {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     elf::scanSection1<X86_64, ELF64LE>(*this, sec, shard);
   else // ilp32
     elf::scanSection1<X86_64, ELF32LE>(*this, sec, shard);
@@ -1320,7 +1320,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
   // GOTPCRELX with addend != -4. Such an instruction does not load the full GOT
   // entry, so we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip),
   // %rax (addend=0) loads the high 32 bits of the GOT entry.
-  if (!ctx.arg.relax || addend != -4 ||
+  if (!ctx.arg.getRelax() || addend != -4 ||
       (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX &&
        type != R_X86_64_CODE_4_GOTPCRELX))
     return R_GOT_PC;
@@ -1344,7 +1344,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
 
   // Relaxation of test, adc, add, and, cmp, or, sbb, sub, xor.
   // If PIC then no relaxation is available.
-  return ctx.arg.isPic ? R_GOT_PC : R_RELAX_GOT_PC_NOPIC;
+  return ctx.arg.getIsPic() ? R_GOT_PC : R_RELAX_GOT_PC_NOPIC;
 }
 
 // A subset of relaxations can only be applied for no-PIC. This method
@@ -1444,7 +1444,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!rel.sym->file->ctx.arg.isPic);
+    assert(!rel.sym->file->ctx.arg.getIsPic());
     relaxGotNoPic(loc, val + 4, op, modRm,
                   rel.type == R_X86_64_CODE_4_GOTPCRELX);
     return;
@@ -1475,7 +1475,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
 // B) Or a load of a stack pointer offset with an lea to r10 or r11.
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
-  if (!ctx.arg.is64) {
+  if (!ctx.arg.getIs64()) {
     ErrAlways(ctx) << "target doesn't support split stacks";
     return false;
   }
@@ -1755,8 +1755,8 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 void elf::setX86_64TargetInfo(Ctx &ctx) {
-  if (ctx.arg.zRetpolineplt) {
-    if (ctx.arg.zNow)
+  if (ctx.arg.getZRetpolineplt()) {
+    if (ctx.arg.getZNow())
       ctx.target.reset(new RetpolineZNow(ctx));
     else
       ctx.target.reset(new Retpoline(ctx));

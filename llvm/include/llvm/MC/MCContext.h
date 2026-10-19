@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -186,13 +187,14 @@ private:
   /// Boolean toggled when .secure_log_unique / .secure_log_reset is seen to
   /// catch errors if .secure_log_unique appears twice without
   /// .secure_log_reset appearing between them.
-  bool SecureLogUsed = false;
 
   /// The compilation directory to use for DW_AT_comp_dir.
   SmallString<128> CompilationDir;
 
   /// Prefix replacement map for source file information.
-  SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
+  // Flag bits 0-3 record secure logging, temporary names, reset, and errors.
+  SmallVectorWithFlags<std::pair<std::string, std::string>, 0, 4>
+      DebugPrefixMap;
 
   /// The main file name if passed in explicitly.
   std::string MainFileName;
@@ -239,7 +241,6 @@ private:
   /// differences between temporary and non-temporary labels (primarily on
   /// Darwin).
   bool SaveTempLabels = false;
-  bool UseNamesOnTempLabels = false;
 
   /// The Compile Unit ID that we are currently processing.
   unsigned DwarfCompileUnitID = 0;
@@ -324,9 +325,6 @@ private:
   SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
 
   /// Do automatic reset in destructor
-  bool AutoReset;
-
-  bool HadError = false;
 
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
@@ -418,7 +416,7 @@ public:
 
   LLVM_ABI CodeViewContext &getCVContext();
 
-  void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
+  void setUseNamesOnTempLabels(bool Value) { DebugPrefixMap.setFlag(1, Value); }
 
   /// \name Module Lifetime Management
   /// @{
@@ -725,7 +723,7 @@ public:
     return getMCDwarfLineTable(CUID).getMCDwarfFiles();
   }
 
-  const SmallVectorImpl<std::string> &getMCDwarfDirs(unsigned CUID = 0) {
+  ArrayRef<std::string> getMCDwarfDirs(unsigned CUID = 0) {
     return getMCDwarfLineTable(CUID).getMCDwarfDirs();
   }
 
@@ -822,8 +820,8 @@ public:
     SecureLog = std::move(Value);
   }
 
-  bool getSecureLogUsed() { return SecureLogUsed; }
-  void setSecureLogUsed(bool Value) { SecureLogUsed = Value; }
+  bool getSecureLogUsed() { return DebugPrefixMap.getFlag(0); }
+  void setSecureLogUsed(bool Value) { DebugPrefixMap.setFlag(0, Value); }
 
   void *allocate(unsigned Size, unsigned Align = 8) {
     return Allocator.Allocate(Size, Align);
@@ -837,7 +835,7 @@ public:
     return StringSaver(Allocator).save(s);
   }
 
-  bool hadError() { return HadError; }
+  bool hadError() { return DebugPrefixMap.getFlag(3); }
   LLVM_ABI void diagnose(const SMDiagnostic &SMD);
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg);
   LLVM_ABI void reportWarning(SMLoc L, const Twine &Msg);

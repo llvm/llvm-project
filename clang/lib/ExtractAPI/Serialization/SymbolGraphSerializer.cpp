@@ -605,8 +605,7 @@ void serializeTemplateMixin(Object &Paren, const RecordTy &Record) {
   serializeObject(Paren, "swiftGenerics", Generics);
 }
 
-Array generateParentContexts(const SmallVectorImpl<SymbolReference> &Parents,
-                             Language Lang) {
+Array generateParentContexts(ArrayRef<SymbolReference> Parents, Language Lang) {
   Array ParentContexts;
 
   for (const auto &Parent : Parents) {
@@ -703,7 +702,7 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord *Record) const {
 }
 
 ExtendedModule &SymbolGraphSerializer::getModuleForCurrentSymbol() {
-  if (!ForceEmitToMainModule && ModuleForCurrentSymbol)
+  if (!getForceEmitToMainModule() && ModuleForCurrentSymbol)
     return *ModuleForCurrentSymbol;
 
   return MainModule;
@@ -734,7 +733,7 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
                                                   ExtendedModule &Into) {
   Object Relationship;
   SmallString<64> TestRelLabel;
-  if (EmitSymbolLabelsForTesting) {
+  if (getEmitSymbolLabelsForTesting()) {
     llvm::raw_svector_ostream OS(TestRelLabel);
     OS << SymbolGraphSerializer::getRelationshipString(Kind) << " $ "
        << Source.USR << " $ ";
@@ -749,7 +748,7 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Relationship["targetFallback"] = Target.Name;
   Relationship["kind"] = SymbolGraphSerializer::getRelationshipString(Kind);
 
-  if (ForceEmitToMainModule)
+  if (getForceEmitToMainModule())
     MainModule.addRelationship(std::move(Relationship));
   else
     Into.addRelationship(std::move(Relationship));
@@ -770,7 +769,7 @@ void SymbolGraphSerializer::serializeAPIRecord(const APIRecord *Record) {
 
   // If we need symbol labels for testing emit the USR as the value and the key
   // starts with '!'' to ensure it ends up at the top of the object.
-  if (EmitSymbolLabelsForTesting)
+  if (getEmitSymbolLabelsForTesting())
     Obj["!testLabel"] = Record->USR;
 
   serializeObject(Obj, "identifier",
@@ -940,7 +939,7 @@ bool SymbolGraphSerializer::visitObjCInterfaceRecord(
 
 bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     const ObjCCategoryRecord *Record) {
-  if (SkipSymbolsInCategoriesToExternalTypes &&
+  if (getSkipSymbolsInCategoriesToExternalTypes() &&
       !API.findRecordForUSR(Record->Interface.USR))
     return true;
 
@@ -1105,7 +1104,7 @@ SymbolGraphSerializer::serializeSingleSymbolSGF(StringRef USR,
                                    /*ForceEmitToMainModule*/ true);
 
   // Set up serializer parent chain
-  Serializer.Hierarchy = generateHierarchyFromRecord(Record);
+  Serializer.Hierarchy.assign(generateHierarchyFromRecord(Record));
 
   Serializer.serializeSingleRecord(Record);
   serializeObject(Root, "symbolGraph",

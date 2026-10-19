@@ -223,11 +223,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                        MachinePointerInfo());
 }
 
-bool
-HexagonTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    LLVMContext &Context, const Type *RetTy) const {
+bool HexagonTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                           MachineFunction &MF, bool IsVarArg,
+                                           llvm::ArrayRef<ISD::OutputArg> Outs,
+                                           LLVMContext &Context,
+                                           const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
@@ -242,7 +242,7 @@ HexagonTargetLowering::CanLowerReturn(
 SDValue
 HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    bool IsVarArg,
-                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                   llvm::ArrayRef<ISD::OutputArg> Outs,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &dl, SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of the return value to locations.
@@ -387,9 +387,9 @@ Register HexagonTargetLowering::getRegisterByName(
 /// ISD::CALL.
 SDValue HexagonTargetLowering::LowerCallResult(
     SDValue Chain, SDValue Glue, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
-    const SmallVectorImpl<SDValue> &OutVals, SDValue Callee) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals, const SmallVectorImpl<SDValue> &OutVals,
+    SDValue Callee) const {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
 
@@ -443,14 +443,14 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                  SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
   SDValue Callee                        = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool IsVarArg                         = CLI.IsVarArg;
-  bool DoesNotReturn                    = CLI.DoesNotReturn;
+  bool IsVarArg = CLI.getIsVarArg();
+  bool DoesNotReturn = CLI.getDoesNotReturn();
 
   bool IsStructRet    = Outs.empty() ? false : Outs[0].Flags.isSRet();
   MachineFunction &MF = DAG.getMachineFunction();
@@ -474,20 +474,21 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
 
-  if (CLI.IsTailCall) {
+  if (CLI.getIsTailCall()) {
     bool StructAttrFlag = MF.getFunction().hasStructRetAttr();
-    CLI.IsTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
-                        IsVarArg, IsStructRet, StructAttrFlag, Outs,
-                        OutVals, Ins, DAG);
+    CLI.setIsTailCall(IsEligibleForTailCallOptimization(
+        Callee, CallConv, IsVarArg, IsStructRet, StructAttrFlag, Outs, OutVals,
+        Ins, DAG));
     for (const CCValAssign &VA : ArgLocs) {
       if (VA.isMemLoc()) {
-        CLI.IsTailCall = false;
+        CLI.setIsTailCall(false);
         break;
       }
     }
-    LLVM_DEBUG(dbgs() << (CLI.IsTailCall ? "Eligible for Tail Call\n"
-                                         : "Argument must be passed on stack. "
-                                           "Not eligible for Tail Call\n"));
+    LLVM_DEBUG(dbgs() << (CLI.getIsTailCall()
+                              ? "Eligible for Tail Call\n"
+                              : "Argument must be passed on stack. "
+                                "Not eligible for Tail Call\n"));
   }
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
@@ -570,7 +571,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
 
   SDValue Glue;
-  if (!CLI.IsTailCall) {
+  if (!CLI.getIsTailCall()) {
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
     Glue = Chain.getValue(1);
   }
@@ -579,7 +580,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // chain and flag operands which copy the outgoing args into registers.
   // The Glue is necessary since all emitted instructions must be
   // stuck together.
-  if (!CLI.IsTailCall) {
+  if (!CLI.getIsTailCall()) {
     for (const auto &R : RegsToPass) {
       Chain = DAG.getCopyToReg(Chain, dl, R.first, R.second, Glue);
       Glue = Chain.getValue(1);
@@ -633,7 +634,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (Glue.getNode())
     Ops.push_back(Glue);
 
-  if (CLI.IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MFI.setHasTailCall();
     return DAG.getNode(HexagonISD::TC_RETURN, dl, MVT::Other, Ops);
   }
@@ -844,8 +845,8 @@ SDValue HexagonTargetLowering::LowerFMINFMAX(SDValue Op,
 
 SDValue HexagonTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -3786,15 +3787,11 @@ bool HexagonTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function.
 bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
-                                 SDValue Callee,
-                                 CallingConv::ID CalleeCC,
-                                 bool IsVarArg,
-                                 bool IsCalleeStructRet,
-                                 bool IsCallerStructRet,
-                                 const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                 const SmallVectorImpl<SDValue> &OutVals,
-                                 const SmallVectorImpl<ISD::InputArg> &Ins,
-                                 SelectionDAG& DAG) const {
+    SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
+    bool IsCalleeStructRet, bool IsCallerStructRet,
+    llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    SelectionDAG &DAG) const {
   const Function &CallerF = DAG.getMachineFunction().getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
   bool CCMatch = CallerCC == CalleeCC;

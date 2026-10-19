@@ -477,7 +477,8 @@ void SwitchMatcher::emit(MatchTable &Table) {
 //===- RuleMatcher --------------------------------------------------------===//
 
 RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand)
-    : Matcher(Matcher::MK_Rule), UsesRecordOperand(UsesRecordOperand),
+    : Matcher(Matcher::MK_Rule),
+      Roots(decltype(this->Roots)::withFlags(unsigned(!(UsesRecordOperand)))),
       SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
@@ -1485,12 +1486,14 @@ bool MIFlagsInstructionPredicateMatcher::isIdentical(
     return false;
   const auto &Other =
       static_cast<const MIFlagsInstructionPredicateMatcher &>(B);
-  return Flags == Other.Flags && CheckNot == Other.CheckNot;
+  return (llvm::ArrayRef<llvm::StringRef>(Flags) ==
+          llvm::ArrayRef<llvm::StringRef>(Other.Flags)) &&
+         getCheckNot() == Other.getCheckNot();
 }
 
 void MIFlagsInstructionPredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table) const {
-  Table << MatchTable::Opcode(CheckNot ? "GIM_MIFlagsNot" : "GIM_MIFlags")
+  Table << MatchTable::Opcode(getCheckNot() ? "GIM_MIFlagsNot" : "GIM_MIFlags")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::NamedValue(4, join(Flags, " | "))
         << MatchTable::LineBreak;

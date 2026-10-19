@@ -216,7 +216,7 @@ Error lto::DTLTO::extractLTOInputs() {
     if (Error Err = save(Buf.getBuffer(), ModuleID))
       return Err;
     // Cleanup this file on abnormal process exit.
-    if (!SaveTemps)
+    if (!getSaveTemps())
       addToCleanup(ModuleID);
   }
   return Error::success();

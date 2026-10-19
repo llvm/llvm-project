@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -109,9 +110,6 @@ public:
   };
 
 private:
-  bool BigEndian = false;
-  bool VectorsAreElementAligned = false;
-
   unsigned AllocaAddrSpace = 0;
   unsigned ProgramAddrSpace = 0;
   unsigned DefaultGlobalsAddrSpace = 0;
@@ -134,7 +132,8 @@ private:
   ManglingModeT ManglingMode = MM_None;
 
   // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
-  SmallVector<unsigned char, 8> LegalIntWidths;
+  // Flag bits 0 and 1 record big endianness and element-aligned vectors.
+  SmallVectorWithFlags<unsigned char, 8, 2> LegalIntWidths;
 
   /// Primitive type specifications. Sorted and uniqued by type bit width.
   SmallVector<PrimitiveSpec, 6> IntSpecs;
@@ -214,11 +213,11 @@ public:
   LLVM_ABI static Expected<DataLayout> parse(StringRef LayoutString);
 
   /// Layout endianness...
-  bool isLittleEndian() const { return !BigEndian; }
-  bool isBigEndian() const { return BigEndian; }
+  bool isLittleEndian() const { return !isBigEndian(); }
+  bool isBigEndian() const { return LegalIntWidths.getFlag(0); }
 
   /// Whether vectors are element aligned, rather than naturally aligned.
-  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
+  bool vectorsAreElementAligned() const { return LegalIntWidths.getFlag(1); }
 
   /// Returns the string representation of the DataLayout.
   ///

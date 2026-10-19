@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
@@ -667,7 +668,8 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
       const RuntimeCheckingPtrGroup &CGJ = CheckingGroups[J];
 
       if (needsChecking(CGI, CGJ)) {
-        CanUseDiffCheck = CanUseDiffCheck && tryToCreateDiffCheck(CGI, CGJ);
+        DiffChecks.setFlag(1, DiffChecks.getFlag(1) ||
+                                  !tryToCreateDiffCheck(CGI, CGJ));
         Checks.emplace_back(&CGI, &CGJ);
       }
     }
@@ -1801,7 +1803,7 @@ private:
   const Loop *TheLoop;
 
   /// List of accesses that need a further dependence check.
-  SmallVector<MemAccessInfo, 8> CheckDeps;
+  llvm::SmallVectorWithFlags<MemAccessInfo, 8> CheckDeps;
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
@@ -1834,7 +1836,8 @@ private:
   /// memcheck analysis without dependency checking
   /// (i.e. ShouldRetryWithRuntimeChecks), isDependencyCheckNeeded is
   /// cleared while this remains set if we have potentially dependent accesses.
-  bool IsRTCheckAnalysisNeeded = false;
+  bool getIsRTCheckAnalysisNeeded() const { return CheckDeps.getFlag(0); }
+  void setIsRTCheckAnalysisNeeded(bool Value) { CheckDeps.setFlag(0, Value); }
 
   /// The SCEV predicate containing all the SCEV-related assumptions.
   PredicatedScalarEvolution &PSE;
@@ -2262,7 +2265,8 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   bool CanDoRT = true;
 
   bool MayNeedRTCheck = false;
-  if (!IsRTCheckAnalysisNeeded) return true;
+  if (!getIsRTCheckAnalysisNeeded())
+    return true;
 
   if (auto *Deps = DepChecker.getDependences()) {
     // If there are unknown dependences, this means runtime checks are needed to
@@ -2444,11 +2448,12 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   // If we can do run-time checks, but there are no checks, no runtime checks
   // are needed. This can happen when all pointers point to the same underlying
   // object for example.
-  RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
+  RtCheck.setNeedsChecking(CanDoRT ? RtCheck.getNumberOfChecks() != 0
+                                   : MayNeedRTCheck);
 
-  bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
+  bool CanDoRTIfNeeded = !RtCheck.needsChecking() || CanDoRT;
   assert(CanDoRTIfNeeded == (CanDoRT || !MayNeedRTCheck) &&
-         "CanDoRTIfNeeded depends on RtCheck.Need");
+         "CanDoRTIfNeeded depends on RtCheck.needsChecking()");
   if (!CanDoRTIfNeeded && !AllowPartial)
     RtCheck.reset();
   return CanDoRTIfNeeded;
@@ -2538,7 +2543,7 @@ void AccessAnalysis::buildDependenceSets() {
           // catch "a[i] = a[i] + " without having to do a dependence check).
           if ((IsWrite || IsReadOnlyPtr) && AliasSetHasWrite) {
             CheckDeps.push_back(Access);
-            IsRTCheckAnalysisNeeded = true;
+            setIsRTCheckAnalysisNeeded(true);
           }
 
           if (IsWrite)
@@ -3110,7 +3115,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // TODO: Historically, we didn't retry with runtime checks when (unscaled)
   // strides were different but there is no inherent reason to.
   if (!isa<SCEVConstant>(Dist))
-    ShouldRetryWithRuntimeChecks |= StrideAPtrInt == StrideBPtrInt;
+    InstMap.setFlag(0, InstMap.getFlag(0) || StrideAPtrInt == StrideBPtrInt);
 
   // If distance is a SCEVCouldNotCompute, return Unknown immediately.
   if (isa<SCEVCouldNotCompute>(Dist)) {
@@ -3405,18 +3410,18 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
             // dependences.  In that case return as soon as we find the first
             // unsafe dependence.  This puts a limit on this quadratic
             // algorithm.
-            if (RecordDependences) {
+            if (recordDependences()) {
               if (Type != Dependence::NoDep)
                 Dependences.emplace_back(A.second, B.second, Type);
 
               if (Dependences.size() >= MaxDependences) {
-                RecordDependences = false;
+                InstMap.setFlag(1, true);
                 Dependences.clear();
                 LLVM_DEBUG(dbgs()
                            << "Too many dependences, stopped recording\n");
               }
             }
-            if (!RecordDependences && !isSafeForVectorization())
+            if (!recordDependences() && !isSafeForVectorization())
               return false;
           }
         ++OI;
@@ -3453,9 +3458,8 @@ const char *MemoryDepChecker::Dependence::DepName[] = {
     "BackwardVectorizable",
     "BackwardVectorizableButPreventsForwarding"};
 
-void MemoryDepChecker::Dependence::print(
-    raw_ostream &OS, unsigned Depth,
-    const SmallVectorImpl<Instruction *> &Instrs) const {
+void MemoryDepChecker::Dependence::print(raw_ostream &OS, unsigned Depth,
+                                         ArrayRef<Instruction *> Instrs) const {
   OS.indent(Depth) << DepName[Type] << ":\n";
   OS.indent(Depth + 2) << *Instrs[Source] << " -> \n";
   OS.indent(Depth + 2) << *Instrs[Destination] << "\n";
@@ -3517,7 +3521,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   HasConvergentOp = false;
 
   PtrRtChecking->Pointers.clear();
-  PtrRtChecking->Need = false;
+  PtrRtChecking->setNeedsChecking(false);
 
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
@@ -3776,7 +3780,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
       PtrRtChecking->reset();
-      PtrRtChecking->Need = true;
+      PtrRtChecking->setNeedsChecking(true);
 
       UncomputablePtr = nullptr;
       HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
@@ -3829,7 +3833,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   if (DepsAreSafe) {
     LLVM_DEBUG(
         dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
-               << (PtrRtChecking->Need ? "" : " don't")
+               << (PtrRtChecking->needsChecking() ? "" : " don't")
                << " need runtime memory checks.\n");
     return true;
   }
@@ -4121,7 +4125,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
       OS << ", with a maximum safe store-load forward width of " << SLDist
          << " bits";
     }
-    if (PtrRtChecking->Need)
+    if (PtrRtChecking->needsChecking())
       OS << " with run-time checks";
     OS << "\n";
   }
@@ -4143,7 +4147,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 
   // List the pair of accesses need run-time checks to prove independence.
   PtrRtChecking->print(OS, Depth);
-  if (PtrRtChecking->Need && !HasCompletePtrRtChecking)
+  if (PtrRtChecking->needsChecking() && !HasCompletePtrRtChecking)
     OS.indent(Depth) << "Generated run-time checks are incomplete\n";
   OS << "\n";
 

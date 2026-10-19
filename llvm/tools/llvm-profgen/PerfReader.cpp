@@ -187,7 +187,9 @@ void VirtualUnwinder::unwindBranch(UnwindState &State) {
 std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
-  KeyStr->Context = Binary->getExpandedContext(Stack, KeyStr->WasLeafInlined);
+  bool WasLeafInlined = KeyStr->getWasLeafInlined();
+  KeyStr->Context.assign(Binary->getExpandedContext(Stack, WasLeafInlined));
+  KeyStr->setWasLeafInlined(WasLeafInlined);
   return KeyStr;
 }
 
@@ -1084,7 +1086,9 @@ void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
     if (Line.starts_with("[")) {
       ProfileIsCS = true;
       auto I = ContextStrSet.insert(Line);
-      SampleContext::createCtxVectorFromStr(I.first->getKey(), Key->Context);
+      SampleContextFrameVector Context;
+      SampleContext::createCtxVectorFromStr(I.first->getKey(), Context);
+      Key->Context.assign(std::move(Context));
       TraceIt.advance();
     }
     auto Ret = SampleCounters.try_emplace(Hashable<ContextKey>(Key));

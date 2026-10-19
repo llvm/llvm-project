@@ -36,6 +36,7 @@
 #include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -549,7 +550,7 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  if (!OptForSize || std::distance(S,E) > 100) {
+  if (!getOptForSize() || std::distance(S, E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
       if (ConstCand->CumulativeCost > MaxCostItr->CumulativeCost)
@@ -630,12 +631,17 @@ void ConstantHoistingPass::findAndMakeBaseConstant(
 /// Finds and combines constant candidates that can be easily
 /// rematerialized with an add from a common base constant.
 void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
+  ConstInfoVecType IntegerInfo;
+  IntegerInfo = std::move(ConstIntInfoVec);
+  auto RestoreIntegerInfo =
+      scope_exit([&] { ConstIntInfoVec.assign(std::move(IntegerInfo)); });
+
   // If BaseGV is nullptr, find base among candidate constant integers;
   // Otherwise find base among constant GEPs that share the same BaseGV.
   ConstCandVecType &ConstCandVec = BaseGV ?
       ConstGEPCandMap[BaseGV] : ConstIntCandVec;
-  ConstInfoVecType &ConstInfoVec = BaseGV ?
-      ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
+  ConstInfoVecType &ConstInfoVec =
+      BaseGV ? ConstGEPInfoMap[BaseGV] : IntegerInfo;
 
   // Sort the constants by value and type. This invalidates the mapping!
   llvm::stable_sort(ConstCandVec, [](const ConstantCandidate &LHS,
@@ -811,9 +817,14 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 /// Hoist and hide the base constant behind a bitcast and emit
 /// materialization code for derived constants.
 bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
+  ConstInfoVecType IntegerInfo;
+  IntegerInfo = std::move(ConstIntInfoVec);
+  auto RestoreIntegerInfo =
+      scope_exit([&] { ConstIntInfoVec.assign(std::move(IntegerInfo)); });
+
   bool MadeChange = false;
   SmallVectorImpl<consthoist::ConstantInfo> &ConstInfoVec =
-      BaseGV ? ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
+      BaseGV ? ConstGEPInfoMap[BaseGV] : IntegerInfo;
   for (const consthoist::ConstantInfo &ConstInfo : ConstInfoVec) {
     SmallVector<BasicBlock::iterator, 4> MatInsertPts;
     collectMatInsertPts(ConstInfo.RebasedConstants, MatInsertPts);
@@ -919,8 +930,8 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
-  this->OptForSize = llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
-                                                 PGSOQueryType::IRPass);
+  this->setOptForSize(llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
+                                                  PGSOQueryType::IRPass));
 
   // Collect all constant candidates.
   collectConstantCandidates(Fn);

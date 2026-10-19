@@ -18,6 +18,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -230,7 +231,7 @@ class PipelineSolver {
 
   // Instructions that can be assigned to multiple SchedGroups
   DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
-  SmallVector<SUsToCandSGsVec, 4> PipelineInstrs;
+  llvm::SmallVectorWithFlags<SUsToCandSGsVec, 4, 2> PipelineInstrs;
   DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroups;
   // The current working pipeline
   SmallVector<SmallVector<SchedGroup, 4>, 4> CurrPipeline;
@@ -238,7 +239,8 @@ class PipelineSolver {
   SmallVector<SmallVector<SchedGroup, 4>, 4> BestPipeline;
 
   // Whether or not we actually have any SyncedInstrs to try to solve.
-  bool NeedsSolver = false;
+  bool getNeedsSolver() const { return PipelineInstrs.getFlag(0); }
+  void setNeedsSolver(bool Value) { PipelineInstrs.setFlag(0, Value); }
 
   // Compute an estimate of the size of search tree -- the true size is
   // the product of each conflictedInst.Matches.size() across all SyncPipelines
@@ -263,7 +265,8 @@ class PipelineSolver {
   uint64_t BranchesExplored = 0;
 
   // The direction in which we process the candidate SchedGroups per SU
-  bool IsBottomUp = true;
+  bool getIsBottomUp() const { return !PipelineInstrs.getFlag(1); }
+  void setIsBottomUp(bool Value) { PipelineInstrs.setFlag(1, !Value); }
 
   // Update indices to fit next conflicting instruction
   void advancePosition();
@@ -361,16 +364,18 @@ public:
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
                  ScheduleDAGMI *DAG, bool IsBottomUp = true)
       : DAG(DAG), SyncedInstrs(SyncedInstrs),
-        SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
+        PipelineInstrs(decltype(this->PipelineInstrs)::withFlags(
+            (unsigned(!(IsBottomUp)) << 1))),
+        SyncedSchedGroups(SyncedSchedGroups) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
       if (!PipelineInstrs.second.empty()) {
-        NeedsSolver = true;
+        setNeedsSolver(true);
         break;
       }
     }
 
-    if (!NeedsSolver)
+    if (!getNeedsSolver())
       return;
 
     convertSyncMapsToArrays();
@@ -463,8 +468,9 @@ void PipelineSolver::makePipeline() {
   }
 
   for (auto &SyncPipeline : BestPipeline) {
-    IsBottomUp ? linkSchedGroups(SyncPipeline.rbegin(), SyncPipeline.rend())
-               : linkSchedGroups(SyncPipeline.begin(), SyncPipeline.end());
+    getIsBottomUp()
+        ? linkSchedGroups(SyncPipeline.rbegin(), SyncPipeline.rend())
+        : linkSchedGroups(SyncPipeline.begin(), SyncPipeline.end());
   }
 }
 
@@ -599,10 +605,10 @@ int PipelineSolver::addEdges(
   // opposite is true if !IsBottomUp. IsBottomUp occurs in the case of multiple
   // SCHED_GROUP_BARRIERS, or if a user specifies IGLP_OPT SchedGroups using
   // IsBottomUp (in reverse).
-  return IsBottomUp ? linkSUnit(SU, SGID, AddedEdges, SyncPipeline.rbegin(),
-                                SyncPipeline.rend())
-                    : linkSUnit(SU, SGID, AddedEdges, SyncPipeline.begin(),
-                                SyncPipeline.end());
+  return getIsBottomUp() ? linkSUnit(SU, SGID, AddedEdges,
+                                     SyncPipeline.rbegin(), SyncPipeline.rend())
+                         : linkSUnit(SU, SGID, AddedEdges, SyncPipeline.begin(),
+                                     SyncPipeline.end());
 }
 
 void PipelineSolver::removeEdges(
@@ -727,10 +733,10 @@ bool PipelineSolver::solveExact() {
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
   // Prioritize the candidate sched groups in terms of lowest cost first
-  IsBottomUp ? populateReadyList(ReadyList, CurrSU.second.rbegin(),
-                                 CurrSU.second.rend())
-             : populateReadyList(ReadyList, CurrSU.second.begin(),
-                                 CurrSU.second.end());
+  getIsBottomUp() ? populateReadyList(ReadyList, CurrSU.second.rbegin(),
+                                      CurrSU.second.rend())
+                  : populateReadyList(ReadyList, CurrSU.second.begin(),
+                                      CurrSU.second.end());
 
   auto *I = ReadyList.begin();
   auto *E = ReadyList.end();
@@ -823,7 +829,7 @@ void PipelineSolver::greedyFind(
   LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
                     << CurrSyncGroupIdx << "\n");
 
-  EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, IsBottomUp);
+  EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, getIsBottomUp());
 
   // Since we have added the potential SchedGroups from bottom up, but
   // traversed the DAG from top down, parse over the groups from last to
@@ -887,7 +893,7 @@ bool PipelineSolver::solveGreedy() {
 
   while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size()) {
     SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-    IsBottomUp
+    getIsBottomUp()
         ? greedyFind(AddedEdges, CurrSU.second.rbegin(), CurrSU.second.rend())
         : greedyFind(AddedEdges, CurrSU.second.begin(), CurrSU.second.end());
     advancePosition();
@@ -907,7 +913,7 @@ unsigned PipelineSolver::computeProblemSize() {
 }
 
 void PipelineSolver::solve() {
-  if (!NeedsSolver)
+  if (!getNeedsSolver())
     return;
 
   unsigned ProblemSize = computeProblemSize();

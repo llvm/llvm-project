@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Support/PrivateReductionUtils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
@@ -257,17 +258,18 @@ static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
     fir::runtime::genDerivedTypeInitializeClone(builder, loc, newBox, moldBox);
 }
 
-static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value moldArg,
-                                llvm::SmallVectorImpl<mlir::Value> &lenParams) {
+static llvm::SmallVector<mlir::Value>
+getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value moldArg) {
+  llvm::SmallVector<mlir::Value> lenParams;
   // We pass derived types unboxed and so are not self-contained entities.
   // Assume that unboxed derived types won't need length paramters.
   if (!hlfir::isFortranEntity(moldArg))
-    return;
+    return lenParams;
 
   hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
   if (lenParams.empty())
-    return;
+    return lenParams;
 
   // The verifier for EmboxOp doesn't allow length parameters when the the
   // character already has static LEN. genLengthParameters may still return them
@@ -277,6 +279,7 @@ static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (strTy && strTy.hasConstantLen())
     lenParams.resize(0);
+  return lenParams;
 }
 
 static bool
@@ -329,9 +332,10 @@ public:
         argType{argType}, scalarInitValue{scalarInitValue},
         allocatedPrivVarArg{allocatedPrivVarArg}, moldArg{moldArg},
         initBlock{initBlock}, cleanupRegion{cleanupRegion}, kind{kind},
-        sym{sym}, cannotHaveNonDefaultLowerBounds{cannotHaveLowerBounds},
-        isDoConcurrent{isDoConcurrent},
-        forceHeapAllocation{forceHeapAllocation} {
+        sym{sym},
+        lenParams(decltype(this->lenParams)::withFlags(
+            unsigned(cannotHaveLowerBounds) | (unsigned(isDoConcurrent) << 1) |
+            (unsigned(forceHeapAllocation) << 2))) {
     valType = fir::unwrapRefType(argType);
   }
 
@@ -371,17 +375,27 @@ private:
   const Fortran::semantics::Symbol *sym;
 
   /// Any length parameters which have been fetched for the type
-  mlir::SmallVector<mlir::Value> lenParams;
+  llvm::SmallVectorWithFlags<
+      mlir::Value,
+      llvm::CalculateSmallVectorDefaultInlinedElements<mlir::Value>::value, 3>
+      lenParams;
 
   /// If the source variable being privatized definitely can't have non-default
   /// lower bounds then we don't need to generate code to read them.
-  bool cannotHaveNonDefaultLowerBounds;
+  bool getCannotHaveNonDefaultLowerBounds() const {
+    return lenParams.getFlag(0);
+  }
+  void setCannotHaveNonDefaultLowerBounds(bool Value) {
+    lenParams.setFlag(0, Value);
+  }
 
-  bool isDoConcurrent;
-  bool forceHeapAllocation;
+  bool getIsDoConcurrent() const { return lenParams.getFlag(1); }
+  void setIsDoConcurrent(bool Value) { lenParams.setFlag(1, Value); }
+  bool getForceHeapAllocation() const { return lenParams.getFlag(2); }
+  void setForceHeapAllocation(bool Value) { lenParams.setFlag(2, Value); }
 
   void createYield(mlir::Value ret) {
-    if (isDoConcurrent)
+    if (getIsDoConcurrent())
       fir::YieldOp::create(builder, loc, ret);
     else
       mlir::omp::YieldOp::create(builder, loc, ret);
@@ -506,7 +520,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
 
   if (!shouldAllocateOnStack)
     createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                        isDoConcurrent);
+                        getIsDoConcurrent());
 
   if (ifUnallocated)
     builder.setInsertionPointAfter(ifUnallocated);
@@ -523,7 +537,7 @@ bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
   // On the GPU, always allocate on the stack unless the user explicitly
   // specifies otherwise since heap allocations are very expensive.
   bool isGPU = offloadMod && offloadMod.getIsGPU();
-  if (isGPU && forceHeapAllocation)
+  if (isGPU && getForceHeapAllocation())
     return false;
   if (isGPU && enableGPUHeapAlloc) {
     // Check if it is adjustable array
@@ -540,7 +554,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     fir::BaseBoxType boxTy, bool needsInitialization) {
   bool isAllocatableOrPointer =
       mlir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy());
-  getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
+  lenParams.assign(getLengthParameters(builder, loc, getLoadedMoldArg()));
 
   fir::IfOp ifUnallocated{nullptr};
   if (isAllocatableOrPointer) {
@@ -554,8 +568,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Special case for (possibly allocatable) arrays of polymorphic types
   // e.g. !fir.class<!fir.heap<!fir.array<?x!fir.type<>>>>
   if (source.isPolymorphic()) {
-    fir::ShapeShiftOp shape =
-        getShapeShift(builder, loc, source, cannotHaveNonDefaultLowerBounds);
+    fir::ShapeShiftOp shape = getShapeShift(
+        builder, loc, source, getCannotHaveNonDefaultLowerBounds());
     mlir::Type arrayType = source.getElementOrSequenceType();
     mlir::Value allocatedArray = fir::AllocMemOp::create(
         builder, loc, arrayType, /*typeparams=*/mlir::ValueRange{},
@@ -571,7 +585,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     createYield(allocatedPrivVarArg);
     mlir::OpBuilder::InsertionGuard guard(builder);
     createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                        isDoConcurrent);
+                        getIsDoConcurrent());
     return;
   }
 
@@ -588,7 +602,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     if (needsDealloc) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                          isDoConcurrent);
+                          getIsDoConcurrent());
     } else {
       assert(!isAllocatableOrPointer &&
              "Pointer-like arrays must be heap allocated");
@@ -599,8 +613,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Put the temporary inside of a box:
   // hlfir::genVariableBox doesn't handle non-default lower bounds
   mlir::Value box;
-  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, getLoadedMoldArg(),
-                                               cannotHaveNonDefaultLowerBounds);
+  fir::ShapeShiftOp shapeShift = getShapeShift(
+      builder, loc, getLoadedMoldArg(), getCannotHaveNonDefaultLowerBounds());
   mlir::Type boxType = getLoadedMoldArg().getType();
   if (mlir::isa<fir::BaseBoxType>(temp.getType()))
     // the box created by the declare form createTempFromMold is missing
@@ -646,7 +660,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxchar(
   mlir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
 
   createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                      isDoConcurrent);
+                      getIsDoConcurrent());
 
   builder.setInsertionPointToEnd(initBlock);
   createYield(boxChar);
@@ -685,7 +699,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupUnboxedDerivedType(
 
   if (sym && hasFinalization(*sym))
     createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
-                        isDoConcurrent);
+                        getIsDoConcurrent());
 
   builder.setInsertionPointToEnd(initBlock);
   createYield(allocatedPrivVarArg);
@@ -733,7 +747,7 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     }
 
     // TODO: don't do this unless it is needed
-    getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
+    lenParams.assign(getLengthParameters(builder, loc, getLoadedMoldArg()));
 
     if (isPrivatization(kind) &&
         mlir::isa<fir::PointerType>(boxTy.getEleTy())) {

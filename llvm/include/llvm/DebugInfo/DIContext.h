@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_DICONTEXT_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/WithColor.h"
@@ -209,11 +210,14 @@ struct DIDumpOptions {
   bool DisplayRawContents = false;
   bool IsEH = false;
   bool DumpNonSkeleton = false;
-  bool ShowAggregateErrors = false;
-  bool PrintRegisterOnly = false;
+  bool showAggregateErrors() const { return FilterChildTag.getFlag(0); }
+  void setShowAggregateErrors(bool Show) { FilterChildTag.setFlag(0, Show); }
+  bool printRegisterOnly() const { return FilterChildTag.getFlag(1); }
+  void setPrintRegisterOnly(bool Print) { FilterChildTag.setFlag(1, Print); }
   std::string JsonErrSummaryFile;
   /// List of DWARF tags to filter children by.
-  llvm::SmallVector<unsigned, 0> FilterChildTag;
+  // Flag bits 0 and 1 enable aggregate errors and register-only printing.
+  llvm::SmallVectorWithFlags<unsigned, 0, 2> FilterChildTag;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
   /// The target of the object being dumped.

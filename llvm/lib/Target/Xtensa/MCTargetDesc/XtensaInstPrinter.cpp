@@ -123,7 +123,7 @@ void XtensaInstPrinter::printCallOperand(const MCInst *MI, uint64_t Address,
   const MCOperand &MC = MI->getOperand(OpNum);
   if (MC.isImm()) {
     int64_t Val = MC.getImm() + 4;
-    if (PrintBranchImmAsAddress) {
+    if (getPrintBranchImmAsAddress()) {
       uint64_t Target = Address;
       Target &= ~0x3;
       Target += Val & (~0x3);
@@ -145,7 +145,7 @@ void XtensaInstPrinter::printL32RTarget(const MCInst *MI, uint64_t Address,
   const MCOperand &MC = MI->getOperand(OpNum);
   if (MC.isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
-    if (PrintBranchImmAsAddress) {
+    if (getPrintBranchImmAsAddress()) {
       uint64_t Target = (Address + 0x3) & (~0x3);
       Value &= ~0x3;
       Target += Value;
@@ -166,7 +166,7 @@ void XtensaInstPrinter::printL32RTarget(const MCInst *MI, uint64_t Address,
 
 void XtensaInstPrinter::printPCRelImm(uint64_t Address, int64_t Offset,
                                       raw_ostream &O) {
-  if (PrintBranchImmAsAddress) {
+  if (getPrintBranchImmAsAddress()) {
     uint64_t Target = Address + Offset;
     Target &= 0xffffffff;
     O << formatHex(Target);

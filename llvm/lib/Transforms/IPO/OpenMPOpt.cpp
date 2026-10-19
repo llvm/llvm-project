@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EnumeratedArray.h"
@@ -353,13 +354,14 @@ struct OMPInformationCache : public InformationCache {
     StringRef Name;
 
     /// Flag to indicate a variadic function.
-    bool IsVarArg;
+    bool getIsVarArg() const { return ArgumentTypes.getFlag(0); }
+    void setIsVarArg(bool Value) { ArgumentTypes.setFlag(0, Value); }
 
     /// The return type of the function.
     Type *ReturnType;
 
     /// The argument types of the function.
-    SmallVector<Type *, 8> ArgumentTypes;
+    llvm::SmallVectorWithFlags<Type *, 8> ArgumentTypes;
 
     /// The declaration if available.
     Function *Declaration = nullptr;
@@ -669,9 +671,9 @@ struct OMPInformationCache : public InformationCache {
       auto &RFI = RFIs[_Enum];                                                 \
       RFI.Kind = _Enum;                                                        \
       RFI.Name = _Name;                                                        \
-      RFI.IsVarArg = _IsVarArg;                                                \
+      RFI.setIsVarArg(_IsVarArg);                                              \
       RFI.ReturnType = OMPBuilder._ReturnType;                                 \
-      RFI.ArgumentTypes = std::move(ArgsTypes);                                \
+      RFI.ArgumentTypes.assign(std::move(ArgsTypes));                          \
       RFI.Declaration = F;                                                     \
       unsigned NumUses = collectUses(RFI);                                     \
       (void)NumUses;                                                           \

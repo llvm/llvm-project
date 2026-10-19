@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -296,7 +297,7 @@ protected:
   /// extended to support multiple positions to support div/rem fusion or
   /// load-multiple instructions.
   using RootsTy = SmallVector<InstructionMatcher *, 1>;
-  RootsTy Roots;
+  llvm::SmallVectorWithFlagsFor<RootsTy, 1> Roots;
 
   /// A list of actions that need to be taken when all predicates in this rule
   /// have succeeded.
@@ -342,7 +343,8 @@ protected:
   /// When false, it means the back-end uses other means that we do not know
   /// about and we thus need to assume ANY operand can be accessed by ANY C++
   /// code (GenericInstructionPredicateMatcher)
-  bool UsesRecordOperand = true;
+  bool getUsesRecordOperand() const { return !Roots.getFlag(0); }
+  void setUsesRecordOperand(bool Value) { Roots.setFlag(0, !Value); }
 
   std::vector<std::string> RequiredSimplePredicates;
   std::vector<const Record *> RequiredFeatures;
@@ -394,7 +396,7 @@ public:
     return RequiredFeatures;
   }
 
-  bool usesRecordOperand() const { return UsesRecordOperand; }
+  bool usesRecordOperand() const { return getUsesRecordOperand(); }
 
   void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
   int getHwModeIdx() const { return HwModeIdx; }
@@ -525,7 +527,9 @@ public:
     return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
   }
 
-  iterator_range<RootsTy::iterator> roots() { return Roots; }
+  iterator_range<RootsTy::iterator> roots() {
+    return {Roots.begin(), Roots.end()};
+  }
   bool roots_empty() const { return Roots.empty(); }
   void roots_pop_front();
 };
@@ -1552,15 +1556,19 @@ public:
 };
 
 class MIFlagsInstructionPredicateMatcher : public InstructionPredicateMatcher {
-  SmallVector<StringRef, 2> Flags;
-  bool CheckNot; // false = GIM_MIFlags, true = GIM_MIFlagsNot
+  llvm::SmallVectorWithFlags<StringRef, 2> Flags;
+  bool getCheckNot() const { return Flags.getFlag(0); }
+  void setCheckNot(bool Value) {
+    Flags.setFlag(0, Value);
+  } // false = GIM_MIFlags, true = GIM_MIFlagsNot
 
 public:
   MIFlagsInstructionPredicateMatcher(unsigned InsnVarID,
                                      ArrayRef<StringRef> FlagsToCheck,
                                      bool CheckNot = false)
       : InstructionPredicateMatcher(IPM_MIFlags, InsnVarID),
-        Flags(FlagsToCheck), CheckNot(CheckNot) {
+        Flags(decltype(this->Flags)::withFlags(unsigned(CheckNot),
+                                               FlagsToCheck)) {
     sort(Flags);
   }
 

@@ -221,7 +221,9 @@ static std::atomic<unsigned> ActiveASTUnitObjects;
 
 ASTUnit::ASTUnit(bool _MainFileIsAST)
     : CodeGenOpts(std::make_unique<CodeGenOptions>()),
-      MainFileIsAST(_MainFileIsAST), WantTiming(getenv("LIBCLANG_TIMING")),
+      WantTiming(getenv("LIBCLANG_TIMING")),
+      PreambleDiagnostics(decltype(this->PreambleDiagnostics)::withFlags(
+          (unsigned(_MainFileIsAST) << 3))),
       ShouldCacheCodeCompletionResults(false),
       IncludeBriefCommentsInCodeCompletion(false), UserFilesAreVolatile(false),
       UnsafeToFree(false) {
@@ -231,7 +233,7 @@ ASTUnit::ASTUnit(bool _MainFileIsAST)
 
 ASTUnit::~ASTUnit() {
   // If we loaded from an AST file, balance out the BeginSourceFile call.
-  if (MainFileIsAST && getDiagnostics().getClient()) {
+  if (getMainFileIsAST() && getDiagnostics().getClient()) {
     getDiagnostics().getClient()->EndSourceFile();
   }
 
@@ -711,7 +713,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   }();
 
   AST->LangOpts = std::make_unique<LangOptions>(LangOpts);
-  AST->OnlyLocalDecls = OnlyLocalDecls;
+  AST->setOnlyLocalDeclsFlag(OnlyLocalDecls);
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
@@ -1349,7 +1351,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
         PreambleInvocationIn, MainFileBuffer.get(), Bounds, Diagnostics, VFS,
-        PCHContainerOps, StorePreamblesInMemory, PreambleStoragePath,
+        PCHContainerOps, getStorePreamblesInMemory(), PreambleStoragePath,
         Callbacks);
 
     PreambleInvocationIn.getFrontendOpts().SkipFunctionBodies =
@@ -1386,7 +1388,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
 
   checkAndRemoveNonDriverDiags(NewPreambleDiags);
   StoredDiagnostics = std::move(NewPreambleDiags);
-  PreambleDiagnostics = std::move(NewPreambleDiagsStandalone);
+  PreambleDiagnostics.assign(std::move(NewPreambleDiagsStandalone));
 
   // If the hash of top-level entities differs from the hash of the top-level
   // entities the last time we rebuilt the preamble, clear out the completion
@@ -1432,7 +1434,7 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
     Target = CI.getTargetPtr();
   Reader = CI.getASTReader();
   ModCache = CI.getModuleCachePtr();
-  HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
+  setHadModuleLoaderFatalFailure(CI.hadModuleLoaderFatalFailure());
   if (Invocation != CI.getInvocationPtr()) {
     // This happens when Parse creates a copy of \c Invocation to modify.
     ModifiedInvocation = CI.getInvocationPtr();
@@ -1516,7 +1518,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     // Override the resources path.
     CI->getHeaderSearchOpts().ResourceDir = std::string(ResourceFilesPath);
   }
-  AST->OnlyLocalDecls = OnlyLocalDecls;
+  AST->setOnlyLocalDeclsFlag(OnlyLocalDecls);
   AST->CaptureDiagnostics = CaptureDiagnostics;
   if (PrecompilePreambleAfterNParses > 0)
     AST->PreambleRebuildCountdown = PrecompilePreambleAfterNParses;
@@ -1688,7 +1690,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
   *AST->CodeGenOpts = CI->getCodeGenOpts();
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
-  AST->OnlyLocalDecls = OnlyLocalDecls;
+  AST->setOnlyLocalDeclsFlag(OnlyLocalDecls);
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
   AST->ShouldCacheCodeCompletionResults = CacheCodeCompletionResults;
@@ -2190,7 +2192,7 @@ void ASTUnit::CodeComplete(
 }
 
 bool ASTUnit::Save(StringRef File) {
-  if (HadModuleLoaderFatalFailure)
+  if (getHadModuleLoaderFatalFailure())
     return true;
 
   // FIXME: Can we somehow regenerate the stat cache here, or do we need to

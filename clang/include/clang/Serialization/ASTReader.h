@@ -44,6 +44,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -484,7 +485,12 @@ private:
   /// The receiver of deserialization events.
   ASTDeserializationListener *DeserializationListener = nullptr;
 
-  bool OwnsDeserializationListener = false;
+  bool getOwnsDeserializationListener() const {
+    return CommentsCursors.getFlag(0);
+  }
+  void setOwnsDeserializationListener(bool Value) {
+    CommentsCursors.setFlag(0, Value);
+  }
 
   SourceManager &SourceMgr;
   FileManager &FileMgr;
@@ -1087,29 +1093,59 @@ private:
   DisableValidationForModuleKind DisableValidationKind;
 
   /// Whether to accept an AST file with compiler errors.
-  bool AllowASTWithCompilerErrors;
+  bool getAllowASTWithCompilerErrors() const {
+    return CommentsCursors.getFlag(1);
+  }
+  void setAllowASTWithCompilerErrors(bool Value) {
+    CommentsCursors.setFlag(1, Value);
+  }
 
   /// Whether to accept an AST file that has a different configuration
   /// from the current compiler instance.
-  bool AllowConfigurationMismatch;
+  bool getAllowConfigurationMismatch() const {
+    return CommentsCursors.getFlag(2);
+  }
+  void setAllowConfigurationMismatch(bool Value) {
+    CommentsCursors.setFlag(2, Value);
+  }
 
   /// Whether to validate system input files.
-  bool ValidateSystemInputs;
+  bool getValidateSystemInputs() const { return CommentsCursors.getFlag(3); }
+  void setValidateSystemInputs(bool Value) {
+    CommentsCursors.setFlag(3, Value);
+  }
 
   /// Whether to force the validation of user input files.
-  bool ForceValidateUserInputs;
+  bool getForceValidateUserInputs() const {
+    return PreloadedDeclIDs.getFlag(0);
+  }
+  void setForceValidateUserInputs(bool Value) {
+    PreloadedDeclIDs.setFlag(0, Value);
+  }
 
   /// Whether validate headers and module maps using hash based on contents.
-  bool ValidateASTInputFilesContent;
+  bool getValidateASTInputFilesContent() const {
+    return PreloadedDeclIDs.getFlag(1);
+  }
+  void setValidateASTInputFilesContent(bool Value) {
+    PreloadedDeclIDs.setFlag(1, Value);
+  }
 
   /// Whether we are allowed to use the global module index.
-  bool UseGlobalIndex;
+  bool getUseGlobalIndex() const { return PreloadedDeclIDs.getFlag(2); }
+  void setUseGlobalIndex(bool Value) { PreloadedDeclIDs.setFlag(2, Value); }
 
   /// Whether we have tried loading the global module index yet.
-  bool TriedLoadingGlobalIndex = false;
+  bool getTriedLoadingGlobalIndex() const {
+    return PreloadedDeclIDs.getFlag(3);
+  }
+  void setTriedLoadingGlobalIndex(bool Value) {
+    PreloadedDeclIDs.setFlag(3, Value);
+  }
 
   ///Whether we are currently processing update records.
-  bool ProcessingUpdateRecords = false;
+  bool getProcessingUpdateRecords() const { return StmtStack.getFlag(0); }
+  void setProcessingUpdateRecords(bool Value) { StmtStack.setFlag(0, Value); }
 
   using SwitchCaseMapTy = llvm::DenseMap<unsigned, SwitchCase *>;
 
@@ -1197,7 +1233,8 @@ private:
   /// "interesting" decls to the consumer inside FinishedDeserializing().
   /// This is used as a guard to avoid recursively entering the process of
   /// passing decls to consumer.
-  bool CanPassDeclsToConsumer = true;
+  bool getCanPassDeclsToConsumer() const { return !StmtStack.getFlag(1); }
+  void setCanPassDeclsToConsumer(bool Value) { StmtStack.setFlag(1, !Value); }
 
   /// The set of identifiers that were read while the AST reader was
   /// (recursively) loading declarations.
@@ -1354,7 +1391,7 @@ private:
   llvm::DenseMap<RecordDecl *, RecordDecl *> RecordDefinitions;
 
   /// When reading a Stmt tree, Stmt operands are placed in this stack.
-  SmallVector<Stmt *, 16> StmtStack;
+  llvm::SmallVectorWithFlags<Stmt *, 16, 2> StmtStack;
 
   /// What kind of records we are reading.
   enum ReadingKind {
@@ -1387,14 +1424,16 @@ private:
 
   public:
     ProcessingUpdatesRAIIObj(ASTReader &reader)
-        : Reader(reader), PrevState(Reader.ProcessingUpdateRecords) {
-      Reader.ProcessingUpdateRecords = true;
+        : Reader(reader), PrevState(Reader.getProcessingUpdateRecords()) {
+      Reader.setProcessingUpdateRecords(true);
     }
 
     ProcessingUpdatesRAIIObj(const ProcessingUpdatesRAIIObj &) = delete;
     ProcessingUpdatesRAIIObj &
     operator=(const ProcessingUpdatesRAIIObj &) = delete;
-    ~ProcessingUpdatesRAIIObj() { Reader.ProcessingUpdateRecords = PrevState; }
+    ~ProcessingUpdatesRAIIObj() {
+      Reader.setProcessingUpdateRecords(PrevState);
+    }
   };
 
   /// Suggested contents of the predefines buffer, after this
@@ -1952,7 +1991,7 @@ public:
   GlobalModuleIndex *getGlobalIndex() { return GlobalIndex.get(); }
 
   /// Reset reader for a reload try.
-  void resetForReload() { TriedLoadingGlobalIndex = false; }
+  void resetForReload() { setTriedLoadingGlobalIndex(false); }
 
   /// Attempts to load the global index.
   ///
@@ -2622,7 +2661,7 @@ public:
 
   // Contains the IDs for declarations that were requested before we have
   // access to a Sema object.
-  SmallVector<GlobalDeclID, 16> PreloadedDeclIDs;
+  llvm::SmallVectorWithFlags<GlobalDeclID, 16, 4> PreloadedDeclIDs;
 
   /// Retrieve the semantic analysis object used to analyze the
   /// translation unit in which the precompiled header is being
@@ -2648,8 +2687,9 @@ public:
   void ClearSwitchCaseIDs();
 
   /// Cursors for comments blocks.
-  SmallVector<std::pair<llvm::BitstreamCursor,
-                        serialization::ModuleFile *>, 8> CommentsCursors;
+  llvm::SmallVectorWithFlags<
+      std::pair<llvm::BitstreamCursor, serialization::ModuleFile *>, 8, 4>
+      CommentsCursors;
 
   /// Loads comments ranges.
   void ReadComments() override;
@@ -2672,7 +2712,7 @@ public:
   void visitTopLevelModuleMaps(serialization::ModuleFile &MF,
                                llvm::function_ref<void(FileEntryRef)> Visitor);
 
-  bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
+  bool isProcessingUpdateRecords() { return getProcessingUpdateRecords(); }
 };
 
 /// A simple helper class to unpack an integer to bits and consuming

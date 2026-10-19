@@ -17,7 +17,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace mlir {
 namespace tosa {
@@ -33,20 +33,21 @@ namespace tosa {
 struct ValueKnowledge {
   ValueKnowledge() = delete;
   ValueKnowledge(bool hasRank, llvm::ArrayRef<int64_t> newSizes, Type dtype)
-      : hasError(false), hasRank(hasRank), dtype(dtype) {
+      : dtype(dtype) {
+    setHasRank(hasRank);
     sizes.reserve(newSizes.size());
     for (auto size : newSizes)
       sizes.push_back(size);
   }
 
-  operator bool() const { return !hasError; }
+  operator bool() const { return !hasError(); }
 
   // Get the static knowledge intrinsic to `type`.
   static ValueKnowledge getKnowledgeFromType(Type type) {
     ValueKnowledge result = getPessimisticValueState();
     if (auto shapedType = dyn_cast<ShapedType>(type)) {
       if (shapedType.hasRank()) {
-        result.hasRank = true;
+        result.setHasRank(true);
         result.sizes.reserve(shapedType.getRank());
         for (auto dim : shapedType.getShape())
           result.sizes.push_back(dim);
@@ -63,17 +64,19 @@ struct ValueKnowledge {
   }
 
   ShapedTypeComponents getShapedTypeComponents() const {
-    return hasRank ? ShapedTypeComponents(sizes) : ShapedTypeComponents();
+    return hasRank() ? ShapedTypeComponents(sizes) : ShapedTypeComponents();
   }
 
   Type getType() const {
-    if (hasRank)
+    if (hasRank())
       return RankedTensorType::get(llvm::ArrayRef(sizes), dtype);
     return UnrankedTensorType::get(dtype);
   }
 
   bool operator==(const ValueKnowledge &rhs) const {
-    return hasRank == rhs.hasRank && sizes == rhs.sizes && dtype == rhs.dtype;
+    return hasRank() == rhs.hasRank() &&
+           ArrayRef<int64_t>(sizes) == ArrayRef<int64_t>(rhs.sizes) &&
+           dtype == rhs.dtype;
   }
 
   // Given two pieces of static knowledge, calculate conservatively the
@@ -84,33 +87,33 @@ struct ValueKnowledge {
     // knowledge" default-initialized state to a state with more knowledge
     // consistent with lhs and rhs.
     ValueKnowledge result = getPessimisticValueState();
-    result.hasError = true;
+    result.setHasError(true);
 
     if (!lhs || !rhs || lhs.dtype != rhs.dtype)
       return result;
 
-    result.hasError = false;
+    result.setHasError(false);
     result.dtype = lhs.dtype;
 
-    if (!lhs.hasRank && !rhs.hasRank)
+    if (!lhs.hasRank() && !rhs.hasRank())
       return result;
 
-    if (!rhs.hasRank) {
-      result.hasRank = true;
-      result.sizes = lhs.sizes;
+    if (!rhs.hasRank()) {
+      result.setHasRank(true);
+      result.sizes.assign(lhs.sizes.begin(), lhs.sizes.end());
       return result;
     }
 
-    if (!lhs.hasRank) {
-      result.hasRank = true;
-      result.sizes = rhs.sizes;
+    if (!lhs.hasRank()) {
+      result.setHasRank(true);
+      result.sizes.assign(rhs.sizes.begin(), rhs.sizes.end());
       return result;
     }
 
     if (lhs.sizes.size() != rhs.sizes.size())
       return result;
 
-    result.hasRank = true;
+    result.setHasRank(true);
     result.sizes.resize(lhs.sizes.size(), ShapedType::kDynamic);
     for (auto i : llvm::seq<unsigned>(0, result.sizes.size())) {
       int64_t lhsSize = lhs.sizes[i];
@@ -123,7 +126,7 @@ struct ValueKnowledge {
       } else if (lhsSize == rhsSize) {
         resultSize = lhsSize;
       } else {
-        result.hasError = true;
+        result.setHasError(true);
       }
     }
 
@@ -136,25 +139,25 @@ struct ValueKnowledge {
   static ValueKnowledge meet(const ValueKnowledge &lhs,
                              const ValueKnowledge &rhs) {
     ValueKnowledge result = getPessimisticValueState();
-    result.hasError = true;
+    result.setHasError(true);
 
     if (!lhs || !rhs || lhs.dtype != rhs.dtype)
       return result;
 
-    result.hasError = false;
+    result.setHasError(false);
     result.dtype = lhs.dtype;
 
-    if (!lhs.hasRank || !rhs.hasRank) {
-      result.hasRank = false;
+    if (!lhs.hasRank() || !rhs.hasRank()) {
+      result.setHasRank(false);
       return result;
     }
 
     if (lhs.sizes.size() != rhs.sizes.size()) {
-      result.hasRank = false;
+      result.setHasRank(false);
       return result;
     }
 
-    result.hasRank = true;
+    result.setHasRank(true);
     result.sizes.resize(lhs.sizes.size(), ShapedType::kDynamic);
     for (int i = 0, e = lhs.sizes.size(); i < e; i++) {
       if (lhs.sizes[i] == rhs.sizes[i]) {
@@ -166,12 +169,17 @@ struct ValueKnowledge {
   }
 
   // Whether the value information has an error.
-  bool hasError;
+  bool hasError() const { return sizes.getFlag(0); }
+  void setHasError(bool value) { sizes.setFlag(0, value); }
   // Whether the value has known rank.
-  bool hasRank;
+  bool hasRank() const { return sizes.getFlag(1); }
+  void setHasRank(bool value) { sizes.setFlag(1, value); }
   // If `hasRank`, the sizes along each rank. Unknown sizes are represented as
   // `ShapedType::kDynamic`.
-  llvm::SmallVector<int64_t> sizes;
+  llvm::SmallVectorWithFlags<
+      int64_t, llvm::CalculateSmallVectorDefaultInlinedElements<int64_t>::value,
+      2>
+      sizes;
   // The dtype of a tensor.
   // This is equal to nullptr if we don't know that it is a specific concrete
   // type.

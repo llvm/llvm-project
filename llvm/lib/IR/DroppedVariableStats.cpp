@@ -19,7 +19,8 @@
 using namespace llvm;
 
 DroppedVariableStats::DroppedVariableStats(bool DroppedVarStatsEnabled)
-    : DroppedVariableStatsEnabled(DroppedVarStatsEnabled) {
+    : InlinedAts(decltype(this->InlinedAts)::withFlags(
+          unsigned(DroppedVarStatsEnabled))) {
   if (DroppedVarStatsEnabled)
     llvm::outs() << "Pass Level, Pass Name, Num of Dropped Variables, Func or "
                     "Module Name\n";
@@ -62,9 +63,9 @@ void DroppedVariableStats::calculateDroppedStatsAndPrint(
   if (DroppedCount > 0) {
     llvm::outs() << PassLevel << ", " << PassID << ", " << DroppedCount << ", "
                  << FuncOrModName << "\n";
-    PassDroppedVariables = true;
+    setPassDroppedVariablesFlag(true);
   } else
-    PassDroppedVariables = false;
+    setPassDroppedVariablesFlag(false);
 }
 
 bool DroppedVariableStats::updateDroppedCount(

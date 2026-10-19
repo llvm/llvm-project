@@ -9,6 +9,7 @@
 #ifndef MLIR_TOOLS_PDLL_ODS_OPERATION_H_
 #define MLIR_TOOLS_PDLL_ODS_OPERATION_H_
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <string>
 
 #include "mlir/Support/LLVM.h"
@@ -168,7 +169,7 @@ public:
   ArrayRef<OperandOrResult> getResults() const { return results; }
 
   /// Return if the operation is known to support result type inferrence.
-  bool hasResultTypeInferrence() const { return supportsTypeInferrence; }
+  bool hasResultTypeInferrence() const { return getSupportsTypeInferrence(); }
 
 private:
   Operation(StringRef name, StringRef summary, StringRef desc,
@@ -185,7 +186,8 @@ private:
   std::string nativeClassName;
 
   /// Flag indicating if the operation is known to support type inferrence.
-  bool supportsTypeInferrence;
+  bool getSupportsTypeInferrence() const { return attributes.getFlag(0); }
+  void setSupportsTypeInferrence(bool Value) { attributes.setFlag(0, Value); }
 
   /// The source location of this operation.
   SMRange location;
@@ -197,7 +199,7 @@ private:
   SmallVector<OperandOrResult> results;
 
   /// The attributes of the operation.
-  SmallVector<Attribute> attributes;
+  llvm::SmallVectorWithFlags<Attribute> attributes;
 
   /// Allow access to the private constructor.
   friend class Dialect;

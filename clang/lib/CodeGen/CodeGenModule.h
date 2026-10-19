@@ -35,6 +35,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
@@ -365,7 +366,10 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
-  bool CXX20ModuleInits = false;
+  bool getCXX20ModuleInits() const { return ELFDependentLibraries.getFlag(0); }
+  void setCXX20ModuleInits(bool Value) {
+    ELFDependentLibraries.setFlag(0, Value);
+  }
   std::unique_ptr<CodeGenTBAA> TBAA;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
@@ -569,7 +573,12 @@ private:
 
   /// Whether this TU contains a direct use of global ::operator delete
   /// (indicating that __global_delete forwarding bodies should be emitted).
-  bool HasDirectGlobalDelete = false;
+  bool getHasDirectGlobalDelete() const {
+    return ELFDependentLibraries.getFlag(1);
+  }
+  void setHasDirectGlobalDelete(bool Value) {
+    ELFDependentLibraries.setFlag(1, Value);
+  }
 
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
@@ -627,7 +636,7 @@ private:
   SmallVector<llvm::MDNode *, 16> LinkerOptionsMetadata;
 
   /// A vector of metadata strings for dependent libraries for ELF.
-  SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
+  llvm::SmallVectorWithFlags<llvm::MDNode *, 16, 2> ELFDependentLibraries;
 
   /// Global variable for copyright pragma comment (if present).
   llvm::GlobalVariable *LoadTimeCommentGlobal = nullptr;

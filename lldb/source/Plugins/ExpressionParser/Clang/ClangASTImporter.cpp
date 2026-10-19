@@ -1273,8 +1273,8 @@ RemapModule(OptionalClangModuleID from_id,
   OptionalClangModuleID parent = RemapModule(
       from_source.GetIDForModule(module->Parent), from_source, to_source);
   TypeSystemClang &to_ts = to_source.GetTypeSystem();
-  return to_ts.GetOrCreateClangModule(module->Name, parent, module->IsFramework,
-                                      module->IsExplicit);
+  return to_ts.GetOrCreateClangModule(
+      module->Name, parent, module->getIsFramework(), module->getIsExplicit());
 }
 
 void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,

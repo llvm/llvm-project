@@ -21,6 +21,7 @@
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
 #include "CIRGenValue.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
@@ -116,11 +117,14 @@ private:
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
   /// Accumulated record layout entries, materialized in release().
-  llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
+  llvm::SmallVectorWithFlags<mlir::NamedAttribute> recordLayoutEntries;
 
   /// Whether C++20 named modules get their own module initializer function,
   /// which requires the Itanium mangling of the initializer name.
-  bool cxx20ModuleInits = false;
+  bool getCxx20ModuleInits() const { return recordLayoutEntries.getFlag(0); }
+  void setCxx20ModuleInits(bool Value) {
+    recordLayoutEntries.setFlag(0, Value);
+  }
 
   /// The complete set of modules that have been imported.
   llvm::SetVector<clang::Module *> importedModules;

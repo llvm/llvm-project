@@ -235,8 +235,8 @@ MSP430TargetLowering::getRegForInlineAsmConstraint(
 
 /// For each argument in a function store the number of pieces it is composed
 /// of.
-template<typename ArgT>
-static void ParseFunctionArgs(const SmallVectorImpl<ArgT> &Args,
+template <typename ArgRangeT>
+static void ParseFunctionArgs(const ArgRangeT &Args,
                               SmallVectorImpl<unsigned> &Out) {
   unsigned CurrentArgIndex;
 
@@ -257,12 +257,11 @@ static void ParseFunctionArgs(const SmallVectorImpl<ArgT> &Args,
 }
 
 static void AnalyzeVarArgs(CCState &State,
-                           const SmallVectorImpl<ISD::OutputArg> &Outs) {
+                           llvm::ArrayRef<ISD::OutputArg> Outs) {
   State.AnalyzeCallOperands(Outs, CC_MSP430_AssignStack);
 }
 
-static void AnalyzeVarArgs(CCState &State,
-                           const SmallVectorImpl<ISD::InputArg> &Ins) {
+static void AnalyzeVarArgs(CCState &State, llvm::ArrayRef<ISD::InputArg> Ins) {
   State.AnalyzeFormalArguments(Ins, CC_MSP430_AssignStack);
 }
 
@@ -270,10 +269,10 @@ static void AnalyzeVarArgs(CCState &State,
 /// to handle special constraints in the ABI like reversing the order of the
 /// pieces of splitted arguments. In addition, all pieces of a certain argument
 /// have to be passed either using registers or the stack but never mixing both.
-template<typename ArgT>
+template <typename ArgRangeT>
 static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
-                             const SmallVectorImpl<ArgT> &Args) {
+                             const ArgRangeT &Args) {
   static const MCPhysReg CRegList[] = {
     MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
@@ -369,26 +368,26 @@ static void AnalyzeArguments(CCState &State,
 }
 
 static void AnalyzeRetResult(CCState &State,
-                             const SmallVectorImpl<ISD::InputArg> &Ins) {
+                             llvm::ArrayRef<ISD::InputArg> Ins) {
   State.AnalyzeCallResult(Ins, RetCC_MSP430);
 }
 
 static void AnalyzeRetResult(CCState &State,
-                             const SmallVectorImpl<ISD::OutputArg> &Outs) {
+                             llvm::ArrayRef<ISD::OutputArg> Outs) {
   State.AnalyzeReturn(Outs, RetCC_MSP430);
 }
 
-template<typename ArgT>
+template <typename ArgRangeT>
 static void AnalyzeReturnValues(CCState &State,
                                 SmallVectorImpl<CCValAssign> &RVLocs,
-                                const SmallVectorImpl<ArgT> &Args) {
+                                const ArgRangeT &Args) {
   AnalyzeRetResult(State, Args);
 }
 
 SDValue MSP430TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   switch (CallConv) {
   default:
@@ -408,17 +407,16 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                 SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
-  SDValue Callee                        = CLI.Callee;
-  bool &isTailCall                      = CLI.IsTailCall;
+  SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool isVarArg                         = CLI.IsVarArg;
+  bool isVarArg = CLI.getIsVarArg();
 
   // MSP430 target does not yet support tail call optimization.
-  isTailCall = false;
+  CLI.setIsTailCall(false);
 
   switch (CallConv) {
   default:
@@ -426,8 +424,9 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   case CallingConv::MSP430_BUILTIN:
   case CallingConv::Fast:
   case CallingConv::C:
-    return LowerCCCCallTo(Chain, Callee, CallConv, isVarArg, isTailCall,
-                          Outs, OutVals, Ins, dl, DAG, InVals);
+    return LowerCCCCallTo(Chain, Callee, CallConv, isVarArg,
+                          CLI.getIsTailCall(), Outs, OutVals, Ins, dl, DAG,
+                          InVals);
   case CallingConv::MSP430_INTR:
     report_fatal_error("ISRs cannot be called directly");
   }
@@ -438,8 +437,8 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 // FIXME: struct return stuff
 SDValue MSP430TargetLowering::LowerCCCArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -541,13 +540,11 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
   return Chain;
 }
 
-bool
-MSP430TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
-                                     MachineFunction &MF,
-                                     bool IsVarArg,
-                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                     LLVMContext &Context,
-                                     const Type *RetTy) const {
+bool MSP430TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                          MachineFunction &MF, bool IsVarArg,
+                                          llvm::ArrayRef<ISD::OutputArg> Outs,
+                                          LLVMContext &Context,
+                                          const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_MSP430);
@@ -556,7 +553,7 @@ MSP430TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
 SDValue
 MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                   bool isVarArg,
-                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                  llvm::ArrayRef<ISD::OutputArg> Outs,
                                   const SmallVectorImpl<SDValue> &OutVals,
                                   const SDLoc &dl, SelectionDAG &DAG) const {
 
@@ -626,10 +623,10 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 /// (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
 SDValue MSP430TargetLowering::LowerCCCCallTo(
     SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool isVarArg,
-    bool isTailCall, const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    bool isTailCall, llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
@@ -755,8 +752,8 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 ///
 SDValue MSP430TargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;

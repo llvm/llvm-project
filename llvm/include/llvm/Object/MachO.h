@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -111,7 +112,8 @@ private:
     unsigned ParentStringLength = 0;
     bool IsExportNode = false;
   };
-  using NodeList = SmallVector<NodeState, 16>;
+  // Flag bit 0 marks the end of the export traversal.
+  using NodeList = SmallVectorWithFlags<NodeState, 16>;
   using node_iterator = NodeList::const_iterator;
 
   Error *E;
@@ -119,7 +121,6 @@ private:
   ArrayRef<uint8_t> Trie;
   SmallString<256> CumulativeString;
   NodeList Stack;
-  bool Done = false;
 
   iterator_range<node_iterator> nodes() const { return Stack; }
 };
@@ -767,7 +768,7 @@ public:
   llvm::binaryformat::Swift5ReflectionSectionKind
   mapReflectionSectionNameToEnumValue(StringRef SectionName) const override;
 
-  bool hasPageZeroSegment() const { return HasPageZeroSegment; }
+  bool hasPageZeroSegment() const { return getHasPageZeroSegment(); }
 
   size_t getMachOFilesetEntryOffset() const { return MachOFilesetEntryOffset; }
 
@@ -858,7 +859,7 @@ private:
   SectionList Sections;
   using LibraryList = SmallVector<const char*, 1>;
   LibraryList Libraries;
-  LoadCommandList LoadCommands;
+  llvm::SmallVectorWithFlagsFor<LoadCommandList, 1> LoadCommands;
   using LibraryShortName = SmallVector<StringRef, 1>;
   using BuildToolList = SmallVector<const char*, 1>;
   BuildToolList BuildTools;
@@ -873,7 +874,8 @@ private:
   const char *DyldChainedFixupsLoadCmd = nullptr;
   const char *DyldExportsTrieLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
-  bool HasPageZeroSegment = false;
+  bool getHasPageZeroSegment() const { return LoadCommands.getFlag(0); }
+  void setHasPageZeroSegment(bool Value) { LoadCommands.setFlag(0, Value); }
   size_t MachOFilesetEntryOffset = 0;
 };
 

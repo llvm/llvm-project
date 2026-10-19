@@ -247,7 +247,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
     const CodeGenRegister::Vec &Regs = RC.getMembers();
     OS << "    {" << RC.getWeight(RegBank) << ", ";
     unsigned WeightLimit = 0;
-    if (Regs.empty() || RC.Artificial)
+    if (Regs.empty() || RC.getArtificial())
       OS << '0';
     else {
       std::vector<unsigned> RegUnits;
@@ -1080,8 +1080,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
-       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
-       << Reg.Artificial << " },\n";
+       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.getConstant()
+       << ", " << Reg.getArtificial() << " },\n";
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...
@@ -1241,7 +1241,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
        << RCIndices.RegSetSize << ", /* RegSetSize */\n      "
        << RC.getQualifiedIdName() << ",\n      "
        << static_cast<unsigned>(RC.CopyCost) << ", /* CopyCost */\n      "
-       << (RC.Allocatable ? "true" : "false") << ", /* Allocatable */\n      "
+       << (RC.getAllocatable() ? "true" : "false")
+       << ", /* Allocatable */\n      "
        << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      "
        << GetOff("SubClassMasks", RCIndices.SubClassMaskIdx) << ",\n      "
        << GetOff("SuperRegIdxSeqs",
@@ -1249,12 +1250,12 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
        << ",\n      ";
     printMask(OS, RC.LaneMask);
     OS << ",\n      " << (unsigned)RC.AllocationPriority << ",\n      "
-       << (RC.GlobalPriority ? "true" : "false") << ",\n      "
+       << (RC.getGlobalPriority() ? "true" : "false") << ",\n      "
        << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n      "
        << (unsigned)RC.SpillStackID << ", /* SpillStackID */\n      "
-       << (RC.HasDisjunctSubRegs ? "true" : "false")
+       << (RC.getHasDisjunctSubRegs() ? "true" : "false")
        << ", /* HasDisjunctSubRegs */\n      "
-       << (RC.CoveredBySubRegs ? "true" : "false")
+       << (RC.getCoveredBySubRegs() ? "true" : "false")
        << ", /* CoveredBySubRegs */\n      "
        << GetOff("SuperClasses", RCIndices.SuperClassIdx) << ",\n      "
        << RC.getSuperClasses().size() << "\n    },\n";
@@ -1523,7 +1524,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   for (const auto &RC : RegisterClasses) {
     ArrayRef<const Record *> Order = RC.getOrder();
 
-    if (RC.Allocatable)
+    if (RC.getAllocatable())
       AllocatableRegs.insert(Order.begin(), Order.end());
   }
 
@@ -1955,7 +1956,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     // Add all constant physical registers to the preserved mask:
     SetTheory::RecSet ConstantSet;
     for (const auto &Reg : RegBank.getRegisters()) {
-      if (Reg.Constant)
+      if (Reg.getConstant())
         ConstantSet.insert(Reg.TheDef);
     }
     Covered |= RegBank.computeCoveredRegisters(ConstantSet.getArrayRef());
@@ -2041,7 +2042,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "isConstantPhysReg(MCRegister PhysReg) const {\n"
      << "  return\n";
   for (const auto &Reg : Regs)
-    if (Reg.Constant)
+    if (Reg.getConstant())
       OS << "      PhysReg == " << getQualifiedName(Reg.TheDef) << " ||\n";
   OS << "      false;\n";
   OS << "}\n\n";
@@ -2135,9 +2136,9 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
        << '\n';
     OS << "\tNumRegs: " << RC.getMembers().size() << '\n';
     OS << "\tLaneMask: " << PrintLaneMask(RC.LaneMask) << '\n';
-    OS << "\tHasDisjunctSubRegs: " << RC.HasDisjunctSubRegs << '\n';
-    OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
-    OS << "\tAllocatable: " << RC.Allocatable << '\n';
+    OS << "\tHasDisjunctSubRegs: " << RC.getHasDisjunctSubRegs() << '\n';
+    OS << "\tCoveredBySubRegs: " << RC.getCoveredBySubRegs() << '\n';
+    OS << "\tAllocatable: " << RC.getAllocatable() << '\n';
     OS << "\tAllocationPriority: " << unsigned(RC.AllocationPriority) << '\n';
     OS << "\tWeight: " << RC.getWeight(RegBank) << '\n';
     OS << "\tBaseClassOrder: " << RC.getBaseClassOrder() << '\n';
@@ -2159,21 +2160,21 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
       OS << " " << SRC->getName();
     }
     OS << '\n';
-    if (RC.Artificial)
+    if (RC.getArtificial())
       OS << "\tArtificial: 1\n";
   }
 
   for (const CodeGenSubRegIndex &SRI : RegBank.getSubRegIndices()) {
     OS << "SubRegIndex " << SRI.getName() << ":\n";
     OS << "\tLaneMask: " << PrintLaneMask(SRI.LaneMask) << '\n';
-    OS << "\tAllSuperRegsCovered: " << SRI.AllSuperRegsCovered << '\n';
+    OS << "\tAllSuperRegsCovered: " << SRI.getAllSuperRegsCovered() << '\n';
     OS << "\tOffset: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
       return Info.Offset;
     }) << '\n';
     OS << "\tSize: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
       return Info.Size;
     }) << '\n';
-    if (SRI.Artificial)
+    if (SRI.getArtificial())
       OS << "\tArtificial: 1\n";
   }
 
@@ -2183,15 +2184,15 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     for (const auto &Cost : R.CostPerUse)
       OS << Cost << " ";
     OS << '\n';
-    OS << "\tCoveredBySubregs: " << R.CoveredBySubRegs << '\n';
-    OS << "\tHasDisjunctSubRegs: " << R.HasDisjunctSubRegs << '\n';
+    OS << "\tCoveredBySubregs: " << R.getCoveredBySubRegs() << '\n';
+    OS << "\tHasDisjunctSubRegs: " << R.getHasDisjunctSubRegs() << '\n';
     for (auto &[SubIdx, SubReg] : R.getSubRegs()) {
       OS << "\tSubReg " << SubIdx->getName() << " = " << SubReg->getName()
          << '\n';
     }
     for (unsigned U : R.getNativeRegUnits())
       OS << "\tRegUnit " << U << '\n';
-    if (R.Artificial)
+    if (R.getArtificial())
       OS << "\tArtificial: 1\n";
   }
 }

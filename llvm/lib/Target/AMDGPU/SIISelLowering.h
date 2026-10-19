@@ -437,18 +437,16 @@ public:
     const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
-  bool CanLowerReturn(CallingConv::ID CallConv,
-                      MachineFunction &MF, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool isVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
@@ -462,18 +460,17 @@ public:
 
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
-                          const SmallVectorImpl<ISD::InputArg> &Ins,
-                          const SDLoc &DL, SelectionDAG &DAG,
-                          SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                          SDValue ThisVal) const;
+                          llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL,
+                          SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+                          bool isThisReturn, SDValue ThisVal) const;
 
   bool mayBeEmittedAsTailCall(const CallInst *) const override;
 
   bool isEligibleForTailCallOptimization(
-    SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
+      SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
+      llvm::ArrayRef<ISD::OutputArg> Outs,
+      const SmallVectorImpl<SDValue> &OutVals,
+      llvm::ArrayRef<ISD::InputArg> Ins, SelectionDAG &DAG) const;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
@@ -643,7 +640,7 @@ public:
 
   void allocatePreloadKernArgSGPRs(CCState &CCInfo,
                                    SmallVectorImpl<CCValAssign> &ArgLocs,
-                                   const SmallVectorImpl<ISD::InputArg> &Ins,
+                                   llvm::ArrayRef<ISD::InputArg> Ins,
                                    MachineFunction &MF,
                                    const SIRegisterInfo &TRI,
                                    SIMachineFunctionInfo &Info) const;

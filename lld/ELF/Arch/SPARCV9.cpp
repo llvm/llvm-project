@@ -199,7 +199,7 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     case R_SPARC_TLS_IE_LD:
     case R_SPARC_TLS_IE_LDX:
-      if (!ctx.arg.shared && !sym.isPreemptible)
+      if (!ctx.arg.getShared() && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 

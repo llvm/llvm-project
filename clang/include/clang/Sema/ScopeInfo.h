@@ -30,6 +30,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -723,17 +724,28 @@ public:
 
   /// - Whether the target type of return statements in this context
   /// is deduced (e.g. a lambda or block with omitted return type).
-  bool HasImplicitReturnType = false;
+  bool getHasImplicitReturnType() const { return LocalPacks.getFlag(0); }
+  void setHasImplicitReturnType(bool Value) { LocalPacks.setFlag(0, Value); }
 
   /// Whether this contains an unexpanded parameter pack.
-  bool ContainsUnexpandedParameterPack = false;
+  bool getContainsUnexpandedParameterPack() const {
+    return LocalPacks.getFlag(1);
+  }
+  void setContainsUnexpandedParameterPack(bool Value) {
+    LocalPacks.setFlag(1, Value);
+  }
+
+  void addUnexpandedParameterPack(bool ContainsPack) {
+    setContainsUnexpandedParameterPack(getContainsUnexpandedParameterPack() |
+                                       (ContainsPack));
+  }
 
   /// ReturnType - The target type of return statements in this context,
   /// or null if unknown.
   QualType ReturnType;
 
   /// Packs introduced by this, if any.
-  SmallVector<NamedDecl *, 4> LocalPacks;
+  llvm::SmallVectorWithFlags<NamedDecl *, 4, 2> LocalPacks;
 
   void addCapture(ValueDecl *Var, bool isBlock, bool isByref, bool isNested,
                   SourceLocation Loc, SourceLocation EllipsisLoc,
@@ -877,9 +889,13 @@ public:
   /// Indicate that we parsed the parameter list
   /// at which point the mutability of the lambda
   /// is known.
-  bool AfterParameterList = true;
+  bool getAfterParameterList() const { return !ShadowingDecls.getFlag(0); }
+  void setAfterParameterList(bool Value) { ShadowingDecls.setFlag(0, !Value); }
 
-  bool BeforeCompoundStatement = true;
+  bool getBeforeCompoundStatement() const { return !ShadowingDecls.getFlag(1); }
+  void setBeforeCompoundStatement(bool Value) {
+    ShadowingDecls.setFlag(1, !Value);
+  }
 
   ParmVarDecl *ExplicitObjectParameter = nullptr;
 
@@ -896,10 +912,15 @@ public:
 
   /// Whether this is a mutable lambda. Until the mutable keyword is parsed,
   /// we assume the lambda is mutable.
-  bool Mutable = true;
+  bool getMutable() const { return !ShadowingDecls.getFlag(2); }
+  void setMutable(bool Value) { ShadowingDecls.setFlag(2, !Value); }
 
   /// Whether the (empty) parameter list is explicit.
-  bool ExplicitParams = false;
+  bool getExplicitParams() const { return ShadowingDecls.getFlag(3); }
+  bool setExplicitParams(bool Value) {
+    ShadowingDecls.setFlag(3, Value);
+    return Value;
+  }
 
   /// Whether any of the capture expressions requires cleanups.
   CleanupInfo Cleanup;
@@ -948,7 +969,7 @@ public:
     const NamedDecl *VD;
     const NamedDecl *ShadowedDecl;
   };
-  llvm::SmallVector<ShadowedOuterDecl, 4> ShadowingDecls;
+  llvm::SmallVectorWithFlags<ShadowedOuterDecl, 4, 4> ShadowingDecls;
 
   SourceLocation PotentialThisCaptureLocation;
 

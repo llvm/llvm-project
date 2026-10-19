@@ -17,6 +17,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Support/FileSystem.h"
@@ -44,8 +45,8 @@ public:
   }
 };
 
-typedef SmallVector<uint64_t, 64> RecordData;
-typedef SmallVectorImpl<uint64_t> RecordDataImpl;
+typedef llvm::SmallVectorWithFlags<uint64_t, 64> RecordData;
+typedef llvm::SmallVectorWithFlagsImpl<uint64_t> RecordDataImpl;
 typedef ArrayRef<uint64_t> RecordDataRef;
 
 class SDiagsWriter;
@@ -238,8 +239,7 @@ private:
   /// consumer.
   struct SharedState {
     SharedState(StringRef File, DiagnosticOptions &DiagOpts)
-        : DiagOpts(DiagOpts), Stream(Buffer), OutputFile(File.str()),
-          EmittedAnyDiagBlocks(false) {}
+        : DiagOpts(DiagOpts), Stream(Buffer), OutputFile(File.str()) {}
 
     /// Diagnostic options.
     DiagnosticOptions DiagOpts;
@@ -277,7 +277,8 @@ private:
     /// Whether we have already started emission of any DIAG blocks. Once
     /// this becomes \c true, we never close a DIAG block until we know that we're
     /// starting another one or we're done.
-    bool EmittedAnyDiagBlocks;
+    bool getEmittedAnyDiagBlocks() const { return Record.getFlag(0); }
+    void setEmittedAnyDiagBlocks(bool Value) { Record.setFlag(0, Value); }
 
     /// Engine for emitting diagnostics about the diagnostics.
     std::unique_ptr<DiagnosticsEngine> MetaDiagnostics;
@@ -582,11 +583,11 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   // for beginDiagnostic, in case associated notes are emitted before we get
   // there.
   if (DiagLevel != DiagnosticsEngine::Note) {
-    if (State->EmittedAnyDiagBlocks)
+    if (State->getEmittedAnyDiagBlocks())
       ExitDiagBlock();
 
     EnterDiagBlock();
-    State->EmittedAnyDiagBlocks = true;
+    State->setEmittedAnyDiagBlocks(true);
   }
 
   // Compute the diagnostic text.
@@ -777,11 +778,11 @@ SDiagsWriter::~SDiagsWriter() {
     return;
 
   // Finish off any diagnostic we were in the process of emitting.
-  if (State->EmittedAnyDiagBlocks)
+  if (State->getEmittedAnyDiagBlocks())
     ExitDiagBlock();
 
   if (MergeChildRecords) {
-    if (!State->EmittedAnyDiagBlocks)
+    if (!State->getEmittedAnyDiagBlocks())
       // We have no diagnostics of our own, so we can just leave the child
       // process' output alone
       return;

@@ -347,12 +347,12 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
   State.Stack.push_back(ParenState(/*Tok=*/nullptr, FirstIndent, FirstIndent,
                                    /*AvoidBinPacking=*/false,
                                    /*NoLineBreak=*/false));
-  State.NoContinuation = false;
+  State.setNoContinuation(false);
   State.StartOfStringLiteral = 0;
-  State.NoLineBreak = false;
+  State.setNoLineBreak(false);
   State.StartOfLineLevel = 0;
   State.LowestLevelOnLine = 0;
-  State.IgnoreStackForComparison = false;
+  State.setIgnoreStackForComparison(false);
 
   if (Style.isTextProto()) {
     // We need this in order to deal with the bin packing of text fields at
@@ -468,7 +468,7 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return true;
   }
 
-  return !State.NoLineBreak && !CurrentState.NoLineBreak;
+  return !State.getNoLineBreak() && !CurrentState.NoLineBreak;
 }
 
 bool ContinuationIndenter::mustBreak(const LineState &State) {
@@ -707,7 +707,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
 
   if (Current.is(TT_FunctionDeclarationName) &&
-      !State.Line->ReturnTypeWrapped &&
+      !State.Line->getReturnTypeWrapped() &&
       // Don't break before a C# function when no break after return type.
       (!Style.isCSharp() ||
        Style.BreakAfterReturnType > FormatStyle::RTBS_ExceptShortType) &&
@@ -749,7 +749,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Previous.is(TT_BlockComment) && Previous.IsMultiline)
     return true;
 
-  if (State.NoContinuation)
+  if (State.getNoContinuation())
     return true;
 
   return false;
@@ -763,7 +763,7 @@ unsigned ContinuationIndenter::addTokenToState(LineState &State, bool Newline,
   const FormatToken &Previous = *State.NextToken->Previous;
 
   assert(!State.Stack.empty());
-  State.NoContinuation = false;
+  State.setNoContinuation(false);
 
   if (Current.is(TT_ImplicitStringLiteral) &&
       (!Previous.Tok.getIdentifierInfo() ||
@@ -850,7 +850,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   };
 
   if (DisallowLineBreaks())
-    State.NoLineBreak = true;
+    State.setNoLineBreak(true);
 
   if (Current.is(tok::equal) &&
       (State.Line->First->is(tok::kw_for) || Current.NestingLevel == 0) &&
@@ -1031,7 +1031,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Previous.isNoneOf(TT_ObjCMethodExpr, TT_RequiresClause,
                         TT_TableGenDAGArgOpener,
                         TT_TableGenDAGArgOpenerToBreak) &&
-      !(Current.MacroParent && Previous.MacroParent) &&
+      !(Current.getMacroParent() && Previous.getMacroParent()) &&
       (Current.isNot(TT_LineComment) ||
        (Previous.is(BK_BracedInit) &&
         Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall) ||
@@ -1698,7 +1698,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
                                     TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName)) ||
-      (State.Line->ReturnTypeWrapped && PreviousNonComment &&
+      (State.Line->getReturnTypeWrapped() && PreviousNonComment &&
        isReturnTypePrefixSpecifier(*PreviousNonComment))) {
     return std::max(IndentationAndAlignment(CurrentState.LastSpace),
                     CurrentState.Indent);
@@ -3134,7 +3134,7 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
         Paren.BreakBeforeParameter = true;
 
     if (Current.is(TT_BlockComment))
-      State.NoContinuation = true;
+      State.setNoContinuation(true);
 
     State.Stack.back().LastSpace = StartColumn;
   }

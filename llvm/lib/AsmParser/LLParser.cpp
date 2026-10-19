@@ -294,7 +294,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   // We should have already returned an error if we observed both intrinsics and
   // records in this IR.
-  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
+  assert(!(getSeenNewDbgInfoFormat() && getSeenOldDbgInfoFormat()) &&
          "Mixed debug intrinsics/records seen without a parsing error?");
 
   // Handle any function attribute group forward references.
@@ -7550,10 +7550,10 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     // following the debug records, i.e. they cannot appear after the block
     // terminator.
     while (Lex.getKind() == lltok::hash) {
-      if (SeenOldDbgInfoFormat)
+      if (getSeenOldDbgInfoFormat())
         return error(Lex.getLoc(), "debug record should not appear in a module "
                                    "containing debug info intrinsics");
-      SeenNewDbgInfoFormat = true;
+      setSeenNewDbgInfoFormat(true);
       Lex.Lex();
 
       DbgRecord *DR;
@@ -9054,12 +9054,12 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
 
   if (CalleeID.Kind == ValID::t_GlobalName &&
       isOldDbgFormatIntrinsic(CalleeID.StrVal)) {
-    if (SeenNewDbgInfoFormat) {
+    if (getSeenNewDbgInfoFormat()) {
       CI->deleteValue();
       return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
                             "using non-intrinsic debug info");
     }
-    SeenOldDbgInfoFormat = true;
+    setSeenOldDbgInfoFormat(true);
   }
   CI->setAttributes(PAL);
   ForwardRefAttrGroups[CI] = FwdRefAttrGrps;

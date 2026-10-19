@@ -71,6 +71,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -196,8 +197,9 @@ private:
   struct SliceInfo {
     SmallVector<Value> shapeVec;
     SmallVector<Value> shiftVec;
-    SmallVector<Value> sliceVec;
-    bool hasProjectedSlice = false;
+    llvm::SmallVectorWithFlags<Value> sliceVec;
+    bool getHasProjectedSlice() const { return sliceVec.getFlag(0); }
+    void setHasProjectedSlice(bool Value) { sliceVec.setFlag(0, Value); }
     // Constant value of the first projected-slice field, if any.
     std::optional<std::int64_t> projectedSliceStart;
   };
@@ -477,7 +479,7 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
 
     if (auto sliceOp = getSliceOp(op.getSlice())) {
       if (hasProjectedSlice(sliceOp)) {
-        info.hasProjectedSlice = true;
+        info.setHasProjectedSlice(true);
         info.projectedSliceStart = getProjectedSliceStartIfConstant(sliceOp);
       }
       auto triples = sliceOp.getTriples();
@@ -826,7 +828,7 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
   }
 
   SmallVector<Value> &shiftVec = sliceInfo.shiftVec;
-  SmallVector<Value> &sliceVec = sliceInfo.sliceVec;
+  auto &sliceVec = sliceInfo.sliceVec;
   SmallVector<Value> sliceLbs, sliceStrides;
   for (size_t i = 0; i < sliceVec.size(); i += 3) {
     sliceLbs.push_back(castTypeToIndexType(sliceVec[i], rewriter));
@@ -992,7 +994,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
     collectSliceInfoFrom(rebox, sliceInfo);
 
-  if (!sliceInfo.hasProjectedSlice && sliceInfo.shapeVec.empty()) {
+  if (!sliceInfo.getHasProjectedSlice() && sliceInfo.shapeVec.empty()) {
     auto shapeVal = arrayCoorOp.getShape();
     if (shapeVal &&
         mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
@@ -1025,7 +1027,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   // each load/store touches exactly sizeof(T) bytes.
   auto srcTy = cast<MemRefType>((*converted).getType());
   std::optional<int64_t> complexPartIdx;
-  if (sliceInfo.hasProjectedSlice) {
+  if (sliceInfo.getHasProjectedSlice()) {
     if (auto complexTy = dyn_cast<mlir::ComplexType>(srcTy.getElementType())) {
       if (!sliceInfo.projectedSliceStart ||
           (*sliceInfo.projectedSliceStart != 0 &&
@@ -1088,8 +1090,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       shapeVec.empty() || (firMemrefIsBox && !firMemrefIsEmbox);
   if (descriptorOwnsLayout) {
     // Plain `!fir.ref` without recoverable shape extents cannot use fir.box_*.
-    if (shapeVec.empty() && !sliceInfo.hasProjectedSlice && !isDescriptor &&
-        !isRebox)
+    if (shapeVec.empty() && !sliceInfo.getHasProjectedSlice() &&
+        !isDescriptor && !isRebox)
       return failure();
 
     // Complex %re/%im: memref_stride = box_dims_byte_stride / sizeof(T),

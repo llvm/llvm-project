@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -498,7 +499,7 @@ private:
   // The begin index for a HeaderKind also acts the end index of HeaderKind - 1.
   // The extra element at the end acts as the end index of the last HeaderKind.
   unsigned HeaderKindBeginIndex[NumHeaderKinds + 1] = {};
-  SmallVector<Header, 2> HeadersStorage;
+  llvm::SmallVectorWithFlags<Header, 2, 4> HeadersStorage;
 
 public:
   ArrayRef<Header> getAllHeaders() const { return HeadersStorage; }
@@ -552,7 +553,7 @@ public:
   ///
   /// If any of these requirements are not available, the \c IsAvailable bit
   /// will be false to indicate that this (sub)module is not available.
-  SmallVector<Requirement, 2> Requirements;
+  llvm::SmallVectorWithFlags<Requirement, 2, 4> Requirements;
 
   /// A module with the same name that shadows this module.
   Module *ShadowingModule = nullptr;
@@ -560,86 +561,129 @@ public:
   /// Whether this module has declared itself unimportable, either because
   /// it's missing a requirement from \p Requirements or because it's been
   /// shadowed by another module.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsUnimportable : 1;
+  unsigned getIsUnimportable() const { return Requirements.getFlag(0); }
+  void setIsUnimportable(unsigned Value) {
+    Requirements.setFlag(0, (Value & 1));
+  }
 
   /// Whether we tried and failed to load a module file for this module.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HasIncompatibleModuleFile : 1;
+  unsigned getHasIncompatibleModuleFile() const {
+    return Requirements.getFlag(1);
+  }
+  void setHasIncompatibleModuleFile(unsigned Value) {
+    Requirements.setFlag(1, (Value & 1));
+  }
 
   /// Whether this module is available in the current translation unit.
   ///
   /// If the module is missing headers or does not meet all requirements then
   /// this bit will be 0.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsAvailable : 1;
+  unsigned getIsAvailable() const { return Requirements.getFlag(2); }
+  void setIsAvailable(unsigned Value) { Requirements.setFlag(2, (Value & 1)); }
 
   /// Whether this module was loaded from a module file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFromModuleFile : 1;
+  unsigned getIsFromModuleFile() const { return Requirements.getFlag(3); }
+  void setIsFromModuleFile(unsigned Value) {
+    Requirements.setFlag(3, (Value & 1));
+  }
 
   /// Whether this is a framework module.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFramework : 1;
+  unsigned getIsFramework() const { return HeadersStorage.getFlag(0); }
+  void setIsFramework(unsigned Value) {
+    HeadersStorage.setFlag(0, (Value & 1));
+  }
 
   /// Whether this is an explicit submodule.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsExplicit : 1;
+  unsigned getIsExplicit() const { return HeadersStorage.getFlag(1); }
+  void setIsExplicit(unsigned Value) { HeadersStorage.setFlag(1, (Value & 1)); }
 
   /// Whether this is a "system" module (which assumes that all
   /// headers in it are system headers).
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsSystem : 1;
+  unsigned getIsSystem() const { return HeadersStorage.getFlag(2); }
+  unsigned setIsSystem(unsigned Value) {
+    HeadersStorage.setFlag(2, (Value & 1));
+    return (Value & 1);
+  }
 
   /// Whether this is an 'extern "C"' module (which implicitly puts all
   /// headers in it within an 'extern "C"' block, and allows the module to be
   /// imported within such a block).
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsExternC : 1;
+  unsigned getIsExternC() const { return HeadersStorage.getFlag(3); }
+  unsigned setIsExternC(unsigned Value) {
+    HeadersStorage.setFlag(3, (Value & 1));
+    return (Value & 1);
+  }
 
   /// Whether this is an inferred submodule (module * { ... }).
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsInferred : 1;
+  unsigned getIsInferred() const { return LinkLibraries.getFlag(0); }
+  void setIsInferred(unsigned Value) { LinkLibraries.setFlag(0, (Value & 1)); }
 
   /// Whether we should infer submodules for this module based on
   /// the headers.
   ///
   /// Submodules can only be inferred for modules with an umbrella header.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned InferSubmodules : 1;
+  unsigned getInferSubmodules() const { return LinkLibraries.getFlag(1); }
+  void setInferSubmodules(unsigned Value) {
+    LinkLibraries.setFlag(1, (Value & 1));
+  }
 
   /// Whether, when inferring submodules, the inferred submodules
   /// should be explicit.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned InferExplicitSubmodules : 1;
+  unsigned getInferExplicitSubmodules() const {
+    return LinkLibraries.getFlag(2);
+  }
+  void setInferExplicitSubmodules(unsigned Value) {
+    LinkLibraries.setFlag(2, (Value & 1));
+  }
 
   /// Whether, when inferring submodules, the inferr submodules should
   /// export all modules they import (e.g., the equivalent of "export *").
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned InferExportWildcard : 1;
+  unsigned getInferExportWildcard() const { return LinkLibraries.getFlag(3); }
+  unsigned setInferExportWildcard(unsigned Value) {
+    LinkLibraries.setFlag(3, (Value & 1));
+    return (Value & 1);
+  }
 
   /// Whether the set of configuration macros is exhaustive.
   ///
   /// When the set of configuration macros is exhaustive, meaning
   /// that no identifier not in this list should affect how the module is
   /// built.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ConfigMacrosExhaustive : 1;
+  unsigned getConfigMacrosExhaustive() const {
+    return UnresolvedDirectUses.getFlag(0);
+  }
+  void setConfigMacrosExhaustive(unsigned Value) {
+    UnresolvedDirectUses.setFlag(0, (Value & 1));
+  }
 
   /// Whether files in this module can only include non-modular headers
   /// and headers from used modules.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned NoUndeclaredIncludes : 1;
+  unsigned getNoUndeclaredIncludes() const {
+    return UnresolvedDirectUses.getFlag(1);
+  }
+  unsigned setNoUndeclaredIncludes(unsigned Value) {
+    UnresolvedDirectUses.setFlag(1, (Value & 1));
+    return (Value & 1);
+  }
 
   /// Whether this module came from a "private" module map, found next
   /// to a regular (public) module map.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ModuleMapIsPrivate : 1;
+  unsigned getModuleMapIsPrivate() const {
+    return UnresolvedDirectUses.getFlag(2);
+  }
+  void setModuleMapIsPrivate(unsigned Value) {
+    UnresolvedDirectUses.setFlag(2, (Value & 1));
+  }
 
   /// Whether this C++20 named modules doesn't need an initializer.
   /// This is only meaningful for C++20 modules.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned NamedModuleHasInit : 1;
+  unsigned getNamedModuleHasInit() const {
+    return UnresolvedDirectUses.getFlag(3);
+  }
+  unsigned setNamedModuleHasInit(unsigned Value) {
+    UnresolvedDirectUses.setFlag(3, (Value & 1));
+    return (Value & 1);
+  }
 
   /// Describes the visibility of the various names within a
   /// particular module.
@@ -680,22 +724,26 @@ public:
     SourceLocation ExportLoc;
 
     /// The name of the module.
-    ModuleId Id;
+    llvm::SmallVectorWithFlagsFor<ModuleId, 1> Id;
 
     /// Whether this export declaration ends in a wildcard, indicating
     /// that all of its submodules should be exported (rather than the named
     /// module itself).
-    bool Wildcard;
+    bool getWildcard() const { return Id.getFlag(0); }
+    void setWildcard(bool Value) { Id.setFlag(0, Value); }
+
+    UnresolvedExportDecl(SourceLocation ExportLoc, ModuleId Id, bool Wildcard)
+        : ExportLoc(ExportLoc), Id(unsigned(Wildcard), std::move(Id)) {}
   };
 
   /// The set of export declarations that have yet to be resolved.
   SmallVector<UnresolvedExportDecl, 2> UnresolvedExports;
 
   /// The directly used modules.
-  SmallVector<Module *, 2> DirectUses;
+  llvm::SmallVectorWithFlags<Module *, 2> DirectUses;
 
   /// The set of use declarations that have yet to be resolved.
-  SmallVector<ModuleId, 2> UnresolvedDirectUses;
+  llvm::SmallVectorWithFlags<ModuleId, 2, 4> UnresolvedDirectUses;
 
   /// When \c NoUndeclaredIncludes is true, the set of modules this module tried
   /// to import but didn't because they are not direct uses.
@@ -720,11 +768,15 @@ public:
 
   /// The set of libraries or frameworks to link against when
   /// an entity from this module is used.
-  llvm::SmallVector<LinkLibrary, 2> LinkLibraries;
+  llvm::SmallVectorWithFlags<LinkLibrary, 2, 4> LinkLibraries;
 
   /// Autolinking uses the framework name for linking purposes
   /// when this is false and the export_as name otherwise.
-  bool UseExportAsModuleLinkName = false;
+  bool getUseExportAsModuleLinkName() const { return DirectUses.getFlag(0); }
+  bool setUseExportAsModuleLinkName(bool Value) {
+    DirectUses.setFlag(0, Value);
+    return Value;
+  }
 
   /// The set of "configuration macros", which are macros that
   /// (intentionally) change how this module is built.
@@ -763,7 +815,7 @@ public:
   ~Module();
 
   /// Determine whether this module has been declared unimportable.
-  bool isUnimportable() const { return IsUnimportable; }
+  bool isUnimportable() const { return getIsUnimportable(); }
 
   /// Determine whether this module has been declared unimportable.
   ///
@@ -786,7 +838,7 @@ public:
 
   /// Determine whether this module is available for use within the
   /// current translation unit.
-  bool isAvailable() const { return IsAvailable; }
+  bool isAvailable() const { return getIsAvailable(); }
 
   /// Determine whether this module is available for use within the
   /// current translation unit.
@@ -827,7 +879,7 @@ public:
   /// of a framework module.
   bool isPartOfFramework() const {
     for (const Module *Mod = this; Mod; Mod = Mod->Parent)
-      if (Mod->IsFramework)
+      if (Mod->getIsFramework())
         return true;
 
     return false;
@@ -836,7 +888,7 @@ public:
   /// Determine whether this module is a subframework of another
   /// framework.
   bool isSubFramework() const {
-    return IsFramework && Parent && Parent->isPartOfFramework();
+    return getIsFramework() && Parent && Parent->isPartOfFramework();
   }
 
   /// Set the parent of this module. This should only be used if the parent
@@ -902,7 +954,7 @@ public:
     return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
   }
 
-  bool isNamedModuleInterfaceHasInit() const { return NamedModuleHasInit; }
+  bool isNamedModuleInterfaceHasInit() const { return getNamedModuleHasInit(); }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {

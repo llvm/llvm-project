@@ -512,7 +512,7 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   else if (R->getName() == "IntrNoMerge")
     isNoMerge = true;
   else if (R->getName() == "IntrConvergent")
-    isConvergent = true;
+    setIsConvergent(true);
   else if (R->getName() == "IntrNoReturn")
     isNoReturn = true;
   else if (R->getName() == "IntrNoCallback")
@@ -520,21 +520,21 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   else if (R->getName() == "IntrNoSync")
     isNoSync = true;
   else if (R->getName() == "IntrNoFree")
-    isNoFree = true;
+    setIsNoFree(true);
   else if (R->getName() == "IntrWillReturn")
-    isWillReturn = !isNoReturn;
+    setIsWillReturn(!isNoReturn);
   else if (R->getName() == "IntrCold")
-    isCold = true;
+    setIsCold(true);
   else if (R->getName() == "IntrSpeculatable")
-    isSpeculatable = true;
+    setIsSpeculatable(true);
   else if (R->getName() == "IntrHasSideEffects")
-    hasSideEffects = true;
+    setHasSideEffects(true);
   else if (R->getName() == "IntrStrictFP")
-    isStrictFP = true;
+    setIsStrictFP(true);
   else if (R->getName() == "IntrNoCreateUndefOrPoison")
-    isNoCreateUndefOrPoison = true;
+    setIsNoCreateUndefOrPoison(true);
   else if (R->getName() == "IntrTriviallyScalarizable")
-    isTriviallyScalarizable = true;
+    setIsTriviallyScalarizable(true);
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoCapture);

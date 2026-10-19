@@ -149,7 +149,7 @@ void MipsInstPrinter::printJumpOperand(const MCInst *MI, unsigned OpNo,
   if (!Op.isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  if (PrintBranchImmAsAddress)
+  if (getPrintBranchImmAsAddress())
     markup(O, Markup::Immediate) << formatHex(Op.getImm());
   else
     markup(O, Markup::Immediate) << formatImm(Op.getImm());
@@ -163,7 +163,7 @@ void MipsInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
   if (!Op.isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  if (PrintBranchImmAsAddress) {
+  if (getPrintBranchImmAsAddress()) {
     uint64_t Target = Address + Op.getImm();
     if (STI.hasFeature(Mips::FeatureMips32))
       Target &= 0xffffffff;

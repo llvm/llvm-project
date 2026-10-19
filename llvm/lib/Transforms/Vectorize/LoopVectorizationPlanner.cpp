@@ -573,7 +573,7 @@ bool VFSelectionContext::runtimeChecksRequired() {
   LLVM_DEBUG(dbgs() << "LV: Performing code size checks.\n");
 
   Loop *L = const_cast<Loop *>(TheLoop);
-  if (Legal->getRuntimePointerChecking()->Need) {
+  if (Legal->getRuntimePointerChecking()->needsChecking()) {
     reportVectorizationFailure(
         "Runtime ptr check is required with -Os/-Oz",
         "runtime pointer checks needed. Enable vectorization of this "

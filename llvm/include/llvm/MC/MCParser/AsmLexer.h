@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
@@ -42,7 +43,8 @@ public:
 
 class AsmLexer {
   /// The current token, stored in the base class for faster access.
-  SmallVector<AsmToken, 1> CurTok;
+  // Flag bit 0 selects the MASM default radix.
+  SmallVectorWithFlags<AsmToken, 1> CurTok;
 
   const char *CurPtr = nullptr;
   /// NULL-terminated buffer. NULL terminator must reside at `CurBuf.end()`.
@@ -68,7 +70,6 @@ class AsmLexer {
   bool LexMasmIntegers = false;
   bool LexMasmStrings = false;
   bool LexMotorolaIntegers = false;
-  bool UseMasmDefaultRadix = false;
   unsigned DefaultRadix = 10;
   bool LexHLASMIntegers = false;
   bool LexHLASMStrings = false;
@@ -168,7 +169,7 @@ public:
 
   /// Set whether to use masm-style default-radix integer literals. If disabled,
   /// assume decimal unless prefixed (e.g., 0x2c [hex], 077 [octal]).
-  void useMasmDefaultRadix(bool V) { UseMasmDefaultRadix = V; }
+  void useMasmDefaultRadix(bool V) { CurTok.setFlag(0, V); }
 
   unsigned getMasmDefaultRadix() const { return DefaultRadix; }
   void setMasmDefaultRadix(unsigned Radix) { DefaultRadix = Radix; }

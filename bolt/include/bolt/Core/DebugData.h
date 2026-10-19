@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -517,7 +518,7 @@ public:
   }
 
   bool isStrOffsetsSectionModified() const {
-    return StrOffsetSectionWasModified;
+    return getStrOffsetSectionWasModified();
   }
 
 private:
@@ -526,9 +527,12 @@ private:
   std::map<uint32_t, uint64_t> IndexToAddressMap;
   [[maybe_unused]]
   DenseSet<uint64_t> DebugStrOffsetFinalized;
-  SmallVector<uint64_t, 5> StrOffsets;
+  llvm::SmallVectorWithFlags<uint64_t, 5> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
-  bool StrOffsetSectionWasModified = false;
+  bool getStrOffsetSectionWasModified() const { return StrOffsets.getFlag(0); }
+  void setStrOffsetSectionWasModified(bool Value) {
+    StrOffsets.setFlag(0, Value);
+  }
   BinaryContext &BC;
 };
 

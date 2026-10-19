@@ -2701,7 +2701,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
               ThisVarDecl->getType()->getCanonicalTypeInternal(),
               ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
               /*Braced=*/false);
-      CalledSignatureHelp = true;
+      setCalledSignatureHelp(true);
       return PreferredType;
     };
     auto SetPreferredType = [&] {
@@ -2720,12 +2720,13 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
 
     if (SawError) {
-      if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
+      if (ThisVarDecl && PP.isCodeCompletionReached() &&
+          !getCalledSignatureHelp()) {
         Actions.CodeCompletion().ProduceConstructorSignatureHelp(
             ThisVarDecl->getType()->getCanonicalTypeInternal(),
             ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
             /*Braced=*/false);
-        CalledSignatureHelp = true;
+        setCalledSignatureHelp(true);
       }
       Actions.ActOnInitializerError(ThisDecl);
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -5265,7 +5266,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   // Parse the fixed underlying type.
   if (Tok.is(tok::colon) &&
-      (!ParsingGenericAssociationType || IsCXXTypeAhead())) {
+      (!getParsingGenericAssociationType() || IsCXXTypeAhead())) {
     // This might be an enum-base or part of some unrelated enclosing context.
     //
     // 'enum E : base' is permitted in two circumstances:
@@ -5295,7 +5296,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       // not make sense as one. In C++11, it's an error if this happens.
       if (getLangOpts().CPlusPlus11)
         Diag(Tok.getLocation(), diag::err_anonymous_enum_bitfield);
-    } else if (CanHaveEnumBase || !ColonIsSacred) {
+    } else if (CanHaveEnumBase || !getColonIsSacred()) {
       SourceLocation ColonLoc = ConsumeToken();
 
       // Parse a type-specifier-seq as a type. We can't just ParseTypeName here,

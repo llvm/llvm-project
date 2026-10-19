@@ -1119,7 +1119,7 @@ Printable Rematerializer::printUser(const MachineInstr *MI,
 
 void Rollbacker::rematerializerNoteRegCreated(const Rematerializer &Remater,
                                               RegisterIdx RegIdx) {
-  if (RollingBack)
+  if (getRollingBack())
     return;
   assert(Remater.isRematerializedRegister(RegIdx) && "only remats are created");
   Rematerializations[Remater.getOriginOf(RegIdx)].insert(RegIdx);
@@ -1127,7 +1127,7 @@ void Rollbacker::rematerializerNoteRegCreated(const Rematerializer &Remater,
 
 void Rollbacker::rematerializerNoteRegWillBeDeleted(
     const Rematerializer &Remater, RegisterIdx RegIdx) {
-  if (RollingBack)
+  if (getRollingBack())
     return;
 
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
@@ -1183,7 +1183,7 @@ void Rollbacker::rematerializerNoteRegWillBeDeleted(
 
 void Rollbacker::rematerializerNoteMIWillBeDeleted(
     const Rematerializer &Remater, MachineInstr &MI) {
-  if (RollingBack)
+  if (getRollingBack())
     return;
 
   // Previously deleted registers that reference this MI as their re-creation
@@ -1196,7 +1196,7 @@ void Rollbacker::rematerializerNoteMIWillBeDeleted(
 }
 
 void Rollbacker::rollback(Rematerializer &Remater) {
-  RollingBack = true;
+  setRollingBack(true);
 
   // As we re-create registers, map deleted definitions to re-created ones. This
   // allows to replace invalid re-creation positions that reference deleted
@@ -1256,7 +1256,7 @@ void Rollbacker::rollback(Rematerializer &Remater) {
   Positions.clear();
   PosToIdx.clear();
   Rematerializations.clear();
-  RollingBack = false;
+  setRollingBack(false);
 }
 
 bool Rollbacker::isRollbackableMI(const MachineInstr &MI,

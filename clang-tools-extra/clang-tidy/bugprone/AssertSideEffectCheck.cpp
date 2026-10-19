@@ -14,6 +14,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
@@ -87,16 +88,22 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
 AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CheckFunctionCalls(Options.get("CheckFunctionCalls", false)),
       RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
+      AssertMacros(decltype(this->AssertMacros)::withFlags([&] {
+        unsigned PackedFlags = 0;
+        PackedFlags |= unsigned(bool(Options.get("CheckFunctionCalls", false)));
+        return PackedFlags;
+      }())),
       IgnoredFunctions(utils::options::parseListPair(
           "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
-  RawAssertList.split(AssertMacros, ",", -1, false);
+  for (StringRef Macro : llvm::split(RawAssertList, ','))
+    if (!Macro.empty())
+      AssertMacros.push_back(Macro);
 }
 
 // The options are explained in AssertSideEffectCheck.h.
 void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CheckFunctionCalls", CheckFunctionCalls);
+  Options.store(Opts, "CheckFunctionCalls", getCheckFunctionCalls());
   Options.store(Opts, "AssertMacros", RawAssertList);
   Options.store(Opts, "IgnoredFunctions",
                 utils::options::serializeStringList(IgnoredFunctions));
@@ -106,9 +113,9 @@ void AssertSideEffectCheck::registerMatchers(MatchFinder *Finder) {
   const auto IgnoredFunctionsMatcher =
       matchers::matchesAnyListedRegexName(IgnoredFunctions);
 
-  const auto DescendantWithSideEffect =
-      traverse(TK_AsIs, hasDescendant(expr(hasSideEffect(
-                            CheckFunctionCalls, IgnoredFunctionsMatcher))));
+  const auto DescendantWithSideEffect = traverse(
+      TK_AsIs, hasDescendant(expr(hasSideEffect(getCheckFunctionCalls(),
+                                                IgnoredFunctionsMatcher))));
   const auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
   Finder->addMatcher(
       stmt(

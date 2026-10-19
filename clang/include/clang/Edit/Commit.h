@@ -13,6 +13,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/FileOffset.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 
@@ -54,8 +55,9 @@ private:
   const PPConditionalDirectiveRecord *PPRec;
   EditedSource *Editor = nullptr;
 
-  bool IsCommitable = true;
-  SmallVector<Edit, 8> CachedEdits;
+  bool getIsCommitable() const { return !CachedEdits.getFlag(0); }
+  void setIsCommitable(bool Value) { CachedEdits.setFlag(0, !Value); }
+  llvm::SmallVectorWithFlags<Edit, 8> CachedEdits;
 
   llvm::BumpPtrAllocator StrAlloc;
 
@@ -65,7 +67,7 @@ public:
          const PPConditionalDirectiveRecord *PPRec = nullptr)
       : SourceMgr(SM), LangOpts(LangOpts), PPRec(PPRec) {}
 
-  bool isCommitable() const { return IsCommitable; }
+  bool isCommitable() const { return getIsCommitable(); }
 
   bool insert(SourceLocation loc, StringRef text, bool afterToken = false,
               bool beforePreviousInsertions = false);

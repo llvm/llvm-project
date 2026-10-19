@@ -42,16 +42,14 @@ public:
 
   // Lower incoming arguments, copy physregs into vregs.
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool IsVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      bool IsVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -198,12 +196,11 @@ private:
                                    bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
+                        llvm::ArrayRef<ISD::InputArg> Ins, bool IsRet,
                         LoongArchCCAssignFn Fn) const;
   void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
-                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsRet, CallLoweringInfo *CLI,
-                         LoongArchCCAssignFn Fn) const;
+                         llvm::ArrayRef<ISD::OutputArg> Outs, bool IsRet,
+                         CallLoweringInfo *CLI, LoongArchCCAssignFn Fn) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, CodeModel::Model M,

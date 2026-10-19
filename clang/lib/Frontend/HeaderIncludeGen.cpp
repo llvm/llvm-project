@@ -12,6 +12,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
@@ -79,17 +80,19 @@ private:
 class HeaderIncludesJSONCallback : public PPCallbacks {
   SourceManager &SM;
   raw_ostream *OutputFile;
-  bool OwnsOutputFile;
-  SmallVector<std::string, 16> IncludedHeaders;
+  bool getOwnsOutputFile() const { return IncludedHeaders.getFlag(0); }
+  void setOwnsOutputFile(bool Value) { IncludedHeaders.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<std::string, 16> IncludedHeaders;
 
 public:
   HeaderIncludesJSONCallback(const Preprocessor *PP, raw_ostream *OutputFile_,
                              bool OwnsOutputFile_)
       : SM(PP->getSourceManager()), OutputFile(OutputFile_),
-        OwnsOutputFile(OwnsOutputFile_) {}
+        IncludedHeaders(
+            decltype(IncludedHeaders)::withFlags(unsigned(OwnsOutputFile_))) {}
 
   ~HeaderIncludesJSONCallback() override {
-    if (OwnsOutputFile)
+    if (getOwnsOutputFile())
       delete OutputFile;
   }
 

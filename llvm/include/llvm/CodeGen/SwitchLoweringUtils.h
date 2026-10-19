@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_SWITCHLOWERINGUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/InstrTypes.h"
@@ -220,21 +221,27 @@ struct BitTestBlock {
   const Value *SValue;
   Register Reg;
   MVT RegVT;
-  bool Emitted;
-  bool ContiguousRange;
+  bool getEmitted() const { return Cases.getFlag(0); }
+  void setEmitted(bool Value) { Cases.setFlag(0, Value); }
+  bool getContiguousRange() const { return Cases.getFlag(1); }
+  void setContiguousRange(bool Value) { Cases.setFlag(1, Value); }
   MachineBasicBlock *Parent;
   MachineBasicBlock *Default;
-  BitTestInfo Cases;
+  llvm::SmallVectorWithFlagsFor<BitTestInfo, 3> Cases;
   BranchProbability Prob;
   BranchProbability DefaultProb;
-  bool FallthroughUnreachable = false;
+  bool getFallthroughUnreachable() const { return Cases.getFlag(2); }
+  bool setFallthroughUnreachable(bool Value) {
+    Cases.setFlag(2, Value);
+    return Value;
+  }
 
   BitTestBlock(APInt F, APInt R, const Value *SV, Register Rg, MVT RgVT, bool E,
                bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
                BitTestInfo C, BranchProbability Pr)
       : First(std::move(F)), Range(std::move(R)), SValue(SV), Reg(Rg),
-        RegVT(RgVT), Emitted(E), ContiguousRange(CR), Parent(P), Default(D),
-        Cases(std::move(C)), Prob(Pr) {}
+        RegVT(RgVT), Parent(P), Default(D),
+        Cases(unsigned(E) | (unsigned(CR) << 1), std::move(C)), Prob(Pr) {}
 };
 
 /// Return the range of values within a range.

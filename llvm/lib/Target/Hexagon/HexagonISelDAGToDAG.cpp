@@ -15,6 +15,7 @@
 #include "HexagonISelLowering.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -1822,33 +1823,28 @@ struct WeightedLeaf {
 /// constants and allows removal of non-top elements while maintaining the
 /// priority order.
 class LeafPrioQueue {
-  SmallVector<WeightedLeaf, 8> Q;
-  bool HaveConst;
+  llvm::SmallVectorWithFlags<WeightedLeaf, 8> Q;
+  bool getHaveConst() const { return Q.getFlag(0); }
+  void setHaveConst(bool Value) { Q.setFlag(0, Value); }
   WeightedLeaf ConstElt;
   unsigned Opcode;
 
 public:
-  bool empty() {
-    return (!HaveConst && Q.empty());
-  }
+  bool empty() { return (!getHaveConst() && Q.empty()); }
 
-  size_t size() {
-    return Q.size() + HaveConst;
-  }
+  size_t size() { return Q.size() + getHaveConst(); }
 
-  bool hasConst() {
-    return HaveConst;
-  }
+  bool hasConst() { return getHaveConst(); }
 
   const WeightedLeaf &top() {
-    if (HaveConst)
+    if (getHaveConst())
       return ConstElt;
     return Q.front();
   }
 
   WeightedLeaf pop() {
-    if (HaveConst) {
-      HaveConst = false;
+    if (getHaveConst()) {
+      setHaveConst(false);
       return ConstElt;
     }
     std::pop_heap(Q.begin(), Q.end(), WeightedLeaf::Compare);
@@ -1856,7 +1852,7 @@ public:
   }
 
   void push(WeightedLeaf L, bool SeparateConst=true) {
-    if (!HaveConst && SeparateConst && isa<ConstantSDNode>(L.Value)) {
+    if (!getHaveConst() && SeparateConst && isa<ConstantSDNode>(L.Value)) {
       if (Opcode == ISD::MUL &&
           cast<ConstantSDNode>(L.Value)->getSExtValue() == 1)
         return;
@@ -1864,7 +1860,7 @@ public:
           cast<ConstantSDNode>(L.Value)->getSExtValue() == 0)
         return;
 
-      HaveConst = true;
+      setHaveConst(true);
       ConstElt = L;
     } else {
       Q.push_back(L);
@@ -1885,8 +1881,7 @@ public:
 
   WeightedLeaf findMULbyConst();
 
-  LeafPrioQueue(unsigned Opcode) :
-    HaveConst(false), Opcode(Opcode) { }
+  LeafPrioQueue(unsigned Opcode) : Opcode(Opcode) {}
 };
 } // end anonymous namespace
 

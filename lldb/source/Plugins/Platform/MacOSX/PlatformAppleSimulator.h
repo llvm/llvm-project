@@ -18,6 +18,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -116,10 +117,15 @@ protected:
   llvm::StringRef GetSDKFilepath();
 
   llvm::Triple::OSType m_os_type = llvm::Triple::UnknownOS;
-  llvm::SmallVector<llvm::StringRef, 4> m_supported_triples = {};
+  llvm::SmallVectorWithFlags<llvm::StringRef, 4> m_supported_triples = {};
   std::string m_sdk_name_primary;
   std::string m_sdk_name_secondary;
-  bool m_have_searched_for_sdk = false;
+  bool getM_have_searched_for_sdk() const {
+    return m_supported_triples.getFlag(0);
+  }
+  void setM_have_searched_for_sdk(bool Value) {
+    m_supported_triples.setFlag(0, Value);
+  }
   std::string m_sdk;
   XcodeSDK::Type m_sdk_type;
 

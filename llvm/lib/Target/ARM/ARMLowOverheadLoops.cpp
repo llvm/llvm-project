@@ -58,6 +58,7 @@
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -373,13 +374,15 @@ namespace {
     MachineInstr *Dec = nullptr;
     MachineInstr *End = nullptr;
     MachineOperand TPNumElements;
-    SmallVector<MachineInstr *, 4> VCTPs;
+    llvm::SmallVectorWithFlags<MachineInstr *, 4, 2> VCTPs;
     SmallPtrSet<MachineInstr *, 4> ToRemove;
     SmallPtrSet<MachineInstr *, 4> BlockMasksToRecompute;
     SmallPtrSet<MachineInstr *, 4> DoubleWidthResultInstrs;
     SmallPtrSet<MachineInstr *, 4> VMOVCopies;
-    bool Revert = false;
-    bool CannotTailPredicate = false;
+    bool getRevert() const { return VCTPs.getFlag(0); }
+    void setRevert(bool Value) { VCTPs.setFlag(0, Value); }
+    bool getCannotTailPredicate() const { return VCTPs.getFlag(1); }
+    void setCannotTailPredicate(bool Value) { VCTPs.setFlag(1, Value); }
     VPTState VPTstate;
 
     LowOverheadLoop(MachineLoop &ML, MachineLoopInfo &MLI, ReachingDefInfo &RDI,
@@ -399,14 +402,14 @@ namespace {
     bool ValidateMVEInst(MachineInstr *MI);
 
     void AnalyseMVEInst(MachineInstr *MI) {
-      CannotTailPredicate = !ValidateMVEInst(MI);
+      setCannotTailPredicate(!ValidateMVEInst(MI));
     }
 
     bool IsTailPredicationLegal() const {
       // For now, let's keep things really simple and only support a single
       // block for tail predication.
-      return !Revert && FoundAllComponents() && !VCTPs.empty() &&
-             !CannotTailPredicate && ML.getNumBlocks() == 1;
+      return !getRevert() && FoundAllComponents() && !VCTPs.empty() &&
+             !getCannotTailPredicate() && ML.getNumBlocks() == 1;
     }
 
     // Given that MI is a VCTP, check that is equivalent to any other VCTPs
@@ -1067,7 +1070,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
 }
 
 void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
-  if (Revert)
+  if (getRevert())
     return;
 
   // Check branch target ranges: WLS[TP] can only branch forwards and LE[TP]
@@ -1108,8 +1111,8 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   LLVM_DEBUG(dbgs() << "ARM Loops: Will insert LoopStart at "
                     << *StartInsertPt);
 
-  Revert = !ValidateRanges(Start, End, BBUtils, ML);
-  CannotTailPredicate = !ValidateTailPredicate();
+  setRevert(!ValidateRanges(Start, End, BBUtils, ML));
+  setCannotTailPredicate(!ValidateTailPredicate());
 }
 
 bool LowOverheadLoop::AddVCTP(MachineInstr *MI) {
@@ -1211,7 +1214,7 @@ static bool ValidateMVEStore(MachineInstr *MI, MachineLoop *ML) {
 }
 
 bool LowOverheadLoop::ValidateMVEInst(MachineInstr *MI) {
-  if (CannotTailPredicate)
+  if (getCannotTailPredicate())
     return false;
 
   if (!shouldInspect(*MI))
@@ -1380,7 +1383,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         // TODO: Though the call will require LE to execute again, does this
         // mean we should revert? Always executing LE hopefully should be
         // faster than performing a sub,cmp,br or even subs,br.
-        LoLoop.Revert = true;
+        LoLoop.setRevert(true);
         LLVM_DEBUG(dbgs() << "ARM Loops: Found call.\n");
       } else {
         // Record VPR defs and build up their corresponding vpt blocks.
@@ -1407,7 +1410,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     RDI->getReachingLocalUses(LoLoop.Dec, MCRegister::from(ARM::LR), Uses);
     if (Uses.size() > 1 || !Uses.count(LoLoop.End)) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove LoopDec.\n");
-      LoLoop.Revert = true;
+      LoLoop.setRevert(true);
     }
   }
   LoLoop.Validate(BBUtils.get());
@@ -1769,7 +1772,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     }
   };
 
-  if (LoLoop.Revert) {
+  if (LoLoop.getRevert()) {
     if (isWhileLoopStart(*LoLoop.Start))
       RevertWhile(LoLoop.Start);
     else

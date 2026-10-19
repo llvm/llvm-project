@@ -257,7 +257,7 @@ void LexicalScopes::constructScopeNest(LexicalScope *Scope) {
     auto &ScopePosition = WorkStack.back();
     LexicalScope *WS = ScopePosition.first;
     size_t ChildNum = ScopePosition.second++;
-    const SmallVectorImpl<LexicalScope *> &Children = WS->getChildren();
+    ArrayRef<LexicalScope *> Children = WS->getChildren();
     if (ChildNum < Children.size()) {
       auto &ChildScope = Children[ChildNum];
       WorkStack.push_back(std::make_pair(ChildScope, 0));
@@ -349,7 +349,7 @@ LLVM_DUMP_METHOD void LexicalScope::dump(unsigned Indent) const {
   const MDNode *N = Desc;
   err.indent(Indent);
   N->dump();
-  if (AbstractScope)
+  if (isAbstractScope())
     err << std::string(Indent, ' ') << "Abstract Scope\n";
 
   if (!Children.empty())

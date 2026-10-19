@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_REMATERIALIZER_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -620,7 +621,7 @@ private:
   /// in register deletion order overall. A position is either a MachineInstr*
   /// that existed in the MIR at the time the rollbacker was attached to the
   /// rematerializer, or a MachineBasicBlock*.
-  SmallVector<InsertBeforePos> Positions;
+  llvm::SmallVectorWithFlags<InsertBeforePos> Positions;
   /// Maps all re-creation positions that exist in \ref Positions to the indices
   /// of elements holding that position in the vector.
   DenseMap<InsertBeforePos, SmallDenseSet<unsigned, 1>> PosToIdx;
@@ -629,7 +630,8 @@ private:
   DenseMap<RegisterIdx, Rematerializer::RematsOf> Rematerializations;
   /// Used to block further recording of events whenver we are actively rolling
   /// back.
-  bool RollingBack = false;
+  bool getRollingBack() const { return Positions.getFlag(0); }
+  void setRollingBack(bool Value) { Positions.setFlag(0, Value); }
 
   InsertBeforePos makePos(MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) const {

@@ -77,18 +77,18 @@ static uint16_t lo(uint32_t v) { return v; }
 static uint16_t ha(uint32_t v) { return (v + 0x8000) >> 16; }
 
 static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
-  return read32(ctx, ctx.arg.isLE ? loc : loc - 2);
+  return read32(ctx, ctx.arg.getIsLE() ? loc : loc - 2);
 }
 
 static void writeFromHalf16(Ctx &ctx, uint8_t *loc, uint32_t insn) {
-  write32(ctx, ctx.arg.isLE ? loc : loc - 2, insn);
+  write32(ctx, ctx.arg.getIsLE() ? loc : loc - 2, insn);
 }
 
 void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   // Create canonical PLT entries for non-PIE code. Compilers don't generate
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
   uint32_t glink = ctx.in.plt->getVA(); // VA of .glink
-  if (!ctx.arg.isPic) {
+  if (!ctx.arg.getIsPic()) {
     for (const Symbol *sym :
          cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
       writePPC32PltCallStub(ctx, buf, glink, sym->getGotPltVA(ctx), nullptr, 0);
@@ -116,7 +116,7 @@ void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   // itself) and calls _dl_runtime_resolve() (in glibc).
   uint32_t got = ctx.in.got->getVA();
   const uint8_t *end = buf + 64;
-  if (ctx.arg.isPic) {
+  if (ctx.arg.getIsPic()) {
     uint32_t afterBcl = 4 * ctx.in.plt->getNumEntries() + 12;
     uint32_t gotBcl = got + 4 - (glink + afterBcl);
     write32(ctx, buf + 0,
@@ -179,7 +179,7 @@ PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 0;
   pltEntrySize = 4;
-  ipltEntrySize = ctx.arg.isPic ? 32 : 16;
+  ipltEntrySize = ctx.arg.getIsPic() ? 32 : 16;
 
   needsThunks = true;
 
@@ -367,7 +367,7 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsIe(R_GOT_OFF, type, offset, addend, sym);
       continue;
     case R_PPC_TLS:
-      if (!ctx.arg.shared && !sym.isPreemptible)
+      if (!ctx.arg.getShared() && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 
@@ -378,7 +378,7 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     case R_PPC_TLSGD:
     case R_PPC_TLSLD:
-      if (!ctx.arg.shared) {
+      if (!ctx.arg.getShared()) {
         sec.addReloc({sym.isPreemptible ? R_GOT_OFF : R_TPREL, type, offset,
                       addend, &sym});
         ++it; // Skip REL24
@@ -408,7 +408,7 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 }
 
 void PPC::scanSection(InputSectionBase &sec, unsigned shard) {
-  if (ctx.arg.isLE)
+  if (ctx.arg.getIsLE())
     elf::scanSection1<PPC, ELF32LE>(*this, sec, shard);
   else
     elf::scanSection1<PPC, ELF32BE>(*this, sec, shard);

@@ -186,7 +186,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
                                           std::optional<size_t> MaxSubPatterns,
                                           bool SlashAgnostic) {
   GlobPattern Pat;
-  Pat.SlashAgnostic = SlashAgnostic;
+  Pat.SubGlobs.setFlag(0, SlashAgnostic);
   Pat.Pattern = S;
 
   const char *PrefixMetas =
@@ -244,7 +244,7 @@ std::optional<std::string> GlobPattern::asLiteral() const {
   // In slash-agnostic mode '/' and '\\' match each other, so a pattern holding
   // either matches more than one string. A pattern with no sub-pattern cannot
   // reach here holding one, as both are prefix metacharacters in that mode.
-  if (SlashAgnostic &&
+  if (SubGlobs.getFlag(0) &&
       StringRef(Literal).find_first_of("/\\") != StringRef::npos)
     return std::nullopt;
 
@@ -287,7 +287,7 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
         return make_error<StringError>("invalid glob pattern, stray '\\'",
                                        errc::invalid_argument);
     } else if (S[I] == '*' || S[I] == '?') {
-      Pat.HasWildcard = true;
+      Pat.Pat.setFlag(0, true);
     }
   }
   return Pat;
@@ -295,7 +295,7 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
 
 StringRef GlobPattern::longest_substr() const {
   return maxPlainSubstring(Pattern.drop_front(PrefixSize).drop_back(SuffixSize),
-                           SlashAgnostic);
+                           SubGlobs.getFlag(0));
 }
 
 bool GlobPattern::match(StringRef S) const {
@@ -306,7 +306,7 @@ bool GlobPattern::match(StringRef S) const {
   if (SubGlobs.empty() && S.empty())
     return true;
   for (auto &Glob : SubGlobs)
-    if (Glob.match(S, SlashAgnostic))
+    if (Glob.match(S, SubGlobs.getFlag(0)))
       return true;
   return false;
 }

@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -116,20 +117,24 @@ namespace llvm {
 
     /// True if the DAG builder should remove kill flags (in preparation for
     /// rescheduling).
-    bool RemoveKillFlags;
+    bool getRemoveKillFlags() const { return Clusters.getFlag(0); }
+    void setRemoveKillFlags(bool Value) { Clusters.setFlag(0, Value); }
 
     /// True if regions with a single MI should be scheduled.
-    bool ScheduleSingleMIRegions = false;
+    bool getScheduleSingleMIRegions() const { return Clusters.getFlag(1); }
+    void setScheduleSingleMIRegions(bool Value) { Clusters.setFlag(1, Value); }
 
     /// The standard DAG builder does not normally include terminators as DAG
     /// nodes because it does not create the necessary dependencies to prevent
     /// reordering. A specialized scheduler can override
     /// TargetInstrInfo::isSchedulingBoundary then enable this flag to indicate
     /// it has taken responsibility for scheduling the terminator correctly.
-    bool CanHandleTerminators = false;
+    bool getCanHandleTerminators() const { return Clusters.getFlag(2); }
+    void setCanHandleTerminators(bool Value) { Clusters.setFlag(2, Value); }
 
     /// Whether lane masks should get tracked.
-    bool TrackLaneMasks = false;
+    bool getTrackLaneMasks() const { return Clusters.getFlag(3); }
+    void setTrackLaneMasks(bool Value) { Clusters.setFlag(3, Value); }
 
     // State specific to the current scheduling region.
     // ------------------------------------------------
@@ -167,7 +172,10 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    SmallVector<ClusterInfo> Clusters;
+    llvm::SmallVectorWithFlags<
+        ClusterInfo,
+        llvm::CalculateSmallVectorDefaultInlinedElements<ClusterInfo>::value, 4>
+        Clusters;
 
     friend class ScheduleDAGDependencyBuilder;
 
@@ -224,7 +232,7 @@ namespace llvm {
 
     /// Whether regions with a single MI should be scheduled.
     bool shouldScheduleSingleMIRegions() const {
-      return ScheduleSingleMIRegions;
+      return getScheduleSingleMIRegions();
     }
 
     /// Returns an iterator to the top of the current scheduling region.
@@ -317,7 +325,7 @@ namespace llvm {
     bool addEdge(SUnit *SuccSU, const SDep &PredDep);
 
     /// Returns the array of the clusters.
-    SmallVector<ClusterInfo> &getClusters() { return Clusters; }
+    auto &getClusters() { return Clusters; }
 
     /// Get the specific cluster, return nullptr for InvalidClusterId.
     ClusterInfo *getCluster(unsigned Idx) {

@@ -32,7 +32,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
     : MCStreamer(Context),
       Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
-      EmitEHFrame(true), EmitDebugFrame(false), EmitSFrame(false) {
+      FragStorage(decltype(this->FragStorage)::withFlags(1)) {
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
   IsObj = true;
   setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -173,9 +173,9 @@ void MCObjectStreamer::reset() {
     Assembler->reset();
     Assembler->setRelaxAll(getContext().getTargetOptions().MCRelaxAll);
   }
-  EmitEHFrame = true;
-  EmitDebugFrame = false;
-  BundleLocked = false;
+  setEmitEHFrame(true);
+  setEmitDebugFrame(false);
+  setBundleLocked(false);
   FragStorage.clear();
   FragSpace = 0;
   SpecialFragAllocator.Reset();
@@ -193,12 +193,12 @@ void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
-  if (EmitEHFrame)
+  if (getEmitEHFrame())
     MCDwarfFrameEmitter::emit(*this, true);
-  if (EmitDebugFrame)
+  if (getEmitDebugFrame())
     MCDwarfFrameEmitter::emit(*this, false);
 
-  if (EmitSFrame || getContext().getTargetOptions().EmitSFrameUnwind)
+  if (getEmitSFrame() || getContext().getTargetOptions().EmitSFrameUnwind)
     MCSFrameEmitter::emit(*this);
 }
 
@@ -208,9 +208,9 @@ void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
 
 void MCObjectStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
   MCStreamer::emitCFISections(EH, Debug, SFrame);
-  EmitEHFrame = EH;
-  EmitDebugFrame = Debug;
-  EmitSFrame = SFrame;
+  setEmitEHFrame(EH);
+  setEmitDebugFrame(Debug);
+  setEmitSFrame(SFrame);
 }
 
 void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
@@ -426,7 +426,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
   // Bundling emits one relaxable fragment per instruction so that finishLayout
   // can fold padding into instruction encodings.
   if (Assembler.isBundlingEnabled()) {
-    if (BundleLocked || Assembler.getRelaxAll())
+    if (getBundleLocked() || Assembler.getRelaxAll())
       emitInstToFragment(relaxToFixpoint(Inst), STI);
     else
       emitInstToFragment(Inst, STI);

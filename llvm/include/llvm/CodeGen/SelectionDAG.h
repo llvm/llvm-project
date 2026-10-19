@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
@@ -1777,6 +1778,11 @@ public:
   /// the final TokenFactor has less than 64k operands.
   LLVM_ABI SDValue getTokenFactor(const SDLoc &DL,
                                   SmallVectorImpl<SDValue> &Vals);
+  template <unsigned FlagBits>
+  SDValue getTokenFactor(const SDLoc &DL,
+                         SmallVectorWithFlagsImpl<SDValue, FlagBits> &Vals) {
+    return getTokenFactorImpl(DL, Vals);
+  }
 
   /// *Mutate* the specified machine node's memory references to the provided
   /// list.
@@ -2779,6 +2785,19 @@ public:
                                                 ArrayRef<SDValue> Scalars);
 
 private:
+  template <typename ValueListT>
+  SDValue getTokenFactorImpl(const SDLoc &DL, ValueListT &Vals) {
+    size_t Limit = SDNode::getMaxNumOperands();
+    while (Vals.size() > Limit) {
+      unsigned SliceIdx = Vals.size() - Limit;
+      auto ExtractedTFs = ArrayRef<SDValue>(Vals).slice(SliceIdx, Limit);
+      SDValue NewTF = getNode(ISD::TokenFactor, DL, MVT::Other, ExtractedTFs);
+      Vals.erase(Vals.begin() + SliceIdx, Vals.end());
+      Vals.emplace_back(NewTF);
+    }
+    return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
+  }
+
 #ifndef NDEBUG
   void verifyNode(SDNode *N) const;
 #endif

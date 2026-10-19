@@ -15,13 +15,24 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace {
 
 /// Represents the availability of a symbol across platforms.
 struct AvailabilitySet {
-  bool UnconditionallyDeprecated = false;
-  bool UnconditionallyUnavailable = false;
+  bool getUnconditionallyDeprecated() const {
+    return Availabilities.getFlag(0);
+  }
+  void setUnconditionallyDeprecated(bool Value) {
+    Availabilities.setFlag(0, Value);
+  }
+  bool getUnconditionallyUnavailable() const {
+    return Availabilities.getFlag(1);
+  }
+  void setUnconditionallyUnavailable(bool Value) {
+    Availabilities.setFlag(1, Value);
+  }
 
   void insert(clang::AvailabilityInfo &&Availability) {
     auto *Found = getForPlatform(Availability.Domain);
@@ -40,7 +51,11 @@ struct AvailabilitySet {
   }
 
 private:
-  llvm::SmallVector<clang::AvailabilityInfo> Availabilities;
+  llvm::SmallVectorWithFlags<clang::AvailabilityInfo,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 clang::AvailabilityInfo>::value,
+                             2>
+      Availabilities;
 };
 
 static void createInfoForDecl(const clang::Decl *Decl,
@@ -57,11 +72,11 @@ static void createInfoForDecl(const clang::Decl *Decl,
 
     if (const auto *A = RD->getAttr<clang::UnavailableAttr>())
       if (!A->isImplicit())
-        Availabilities.UnconditionallyUnavailable = true;
+        Availabilities.setUnconditionallyUnavailable(true);
 
     if (const auto *A = RD->getAttr<clang::DeprecatedAttr>())
       if (!A->isImplicit())
-        Availabilities.UnconditionallyDeprecated = true;
+        Availabilities.setUnconditionallyDeprecated(true);
   }
 }
 
@@ -106,15 +121,18 @@ AvailabilityInfo AvailabilityInfo::createFromDecl(const Decl *D) {
 
   if (auto *Avail = Availabilities.getForPlatform(
           D->getASTContext().getTargetInfo().getPlatformName())) {
-    Avail->UnconditionallyDeprecated = Availabilities.UnconditionallyDeprecated;
+    Avail->UnconditionallyDeprecated =
+        Availabilities.getUnconditionallyDeprecated();
     Avail->UnconditionallyUnavailable =
-        Availabilities.UnconditionallyUnavailable;
+        Availabilities.getUnconditionallyUnavailable();
     return std::move(*Avail);
   }
 
   AvailabilityInfo Avail;
-  Avail.UnconditionallyDeprecated = Availabilities.UnconditionallyDeprecated;
-  Avail.UnconditionallyUnavailable = Availabilities.UnconditionallyUnavailable;
+  Avail.UnconditionallyDeprecated =
+      Availabilities.getUnconditionallyDeprecated();
+  Avail.UnconditionallyUnavailable =
+      Availabilities.getUnconditionallyUnavailable();
   return Avail;
 }
 

@@ -618,8 +618,9 @@ BTFTypeFuncProto::BTFTypeFuncProto(
     bool UseFilteredParams, ArrayRef<uint32_t> AliveParamIndices,
     bool VoidReturn)
     : STy(STy), FuncArgNames(FuncArgNames),
-      AliveParamIndices(AliveParamIndices),
-      UseFilteredParams(UseFilteredParams), VoidReturn(VoidReturn) {
+      AliveParamIndices(decltype(this->AliveParamIndices)::withFlags(
+          unsigned(UseFilteredParams) | (unsigned(VoidReturn) << 1),
+          AliveParamIndices)) {
   Kind = BTF::BTF_KIND_FUNC_PROTO;
   BTFType.Info = (Kind << 24) | VLen;
 }
@@ -630,7 +631,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  if (VoidReturn) {
+  if (getVoidReturn()) {
     BTFType.Type = 0;
   } else {
     auto RetType = tryRemoveAtomicType(Elements[0]);
@@ -653,7 +654,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
     Parameters.push_back(Param);
   };
 
-  if (UseFilteredParams) {
+  if (getUseFilteredParams()) {
     for (uint32_t I : AliveParamIndices)
       EmitParam(I);
     return;

@@ -58,10 +58,10 @@ char SymbolFileDWARFDebugMap::ID;
 const SymbolFileDWARFDebugMap::FileRangeMap &
 SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
     SymbolFileDWARFDebugMap *exe_symfile) {
-  if (file_range_map_valid)
+  if (getFile_range_map_valid())
     return file_range_map;
 
-  file_range_map_valid = true;
+  setFile_range_map_valid(true);
 
   Module *oso_module = exe_symfile->GetModuleByCompUnitInfo(this);
   if (!oso_module)

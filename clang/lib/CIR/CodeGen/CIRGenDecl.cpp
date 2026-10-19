@@ -158,7 +158,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   } else {
     // Non-constant size type
     assert(!cir::MissingFeatures::openMP());
-    if (!didCallStackSave) {
+    if (!getDidCallStackSave()) {
       // Save the stack.
       cir::PointerType defaultTy = allocaInt8PtrTy;
       CharUnits align = CharUnits::fromQuantity(
@@ -169,7 +169,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
       assert(v.getType() == allocaInt8PtrTy);
       builder.createStore(loc, v, stack);
 
-      didCallStackSave = true;
+      setDidCallStackSave(true);
 
       // Push a cleanup block and restore the stack there.
       // FIXME: in general circumstances, this should be an EH cleanup.
@@ -1532,7 +1532,7 @@ void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {
 }
 
 bool CIRGenFunction::emitLifetimeStartOp(mlir::Location loc, mlir::Value addr) {
-  if (!shouldEmitLifetimeMarkers)
+  if (!getShouldEmitLifetimeMarkers())
     return false;
 
   assert(mlir::cast<cir::PointerType>(addr.getType()).getAddrSpace() ==
@@ -1544,7 +1544,7 @@ bool CIRGenFunction::emitLifetimeStartOp(mlir::Location loc, mlir::Value addr) {
 }
 
 void CIRGenFunction::emitLifetimeEndOp(mlir::Location loc, mlir::Value addr) {
-  if (!shouldEmitLifetimeMarkers)
+  if (!getShouldEmitLifetimeMarkers())
     return;
 
   assert(mlir::cast<cir::PointerType>(addr.getType()).getAddrSpace() ==

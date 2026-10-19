@@ -129,10 +129,10 @@ std::unique_ptr<ASTUnit> clang::CreateASTUnitFromCommandLine(
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr =
       llvm::makeIntrusiveRefCnt<FileManager>(AST->FileSystemOpts, VFS);
-  AST->StorePreamblesInMemory = StorePreamblesInMemory;
+  AST->setStorePreamblesInMemory(StorePreamblesInMemory);
   AST->PreambleStoragePath = PreambleStoragePath;
   AST->ModCache = createCrossProcessModuleCache();
-  AST->OnlyLocalDecls = OnlyLocalDecls;
+  AST->setOnlyLocalDeclsFlag(OnlyLocalDecls);
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
   AST->ShouldCacheCodeCompletionResults = CacheCodeCompletionResults;

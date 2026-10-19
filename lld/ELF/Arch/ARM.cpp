@@ -133,7 +133,7 @@ uint32_t ARM::calcEFlags() const {
   else if (ctx.arg.armVFPArgs == ARMVFPArgKind::VFP)
     abiFloatType = EF_ARM_ABI_FLOAT_HARD;
 
-  if (!ctx.arg.isLE && ctx.arg.armBe8)
+  if (!ctx.arg.getIsLE() && ctx.arg.getArmBe8())
     armBE8 = EF_ARM_BE8;
 
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
@@ -273,7 +273,7 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
     // Platform-specific relocations:
     case R_ARM_TARGET1:
-      expr = ctx.arg.target1Rel ? R_PC : R_ABS;
+      expr = ctx.arg.getTarget1Rel() ? R_PC : R_ABS;
       break;
     case R_ARM_TARGET2:
       if (ctx.arg.target2 == Target2Policy::Rel)
@@ -315,7 +315,8 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 }
 
 RelType ARM::getDynRel(RelType type) const {
-  if ((type == R_ARM_ABS32) || (type == R_ARM_TARGET1 && !ctx.arg.target1Rel))
+  if ((type == R_ARM_ABS32) ||
+      (type == R_ARM_TARGET1 && !ctx.arg.getTarget1Rel()))
     return R_ARM_ABS32;
   return R_ARM_NONE;
 }
@@ -1399,7 +1400,7 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
       continue;
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
-    if (!ctx.arg.armCMSESupport) {
+    if (!ctx.arg.getArmCMSESupport()) {
       Err(ctx) << "CMSE is only supported by ARMv8-M architecture or later";
       ctx.arg.cmseImplib = false;
       break;
@@ -1621,7 +1622,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   eHdr->e_entry = 0;
   eHdr->e_shoff = sectionHeaderOff;
   eHdr->e_ident[EI_CLASS] = ELFCLASS32;
-  eHdr->e_ident[EI_DATA] = ctx.arg.isLE ? ELFDATA2LSB : ELFDATA2MSB;
+  eHdr->e_ident[EI_DATA] = ctx.arg.getIsLE() ? ELFDATA2LSB : ELFDATA2MSB;
   eHdr->e_ident[EI_VERSION] = EV_CURRENT;
   eHdr->e_ident[EI_OSABI] = ctx.arg.osabi;
   eHdr->e_ident[EI_ABIVERSION] = 0;

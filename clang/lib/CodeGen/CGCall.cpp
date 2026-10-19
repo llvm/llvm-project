@@ -4478,7 +4478,7 @@ void CodeGenFunction::EmitFunctionEpilog(
         // Reuse the debug location from the store unless there is
         // cleanup code to be emitted between the store and return
         // instruction.
-        if (EmitRetDbgLoc && !AutoreleaseResult)
+        if (EmitRetDbgLoc && !getAutoreleaseResult())
           RetDbgLoc = SI->getDebugLoc();
         // Get the stored value and nuke the now-dead store.
         RV = SI->getValueOperand();
@@ -4497,7 +4497,7 @@ void CodeGenFunction::EmitFunctionEpilog(
 
     // In ARC, end functions that return a retainable type with a call
     // to objc_autoreleaseReturnValue.
-    if (AutoreleaseResult) {
+    if (getAutoreleaseResult()) {
 #ifndef NDEBUG
       // Type::isObjCRetainabletype has to be called on a QualType that hasn't
       // been stripped of the typedefs, so we cannot use RetTy here. Get the
@@ -4722,7 +4722,7 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
   }
 
   // Deactivate the cleanup for the callee-destructed param that was pushed.
-  if (type->isRecordType() && !CurFuncIsThunk &&
+  if (type->isRecordType() && !getCurFuncIsThunk() &&
       type->castAsRecordDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     EHScopeStack::stable_iterator cleanup =

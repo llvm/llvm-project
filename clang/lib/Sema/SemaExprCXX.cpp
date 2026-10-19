@@ -48,6 +48,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
@@ -1469,7 +1470,7 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
         continue;
 
       if (LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
-          LSI->AfterParameterList)
+          LSI->getAfterParameterList())
         return false;
 
       // If this lambda captures 'this' by value, then 'this' is dependent iff
@@ -3480,7 +3481,7 @@ foundCandidate:
 }
 
 void Sema::DeclareGlobalNewDelete() {
-  if (GlobalNewDeleteDeclared)
+  if (getGlobalNewDeleteDeclared())
     return;
 
   // The implicitly declared new and delete operators
@@ -3572,7 +3573,7 @@ void Sema::DeclareGlobalNewDelete() {
     StdAlignValT = AlignValT;
   }
 
-  GlobalNewDeleteDeclared = true;
+  setGlobalNewDeleteDeclared(true);
 
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
   QualType SizeT = Context.getSizeType();
@@ -3882,8 +3883,8 @@ public:
   /// translation unit. False, if this is the initial analysis at the point
   /// delete-expression was encountered.
   explicit MismatchingNewDeleteDetector(bool EndOfTU)
-      : Field(nullptr), IsArrayForm(false), EndOfTU(EndOfTU),
-        HasUndefinedConstructors(false) {}
+      : Field(nullptr), NewExprs(decltype(this->NewExprs)::withFlags(
+                            (unsigned(EndOfTU) << 1))) {}
 
   /// Checks whether pointee of a delete-expression is initialized with
   /// matching form of new-expression.
@@ -3903,14 +3904,16 @@ public:
   MismatchResult analyzeField(FieldDecl *Field, bool DeleteWasArrayForm);
   FieldDecl *Field;
   /// List of mismatching new-expressions used for initialization of the pointee
-  llvm::SmallVector<const CXXNewExpr *, 4> NewExprs;
+  llvm::SmallVectorWithFlags<const CXXNewExpr *, 4, 3> NewExprs;
   /// Indicates whether delete-expression was in array form.
-  bool IsArrayForm;
+  bool getIsArrayForm() const { return NewExprs.getFlag(0); }
+  void setIsArrayForm(bool Value) { NewExprs.setFlag(0, Value); }
 
 private:
-  const bool EndOfTU;
+  bool getEndOfTU() const { return NewExprs.getFlag(1); }
   /// Indicates that there is at least one constructor without body.
-  bool HasUndefinedConstructors;
+  bool getHasUndefinedConstructors() const { return NewExprs.getFlag(2); }
+  void setHasUndefinedConstructors(bool Value) { NewExprs.setFlag(2, Value); }
   /// Returns \c CXXNewExpr from given initialization expression.
   /// \param E Expression used for initializing pointee in delete-expression.
   /// E can be a single-element \c InitListExpr consisting of new-expression.
@@ -3946,6 +3949,14 @@ private:
   /// Checks whether member is initialized with mismatching form of \c new by
   /// in-class initializer.
   MismatchResult analyzeInClassInitializer();
+
+public:
+  MismatchingNewDeleteDetector(const MismatchingNewDeleteDetector &) = default;
+  MismatchingNewDeleteDetector(MismatchingNewDeleteDetector &&) = default;
+  MismatchingNewDeleteDetector &
+  operator=(const MismatchingNewDeleteDetector &) = delete;
+  MismatchingNewDeleteDetector &
+  operator=(MismatchingNewDeleteDetector &&) = delete;
 };
 }
 
@@ -3953,7 +3964,7 @@ MismatchingNewDeleteDetector::MismatchResult
 MismatchingNewDeleteDetector::analyzeDeleteExpr(const CXXDeleteExpr *DE) {
   NewExprs.clear();
   assert(DE && "Expected delete-expression");
-  IsArrayForm = DE->isArrayForm();
+  setIsArrayForm(DE->isArrayForm());
   const Expr *E = DE->getArgument()->IgnoreParenImpCasts();
   if (const MemberExpr *ME = dyn_cast<const MemberExpr>(E)) {
     return analyzeMemberExpr(ME);
@@ -3981,7 +3992,7 @@ bool MismatchingNewDeleteDetector::hasMatchingNewInCtorInit(
   const CXXNewExpr *NE = nullptr;
   if (Field == CI->getMember() &&
       (NE = getNewExprFromInitListOrExpr(CI->getInit()))) {
-    if (NE->isArray() == IsArrayForm)
+    if (NE->isArray() == getIsArrayForm())
       return true;
     else
       NewExprs.push_back(NE);
@@ -3995,8 +4006,8 @@ bool MismatchingNewDeleteDetector::hasMatchingNewInCtor(
     return false;
   const FunctionDecl *Definition = CD;
   if (!CD->isThisDeclarationADefinition() && !CD->isDefined(Definition)) {
-    HasUndefinedConstructors = true;
-    return EndOfTU;
+    setHasUndefinedConstructors(true);
+    return getEndOfTU();
   }
   for (const auto *CI : cast<const CXXConstructorDecl>(Definition)->inits()) {
     if (hasMatchingNewInCtorInit(CI))
@@ -4010,9 +4021,9 @@ MismatchingNewDeleteDetector::analyzeInClassInitializer() {
   assert(Field != nullptr && "This should be called only for members");
   const Expr *InitExpr = Field->getInClassInitializer();
   if (!InitExpr)
-    return EndOfTU ? NoMismatch : AnalyzeLater;
+    return getEndOfTU() ? NoMismatch : AnalyzeLater;
   if (const CXXNewExpr *NE = getNewExprFromInitListOrExpr(InitExpr)) {
-    if (NE->isArray() != IsArrayForm) {
+    if (NE->isArray() != getIsArrayForm()) {
       NewExprs.push_back(NE);
       return MemberInitMismatches;
     }
@@ -4025,14 +4036,14 @@ MismatchingNewDeleteDetector::analyzeField(FieldDecl *Field,
                                            bool DeleteWasArrayForm) {
   assert(Field != nullptr && "Analysis requires a valid class member.");
   this->Field = Field;
-  IsArrayForm = DeleteWasArrayForm;
+  setIsArrayForm(DeleteWasArrayForm);
   const CXXRecordDecl *RD = cast<const CXXRecordDecl>(Field->getParent());
   for (const auto *CD : RD->ctors()) {
     if (hasMatchingNewInCtor(CD))
       return NoMismatch;
   }
-  if (HasUndefinedConstructors)
-    return EndOfTU ? NoMismatch : AnalyzeLater;
+  if (getHasUndefinedConstructors())
+    return getEndOfTU() ? NoMismatch : AnalyzeLater;
   if (!NewExprs.empty())
     return MemberInitMismatches;
   return Field->hasInClassInitializer() ? analyzeInClassInitializer()
@@ -4043,7 +4054,7 @@ MismatchingNewDeleteDetector::MismatchResult
 MismatchingNewDeleteDetector::analyzeMemberExpr(const MemberExpr *ME) {
   assert(ME != nullptr && "Expected a member expression");
   if (FieldDecl *F = dyn_cast<FieldDecl>(ME->getMemberDecl()))
-    return analyzeField(F, IsArrayForm);
+    return analyzeField(F, getIsArrayForm());
   return NoMismatch;
 }
 
@@ -4051,7 +4062,7 @@ bool MismatchingNewDeleteDetector::hasMatchingVarInit(const DeclRefExpr *D) {
   const CXXNewExpr *NE = nullptr;
   if (const VarDecl *VD = dyn_cast<const VarDecl>(D->getDecl())) {
     if (VD->hasInit() && (NE = getNewExprFromInitListOrExpr(VD->getInit())) &&
-        NE->isArray() != IsArrayForm) {
+        NE->isArray() != getIsArrayForm()) {
       NewExprs.push_back(NE);
     }
   }
@@ -4063,7 +4074,7 @@ DiagnoseMismatchedNewDelete(Sema &SemaRef, SourceLocation DeleteLoc,
                             const MismatchingNewDeleteDetector &Detector) {
   SourceLocation EndOfDelete = SemaRef.getLocForEndOfToken(DeleteLoc);
   FixItHint H;
-  if (!Detector.IsArrayForm)
+  if (!Detector.getIsArrayForm())
     H = FixItHint::CreateInsertion(EndOfDelete, "[]");
   else {
     SourceLocation RSquare = Lexer::findLocationAfterToken(
@@ -4073,11 +4084,11 @@ DiagnoseMismatchedNewDelete(Sema &SemaRef, SourceLocation DeleteLoc,
       H = FixItHint::CreateRemoval(SourceRange(EndOfDelete, RSquare));
   }
   SemaRef.Diag(DeleteLoc, diag::warn_mismatched_delete_new)
-      << Detector.IsArrayForm << H;
+      << Detector.getIsArrayForm() << H;
 
   for (const auto *NE : Detector.NewExprs)
     SemaRef.Diag(NE->getExprLoc(), diag::note_allocated_here)
-        << Detector.IsArrayForm;
+        << Detector.getIsArrayForm();
 }
 
 void Sema::AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE) {
@@ -7778,7 +7789,8 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   assert(
-      (CurrentLSI->CallOperator == DC || !CurrentLSI->AfterParameterList) &&
+      (CurrentLSI->CallOperator == DC ||
+       !CurrentLSI->getAfterParameterList()) &&
       "The current call operator must be synchronized with Sema's CurContext");
 #endif // NDEBUG
 

@@ -440,7 +440,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
 
   CallInst = MIRBuilder.buildInstrNoInsert(WebAssembly::CALL);
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     CallInst.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   SmallVector<ArgInfo, 8> SplitArgs;

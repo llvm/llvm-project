@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerCompileUnit.h"
@@ -256,20 +257,20 @@ public:
 
   /// Verify the input DWARF.
   void setVerifyInputDWARF(bool Verify) override {
-    Options.VerifyInputDWARF = Verify;
+    Options.setVerifyInputDWARF(Verify);
   }
 
   /// Do not unique types according to ODR.
-  void setNoODR(bool NoODR) override { Options.NoODR = NoODR; }
+  void setNoODR(bool NoODR) override { Options.setNoODR(NoODR); }
 
   /// Update index tables only(do not modify rest of DWARF).
   void setUpdateIndexTablesOnly(bool Update) override {
-    Options.Update = Update;
+    Options.setUpdate(Update);
   }
 
   /// Set whether to keep the enclosing function for a static variable.
   void setKeepFunctionForStatic(bool KeepFunctionForStatic) override {
-    Options.KeepFunctionForStatic = KeepFunctionForStatic;
+    Options.setKeepFunctionForStatic(KeepFunctionForStatic);
   }
 
   /// Use specified number of threads for parallel files linking.
@@ -807,23 +808,27 @@ private:
     bool Statistics = false;
 
     /// Verify the input DWARF.
-    bool VerifyInputDWARF = false;
+    bool getVerifyInputDWARF() const { return AccelTables.getFlag(0); }
+    void setVerifyInputDWARF(bool Value) { AccelTables.setFlag(0, Value); }
 
     /// Do not unique types according to ODR
-    bool NoODR = false;
+    bool getNoODR() const { return AccelTables.getFlag(1); }
+    void setNoODR(bool Value) { AccelTables.setFlag(1, Value); }
 
     /// Update
-    bool Update = false;
+    bool getUpdate() const { return AccelTables.getFlag(2); }
+    void setUpdate(bool Value) { AccelTables.setFlag(2, Value); }
 
     /// Whether we want a static variable to force us to keep its enclosing
     /// function.
-    bool KeepFunctionForStatic = false;
+    bool getKeepFunctionForStatic() const { return AccelTables.getFlag(3); }
+    void setKeepFunctionForStatic(bool Value) { AccelTables.setFlag(3, Value); }
 
     /// Number of threads.
     unsigned Threads = 1;
 
     /// The accelerator table kinds
-    SmallVector<AccelTableKind, 1> AccelTables;
+    llvm::SmallVectorWithFlags<AccelTableKind, 1, 4> AccelTables;
 
     /// Prepend path for the clang modules.
     std::string PrependPath;

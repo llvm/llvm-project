@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -119,9 +120,10 @@ private:
   BasicBlock::iterator BBI;
   Value *V;
   VectorSplit VS;
-  bool IsPointer;
+  bool getIsPointer() const { return Tmp.getFlag(0); }
+  void setIsPointer(bool Value) { Tmp.setFlag(0, Value); }
   ValueVector *CachePtr;
-  ValueVector Tmp;
+  llvm::SmallVectorWithFlagsFor<ValueVector, 1> Tmp;
 };
 
 // FCmpSplitter(FCI)(Builder, X, Y, Name) uses Builder to create an FCmp
@@ -278,10 +280,10 @@ class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
   ScalarizerVisitor(DominatorTree *DT, const TargetTransformInfo *TTI,
                     ScalarizerPassOptions Options)
-      : DT(DT), TTI(TTI),
-        ScalarizeVariableInsertExtract(Options.ScalarizeVariableInsertExtract),
-        ScalarizeLoadStore(Options.ScalarizeLoadStore),
-        ScalarizeMinBits(Options.ScalarizeMinBits) {}
+      : Gathered(decltype(this->Gathered)::withFlags(
+            (unsigned(bool(Options.ScalarizeVariableInsertExtract)) << 1) |
+            (unsigned(bool(Options.ScalarizeLoadStore)) << 2))),
+        DT(DT), TTI(TTI), ScalarizeMinBits(Options.ScalarizeMinBits) {}
 
   bool visit(Function &F);
 
@@ -323,16 +325,17 @@ private:
   bool splitCall(CallInst &CI);
 
   ScatterMap Scattered;
-  GatherList Gathered;
-  bool Scalarized;
+  llvm::SmallVectorWithFlagsFor<GatherList, 3> Gathered;
+  bool getScalarized() const { return Gathered.getFlag(0); }
+  void setScalarized(bool Value) { Gathered.setFlag(0, Value); }
 
   SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
 
   DominatorTree *DT;
   const TargetTransformInfo *TTI;
 
-  const bool ScalarizeVariableInsertExtract;
-  const bool ScalarizeLoadStore;
+  bool getScalarizeVariableInsertExtract() const { return Gathered.getFlag(1); }
+  bool getScalarizeLoadStore() const { return Gathered.getFlag(2); }
   const unsigned ScalarizeMinBits;
 };
 
@@ -368,12 +371,12 @@ INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
 Scatterer::Scatterer(BasicBlock::iterator bbi, Value *v, const VectorSplit &VS,
                      ValueVector *cachePtr)
     : BBI(bbi), V(v), VS(VS), CachePtr(cachePtr) {
-  IsPointer = V->getType()->isPointerTy();
+  setIsPointer(V->getType()->isPointerTy());
   if (!CachePtr) {
     Tmp.resize(VS.NumFragments, nullptr);
   } else {
     assert((CachePtr->empty() || VS.NumFragments == CachePtr->size() ||
-            IsPointer) &&
+            getIsPointer()) &&
            "Inconsistent vector sizes");
     if (VS.NumFragments > CachePtr->size())
       CachePtr->resize(VS.NumFragments, nullptr);
@@ -382,12 +385,13 @@ Scatterer::Scatterer(BasicBlock::iterator bbi, Value *v, const VectorSplit &VS,
 
 // Return fragment Frag, creating a new Value for it if necessary.
 Value *Scatterer::operator[](unsigned Frag) {
-  ValueVector &CV = CachePtr ? *CachePtr : Tmp;
+  MutableArrayRef<Value *> CV = CachePtr ? MutableArrayRef<Value *>(*CachePtr)
+                                         : MutableArrayRef<Value *>(Tmp);
   // Try to reuse a previous value.
   if (CV[Frag])
     return CV[Frag];
   IRBuilder<> Builder(BBI);
-  if (IsPointer) {
+  if (getIsPointer()) {
     if (Frag == 0)
       CV[Frag] = V;
     else
@@ -455,7 +459,7 @@ FunctionPass *llvm::createScalarizerPass(const ScalarizerPassOptions &Options) {
 bool ScalarizerVisitor::visit(Function &F) {
   assert(Gathered.empty() && Scattered.empty());
 
-  Scalarized = false;
+  setScalarized(false);
 
   // To ensure we replace gathered components correctly we need to do an ordered
   // traversal of the basic blocks in the function.
@@ -467,7 +471,7 @@ bool ScalarizerVisitor::visit(Function &F) {
       ++II;
       if (Done && I->getType()->isVoidTy()) {
         I->eraseFromParent();
-        Scalarized = true;
+        setScalarized(true);
       }
     }
   }
@@ -538,7 +542,7 @@ void ScalarizerVisitor::replaceUses(Instruction *Op, Value *CV) {
   if (CV != Op) {
     Op->replaceAllUsesWith(CV);
     PotentiallyDeadInstrs.emplace_back(Op);
-    Scalarized = true;
+    setScalarized(true);
   }
 }
 
@@ -1091,7 +1095,7 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
     }
   } else {
     // Never split a variable insertelement that isn't fully scalarized.
-    if (!ScalarizeVariableInsertExtract || VS->NumPacked > 1)
+    if (!getScalarizeVariableInsertExtract() || VS->NumPacked > 1)
       return false;
 
     for (unsigned I = 0; I < VS->NumFragments; ++I) {
@@ -1184,7 +1188,7 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   }
 
   // Never split a variable extractelement that isn't fully scalarized.
-  if (!ScalarizeVariableInsertExtract || VS->NumPacked > 1)
+  if (!getScalarizeVariableInsertExtract() || VS->NumPacked > 1)
     return false;
 
   Value *Res = PoisonValue::get(VS->VecTy->getElementType());
@@ -1251,7 +1255,7 @@ bool ScalarizerVisitor::visitPHINode(PHINode &PHI) {
 }
 
 bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
-  if (!ScalarizeLoadStore)
+  if (!getScalarizeLoadStore())
     return false;
   if (!LI.isSimple())
     return false;
@@ -1276,7 +1280,7 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
 }
 
 bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
-  if (!ScalarizeLoadStore)
+  if (!getScalarizeLoadStore())
     return false;
   if (!SI.isSimple())
     return false;
@@ -1318,7 +1322,7 @@ bool ScalarizerVisitor::visitFreezeInst(FreezeInst &FI) {
 bool ScalarizerVisitor::finish() {
   // The presence of data in Gathered or Scattered indicates changes
   // made to the Function.
-  if (Gathered.empty() && Scattered.empty() && !Scalarized)
+  if (Gathered.empty() && Scattered.empty() && !getScalarized())
     return false;
   for (const auto &GMI : Gathered) {
     Instruction *Op = GMI.first;
@@ -1380,7 +1384,7 @@ bool ScalarizerVisitor::finish() {
   }
   Gathered.clear();
   Scattered.clear();
-  Scalarized = false;
+  setScalarized(false);
 
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
 

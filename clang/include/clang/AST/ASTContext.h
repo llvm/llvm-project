@@ -42,6 +42,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -245,7 +246,7 @@ struct QualTypeBoolInfo {
 class ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
-  mutable SmallVector<Type *, 0> Types;
+  mutable llvm::SmallVectorWithFlags<Type *, 0, 3> Types;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
   mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
@@ -838,10 +839,15 @@ private:
 
   /// Address space map mangling must be used with language specific
   /// address spaces (e.g. OpenCL/CUDA)
-  bool AddrSpaceMapMangling;
+  bool getAddrSpaceMapMangling() const { return Types.getFlag(0); }
+  void setAddrSpaceMapMangling(bool Value) { Types.setFlag(0, Value); }
 
   /// For performance, track whether any function effects are in use.
-  mutable bool AnyFunctionEffects = false;
+  bool getAnyFunctionEffects() const { return Types.getFlag(1); }
+  bool setAnyFunctionEffects(bool Value) const {
+    Types.setFlag(1, Value);
+    return Value;
+  }
 
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
@@ -1048,7 +1054,8 @@ public:
   RawCommentList Comments;
 
   /// True if comments are already loaded from ExternalASTSource.
-  mutable bool CommentsLoaded = false;
+  bool getCommentsLoaded() const { return Types.getFlag(2); }
+  void setCommentsLoaded(bool Value) const { Types.setFlag(2, Value); }
 
   /// Key used to look up the raw comment attached to a declaration or macro.
   using RawCommentLookupKey =
@@ -1520,7 +1527,9 @@ public:
   ASTMutationListener *getASTMutationListener() const { return Listener; }
 
   void PrintStats() const;
-  const SmallVectorImpl<Type *>& getTypes() const { return Types; }
+  const llvm::SmallVectorWithFlagsImpl<Type *, 3> &getTypes() const {
+    return Types;
+  }
 
   BuiltinTemplateDecl *buildBuiltinTemplateDecl(BuiltinTemplateKind BTK,
                                                 const IdentifierInfo *II) const;
@@ -3402,10 +3411,10 @@ public:
   uint64_t getTargetNullPointerValue(QualType QT) const;
 
   bool addressSpaceMapManglingFor(LangAS AS) const {
-    return AddrSpaceMapMangling || isTargetAddressSpace(AS);
+    return getAddrSpaceMapMangling() || isTargetAddressSpace(AS);
   }
 
-  bool hasAnyFunctionEffects() const { return AnyFunctionEffects; }
+  bool hasAnyFunctionEffects() const { return getAnyFunctionEffects(); }
 
   // Merges two exception specifications, such that the resulting
   // exception spec is the union of both. For example, if either

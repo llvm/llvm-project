@@ -253,7 +253,7 @@ bool LambdaScopeInfo::lambdaCaptureShouldBeConst() const {
     return ExplicitObjectParameter->getType()
         .getNonReferenceType()
         .isConstQualified();
-  return !Mutable;
+  return !getMutable();
 }
 
 FunctionScopeInfo::~FunctionScopeInfo() { }

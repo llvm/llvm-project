@@ -11,6 +11,7 @@
 
 #include "ModulePool.h"
 #include "TypePool.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/Support/PerThreadBumpPtrAllocator.h"
@@ -37,23 +38,30 @@ struct DWARFLinkerOptions {
   bool Statistics = false;
 
   /// Verify the input DWARF.
-  bool VerifyInputDWARF = false;
+  bool getVerifyInputDWARF() const { return AccelTables.getFlag(0); }
+  void setVerifyInputDWARF(bool Value) { AccelTables.setFlag(0, Value); }
 
   /// Do not unique types according to ODR
-  bool NoODR = false;
+  bool getNoODR() const { return AccelTables.getFlag(1); }
+  bool setNoODR(bool Value) {
+    AccelTables.setFlag(1, Value);
+    return Value;
+  }
 
   /// Update index tables.
-  bool UpdateIndexTablesOnly = false;
+  bool getUpdateIndexTablesOnly() const { return AccelTables.getFlag(2); }
+  void setUpdateIndexTablesOnly(bool Value) { AccelTables.setFlag(2, Value); }
 
   /// Whether we want a static variable to force us to keep its enclosing
   /// function.
-  bool KeepFunctionForStatic = false;
+  bool getKeepFunctionForStatic() const { return AccelTables.getFlag(3); }
+  void setKeepFunctionForStatic(bool Value) { AccelTables.setFlag(3, Value); }
 
   /// Number of threads.
   unsigned Threads = 1;
 
   /// The accelerator table kinds
-  SmallVector<DWARFLinkerBase::AccelTableKind, 1> AccelTables;
+  llvm::SmallVectorWithFlags<DWARFLinkerBase::AccelTableKind, 1, 4> AccelTables;
 
   /// Prepend path for the clang modules.
   std::string PrependPath;

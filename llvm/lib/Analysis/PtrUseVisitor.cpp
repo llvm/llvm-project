@@ -21,16 +21,14 @@ void detail::PtrUseVisitorBase::enqueueUsers(Value &I) {
   for (Use &U : I.uses()) {
     if (VisitedUses.insert(&U).second) {
       UseToVisit NewU = {
-        UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
-        Offset
-      };
+          UseToVisit::UseAndIsOffsetKnownPair(&U, isOffsetKnown()), Offset};
       Worklist.push_back(std::move(NewU));
     }
   }
 }
 
 bool detail::PtrUseVisitorBase::adjustOffsetForGEP(GetElementPtrInst &GEPI) {
-  if (!IsOffsetKnown)
+  if (!isOffsetKnown())
     return false;
 
   APInt TmpOffset(DL.getIndexTypeSizeInBits(GEPI.getType()), 0);

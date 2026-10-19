@@ -21,6 +21,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <string>
 
 namespace clang::lifetimes {
@@ -524,13 +525,14 @@ public:
 
 private:
   struct LifetimeBoundMacroCache {
-    bool IsBuilt = false;
-    SmallVector<const IdentifierInfo *> Candidates;
+    bool getIsBuilt() const { return Candidates.getFlag(0); }
+    void setIsBuilt(bool Value) { Candidates.setFlag(0, Value); }
+    llvm::SmallVectorWithFlags<const IdentifierInfo *> Candidates;
   };
 
   void buildLifetimeBoundMacroCache(LifetimeBoundMacroCache &Cache,
                                     ArrayRef<TokenValue> Tokens) {
-    if (Cache.IsBuilt)
+    if (Cache.getIsBuilt())
       return;
 
     const Preprocessor &PP = S.getPreprocessor();
@@ -552,7 +554,7 @@ private:
         }
       }
     }
-    Cache.IsBuilt = true;
+    Cache.setIsBuilt(true);
   }
 
   StringRef getLastCachedMacroWithSpelling(SourceLocation Loc,

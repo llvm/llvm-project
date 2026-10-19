@@ -49,8 +49,7 @@ private:
 
   // Lower Operand helpers
   SDValue LowerCallArguments(SDValue Chain, CallingConv::ID CallConv,
-                             bool isVarArg,
-                             const SmallVectorImpl<ISD::InputArg> &Ins,
+                             bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                              SDLoc dl, SelectionDAG &DAG,
                              SmallVectorImpl<SDValue> &InVals) const;
   // Lower Operand specifics
@@ -63,8 +62,7 @@ private:
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
@@ -72,13 +70,12 @@ private:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
                       SelectionDAG &DAG) const override;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
+                      bool isVarArg, llvm::ArrayRef<ISD::OutputArg> ArgsFlags,
                       LLVMContext &Context, const Type *RetTy) const override;
 
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;

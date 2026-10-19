@@ -58,7 +58,7 @@ ConstantInitBuilderBase::createFuture(llvm::Constant *initializer) {
 // Only used in this file.
 inline ConstantInitFuture::ConstantInitFuture(ConstantInitBuilderBase *builder)
     : Data(builder) {
-  assert(!builder->Frozen);
+  assert(!builder->getFrozen());
   assert(builder->Buffer.size() == 1);
   assert(builder->Buffer[0] != nullptr);
 }

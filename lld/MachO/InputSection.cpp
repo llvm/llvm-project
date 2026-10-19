@@ -63,7 +63,7 @@ void lld::macho::addInputSection(InputSection *inputSection) {
     isec->parent = osec;
     inputSections.push_back(isec);
   } else if (auto *isec = dyn_cast<CStringInputSection>(inputSection)) {
-    bool useSectionName = config->separateCstringLiteralSections ||
+    bool useSectionName = config->getSeparateCstringLiteralSections() ||
                           isec->getName() == section_names::objcMethname;
     auto *osec = in.getOrCreateCStringSection(
         useSectionName ? isec->getName() : section_names::cString);

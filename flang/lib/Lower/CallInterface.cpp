@@ -570,7 +570,7 @@ Fortran::lower::CallerInterface::getDummySymbol(
 mlir::Type Fortran::lower::CallerInterface::getResultStorageType() const {
   if (passedResult)
     return fir::dyn_cast_ptrEleTy(inputs[passedResult->firArgument].type);
-  assert(saveResult && !outputs.empty());
+  assert(mustSaveResult() && !outputs.empty());
   return outputs[0].type;
 }
 
@@ -1484,7 +1484,7 @@ private:
     interface.passedResult =
         PassedEntity{p, entity, emptyValue(), emptyValue()};
   }
-  void setSaveResult() { interface.saveResult = true; }
+  void setSaveResult() { interface.passedArguments.setFlag(0, true); }
   int nextPassedArgPosition() { return interface.passedArguments.size(); }
 
   static FirValue emptyValue() {

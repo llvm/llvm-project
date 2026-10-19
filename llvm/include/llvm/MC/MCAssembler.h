@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -57,9 +58,12 @@ private:
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCObjectWriter> Writer;
 
-  bool HasLayout = false;
-  bool HasFinalLayout = false;
-  bool RelaxAll = false;
+  bool getHasLayout() const { return PendingErrors.getFlag(0); }
+  void setHasLayout(bool Value) { PendingErrors.setFlag(0, Value); }
+  bool getHasFinalLayout() const { return PendingErrors.getFlag(1); }
+  void setHasFinalLayout(bool Value) { PendingErrors.setFlag(1, Value); }
+  bool getRelaxAllFlag() const { return PendingErrors.getFlag(2); }
+  void setRelaxAllFlag(bool Value) { PendingErrors.setFlag(2, Value); }
 
   // Cumulative upstream size change during `relaxOnce`. Used to compensate
   // forward-reference displacements in `evaluateFixup`.
@@ -79,7 +83,8 @@ private:
   };
   SmallVector<RelocDirective, 0> relocDirectives;
 
-  mutable SmallVector<std::pair<SMLoc, std::string>, 0> PendingErrors;
+  mutable llvm::SmallVectorWithFlags<std::pair<SMLoc, std::string>, 0, 3>
+      PendingErrors;
 
   MCDwarfLineTableParams LTParams;
 
@@ -196,10 +201,10 @@ public:
   // Layout all section and prepare them for emission.
   LLVM_ABI void layout();
 
-  bool hasLayout() const { return HasLayout; }
-  bool hasFinalLayout() const { return HasFinalLayout; }
-  bool getRelaxAll() const { return RelaxAll; }
-  void setRelaxAll(bool Value) { RelaxAll = Value; }
+  bool hasLayout() const { return getHasLayout(); }
+  bool hasFinalLayout() const { return getHasFinalLayout(); }
+  bool getRelaxAll() const { return getRelaxAllFlag(); }
+  void setRelaxAll(bool Value) { setRelaxAllFlag(Value); }
   int64_t getStretch() const { return Stretch; }
 
   bool isBundlingEnabled() const { return bool(BundleAlign); }

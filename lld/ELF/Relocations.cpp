@@ -620,14 +620,14 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     msg << "\n>>> the vtable symbol may be undefined because the class is "
            "missing its key function "
            "(see https://lld.llvm.org/missingkeyfunction)";
-  if (ctx.arg.gcSections && ctx.arg.zStartStopGC &&
+  if (ctx.arg.gcSections && ctx.arg.getZStartStopGC() &&
       sym.getName().starts_with("__start_")) {
     msg << "\n>>> the encapsulation symbol needs to be retained under "
            "--gc-sections properly; consider -z nostart-stop-gc "
            "(see https://lld.llvm.org/ELF/start-stop-gc)";
   }
 
-  if (undef.isWarning)
+  if (undef.getIsWarning())
     Warn(ctx) << msg.str();
   else
     ctx.e.error(msg.str(), ErrorTag::SymbolNotFound, {sym.getName()});
@@ -694,7 +694,7 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
 }
 
 bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {
-  if (!ctx.arg.shared)
+  if (!ctx.arg.getShared())
     return false;
   auto diag = Err(ctx);
   diag << "relocation " << type << " against " << &sym
@@ -762,7 +762,7 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
-  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+  if (sym.isPreemptible && ctx.arg.getZMarkPlt() && type == ctx.target->pltRel)
     expr = R_PLT;
   rel.addReloc(
       {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
@@ -781,7 +781,7 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
   // Otherwise, the value is either a link-time constant or the load base
   // plus a constant.
-  if (!ctx.arg.isPic || isAbsolute(sym))
+  if (!ctx.arg.getIsPic() || isAbsolute(sym))
     ctx.in.got->addConstant({R_ABS, ctx.target->symbolicRel, off, 0, &sym});
   else
     addRelativeReloc(ctx, *ctx.in.got, off, sym, 0, R_ABS,
@@ -810,7 +810,7 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset(ctx);
-  if (!sym.isPreemptible && !ctx.arg.shared) {
+  if (!sym.isPreemptible && !ctx.arg.getShared()) {
     ctx.in.got->addConstant({R_TPREL, ctx.target->symbolicRel, off, 0, &sym});
     return;
   }
@@ -863,7 +863,7 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
-    return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
+    return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.getIsPic();
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation unless the symbol is
   // non-preemptible and undefined.
   if (e == RE_AARCH64_AUTH && (!sym.isUndefined() || sym.isPreemptible))
@@ -878,8 +878,8 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // IRELATIVE). Emitting dynamic relocations for -shared aligns with its -z
   // undefs default. Dynamic -no-pie linking and -pie allow flexibility.
   if (sym.isPreemptible)
-    return sym.isUndefined() && !ctx.arg.isPic;
-  if (!ctx.arg.isPic)
+    return sym.isUndefined() && !ctx.arg.getIsPic();
+  if (!ctx.arg.getIsPic())
     return true;
 
   // Constant when referencing a non-preemptible symbol.
@@ -951,7 +951,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
 
   // We were asked not to generate PLT entries for ifuncs. Instead, pass the
   // direct relocation on through.
-  if (LLVM_UNLIKELY(isIfunc) && ctx.arg.zIfuncNoplt) {
+  if (LLVM_UNLIKELY(isIfunc) && ctx.arg.getZIfuncNoplt()) {
     std::lock_guard<std::mutex> lock(ctx.relocMutex);
     sym.isExported = true;
     ctx.in.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
@@ -1003,7 +1003,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
   bool canWrite = (sec->flags & SHF_WRITE) ||
-                  !(ctx.arg.zText ||
+                  !(ctx.arg.getZText() ||
                     (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
@@ -1062,7 +1062,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
   // Copy relocations/canonical PLT entries are unsupported for
   // R_AARCH64_AUTH_ABS64.
-  if (!ctx.arg.shared && sym.isShared() &&
+  if (!ctx.arg.getShared() && sym.isShared() &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(ctx, sym)) {
       auto diag = Err(ctx);
@@ -1114,7 +1114,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
     // * If a library definition gets preempted to the executable, it will have
     //   the wrong ebx value.
     if (sym.isFunc()) {
-      if (ctx.arg.pie && ctx.arg.emachine == EM_386) {
+      if (ctx.arg.getPie() && ctx.arg.emachine == EM_386) {
         auto diag = Err(ctx);
         diag << "symbol '" << &sym
              << "' cannot be preempted; recompile with -fPIE";
@@ -1252,7 +1252,7 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   //
   // Note: IRELATIVE relocations are needed even in static executables; see
   // `addRelIpltSymbols`.
-  if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.zIfuncNoplt)
+  if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.getZIfuncNoplt())
     return false;
   // Skip unreferenced non-preemptible ifunc.
   if (!(flags & (NEEDS_GOT | NEEDS_GOT_AUTH | NEEDS_PLT | HAS_DIRECT_RELOC)))
@@ -1390,7 +1390,7 @@ void elf::postScanRelocations(Ctx &ctx) {
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *got,
                                        offsetOff, sym);
       } else {
-        if (ctx.arg.shared)
+        if (ctx.arg.getShared())
           ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, got, off});
         else
           // Write one to the GOT slot.
@@ -1414,7 +1414,7 @@ void elf::postScanRelocations(Ctx &ctx) {
 
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    if (ctx.arg.shared)
+    if (ctx.arg.getShared())
       ctx.in.relaDyn->addReloc(
           {ctx.target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
     else
@@ -1435,7 +1435,7 @@ void elf::postScanRelocations(Ctx &ctx) {
   if (needsTlsIe)
     ctx.hasTlsIe.store(true, std::memory_order_relaxed);
 
-  if (ctx.arg.branchToBranch)
+  if (ctx.arg.getBranchToBranch())
     ctx.target->applyBranchToBranchOpt();
 }
 
@@ -1801,7 +1801,7 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                        isd->sections.back()->getSize() -
                        isd->sections.front()->outSecOff;
     if (os->size > ctx.target->getThunkSectionSpacing() && isdSize > 4096)
-      ts->roundUpSizeForErrata = true;
+      ts->setRoundUpSizeForErrata(true);
   }
   isd->thunkSections.push_back({ts, pass});
   return ts;
@@ -1820,7 +1820,7 @@ static bool isThunkSectionCompatible(InputSection *source, Thunk &thunk) {
 
   // Thunks in a different Overlay Output Section can't be reused
   // as we can't guarantee that the Overlay will be in memory.
-  return (sourceOS == targetOS || !targetOS->inOverlay);
+  return (sourceOS == targetOS || !targetOS->getInOverlay());
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
@@ -2008,7 +2008,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
 }
 
 static bool matchesRefTo(const NoCrossRefCommand &cmd, StringRef osec) {
-  if (cmd.toFirst)
+  if (cmd.toFirst())
     return cmd.outputSections[0] == osec;
   return llvm::is_contained(cmd.outputSections, osec);
 }
@@ -2017,7 +2017,7 @@ template <class ELFT, class Rels>
 static void scanCrossRefs(Ctx &ctx, const NoCrossRefCommand &cmd,
                           OutputSection *osec, InputSection *sec, Rels rels) {
   for (const auto &r : rels) {
-    Symbol &sym = sec->file->getSymbol(r.getSymbol(ctx.arg.isMips64EL));
+    Symbol &sym = sec->file->getSymbol(r.getSymbol(ctx.arg.getIsMips64EL()));
     // A legal cross-reference is when the destination output section is
     // nullptr, osec for a self-reference, or a section that is described by the
     // NOCROSSREFS/NOCROSSREFS_TO command.
@@ -2042,7 +2042,7 @@ template <class ELFT> void elf::checkNoCrossRefs(Ctx &ctx) {
   for (OutputSection *osec : ctx.outputSections) {
     for (const NoCrossRefCommand &noxref : ctx.script->noCrossRefs) {
       if (!llvm::is_contained(noxref.outputSections, osec->name) ||
-          (noxref.toFirst && noxref.outputSections[0] == osec->name))
+          (noxref.toFirst() && noxref.outputSections[0] == osec->name))
         continue;
       for (SectionCommand *cmd : osec->commands) {
         auto *isd = dyn_cast<InputSectionDescription>(cmd);

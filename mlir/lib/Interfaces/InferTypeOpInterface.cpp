@@ -94,7 +94,8 @@ Type ShapeAdaptor::getElementType() const {
   return cast<ShapedTypeComponents *>(val)->getElementType();
 }
 
-void ShapeAdaptor::getDims(SmallVectorImpl<int64_t> &res) const {
+template <typename ShapeStorageT>
+void ShapeAdaptor::getDimsImpl(ShapeStorageT &res) const {
   assert(hasRank());
   if (auto t = llvm::dyn_cast_if_present<Type>(val)) {
     ArrayRef<int64_t> vals = cast<ShapedType>(t).getShape();
@@ -111,10 +112,14 @@ void ShapeAdaptor::getDims(SmallVectorImpl<int64_t> &res) const {
   }
 }
 
+void ShapeAdaptor::getDims(SmallVectorImpl<int64_t> &res) const {
+  getDimsImpl(res);
+}
+
 void ShapeAdaptor::getDims(ShapedTypeComponents &res) const {
   assert(hasRank());
-  res.ranked = true;
-  getDims(res.dims);
+  getDimsImpl(res.dims);
+  res.dims.setFlag(0, true);
 }
 
 int64_t ShapeAdaptor::getDimSize(int index) const {

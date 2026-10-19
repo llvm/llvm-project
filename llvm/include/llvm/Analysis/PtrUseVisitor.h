@@ -26,6 +26,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -137,7 +138,8 @@ protected:
   };
 
   /// The worklist of to-visit uses.
-  SmallVector<UseToVisit, 8> Worklist;
+  // Flag bit 0 records whether the current offset is known.
+  SmallVectorWithFlags<UseToVisit, 8> Worklist;
 
   /// A set of visited uses to break cycles in unreachable code.
   SmallPtrSet<Use *, 8> VisitedUses;
@@ -153,7 +155,8 @@ protected:
 
   /// True if we have a known constant offset for the use currently
   /// being visited.
-  bool IsOffsetKnown;
+  bool isOffsetKnown() const { return Worklist.getFlag(0); }
+  void setIsOffsetKnown(bool Known) { Worklist.setFlag(0, Known); }
 
   /// The constant offset of the use if that is known.
   APInt Offset;
@@ -228,7 +231,7 @@ public:
     assert(I.getType()->isPointerTy());
     assert(isa<Instruction>(I) || isa<Argument>(I));
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
-    IsOffsetKnown = true;
+    setIsOffsetKnown(true);
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
     PI.reset();
 
@@ -239,8 +242,8 @@ public:
     while (!Worklist.empty()) {
       UseToVisit ToVisit = Worklist.pop_back_val();
       U = ToVisit.UseAndIsOffsetKnown.getPointer();
-      IsOffsetKnown = ToVisit.UseAndIsOffsetKnown.getInt();
-      if (IsOffsetKnown)
+      setIsOffsetKnown(ToVisit.UseAndIsOffsetKnown.getInt());
+      if (isOffsetKnown())
         Offset = std::move(ToVisit.Offset);
 
       Instruction *I = cast<Instruction>(U->getUser());
@@ -275,7 +278,7 @@ protected:
 
     // If we can't walk the GEP, clear the offset.
     if (!adjustOffsetForGEP(GEPI)) {
-      IsOffsetKnown = false;
+      setIsOffsetKnown(false);
       Offset = APInt();
     }
 

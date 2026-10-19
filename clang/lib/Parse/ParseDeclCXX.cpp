@@ -1546,8 +1546,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
     return true;
   case tok::colon:
     return CouldBeBitfield || // enum E { ... }   :         2;
-           ColonIsSacred ||
-           ParsingGenericAssociationType; // _Generic(..., enum E :     2);
+           getColonIsSacred() ||
+           getParsingGenericAssociationType(); // _Generic(..., enum E :     2);
   // Microsoft compatibility
   case tok::kw___cdecl:      // struct foo {...} __cdecl      x;
   case tok::kw___fastcall:   // struct foo {...} __fastcall   x;
@@ -2613,7 +2613,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(
-        VS, getCurrentClass().IsInterface,
+        VS, getCurrentClass().isInterface(),
         DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
     if (!VS.isUnset())
       MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(DeclaratorInfo,
@@ -2642,7 +2642,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   // virt-specifier *after* the GNU attributes.
   if (BitfieldSize.isUnset() && VS.isUnset()) {
     ParseOptionalCXX11VirtSpecifierSeq(
-        VS, getCurrentClass().IsInterface,
+        VS, getCurrentClass().isInterface(),
         DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
     if (!VS.isUnset()) {
       // If we saw any GNU-style attributes that are known to GCC followed by a
@@ -3355,8 +3355,11 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
   // CWG2760
   // Default member initializers used to initialize a base or member subobject
   // [...] are considered to be part of the function body
-  Actions.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      IsFieldInitialization;
+  [&] {
+    auto PackedFlagValue_ = IsFieldInitialization;
+    return Actions.ExprEvalContexts.back()
+        .setInImmediateEscalatingFunctionContext(PackedFlagValue_);
+  }();
 
   if (TryConsumeToken(tok::equal, EqualLoc)) {
     if (Tok.is(tok::kw_delete)) {
@@ -3588,7 +3591,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         NonNestedClass = false;
 
         // The Microsoft extension __interface does not permit nested classes.
-        if (getCurrentClass().IsInterface) {
+        if (getCurrentClass().isInterface()) {
           Diag(RecordLoc, diag::err_invalid_member_in_interface)
               << /*ErrorType=*/6
               << (isa<NamedDecl>(TagDecl)
@@ -3952,14 +3955,14 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
           Actions.CodeCompletion().ProduceCtorInitMemberSignatureHelp(
               ConstructorDecl, SS, TemplateTypeTy.get(), ArgExprs, II,
               T.getOpenLocation(), /*Braced=*/false);
-      CalledSignatureHelp = true;
+      setCalledSignatureHelp(true);
       return PreferredType;
     };
     if (Tok.isNot(tok::r_paren) && ParseExpressionList(ArgExprs, [&] {
           PreferredType.enterFunctionArgument(Tok.getLocation(),
                                               RunSignatureHelp);
         })) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+      if (PP.isCodeCompletionReached() && !getCalledSignatureHelp())
         RunSignatureHelp();
       SkipUntil(tok::r_paren, StopAtSemi);
       return true;
@@ -4276,7 +4279,7 @@ void Parser::PopParsingClass(Sema::ParsingClassState state) {
 
   ParsingClass *Victim = ClassStack.top();
   ClassStack.pop();
-  if (Victim->TopLevelClass) {
+  if (Victim->isTopLevelClass()) {
     // Deallocate all of the nested classes of this class,
     // recursively: we don't need to keep any of this information.
     DeallocateParsedClasses(Victim);

@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_FORMAT_QUALIFIERALIGNMENTFIXER_H
 
 #include "TokenAnalyzer.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 namespace format {
@@ -40,8 +41,9 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
 
 class LeftRightQualifierAlignmentFixer : public TokenAnalyzer {
   std::string Qualifier;
-  bool RightAlign;
-  SmallVector<tok::TokenKind, 8> QualifierTokens;
+  bool getRightAlign() const { return QualifierTokens.getFlag(0); }
+  void setRightAlign(bool Value) { QualifierTokens.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<tok::TokenKind, 8> QualifierTokens;
   std::vector<tok::TokenKind> ConfiguredQualifierTokens;
 
 public:
@@ -58,7 +60,7 @@ public:
 
   static tok::TokenKind getTokenFromQualifier(const std::string &Qualifier);
 
-  void fixQualifierAlignment(SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+  void fixQualifierAlignment(ArrayRef<AnnotatedLine *> AnnotatedLines,
                              FormatTokenLexer &Tokens,
                              tooling::Replacements &Fixes);
 

@@ -1452,16 +1452,21 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       }
       UuidLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_SEGMENT_64) {
-      if ((Err = parseSegmentLoadCommand<MachO::segment_command_64,
-                                         MachO::section_64>(
-                   *this, Load, Sections, HasPageZeroSegment, I,
-                   "LC_SEGMENT_64", SizeOfHeaders, Elements)))
+      bool HasPageZero = getHasPageZeroSegment();
+      Err =
+          parseSegmentLoadCommand<MachO::segment_command_64, MachO::section_64>(
+              *this, Load, Sections, HasPageZero, I, "LC_SEGMENT_64",
+              SizeOfHeaders, Elements);
+      setHasPageZeroSegment(HasPageZero);
+      if (Err)
         return;
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
-      if ((Err = parseSegmentLoadCommand<MachO::segment_command,
-                                         MachO::section>(
-                   *this, Load, Sections, HasPageZeroSegment, I,
-                   "LC_SEGMENT", SizeOfHeaders, Elements)))
+      bool HasPageZero = getHasPageZeroSegment();
+      Err = parseSegmentLoadCommand<MachO::segment_command, MachO::section>(
+          *this, Load, Sections, HasPageZero, I, "LC_SEGMENT", SizeOfHeaders,
+          Elements);
+      setHasPageZeroSegment(HasPageZero);
+      if (Err)
         return;
     } else if (Load.C.cmd == MachO::LC_ID_DYLIB) {
       if ((Err = checkDylibIdCommand(*this, Load, I, &DyldIdLoadCmd)))
@@ -3044,13 +3049,13 @@ void ExportEntry::moveToFirst() {
 
 void ExportEntry::moveToEnd() {
   Stack.clear();
-  Done = true;
+  Stack.setFlag(0, true);
 }
 
 bool ExportEntry::operator==(const ExportEntry &Other) const {
   // Common case, one at end, other iterating from begin.
-  if (Done || Other.Done)
-    return (Done == Other.Done);
+  if (Stack.getFlag(0) || Other.Stack.getFlag(0))
+    return Stack.getFlag(0) == Other.Stack.getFlag(0);
   // Not equal if different stack sizes.
   if (Stack.size() != Other.Stack.size())
     return false;
@@ -3333,7 +3338,7 @@ void ExportEntry::moveNext() {
       Stack.pop_back();
     }
   }
-  Done = true;
+  Stack.setFlag(0, true);
 }
 
 iterator_range<export_iterator>

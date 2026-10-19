@@ -1732,11 +1732,11 @@ OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
   // Trailing layout: Expr*[1 + NumPrefs + NumAttrs], unsigned[NumPrefs].
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, unsigned>(1 + NumPrefs + NumAttrs, NumPrefs));
-  auto *Clause = new (Mem)
-      OMPInitClause(InteropInfo.IsTarget, InteropInfo.IsTargetSync, StartLoc,
-                    LParenLoc, VarLoc, EndLoc, /*VarListN=*/1 + NumPrefs);
+  auto *Clause = new (Mem) OMPInitClause(
+      InteropInfo.isTarget(), InteropInfo.isTargetSync(), StartLoc, LParenLoc,
+      VarLoc, EndLoc, /*VarListN=*/1 + NumPrefs);
   Clause->NumAttrs = NumAttrs;
-  Clause->HasPreferAttrs = InteropInfo.HasPreferAttrs;
+  Clause->HasPreferAttrs = InteropInfo.hasPreferAttrs();
 
   Expr **E = Clause->getTrailingObjects<Expr *>();
   E[0] = InteropVar;

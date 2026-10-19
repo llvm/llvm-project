@@ -50,6 +50,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -3821,23 +3822,24 @@ namespace {
     llvm::SmallPtrSetImpl<QualType> &BaseClasses;
     // Vector of decls to be removed from the Decl set prior to visiting the
     // nodes.  These Decls may have been initialized in the prior initializer.
-    llvm::SmallVector<ValueDecl*, 4> DeclsToRemove;
+    llvm::SmallVectorWithFlags<ValueDecl *, 4> DeclsToRemove;
     // If non-null, add a note to the warning pointing back to the constructor.
     const CXXConstructorDecl *Constructor;
     // Variables to hold state when processing an initializer list.  When
     // InitList is true, special case initialization of FieldDecls matching
     // InitListFieldDecl.
-    bool InitList;
+    bool getInitList() const { return DeclsToRemove.getFlag(0); }
+    void setInitList(bool Value) { DeclsToRemove.setFlag(0, Value); }
     FieldDecl *InitListFieldDecl;
     llvm::SmallVector<unsigned, 4> InitFieldIndex;
 
   public:
     typedef EvaluatedExprVisitor<UninitializedFieldVisitor> Inherited;
     UninitializedFieldVisitor(Sema &S,
-                              llvm::SmallPtrSetImpl<ValueDecl*> &Decls,
+                              llvm::SmallPtrSetImpl<ValueDecl *> &Decls,
                               llvm::SmallPtrSetImpl<QualType> &BaseClasses)
-      : Inherited(S.Context), S(S), Decls(Decls), BaseClasses(BaseClasses),
-        Constructor(nullptr), InitList(false), InitListFieldDecl(nullptr) {}
+        : Inherited(S.Context), S(S), Decls(Decls), BaseClasses(BaseClasses),
+          Constructor(nullptr), InitListFieldDecl(nullptr) {}
 
     // Returns true if the use of ME is not an uninitialized use.
     bool IsInitListMemberExprInitialized(MemberExpr *ME,
@@ -3937,7 +3939,7 @@ namespace {
 
       const bool IsReference = FoundVD->getType()->isReferenceType();
 
-      if (InitList && !AddressOf && FoundVD == InitListFieldDecl) {
+      if (getInitList() && !AddressOf && FoundVD == InitListFieldDecl) {
         // Special checking for initializer lists.
         if (IsInitListMemberExprInitialized(ME, CheckReferenceOnly)) {
           return;
@@ -4031,12 +4033,12 @@ namespace {
       InitListExpr *ILE = dyn_cast<InitListExpr>(E);
 
       if (ILE && Field) {
-        InitList = true;
+        setInitList(true);
         InitListFieldDecl = Field;
         InitFieldIndex.clear();
         CheckInitListExpr(ILE);
       } else {
-        InitList = false;
+        setInitList(false);
         Visit(E);
       }
 
@@ -6705,7 +6707,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (BC->getTrailingRequiresClause()) {
         ConstraintSatisfaction Satisfaction;
         if (CheckFunctionConstraints(BC, Satisfaction) ||
-            !Satisfaction.IsSatisfied)
+            !Satisfaction.isSatisfied())
           continue;
       }
       findInheritingConstructor(Class->getLocation(), BC, S);
@@ -6776,7 +6778,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
           // specialization.
           ConstraintSatisfaction Satisfaction;
           if (CheckFunctionConstraints(MD, Satisfaction) ||
-              !Satisfaction.IsSatisfied)
+              !Satisfaction.isSatisfied())
             continue;
         }
       }
@@ -8637,12 +8639,13 @@ private:
 
 /// A list of statements.
 struct StmtListResult {
-  bool IsInvalid = false;
-  llvm::SmallVector<Stmt*, 16> Stmts;
+  bool getIsInvalid() const { return Stmts.getFlag(0); }
+  void setIsInvalid(bool Value) { Stmts.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<Stmt *, 16> Stmts;
 
   bool add(const StmtResult &S) {
-    IsInvalid |= S.isInvalid();
-    if (IsInvalid)
+    setIsInvalid(int(getIsInvalid()) | (S.isInvalid()));
+    if (getIsInvalid())
       return true;
     Stmts.push_back(S.get());
     return false;
@@ -8674,7 +8677,7 @@ public:
     Sema::CompoundScopeRAII CompoundScope(S);
 
     StmtListResult Stmts = visit();
-    if (Stmts.IsInvalid)
+    if (Stmts.getIsInvalid())
       return StmtError();
 
     ExprResult RetVal;
@@ -8691,7 +8694,7 @@ public:
       // Join the comparisons with '&&'s and return the result. Use a right
       // fold (traversing the conditions right-to-left), because that
       // short-circuits more naturally.
-      auto OldStmts = std::move(Stmts.Stmts);
+      auto OldStmts = llvm::SmallVector<Stmt *, 16>(std::move(Stmts.Stmts));
       Stmts.Stmts.clear();
       ExprResult CmpSoFar;
       // Finish a particular comparison chain.

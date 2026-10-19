@@ -173,7 +173,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   // Scalable tile sizes are non-constant at compile time, so they can never
   // satisfy the full-tile divisibility check. Reject early before creating
   // any ops to avoid modifying IR before returning notifyMatchFailure.
-  if (!options->allowPadding && hasScalable)
+  if (!options->getAllowPadding() && hasScalable)
     return rewriter.notifyMatchFailure(
         linalgOp, "scalable block factors require padding");
 
@@ -194,7 +194,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   }
 
   // If padding is disabled, make sure that dimensions can be packed cleanly.
-  if (!options->allowPadding &&
+  if (!options->getAllowPadding() &&
       !validateFullTilesOnDims(linalgOp, mnkTiles, options->mnkOrder)) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "expect packing full tiles only");
@@ -231,8 +231,8 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   // Transpose LHS matrix according to the options.
   FailureOr<PackTransposeResult> packedLhs = transposePackedMatmul(
       rewriter, packedMatmul->packedLinalgOp, packedMatmul->packOps[0], maps[0],
-      contractDims->m, options->lhsTransposeOuterBlocks,
-      options->lhsTransposeInnerBlocks);
+      contractDims->m, options->getLhsTransposeOuterBlocks(),
+      options->getLhsTransposeInnerBlocks());
   if (failed(packedLhs))
     return failure();
 
@@ -243,8 +243,8 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   // Transpose RHS matrix according to the options.
   FailureOr<PackTransposeResult> packedRhs = transposePackedMatmul(
       rewriter, packedMatmul->packedLinalgOp, packedMatmul->packOps[1], maps[1],
-      contractDims->k, options->rhsTransposeOuterBlocks,
-      options->rhsTransposeInnerBlocks);
+      contractDims->k, options->getRhsTransposeOuterBlocks(),
+      options->getRhsTransposeInnerBlocks());
   if (failed(packedRhs))
     return failure();
 
@@ -351,15 +351,15 @@ struct LinalgBlockPackMatmul
       if (llvm::none_of(options.scalableBlockFactors, [](bool b) { return b; }))
         options.scalableBlockFactors.clear();
 
-      options.allowPadding = allowPadding;
-      options.mnkPaddedSizesNextMultipleOf =
-          SmallVector<int64_t>{*mnkPaddedSizesNextMultipleOf};
+      options.setAllowPadding(allowPadding);
+      options.mnkPaddedSizesNextMultipleOf.assign(
+          SmallVector<int64_t>{*mnkPaddedSizesNextMultipleOf});
       if (!mnkOrder.empty())
         options.mnkOrder = SmallVector<int64_t>{*mnkOrder};
-      options.lhsTransposeOuterBlocks = lhsTransposeOuterBlocks;
-      options.lhsTransposeInnerBlocks = lhsTransposeInnerBlocks;
-      options.rhsTransposeOuterBlocks = rhsTransposeOuterBlocks;
-      options.rhsTransposeInnerBlocks = rhsTransposeInnerBlocks;
+      options.setLhsTransposeOuterBlocks(lhsTransposeOuterBlocks);
+      options.setLhsTransposeInnerBlocks(lhsTransposeInnerBlocks);
+      options.setRhsTransposeOuterBlocks(rhsTransposeOuterBlocks);
+      options.setRhsTransposeInnerBlocks(rhsTransposeInnerBlocks);
       return options;
     };
 

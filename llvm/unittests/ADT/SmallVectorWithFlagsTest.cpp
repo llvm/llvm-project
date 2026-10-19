@@ -72,6 +72,10 @@ TYPED_TEST(SmallVectorWithFlagsTypedTest,
     T *Data = V.data();
     size_t Capacity = V.capacity();
     for (unsigned Flags = 0; Flags < (1u << TypeParam::NumFlagBits); ++Flags) {
+      TypeParam Constructed = TypeParam::withFlags(Flags, Size, element<T>(3));
+      EXPECT_EQ(Flags, Constructed.getFlags());
+      EXPECT_EQ(Size, Constructed.size());
+      EXPECT_EQ(ArrayRef<T>(V), ArrayRef<T>(Constructed));
       V.setFlags(Flags);
       EXPECT_EQ(Flags, V.getFlags());
       for (unsigned Bit = 0; Bit < TypeParam::NumFlagBits; ++Bit)
@@ -116,10 +120,9 @@ TYPED_TEST(SmallVectorWithFlagsTypedTest, CapacityMatchesPlainSmallVector) {
 }
 
 TYPED_TEST(SmallVectorWithFlagsTypedTest, ElementOperationsPreserveFlags) {
-  TypeParam V;
   using T = typename TypeParam::value_type;
   unsigned Flags = (1u << TypeParam::NumFlagBits) - 1;
-  V.setFlags(Flags);
+  TypeParam V = TypeParam::withFlags(Flags);
   for (unsigned I = 0; I < 32; ++I) {
     V.push_back(element<T>(I));
     EXPECT_EQ(Flags, V.getFlags());
@@ -509,6 +512,74 @@ struct MoveConstructOnly {
   int Value;
 };
 
+TEST(SmallVectorWithFlagsTest, MoveFromPlainVectorWithExplicitFlags) {
+  for (unsigned Size : {0u, 1u, 16u}) {
+    SmallVector<MoveConstructOnly, 1> Source;
+    for (unsigned I = 0; I < Size; ++I)
+      Source.emplace_back(I);
+    MoveConstructOnly *Data = Source.data();
+    SmallVectorWithFlagsFor<decltype(Source), 2> Dest(3, std::move(Source));
+    EXPECT_EQ(Dest.getFlags(), 3u);
+    EXPECT_EQ(Dest.size(), Size);
+    EXPECT_TRUE(Source.empty());
+    if (Size > 1)
+      EXPECT_EQ(Dest.data(), Data);
+    for (unsigned I = 0; I < Size; ++I)
+      EXPECT_EQ(Dest[I].Value, static_cast<int>(I));
+  }
+}
+
+TEST(SmallVectorWithFlagsTest, AssignPlainVectorPreservesFlags) {
+  for (unsigned Size : {0u, 1u, 16u}) {
+    for (bool Reserve : {false, true}) {
+      SmallVector<int, 1> Source(Size, 7);
+      if (Reserve)
+        Source.reserve(32);
+      int *Data = Source.data();
+      bool HasHeapBuffer = Source.capacity() > 1;
+      SmallVectorWithFlags<int, 2, 2> Dest{1, 2, 3};
+      Dest.setFlags(3);
+      Dest.assign(std::move(Source));
+      EXPECT_EQ(Dest.getFlags(), 3u);
+      EXPECT_EQ(Dest.size(), Size);
+      EXPECT_TRUE(Source.empty());
+      if (HasHeapBuffer)
+        EXPECT_EQ(Dest.data(), Data);
+      for (int Value : Dest)
+        EXPECT_EQ(Value, 7);
+
+      // Output interfaces can temporarily own the elements in a plain vector.
+      // Retain both the flags and an empty reserved buffer across that loan.
+      SmallVector<int, 2> Payload;
+      Payload = std::move(Dest);
+      EXPECT_TRUE(Dest.empty());
+      EXPECT_EQ(Dest.getFlags(), 3u);
+      if (HasHeapBuffer)
+        EXPECT_EQ(Payload.data(), Data);
+      Dest.assign(std::move(Payload));
+      EXPECT_EQ(Dest.getFlags(), 3u);
+      EXPECT_EQ(Dest.size(), Size);
+      if (HasHeapBuffer)
+        EXPECT_EQ(Dest.data(), Data);
+    }
+  }
+
+  // Character vectors use a 64-bit capacity word on 64-bit hosts.
+  SmallVectorWithFlags<char, 0, 4> Buffer;
+  Buffer.setFlags(11);
+  Buffer.reserve(32);
+  char *Data = Buffer.data();
+  SmallVector<char, 0> Payload;
+  Payload = std::move(Buffer);
+  EXPECT_EQ(Payload.data(), Data);
+  EXPECT_EQ(Buffer.getFlags(), 11u);
+  Payload.append({'x', 'y', 'z'});
+  Buffer.assign(std::move(Payload));
+  EXPECT_EQ(Buffer.data(), Data);
+  EXPECT_EQ(Buffer.getFlags(), 11u);
+  EXPECT_THAT(Buffer, ElementsAre('x', 'y', 'z'));
+}
+
 TEST(SmallVectorWithFlagsTest, MoveConstructNonMoveAssignableElements) {
   for (unsigned Size : {0u, 1u, 16u}) {
     SmallVectorWithFlags<MoveConstructOnly, 1> Source;
@@ -588,6 +659,41 @@ TEST(SmallVectorWithFlagsTest, MoveIntoPlainSmallVector) {
   ASSERT_EQ(3u, PlainMoveOnly.size());
   EXPECT_EQ(2, PlainMoveOnly[2].Value);
   EXPECT_TRUE(MoveOnly.empty());
+}
+
+TEST(SmallVectorWithFlagsTest, OrdinaryVectorConstruction) {
+  const SmallVector<int, 2> Plain = {1, 2, 3, 4};
+  SmallVectorWithFlags<int, 2, 3> Copy(Plain);
+  EXPECT_EQ(ArrayRef<int>(Copy), ArrayRef<int>(Plain));
+  EXPECT_EQ(Copy.getFlags(), 0u);
+  auto FlaggedCopy = decltype(Copy)::withFlags(5, Plain);
+  EXPECT_EQ(ArrayRef<int>(FlaggedCopy), ArrayRef<int>(Plain));
+  EXPECT_EQ(FlaggedCopy.getFlags(), 5u);
+
+  SmallVector<std::unique_ptr<int>, 1> Owned;
+  Owned.push_back(std::make_unique<int>(7));
+  Owned.push_back(std::make_unique<int>(9));
+  auto *Buffer = Owned.data();
+  SmallVectorWithFlags<std::unique_ptr<int>, 1, 3> Moved(std::move(Owned));
+  EXPECT_EQ(Moved.data(), Buffer);
+  EXPECT_EQ(*Moved[0], 7);
+  EXPECT_EQ(*Moved[1], 9);
+  EXPECT_EQ(Moved.getFlags(), 0u);
+  EXPECT_TRUE(Owned.empty());
+}
+
+TEST(SmallVectorWithFlagsTest, InitializerListAssignmentPreservesFlags) {
+  SmallVectorWithFlags<int, 2, 3> V;
+  V.setFlags(5);
+  V = {1, 2, 3, 4};
+  EXPECT_EQ(ArrayRef<int>(V), (ArrayRef<int>{1, 2, 3, 4}));
+  EXPECT_EQ(V.getFlags(), 5u);
+  V = {9};
+  EXPECT_EQ(ArrayRef<int>(V), (ArrayRef<int>{9}));
+  EXPECT_EQ(V.getFlags(), 5u);
+  V = {};
+  EXPECT_TRUE(V.empty());
+  EXPECT_EQ(V.getFlags(), 5u);
 }
 
 TEST(SmallVectorWithFlagsTest, OwningElements) {

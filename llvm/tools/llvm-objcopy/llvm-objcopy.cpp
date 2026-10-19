@@ -172,7 +172,7 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
       return createFileError(Config.InputFilename, BufOrErr.getError());
     MemoryBufferHolder = std::move(*BufOrErr);
 
-    if (Config.Verbose)
+    if (Config.getVerbose())
       printCopyMessage(
           Config.InputFilename, toFileFormatName(Config.InputFormat),
           Config.OutputFilename, toFileFormatName(Config.OutputFormat));
@@ -199,7 +199,7 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
       if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
         return E;
     } else {
-      if (Config.Verbose)
+      if (Config.getVerbose())
         printCopyMessage(Config.InputFilename,
                          getObjectFormatName(*BinaryHolder.getBinary()),
                          Config.OutputFilename,
@@ -219,14 +219,14 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
       if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
         return E;
     } else {
-      Config.ExtractDWO = true;
-      Config.StripDWO = false;
+      Config.setExtractDWO(true);
+      Config.setStripDWO(false);
       // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
       // file using specified ObjcopyFunc function.
       if (Error E = writeToOutput(Config.SplitDWO, ObjcopyFunc))
         return E;
-      Config.ExtractDWO = false;
-      Config.StripDWO = true;
+      Config.setExtractDWO(false);
+      Config.setStripDWO(true);
       // Apply transformations described by Config, remove .dwo tables and
       // store result into Config.OutputFilename using specified ObjcopyFunc
       // function.
@@ -235,13 +235,13 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     }
   }
 
-  if (Error E =
-          PermsApplierOrErr->apply(Config.OutputFilename, Config.PreserveDates))
+  if (Error E = PermsApplierOrErr->apply(Config.OutputFilename,
+                                         Config.getPreserveDates()))
     return E;
 
   if (!Config.SplitDWO.empty())
     if (Error E =
-            PermsApplierOrErr->apply(Config.SplitDWO, Config.PreserveDates,
+            PermsApplierOrErr->apply(Config.SplitDWO, Config.getPreserveDates(),
                                      static_cast<sys::fs::perms>(0666)))
       return E;
 

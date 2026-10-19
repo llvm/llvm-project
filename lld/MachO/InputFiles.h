@@ -11,6 +11,7 @@
 
 #include "MachOStructs.h"
 #include "Target.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
@@ -235,34 +236,45 @@ public:
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
   bool isReferenced() const { return numReferencedSymbols > 0; }
   bool isExplicitlyLinked() const;
-  void setExplicitlyLinked() { explicitlyLinked = true; }
+  void setExplicitlyLinked() { setExplicitlyLinkedFlag(true); }
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
   StringRef installName;
   DylibFile *exportingFile = nullptr;
   DylibFile *umbrella;
-  SmallVector<StringRef, 2> rpaths;
-  SmallVector<StringRef> allowableClients;
+  llvm::SmallVectorWithFlags<StringRef, 2, 2> rpaths;
+  llvm::SmallVectorWithFlags<
+      StringRef,
+      llvm::CalculateSmallVectorDefaultInlinedElements<StringRef>::value, 4>
+      allowableClients;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   unsigned numReferencedSymbols = 0;
   RefState refState;
-  bool reexport = false;
-  bool forceNeeded = false;
-  bool forceWeakImport = false;
-  bool deadStrippable = false;
+  bool getReexport() const { return allowableClients.getFlag(0); }
+  void setReexport(bool Value) { allowableClients.setFlag(0, Value); }
+  bool getForceNeeded() const { return allowableClients.getFlag(1); }
+  void setForceNeeded(bool Value) { allowableClients.setFlag(1, Value); }
+  bool getForceWeakImport() const { return allowableClients.getFlag(2); }
+  void setForceWeakImport(bool Value) { allowableClients.setFlag(2, Value); }
+  bool getDeadStrippable() const { return allowableClients.getFlag(3); }
+  void setDeadStrippable(bool Value) { allowableClients.setFlag(3, Value); }
 
 private:
-  bool explicitlyLinked = false; // Access via isExplicitlyLinked().
+  bool getExplicitlyLinkedFlag() const { return rpaths.getFlag(0); }
+  void setExplicitlyLinkedFlag(bool Value) {
+    rpaths.setFlag(0, Value);
+  } // Access via isExplicitlyLinked().
 
 public:
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
   // implemented in the bundle. When used like this, it is very similar
   // to a dylib, so we've used the same class to represent it.
-  bool isBundleLoader;
+  bool getIsBundleLoader() const { return rpaths.getFlag(1); }
+  void setIsBundleLoader(bool Value) { rpaths.setFlag(1, Value); }
 
   // Synthetic Dylib objects created by $ld$previous symbols in this dylib.
   // Usually empty. These synthetic dylibs won't have synthetic dylibs

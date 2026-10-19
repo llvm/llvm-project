@@ -127,7 +127,7 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
         ((sym.stOther & STO_MIPS_MICROMIPS) || sym.hasFlag(NEEDS_COPY)))
       va |= 1;
 
-    if (d.isTls() && !ctx.arg.relocatable) {
+    if (d.isTls() && !ctx.arg.getRelocatable()) {
       // Use the address of the TLS segment's first section rather than the
       // segment's address, because segment addresses aren't initialized until
       // after sections are finalized. (e.g. Measuring the size of .rela.dyn
@@ -274,14 +274,14 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
   // so we do not report error in this case. We also do not error
   // if the symbol has a local version as it won't be in the dynamic
   // symbol table.
-  if (ctx.arg.shared && versionId != VER_NDX_LOCAL)
+  if (ctx.arg.getShared() && versionId != VER_NDX_LOCAL)
     ErrAlways(ctx) << file << ": symbol " << s << " has undefined version "
                    << verstr;
 }
 
 void Symbol::extract(Ctx &ctx) const {
-  assert(file->lazy);
-  file->lazy = false;
+  assert(file->getLazy());
+  file->setLazy(false);
   parseFile(ctx, file);
 }
 
@@ -368,14 +368,14 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   if (!sym.isDefined())
     return !sym.isUndefined() || ctx.arg.zDynamicUndefined;
 
-  if (!ctx.arg.shared)
+  if (!ctx.arg.getShared())
     return false;
 
   // If -Bsymbolic or --dynamic-list is specified, or -Bsymbolic-functions is
   // specified and the symbol is STT_FUNC, the symbol is preemptible iff it is
   // in the dynamic list. -Bsymbolic-non-weak-functions is a non-weak subset of
   // -Bsymbolic-functions.
-  if (ctx.arg.symbolic ||
+  if (ctx.arg.getSymbolic() ||
       (ctx.arg.bsymbolic == BsymbolicKind::NonWeak &&
        sym.binding != STB_WEAK) ||
       (ctx.arg.bsymbolic == BsymbolicKind::Functions && sym.isFunc()) ||
@@ -498,7 +498,8 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // A forms group 0. B form group 1. C and D (including their member object
     // files) form group 2. E forms group 3. I think that you can see how this
     // group assignment rule simulates the traditional linker's semantics.
-    bool backref = ctx.arg.warnBackrefs && file->groupId < other.file->groupId;
+    bool backref =
+        ctx.arg.getWarnBackrefs() && file->groupId < other.file->groupId;
     extract(ctx);
 
     if (!ctx.arg.whyExtract.empty())

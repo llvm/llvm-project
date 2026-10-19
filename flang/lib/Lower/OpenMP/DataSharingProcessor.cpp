@@ -72,11 +72,12 @@ DataSharingProcessor::DataSharingProcessor(
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
     lower::SymMap &symTable, bool isTargetPrivatization,
     llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs)
-    : converter(converter), semaCtx(semaCtx),
+    : loopIVs(decltype(this->loopIVs)::withFlags(
+          (unsigned(shouldCollectPreDeterminedSymbols) << 1) |
+          (unsigned(useDelayedPrivatization) << 2))),
+      converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
-      shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
-      useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
-      isTargetPrivatization(isTargetPrivatization),
+      symTable(symTable), isTargetPrivatization(isTargetPrivatization),
       isMetadirectiveLoop(!metadirectiveLoopIVs.empty()) {}
 
 DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
@@ -128,7 +129,7 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 void DataSharingProcessor::insertDeallocs() {
   for (const semantics::Symbol *sym : allPrivatizedSymbols)
     if (semantics::IsAllocatable(sym->GetUltimate())) {
-      if (!useDelayedPrivatization) {
+      if (!getUseDelayedPrivatization()) {
         converter.createHostAssociateVarCloneDealloc(*sym);
         continue;
       }
@@ -336,10 +337,10 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // standard lastprivate copy-back suppressed (see copyLastPrivateSymbol /
   // insertLastPrivateCompare) in favor of the conditional copy-back.
   for (auto *sym : explicitlyPrivatizedSymbols)
-    if (!isException(sym) && (conditionalLpUsesPrivateCopy ||
+    if (!isException(sym) && (getConditionalLpUsesPrivateCopyFlag() ||
                               !conditionalLastPrivatizedSymbols.contains(sym)))
       allPrivatizedSymbols.insert(sym);
-  if (conditionalLpUsesPrivateCopy)
+  if (getConditionalLpUsesPrivateCopyFlag())
     for (auto *sym : conditionalLastPrivatizedSymbols)
       if (!isException(sym))
         allPrivatizedSymbols.insert(sym);
@@ -373,7 +374,7 @@ void DataSharingProcessor::insertBarrier(
   if (!needBarrier())
     return;
 
-  if (useDelayedPrivatization) {
+  if (getUseDelayedPrivatization()) {
     if (clauseOps)
       clauseOps->privateNeedsBarrier =
           mlir::UnitAttr::get(&converter.getMLIRContext());
@@ -655,7 +656,7 @@ void DataSharingProcessor::collectImplicitSymbols() {
 }
 
 void DataSharingProcessor::collectPreDeterminedSymbols() {
-  if (shouldCollectPreDeterminedSymbols)
+  if (getShouldCollectPreDeterminedSymbols())
     collectSymbols(semantics::Symbol::Flag::OmpPreDetermined);
 }
 
@@ -664,7 +665,7 @@ void DataSharingProcessor::collectPreDeterminedSymbols() {
 // enclosing context, to avoid updating the wrong symbol.
 void DataSharingProcessor::collectIndirectReferences() {
   // For compound constructs, collect the symbols only for the last leaf.
-  if (!shouldCollectPreDeterminedSymbols)
+  if (!getShouldCollectPreDeterminedSymbols())
     return;
 
   const semantics::Scope *curScope = getCurrentScope(semaCtx, eval);
@@ -749,7 +750,7 @@ void DataSharingProcessor::privatizeSymbol(
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
     std::optional<llvm::omp::Directive> dir) {
-  if (!useDelayedPrivatization) {
+  if (!getUseDelayedPrivatization()) {
     cloneSymbol(symToPrivatize);
     copyFirstPrivateSymbol(symToPrivatize);
     return;
@@ -759,7 +760,7 @@ void DataSharingProcessor::privatizeSymbol(
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
       mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
-      forceHeapAllocationForPrivateDynamicArrays);
+      getForceHeapAllocationForPrivateDynamicArraysFlag());
 }
 } // namespace omp
 } // namespace lower

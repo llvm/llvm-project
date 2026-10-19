@@ -64,7 +64,7 @@ Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc,
       getDiagnostics().getDiagnosticIDs()->isDefaultMappingAsError(DiagID);
   bool ShouldDefer = getLangOpts().CUDA && getLangOpts().GPUDeferDiag &&
                      DiagnosticIDs::isDeferrable(DiagID) &&
-                     (SemaRef.DeferDiags || !IsError);
+                     (SemaRef.getDeferDiags() || !IsError);
   // Even without -fgpu-defer-diag, defer device-side errors inside an
   // implicit-H+D explicit instantiation so end-of-TU classification can
   // choose between surfacing them or emitting a trap body.
@@ -75,7 +75,7 @@ Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc,
     ShouldDefer = true;
   auto SetIsLastErrorImmediate = [&](bool Flag) {
     if (IsError)
-      SemaRef.IsLastErrorImmediate = Flag;
+      SemaRef.setIsLastErrorImmediate(Flag);
   };
   if (!ShouldDefer) {
     SetIsLastErrorImmediate(true);

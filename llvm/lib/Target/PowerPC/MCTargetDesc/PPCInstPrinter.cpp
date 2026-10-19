@@ -422,7 +422,7 @@ void PPCInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
   if (!MI->getOperand(OpNo).isImm())
     return printOperand(MI, OpNo, STI, O);
   int32_t Imm = SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
-  if (PrintBranchImmAsAddress) {
+  if (getPrintBranchImmAsAddress()) {
     uint64_t Target = Address + Imm;
     if (!TT.isPPC64())
       Target &= 0xffffffff;

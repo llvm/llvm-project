@@ -94,7 +94,7 @@ template <class ELFT>
 static uint64_t getAddend(Ctx &ctx, InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
   return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                       rel.getType(ctx.arg.isMips64EL));
+                                       rel.getType(ctx.arg.getIsMips64EL()));
 }
 
 template <class ELFT>
@@ -405,7 +405,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     scanEhFrameSection(*eh);
   // See markUsedSymbols.
   bool markUsed =
-      ctx.arg.copyRelocs &&
+      ctx.arg.getCopyRelocs() &&
       (ctx.arg.discard != DiscardPolicy::None || ctx.arg.retainSymbols);
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
@@ -454,7 +454,8 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     } else if (ctx.script->shouldKeep(sec)) {
       enqueue(sec, /*offset=*/0, /*sym=*/nullptr,
               {std::nullopt, "KEEP in linker script"});
-    } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
+    } else if ((!ctx.arg.getZStartStopGC() ||
+                sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
@@ -622,7 +623,7 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
         if (s->isUsedInRegularObj && !s->isWeak())
           cast<SharedFile>(s->file)->isNeeded = true;
     // See markUsedSymbols.
-    if (ctx.arg.copyRelocs &&
+    if (ctx.arg.getCopyRelocs() &&
         (ctx.arg.discard != DiscardPolicy::None || ctx.arg.retainSymbols))
       parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
         for (InputSectionBase *sec : file->getSections())

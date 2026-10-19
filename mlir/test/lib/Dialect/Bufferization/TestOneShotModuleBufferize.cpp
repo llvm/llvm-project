@@ -133,7 +133,7 @@ struct TestOneShotModuleBufferizePass
     };
     // Function signature update only works with memref.cast. Disable it to
     // align behaviour for upstream and user casts.
-    opt.inferFunctionResultLayout = false;
+    opt.setInferFunctionResultLayout(false);
 
     bufferization::BufferizationState bufferizationState;
 

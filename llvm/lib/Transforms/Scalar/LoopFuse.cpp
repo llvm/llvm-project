@@ -48,6 +48,7 @@
 #include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -139,17 +140,20 @@ struct FusionCandidate {
   /// Vector of instructions in this loop that read from memory
   SmallVector<Instruction *, 16> MemReads;
   /// Vector of instructions in this loop that write to memory
-  SmallVector<Instruction *, 16> MemWrites;
+  llvm::SmallVectorWithFlags<Instruction *, 16, 3> MemWrites;
   /// Are all of the members of this fusion candidate still valid
-  bool Valid;
+  bool getValid() const { return MemWrites.getFlag(0); }
+  void setValid(bool Value) { MemWrites.setFlag(0, Value); }
   /// Guard branch of the loop, if it exists
   CondBrInst *GuardBranch;
   /// Peeling Paramaters of the Loop.
   TTI::PeelingPreferences PP;
   /// Can you Peel this Loop?
-  bool AbleToPeel;
+  bool getAbleToPeel() const { return MemWrites.getFlag(1); }
+  void setAbleToPeel(bool Value) { MemWrites.setFlag(1, Value); }
   /// Has this loop been Peeled
-  bool Peeled;
+  bool getPeeled() const { return MemWrites.getFlag(2); }
+  void setPeeled(bool Value) { MemWrites.setFlag(2, Value); }
 
   DominatorTree &DT;
   const PostDominatorTree *PDT;
@@ -160,9 +164,11 @@ struct FusionCandidate {
                   OptimizationRemarkEmitter &ORE, TTI::PeelingPreferences PP)
       : Preheader(L->getLoopPreheader()), Header(L->getHeader()),
         ExitingBlock(L->getExitingBlock()), ExitBlock(L->getExitBlock()),
-        Latch(L->getLoopLatch()), L(L), Valid(true),
-        GuardBranch(L->getLoopGuardBranch()), PP(PP), AbleToPeel(canPeel(L)),
-        Peeled(false), DT(DT), PDT(PDT), ORE(ORE) {
+        Latch(L->getLoopLatch()), L(L),
+        MemWrites(decltype(this->MemWrites)::withFlags(
+            (unsigned(bool(canPeel(L))) << 1) | 1)),
+        GuardBranch(L->getLoopGuardBranch()), PP(PP), DT(DT), PDT(PDT),
+        ORE(ORE) {
 
     // Walk over all blocks in the loop and check for conditions that may
     // prevent fusion. For each block, walk over all instructions and collect
@@ -213,7 +219,7 @@ struct FusionCandidate {
   /// Check if all members of the class are valid.
   bool isValid() const {
     return Preheader && ExitingBlock && ExitBlock && Latch && L &&
-           !L->isInvalid() && Valid;
+           !L->isInvalid() && getValid();
   }
 
   /// Verify that all members are in sync with the Loop object.
@@ -259,7 +265,7 @@ struct FusionCandidate {
   /// This method is only valid for guarded loops.
   BasicBlock *getNonLoopBlock() const {
     assert(GuardBranch && "Only valid on guarded loops.");
-    if (Peeled)
+    if (getPeeled())
       return GuardBranch->getSuccessor(1);
     return (GuardBranch->getSuccessor(0) == Preheader)
                ? GuardBranch->getSuccessor(1)
@@ -336,7 +342,7 @@ private:
   void invalidate() {
     MemWrites.clear();
     MemReads.clear();
-    Valid = false;
+    setValid(false);
   }
 
   // Emit an analysis remark explaining why this loop cannot be fused. The
@@ -740,7 +746,7 @@ private:
 
   void peelFusionCandidate(FusionCandidate &FC0, const FusionCandidate &FC1,
                            unsigned PeelCount) {
-    assert(FC0.AbleToPeel && "Should be able to peel loop");
+    assert(FC0.getAbleToPeel() && "Should be able to peel loop");
 
     LLVM_DEBUG(dbgs() << "Attempting to peel first " << PeelCount
                       << " iterations of the first loop. \n");
@@ -751,7 +757,7 @@ private:
     // simplifyLoop call.
     peelLoop(FC0.L, PeelCount, /*PeelLast=*/false, &LI, &SE, DT, &AC,
              /*PreserveLCSSA=*/false, VMap);
-    FC0.Peeled = true;
+    FC0.setPeeled(true);
     LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
 #ifndef NDEBUG
@@ -845,9 +851,10 @@ private:
         // the first loop has a larger trip count. In this case it is possible
         // that the first loop is peeled to expose the fusion opportunity.
         // Peeling the second loop is not currently supported.
-        bool WillPeel = FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
-                        *TCDifference <= static_cast<int64_t>(
-                                             Opts.loop_fusion_peel_max_count);
+        bool WillPeel =
+            FC0.getAbleToPeel() && TCDifference && *TCDifference > 0 &&
+            *TCDifference <=
+                static_cast<int64_t>(Opts.loop_fusion_peel_max_count);
 
         if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
@@ -1718,8 +1725,9 @@ private:
     if (FC0.GuardBranch)
       return fuseGuardedLoops(FC0, FC1);
 
-    assert(FC1.Preheader ==
-           (FC0.Peeled ? FC0.ExitBlock->getUniqueSuccessor() : FC0.ExitBlock));
+    assert(FC1.Preheader == (FC0.getPeeled()
+                                 ? FC0.ExitBlock->getUniqueSuccessor()
+                                 : FC0.ExitBlock));
     assert(FC1.Preheader->size() == 1 &&
            FC1.Preheader->getSingleSuccessor() == FC1.Header);
 
@@ -1761,7 +1769,7 @@ private:
     // to FC1.Header? I think this is basically what the three sequences are
     // trying to accomplish; however, doing this directly in the CFG may mean
     // the DT/PDT becomes invalid
-    if (!FC0.Peeled) {
+    if (!FC0.getPeeled()) {
       FC0.ExitingBlock->getTerminator()->replaceUsesOfWith(FC1.Preheader,
                                                            FC1.Header);
       TreeUpdates.emplace_back(DominatorTree::UpdateType(
@@ -1797,7 +1805,7 @@ private:
 
     LI.removeBlock(FC1.Preheader);
     DTU.deleteBB(FC1.Preheader);
-    if (FC0.Peeled) {
+    if (FC0.getPeeled()) {
       LI.removeBlock(FC0.ExitBlock);
       DTU.deleteBB(FC0.ExitBlock);
     }
@@ -1881,8 +1889,8 @@ private:
     // case that FC0 loop is peeled, then move the instructions of the successor
     // of the FC0 Exit block to the beginning of the exit block of FC1.
     moveInstructionsToTheBeginning(
-        (FC0.Peeled ? *FC0ExitBlockSuccessor : *FC0.ExitBlock), *FC1.ExitBlock,
-        DT, PDT, DI, SE);
+        (FC0.getPeeled() ? *FC0ExitBlockSuccessor : *FC0.ExitBlock),
+        *FC1.ExitBlock, DT, PDT, DI, SE);
 
     // Move instructions from the guard block of FC1 to the end of the guard
     // block of FC0.
@@ -1903,7 +1911,8 @@ private:
     FC1NonLoopBlock->replacePhiUsesWith(FC1GuardBlock, FC0GuardBlock);
     FC0.GuardBranch->replaceUsesOfWith(FC0NonLoopBlock, FC1NonLoopBlock);
 
-    BasicBlock *BBToUpdate = FC0.Peeled ? FC0ExitBlockSuccessor : FC0.ExitBlock;
+    BasicBlock *BBToUpdate =
+        FC0.getPeeled() ? FC0ExitBlockSuccessor : FC0.ExitBlock;
     BBToUpdate->getTerminator()->replaceUsesOfWith(FC1GuardBlock, FC1.Header);
 
     // The guard of FC1 is not necessary anymore.
@@ -1919,7 +1928,7 @@ private:
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
         DominatorTree::Insert, FC0GuardBlock, FC1NonLoopBlock));
 
-    if (FC0.Peeled) {
+    if (FC0.getPeeled()) {
       TreeUpdates.emplace_back(DominatorTree::UpdateType(
           DominatorTree::Delete, FC0.ExitBlock, FC0ExitBlockSuccessor));
       // Remove the Block after the ExitBlock of FC0
@@ -2012,7 +2021,7 @@ private:
     LI.removeBlock(FC1GuardBlock);
     LI.removeBlock(FC1.Preheader);
     LI.removeBlock(FC0.ExitBlock);
-    if (FC0.Peeled) {
+    if (FC0.getPeeled()) {
       LI.removeBlock(FC0ExitBlockSuccessor);
       DTU.deleteBB(FC0ExitBlockSuccessor);
     }

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -27,16 +28,28 @@ namespace mcdxbc {
 
 struct PSVSignatureElement {
   StringRef Name;
-  SmallVector<uint32_t> Indices;
+  llvm::SmallVectorWithFlags<uint32_t> Indices;
   uint8_t StartRow;
   uint8_t Cols;
   uint8_t StartCol;
-  bool Allocated;
+  bool getAllocated() const { return Indices.getFlag(0); }
+  void setAllocated(bool Value) { Indices.setFlag(0, Value); }
   dxbc::PSV::SemanticKind Kind;
   dxbc::PSV::ComponentType Type;
   dxbc::PSV::InterpolationMode Mode;
   uint8_t DynamicMask;
   uint8_t Stream;
+
+  PSVSignatureElement() = default;
+  PSVSignatureElement(StringRef Name, SmallVector<uint32_t> Indices,
+                      uint8_t StartRow, uint8_t Cols, uint8_t StartCol,
+                      bool Allocated, dxbc::PSV::SemanticKind Kind,
+                      dxbc::PSV::ComponentType Type,
+                      dxbc::PSV::InterpolationMode Mode, uint8_t DynamicMask,
+                      uint8_t Stream)
+      : Name(Name), Indices(unsigned(Allocated), std::move(Indices)),
+        StartRow(StartRow), Cols(Cols), StartCol(StartCol), Kind(Kind),
+        Type(Type), Mode(Mode), DynamicMask(DynamicMask), Stream(Stream) {}
 };
 
 // This data structure is a helper for reading and writing PSV RuntimeInfo data.

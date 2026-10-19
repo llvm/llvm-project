@@ -226,7 +226,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
 
   OS.emitLabel(FileEnd);
 
-  ChecksumOffsetsAssigned = true;
+  setChecksumOffsetsAssigned(true);
 }
 
 // Output checksum table offset of the given file number.  It is possible that
@@ -240,7 +240,7 @@ void CodeViewContext::emitFileChecksumOffset(MCObjectStreamer &OS,
   if (Idx >= Files.size())
     Files.resize(Idx + 1);
 
-  if (ChecksumOffsetsAssigned) {
+  if (getChecksumOffsetsAssigned()) {
     OS.emitSymbolValue(Files[Idx].ChecksumTableOffset, 4);
     return;
   }

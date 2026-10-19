@@ -148,7 +148,7 @@ std::pair<Symbol *, bool> SymbolTable::insertName(StringRef name) {
   sym->canInline = true;
   sym->traced = trace;
   sym->forceExport = false;
-  sym->referenced = !ctx.arg.gcSections;
+  sym->referenced = !ctx.arg.getGcSections();
   symVector.emplace_back(sym);
   return {sym, true};
 }
@@ -934,12 +934,12 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
   WasmTableType *type = make<WasmTableType>();
   type->ElemType = ValType::FUNCREF;
   type->Limits = limits;
-  uint32_t flags = ctx.arg.exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  uint32_t flags = ctx.arg.getExportTable() ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
   flags |= WASM_SYMBOL_UNDEFINED;
   Symbol *sym =
       addUndefinedTable(name, name, defaultModule, flags, nullptr, type);
   sym->markLive();
-  sym->forceExport = ctx.arg.exportTable;
+  sym->forceExport = ctx.arg.getExportTable();
   return cast<TableSymbol>(sym);
 }
 
@@ -950,10 +950,10 @@ TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
   WasmTableType type{ValType::FUNCREF, limits};
   WasmTable desc{invalidIndex, type, name};
   InputTable *table = make<InputTable>(desc, nullptr);
-  uint32_t flags = ctx.arg.exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  uint32_t flags = ctx.arg.getExportTable() ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
   TableSymbol *sym = addSyntheticTable(name, flags, table);
   sym->markLive();
-  sym->forceExport = ctx.arg.exportTable;
+  sym->forceExport = ctx.arg.getExportTable();
   return sym;
 }
 
@@ -985,7 +985,7 @@ TableSymbol *SymbolTable::resolveIndirectFunctionTable(bool required) {
     }
     if (required)
       return createUndefinedIndirectFunctionTable(functionTableName);
-  } else if ((existing && existing->isLive()) || ctx.arg.exportTable ||
+  } else if ((existing && existing->isLive()) || ctx.arg.getExportTable() ||
              required) {
     // A defined table is required.  Either because the user request an exported
     // table or because the table symbol is already live.  The existing table is

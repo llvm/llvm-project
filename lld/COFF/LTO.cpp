@@ -88,16 +88,16 @@ lto::Config BitcodeCompiler::createConfig() {
   assert(optLevelOrNone && "Invalid optimization level!");
   c.CGOptLevel = *optLevelOrNone;
   c.AlwaysEmitRegularLTOObj = !ctx.config.ltoObjPath.empty();
-  c.DebugPassManager = ctx.config.ltoDebugPassManager;
+  c.DebugPassManager = ctx.config.getLtoDebugPassManager();
   c.CSIRProfile = std::string(ctx.config.ltoCSProfileFile);
-  c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
-  c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
+  c.RunCSIRInstr = ctx.config.getLtoCSProfileGenerate();
+  c.PGOWarnMismatch = ctx.config.getLtoPGOWarnMismatch();
   c.SampleProfile = ctx.config.ltoSampleProfileName;
   c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
   c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
   c.RemarksFilename = ctx.config.optRemarksFilename;
   c.RemarksPasses = ctx.config.optRemarksPasses;
-  c.RemarksWithHotness = ctx.config.optRemarksWithHotness;
+  c.RemarksWithHotness = ctx.config.getOptRemarksWithHotness();
   c.RemarksHotnessThreshold = ctx.config.optRemarksHotnessThreshold;
   c.RemarksFormat = ctx.config.optRemarksFormat;
 
@@ -153,8 +153,10 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         llvm::lto::LTO::LTOKind::LTOK_Default, nullptr,
         ctx.config.thinLTOEmitImportsFiles, ctx.config.thinLTOIndexOnly,
         ctx.config.outputFile, ctx.config.dtltoDistributor,
-        ctx.config.dtltoDistributorArgs, ctx.config.dtltoCompiler,
-        ctx.config.dtltoCompilerPrependArgs, ctx.config.dtltoCompilerArgs,
+        ArrayRef<StringRef>(ctx.config.dtltoDistributorArgs),
+        ctx.config.dtltoCompiler,
+        ArrayRef<StringRef>(ctx.config.dtltoCompilerPrependArgs),
+        ArrayRef<StringRef>(ctx.config.dtltoCompilerArgs),
         createAddBufferFn(files, file_names),
         !ctx.config.saveTempsArgs.empty());
 }

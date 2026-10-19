@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace mlir {
 
@@ -28,20 +29,24 @@ using ShardingArrayRef = ArrayRef<SmallVector<GridAxis>>;
 struct ShardingOption {
   // An array of int array. The sub-array at the i-th position signifies the
   // grid axes the i-th loop will be sharded on.
-  ShardingArray shardingArray = {};
+  llvm::SmallVectorWithFlagsFor<ShardingArray, 1> shardingArray = {};
   FlatSymbolRefAttr grid = nullptr;
   // `empty` being true indicates that no sharding information can be inferred
   // at present. Note that it is different from the case where an operation is
   // not sharded.
-  bool empty = false;
+  bool getEmpty() const { return shardingArray.getFlag(0); }
+  bool setEmpty(bool Value) {
+    shardingArray.setFlag(0, Value);
+    return Value;
+  }
   ShardingOption() = default;
   ShardingOption(ShardingArray shardingArray, FlatSymbolRefAttr grid)
-      : shardingArray(std::move(shardingArray)), grid(grid) {
+      : shardingArray(0, std::move(shardingArray)), grid(grid) {
     assert(this->grid);
   }
   static ShardingOption makeEmpty() {
     auto res = ShardingOption();
-    res.empty = true;
+    res.setEmpty(true);
     return res;
   }
 };

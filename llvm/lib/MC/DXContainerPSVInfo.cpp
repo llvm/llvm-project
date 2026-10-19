@@ -48,7 +48,7 @@ ProcessElementList(StringTableBuilder &StrTabBuilder,
     FinalElement.StartRow = El.StartRow;
     FinalElement.Cols = El.Cols;
     FinalElement.StartCol = El.StartCol;
-    FinalElement.Allocated = El.Allocated;
+    FinalElement.Allocated = El.getAllocated();
     FinalElement.Kind = El.Kind;
     FinalElement.Type = El.Type;
     FinalElement.Mode = El.Mode;

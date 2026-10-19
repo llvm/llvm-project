@@ -10,6 +10,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGLOCENTRY_H
 
 #include "DebugLocStream.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -135,17 +136,21 @@ class DbgValueLoc {
   /// Any complex address location expression for this DbgValueLoc.
   const DIExpression *Expression;
 
-  SmallVector<DbgValueLocEntry, 2> ValueLocEntries;
+  llvm::SmallVectorWithFlags<DbgValueLocEntry, 2> ValueLocEntries;
 
-  bool IsVariadic;
+  bool getIsVariadic() const { return ValueLocEntries.getFlag(0); }
+  void setIsVariadic(bool Value) { ValueLocEntries.setFlag(0, Value); }
 
 public:
   DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs)
-      : Expression(Expr), ValueLocEntries(Locs), IsVariadic(true) {}
+      : Expression(Expr),
+        ValueLocEntries(decltype(this->ValueLocEntries)::withFlags(1, Locs)) {}
 
   DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs,
               bool IsVariadic)
-      : Expression(Expr), ValueLocEntries(Locs), IsVariadic(IsVariadic) {
+      : Expression(Expr),
+        ValueLocEntries(decltype(this->ValueLocEntries)::withFlags(
+            unsigned(IsVariadic), Locs)) {
 #ifndef NDEBUG
     assert(Expr->isValid() ||
            !any_of(Locs, [](auto LE) { return LE.isLocation(); }));
@@ -156,22 +161,22 @@ public:
   }
 
   DbgValueLoc(const DIExpression *Expr, DbgValueLocEntry Loc)
-      : Expression(Expr), ValueLocEntries(1, Loc), IsVariadic(false) {
+      : Expression(Expr), ValueLocEntries(1, Loc) {
     assert(((Expr && Expr->isValid()) || !Loc.isLocation()) &&
            "DBG_VALUE with a machine location must have a valid expression.");
   }
 
   bool isFragment() const { return getExpression()->isFragment(); }
   bool isEntryVal() const { return getExpression()->isEntryValue(); }
-  bool isVariadic() const { return IsVariadic; }
+  bool isVariadic() const { return getIsVariadic(); }
   bool isEquivalent(const DbgValueLoc &Other) const {
     // Cannot be equivalent with different numbers of entries.
     if (ValueLocEntries.size() != Other.ValueLocEntries.size())
       return false;
     bool ThisIsIndirect =
-        !IsVariadic && ValueLocEntries[0].isIndirectLocation();
+        !getIsVariadic() && ValueLocEntries[0].isIndirectLocation();
     bool OtherIsIndirect =
-        !Other.IsVariadic && Other.ValueLocEntries[0].isIndirectLocation();
+        !Other.getIsVariadic() && Other.ValueLocEntries[0].isIndirectLocation();
     // Check equivalence of DIExpressions + Directness together.
     if (!DIExpression::isEqualExpression(Expression, ThisIsIndirect,
                                          Other.Expression, OtherIsIndirect))
@@ -185,7 +190,8 @@ public:
              ThisOp.getLoc().getReg() == OtherOp.getLoc().getReg();
     }
     // If neither are indirect, then just compare the loc entries directly.
-    return ValueLocEntries == Other.ValueLocEntries;
+    return (llvm::ArrayRef<llvm::DbgValueLocEntry>(ValueLocEntries) ==
+            llvm::ArrayRef<llvm::DbgValueLocEntry>(Other.ValueLocEntries));
   }
   const DIExpression *getExpression() const { return Expression; }
   ArrayRef<DbgValueLocEntry> getLocEntries() const { return ValueLocEntries; }
@@ -297,8 +303,9 @@ inline bool operator==(const DbgValueLocEntry &A, const DbgValueLocEntry &B) {
 
 /// Compare two DbgValueLocs for equality.
 inline bool operator==(const DbgValueLoc &A, const DbgValueLoc &B) {
-  return A.ValueLocEntries == B.ValueLocEntries &&
-         A.Expression == B.Expression && A.IsVariadic == B.IsVariadic;
+  return (llvm::ArrayRef<llvm::DbgValueLocEntry>(A.ValueLocEntries) ==
+          llvm::ArrayRef<llvm::DbgValueLocEntry>(B.ValueLocEntries)) &&
+         A.Expression == B.Expression && A.getIsVariadic() == B.getIsVariadic();
 }
 
 /// Compare two fragments based on their offset.

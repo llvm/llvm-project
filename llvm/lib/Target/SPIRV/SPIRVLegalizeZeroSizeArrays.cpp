@@ -16,6 +16,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -78,8 +79,9 @@ private:
   const SPIRVTargetMachine &TM;
   DenseMap<Type *, Type *> TypeMap;
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
-  SmallVector<Instruction *, 16> ToErase;
-  bool Modified = false;
+  llvm::SmallVectorWithFlags<Instruction *, 16> ToErase;
+  bool getModified() const { return ToErase.getFlag(0); }
+  void setModified(bool Value) { ToErase.setFlag(0, Value); }
 };
 
 class SPIRVLegalizeZeroSizeArraysLegacy : public ModulePass {
@@ -205,7 +207,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitAllocaInst(AllocaInst &AI) {
   NewAI->setDebugLoc(AI.getDebugLoc());
   AI.replaceAllUsesWith(NewAI);
   ToErase.push_back(&AI);
-  Modified = true;
+  setModified(true);
 }
 
 void SPIRVLegalizeZeroSizeArraysImpl::visitLoadInst(LoadInst &LI) {
@@ -217,7 +219,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitLoadInst(LoadInst &LI) {
   if (shouldLegalizeInstType(ArrTy)) {
     LI.replaceAllUsesWith(PoisonValue::get(LI.getType()));
     ToErase.push_back(&LI);
-    Modified = true;
+    setModified(true);
   }
 }
 
@@ -228,7 +230,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitStoreInst(StoreInst &SI) {
   ArrayType *ArrTy = dyn_cast<ArrayType>(StoreTy);
   if (shouldLegalizeInstType(ArrTy)) {
     ToErase.push_back(&SI);
-    Modified = true;
+    setModified(true);
   }
 }
 
@@ -241,7 +243,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitSelectInst(SelectInst &Sel) {
   if (shouldLegalizeInstType(ArrTy)) {
     Sel.replaceAllUsesWith(PoisonValue::get(Sel.getType()));
     ToErase.push_back(&Sel);
-    Modified = true;
+    setModified(true);
   }
 }
 
@@ -255,7 +257,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitExtractValueInst(
   if (shouldLegalizeInstType(ArrTy)) {
     EVI.replaceAllUsesWith(PoisonValue::get(EVI.getType()));
     ToErase.push_back(&EVI);
-    Modified = true;
+    setModified(true);
   }
 }
 
@@ -270,7 +272,7 @@ void SPIRVLegalizeZeroSizeArraysImpl::visitInsertValueInst(
   if (shouldLegalizeInstType(ArrTy)) {
     IVI.replaceAllUsesWith(IVI.getAggregateOperand());
     ToErase.push_back(&IVI);
-    Modified = true;
+    setModified(true);
   }
 }
 
@@ -278,7 +280,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   TypeMap.clear();
   GlobalMap.clear();
   ToErase.clear();
-  Modified = false;
+  setModified(false);
 
   // Runtime arrays are allowed for shaders, so we don't need to do anything.
   if (TM.getSubtargetImpl()->isShader())
@@ -321,7 +323,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
     NewGV->setAlignment(GV.getAlign());
     GlobalMap[&GV] = NewGV;
     OldGlobals.push_back(&GV);
-    Modified = true;
+    setModified(true);
   }
 
   // Second pass: replace uses, transfer names, and erase old globals.
@@ -339,7 +341,7 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   for (Instruction *I : ToErase)
     I->eraseFromParent();
 
-  return Modified;
+  return getModified();
 }
 
 } // namespace

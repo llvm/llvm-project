@@ -271,12 +271,15 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              ArrayRef<BasicBlock *> DeallocationBlocks,
                              std::string Suffix, bool ArgsInZeroAddressSpace,
                              bool VoidReturnWithSingleOutput)
-    : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-      DeallocationBlocks(DeallocationBlocks), AllowVarArgs(AllowVarArgs),
+    : DT(DT), BFI(BFI), BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
+      DeallocationBlocks(DeallocationBlocks),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
-      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
-      VoidReturnWithSingleOutput(VoidReturnWithSingleOutput) {}
+      ExtractedFuncRetVals(decltype(this->ExtractedFuncRetVals)::withFlags(
+          unsigned(bool(AggregateArgs || AggregateArgsOpt)) |
+          (unsigned(AllowVarArgs) << 1) |
+          (unsigned(ArgsInZeroAddressSpace) << 2) |
+          (unsigned(VoidReturnWithSingleOutput) << 3))),
+      Suffix(Suffix) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -460,7 +463,8 @@ Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
   Instruction *Alloca =
       new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocaIP);
 
-  if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+  if (CastedAlloc && getArgsInZeroAddressSpace() &&
+      DL.getAllocaAddrSpace() != 0) {
     *CastedAlloc = new AddrSpaceCastInst(
         Alloca, PointerType::get(BB->getContext(), 0), Name + ".ascast");
     (*CastedAlloc)->insertAfter(Alloca->getIterator());
@@ -654,7 +658,7 @@ bool CodeExtractor::isEligible() const {
 
   // For functions with varargs, check that varargs handling is only done in the
   // outlined function, i.e vastart and vaend are only used in outlined blocks.
-  if (AllowVarArgs && F->getFunctionType()->isVarArg()) {
+  if (getAllowVarArgs() && F->getFunctionType()->isVarArg()) {
     auto containsVarArgIntrinsic = [](const Instruction &I) {
       if (const CallInst *CI = dyn_cast<CallInst>(&I))
         if (const Function *Callee = CI->getCalledFunction())
@@ -717,8 +721,8 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
   // Reset stale state from any prior call in HotColdSplitting; the CFG may
   // have changed since.
   FuncRetVal = nullptr;
-  if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
-      getCommonExitBlock(Blocks)) {
+  if (!getVoidReturnWithSingleOutput() && !getAggregateArgs() &&
+      Outputs.size() == 1 && getCommonExitBlock(Blocks)) {
     FuncRetVal = Outputs[0];
     Outputs.clear();
   }
@@ -885,7 +889,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Add the types of the input values to the function's argument list
   for (Value *value : inputs) {
     LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
-    if (AggregateArgs && !ExcludeArgsFromAggregate.contains(value)) {
+    if (getAggregateArgs() && !ExcludeArgsFromAggregate.contains(value)) {
       AggParamTy.push_back(value->getType());
       StructValues.insert(value);
     } else
@@ -895,7 +899,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Add the types of the output values to the function's argument list.
   for (Value *output : outputs) {
     LLVM_DEBUG(dbgs() << "instr used in func: " << *output << "\n");
-    if (AggregateArgs && !ExcludeArgsFromAggregate.contains(output)) {
+    if (getAggregateArgs() && !ExcludeArgsFromAggregate.contains(output)) {
       AggParamTy.push_back(output->getType());
       StructValues.insert(output);
     } else
@@ -907,14 +911,15 @@ Function *CodeExtractor::constructFunctionDeclaration(
       (ParamTy.size() + AggParamTy.size()) ==
           (inputs.size() + outputs.size()) &&
       "Number of scalar and aggregate params does not match inputs, outputs");
-  assert((StructValues.empty() || AggregateArgs) &&
+  assert((StructValues.empty() || getAggregateArgs()) &&
          "Expeced StructValues only with AggregateArgs set");
 
   // Concatenate scalar and aggregate params in ParamTy.
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
     ParamTy.push_back(PointerType::get(
-        M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
+        M->getContext(),
+        getArgsInZeroAddressSpace() ? 0 : DL.getAllocaAddrSpace()));
   }
 
   Type *RetTy = FuncRetVal ? FuncRetVal->getType() : getSwitchType();
@@ -926,7 +931,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   });
 
   FunctionType *funcType = FunctionType::get(
-      RetTy, ParamTy, AllowVarArgs && oldFunction->isVarArg());
+      RetTy, ParamTy, getAllowVarArgs() && oldFunction->isVarArg());
 
   // Create the new function
   Function *newFunction =

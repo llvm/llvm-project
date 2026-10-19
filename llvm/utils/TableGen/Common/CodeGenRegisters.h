@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -75,15 +76,23 @@ public:
 
   /// A list of subregister indexes concatenated resulting in this
   /// subregister index. This is the reverse of CodeGenRegBank::ConcatIdx.
-  SmallVector<CodeGenSubRegIndex *, 4> ConcatenationOf;
+  llvm::SmallVectorWithFlags<CodeGenSubRegIndex *, 4, 2> ConcatenationOf;
 
   // Are all super-registers containing this SubRegIndex covered by their
   // sub-registers?
-  bool AllSuperRegsCovered;
+  bool getAllSuperRegsCovered() const { return ConcatenationOf.getFlag(0); }
+  bool setAllSuperRegsCovered(bool Value) {
+    ConcatenationOf.setFlag(0, Value);
+    return Value;
+  }
   // A subregister index is "artificial" if every subregister obtained
   // from applying this index is artificial. Artificial subregister
   // indexes are not used to create new register classes.
-  bool Artificial;
+  bool getArtificial() const { return ConcatenationOf.getFlag(1); }
+  bool setArtificial(bool Value) {
+    ConcatenationOf.setFlag(1, Value);
+    return Value;
+  }
 
   CodeGenSubRegIndex(const Record *R, unsigned Enum, const CodeGenHwModes &CGH);
   CodeGenSubRegIndex(StringRef N, StringRef Nspace, unsigned Enum);
@@ -176,10 +185,14 @@ public:
   const Record *TheDef;
   unsigned EnumValue;
   std::vector<int64_t> CostPerUse;
-  bool CoveredBySubRegs = true;
-  bool HasDisjunctSubRegs = false;
-  bool Artificial = true;
-  bool Constant = false;
+  bool getCoveredBySubRegs() const { return !RegUnitLaneMasks.getFlag(0); }
+  void setCoveredBySubRegs(bool Value) { RegUnitLaneMasks.setFlag(0, !Value); }
+  bool getHasDisjunctSubRegs() const { return RegUnitLaneMasks.getFlag(1); }
+  void setHasDisjunctSubRegs(bool Value) { RegUnitLaneMasks.setFlag(1, Value); }
+  bool getArtificial() const { return !RegUnitLaneMasks.getFlag(2); }
+  void setArtificial(bool Value) { RegUnitLaneMasks.setFlag(2, !Value); }
+  bool getConstant() const { return RegUnitLaneMasks.getFlag(3); }
+  void setConstant(bool Value) { RegUnitLaneMasks.setFlag(3, Value); }
 
   // Map SubRegIndex -> Register.
   using SubRegMap =
@@ -213,7 +226,7 @@ public:
   void checkSubRegIndexSizes(CodeGenRegBank &) const;
 
   const SubRegMap &getSubRegs() const {
-    assert(SubRegsComplete && "Must precompute sub-registers");
+    assert(getSubRegsComplete() && "Must precompute sub-registers");
     return SubRegs;
   }
 
@@ -233,7 +246,7 @@ public:
   // This is valid after computeSubRegs visits all registers during RegBank
   // construction.
   const SuperRegList &getSuperRegs() const {
-    assert(SubRegsComplete && "Must precompute sub-registers");
+    assert(getSubRegsComplete() && "Must precompute sub-registers");
     return SuperRegs;
   }
 
@@ -250,7 +263,7 @@ public:
   // sub-register indices mapping to the same kind of sub-registers
   // (TopoSig-wise).
   unsigned getTopoSig() const {
-    assert(SuperRegsComplete && "TopoSigs haven't been computed yet.");
+    assert(getSuperRegsComplete() && "TopoSigs haven't been computed yet.");
     return TopoSig;
   }
 
@@ -277,7 +290,8 @@ public:
   RegUnitList getNativeRegUnits() const { return NativeRegUnits; }
 
   void setRegUnitLaneMasks(const RegUnitLaneMaskList &LaneMasks) {
-    RegUnitLaneMasks = LaneMasks;
+    if (RegUnitLaneMasks.data() != LaneMasks.data())
+      RegUnitLaneMasks.assign(LaneMasks.begin(), LaneMasks.end());
   }
 
   // Inherit register units from subregisters.
@@ -295,8 +309,10 @@ public:
   using Vec = std::vector<const CodeGenRegister *>;
 
 private:
-  bool SubRegsComplete;
-  bool SuperRegsComplete;
+  bool getSubRegsComplete() const { return ExplicitAliases.getFlag(0); }
+  void setSubRegsComplete(bool Value) { ExplicitAliases.setFlag(0, Value); }
+  bool getSuperRegsComplete() const { return ExplicitAliases.getFlag(1); }
+  void setSuperRegsComplete(bool Value) { ExplicitAliases.setFlag(1, Value); }
   unsigned TopoSig;
 
   // The sub-registers explicit in the .td file form a tree.
@@ -304,7 +320,7 @@ private:
   SmallVector<CodeGenRegister *, 8> ExplicitSubRegs;
 
   // Explicit ad hoc aliases, symmetrized to form an undirected graph.
-  SmallVector<CodeGenRegister *, 8> ExplicitAliases;
+  llvm::SmallVectorWithFlags<CodeGenRegister *, 8, 2> ExplicitAliases;
 
   // Super-registers where this is the first explicit sub-register.
   SuperRegList LeadingSuperRegs;
@@ -313,7 +329,7 @@ private:
   SuperRegList SuperRegs;
   DenseMap<const CodeGenRegister *, CodeGenSubRegIndex *> SubReg2Idx;
   RegUnitList RegUnits;
-  RegUnitLaneMaskList RegUnitLaneMasks;
+  llvm::SmallVectorWithFlagsFor<RegUnitLaneMaskList, 4> RegUnitLaneMasks;
 };
 
 inline bool operator<(const CodeGenRegister &A, const CodeGenRegister &B) {
@@ -338,7 +354,7 @@ class CodeGenRegisterClass {
   BitVector SubClasses;
   // List of super-classes, topologocally ordered to have the larger classes
   // first.  This is the same as sorting by EnumValue.
-  SmallVector<CodeGenRegisterClass *, 4> SuperClasses;
+  llvm::SmallVectorWithFlags<CodeGenRegisterClass *, 4, 2> SuperClasses;
   const Record *TheDef;
   std::string Name;
 
@@ -372,25 +388,31 @@ class CodeGenRegisterClass {
 public:
   unsigned EnumValue;
   StringRef Namespace;
-  SmallVector<ValueTypeByHwMode, 4> VTs;
+  llvm::SmallVectorWithFlags<ValueTypeByHwMode, 4, 4> VTs;
   RegSizeInfoByHwMode RSI;
   uint8_t CopyCost;
-  bool Allocatable;
+  bool getAllocatable() const { return VTs.getFlag(0); }
+  void setAllocatable(bool Value) { VTs.setFlag(0, Value); }
   StringRef AltOrderSelect;
   uint8_t AllocationPriority;
-  bool GlobalPriority;
+  bool getGlobalPriority() const { return VTs.getFlag(1); }
+  void setGlobalPriority(bool Value) { VTs.setFlag(1, Value); }
   uint8_t TSFlags;
   uint8_t SpillStackID;
   /// Contains the combination of the lane masks of all subregisters.
   LaneBitmask LaneMask;
   /// True if there are at least 2 subregisters which do not interfere.
-  bool HasDisjunctSubRegs;
-  bool CoveredBySubRegs;
+  bool getHasDisjunctSubRegs() const { return VTs.getFlag(2); }
+  void setHasDisjunctSubRegs(bool Value) { VTs.setFlag(2, Value); }
+  bool getCoveredBySubRegs() const { return VTs.getFlag(3); }
+  void setCoveredBySubRegs(bool Value) { VTs.setFlag(3, Value); }
   /// A register class is artificial if all its members are artificial.
-  bool Artificial;
+  bool getArtificial() const { return SuperClasses.getFlag(0); }
+  void setArtificial(bool Value) { SuperClasses.setFlag(0, Value); }
   /// Generate register pressure set for this register class and any class
   /// synthesized from it.
-  bool GeneratePressureSet;
+  bool getGeneratePressureSet() const { return SuperClasses.getFlag(1); }
+  void setGeneratePressureSet(bool Value) { SuperClasses.setFlag(1, Value); }
 
   // Return the Record that defined this class, or NULL if the class was
   // created by TableGen.
@@ -647,7 +669,7 @@ class CodeGenRegBank {
 
   const CodeGenHwModes &CGH;
 
-  const bool RegistersAreIntervals;
+  bool getRegistersAreIntervals() const { return RegUnits.getFlag(0); }
 
   std::deque<CodeGenSubRegIndex> SubRegIndices;
   DenseMap<const Record *, CodeGenSubRegIndex *> Def2SubRegIdx;
@@ -670,7 +692,7 @@ class CodeGenRegBank {
   std::map<TopoSigId, unsigned> TopoSigs;
 
   // Includes native (0..NumNativeRegUnits-1) and adopted register units.
-  SmallVector<RegUnit, 8> RegUnits;
+  llvm::SmallVectorWithFlags<RegUnit, 8> RegUnits;
 
   // Register classes.
   std::list<CodeGenRegisterClass> RegClasses;
@@ -818,9 +840,9 @@ public:
     RegUnit &RU = RegUnits.emplace_back();
     RU.Roots[0] = R0;
     RU.Roots[1] = R1;
-    RU.Artificial = R0->Artificial;
+    RU.Artificial = R0->getArtificial();
     if (R1)
-      RU.Artificial |= R1->Artificial;
+      RU.Artificial |= R1->getArtificial();
     return RegUnits.size() - 1;
   }
 

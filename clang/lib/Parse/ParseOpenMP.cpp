@@ -365,14 +365,14 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
           Actions.CodeCompletion().ProduceConstructorSignatureHelp(
               OmpPrivParm->getType()->getCanonicalTypeInternal(),
               OmpPrivParm->getLocation(), Exprs, LParLoc, /*Braced=*/false);
-      CalledSignatureHelp = true;
+      setCalledSignatureHelp(true);
       return PreferredType;
     };
     if (ParseExpressionList(Exprs, [&] {
           PreferredType.enterFunctionArgument(Tok.getLocation(),
                                               RunSignatureHelp);
         })) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+      if (PP.isCodeCompletionReached() && !getCalledSignatureHelp())
         RunSignatureHelp();
       Actions.ActOnInitializerError(OmpPrivParm);
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
@@ -3895,7 +3895,7 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
 
           if (FrExpr || !AttrExprs.empty())
             InteropInfo.Prefs.emplace_back(FrExpr, AttrExprs);
-          InteropInfo.HasPreferAttrs = true;
+          InteropInfo.setPreferAttrs(true);
         } else {
           // OMP 5.1: flat foreign-runtime-id (string or int). Stored as a
           // pref-spec with Fr=expr and no attr() entries.
@@ -3943,8 +3943,8 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
 
   // As of OpenMP 5.1,there are two interop-types, "target" and
   // "targetsync". Either or both are allowed for a single interop.
-  InteropInfo.IsTarget = IsTarget;
-  InteropInfo.IsTargetSync = IsTargetSync;
+  InteropInfo.setIsTarget(IsTarget);
+  InteropInfo.setIsTargetSync(IsTargetSync);
 
   return HasError;
 }

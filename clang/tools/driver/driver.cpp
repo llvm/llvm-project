@@ -139,9 +139,9 @@ static T checkEnvVar(const char *EnvOptSet, const char *EnvOptFile,
 }
 
 static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
-  TheDriver.CCPrintOptions =
+  TheDriver.setCCPrintOptions(
       checkEnvVar<bool>("CC_PRINT_OPTIONS", "CC_PRINT_OPTIONS_FILE",
-                        TheDriver.CCPrintOptionsFilename);
+                        TheDriver.CCPrintOptionsFilename));
   if (checkEnvVar<bool>("CC_PRINT_HEADERS", "CC_PRINT_HEADERS_FILE",
                         TheDriver.CCPrintHeadersFilename)) {
     TheDriver.CCPrintHeadersFormat = HIFMT_Textual;

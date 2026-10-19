@@ -83,7 +83,7 @@ void CSKYInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
-  if (PrintBranchImmAsAddress)
+  if (getPrintBranchImmAsAddress())
     O << getRegisterName(Reg, ABIRegNames ? CSKY::ABIRegAltName
                                           : CSKY::NoRegAltName);
   else
@@ -91,7 +91,7 @@ void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 }
 
 void CSKYInstPrinter::printFPRRegName(raw_ostream &O, unsigned RegNo) const {
-  if (PrintBranchImmAsAddress)
+  if (getPrintBranchImmAsAddress())
     O << getRegisterName(RegNo, CSKY::NoRegAltName);
   else
     O << getRegisterName(RegNo);
@@ -104,7 +104,7 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (MO.isReg()) {
     unsigned Reg = MO.getReg();
     bool useABIName = false;
-    if (PrintBranchImmAsAddress)
+    if (getPrintBranchImmAsAddress())
       useABIName = ABIRegNames;
     else
       useABIName = !ArchRegNames;
@@ -130,7 +130,7 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     uint64_t TSFlags = MII.get(MI->getOpcode()).TSFlags;
 
     if (((TSFlags & CSKYII::AddrModeMask) != CSKYII::AddrModeNone) &&
-        PrintBranchImmAsAddress)
+        getPrintBranchImmAsAddress())
       O << formatHex(MO.getImm());
     else
       O << MO.getImm();
@@ -160,7 +160,7 @@ void CSKYInstPrinter::printConstpool(const MCInst *MI, uint64_t Address,
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isImm()) {
-    if (PrintBranchImmAsAddress) {
+    if (getPrintBranchImmAsAddress()) {
       uint64_t Target = Address + MO.getImm();
       Target &= 0xfffffffc;
       O << formatHex(Target);
@@ -186,7 +186,7 @@ void CSKYInstPrinter::printCSKYSymbolOperand(const MCInst *MI, uint64_t Address,
     return printOperand(MI, OpNo, STI, O);
   }
 
-  if (PrintBranchImmAsAddress) {
+  if (getPrintBranchImmAsAddress()) {
     uint64_t Target = Address + MO.getImm();
     Target &= 0xffffffff;
     O << formatHex(Target);

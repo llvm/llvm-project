@@ -6606,8 +6606,8 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
-    Info.ReadMem = true;
-    Info.WriteMem = false;
+    Info.setReadMem(true);
+    Info.setWriteMem(false);
     Info.PtrVal = Inst->getArgOperand(0);
     break;
   case Intrinsic::aarch64_neon_st1x2:
@@ -6616,8 +6616,8 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4:
-    Info.ReadMem = false;
-    Info.WriteMem = true;
+    Info.setReadMem(false);
+    Info.setWriteMem(true);
     Info.PtrVal = Inst->getArgOperand(Inst->arg_size() - 1);
     break;
   }

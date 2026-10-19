@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -38,10 +39,11 @@ public:
                              TargetMachine *TM);
 
   /// Whether the function has external linkage and is not a kernel function.
-  bool ExternalNotKernel = false;
+  bool getExternalNotKernel() const { return LaunchBounds.getFlag(0); }
+  void setExternalNotKernel(bool Value) { LaunchBounds.setFlag(0, Value); }
 
   /// Launch bounds.
-  SmallVector<std::pair<StringRef, int64_t>> LaunchBounds;
+  llvm::SmallVectorWithFlags<std::pair<StringRef, int64_t>> LaunchBounds;
 
   /// The number of alloca instructions inside the function, the number of those
   /// with allocation sizes that cannot be determined at compile time, and the
@@ -289,12 +291,15 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   KI.FlatAddrspace = TheTTI.getFlatAddressSpace();
 
   // Record function properties.
-  KI.ExternalNotKernel = F.hasExternalLinkage() && !F.hasKernelCallingConv();
+  KI.setExternalNotKernel(F.hasExternalLinkage() && !F.hasKernelCallingConv());
   for (StringRef Name : {"omp_target_num_teams", "omp_target_thread_limit"}) {
     if (auto Val = parseFnAttrAsInteger(F, Name))
       KI.LaunchBounds.push_back({Name, *Val});
   }
-  TheTTI.collectKernelLaunchBounds(F, KI.LaunchBounds);
+  SmallVector<std::pair<StringRef, int64_t>> LaunchBounds;
+  LaunchBounds = std::move(KI.LaunchBounds);
+  TheTTI.collectKernelLaunchBounds(F, LaunchBounds);
+  KI.LaunchBounds.assign(std::move(LaunchBounds));
 
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   for (const auto &BB : F)
@@ -302,7 +307,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
 #define REMARK_PROPERTY(PROP_NAME)                                             \
   remarkProperty(ORE, F, #PROP_NAME, KI.PROP_NAME)
-  REMARK_PROPERTY(ExternalNotKernel);
+  REMARK_PROPERTY(getExternalNotKernel());
   for (auto LB : KI.LaunchBounds)
     remarkProperty(ORE, F, LB.first, LB.second);
   REMARK_PROPERTY(Allocas);

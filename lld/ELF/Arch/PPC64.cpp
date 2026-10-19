@@ -247,7 +247,7 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(Ctx &ctx, uint8_t stOther) {
 }
 
 void elf::writePrefixedInst(Ctx &ctx, uint8_t *loc, uint64_t insn) {
-  insn = ctx.arg.isLE ? insn << 32 | insn >> 32 : insn;
+  insn = ctx.arg.getIsLE() ? insn << 32 | insn >> 32 : insn;
   write64(ctx, loc, insn);
 }
 
@@ -380,7 +380,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 // Returns true if the relaxation is performed.
 static bool tryRelaxPPC64TocIndirection(Ctx &ctx, const Relocation &rel,
                                         uint8_t *bufLoc) {
-  assert(ctx.arg.tocOptimize);
+  assert(ctx.arg.getTocOptimize());
   if (rel.addend < 0)
     return false;
 
@@ -393,8 +393,8 @@ static bool tryRelaxPPC64TocIndirection(Ctx &ctx, const Relocation &rel,
   int64_t addend;
   auto *tocISB = cast<InputSectionBase>(defSym->section);
   std::tie(d, addend) =
-      ctx.arg.isLE ? getRelaTocSymAndAddend<ELF64LE>(tocISB, rel.addend)
-                   : getRelaTocSymAndAddend<ELF64BE>(tocISB, rel.addend);
+      ctx.arg.getIsLE() ? getRelaTocSymAndAddend<ELF64LE>(tocISB, rel.addend)
+                        : getRelaTocSymAndAddend<ELF64BE>(tocISB, rel.addend);
 
   // Only non-preemptable defined symbols can be relaxed.
   if (!d || d->isPreemptible)
@@ -567,16 +567,16 @@ static int64_t getTotalDisp(uint64_t prefixedInsn, uint32_t accessInsn) {
 // little-endian it is pointing to the start of the word. These 2 helpers are to
 // simplify reading and writing in that context.
 static void writeFromHalf16(Ctx &ctx, uint8_t *loc, uint32_t insn) {
-  write32(ctx, ctx.arg.isLE ? loc : loc - 2, insn);
+  write32(ctx, ctx.arg.getIsLE() ? loc : loc - 2, insn);
 }
 
 static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
-  return read32(ctx, ctx.arg.isLE ? loc : loc - 2);
+  return read32(ctx, ctx.arg.getIsLE() ? loc : loc - 2);
 }
 
 static uint64_t readPrefixedInst(Ctx &ctx, const uint8_t *loc) {
   uint64_t fullInstr = read64(ctx, loc);
-  return ctx.arg.isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
+  return ctx.arg.getIsLE() ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
 }
 
 PPC64::PPC64(Ctx &ctx) : TargetInfo(ctx) {
@@ -1119,7 +1119,7 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   bool optimizeTlsGdLd =
-      !missingTlsGdLdMarker<RelTy>(sec, rels) && !ctx.arg.shared;
+      !missingTlsGdLdMarker<RelTy>(sec, rels) && !ctx.arg.getShared();
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
     uint32_t symIdx = it->getSymbol(false);
@@ -1129,7 +1129,7 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
     int64_t addend = rs.getAddend<ELFT>(*it, type);
-    if (ctx.arg.isPic && type == R_PPC64_TOC)
+    if (ctx.arg.getIsPic() && type == R_PPC64_TOC)
       addend += getPPC64TocBase(ctx);
 
     RelExpr expr;
@@ -1188,7 +1188,7 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // TOC-relative relocations:
     case R_PPC64_TOC16:
     case R_PPC64_TOC16_DS:
-      sec.file->ppc64SmallCodeModelTocRelocs = true;
+      sec.file->setPpc64SmallCodeModelTocRelocs(true);
       expr = R_GOTREL;
       break;
     case R_PPC64_TOC16_HI:
@@ -1250,7 +1250,7 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
       continue;
     case R_PPC64_TLS:
-      if (!ctx.arg.shared && !sym.isPreemptible)
+      if (!ctx.arg.getShared() && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 
@@ -1354,7 +1354,7 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 }
 
 void PPC64::scanSection(InputSectionBase &sec, unsigned shard) {
-  if (ctx.arg.isLE)
+  if (ctx.arg.getIsLE())
     elf::scanSection1<PPC64, ELF64LE>(*this, sec, shard);
   else
     elf::scanSection1<PPC64, ELF64BE>(*this, sec, shard);
@@ -1466,7 +1466,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
-    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0)
+    if (ctx.arg.getTocOptimize() && shouldTocOptimize && ha(val) == 0)
       writeFromHalf16(ctx, loc, NOP);
     else {
       checkInt(ctx, loc, val + 0x8000, 32, rel);
@@ -1532,7 +1532,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // When the high-adjusted part of a toc relocation evaluates to 0, it is
     // changed into a nop. The lo part then needs to be updated to use the
     // toc-pointer register r2, as the base register.
-    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
+    if (ctx.arg.getTocOptimize() && shouldTocOptimize && ha(val) == 0) {
       uint32_t insn = readFromHalf16(ctx, loc);
       if (isInstructionUpdateForm(insn))
         Err(ctx) << getErrorLoc(ctx, loc)
@@ -1557,7 +1557,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     uint32_t insn = readFromHalf16(ctx, loc);
     uint16_t mask = isDQFormInstruction(insn) ? 0xf : 0x3;
     checkAlignment(ctx, loc, lo(val), mask + 1, rel);
-    if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
+    if (ctx.arg.getTocOptimize() && shouldTocOptimize && ha(val) == 0) {
       // When the high-adjusted part of a toc relocation evaluates to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.
@@ -1682,7 +1682,7 @@ bool PPC64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
                                const uint8_t *loc) const {
   if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
-      ctx.arg.pcRelOptimize) {
+      ctx.arg.getPcRelOptimize()) {
     // It only makes sense to optimize pld since paddi means that the address
     // of the object in the GOT is required rather than the object itself.
     if ((readPrefixedInst(ctx, loc) & 0xfc000000) == 0xe4000000)
@@ -1789,7 +1789,7 @@ void PPC64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       // entry, there may be R_PPC64_TOC16_HA not paired with
       // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
       // opportunities but is safe.
-      if (ctx.arg.tocOptimize &&
+      if (ctx.arg.getTocOptimize() &&
           !ctx.ppc64noTocRelax.contains({rel.sym, rel.addend}) &&
           tryRelaxPPC64TocIndirection(ctx, rel, loc))
         continue;

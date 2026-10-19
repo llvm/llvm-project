@@ -380,7 +380,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, uint64_t Address,
                                   unsigned OpNum, const MCSubtargetInfo &STI,
                                   raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
-  if (!Op.isImm() || !PrintBranchImmAsAddress || getUseMarkup())
+  if (!Op.isImm() || !getPrintBranchImmAsAddress() || getUseMarkup())
     return printOperand(MI, OpNum, STI, O);
   uint64_t Target = ARM_MC::evaluateBranchTarget(MII.get(MI->getOpcode()),
                                                  Address, Op.getImm());

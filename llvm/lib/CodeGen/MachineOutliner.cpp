@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/MachineOutliner.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -191,13 +192,14 @@ struct InstructionMapper {
 
   /// Stores the location of the instruction associated with the integer
   /// at index i in \p UnsignedVec for each index i.
-  SmallVector<MachineBasicBlock::iterator> InstrList;
+  llvm::SmallVectorWithFlags<MachineBasicBlock::iterator> InstrList;
 
   // Set if we added an illegal number in the previous step.
   // Since each illegal number is unique, we only need one of them between
   // each range of legal numbers. This lets us make sure we don't add more
   // than one illegal number per range.
-  bool AddedIllegalLastTime = false;
+  bool getAddedIllegalLastTime() const { return InstrList.getFlag(0); }
+  void setAddedIllegalLastTime(bool Value) { InstrList.setFlag(0, Value); }
 
   /// Maps \p *It to a legal integer.
   ///
@@ -212,7 +214,7 @@ struct InstructionMapper {
       SmallVector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // We added something legal, so we should unset the AddedLegalLastTime
     // flag.
-    AddedIllegalLastTime = false;
+    setAddedIllegalLastTime(false);
 
     // If we have at least two adjacent legal instructions (which may have
     // invisible instructions in between), remember that.
@@ -263,11 +265,11 @@ struct InstructionMapper {
     CanOutlineWithPrevInstr = false;
 
     // Only add one illegal number per range of legal numbers.
-    if (AddedIllegalLastTime)
+    if (getAddedIllegalLastTime())
       return IllegalInstrNumber;
 
     // Remember that we added an illegal number last time.
-    AddedIllegalLastTime = true;
+    setAddedIllegalLastTime(true);
     unsigned MINumber = IllegalInstrNumber;
 
     InstrListForMBB.push_back(It);
@@ -388,7 +390,7 @@ struct InstructionMapper {
           // Normally this is set by mapTo(Blah)Unsigned, but we just want to
           // skip this instruction. So, unset the flag here.
           ++NumInvisible;
-          AddedIllegalLastTime = false;
+          setAddedIllegalLastTime(false);
           break;
         }
       }

@@ -14,15 +14,16 @@
 #ifndef LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 #define LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 
-#include "clang/Sema/Ownership.h"
-#include "clang/Sema/SemaConcept.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaConcept.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <cassert>
 #include <cstddef>
 #include <optional>
@@ -351,13 +352,14 @@ struct TemplateSpecCandidate {
 /// TODO: In the future, we may need to unify/generalize this with
 /// OverloadCandidateSet.
 class TemplateSpecCandidateSet {
-  SmallVector<TemplateSpecCandidate, 16> Candidates;
+  llvm::SmallVectorWithFlags<TemplateSpecCandidate, 16> Candidates;
   SourceLocation Loc;
 
   // Stores whether we're taking the address of these candidates. This helps us
   // produce better error messages when dealing with the pass_object_size
   // attribute on parameters.
-  bool ForTakingAddress;
+  bool getForTakingAddress() const { return Candidates.getFlag(0); }
+  void setForTakingAddress(bool Value) { Candidates.setFlag(0, Value); }
 
   TemplateSpecCandidateSetKind CandidateSetKind;
 
@@ -367,8 +369,8 @@ public:
   TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false,
                            TemplateSpecCandidateSetKind CandidateSetKind =
                                TemplateSpecCandidateSetKind::Normal)
-      : Loc(Loc), ForTakingAddress(ForTakingAddress),
-        CandidateSetKind(CandidateSetKind) {}
+      : Candidates(decltype(Candidates)::withFlags(unsigned(ForTakingAddress))),
+        Loc(Loc), CandidateSetKind(CandidateSetKind) {}
   TemplateSpecCandidateSet(const TemplateSpecCandidateSet &) = delete;
   TemplateSpecCandidateSet &
   operator=(const TemplateSpecCandidateSet &) = delete;

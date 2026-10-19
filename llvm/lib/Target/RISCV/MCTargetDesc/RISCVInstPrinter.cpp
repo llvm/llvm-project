@@ -108,14 +108,14 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   // Do not print the numeric target address when symbolizing.
-  if (SymbolizeOperands)
+  if (getSymbolizeOperands())
     return;
 
   const MCOperand &MO = MI->getOperand(OpNo);
   if (!MO.isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  if (PrintBranchImmAsAddress) {
+  if (getPrintBranchImmAsAddress()) {
     uint64_t Target = Address + MO.getImm();
     if (!STI.hasFeature(RISCV::Feature64Bit))
       Target &= 0xffffffff;

@@ -15,12 +15,13 @@
 #ifndef LLVM_CLANG_CODEGEN_CONSTANTINITBUILDER_H
 #define LLVM_CLANG_CODEGEN_CONSTANTINITBUILDER_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/GlobalValue.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CodeGen/ConstantInitFuture.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 
 #include <optional>
 #include <vector>
@@ -60,9 +61,10 @@ class ConstantInitBuilderBase {
     SelfReference(llvm::GlobalVariable *dummy) : Dummy(dummy) {}
   };
   CodeGenModule &CGM;
-  llvm::SmallVector<llvm::Constant*, 16> Buffer;
+  llvm::SmallVectorWithFlags<llvm::Constant *, 16> Buffer;
   std::vector<SelfReference> SelfReferences;
-  bool Frozen = false;
+  bool getFrozen() const { return Buffer.getFlag(0); }
+  void setFrozen(bool Value) { Buffer.setFlag(0, Value); }
 
   friend class ConstantInitFuture;
   friend class ConstantAggregateBuilderBase;
@@ -108,11 +110,11 @@ protected:
   bool Packed = false;
   mutable CharUnits CachedOffsetFromGlobal;
 
-  llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() {
+  llvm::SmallVectorWithFlagsImpl<llvm::Constant *> &getBuffer() {
     return Builder.Buffer;
   }
 
-  const llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() const {
+  const llvm::SmallVectorWithFlagsImpl<llvm::Constant *> &getBuffer() const {
     return Builder.Buffer;
   }
 
@@ -123,8 +125,9 @@ protected:
       assert(!parent->Frozen && "parent already has child builder active");
       parent->Frozen = true;
     } else {
-      assert(!builder.Frozen && "builder already has child builder active");
-      builder.Frozen = true;
+      assert(!builder.getFrozen() &&
+             "builder already has child builder active");
+      builder.setFrozen(true);
     }
   }
 
@@ -141,9 +144,9 @@ protected:
              "parent not frozen while child builder active");
       Parent->Frozen = false;
     } else {
-      assert(Builder.Frozen &&
+      assert(Builder.getFrozen() &&
              "builder not frozen while child builder active");
-      Builder.Frozen = false;
+      Builder.setFrozen(false);
     }
   }
 

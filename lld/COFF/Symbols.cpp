@@ -25,7 +25,7 @@ static_assert(sizeof(SymbolUnion) <= 48,
 // Returns a symbol name for an error message.
 std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
                                 StringRef symName) {
-  if (ctx.config.demangle) {
+  if (ctx.config.getDemangle()) {
     std::string prefix;
     StringRef prefixless = symName;
     if (prefixless.consume_front("__imp_"))

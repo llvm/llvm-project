@@ -110,7 +110,7 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
 
   const ObjFile<ELFT> *file = sec.getFile<ELFT>();
   Ctx &ctx = sec.getCtx();
-  uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
+  uint32_t symIndex = rel.getSymbol(ctx.arg.getIsMips64EL());
   const typename ELFT::Sym &sym = file->template getELFSyms<ELFT>()[symIndex];
   uint32_t secIndex = file->getSectionIndex(sym);
 

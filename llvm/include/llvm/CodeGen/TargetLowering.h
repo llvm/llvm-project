@@ -26,6 +26,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -4978,10 +4979,11 @@ public:
   /// described by the Ins array, into the specified DAG. The implementation
   /// should fill in the InVals array with legal-type argument values, and
   /// return the resulting token chain value.
-  virtual SDValue LowerFormalArguments(
-      SDValue /*Chain*/, CallingConv::ID /*CallConv*/, bool /*isVarArg*/,
-      const SmallVectorImpl<ISD::InputArg> & /*Ins*/, const SDLoc & /*dl*/,
-      SelectionDAG & /*DAG*/, SmallVectorImpl<SDValue> & /*InVals*/) const {
+  virtual SDValue
+  LowerFormalArguments(SDValue /*Chain*/, CallingConv::ID /*CallConv*/,
+                       bool /*isVarArg*/, llvm::ArrayRef<ISD::InputArg> /*Ins*/,
+                       const SDLoc & /*dl*/, SelectionDAG & /*DAG*/,
+                       SmallVectorImpl<SDValue> & /*InVals*/) const {
     llvm_unreachable("Not Implemented");
   }
 
@@ -5013,23 +5015,44 @@ public:
     Type *OrigRetTy = nullptr;
     /// Same as OrigRetTy, or partially legalized for soft float libcalls.
     Type *RetTy = nullptr;
-    bool RetSExt           : 1;
-    bool RetZExt           : 1;
-    bool IsVarArg          : 1;
-    bool IsInReg           : 1;
-    bool DoesNotReturn     : 1;
-    bool IsReturnValueUsed : 1;
-    bool IsConvergent      : 1;
-    bool IsPatchPoint      : 1;
-    bool IsPreallocated : 1;
-    bool NoMerge           : 1;
+    bool getRetSExt() const { return InVals.getFlag(0); }
+    void setRetSExt(bool Value) { InVals.setFlag(0, Value); }
+    bool getRetZExt() const { return InVals.getFlag(1); }
+    void setRetZExt(bool Value) { InVals.setFlag(1, Value); }
+    bool getIsVarArg() const { return InVals.getFlag(2); }
+    bool setIsVarArg(bool Value) {
+      InVals.setFlag(2, Value);
+      return Value;
+    }
+    bool getIsInReg() const { return InVals.getFlag(3); }
+    void setIsInReg(bool Value) { InVals.setFlag(3, Value); }
+    bool getDoesNotReturn() const { return Ins.getFlag(0); }
+    bool setDoesNotReturn(bool Value) {
+      Ins.setFlag(0, Value);
+      return Value;
+    }
+    bool getIsReturnValueUsed() const { return Ins.getFlag(1); }
+    void setIsReturnValueUsed(bool Value) { Ins.setFlag(1, Value); }
+    bool getIsConvergent() const { return Ins.getFlag(2); }
+    void setIsConvergent(bool Value) { Ins.setFlag(2, Value); }
+    bool getIsPatchPointFlag() const { return Ins.getFlag(3); }
+    void setIsPatchPointFlag(bool Value) { Ins.setFlag(3, Value); }
+    bool getIsPreallocatedFlag() const { return Outs.getFlag(0); }
+    void setIsPreallocatedFlag(bool Value) { Outs.setFlag(0, Value); }
+    bool getNoMerge() const { return Outs.getFlag(1); }
+    void setNoMerge(bool Value) { Outs.setFlag(1, Value); }
 
     // IsTailCall should be modified by implementations of
     // TargetLowering::LowerCall that perform tail call conversions.
-    bool IsTailCall = false;
+    bool getIsTailCall() const { return Outs.getFlag(2); }
+    bool setIsTailCall(bool Value) {
+      Outs.setFlag(2, Value);
+      return Value;
+    }
 
     // Is Call lowering done post SelectionDAG type legalization.
-    bool IsPostTypeLegalization = false;
+    bool getIsPostTypeLegalizationFlag() const { return Outs.getFlag(3); }
+    void setIsPostTypeLegalizationFlag(bool Value) { Outs.setFlag(3, Value); }
 
     unsigned NumFixedArgs = -1;
     CallingConv::ID CallConv = CallingConv::C;
@@ -5038,10 +5061,10 @@ public:
     SelectionDAG &DAG;
     SDLoc DL;
     const CallBase *CB = nullptr;
-    SmallVector<ISD::OutputArg, 32> Outs;
+    llvm::SmallVectorWithFlags<ISD::OutputArg, 32, 4> Outs;
     SmallVector<SDValue, 32> OutVals;
-    SmallVector<ISD::InputArg, 32> Ins;
-    SmallVector<SDValue, 4> InVals;
+    llvm::SmallVectorWithFlags<ISD::InputArg, 32, 4> Ins;
+    llvm::SmallVectorWithFlags<SDValue, 4, 4> InVals;
     const ConstantInt *CFIType = nullptr;
     SDValue ConvergenceControlToken;
     GlobalValue *DeactivationSymbol = nullptr;
@@ -5049,10 +5072,7 @@ public:
     std::optional<PtrAuthInfo> PAI;
 
     CallLoweringInfo(SelectionDAG &DAG)
-        : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
-          DoesNotReturn(false), IsReturnValueUsed(true), IsConvergent(false),
-          IsPatchPoint(false), IsPreallocated(false), NoMerge(false),
-          DAG(DAG) {}
+        : DAG(DAG), Ins(decltype(this->Ins)::withFlags(2)) {}
 
     CallLoweringInfo &setDebugLoc(const SDLoc &dl) {
       DL = dl;
@@ -5090,10 +5110,10 @@ public:
                                 SDValue Target, ArgListTy &&ArgsList,
                                 AttributeSet ResultAttrs = {}) {
       RetTy = OrigRetTy = ResultType;
-      IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
-      RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
-      RetZExt = ResultAttrs.hasAttribute(Attribute::ZExt);
-      NoMerge = ResultAttrs.hasAttribute(Attribute::NoMerge);
+      setIsInReg(ResultAttrs.hasAttribute(Attribute::InReg));
+      setRetSExt(ResultAttrs.hasAttribute(Attribute::SExt));
+      setRetZExt(ResultAttrs.hasAttribute(Attribute::ZExt));
+      setNoMerge(ResultAttrs.hasAttribute(Attribute::NoMerge));
 
       Callee = Target;
       CallConv = CC;
@@ -5107,15 +5127,15 @@ public:
                                 const CallBase &Call) {
       RetTy = OrigRetTy = ResultType;
 
-      IsInReg = Call.hasRetAttr(Attribute::InReg);
-      DoesNotReturn =
+      setIsInReg(Call.hasRetAttr(Attribute::InReg));
+      setDoesNotReturn(
           Call.doesNotReturn() ||
-          (!isa<InvokeInst>(Call) && isa<UnreachableInst>(Call.getNextNode()));
-      IsVarArg = FTy->isVarArg();
-      IsReturnValueUsed = !Call.use_empty();
-      RetSExt = Call.hasRetAttr(Attribute::SExt);
-      RetZExt = Call.hasRetAttr(Attribute::ZExt);
-      NoMerge = Call.hasFnAttr(Attribute::NoMerge);
+          (!isa<InvokeInst>(Call) && isa<UnreachableInst>(Call.getNextNode())));
+      setIsVarArg(FTy->isVarArg());
+      setIsReturnValueUsed(!Call.use_empty());
+      setRetSExt(Call.hasRetAttr(Attribute::SExt));
+      setRetZExt(Call.hasRetAttr(Attribute::ZExt));
+      setNoMerge(Call.hasFnAttr(Attribute::NoMerge));
 
       Callee = Target;
 
@@ -5129,52 +5149,52 @@ public:
     }
 
     CallLoweringInfo &setInRegister(bool Value = true) {
-      IsInReg = Value;
+      setIsInReg(Value);
       return *this;
     }
 
     CallLoweringInfo &setNoReturn(bool Value = true) {
-      DoesNotReturn = Value;
+      setDoesNotReturn(Value);
       return *this;
     }
 
     CallLoweringInfo &setVarArg(bool Value = true) {
-      IsVarArg = Value;
+      setIsVarArg(Value);
       return *this;
     }
 
     CallLoweringInfo &setTailCall(bool Value = true) {
-      IsTailCall = Value;
+      setIsTailCall(Value);
       return *this;
     }
 
     CallLoweringInfo &setDiscardResult(bool Value = true) {
-      IsReturnValueUsed = !Value;
+      setIsReturnValueUsed(!Value);
       return *this;
     }
 
     CallLoweringInfo &setConvergent(bool Value = true) {
-      IsConvergent = Value;
+      setIsConvergent(Value);
       return *this;
     }
 
     CallLoweringInfo &setSExtResult(bool Value = true) {
-      RetSExt = Value;
+      setRetSExt(Value);
       return *this;
     }
 
     CallLoweringInfo &setZExtResult(bool Value = true) {
-      RetZExt = Value;
+      setRetZExt(Value);
       return *this;
     }
 
     CallLoweringInfo &setIsPatchPoint(bool Value = true) {
-      IsPatchPoint = Value;
+      setIsPatchPointFlag(Value);
       return *this;
     }
 
     CallLoweringInfo &setIsPreallocated(bool Value = true) {
-      IsPreallocated = Value;
+      setIsPreallocatedFlag(Value);
       return *this;
     }
 
@@ -5184,7 +5204,7 @@ public:
     }
 
     CallLoweringInfo &setIsPostTypeLegalization(bool Value=true) {
-      IsPostTypeLegalization = Value;
+      setIsPostTypeLegalizationFlag(Value);
       return *this;
     }
 
@@ -5285,10 +5305,10 @@ public:
   /// described by the Outs array can fit into the return registers.  If false
   /// is returned, an sret-demotion is performed.
   virtual bool CanLowerReturn(CallingConv::ID /*CallConv*/,
-                              MachineFunction &/*MF*/, bool /*isVarArg*/,
-               const SmallVectorImpl<ISD::OutputArg> &/*Outs*/,
-               LLVMContext &/*Context*/, const Type *RetTy) const
-  {
+                              MachineFunction & /*MF*/, bool /*isVarArg*/,
+                              llvm::ArrayRef<ISD::OutputArg> /*Outs*/,
+                              LLVMContext & /*Context*/,
+                              const Type *RetTy) const {
     // Return true by default to get preexisting behavior.
     return true;
   }
@@ -5302,7 +5322,7 @@ public:
   /// return the resulting token chain value.
   virtual SDValue LowerReturn(SDValue /*Chain*/, CallingConv::ID /*CallConv*/,
                               bool /*isVarArg*/,
-                              const SmallVectorImpl<ISD::OutputArg> & /*Outs*/,
+                              llvm::ArrayRef<ISD::OutputArg> /*Outs*/,
                               const SmallVectorImpl<SDValue> & /*OutVals*/,
                               const SDLoc & /*dl*/,
                               SelectionDAG & /*DAG*/) const {

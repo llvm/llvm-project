@@ -514,9 +514,9 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 
     Info.PtrVal = Inst->getArgOperand(0);
     Info.Ordering = static_cast<AtomicOrdering>(OrderingVal);
-    Info.ReadMem = true;
-    Info.WriteMem = true;
-    Info.IsVolatile = !Volatile->isZero();
+    Info.setReadMem(true);
+    Info.setWriteMem(true);
+    Info.setIsVolatile(!Volatile->isZero());
     return true;
   }
   default:

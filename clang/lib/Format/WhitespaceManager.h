@@ -17,6 +17,7 @@
 
 #include "TokenAnnotator.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 namespace format {
@@ -36,9 +37,10 @@ class WhitespaceManager {
 public:
   WhitespaceManager(const SourceManager &SourceMgr, const FormatStyle &Style,
                     bool UseCRLF)
-      : SourceMgr(SourceMgr), Style(Style), UseCRLF(UseCRLF) {}
+      : Changes(decltype(this->Changes)::withFlags(unsigned(UseCRLF))),
+        SourceMgr(SourceMgr), Style(Style) {}
 
-  bool useCRLF() const { return UseCRLF; }
+  bool useCRLF() const { return getUseCRLF(); }
 
   /// Infers whether the input is using CRLF.
   static bool inputUsesCRLF(StringRef Text, bool DefaultToCRLF);
@@ -375,11 +377,12 @@ private:
   unsigned appendTabIndent(std::string &Text, unsigned Spaces,
                            unsigned Indentation);
 
-  SmallVector<Change, 16> Changes;
+  llvm::SmallVectorWithFlags<Change, 16> Changes;
   const SourceManager &SourceMgr;
   tooling::Replacements Replaces;
   const FormatStyle &Style;
-  bool UseCRLF;
+  bool getUseCRLF() const { return Changes.getFlag(0); }
+  void setUseCRLF(bool Value) { Changes.setFlag(0, Value); }
 };
 
 } // namespace format

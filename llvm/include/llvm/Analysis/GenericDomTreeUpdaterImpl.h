@@ -39,7 +39,7 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::recalculate(
   // Lazy UpdateStrategy so we recalculate available trees immediately.
 
   // Prevent forceFlushDeletedBB() from erasing DomTree or PostDomTree nodes.
-  IsRecalculatingDomTree = IsRecalculatingPostDomTree = true;
+  PendUpdates.setFlags(3);
 
   // Because all trees are going to be up-to-date after recalculation,
   // flush awaiting deleted BasicBlocks.
@@ -50,7 +50,7 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::recalculate(
     PDT->recalculate(F);
 
   // Resume forceFlushDeletedBB() to erase DomTree or PostDomTree nodes.
-  IsRecalculatingDomTree = IsRecalculatingPostDomTree = false;
+  PendUpdates.setFlags(0);
   PendDTUpdateIndex = PendPDTUpdateIndex = PendUpdates.size();
   dropOutOfDateUpdates();
 }
@@ -330,11 +330,11 @@ bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::isUpdateValid(
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::eraseDelBBNode(
     BasicBlockT *DelBB) {
-  if (DT && !IsRecalculatingDomTree)
+  if (DT && !isRecalculatingDomTree())
     if (DT->getNode(DelBB))
       DT->eraseNode(DelBB);
 
-  if (PDT && !IsRecalculatingPostDomTree)
+  if (PDT && !isRecalculatingPostDomTree())
     if (PDT->getNode(DelBB))
       PDT->eraseNode(DelBB);
 }

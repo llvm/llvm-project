@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -2537,10 +2538,10 @@ class JoinVals {
 
   /// This is true when joining sub register ranges, false when joining main
   /// ranges.
-  const bool SubRangeJoin;
+  bool getSubRangeJoin() const { return Vals.getFlag(0); }
 
   /// Whether the current LiveInterval tracks subregister liveness.
-  const bool TrackSubRegLiveness;
+  bool getTrackSubRegLiveness() const { return Vals.getFlag(1); }
 
   /// Values that will be present in the final live range.
   SmallVectorImpl<VNInfo *> &NewVNInfo;
@@ -2646,7 +2647,7 @@ private:
   };
 
   /// One entry per value number in LI.
-  SmallVector<Val, 8> Vals;
+  llvm::SmallVectorWithFlags<Val, 8, 2> Vals;
 
   /// Compute the bitmask of lanes actually written by DefMI.
   /// Set Redef if there are any partial register definitions that depend on the
@@ -2710,10 +2711,11 @@ public:
            LiveIntervals *lis, const TargetRegisterInfo *TRI, bool SubRangeJoin,
            bool TrackSubRegLiveness)
       : LR(LR), Reg(Reg), SubIdx(SubIdx), LaneMask(LaneMask),
-        SubRangeJoin(SubRangeJoin), TrackSubRegLiveness(TrackSubRegLiveness),
         NewVNInfo(newVNInfo), CP(cp), LIS(lis), Indexes(LIS->getSlotIndexes()),
         TRI(TRI), Assignments(LR.getNumValNums(), -1),
-        Vals(LR.getNumValNums()) {}
+        Vals(decltype(this->Vals)::withFlags(
+            unsigned(SubRangeJoin) | (unsigned(TrackSubRegLiveness) << 1),
+            LR.getNumValNums())) {}
 
   /// Analyze defs in LR and compute a value mapping in NewVNInfo.
   /// Returns false if any conflicts were impossible to resolve.
@@ -2798,7 +2800,7 @@ JoinVals::followCopyChain(const VNInfo *VNI) const {
     const LiveInterval &LI = LIS->getInterval(SrcReg);
     const VNInfo *ValueIn;
     // No subrange involved.
-    if (!SubRangeJoin || !LI.hasSubRanges()) {
+    if (!getSubRangeJoin() || !LI.hasSubRanges()) {
       LiveQueryResult LRQ = LI.Query(Def);
       ValueIn = LRQ.valueIn();
     } else {
@@ -2872,13 +2874,13 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
   const MachineInstr *DefMI = nullptr;
   if (VNI->isPHIDef()) {
     // Conservatively assume that all lanes in a PHI are valid.
-    LaneBitmask Lanes = SubRangeJoin ? LaneBitmask::getLane(0)
-                                     : TRI->getSubRegIndexLaneMask(SubIdx);
+    LaneBitmask Lanes = getSubRangeJoin() ? LaneBitmask::getLane(0)
+                                          : TRI->getSubRegIndexLaneMask(SubIdx);
     V.ValidLanes = V.WriteLanes = Lanes;
   } else {
     DefMI = Indexes->getInstructionFromIndex(VNI->def);
     assert(DefMI != nullptr);
-    if (SubRangeJoin) {
+    if (getSubRangeJoin()) {
       // We don't care about the lanes when joining subregister ranges.
       V.WriteLanes = V.ValidLanes = LaneBitmask::getLane(0);
       if (DefMI->isImplicitDef()) {
@@ -2906,7 +2908,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
       // not important.
       if (Redef) {
         V.RedefVNI = LR.Query(VNI->def).valueIn();
-        assert((TrackSubRegLiveness || V.RedefVNI) &&
+        assert((getTrackSubRegLiveness() || V.RedefVNI) &&
                "Instruction is reading nonexistent value");
         if (V.RedefVNI != nullptr) {
           computeAssignment(V.RedefVNI->id, Other);
@@ -3052,7 +3054,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
   // The remaining checks apply to the lanes, which aren't tracked here.  This
   // was already decided to be OK via the following CR_Replace condition.
   // CR_Replace.
-  if (SubRangeJoin)
+  if (getSubRangeJoin())
     return CR_Replace;
 
   // If the lanes written by this instruction were all undef in OtherVNI, it is
@@ -3091,7 +3093,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
   if ((TRI->getSubRegIndexLaneMask(Other.SubIdx) & ~V.WriteLanes).none())
     return CR_Impossible;
 
-  if (TrackSubRegLiveness) {
+  if (getTrackSubRegLiveness()) {
     auto &OtherLI = LIS->getInterval(Other.Reg);
     // If OtherVNI does not have subranges, it means all the lanes of OtherVNI
     // share the same live range, so we just need to check whether they have
@@ -3252,7 +3254,7 @@ bool JoinVals::resolveConflicts(JoinVals &Other) {
     LLVM_DEBUG(dbgs() << "\t\tconflict at " << printReg(Reg) << ':' << i << '@'
                       << LR.getValNumInfo(i)->def << ' '
                       << PrintLaneMask(LaneMask) << '\n');
-    if (SubRangeJoin)
+    if (getSubRangeJoin())
       return false;
 
     ++NumLaneConflicts;

@@ -3076,14 +3076,14 @@ bool RAGreedy::run(MachineFunction &mf) {
   initializeCSRCost();
 
   RegCosts = TRI->getRegisterCosts(*MF);
-  RegClassPriorityTrumpsGlobalness =
+  setRegClassPriorityTrumpsGlobalnessFlag(
       GreedyRegClassPriorityTrumpsGlobalness.getNumOccurrences()
           ? GreedyRegClassPriorityTrumpsGlobalness
-          : TRI->regClassPriorityTrumpsGlobalness(*MF);
+          : TRI->regClassPriorityTrumpsGlobalness(*MF));
 
-  ReverseLocalAssignment = GreedyReverseLocalAssignment.getNumOccurrences()
-                               ? GreedyReverseLocalAssignment
-                               : TRI->reverseLocalAssignment();
+  setReverseLocalAssignmentFlag(GreedyReverseLocalAssignment.getNumOccurrences()
+                                    ? GreedyReverseLocalAssignment
+                                    : TRI->reverseLocalAssignment());
 
   ExtraInfo.emplace();
 

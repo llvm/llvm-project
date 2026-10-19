@@ -16,6 +16,7 @@
 #include "ARMBaseInstrInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/Support/DataTypes.h"
 #include <initializer_list>
@@ -44,11 +45,12 @@ public:
 
 // Hazards related to bank conflicts
 class ARMBankConflictHazardRecognizer : public ScheduleHazardRecognizer {
-  SmallVector<MachineInstr *, 8> Accesses;
+  llvm::SmallVectorWithFlags<MachineInstr *, 8> Accesses;
   const MachineFunction &MF;
   const DataLayout &DL;
   int64_t DataMask;
-  bool AssumeITCMBankConflict;
+  bool getAssumeITCMBankConflict() const { return Accesses.getFlag(0); }
+  void setAssumeITCMBankConflict(bool Value) { Accesses.setFlag(0, Value); }
 
 public:
   ARMBankConflictHazardRecognizer(const ScheduleDAG *DAG, int64_t DDM,

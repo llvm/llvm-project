@@ -17,6 +17,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -40,10 +41,11 @@ struct BaseSubobjectInfo {
   const CXXRecordDecl *Class;
 
   /// IsVirtual - Whether the BaseInfo represents a virtual base or not.
-  bool IsVirtual;
+  bool getIsVirtual() const { return Bases.getFlag(0); }
+  void setIsVirtual(bool Value) { Bases.setFlag(0, Value); }
 
   /// Bases - Information about the base subobjects.
-  SmallVector<BaseSubobjectInfo*, 4> Bases;
+  llvm::SmallVectorWithFlags<BaseSubobjectInfo *, 4> Bases;
 
   /// PrimaryVirtualBaseInfo - Holds the base info for the primary virtual base
   /// of this base info (if one exists).
@@ -278,7 +280,7 @@ EmptySubobjectMap::CanPlaceBaseSubobjectAtOffset(const BaseSubobjectInfo *Info,
   // Traverse all non-virtual bases.
   const ASTRecordLayout &Layout = Context.getASTRecordLayout(Info->Class);
   for (const BaseSubobjectInfo *Base : Info->Bases) {
-    if (Base->IsVirtual)
+    if (Base->getIsVirtual())
       continue;
 
     CharUnits BaseOffset = Offset + Layout.getBaseClassOffset(Base->Class);
@@ -326,7 +328,7 @@ void EmptySubobjectMap::UpdateEmptyBaseSubobjects(const BaseSubobjectInfo *Info,
   // Traverse all non-virtual bases.
   const ASTRecordLayout &Layout = Context.getASTRecordLayout(Info->Class);
   for (const BaseSubobjectInfo *Base : Info->Bases) {
-    if (Base->IsVirtual)
+    if (Base->getIsVirtual())
       continue;
 
     CharUnits BaseOffset = Offset + Layout.getBaseClassOffset(Base->Class);
@@ -583,7 +585,7 @@ protected:
   /// \brief The maximum of the alignments of top-level members.
   CharUnits UnadjustedAlignment;
 
-  SmallVector<uint64_t, 16> FieldOffsets;
+  llvm::SmallVectorWithFlags<uint64_t, 16, 4> FieldOffsets;
 
   /// Whether the external AST source has provided a layout for this
   /// record.
@@ -642,20 +644,28 @@ protected:
 
   /// PrimaryBaseIsVirtual - Whether the primary base of the class we're laying
   /// out is virtual.
-  bool PrimaryBaseIsVirtual;
+  bool getPrimaryBaseIsVirtual() const { return FieldOffsets.getFlag(0); }
+  void setPrimaryBaseIsVirtual(bool Value) { FieldOffsets.setFlag(0, Value); }
 
   /// HasOwnVFPtr - Whether the class provides its own vtable/vftbl
   /// pointer, as opposed to inheriting one from a primary base class.
-  bool HasOwnVFPtr;
+  bool getHasOwnVFPtr() const { return FieldOffsets.getFlag(1); }
+  void setHasOwnVFPtr(bool Value) { FieldOffsets.setFlag(1, Value); }
 
   /// the flag of field offset changing due to packed attribute.
-  bool HasPackedField;
+  bool getHasPackedField() const { return FieldOffsets.getFlag(2); }
+  void setHasPackedField(bool Value) { FieldOffsets.setFlag(2, Value); }
 
   /// HandledFirstNonOverlappingEmptyField - An auxiliary field used for AIX.
   /// When there are OverlappingEmptyFields existing in the aggregate, the
   /// flag shows if the following first non-empty or empty-but-non-overlapping
   /// field has been handled, if any.
-  bool HandledFirstNonOverlappingEmptyField;
+  bool getHandledFirstNonOverlappingEmptyField() const {
+    return FieldOffsets.getFlag(3);
+  }
+  void setHandledFirstNonOverlappingEmptyField(bool Value) {
+    FieldOffsets.setFlag(3, Value);
+  }
 
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
 
@@ -695,8 +705,6 @@ protected:
         NonVirtualAlignment(CharUnits::One()),
         PreferredNVAlignment(CharUnits::One()),
         PaddedFieldSize(CharUnits::Zero()), PrimaryBase(nullptr),
-        PrimaryBaseIsVirtual(false), HasOwnVFPtr(false), HasPackedField(false),
-        HandledFirstNonOverlappingEmptyField(false),
         FirstNearlyEmptyVBase(nullptr) {}
 
   void Layout(const RecordDecl *D);
@@ -833,7 +841,7 @@ void ItaniumRecordLayoutBuilder::SelectPrimaryVBase(const CXXRecordDecl *RD) {
       // base.
       if (!IndirectPrimaryBases.count(Base)) {
         PrimaryBase = Base;
-        PrimaryBaseIsVirtual = true;
+        setPrimaryBaseIsVirtual(true);
         return;
       }
 
@@ -871,7 +879,7 @@ void ItaniumRecordLayoutBuilder::DeterminePrimaryBase(const CXXRecordDecl *RD) {
     if (Base->isDynamicClass()) {
       // We found it.
       PrimaryBase = Base;
-      PrimaryBaseIsVirtual = false;
+      setPrimaryBaseIsVirtual(false);
       return;
     }
   }
@@ -889,7 +897,7 @@ void ItaniumRecordLayoutBuilder::DeterminePrimaryBase(const CXXRecordDecl *RD) {
   // Otherwise, it is the first indirect primary base class, if one exists.
   if (FirstNearlyEmptyVBase) {
     PrimaryBase = FirstNearlyEmptyVBase;
-    PrimaryBaseIsVirtual = true;
+    setPrimaryBaseIsVirtual(true);
     return;
   }
 
@@ -916,7 +924,7 @@ BaseSubobjectInfo *ItaniumRecordLayoutBuilder::ComputeBaseSubobjectInfo(
   }
 
   Info->Class = RD;
-  Info->IsVirtual = IsVirtual;
+  Info->setIsVirtual(IsVirtual);
   Info->Derived = nullptr;
   Info->PrimaryVirtualBaseInfo = nullptr;
 
@@ -1024,7 +1032,7 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBases(
 
   // If we have a primary base class, lay it out.
   if (PrimaryBase) {
-    if (PrimaryBaseIsVirtual) {
+    if (getPrimaryBaseIsVirtual()) {
       // If the primary virtual base was a primary virtual base of some other
       // base class we'll have to steal it.
       BaseSubobjectInfo *PrimaryBaseInfo = VirtualBaseInfo.lookup(PrimaryBase);
@@ -1056,10 +1064,10 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBases(
     CharUnits PtrAlign = Context.toCharUnitsFromBits(
         Context.getTargetInfo().getPointerAlign(LangAS::Default));
     EnsureVTablePointerAlignment(PtrAlign);
-    HasOwnVFPtr = true;
+    setHasOwnVFPtr(true);
 
     assert(!IsUnion && "Unions cannot be dynamic classes.");
-    HandledFirstNonOverlappingEmptyField = true;
+    setHandledFirstNonOverlappingEmptyField(true);
 
     setSize(getSize() + PtrWidth);
     setDataSize(getSize());
@@ -1077,7 +1085,7 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBases(
     // Skip the primary base, because we've already laid it out.  The
     // !PrimaryBaseIsVirtual check is required because we might have a
     // non-virtual base of the same type as a primary virtual base.
-    if (BaseDecl == PrimaryBase && !PrimaryBaseIsVirtual)
+    if (BaseDecl == PrimaryBase && !getPrimaryBaseIsVirtual())
       continue;
 
     // Lay out the base.
@@ -1108,7 +1116,7 @@ void ItaniumRecordLayoutBuilder::AddPrimaryVirtualBaseOffsets(
 
   // First, check if we have a virtual primary base to add offsets for.
   if (Info->PrimaryVirtualBaseInfo) {
-    assert(Info->PrimaryVirtualBaseInfo->IsVirtual &&
+    assert(Info->PrimaryVirtualBaseInfo->getIsVirtual() &&
            "Primary virtual base is not virtual!");
     if (Info->PrimaryVirtualBaseInfo->Derived == Info) {
       // Add the offset.
@@ -1125,7 +1133,7 @@ void ItaniumRecordLayoutBuilder::AddPrimaryVirtualBaseOffsets(
   // Now go through all direct non-virtual bases.
   const ASTRecordLayout &Layout = Context.getASTRecordLayout(Info->Class);
   for (const BaseSubobjectInfo *Base : Info->Bases) {
-    if (Base->IsVirtual)
+    if (Base->getIsVirtual())
       continue;
 
     CharUnits BaseOffset = Offset + Layout.getBaseClassOffset(Base->Class);
@@ -1140,7 +1148,7 @@ void ItaniumRecordLayoutBuilder::LayoutVirtualBases(
 
   if (MostDerivedClass == RD) {
     PrimaryBase = this->PrimaryBase;
-    PrimaryBaseIsVirtual = this->PrimaryBaseIsVirtual;
+    PrimaryBaseIsVirtual = this->getPrimaryBaseIsVirtual();
   } else {
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     PrimaryBase = Layout.getPrimaryBase();
@@ -1204,7 +1212,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   // Query the external layout to see if it provides an offset.
   bool HasExternalLayout = false;
   if (UseExternalLayout) {
-    if (Base->IsVirtual)
+    if (Base->getIsVirtual())
       HasExternalLayout = External.getExternalVBaseOffset(Base->Class, Offset);
     else
       HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
@@ -1235,10 +1243,10 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     // non-union classes if the source of the alignment (the current base in
     // this context) follows introduction of the first subobject with
     // exclusively allocated space or zero-extent array.
-    if (!Base->Class->isEmpty() && !HandledFirstNonOverlappingEmptyField) {
+    if (!Base->Class->isEmpty() && !getHandledFirstNonOverlappingEmptyField()) {
       // By handling a base class that is not empty, we're handling the
       // "first (inherited) member".
-      HandledFirstNonOverlappingEmptyField = true;
+      setHandledFirstNonOverlappingEmptyField(true);
     } else if (!IsNaturalAlign) {
       UnpackedPreferredBaseAlign = UnpackedBaseAlign;
       PreferredBaseAlign = BaseAlign;
@@ -1341,8 +1349,8 @@ void ItaniumRecordLayoutBuilder::InitializeLayout(const Decl *D) {
       UpdateAlignment(Context.toCharUnitsFromBits(MaxAlign));
   }
 
-  HandledFirstNonOverlappingEmptyField =
-      !Context.getTargetInfo().defaultsToAIXPowerAlignment() || IsNaturalAlign;
+  setHandledFirstNonOverlappingEmptyField(
+      !Context.getTargetInfo().defaultsToAIXPowerAlignment() || IsNaturalAlign);
 
   // If there is an external AST source, ask it for the various offsets.
   if (const RecordDecl *RD = dyn_cast<RecordDecl>(D))
@@ -1859,7 +1867,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   const bool DefaultsToAIXPowerAlignment =
       Context.getTargetInfo().defaultsToAIXPowerAlignment();
   bool FoundFirstNonOverlappingEmptyFieldForAIX = false;
-  if (DefaultsToAIXPowerAlignment && !HandledFirstNonOverlappingEmptyField) {
+  if (DefaultsToAIXPowerAlignment &&
+      !getHandledFirstNonOverlappingEmptyField()) {
     assert(FieldOffset == CharUnits::Zero() &&
            "The first non-overlapping empty field should have been handled.");
 
@@ -1871,7 +1880,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       // invocation of this function; record it as handled for future
       // invocations (except for unions, because the current field does not
       // represent all "firsts").
-      HandledFirstNonOverlappingEmptyField = !IsUnion;
+      setHandledFirstNonOverlappingEmptyField(!IsUnion);
     }
   }
 
@@ -2202,7 +2211,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
     // attribute on such a type does allow the type to be packed into other
     // structures that use the packed attribute.
     if (Packed && UnpackedAlignment <= Alignment &&
-        UnpackedSizeInBits == getSizeInBits() && !HasPackedField &&
+        UnpackedSizeInBits == getSizeInBits() && !getHasPackedField() &&
         (!CXXRD || CXXRD->isPOD() ||
          Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver15)))
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
@@ -2320,7 +2329,7 @@ void ItaniumRecordLayoutBuilder::CheckFieldPadding(
     unsigned UnpackedAlign, bool isPacked, const FieldDecl *D) {
   ::CheckFieldPadding(Context, IsUnion, Offset, UnpaddedOffset, D);
   if (isPacked && Offset != UnpackedOffset) {
-    HasPackedField = true;
+    setHasPackedField(true);
   }
 }
 
@@ -3518,13 +3527,13 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.PreferredAlignment, Builder.UnadjustedAlignment,
           /*RequiredAlignment : used by MS-ABI)*/
           Builder.Alignment, /*PragmaPackResistantAlignment=*/CharUnits::Zero(),
-          Builder.HasOwnVFPtr, RD->isDynamicClass(),
+          Builder.getHasOwnVFPtr(), RD->isDynamicClass(),
           CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets,
           NonVirtualSize, Builder.NonVirtualAlignment,
           Builder.PreferredNVAlignment, Builder.NonVirtualAlignment,
           EmptySubobjects.SizeOfLargestEmptySubobject, Builder.PrimaryBase,
-          Builder.PrimaryBaseIsVirtual, nullptr, false, false, Builder.Bases,
-          Builder.VBases);
+          Builder.getPrimaryBaseIsVirtual(), nullptr, false, false,
+          Builder.Bases, Builder.VBases);
     } else {
       ItaniumRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.Layout(D);

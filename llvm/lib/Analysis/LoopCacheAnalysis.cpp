@@ -27,6 +27,7 @@
 
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -127,7 +128,7 @@ static const SCEV *computeTripCount(const Loop &L, const SCEV &ElemSize,
 // IndexedReference implementation
 //
 raw_ostream &llvm::operator<<(raw_ostream &OS, const IndexedReference &R) {
-  if (!R.IsValid) {
+  if (!R.getIsValid()) {
     OS << R.StoreOrLoadInst;
     OS << ", IsValid=false.";
     return OS;
@@ -150,8 +151,8 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
   assert((isa<StoreInst>(StoreOrLoadInst) || isa<LoadInst>(StoreOrLoadInst)) &&
          "Expecting a load or store instruction");
 
-  IsValid = delinearize(LI);
-  if (IsValid)
+  setIsValid(delinearize(LI));
+  if (getIsValid())
     LLVM_DEBUG(dbgs().indent(2) << "Succesfully delinearized: " << *this
                                 << "\n");
 }
@@ -159,7 +160,7 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
 std::optional<bool>
 IndexedReference::hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
                                   AAResults &AA) const {
-  assert(IsValid && "Expecting a valid reference");
+  assert(getIsValid() && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
     LLVM_DEBUG(dbgs().indent(2)
@@ -215,7 +216,7 @@ std::optional<bool>
 IndexedReference::hasTemporalReuse(const IndexedReference &Other,
                                    unsigned MaxDistance, const Loop &L,
                                    DependenceInfo &DI, AAResults &AA) const {
-  assert(IsValid && "Expecting a valid reference");
+  assert(getIsValid() && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
     LLVM_DEBUG(dbgs().indent(2)
@@ -271,7 +272,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
 
 CacheCostTy IndexedReference::computeRefCost(const Loop &L,
                                              unsigned CLS) const {
-  assert(IsValid && "Expecting a valid reference");
+  assert(getIsValid() && "Expecting a valid reference");
   LLVM_DEBUG({
     dbgs().indent(2) << "Computing cache cost for:\n";
     dbgs().indent(4) << *this << "\n";
@@ -361,12 +362,16 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
 bool IndexedReference::delinearize(const LoopInfo &LI) {
   assert(Subscripts.empty() && "Subscripts should be empty");
   assert(Sizes.empty() && "Sizes should be empty");
-  assert(!IsValid && "Should be called once from the constructor");
+  assert(!getIsValid() && "Should be called once from the constructor");
   LLVM_DEBUG(dbgs() << "Delinearizing: " << StoreOrLoadInst << "\n");
 
   const SCEV *ElemSize = SE.getElementSize(&StoreOrLoadInst);
   const BasicBlock *BB = StoreOrLoadInst.getParent();
 
+  SmallVector<const SCEV *, 3> DimensionSizes;
+  DimensionSizes = std::move(Sizes);
+  auto RestoreSizes =
+      scope_exit([&] { Sizes.assign(std::move(DimensionSizes)); });
   if (Loop *L = LI.getLoopFor(BB)) {
     const SCEV *AccessFn =
         SE.getSCEVAtScope(getPointerOperand(&StoreOrLoadInst), L);
@@ -383,7 +388,8 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
 
     // Try to delinearize fixed-size arrays.
-    if (delinearizeFixedSizeArray(SE, AccessFn, Subscripts, Sizes, ElemSize)) {
+    if (delinearizeFixedSizeArray(SE, AccessFn, Subscripts, DimensionSizes,
+                                  ElemSize)) {
       IsFixedSize = true;
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
@@ -393,20 +399,20 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     if (!IsFixedSize) {
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
-      Sizes.clear();
-      llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
+      DimensionSizes.clear();
+      llvm::delinearize(SE, AccessFn, Subscripts, DimensionSizes,
                         SE.getElementSize(&StoreOrLoadInst));
     }
 
-    if (Subscripts.empty() || Sizes.empty() ||
-        Subscripts.size() != Sizes.size()) {
+    if (Subscripts.empty() || DimensionSizes.empty() ||
+        Subscripts.size() != DimensionSizes.size()) {
       // Attempt to determine whether we have a single dimensional array access.
       // before giving up.
       if (!isOneDimensionalArray(*AccessFn, *ElemSize, *L, SE)) {
         LLVM_DEBUG(dbgs().indent(2)
                    << "ERROR: failed to delinearize reference\n");
         Subscripts.clear();
-        Sizes.clear();
+        DimensionSizes.clear();
         return false;
       }
 
@@ -424,7 +430,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
                                     AccessFnAR->getLoop(), SCEVFlags::FlagNone);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
-      Sizes.push_back(ElemSize);
+      DimensionSizes.push_back(ElemSize);
     }
 
     return all_of(Subscripts, [&](const SCEV *Subscript) {

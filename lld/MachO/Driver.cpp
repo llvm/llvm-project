@@ -580,11 +580,11 @@ static DenseSet<StringRef> loadedObjectFrameworks;
 static void applyDylibMetadata(InputFile *file, bool isNeeded, bool isWeak,
                                bool isReexport) {
   if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
-    dylibFile->forceNeeded |= isNeeded;
-    dylibFile->forceWeakImport |= isWeak;
+    dylibFile->setForceNeeded(dylibFile->getForceNeeded() | (isNeeded));
+    dylibFile->setForceWeakImport(dylibFile->getForceWeakImport() | (isWeak));
     if (isReexport) {
       config->hasReexports = true;
-      dylibFile->reexport = true;
+      dylibFile->setReexport(true);
     }
   }
 }
@@ -661,7 +661,7 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
 void macho::parseLCLinkerOption(
     llvm::SmallVectorImpl<StringRef> &LCLinkerOptions, InputFile *f,
     unsigned argc, StringRef data) {
-  if (config->ignoreAutoLink)
+  if (config->getIgnoreAutoLink())
     return;
 
   SmallVector<StringRef, 4> argv;
@@ -766,7 +766,7 @@ static bool markReexport(StringRef searchName, ArrayRef<StringRef> extensions) {
       StringRef filename = path::filename(dylibFile->getName());
       if (filename.consume_front(searchName) &&
           (filename.empty() || llvm::is_contained(extensions, filename))) {
-        dylibFile->reexport = true;
+        dylibFile->setReexport(true);
         return true;
       }
     }
@@ -1679,7 +1679,7 @@ static void createAliases() {
 
 static void handleExplicitExports() {
   static constexpr int kMaxWarnings = 3;
-  if (config->hasExplicitExports) {
+  if (config->getHasExplicitExports()) {
     std::atomic<uint64_t> warningsCount{0};
     parallelForEach(symtab->getSymbols(), [&warningsCount](Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym)) {
@@ -1732,7 +1732,7 @@ static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
     StringRef val = arg->getValue();
     if (seen.insert(val).second)
       vals.push_back(val);
-    else if (config->warnDuplicateRpath)
+    else if (config->getWarnDuplicateRpath())
       warn("duplicate -rpath '" + val + "' ignored [--warn-duplicate-rpath]");
   }
   return vals;
@@ -1957,7 +1957,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->omitDebugInfo = args.hasArg(OPT_S);
-  config->errorForArchMismatch = args.hasArg(OPT_arch_errors_fatal);
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_arch_errors_fatal);
+    return config->setErrorForArchMismatch(PackedFlagValue);
+  }();
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
@@ -2009,10 +2012,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
           "--thinlto-index-only=");
   }
-  config->warnDuplicateRpath =
-      args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
-  config->runtimePaths = getRuntimePaths(args);
-  config->allowableClients = getAllowableClients(args);
+  [&] {
+    auto PackedFlagValue = args.hasFlag(OPT_warn_duplicate_rpath,
+                                        OPT_no_warn_duplicate_rpath, true);
+    return config->setWarnDuplicateRpath(PackedFlagValue);
+  }();
+  config->runtimePaths.assign(getRuntimePaths(args));
+  config->allowableClients.assign(getAllowableClients(args));
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -2032,7 +2038,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
-  config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_keep_icf_stabs);
+    return config->setKeepICFStabs(PackedFlagValue);
+  }();
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
@@ -2043,21 +2052,41 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
-  config->callGraphProfileSort = args.hasFlag(
-      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
+  [&] {
+    auto PackedFlagValue = args.hasFlag(OPT_call_graph_profile_sort,
+                                        OPT_no_call_graph_profile_sort, true);
+    return config->setCallGraphProfileSort(PackedFlagValue);
+  }();
   config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order_eq);
-  config->forceExactCpuSubtypeMatch =
-      getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
+  [&] {
+    auto PackedFlagValue = getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
+    return config->setForceExactCpuSubtypeMatch(PackedFlagValue);
+  }();
   config->objcStubsMode = getObjCStubsMode(args);
-  config->ignoreAutoLink = args.hasArg(OPT_ignore_auto_link);
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_ignore_auto_link);
+    return config->setIgnoreAutoLink(PackedFlagValue);
+  }();
   for (const Arg *arg : args.filtered(OPT_ignore_auto_link_option))
     config->ignoreAutoLinkOptions.insert(arg->getValue());
-  config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
-  config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
-  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_strict_auto_link);
+    return config->setStrictAutoLink(PackedFlagValue);
+  }();
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_lto_debug_pass_manager);
+    return config->setLtoDebugPassManager(PackedFlagValue);
+  }();
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_lto_emit_llvm);
+    return config->setEmitLLVM(PackedFlagValue);
+  }();
   config->codegenDataGeneratePath =
       args.getLastArgValue(OPT_codegen_data_generate_path);
-  config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_cs_profile_generate);
+    return config->setCsProfileGenerate(PackedFlagValue);
+  }();
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
@@ -2067,13 +2096,22 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnMissingSubsectionsViaSymbols =
       args.hasFlag(OPT_warn_missing_subsections_via_symbols,
                    OPT_no_warn_missing_subsections_via_symbols, false);
-  config->generateUuid = !args.hasArg(OPT_no_uuid);
+  [&] {
+    auto PackedFlagValue = !args.hasArg(OPT_no_uuid);
+    return config->setGenerateUuid(PackedFlagValue);
+  }();
   config->disableVerify = args.hasArg(OPT_disable_verify);
-  config->separateCstringLiteralSections =
-      args.hasFlag(OPT_separate_cstring_literal_sections,
-                   OPT_no_separate_cstring_literal_sections, false);
-  config->tailMergeStrings =
-      args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
+  [&] {
+    auto PackedFlagValue =
+        args.hasFlag(OPT_separate_cstring_literal_sections,
+                     OPT_no_separate_cstring_literal_sections, false);
+    return config->setSeparateCstringLiteralSections(PackedFlagValue);
+  }();
+  [&] {
+    auto PackedFlagValue =
+        args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
+    return config->setTailMergeStrings(PackedFlagValue);
+  }();
   if (auto *arg = args.getLastArg(OPT_slop_scale_eq)) {
     StringRef v(arg->getValue());
     unsigned slop = 0;
@@ -2085,7 +2123,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified
-    if (config->callGraphProfileSort)
+    if (config->getCallGraphProfileSort())
       if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
         error(firstArgStr + " is incompatible with " + arg->getSpelling());
   };
@@ -2098,27 +2136,30 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
     config->irpgoProfilePath = arg->getValue();
-    config->bpStartupFunctionSort = true;
+    config->setBpStartupFunctionSort(true);
     IncompatWithCGSort(arg->getSpelling());
   }
-  config->bpCompressionSortStartupFunctions =
-      args.hasFlag(OPT_bp_compression_sort_startup_functions,
-                   OPT_no_bp_compression_sort_startup_functions, false);
+  [&] {
+    auto PackedFlagValue =
+        args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                     OPT_no_bp_compression_sort_startup_functions, false);
+    return config->setBpCompressionSortStartupFunctions(PackedFlagValue);
+  }();
   if (const Arg *arg = args.getLastArg(OPT_bp_startup_sort)) {
     StringRef startupSortStr = arg->getValue();
     if (startupSortStr == "function") {
-      config->bpStartupFunctionSort = true;
+      config->setBpStartupFunctionSort(true);
     } else if (startupSortStr != "none") {
       error("unknown value `" + startupSortStr + "` for " + arg->getSpelling());
     }
     if (startupSortStr != "none")
       IncompatWithCGSort(arg->getSpelling());
   }
-  if (!config->bpStartupFunctionSort &&
-      config->bpCompressionSortStartupFunctions)
+  if (!config->getBpStartupFunctionSort() &&
+      config->getBpCompressionSortStartupFunctions())
     error("--bp-compression-sort-startup-functions must be used with "
           "--bp-startup-sort=function");
-  if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
+  if (config->irpgoProfilePath.empty() && config->getBpStartupFunctionSort())
     error("--bp-startup-sort=function must be used with "
           "--irpgo-profile");
   auto addCompressionSortSpec = [&](StringRef value) {
@@ -2168,12 +2209,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
-      config->bpFunctionOrderForCompression = true;
+      config->setBpFunctionOrderForCompression(true);
     } else if (compressionSortStr == "data") {
-      config->bpDataOrderForCompression = true;
+      config->setBpDataOrderForCompression(true);
     } else if (compressionSortStr == "both") {
-      config->bpFunctionOrderForCompression = true;
-      config->bpDataOrderForCompression = true;
+      config->setBpFunctionOrderForCompression(true);
+      config->setBpDataOrderForCompression(true);
     } else if (compressionSortStr != "none") {
       error("unknown value `" + compressionSortStr + "` for " +
             arg->getSpelling());
@@ -2181,7 +2222,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (compressionSortStr != "none")
       IncompatWithCGSort(arg->getSpelling());
   }
-  config->bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+  [&] {
+    auto PackedFlagValue = args.hasArg(OPT_verbose_bp_section_orderer);
+    return config->setBpVerboseSectionOrderer(PackedFlagValue);
+  }();
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -2189,9 +2233,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
 
   if (const char *zero = getenv("ZERO_AR_DATE"))
-    config->zeroModTime = strcmp(zero, "0") != 0;
+    [&] {
+      auto PackedFlagValue = strcmp(zero, "0") != 0;
+      return config->setZeroModTime(PackedFlagValue);
+    }();
   if (args.getLastArg(OPT_reproducible))
-    config->zeroModTime = true;
+    config->setZeroModTime(true);
 
   std::array<PlatformType, 4> encryptablePlatforms{
       PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS, PLATFORM_XROS};
@@ -2304,14 +2351,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->segmentProtections.push_back({segName, maxProt, initProt});
   }
 
-  config->hasExplicitExports =
-      args.hasArg(OPT_no_exported_symbols) ||
-      args.hasArgNoClaim(OPT_exported_symbol, OPT_exported_symbols_list);
+  [&] {
+    auto PackedFlagValue =
+        args.hasArg(OPT_no_exported_symbols) ||
+        args.hasArgNoClaim(OPT_exported_symbol, OPT_exported_symbols_list);
+    return config->setHasExplicitExports(PackedFlagValue);
+  }();
   handleSymbolPatterns(args, config->exportedSymbols, OPT_exported_symbol,
                        OPT_exported_symbols_list);
   handleSymbolPatterns(args, config->unexportedSymbols, OPT_unexported_symbol,
                        OPT_unexported_symbols_list);
-  if (config->hasExplicitExports && !config->unexportedSymbols.empty())
+  if (config->getHasExplicitExports() && !config->unexportedSymbols.empty())
     error("cannot use both -exported_symbol* and -unexported_symbol* options");
 
   if (args.hasArg(OPT_no_exported_symbols) && !config->exportedSymbols.empty())
@@ -2439,7 +2489,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       config->mllvmOpts.emplace_back(arg->getValue());
     }
 
-    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+    config->passPlugins.assign(args::getStrings(args, OPT_load_pass_plugins));
 
     createSyntheticSections();
     createSyntheticSymbols();
@@ -2458,7 +2508,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // If either --thinlto-index-only or --lto-emit-llvm is given, we should
     // not create object files. Index file creation is already done in
     // compileBitcodeFiles, so we are done if that's the case.
-    if (config->thinLTOIndexOnly || config->emitLLVM)
+    if (config->thinLTOIndexOnly || config->getEmitLLVM())
       return errorCount() == 0;
 
     // LTO may emit a non-hidden (extern) object file symbol even if the
@@ -2500,7 +2550,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (!config->codegenDataGeneratePath.empty())
       codegenDataGenerate();
 
-    if (config->callGraphProfileSort)
+    if (config->getCallGraphProfileSort())
       priorityBuilder.extractCallGraphProfile();
 
     if (config->deadStrip)
@@ -2554,7 +2604,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     timeTraceProfilerCleanup();
   }
 
-  if (errorCount() != 0 || config->strictAutoLink)
+  if (errorCount() != 0 || config->getStrictAutoLink())
     for (const auto &warning : missingAutolinkWarnings)
       warn(warning);
 

@@ -127,7 +127,7 @@ getCustomCoders(ArrayRef<const Init *> Args) {
 }
 
 VarLenInst::VarLenInst(const DagInit *DI, const RecordVal *TheDef)
-    : TheDef(TheDef), NumBits(0U), HasDynamicSegment(false) {
+    : TheDef(TheDef), NumBits(0U) {
   buildRec(DI);
   for (const auto &S : Segments)
     NumBits += S.BitWidth;
@@ -168,7 +168,7 @@ void VarLenInst::buildRec(const DagInit *DI) {
     if (DI->getNumArgs() < 2)
       PrintFatalError(TheDef->getLoc(),
                       "Expecting at least 2 arguments for `operand`");
-    HasDynamicSegment = true;
+    setHasDynamicSegment(true);
     const Init *OperandName = DI->getArg(0), *NumBits = DI->getArg(1);
     if (!isa<StringInit>(OperandName) || !isa<IntInit>(NumBits))
       PrintFatalError(TheDef->getLoc(), "Invalid argument types for `operand`");
@@ -187,7 +187,7 @@ void VarLenInst::buildRec(const DagInit *DI) {
     if (DI->getNumArgs() < 3)
       PrintFatalError(TheDef->getLoc(),
                       "Expecting at least 3 arguments for `slice`");
-    HasDynamicSegment = true;
+    setHasDynamicSegment(true);
     const Init *OperandName = DI->getArg(0), *HiBit = DI->getArg(1),
                *LoBit = DI->getArg(2);
     if (!isa<StringInit>(OperandName) || !isa<IntInit>(HiBit) ||

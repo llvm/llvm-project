@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <tuple>
@@ -57,10 +58,9 @@ private:
   SmallVector<AnalysisID, 8> Required;
   SmallVector<AnalysisID, 2> RequiredTransitive;
   SmallVector<AnalysisID, 2> Preserved;
-  SmallVector<AnalysisID, 0> Used;
-  bool PreservesAll = false;
-
-  void pushUnique(VectorType &Set, AnalysisID ID) {
+  /// Flag bit 0 records whether all analyses are preserved.
+  SmallVectorWithFlags<AnalysisID, 0> Used;
+  template <typename VectorT> void pushUnique(VectorT &Set, AnalysisID ID) {
     if (!llvm::is_contained(Set, ID))
       Set.push_back(ID);
   }
@@ -128,10 +128,10 @@ public:
   LLVM_ABI AnalysisUsage &addPreserved(StringRef Arg);
 
   /// Set by analyses that do not transform their input at all
-  void setPreservesAll() { PreservesAll = true; }
+  void setPreservesAll() { Used.setFlag(0, true); }
 
   /// Determine whether a pass said it does not transform its input at all
-  bool getPreservesAll() const { return PreservesAll; }
+  bool getPreservesAll() const { return Used.getFlag(0); }
 
   /// This function should be called by the pass, iff they do not:
   ///
@@ -147,7 +147,7 @@ public:
     return RequiredTransitive;
   }
   const VectorType &getPreservedSet() const { return Preserved; }
-  const VectorType &getUsedSet() const { return Used; }
+  ArrayRef<AnalysisID> getUsedSet() const { return Used; }
 };
 
 //===----------------------------------------------------------------------===//

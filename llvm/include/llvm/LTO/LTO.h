@@ -15,6 +15,7 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Compiler.h"
@@ -122,7 +123,7 @@ private:
   InputFile() = default;
 
   std::vector<BitcodeModule> Mods;
-  SmallVector<char, 0> Strtab;
+  llvm::SmallVectorWithFlags<char, 0, 3> Strtab;
   std::vector<Symbol> Symbols;
 
   // [begin, end) for each module
@@ -133,14 +134,17 @@ private:
   std::vector<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable;
 
   MemoryBufferRef MbRef;
-  bool IsFatLTOObject = false;
+  bool getIsFatLTOObject() const { return Strtab.getFlag(0); }
+  void setIsFatLTOObject(bool Value) { Strtab.setFlag(0, Value); }
   // For distributed compilation, each input must exist as an individual
   // bitcode file on disk identified by its ModuleID. For archive members and
   // FatLTO objects, the input bitcode is a sub-section of a larger file. In
   // these cases we flag that the bitcode must be written to a temporary
   // standalone file. Effectively, extracted from its container.
-  bool ExtractForDistribution = false;
-  bool IsThinLTO = false;
+  bool getExtractForDistributionFlag() const { return Strtab.getFlag(1); }
+  void setExtractForDistributionFlag(bool Value) { Strtab.setFlag(1, Value); }
+  bool getIsThinLTO() const { return Strtab.getFlag(2); }
+  void setIsThinLTO(bool Value) { Strtab.setFlag(2, Value); }
   StringRef ArchivePath;
   StringRef MemberName;
 
@@ -215,17 +219,21 @@ public:
   MemoryBufferRef getFileBuffer() const { return MbRef; }
   // Returns true if this input should be extracted to disk for distribution.
   // See the comment on ExtractForDistribution for details.
-  bool getExtractForDistribution() const { return ExtractForDistribution; }
+  bool getExtractForDistribution() const {
+    return getExtractForDistributionFlag();
+  }
   // Mark whether this input should be extracted to disk for distribution.
   // See the comment on ExtractForDistribution for details.
-  void setExtractForDistribution(bool EFD) { ExtractForDistribution = EFD; }
+  void setExtractForDistribution(bool EFD) {
+    setExtractForDistributionFlag(EFD);
+  }
   // Returns true if this bitcode came from a FatLTO object.
-  bool isFatLTOObject() const { return IsFatLTOObject; }
+  bool isFatLTOObject() const { return getIsFatLTOObject(); }
   // Mark this bitcode as coming from a FatLTO object.
-  void fatLTOObject(bool FO) { IsFatLTOObject = FO; }
+  void fatLTOObject(bool FO) { setIsFatLTOObject(FO); }
 
   // Returns true if bitcode is ThinLTO.
-  bool isThinLTO() const { return IsThinLTO; }
+  bool isThinLTO() const { return getIsThinLTO(); }
 
   // Store an archive path and a member name.
   void setArchivePathAndName(StringRef Path, StringRef Name) {
@@ -640,7 +648,10 @@ private:
 
   Error checkPartiallySplit();
 
-  mutable bool CalledGetMaxTasks = false;
+  bool getCalledGetMaxTasks() const { return BitcodeLibFuncs.getFlag(0); }
+  void setCalledGetMaxTasks(bool Value) const {
+    BitcodeLibFuncs.setFlag(0, Value);
+  }
 
 protected:
   // LTO mode when using Unified LTO.
@@ -672,7 +683,7 @@ private:
   // LibFuncs that were implemented in bitcode but were not extracted
   // from their libraries. Such functions cannot safely be called, since
   // they have lost their opportunity to be defined.
-  SmallVector<StringRef> BitcodeLibFuncs;
+  mutable llvm::SmallVectorWithFlags<StringRef> BitcodeLibFuncs;
 
 public:
   /// Helper to emit an optimization remark during the LTO link when outside of

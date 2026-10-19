@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
@@ -92,7 +93,7 @@ class LLVM_ABI CodeExtractor {
 
   // Various bits of state computed on construction.
   DominatorTree *const DT;
-  const bool AggregateArgs;
+  bool getAggregateArgs() const { return ExtractedFuncRetVals.getFlag(0); }
   BlockFrequencyInfo *BFI;
   BranchProbabilityInfo *BPI;
   AssumptionCache *AC;
@@ -111,7 +112,8 @@ class LLVM_ABI CodeExtractor {
   SmallVector<BasicBlock *> DeallocationBlocks;
 
   /// If true, varargs functions can be extracted.
-  bool AllowVarArgs;
+  bool getAllowVarArgs() const { return ExtractedFuncRetVals.getFlag(1); }
+  void setAllowVarArgs(bool Value) { ExtractedFuncRetVals.setFlag(1, Value); }
 
   /// Bits of intermediate state computed at various phases of extraction.
   SetVector<BasicBlock *> Blocks;
@@ -132,7 +134,10 @@ class LLVM_ABI CodeExtractor {
   /// When there are 3 or more exit blocks, leaving the extracted function via
   /// the first block it returns 0. When leaving via the second entry it returns
   /// 1, etc.
-  SmallVector<BasicBlock *> ExtractedFuncRetVals;
+  llvm::SmallVectorWithFlags<
+      BasicBlock *,
+      llvm::CalculateSmallVectorDefaultInlinedElements<BasicBlock *>::value, 4>
+      ExtractedFuncRetVals;
 
   /// Suffix to use when creating extracted function (appended to the original
   /// function name + "."). If empty, the default is to use the entry block
@@ -141,11 +146,21 @@ class LLVM_ABI CodeExtractor {
 
   /// If true, the outlined function has aggregate argument in zero address
   /// space.
-  bool ArgsInZeroAddressSpace;
+  bool getArgsInZeroAddressSpace() const {
+    return ExtractedFuncRetVals.getFlag(2);
+  }
+  void setArgsInZeroAddressSpace(bool Value) {
+    ExtractedFuncRetVals.setFlag(2, Value);
+  }
 
   // If true, the outlined function always return void even when there is only
   // one output.
-  bool VoidReturnWithSingleOutput;
+  bool getVoidReturnWithSingleOutput() const {
+    return ExtractedFuncRetVals.getFlag(3);
+  }
+  void setVoidReturnWithSingleOutput(bool Value) {
+    ExtractedFuncRetVals.setFlag(3, Value);
+  }
 
   // If set, the return value of the outline function.
   Value *FuncRetVal = nullptr;

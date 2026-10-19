@@ -68,8 +68,9 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
 
 [[maybe_unused]] static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
                                                       const ShardingOption &v) {
-  return stream << "{empty = " << v.empty << ", grid" << v.grid
-                << ", shardingArray = " << v.shardingArray << "}";
+  stream << "{empty = " << v.getEmpty() << ", grid" << v.grid
+         << ", shardingArray = ";
+  return printRange(stream, v.shardingArray) << "}";
 }
 
 template <typename Stream, typename... Ts, size_t... Is>
@@ -222,7 +223,7 @@ static FailureOr<ShardingOption> selectShardingOption(
     for (ArrayRef<Sharding> operandShardings : possibleOperandShardingAttrs) {
       FailureOr<ShardingOption> shardingOption =
           shardingOp.getShardingOption(operandShardings, resultShardings);
-      if (failed(shardingOption) || shardingOption->empty) {
+      if (failed(shardingOption) || shardingOption->getEmpty()) {
         continue;
       }
       // These shardings may not be the same as those in operandShardings and
@@ -342,7 +343,7 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   LLVM_DEBUG(DBGS() << "Selected sharding option: " << *shardingOption << "\n");
 
   // sharding info is empty, return immediately
-  if (shardingOption->empty)
+  if (shardingOption->getEmpty())
     return success();
 
   if (failed(shardingOp.addShardingAnnotations(builder, *shardingOption))) {

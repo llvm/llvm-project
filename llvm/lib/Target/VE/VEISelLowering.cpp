@@ -65,10 +65,11 @@ CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
   }
 }
 
-bool VETargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool VETargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                      MachineFunction &MF, bool IsVarArg,
+                                      llvm::ArrayRef<ISD::OutputArg> Outs,
+                                      LLVMContext &Context,
+                                      const Type *RetTy) const {
   CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
@@ -362,12 +363,12 @@ void VETargetLowering::initVPUActions() {
   }
 }
 
-SDValue
-VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                              bool IsVarArg,
-                              const SmallVectorImpl<ISD::OutputArg> &Outs,
-                              const SmallVectorImpl<SDValue> &OutVals,
-                              const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                      bool IsVarArg,
+                                      llvm::ArrayRef<ISD::OutputArg> Outs,
+                                      const SmallVectorImpl<SDValue> &OutVals,
+                                      const SDLoc &DL,
+                                      SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of the return value to locations.
   SmallVector<CCValAssign, 16> RVLocs;
 
@@ -439,8 +440,8 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 SDValue VETargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Get the base offset of the incoming arguments stack space.
@@ -580,7 +581,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   // VE target does not yet support tail call optimization.
-  CLI.IsTailCall = false;
+  CLI.setIsTailCall(false);
 
   // Get the base offset of the outgoing arguments stack space.
   unsigned ArgsBaseOffset = Subtarget->getRsaSize();
@@ -589,8 +590,8 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
+  CCState CCInfo(CLI.CallConv, CLI.getIsVarArg(), DAG.getMachineFunction(),
+                 ArgLocs, *DAG.getContext());
   // Allocate the preserved area first.
   CCInfo.AllocateStack(ArgsPreserved, Align(8));
   // We already allocated the preserved area, so the stack offset computed
@@ -599,11 +600,11 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // VE requires to use both register and stack for varargs or no-prototyped
   // functions.
-  bool UseBoth = CLI.IsVarArg;
+  bool UseBoth = CLI.getIsVarArg();
 
   // Analyze operands again if it is required to store BOTH.
   SmallVector<CCValAssign, 16> ArgLocs2;
-  CCState CCInfo2(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(),
+  CCState CCInfo2(CLI.CallConv, CLI.getIsVarArg(), DAG.getMachineFunction(),
                   ArgLocs2, *DAG.getContext());
   if (UseBoth)
     CCInfo2.AnalyzeCallOperands(CLI.Outs, getParamCC(CLI.CallConv, true));
@@ -776,8 +777,8 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState RVInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), RVLocs,
-                 *DAG.getContext());
+  CCState RVInfo(CLI.CallConv, CLI.getIsVarArg(), DAG.getMachineFunction(),
+                 RVLocs, *DAG.getContext());
 
   // Set inreg flag manually for codegen generated library calls that
   // return float.

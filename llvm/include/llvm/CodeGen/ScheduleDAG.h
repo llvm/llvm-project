@@ -19,6 +19,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -743,10 +744,11 @@ class TargetRegisterInfo;
     SUnit *ExitSU;
 
     // Have any new nodes been added?
-    bool Dirty = false;
+    bool getDirty() const { return Updates.getFlag(0); }
+    void setDirty(bool Value) { Updates.setFlag(0, Value); }
 
     // Outstanding added edges, that have not been applied to the ordering.
-    SmallVector<std::pair<SUnit *, SUnit *>, 16> Updates;
+    llvm::SmallVectorWithFlags<std::pair<SUnit *, SUnit *>, 16> Updates;
 
     /// Maps topological index to the node number.
     std::vector<int> Index2Node;
@@ -818,7 +820,7 @@ class TargetRegisterInfo;
 
     /// Mark the ordering as temporarily broken, after a new node has been
     /// added.
-    void MarkDirty() { Dirty = true; }
+    void MarkDirty() { setDirty(true); }
 
     typedef std::vector<int>::iterator iterator;
     typedef std::vector<int>::const_iterator const_iterator;

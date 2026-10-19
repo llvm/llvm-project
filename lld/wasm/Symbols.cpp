@@ -217,7 +217,7 @@ bool Symbol::isExported() const {
   if (ctx.arg.shared && isLive() && isWeak() && !isHidden())
     return true;
 
-  if (ctx.arg.exportAll || (ctx.arg.exportDynamic && !isHidden()))
+  if (ctx.arg.exportAll || (ctx.arg.getExportDynamic() && !isHidden()))
     return true;
 
   return isExportedExplicit();

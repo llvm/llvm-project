@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETSCHEDULE_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -36,7 +37,7 @@ class TargetSchedModel {
   const TargetSubtargetInfo *STI = nullptr;
   const TargetInstrInfo *TII = nullptr;
 
-  SmallVector<unsigned, 16> ResourceFactors;
+  llvm::SmallVectorWithFlags<unsigned, 16, 2> ResourceFactors;
 
   // Multiply to normalize microops to resource units.
   unsigned MicroOpFactor = 0;
@@ -53,8 +54,10 @@ class TargetSchedModel {
   // can force preference of the other. By disabling both, we will throw away
   // any target specific hardware details for scheduling decisions, and fall
   // into things that provide generic info such as defaultDefLatency.
-  bool EnableSchedModel = true;
-  bool EnableSchedItins = true;
+  bool getEnableSchedModel() const { return !ResourceFactors.getFlag(0); }
+  void setEnableSchedModel(bool Value) { ResourceFactors.setFlag(0, !Value); }
+  bool getEnableSchedItins() const { return !ResourceFactors.getFlag(1); }
+  void setEnableSchedItins(bool Value) { ResourceFactors.setFlag(1, !Value); }
 
 public:
   TargetSchedModel() : SchedModel(MCSchedModel::Default) {}

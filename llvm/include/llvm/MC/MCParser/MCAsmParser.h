@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmMacro.h"
@@ -144,17 +145,24 @@ protected: // Can only create subclasses.
   SourceMgr &SrcMgr;
   const MCAsmInfo &MAI;
   AsmLexer Lexer;
-  SmallVector<MCPendingError, 0> PendingErrors;
+  llvm::SmallVectorWithFlags<MCPendingError, 0, 3> PendingErrors;
 
   /// Flag tracking whether any errors have been encountered.
-  bool HadError = false;
+  bool getHadError() const { return PendingErrors.getFlag(0); }
+  void setHadError(bool Value) { PendingErrors.setFlag(0, Value); }
 
-  bool ShowParsedOperands = false;
+  bool getShowParsedOperandsFlag() const { return PendingErrors.getFlag(1); }
+  void setShowParsedOperandsFlag(bool Value) {
+    PendingErrors.setFlag(1, Value);
+  }
 
   /// Flag tracking whether we're only interested in symbols, which allows us to
   /// avoid some work (e.g. resolving .incbin directives).
   // TODO: Adopt this in more places.
-  bool SymbolScanningMode = false;
+  bool getSymbolScanningModeFlag() const { return PendingErrors.getFlag(2); }
+  void setSymbolScanningModeFlag(bool Value) {
+    PendingErrors.setFlag(2, Value);
+  }
 
 public:
   MCAsmParser(const MCAsmParser &) = delete;
@@ -178,10 +186,10 @@ public:
   virtual unsigned getAssemblerDialect() { return 0;}
   virtual void setAssemblerDialect(unsigned i) { }
 
-  bool getShowParsedOperands() const { return ShowParsedOperands; }
-  void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
+  bool getShowParsedOperands() const { return getShowParsedOperandsFlag(); }
+  void setShowParsedOperands(bool Value) { setShowParsedOperandsFlag(Value); }
 
-  void setSymbolScanningMode(bool Value) { SymbolScanningMode = Value; }
+  void setSymbolScanningMode(bool Value) { setSymbolScanningModeFlag(Value); }
 
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;

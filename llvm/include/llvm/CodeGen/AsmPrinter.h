@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -215,7 +216,8 @@ private:
   DenseMap<GCStrategy *, std::unique_ptr<GCMetadataPrinter>> GCMetadataPrinters;
 
   /// Emit comments in assembly output if this is true.
-  bool VerboseAsm;
+  bool getVerboseAsm() const { return Sleds.getFlag(0); }
+  void setVerboseAsm(bool Value) { Sleds.setFlag(0, Value); }
 
   /// Store symbols and type identifiers used to create callgraph section
   /// entries related to a function.
@@ -254,7 +256,7 @@ protected:
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
   // emitters.
-  SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
+  llvm::SmallVectorWithFlags<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
 
   StackMaps SM;
@@ -279,15 +281,24 @@ private:
   /// True if the module contains split-stack functions. This is used to
   /// emit .note.GNU-split-stack section as required by the linker for
   /// special handling split-stack function calling no-split-stack function.
-  bool HasSplitStack = false;
+  bool getHasSplitStack() const { return Sleds.getFlag(1); }
+  void setHasSplitStack(bool Value) { Sleds.setFlag(1, Value); }
 
   /// True if the module contains no-split-stack functions. This is used to emit
   /// .note.GNU-no-split-stack section when it also contains functions without a
   /// split stack prologue.
-  bool HasNoSplitStack = false;
+  bool getHasNoSplitStack() const { return Sleds.getFlag(2); }
+  bool setHasNoSplitStack(bool Value) {
+    Sleds.setFlag(2, Value);
+    return Value;
+  }
 
   /// True if debugging information is available in this module.
-  bool DbgInfoAvailable = false;
+  bool getDbgInfoAvailable() const { return Sleds.getFlag(3); }
+  bool setDbgInfoAvailable(bool Value) {
+    Sleds.setFlag(3, Value);
+    return Value;
+  }
 
 protected:
   /// The attribute used for a pointer type's DWARF address space. Targets that
@@ -329,7 +340,7 @@ public:
   bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.
-  bool isVerbose() const { return VerboseAsm; }
+  bool isVerbose() const { return getVerboseAsm(); }
 
   /// Return a unique ID for the current function.
   unsigned getFunctionNumber() const;
@@ -396,11 +407,11 @@ public:
   MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
 
   bool doesDwarfUseRelocationsAcrossSections() const {
-    return DwarfUsesRelocationsAcrossSections;
+    return getDwarfUsesRelocationsAcrossSectionsFlag();
   }
 
   void setDwarfUsesRelocationsAcrossSections(bool Enable) {
-    DwarfUsesRelocationsAcrossSections = Enable;
+    setDwarfUsesRelocationsAcrossSectionsFlag(Enable);
   }
 
   /// Returns a section suffix (hot or unlikely) for the constant if profiles
@@ -445,7 +456,7 @@ public:
   };
 
   // All the sleds to be emitted.
-  SmallVector<XRayFunctionEntry, 4> Sleds;
+  llvm::SmallVectorWithFlags<XRayFunctionEntry, 4, 4> Sleds;
 
   // Helper function to record a given XRay sled.
   void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind,
@@ -534,7 +545,7 @@ public:
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
   /// Returns true if valid debug info is present.
-  bool hasDebugInfo() const { return DbgInfoAvailable; }
+  bool hasDebugInfo() const { return getDbgInfoAvailable(); }
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
@@ -988,7 +999,12 @@ private:
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
 
-  bool DwarfUsesRelocationsAcrossSections = false;
+  bool getDwarfUsesRelocationsAcrossSectionsFlag() const {
+    return Handlers.getFlag(0);
+  }
+  void setDwarfUsesRelocationsAcrossSectionsFlag(bool Value) {
+    Handlers.setFlag(0, Value);
+  }
 
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();

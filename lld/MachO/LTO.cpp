@@ -55,9 +55,9 @@ static lto::Config createConfig() {
 
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
-  c.DebugPassManager = config->ltoDebugPassManager;
+  c.DebugPassManager = config->getLtoDebugPassManager();
   c.CSIRProfile = std::string(config->csProfilePath);
-  c.RunCSIRInstr = config->csProfileGenerate;
+  c.RunCSIRInstr = config->getCsProfileGenerate();
   c.PGOWarnMismatch = config->pgoWarnMismatch;
   c.DisableVerify = config->disableVerify;
   c.OptLevel = config->ltoo;
@@ -70,7 +70,7 @@ static lto::Config createConfig() {
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath=*/true));
 
-  if (config->emitLLVM) {
+  if (config->getEmitLLVM()) {
     llvm::StringRef outputFile = config->outputFile;
     c.PreCodeGenModuleHook = [outputFile](size_t task, const Module &m) {
       if (std::unique_ptr<raw_fd_ostream> os = openLTOOutputFile(outputFile))

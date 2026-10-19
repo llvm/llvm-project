@@ -146,7 +146,8 @@ ExprResult Parser::ParseArrayBoundExpression() {
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   // If we parse the bound of a VLA... we parse a non-constant
   // constant-expression!
-  Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
+  Actions.ExprEvalContexts.back().setInConditionallyConstantEvaluateContext(
+      true);
   // For a VLA type inside an unevaluated operator like:
   //
   //   sizeof(typeof(*(int (*)[N])array))
@@ -164,7 +165,7 @@ ExprResult Parser::ParseArrayBoundExpression() {
        Iter != Actions.ExprEvalContexts.rend(); ++Iter) {
     if (!Iter->isUnevaluated())
       break;
-    Iter->InConditionallyConstantEvaluateContext = true;
+    Iter->setInConditionallyConstantEvaluateContext(true);
   }
   return ParseConstantExpressionInExprEvalContext(
       TypoCorrectionTypeBehavior::AllowNonTypes);
@@ -173,7 +174,7 @@ ExprResult Parser::ParseArrayBoundExpression() {
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-  Actions.currentEvaluationContext().IsCaseExpr = true;
+  Actions.currentEvaluationContext().setIsCaseExpr(true);
 
   ExprResult LHS(
       ParseCastExpression(CastParseKind::AnyCastExpr, false,
@@ -921,7 +922,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
         }
       }
 
-      else if ((!ColonIsSacred && Next.is(tok::colon)) ||
+      else if ((!getColonIsSacred() && Next.is(tok::colon)) ||
                Next.isOneOf(tok::coloncolon, tok::less, tok::l_paren,
                             tok::l_brace)) {
         // If TryAnnotateTypeOrScopeToken annotates the token, tail recurse.
@@ -1874,7 +1875,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         QualType PreferredType =
             Actions.CodeCompletion().ProduceCallSignatureHelp(
                 LHS.get(), ArgExprs, PT.getOpenLocation());
-        CalledSignatureHelp = true;
+        setCalledSignatureHelp(true);
         return PreferredType;
       };
       bool ExpressionListIsInvalid = false;
@@ -1888,7 +1889,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             // the CodeCompleteCall handler inside the parser. So call it here
             // to make sure we get overload suggestions even when we are in the
             // middle of a parameter.
-            if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+            if (PP.isCodeCompletionReached() && !getCalledSignatureHelp())
               RunSignatureHelp();
           }
         }

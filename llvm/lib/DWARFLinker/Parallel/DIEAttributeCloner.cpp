@@ -143,7 +143,7 @@ bool DIEAttributeCloner::shouldSkipAttribute(
   case dwarf::DW_AT_low_pc:
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
-    if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    if (InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly())
       return false;
 
     // Skip address attribute if we are in function scope and function does not
@@ -155,16 +155,16 @@ bool DIEAttributeCloner::shouldSkipAttribute(
     // Thus instead of DW_FORM_rnglistx the DW_FORM_sec_offset is used.
     // Since DW_AT_rnglists_base is used for only DW_FORM_rnglistx the
     // DW_AT_rnglists_base is removed.
-    return !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
+    return !InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly();
   case dwarf::DW_AT_loclists_base:
     // In case !Update the .debug_addr table is not generated/preserved.
     // Thus instead of DW_FORM_loclistx the DW_FORM_sec_offset is used.
     // Since DW_AT_loclists_base is used for only DW_FORM_loclistx the
     // DW_AT_loclists_base is removed.
-    return !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
+    return !InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly();
   case dwarf::DW_AT_location:
   case dwarf::DW_AT_frame_base:
-    if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    if (InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly())
       return false;
 
     // When location expression contains an address: skip this attribute
@@ -418,7 +418,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
        InputDieEntry->getTag() == dwarf::DW_TAG_constant))
     AttrInfo.HasLiveAddress = true;
 
-  if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {
+  if (InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly()) {
     if (auto OptionalValue = Val.getAsUnsignedConstant())
       Value = *OptionalValue;
     else if (auto OptionalValue = Val.getAsSignedConstant())
@@ -655,7 +655,7 @@ size_t DIEAttributeCloner::cloneBlockAttr(
   if (HasLocationExpressionAddress)
     AttrInfo.HasLiveAddress =
         VarAddressAdjustment.has_value() ||
-        InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
+        InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly();
 
   return FinalAttributeSize;
 }
@@ -666,7 +666,7 @@ size_t DIEAttributeCloner::cloneAddressAttr(
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc)
     AttrInfo.HasLiveAddress = true;
 
-  if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly)
+  if (InUnit.getGlobalData().getOptions().getUpdateIndexTablesOnly())
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form, Val.getRawUValue())
         .second;

@@ -19,6 +19,7 @@
 #include "FormatToken.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 
 #include <stack>
@@ -113,7 +114,8 @@ private:
   FormatToken *getNextToken();
 
   FormatToken *FormatTok;
-  bool IsFirstToken;
+  bool getIsFirstToken() const { return Tokens.getFlag(0); }
+  void setIsFirstToken(bool Value) { Tokens.setFlag(0, Value); }
   std::stack<LexerState> StateStack;
   unsigned Column;
   unsigned TrailingWhitespace;
@@ -128,21 +130,23 @@ private:
   llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator;
   // Index (in 'Tokens') of the last token that starts a new line.
   unsigned FirstInLineIndex;
-  SmallVector<FormatToken *, 16> Tokens;
+  llvm::SmallVectorWithFlags<FormatToken *, 16, 3> Tokens;
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
   llvm::SmallPtrSet<IdentifierInfo *, 8> MacrosSkippedByRemoveParentheses,
       TemplateNames, TypeNames, VariableTemplates;
 
-  bool FormattingDisabled;
+  bool getFormattingDisabled() const { return Tokens.getFlag(1); }
+  void setFormattingDisabled(bool Value) { Tokens.setFlag(1, Value); }
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;
 
   // The next line is a Verilog protected block that should not be split into
   // tokens. Set at the 'pragma protect' line. Cleared at the next line.
-  bool VerilogProtectedBlock;
+  bool getVerilogProtectedBlock() const { return Tokens.getFlag(2); }
+  void setVerilogProtectedBlock(bool Value) { Tokens.setFlag(2, Value); }
 
   // Targets that may appear inside a C# attribute.
   static const llvm::StringSet<> CSharpAttributeTargets;

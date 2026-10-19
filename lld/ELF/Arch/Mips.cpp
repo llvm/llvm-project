@@ -126,7 +126,7 @@ template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
 }
 
 template <class ELFT> void MIPS<ELFT>::initTargetSpecificSections() {
-  if (!ctx.arg.shared && ctx.hasDynsym) {
+  if (!ctx.arg.getShared() && ctx.getHasDynsym()) {
     ctx.in.mipsRldMap = std::make_unique<RldMapSection>(ctx);
     ctx.inputSections.push_back(ctx.in.mipsRldMap.get());
   }
@@ -373,7 +373,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
     write32(ctx, buf + 20, 0x0018c082); // srl   $24, $24, 2
   }
 
-  uint32_t jalrInst = ctx.arg.zHazardplt ? 0x0320fc09 : 0x0320f809;
+  uint32_t jalrInst = ctx.arg.getZHazardplt() ? 0x0320fc09 : 0x0320f809;
   write32(ctx, buf + 24, jalrInst);   // jalr.hb $25 or jalr $25
   write32(ctx, buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
@@ -409,8 +409,8 @@ void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
 
   uint32_t loadInst = ELFT::Is64Bits ? 0xddf90000 : 0x8df90000;
   uint32_t jrInst = isMipsR6(ctx)
-                        ? (ctx.arg.zHazardplt ? 0x03200409 : 0x03200009)
-                        : (ctx.arg.zHazardplt ? 0x03200408 : 0x03200008);
+                        ? (ctx.arg.getZHazardplt() ? 0x03200409 : 0x03200009)
+                        : (ctx.arg.getZHazardplt() ? 0x03200408 : 0x03200008);
   uint32_t addInst = ELFT::Is64Bits ? 0x65f80000 : 0x25f80000;
 
   write32(ctx, buf, 0x3c0f0000);   // lui   $15, %hi(.got.plt entry)
@@ -533,7 +533,7 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case (R_MIPS_64 << 8) | R_MIPS_REL32:
     return read64(ctx, buf);
   case R_MIPS_COPY:
-    return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
+    return ctx.arg.getIs64() ? read64(ctx, buf) : read32(ctx, buf);
   case R_MIPS_NONE:
   case R_MIPS_JUMP_SLOT:
   case R_MIPS_JALR:
@@ -639,7 +639,7 @@ static RelType getMipsN32RelType(Ctx &ctx, RelTy *&rel, RelTy *end) {
   uint64_t offset = rel->r_offset;
   int n = 0;
   while (rel != end && rel->r_offset == offset)
-    type |= (rel++)->getType(ctx.arg.isMips64EL) << (8 * n++);
+    type |= (rel++)->getType(ctx.arg.getIsMips64EL()) << (8 * n++);
   return type;
 }
 
@@ -679,18 +679,18 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     const RelTy &rel = *it;
     uint64_t offset = rel.r_offset;
     if constexpr (ELFT::Is64Bits) {
-      type = it->getType(ctx.arg.isMips64EL);
+      type = it->getType(ctx.arg.getIsMips64EL());
       ++it;
     } else {
       if (ctx.arg.mipsN32Abi) {
         type = getMipsN32RelType(ctx, it, rels.end());
       } else {
-        type = it->getType(ctx.arg.isMips64EL);
+        type = it->getType(ctx.arg.getIsMips64EL());
         ++it;
       }
     }
 
-    uint32_t symIdx = rel.getSymbol(ctx.arg.isMips64EL);
+    uint32_t symIdx = rel.getSymbol(ctx.arg.getIsMips64EL());
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
     RelExpr expr = getRelExpr(type, sym, sec.content().data() + rel.r_offset);
     if (expr == R_NONE)
@@ -714,8 +714,8 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         // the relocation table, so we need to do linear search. *sigh*
         bool found = false;
         for (auto *ri = &rel; ri != rels.end(); ++ri) {
-          if (ri->getType(ctx.arg.isMips64EL) == pairTy &&
-              ri->getSymbol(ctx.arg.isMips64EL) == symIdx) {
+          if (ri->getType(ctx.arg.getIsMips64EL()) == pairTy &&
+              ri->getSymbol(ctx.arg.getIsMips64EL()) == symIdx) {
             addend += getImplicitAddend(buf + ri->r_offset, pairTy);
             found = true;
             break;
@@ -793,7 +793,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     // The R_MIPS_GOT16 relocation's value in "relocatable" linking mode
     // is updated addend (not a GOT index). In that case write high 16 bits
     // to store a correct addend value.
-    if (ctx.arg.relocatable) {
+    if (ctx.arg.getRelocatable()) {
       writeValue(ctx, loc, val + 0x8000, 16, 16);
     } else {
       checkInt(ctx, loc, val, 16, rel);
@@ -801,7 +801,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     }
     break;
   case R_MICROMIPS_GOT16:
-    if (ctx.arg.relocatable) {
+    if (ctx.arg.getRelocatable()) {
       writeShuffle<e>(ctx, loc, val + 0x8000, 16, 16);
     } else {
       checkInt(ctx, loc, val, 16, rel);
@@ -1058,7 +1058,7 @@ template <class ELFT> void OptionsSection<ELFT>::writeTo(uint8_t *buf) {
   options->kind = ODK_REGINFO;
   options->size = getSize();
 
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.getRelocatable())
     reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
   memcpy(buf + sizeof(Elf_Mips_Options), &reginfo, sizeof(reginfo));
 }
@@ -1090,7 +1090,7 @@ ReginfoSection<ELFT>::ReginfoSection(Ctx &ctx)
 }
 
 template <class ELFT> void ReginfoSection<ELFT>::writeTo(uint8_t *buf) {
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.getRelocatable())
     reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
   memcpy(buf, &reginfo, sizeof(reginfo));
 }

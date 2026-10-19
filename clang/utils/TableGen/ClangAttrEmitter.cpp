@@ -887,9 +887,9 @@ namespace {
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
          << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
          << getLowerName() << "_end(); I != E; ++I) {\n";
-      OS << "      if (I->IsTarget && I->IsTargetSync)\n";
+      OS << "      if (I->isTarget() && I->isTargetSync())\n";
       OS << "        OS << \" Target_TargetSync\";\n";
-      OS << "      else if (I->IsTarget)\n";
+      OS << "      else if (I->isTarget())\n";
       OS << "        OS << \" Target\";\n";
       OS << "      else\n";
       OS << "        OS << \" TargetSync\";\n";
@@ -906,7 +906,7 @@ namespace {
       OS << "      bool IsTarget = Record.readBool();\n";
       OS << "      bool IsTargetSync = Record.readBool();\n";
       OS << "      OMPInteropInfo Info(IsTarget, IsTargetSync);\n";
-      OS << "      Info.HasPreferAttrs = Record.readBool();\n";
+      OS << "      Info.setPreferAttrs(Record.readBool());\n";
       OS << "      unsigned prefsSize = Record.readInt();\n";
       OS << "      Info.Prefs.reserve(prefsSize);\n";
       OS << "      for (unsigned J = 0; J < prefsSize; ++J) {\n";
@@ -928,9 +928,9 @@ namespace {
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
          << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
          << getLowerName() << "_end(); I != E; ++I) {\n";
-      OS << "      Record.writeBool(I->IsTarget);\n";
-      OS << "      Record.writeBool(I->IsTargetSync);\n";
-      OS << "      Record.writeBool(I->HasPreferAttrs);\n";
+      OS << "      Record.writeBool(I->isTarget());\n";
+      OS << "      Record.writeBool(I->isTargetSync());\n";
+      OS << "      Record.writeBool(I->hasPreferAttrs());\n";
       OS << "      Record.push_back(I->Prefs.size());\n";
       OS << "      for (auto &P : I->Prefs) {\n";
       OS << "        Record.writeBool(P.Fr != nullptr);\n";

@@ -30,6 +30,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -187,7 +188,8 @@ public:
   RegAllocFastImpl(const RegAllocFilterFunc F = nullptr,
                    bool ClearVirtRegs_ = true)
       : ShouldAllocateRegisterImpl(F), StackSlotForVirtReg(-1),
-        ClearVirtRegs(ClearVirtRegs_) {}
+        RegMasks(decltype(this->RegMasks)::withFlags(
+            (unsigned(ClearVirtRegs_) << 1))) {}
 
 private:
   MachineFrameInfo *MFI = nullptr;
@@ -199,7 +201,8 @@ private:
 
   /// Tied operands reach this pass unrewritten (TwoAddressInstructionPass was
   /// left out of the pipeline): lower them here.
-  bool LowerTiedOps = false;
+  bool getLowerTiedOps() const { return RegMasks.getFlag(0); }
+  void setLowerTiedOps(bool Value) { RegMasks.setFlag(0, Value); }
 
   /// Basic block currently being allocated.
   MachineBasicBlock *MBB = nullptr;
@@ -284,7 +287,11 @@ private:
 
   SmallVector<unsigned, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
-  SmallVector<const uint32_t *> RegMasks;
+  llvm::SmallVectorWithFlags<
+      const uint32_t *,
+      llvm::CalculateSmallVectorDefaultInlinedElements<const uint32_t *>::value,
+      2>
+      RegMasks;
 
   // Assign index for each instruction to quickly determine dominance.
   InstrPosIndexes PosIndexes;
@@ -351,7 +358,8 @@ private:
   };
 
 public:
-  bool ClearVirtRegs;
+  bool getClearVirtRegs() const { return RegMasks.getFlag(1); }
+  void setClearVirtRegs(bool Value) { RegMasks.setFlag(1, Value); }
 
   bool runOnMachineFunction(MachineFunction &MF);
 
@@ -451,7 +459,7 @@ public:
 
   MachineFunctionProperties getSetProperties() const override {
     MachineFunctionProperties P;
-    if (Impl.ClearVirtRegs)
+    if (Impl.getClearVirtRegs())
       P.setNoVRegs().setTiedOpsRewritten();
     return P;
   }
@@ -954,7 +962,7 @@ Register RegAllocFastImpl::traceCopyChain(Register Reg) const {
     }
     // A two-address instruction's def and tied use end up in the same
     // register, so the tie continues the chain.
-    Reg = LowerTiedOps ? getTiedUseReg(*Def, *DefMO) : Register();
+    Reg = getLowerTiedOps() ? getTiedUseReg(*Def, *DefMO) : Register();
     if (!Reg)
       return Register();
   }
@@ -972,7 +980,7 @@ Register RegAllocFastImpl::traceCopies(Register VirtReg) const {
     Register Reg;
     if (isCoalescable(MI))
       Reg = MI.getOperand(1).getReg();
-    else if (LowerTiedOps)
+    else if (getLowerTiedOps())
       Reg = getTiedUseReg(MI, DefMO);
     if (Reg) {
       Reg = traceCopyChain(Reg);
@@ -1327,7 +1335,7 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
     assert((!MO.isKill() || LRI->LastUse == &MI) && "Invalid kill flag");
   }
 
-  if (LowerTiedOps && MO.isTied() && lowerTiedUse(MI, MO, *LRI))
+  if (getLowerTiedOps() && MO.isTied() && lowerTiedUse(MI, MO, *LRI))
     return false;
 
   // If necessary allocate a register.
@@ -1657,7 +1665,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
           HasVRegDef = true;
           if (MO.isEarlyClobber())
             HasEarlyClobber = true;
-          if (LowerTiedOps && MO.isTied())
+          if (getLowerTiedOps() && MO.isTied())
             HasTiedDef = true;
           if (isLiveThroughDef(MI, MO))
             NeedToAssignLiveThroughs = true;
@@ -2099,8 +2107,8 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   // MIR that already went through TwoAddressInstructionPass carries
   // TiedOpsRewritten, so partial pipelines (-run-pass, -start-before) follow
   // the input they are given.
-  LowerTiedOps = !MF.getProperties().hasTiedOpsRewritten();
-  if (LowerTiedOps) {
+  setLowerTiedOps(!MF.getProperties().hasTiedOpsRewritten());
+  if (getLowerTiedOps()) {
     for (MachineBasicBlock &MBB : MF)
       for (MachineInstr &MI : make_early_inc_range(MBB))
         if (MI.isRegSequence() || MI.isInsertSubreg())
@@ -2119,7 +2127,7 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     allocateBasicBlock(MBB);
 
-  if (ClearVirtRegs) {
+  if (getClearVirtRegs()) {
     // All machine operands and other references to virtual registers have been
     // replaced. Remove the virtual registers.
     MRI->clearVirtRegs();

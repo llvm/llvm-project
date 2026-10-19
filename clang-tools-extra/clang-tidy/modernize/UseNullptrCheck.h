@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang::tidy::modernize {
 
@@ -28,10 +29,16 @@ public:
 
 private:
   const StringRef NullMacrosStr;
-  SmallVector<StringRef, 1> NullMacros;
+  llvm::SmallVectorWithFlags<StringRef, 1> NullMacros;
   std::vector<StringRef> IgnoredTypes;
-  const bool UseNullptrT;
+  bool getUseNullptrT() const { return NullMacros.getFlag(0); }
   utils::IncludeInserter IncludeInserter;
+
+public:
+  UseNullptrCheck(const UseNullptrCheck &) = default;
+  UseNullptrCheck(UseNullptrCheck &&) = default;
+  UseNullptrCheck &operator=(const UseNullptrCheck &) = delete;
+  UseNullptrCheck &operator=(UseNullptrCheck &&) = delete;
 };
 
 } // namespace clang::tidy::modernize

@@ -13,6 +13,7 @@
 #ifndef LLVM_ASMPARSER_LLPARSER_H
 #define LLVM_ASMPARSER_LLPARSER_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/AsmParser/LLLexer.h"
@@ -185,15 +186,18 @@ namespace llvm {
 
     SmallVector<std::tuple<LocTy, DbgRecord *, TrackingMDNodeRef>>
         PendingDbgRecords;
-    SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
+    SmallVectorWithFlagsFor<
+        SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>, 2>
         PendingDbgInsts;
 
-    /// Only the llvm-as tool may set this to false to bypass
-    /// UpgradeDebuginfo so it can generate broken bitcode.
-    bool UpgradeDebugInfo;
-
-    bool SeenNewDbgInfoFormat = false;
-    bool SeenOldDbgInfoFormat = false;
+    bool getSeenNewDbgInfoFormat() const { return PendingDbgInsts.getFlag(0); }
+    void setSeenNewDbgInfoFormat(bool Value) {
+      PendingDbgInsts.setFlag(0, Value);
+    }
+    bool getSeenOldDbgInfoFormat() const { return PendingDbgInsts.getFlag(1); }
+    void setSeenOldDbgInfoFormat(bool Value) {
+      PendingDbgInsts.setFlag(1, Value);
+    }
 
     std::string SourceFileName;
 

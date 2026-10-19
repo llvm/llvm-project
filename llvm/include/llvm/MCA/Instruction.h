@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCRegister.h" // definition of MCPhysReg.
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -502,7 +503,8 @@ class InstructionBase {
   // This field is set for instructions that are candidates for move
   // elimination. For more information about move elimination, see the
   // definition of RegisterMappingTracker in RegisterFile.h
-  bool IsOptimizableMove;
+  bool getIsOptimizableMove() const { return Uses.getFlag(0); }
+  void setIsOptimizableMove(bool Value) { Uses.setFlag(0, Value); }
 
   // Output dependencies.
   // One entry per each implicit and explicit register definition.
@@ -510,7 +512,7 @@ class InstructionBase {
 
   // Input dependencies.
   // One entry per each implicit and explicit register use.
-  SmallVector<ReadState, 4> Uses;
+  llvm::SmallVectorWithFlags<ReadState, 4> Uses;
 
   // List of operands which can be used by mca::CustomBehaviour
   std::vector<MCAOperand> Operands;
@@ -532,12 +534,12 @@ class InstructionBase {
 
 public:
   InstructionBase(const InstrDesc &D, const unsigned Opcode)
-      : Desc(D), IsOptimizableMove(false), Operands(0), Opcode(Opcode),
-        IsALoadBarrier(false), IsAStoreBarrier(false) {}
+      : Desc(D), Operands(0), Opcode(Opcode), IsALoadBarrier(false),
+        IsAStoreBarrier(false) {}
 
   SmallVectorImpl<WriteState> &getDefs() { return Defs; }
   ArrayRef<WriteState> getDefs() const { return Defs; }
-  SmallVectorImpl<ReadState> &getUses() { return Uses; }
+  SmallVectorWithFlagsImpl<ReadState> &getUses() { return Uses; }
   ArrayRef<ReadState> getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
 
@@ -575,9 +577,9 @@ public:
   }
 
   // Returns true if this instruction is a candidate for move elimination.
-  bool isOptimizableMove() const { return IsOptimizableMove; }
-  void setOptimizableMove() { IsOptimizableMove = true; }
-  void clearOptimizableMove() { IsOptimizableMove = false; }
+  bool isOptimizableMove() const { return getIsOptimizableMove(); }
+  void setOptimizableMove() { setIsOptimizableMove(true); }
+  void clearOptimizableMove() { setIsOptimizableMove(false); }
   bool isMemOp() const { return MayLoad || MayStore; }
 
   // Getters and setters for general instruction flags.

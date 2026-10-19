@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/ObjectFile.h"
@@ -488,8 +489,12 @@ public:
 
     SmallVector<StringRef, 2> rpath;
     SmallVector<StringRef, 2> runPath;
-    SmallVector<StringRef, 4> deps;
-    bool isPIE = false;
+    llvm::SmallVectorWithFlags<StringRef, 4> deps;
+    bool getIsPIE() const { return deps.getFlag(0); }
+    bool setIsPIE(bool Value) {
+      deps.setFlag(0, Value);
+      return Value;
+    }
 
     void addRPath(StringRef s) { rpath.push_back(Saver.save(s)); }
 

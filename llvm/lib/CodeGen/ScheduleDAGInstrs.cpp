@@ -107,7 +107,8 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
                                      bool RemoveKillFlags)
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
-      RemoveKillFlags(RemoveKillFlags), Topo(SUnits, &ExitSU) {
+      Clusters(decltype(this->Clusters)::withFlags(unsigned(RemoveKillFlags))),
+      Topo(SUnits, &ExitSU) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
@@ -336,7 +337,7 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
     // Push this SUnit on the use list.
     for (MCRegUnit Unit : TRI->regunits(Reg))
       Uses.insert(PhysRegSUOper(SU, OperIdx, Unit));
-    if (RemoveKillFlags)
+    if (getRemoveKillFlags())
       MO.setIsKill(false);
   } else {
     addPhysRegDataDeps(SU, OperIdx);
@@ -407,7 +408,7 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
 
   LaneBitmask DefLaneMask;
   LaneBitmask KillLaneMask;
-  if (TrackLaneMasks) {
+  if (getTrackLaneMasks()) {
     bool IsKill = MO.getSubReg() == 0 || MO.isUndef();
     DefLaneMask = getLaneMaskForMO(MO);
     // If we have a <read-undef> flag, none of the lane values comes from an
@@ -528,8 +529,8 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   Register Reg = MO.getReg();
 
   // Remember the use. Data dependencies will be added when we find the def.
-  LaneBitmask LaneMask = TrackLaneMasks ? getLaneMaskForMO(MO)
-                                        : LaneBitmask::getAll();
+  LaneBitmask LaneMask =
+      getTrackLaneMasks() ? getLaneMaskForMO(MO) : LaneBitmask::getAll();
   CurrentVRegUses.insert(VReg2SUnitOperIdx(Reg, LaneMask, OperIdx, SU));
 
   // Add antidependences to the following defs of the vreg.
@@ -926,8 +927,8 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
 
     if (RPTracker) {
       RegisterOperands RegOpers;
-      RegOpers.collect(MI, *DAG.TRI, DAG.MRI, DAG.TrackLaneMasks, false);
-      if (DAG.TrackLaneMasks) {
+      RegOpers.collect(MI, *DAG.TRI, DAG.MRI, DAG.getTrackLaneMasks(), false);
+      if (DAG.getTrackLaneMasks()) {
         SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
         RegOpers.adjustLaneLiveness(*LIS, DAG.MRI, SlotIdx);
       } else if (LIS) {
@@ -944,7 +945,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       RPTracker->recede(RegOpers);
     }
 
-    assert((DAG.CanHandleTerminators ||
+    assert((DAG.getCanHandleTerminators() ||
             (!MI.isTerminator() && !MI.isPosition())) &&
            "Cannot schedule terminators or labels!");
 
@@ -1118,7 +1119,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   bool UseAA =
       EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI : ST.useAA();
-  this->TrackLaneMasks = TrackLaneMasks;
+  this->setTrackLaneMasks(TrackLaneMasks);
   MISUnitMap.clear();
   ScheduleDAG::clearDAG();
 

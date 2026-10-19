@@ -38,6 +38,29 @@
 
 using namespace llvm;
 
+TEST(AnalysisUsageTest, PreservesAllAcrossUsedSetUpdatesAndCopies) {
+  char IDs[8] = {};
+  AnalysisUsage Usage;
+  EXPECT_FALSE(Usage.getPreservesAll());
+  Usage.setPreservesAll();
+  for (char &ID : IDs)
+    Usage.addUsedIfAvailableID(ID);
+  Usage.addUsedIfAvailableID(IDs[0]);
+  EXPECT_TRUE(Usage.getPreservesAll());
+  EXPECT_EQ(Usage.getUsedSet().size(), std::size(IDs));
+
+  AnalysisUsage Copy = Usage;
+  EXPECT_TRUE(Copy.getPreservesAll());
+  EXPECT_EQ(Copy.getUsedSet(), Usage.getUsedSet());
+  AnalysisUsage Moved = std::move(Copy);
+  EXPECT_TRUE(Moved.getPreservesAll());
+  EXPECT_EQ(Moved.getUsedSet(), Usage.getUsedSet());
+
+  Moved = AnalysisUsage();
+  EXPECT_FALSE(Moved.getPreservesAll());
+  EXPECT_TRUE(Moved.getUsedSet().empty());
+}
+
 namespace llvm {
 void initializeModuleNDMPass(PassRegistry &);
 void initializeFPassPass(PassRegistry &);

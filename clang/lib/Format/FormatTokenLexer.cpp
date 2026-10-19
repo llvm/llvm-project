@@ -28,13 +28,13 @@ FormatTokenLexer::FormatTokenLexer(
     const FormatStyle &Style, encoding::Encoding Encoding,
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
     IdentifierTable &IdentTable)
-    : FormatTok(nullptr), IsFirstToken(true), StateStack({LexerState::NORMAL}),
-      Column(Column), TrailingWhitespace(0),
-      LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
-      Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
-      Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
-      FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
-      MacroBlockEndRegex(Style.MacroBlockEnd), VerilogProtectedBlock(false) {
+    : FormatTok(nullptr), StateStack({LexerState::NORMAL}), Column(Column),
+      TrailingWhitespace(0), LangOpts(getFormattingLangOpts(Style)),
+      SourceMgr(SourceMgr), ID(ID), Style(Style), IdentTable(IdentTable),
+      Keywords(IdentTable), Encoding(Encoding), Allocator(Allocator),
+      FirstInLineIndex(0), Tokens(decltype(Tokens)::withFlags(1)),
+      MacroBlockBeginRegex(Style.MacroBlockBegin),
+      MacroBlockEndRegex(Style.MacroBlockEnd) {
   Lex = std::make_unique<Lexer>(ID, SourceMgr.getBufferOrFake(ID), SourceMgr,
                                 LangOpts);
   Lex->SetKeepWhitespaceMode(true);
@@ -111,7 +111,7 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       FormatOff = FO_None;
       [[fallthrough]];
     default:
-      if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
+      if (!getFormattingDisabled() && FormatOffRegex.match(Tok.TokenText)) {
         if (Tok.is(tok::comment) &&
             (NewlinesBefore > 0 || Tokens.size() == 1)) {
           Tok.Finalized = true;
@@ -1266,8 +1266,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   readRawToken(*FormatTok);
   SourceLocation WhitespaceStart =
       FormatTok->Tok.getLocation().getLocWithOffset(-TrailingWhitespace);
-  FormatTok->IsFirst = IsFirstToken;
-  IsFirstToken = false;
+  FormatTok->IsFirst = getIsFirstToken();
+  setIsFirstToken(false);
 
   // Consume and record whitespace until we find a significant token.
   // Some tok::unknown tokens are not just whitespace, e.g. whitespace
@@ -1441,7 +1441,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
               Keywords.kw_data_public_key, Keywords.kw_digest_block,
               Keywords.kw_digest_decrypt_key, Keywords.kw_digest_public_key,
               Keywords.kw_key_block, Keywords.kw_key_public_key)) {
-        VerilogProtectedBlock = true;
+        setVerilogProtectedBlock(true);
       }
     }
   } else if (const bool Greater = FormatTok->is(tok::greatergreater);
@@ -1521,9 +1521,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
 
 bool FormatTokenLexer::readVerilogProtected(FormatToken &Tok) {
   // The block follows the pragma line.
-  if (!VerilogProtectedBlock || Tok.NewlinesBefore == 0)
+  if (!getVerilogProtectedBlock() || Tok.NewlinesBefore == 0)
     return false;
-  VerilogProtectedBlock = false;
+  setVerilogProtectedBlock(false);
 
   // The block can be empty. Then no token is necessary. A backtick on its own
   // line is likely a uuencode line. A backtick followed by something is assumed
@@ -1634,12 +1634,12 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     Tok.Tok.setKind(tok::string_literal);
 
   if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
-    FormattingDisabled = false;
+    setFormattingDisabled(false);
 
-  Tok.Finalized = FormattingDisabled;
+  Tok.Finalized = getFormattingDisabled();
 
   if (Tok.is(tok::comment) && isClangFormatOff(Tok.TokenText))
-    FormattingDisabled = true;
+    setFormattingDisabled(true);
 }
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {

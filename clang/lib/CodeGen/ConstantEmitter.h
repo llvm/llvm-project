@@ -16,6 +16,7 @@
 
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 namespace CodeGen {
@@ -37,15 +38,13 @@ private:
   /// Whether the constant-emission failed.
   bool Failed = false;
 
-  /// Whether we're in a constant context.
-  bool InConstantContext = false;
-
   /// The AST address space where this (non-abstract) initializer is going.
   /// Used for generating appropriate placeholders.
   LangAS DestAddressSpace = LangAS::Default;
 
-  llvm::SmallVector<std::pair<llvm::Constant *, llvm::GlobalVariable*>, 4>
-    PlaceholderAddresses;
+  llvm::SmallVectorWithFlags<
+      std::pair<llvm::Constant *, llvm::GlobalVariable *>, 4>
+      PlaceholderAddresses;
 
 public:
   ConstantEmitter(CodeGenModule &CGM, CodeGenFunction *CGF = nullptr)
@@ -67,8 +66,9 @@ public:
     return Abstract;
   }
 
-  bool isInConstantContext() const { return InConstantContext; }
-  void setInConstantContext(bool var) { InConstantContext = var; }
+  /// Whether we're in a constant context.
+  bool isInConstantContext() const { return PlaceholderAddresses.getFlag(0); }
+  void setInConstantContext(bool var) { PlaceholderAddresses.setFlag(0, var); }
 
   /// Try to emit the initiaizer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.

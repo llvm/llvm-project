@@ -28,6 +28,7 @@
 #include "clang/Lex/PPConditionalDirectiveRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -148,11 +149,12 @@ class ParsedSrcLocationsTracker {
   /// constructed.
   llvm::DenseSet<PPRegion> ParsedRegionsSnapshot;
   /// Regions that were queried during this instance lifetime.
-  SmallVector<PPRegion, 32> NewParsedRegions;
+  llvm::SmallVectorWithFlags<PPRegion, 32> NewParsedRegions;
 
   /// Caching the last queried region.
   PPRegion LastRegion;
-  bool LastIsParsed;
+  bool getLastIsParsed() const { return NewParsedRegions.getFlag(0); }
+  void setLastIsParsed(bool Value) { NewParsedRegions.setFlag(0, Value); }
 
 public:
   /// Creates snapshot of \p ParsedRegionsStorage.
@@ -173,17 +175,17 @@ public:
 
     // Check common case, consecutive functions in the same region.
     if (LastRegion == region)
-      return LastIsParsed;
+      return getLastIsParsed();
 
     LastRegion = region;
     // Source locations can't be revisited during single TU parsing.
     // That means if we hit the same region again, it's a different location in
     // the same region and so the "is parsed" value from the snapshot is still
     // correct.
-    LastIsParsed = ParsedRegionsSnapshot.count(region);
-    if (!LastIsParsed)
+    setLastIsParsed(ParsedRegionsSnapshot.count(region));
+    if (!getLastIsParsed())
       NewParsedRegions.emplace_back(std::move(region));
-    return LastIsParsed;
+    return getLastIsParsed();
   }
 
   /// Updates ParsedRegionsStorage with newly parsed regions.

@@ -84,6 +84,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -192,7 +193,8 @@ public:
   MLocTracker *MTracker;
   MachineFunction &MF;
   const DebugVariableMap &DVMap;
-  bool ShouldEmitDebugEntryValues;
+  bool getShouldEmitDebugEntryValues() const { return VarLocs.getFlag(0); }
+  void setShouldEmitDebugEntryValues(bool Value) { VarLocs.setFlag(0, Value); }
 
   /// Record of all changes in variable locations at a block position. Awkwardly
   /// we allow inserting either before or after the point: MBB != nullptr
@@ -233,7 +235,7 @@ public:
   /// between TransferTrackers view of variable locations and MLocTrackers. For
   /// example, MLocTracker observes all clobbers, but TransferTracker lazily
   /// does not.
-  SmallVector<ValueIDNum, 32> VarLocs;
+  llvm::SmallVectorWithFlags<ValueIDNum, 32> VarLocs;
 
   /// Map from LocIdxes to which DebugVariables are based that location.
   /// Mantained while stepping through the block. Not accurate if
@@ -283,7 +285,7 @@ public:
       : TII(TII), MTracker(MTracker), MF(MF), DVMap(DVMap), TRI(TRI),
         CalleeSavedRegs(CalleeSavedRegs) {
     TLI = MF.getSubtarget().getTargetLowering();
-    this->ShouldEmitDebugEntryValues = ShouldEmitDebugEntryValues;
+    this->setShouldEmitDebugEntryValues(ShouldEmitDebugEntryValues);
   }
 
   bool isCalleeSaved(LocIdx L) const {
@@ -666,7 +668,7 @@ public:
                            const ValueIDNum &Num) {
     // Is this variable location a candidate to be an entry value. First,
     // should we be trying this at all?
-    if (!ShouldEmitDebugEntryValues)
+    if (!getShouldEmitDebugEntryValues())
       return false;
 
     const DIExpression *DIExpr = Prop.DIExpr;
@@ -1902,7 +1904,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
   // call, etc). If it is a call that modifies SP, recognise the SP register
   // defs.
   bool CallChangesSP = false;
-  if (AdjustsStackInCalls && MI.isCall() && MI.getOperand(0).isSymbol() &&
+  if (getAdjustsStackInCalls() && MI.isCall() && MI.getOperand(0).isSymbol() &&
       !strcmp(MI.getOperand(0).getSymbolName(), StackProbeSymbolName.data()))
     CallChangesSP = true;
 
@@ -3541,7 +3543,7 @@ void InstrRefBasedLDV::makeDepthFirstEjectionMap(
     LexicalScope *WS = ScopePosition.first;
     ssize_t ChildNum = ScopePosition.second--;
 
-    const SmallVectorImpl<LexicalScope *> &Children = WS->getChildren();
+    ArrayRef<LexicalScope *> Children = WS->getChildren();
     if (ChildNum >= 0) {
       // If ChildNum is positive, there are remaining children to explore.
       // Push the child and its children-count onto the stack.
@@ -3649,7 +3651,7 @@ bool InstrRefBasedLDV::depthFirstVLocAndEmit(
     HighestDFSIn = std::max(HighestDFSIn, WS->getDFSIn());
 
     // Descend into any scope nests.
-    const SmallVectorImpl<LexicalScope *> &Children = WS->getChildren();
+    ArrayRef<LexicalScope *> Children = WS->getChildren();
     if (ChildNum < (ssize_t)Children.size()) {
       // There are children to explore -- push onto stack and continue.
       auto &ChildScope = Children[ChildNum];
@@ -3739,9 +3741,10 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   LS.scanFunction(MF);
 
   const auto &STI = MF.getSubtarget();
-  AdjustsStackInCalls = MFI->adjustsStack() &&
-                        STI.getFrameLowering()->stackProbeFunctionModifiesSP();
-  if (AdjustsStackInCalls)
+  setAdjustsStackInCalls(
+      MFI->adjustsStack() &&
+      STI.getFrameLowering()->stackProbeFunctionModifiesSP());
+  if (getAdjustsStackInCalls())
     StackProbeSymbolName = STI.getTargetLowering()->getStackProbeSymbolName(MF);
 
   MTracker =

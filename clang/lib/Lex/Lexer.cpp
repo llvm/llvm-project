@@ -27,6 +27,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
+#include <memory>
 
 #include <algorithm>
 #include <cassert>
@@ -171,16 +173,16 @@ void Lexer::InitLexer(const char *BufStart, const char *BufPtr,
   HasLeadingEmptyMacro = false;
 
   // We are not after parsing a #.
-  ParsingPreprocessorDirective = false;
+  setParsingPreprocessorDirectiveFlag(false);
 
   // We are not after parsing #include.
-  ParsingFilename = false;
+  setParsingFilename(false);
 
   // We are not in raw mode.  Raw mode disables diagnostics and interpretation
   // of tokens (e.g. identifiers, thus disabling macro expansion).  It is used
   // to quickly lex the tokens of the buffer, e.g. when handling a "#if 0" block
   // or otherwise skipping over tokens.
-  LexingRawMode = false;
+  setLexingRawMode(false);
 
   // Default to not keeping comments.
   ExtendedTokenMode = 0;
@@ -215,7 +217,7 @@ Lexer::Lexer(SourceLocation fileloc, const LangOptions &langOpts,
   InitLexer(BufStart, BufPtr, BufEnd);
 
   // We *are* in raw mode.
-  LexingRawMode = true;
+  setLexingRawMode(true);
 }
 
 /// Lexer constructor - Create a new raw lexer object.  This object is only
@@ -278,7 +280,7 @@ std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
 
   // Ensure that the lexer thinks it is inside a directive, so that end \n will
   // return an EOD token.
-  L->ParsingPreprocessorDirective = true;
+  L->setParsingPreprocessorDirectiveFlag(true);
 
   // This lexer really is for _Pragma.
   L->Is_PragmaLexer = true;
@@ -1860,7 +1862,7 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
       return false;
 
     bool DiagnoseAndContinue = !isLexingRawMode() &&
-                               !ParsingPreprocessorDirective &&
+                               !getParsingPreprocessorDirectiveFlag() &&
                                !PP->isPreprocessedOutput();
     if (!CheckCodepointValidInIdentifier(
             PP, LangOpts, CodePoint, makeCharRange(*this, CurPtr, UCNPtr),
@@ -1915,7 +1917,7 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result) {
       return false;
 
     bool DiagnoseAndContinue = !isLexingRawMode() &&
-                               !ParsingPreprocessorDirective &&
+                               !getParsingPreprocessorDirectiveFlag() &&
                                !PP->isPreprocessedOutput();
 
     if (!CheckCodepointValidInIdentifier(
@@ -1951,7 +1953,7 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
                                       const char *CurPtr) {
   bool IsExtension = false;
   if (isAllowedInitiallyIDChar(C, LangOpts, IsExtension)) {
-    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
+    if (!isLexingRawMode() && !getParsingPreprocessorDirectiveFlag() &&
         !PP->isPreprocessedOutput()) {
       if (IsExtension)
         diagnoseMathematicalNotationInIdentifier(
@@ -1968,7 +1970,7 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
     return LexIdentifierContinue(Result, CurPtr);
   }
 
-  if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
+  if (!isLexingRawMode() && !getParsingPreprocessorDirectiveFlag() &&
       !PP->isPreprocessedOutput() && !isASCII(*BufferPtr) &&
       !isUnicodeWhitespace(C)) {
     // Non-ASCII characters tend to creep into source code unintentionally.
@@ -2077,7 +2079,7 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
 
   // If we are in raw mode, return this identifier raw.  There is no need to
   // look up identifier information or attempt to macro expand it.
-  if (LexingRawMode)
+  if (getLexingRawMode())
     return true;
 
   // Fill in Result.IdentifierInfo and update the token kind,
@@ -2338,7 +2340,7 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
       // The implementation-defined semantics cannot be taken as causing '\' to
       // "escape" the following " because there is no provision for " in a
       // q-char-sequence.
-      if (ParsingFilename && C == '"')
+      if (getParsingFilename() && C == '"')
         CurPtr = SavedCurPtr;
     }
 
@@ -2352,7 +2354,7 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
 
     if (C == 0) {
       if (isCodeCompletionPoint(CurPtr-1)) {
-        if (ParsingFilename)
+        if (getParsingFilename())
           codeCompleteIncludedFile(AfterQuote, CurPtr - 1, /*IsAngled=*/false);
         else
           PP->CodeCompleteNaturalLanguage();
@@ -2643,7 +2645,7 @@ bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr) {
     if (!isVerticalWhitespace(Char))
       break;
 
-    if (ParsingPreprocessorDirective) {
+    if (getParsingPreprocessorDirectiveFlag()) {
       // End of preprocessor directive line, let LexTokenInternal handle this.
       BufferPtr = CurPtr;
       return false;
@@ -2774,9 +2776,9 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr) {
     // we'll handle it below.
     const char *OldPtr = CurPtr;
     bool OldRawMode = isLexingRawMode();
-    LexingRawMode = true;
+    setLexingRawMode(true);
     C = getAndAdvanceChar(CurPtr, Result);
-    LexingRawMode = OldRawMode;
+    setLexingRawMode(OldRawMode);
 
     // If we only read only one character, then no special handling is needed.
     // We're done and can skip forward to the newline.
@@ -2835,7 +2837,7 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr) {
 
   // If we are inside a preprocessor directive and we see the end of line,
   // return immediately, so that the lexer can return this as an EOD token.
-  if (ParsingPreprocessorDirective || CurPtr == BufferEnd) {
+  if (getParsingPreprocessorDirectiveFlag() || CurPtr == BufferEnd) {
     BufferPtr = CurPtr;
     return false;
   }
@@ -2863,7 +2865,7 @@ bool Lexer::SaveLineComment(Token &Result, const char *CurPtr) {
   // directly.
   FormTokenWithChars(Result, CurPtr, tok::comment);
 
-  if (!ParsingPreprocessorDirective || LexingRawMode)
+  if (!getParsingPreprocessorDirectiveFlag() || getLexingRawMode())
     return true;
 
   // If this Line-style comment is in a macro definition, transmogrify it into
@@ -3195,7 +3197,8 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
 /// ReadToEndOfLine - Read the rest of the current preprocessor line as an
 /// uninterpreted string.  This switches the lexer out of directive mode.
 void Lexer::ReadToEndOfLine(SmallVectorImpl<char> *Result) {
-  assert(ParsingPreprocessorDirective && ParsingFilename == false &&
+  assert(getParsingPreprocessorDirectiveFlag() &&
+         getParsingFilename() == false &&
          "Must be in a preprocessing directive!");
   Token Tmp;
   Tmp.startToken();
@@ -3254,9 +3257,9 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
   // If we hit the end of the file while parsing a preprocessor directive,
   // end the preprocessor directive first.  The next token returned will
   // then be the end of file.
-  if (ParsingPreprocessorDirective) {
+  if (getParsingPreprocessorDirectiveFlag()) {
     // Done parsing the "line".
-    ParsingPreprocessorDirective = false;
+    setParsingPreprocessorDirectiveFlag(false);
     // Update the location of token as well as BufferPtr.
     FormTokenWithChars(Result, CurPtr, tok::eod);
 
@@ -3312,7 +3315,8 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
 /// buffer controlled by this lexer, otherwise return the next unexpanded
 /// token.
 std::optional<Token> Lexer::peekNextPPToken() {
-  assert(!LexingRawMode && "How can we expand a macro from a skipping buffer?");
+  assert(!getLexingRawMode() &&
+         "How can we expand a macro from a skipping buffer?");
 
   if (isDependencyDirectivesLexer()) {
     if (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size())
@@ -3326,11 +3330,11 @@ std::optional<Token> Lexer::peekNextPPToken() {
   // Switch to 'skipping' mode.  This will ensure that we can lex a token
   // without emitting diagnostics, disables macro expansion, and will cause EOF
   // to return an EOF token instead of popping the include stack.
-  LexingRawMode = true;
+  setLexingRawMode(true);
 
   // Save state that can be changed while lexing so that we can restore it.
   const char *TmpBufferPtr = BufferPtr;
-  bool inPPDirectiveMode = ParsingPreprocessorDirective;
+  bool inPPDirectiveMode = getParsingPreprocessorDirectiveFlag();
   bool atStartOfLine = IsAtStartOfLine;
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   bool leadingSpace = HasLeadingSpace;
@@ -3341,13 +3345,13 @@ std::optional<Token> Lexer::peekNextPPToken() {
 
   // Restore state that may have changed.
   BufferPtr = TmpBufferPtr;
-  ParsingPreprocessorDirective = inPPDirectiveMode;
+  setParsingPreprocessorDirectiveFlag(inPPDirectiveMode);
   HasLeadingSpace = leadingSpace;
   IsAtStartOfLine = atStartOfLine;
   IsAtPhysicalStartOfLine = atPhysicalStartOfLine;
   MIOpt = MIOptState;
   // Restore the lexer back to non-skipping mode.
-  LexingRawMode = false;
+  setLexingRawMode(false);
 
   if (Tok.is(tok::eof))
     return std::nullopt;
@@ -3473,7 +3477,8 @@ static const char *findPlaceholderEnd(const char *CurPtr,
 
 bool Lexer::lexEditorPlaceholder(Token &Result, const char *CurPtr) {
   assert(CurPtr[-1] == '<' && CurPtr[0] == '#' && "Not a placeholder!");
-  if (!PP || !PP->getPreprocessorOpts().LexEditorPlaceholders || LexingRawMode)
+  if (!PP || !PP->getPreprocessorOpts().LexEditorPlaceholders ||
+      getLexingRawMode())
     return false;
   const char *End = findPlaceholderEnd(CurPtr + 1, BufferEnd);
   if (!End)
@@ -3935,9 +3940,9 @@ LexStart:
   case '\n':
     // If we are inside a preprocessor directive and we see the end of line,
     // we know we are done with the directive, so return an EOD token.
-    if (ParsingPreprocessorDirective) {
+    if (getParsingPreprocessorDirectiveFlag()) {
       // Done parsing the "line".
-      ParsingPreprocessorDirective = false;
+      setParsingPreprocessorDirectiveFlag(false);
 
       // Restore comment saving mode, in case it was disabled for directive.
       if (PP)
@@ -4166,8 +4171,8 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     return LexStringLiteral(Result, CurPtr,
-                            ParsingFilename ? tok::header_name
-                                            : tok::string_literal);
+                            getParsingFilename() ? tok::header_name
+                                                 : tok::string_literal);
 
   // C99 6.4.6: Punctuators.
   case '?':
@@ -4343,7 +4348,7 @@ LexStart:
         // it's actually the start of a preprocessing directive.  Callback to
         // the preprocessor to handle it.
         // TODO: -fpreprocessed mode??
-        if (Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+        if (Result.isAtPhysicalStartOfLine() && !getLexingRawMode() &&
             !Is_PragmaLexer)
           goto HandleDirective;
 
@@ -4355,7 +4360,7 @@ LexStart:
     break;
   case '<':
     Char = getCharAndSize(CurPtr, SizeTmp);
-    if (ParsingFilename && LexAngledStringLiteral(Result, CurPtr))
+    if (getParsingFilename() && LexAngledStringLiteral(Result, CurPtr))
       return true;
 
     if (Char == '<') {
@@ -4536,7 +4541,8 @@ LexStart:
       // it's actually the start of a preprocessing directive.  Callback to
       // the preprocessor to handle it.
       // TODO: -fpreprocessed mode??
-      if (Result.isAtPhysicalStartOfLine() && !LexingRawMode && !Is_PragmaLexer)
+      if (Result.isAtPhysicalStartOfLine() && !getLexingRawMode() &&
+          !Is_PragmaLexer)
         goto HandleDirective;
 
       Kind = tok::hash;
@@ -4547,13 +4553,20 @@ LexStart:
     // Objective C support.
     if (CurPtr[-1] == '@' && LangOpts.ObjC) {
       FormTokenWithChars(Result, CurPtr, tok::at);
-      if (PP && Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+      if (PP && Result.isAtPhysicalStartOfLine() && !getLexingRawMode() &&
           !Is_PragmaLexer) {
         Token NextPPTok;
         NextPPTok.startToken();
         {
-          llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
-              this->ParsingPreprocessorDirective, true);
+          auto SavedParsingPreprocessorDirective = [PackedFlagOwner_ = this] {
+            const bool PackedFlagOld_ =
+                PackedFlagOwner_->getParsingPreprocessorDirectiveFlag();
+            PackedFlagOwner_->setParsingPreprocessorDirectiveFlag(true);
+            return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+              PackedFlagOwner_->setParsingPreprocessorDirectiveFlag(
+                  PackedFlagOld_);
+            });
+          }();
           auto NextTokOr = peekNextPPToken();
           if (NextTokOr.has_value()) {
             NextPPTok = *NextTokOr;
@@ -4618,7 +4631,7 @@ LexStart:
       return LexUnicodeIdentifierStart(Result, CodePoint, CurPtr);
     }
 
-    if (isLexingRawMode() || ParsingPreprocessorDirective ||
+    if (isLexingRawMode() || getParsingPreprocessorDirectiveFlag() ||
         PP->isPreprocessedOutput()) {
       ++CurPtr;
       Kind = tok::unknown;
@@ -4703,7 +4716,7 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   }
 
   const char *DDTokPtr = BufferStart + DDTok.Offset;
-  if (ParsingFilename && *DDTokPtr == '<') {
+  if (getParsingFilename() && *DDTokPtr == '<') {
     Result.setFlag((clang::Token::TokenFlags)DDTok.Flags);
     Result.clearFlag(clang::Token::NeedsCleaning);
     BufferPtr = DDTokPtr;
@@ -4771,7 +4784,7 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     return true;
   }
   if (Result.is(tok::eod))
-    ParsingPreprocessorDirective = false;
+    setParsingPreprocessorDirectiveFlag(false);
 
   return true;
 }

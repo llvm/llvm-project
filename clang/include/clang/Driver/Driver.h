@@ -23,6 +23,7 @@
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -187,7 +188,7 @@ public:
   /// FIXME: This type of customization should be removed in favor of the
   /// universal driver when it is ready.
   typedef SmallVector<std::string, 4> prefix_list;
-  prefix_list PrefixDirs;
+  llvm::SmallVectorWithFlagsFor<prefix_list, 2> PrefixDirs;
 
   /// sysroot, if present
   std::string SysRoot;
@@ -236,13 +237,15 @@ public:
   bool IsDXCMode() const { return Mode == DXCMode; }
 
   /// Only print tool bindings, don't build any jobs.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned CCCPrintBindings : 1;
+  unsigned getCCCPrintBindings() const { return PrefixDirs.getFlag(0); }
+  void setCCCPrintBindings(unsigned Value) {
+    PrefixDirs.setFlag(0, (Value & 1));
+  }
 
   /// Set CC_PRINT_OPTIONS mode, which is like -v but logs the commands to
   /// CCPrintOptionsFilename or to stderr.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned CCPrintOptions : 1;
+  unsigned getCCPrintOptions() const { return PrefixDirs.getFlag(1); }
+  void setCCPrintOptions(unsigned Value) { PrefixDirs.setFlag(1, (Value & 1)); }
 
   /// The format of the header information that is emitted. If CC_PRINT_HEADERS
   /// is set, the format is textual. Otherwise, the format is determined by the

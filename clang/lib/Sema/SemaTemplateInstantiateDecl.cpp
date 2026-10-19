@@ -32,7 +32,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -578,8 +578,8 @@ static void instantiateOMPDeclareVariantAttr(
     NeedDeviceAddrExprs.push_back(ER.get());
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
-    OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
-    Info.HasPreferAttrs = II.HasPreferAttrs;
+    OMPInteropInfo Info(II.isTarget(), II.isTargetSync());
+    Info.setPreferAttrs(II.hasPreferAttrs());
     for (const OMPInteropPref &P : II.Prefs) {
       Expr *SubstFr = nullptr;
       if (P.Fr) {
@@ -2784,7 +2784,10 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   // merged with the local instantiation scope for the function template
   // itself.
   LocalInstantiationScope Scope(SemaRef);
-  llvm::SaveAndRestore RAII(EvaluateConstraints, false);
+  llvm::scope_exit RAII([this, Old = getEvaluateConstraintsFlag()] {
+    setEvaluateConstraintsFlag(Old);
+  });
+  setEvaluateConstraintsFlag(false);
 
   TemplateParameterList *TempParams = D->getTemplateParameters();
   TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
@@ -3854,7 +3857,7 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
       // with the corresponding auto-typed parameter as it might reference
       // other parameters.
       if (SemaRef.SubstTypeConstraint(Inst, TC, TemplateArgs,
-                                      EvaluateConstraints))
+                                      getEvaluateConstraintsFlag()))
         return nullptr;
     }
   }
@@ -4842,7 +4845,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl::Create(
           SemaRef.Context, D->getTagKind(), Owner, D->getBeginLoc(),
           D->getLocation(), InstClassTemplate, CTAI.CanonicalConverted,
-          CTAI.StrictPackMatch, PrevDecl);
+          CTAI.getStrictPackMatch(), PrevDecl);
   InstD->setTemplateArgsAsWritten(InstTemplateArgs);
 
   // Add this partial specialization to the set of class template partial
@@ -5148,7 +5151,7 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
     return nullptr;
 
   Expr *InstRequiresClause = L->getRequiresClause();
-  if (InstRequiresClause && EvaluateConstraints) {
+  if (InstRequiresClause && getEvaluateConstraintsFlag()) {
     ExprResult E =
         SemaRef.SubstConstraintExpr(InstRequiresClause, TemplateArgs);
     if (E.isInvalid())
@@ -5166,7 +5169,10 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
 bool TemplateDeclInstantiator::SubstTemplateParameterLists(
     ArrayRef<TemplateParameterList *> TPLs,
     SmallVectorImpl<TemplateParameterList *> &InstTPLs) {
-  llvm::SaveAndRestore RAII(EvaluateConstraints, false);
+  llvm::scope_exit RAII([this, Old = getEvaluateConstraintsFlag()] {
+    setEvaluateConstraintsFlag(Old);
+  });
+  setEvaluateConstraintsFlag(false);
   for (TemplateParameterList *L : TPLs) {
     TemplateParameterList *InstParams = SubstTemplateParams(L);
     if (!InstParams)
@@ -5447,7 +5453,7 @@ TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
 
   TypeSourceInfo *NewTInfo = SemaRef.SubstFunctionDeclType(
       OldTInfo, TemplateArgs, D->getTypeSpecStartLoc(), D->getDeclName(),
-      ThisContext, ThisTypeQuals, EvaluateConstraints);
+      ThisContext, ThisTypeQuals, getEvaluateConstraintsFlag());
   if (!NewTInfo)
     return nullptr;
 
@@ -5505,7 +5511,7 @@ TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
         ParmVarDecl *Parm = SemaRef.SubstParmVarDecl(
             OldParam, TemplateArgs, /*indexAdjustment=*/0,
             /*NumExpansions=*/std::nullopt,
-            /*ExpectParameterPack=*/false, EvaluateConstraints);
+            /*ExpectParameterPack=*/false, getEvaluateConstraintsFlag());
         if (!Parm)
           return nullptr;
         Params.push_back(Parm);
@@ -6343,8 +6349,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
     VarTemplateDecl *VarTemplate, VarDecl *FromVar,
     const TemplateArgumentList *PartialSpecArgs,
-    SmallVectorImpl<TemplateArgument> &Converted,
-    SourceLocation PointOfInstantiation, LateInstantiatedAttrVec *LateAttrs,
+    ArrayRef<TemplateArgument> Converted, SourceLocation PointOfInstantiation,
+    LateInstantiatedAttrVec *LateAttrs,
     LocalInstantiationScope *StartingScope) {
   if (FromVar->isInvalidDecl())
     return nullptr;
@@ -6569,10 +6575,18 @@ void Sema::InstantiateVariableInitializer(
   EnterExpressionEvaluationContext Evaluated(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,
       ExpressionEvaluationContextRecord::EK_VariableInit);
-  currentEvaluationContext().InLifetimeExtendingContext =
-      parentEvaluationContext().InLifetimeExtendingContext;
-  currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-      parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+  [&] {
+    auto PackedFlagValue_ =
+        parentEvaluationContext().getInLifetimeExtendingContext();
+    return currentEvaluationContext().setInLifetimeExtendingContext(
+        PackedFlagValue_);
+  }();
+  [&] {
+    auto PackedFlagValue_ =
+        parentEvaluationContext().getRebuildDefaultArgOrDefaultInit();
+    return currentEvaluationContext().setRebuildDefaultArgOrDefaultInit(
+        PackedFlagValue_);
+  }();
 
   // Set DeclForInitializer for this variable so DiagIfReachable can properly
   // suppress runtime diagnostics for constexpr/static member variables
@@ -7408,7 +7422,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
             // argument deduction in the process of rebuilding immediate
             // expressions. (Because the default argument that involves a lambda
             // is untransformed and thus could be dependent at this point.)
-            assert(SemaRef.RebuildingImmediateInvocation ||
+            assert(SemaRef.getRebuildingImmediateInvocation() ||
                    CodeSynthesisContexts.back().Kind ==
                        CodeSynthesisContext::BuildingDeductionGuides);
             // Return a nullptr as a sentinel value, we handle it properly in

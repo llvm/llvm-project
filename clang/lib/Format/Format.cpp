@@ -24,6 +24,7 @@
 #include "UsingDeclarationsSorter.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -2699,7 +2700,7 @@ public:
   }
 
 private:
-  void removeParens(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void removeParens(ArrayRef<AnnotatedLine *> Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
@@ -2732,7 +2733,7 @@ public:
   }
 
 private:
-  void insertBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void insertBraces(ArrayRef<AnnotatedLine *> Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
     int OpeningBraceSurplus = 0;
@@ -2786,7 +2787,7 @@ public:
   }
 
 private:
-  void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void removeBraces(ArrayRef<AnnotatedLine *> Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
     const auto *End = Lines.end();
@@ -2827,8 +2828,7 @@ public:
   }
 
 private:
-  void removeSemi(TokenAnnotator &Annotator,
-                  SmallVectorImpl<AnnotatedLine *> &Lines,
+  void removeSemi(TokenAnnotator &Annotator, ArrayRef<AnnotatedLine *> Lines,
                   tooling::Replacements &Result) {
     auto PrecededByFunctionRBrace = [](const FormatToken &Tok) {
       const auto *Prev = Tok.Previous;
@@ -2879,7 +2879,7 @@ public:
   }
 
 private:
-  void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void editEnumTrailingComma(ArrayRef<AnnotatedLine *> Lines,
                              tooling::Replacements &Result) {
     bool InEnumBraces = false;
     FormatToken *BeforeRBrace = nullptr;
@@ -2933,7 +2933,7 @@ public:
 private:
   // Replaces double/single-quoted string literal as appropriate, re-escaping
   // the contents in the process.
-  void requoteJSStringLiteral(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void requoteJSStringLiteral(ArrayRef<AnnotatedLine *> Lines,
                               tooling::Replacements &Result) {
     for (AnnotatedLine *Line : Lines) {
       requoteJSStringLiteral(Line->Children, Result);
@@ -3047,8 +3047,7 @@ public:
   }
 
 private:
-  bool
-  hasCpp03IncompatibleFormat(const SmallVectorImpl<AnnotatedLine *> &Lines) {
+  bool hasCpp03IncompatibleFormat(ArrayRef<AnnotatedLine *> Lines) {
     for (const AnnotatedLine *Line : Lines) {
       if (hasCpp03IncompatibleFormat(Line->Children))
         return true;
@@ -3066,7 +3065,7 @@ private:
     return false;
   }
 
-  int countVariableAlignments(const SmallVectorImpl<AnnotatedLine *> &Lines) {
+  int countVariableAlignments(ArrayRef<AnnotatedLine *> Lines) {
     int AlignmentDiff = 0;
 
     for (const AnnotatedLine *Line : Lines) {
@@ -3176,7 +3175,7 @@ public:
 private:
   /// Inserts trailing commas in [] and {} initializers if they wrap over
   /// multiple lines.
-  void insertTrailingCommas(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void insertTrailingCommas(ArrayRef<AnnotatedLine *> Lines,
                             tooling::Replacements &Result) {
     for (AnnotatedLine *Line : Lines) {
       insertTrailingCommas(Line->Children, Result);
@@ -3461,10 +3460,9 @@ public:
   bool isObjC() { return IsObjC; }
 
 private:
-  static bool
-  guessIsObjC(const SourceManager &SourceManager,
-              const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-              const AdditionalKeywords &Keywords) {
+  static bool guessIsObjC(const SourceManager &SourceManager,
+                          ArrayRef<AnnotatedLine *> AnnotatedLines,
+                          const AdditionalKeywords &Keywords) {
     // Keep this array sorted, since we are binary searching over it.
     static constexpr llvm::StringLiteral FoundationIdentifiers[] = {
         "CGFloat",
@@ -3594,11 +3592,19 @@ struct IncludeDirective {
 };
 
 struct JavaImportDirective {
+  JavaImportDirective(StringRef Identifier, StringRef Text, unsigned Offset,
+                      ArrayRef<StringRef> Comments, bool IsStatic)
+      : Identifier(Identifier), Text(Text), Offset(Offset),
+        AssociatedCommentLines(
+            decltype(this->AssociatedCommentLines)::withFlags(
+                unsigned(IsStatic), Comments)) {}
+
   StringRef Identifier;
   StringRef Text;
   unsigned Offset;
-  SmallVector<StringRef> AssociatedCommentLines;
-  bool IsStatic;
+  llvm::SmallVectorWithFlags<StringRef> AssociatedCommentLines;
+  bool getIsStatic() const { return AssociatedCommentLines.getFlag(0); }
+  void setIsStatic(bool Value) { AssociatedCommentLines.setFlag(0, Value); }
 };
 
 } // end anonymous namespace
@@ -4005,10 +4011,10 @@ static void sortJavaImports(const FormatStyle &Style,
       Style.SortJavaStaticImport == FormatStyle::SJSIO_After;
   sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
     // Negating IsStatic to push static imports above non-static imports.
-    return std::make_tuple(!Imports[LHSI].IsStatic ^
+    return std::make_tuple(!Imports[LHSI].getIsStatic() ^
                                StaticImportAfterNormalImport,
                            JavaImportGroups[LHSI], Imports[LHSI].Identifier) <
-           std::make_tuple(!Imports[RHSI].IsStatic ^
+           std::make_tuple(!Imports[RHSI].getIsStatic() ^
                                StaticImportAfterNormalImport,
                            JavaImportGroups[RHSI], Imports[RHSI].Identifier);
   });
@@ -4020,14 +4026,14 @@ static void sortJavaImports(const FormatStyle &Style,
                              }),
                 Indices.end());
 
-  bool CurrentIsStatic = Imports[Indices.front()].IsStatic;
+  bool CurrentIsStatic = Imports[Indices.front()].getIsStatic();
   unsigned CurrentImportGroup = JavaImportGroups[Indices.front()];
 
   std::string result;
   for (unsigned Index : Indices) {
     if (!result.empty()) {
       result += "\n";
-      if (CurrentIsStatic != Imports[Index].IsStatic ||
+      if (CurrentIsStatic != Imports[Index].getIsStatic() ||
           CurrentImportGroup != JavaImportGroups[Index]) {
         result += "\n";
       }
@@ -4037,7 +4043,7 @@ static void sortJavaImports(const FormatStyle &Style,
       result += "\n";
     }
     result += Imports[Index].Text;
-    CurrentIsStatic = Imports[Index].IsStatic;
+    CurrentIsStatic = Imports[Index].getIsStatic();
     CurrentImportGroup = JavaImportGroups[Index];
   }
 

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_ROCMINSTALLATIONDETECTOR_H
 
 #include "clang/Driver/Driver.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 namespace driver {
@@ -120,7 +121,8 @@ private:
   // HIP version specified by --hip-version.
   StringRef HIPVersionArg;
   // Wheter -nogpulib is specified.
-  bool NoBuiltinLibs = false;
+  bool getNoBuiltinLibs() const { return ROCmSearchDirs.getFlag(0); }
+  void setNoBuiltinLibs(bool Value) { ROCmSearchDirs.setFlag(0, Value); }
 
   // Paths
   SmallString<0> InstallPath;
@@ -151,9 +153,11 @@ private:
   std::map<unsigned, std::string> ABIVersionMap;
 
   // Cache ROCm installation search paths.
-  SmallVector<Candidate, 4> ROCmSearchDirs;
-  bool PrintROCmSearchDirs;
-  bool Verbose;
+  llvm::SmallVectorWithFlags<Candidate, 4, 3> ROCmSearchDirs;
+  bool getPrintROCmSearchDirs() const { return ROCmSearchDirs.getFlag(1); }
+  void setPrintROCmSearchDirs(bool Value) { ROCmSearchDirs.setFlag(1, Value); }
+  bool getVerbose() const { return ROCmSearchDirs.getFlag(2); }
+  void setVerbose(bool Value) { ROCmSearchDirs.setFlag(2, Value); }
 
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
@@ -162,7 +166,7 @@ private:
 
   void scanLibDevicePath(llvm::StringRef Path);
   bool parseHIPVersionFile(llvm::StringRef V);
-  const SmallVectorImpl<Candidate> &getInstallationPathCandidates();
+  ArrayRef<Candidate> getInstallationPathCandidates();
 
   /// Find the path to a SPACK package under the ROCm candidate installation
   /// directory if the candidate is a SPACK ROCm candidate. \returns empty

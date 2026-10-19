@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -245,8 +246,10 @@ private:
   /// A directory for which framework modules can be inferred.
   struct InferredDirectory {
     /// Whether to infer modules from this directory.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned InferModules : 1;
+    unsigned getInferModules() const { return ExcludedModules.getFlag(0); }
+    void setInferModules(unsigned Value) {
+      ExcludedModules.setFlag(0, (Value & 1));
+    }
 
     /// The attributes to use for inferred modules.
     Attributes Attrs;
@@ -257,9 +260,9 @@ private:
 
     /// The names of modules that cannot be inferred within this
     /// directory.
-    SmallVector<std::string, 2> ExcludedModules;
+    llvm::SmallVectorWithFlags<std::string, 2> ExcludedModules;
 
-    InferredDirectory() : InferModules(false) {}
+    InferredDirectory() {}
   };
 
   /// A mapping from directories to information about inferring
@@ -319,7 +322,8 @@ private:
   ///
   /// \returns The resolved module, or null if the module-id could not be
   /// resolved.
-  Module *resolveModuleId(const ModuleId &Id, Module *Mod, bool Complain) const;
+  Module *resolveModuleId(llvm::ArrayRef<ModuleId::value_type> Id, Module *Mod,
+                          bool Complain) const;
 
   /// Add an unresolved header to a module.
   ///
@@ -646,7 +650,7 @@ public:
   /// Check whether a framework module can be inferred in the given directory.
   bool canInferFrameworkModule(const DirectoryEntry *Dir) const {
     auto It = InferredDirectories.find(Dir);
-    return It != InferredDirectories.end() && It->getSecond().InferModules;
+    return It != InferredDirectories.end() && It->getSecond().getInferModules();
   }
 
   /// Retrieve the module map file containing the definition of the given

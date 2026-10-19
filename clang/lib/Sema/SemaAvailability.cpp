@@ -553,7 +553,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   case AR_Deprecated:
     if (ObjCPropertyAccess)
       diag = diag::warn_property_method_deprecated;
-    else if (S.currentEvaluationContext().IsCaseExpr)
+    else if (S.currentEvaluationContext().getIsCaseExpr())
       diag = diag::warn_deprecated_switch_case;
     else
       diag = diag::warn_deprecated;

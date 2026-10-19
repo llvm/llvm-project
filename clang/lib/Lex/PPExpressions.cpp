@@ -30,11 +30,13 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
+#include <memory>
 
 using namespace clang;
 
@@ -885,7 +887,13 @@ Preprocessor::DirectiveEvalResult
 Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
                                           Token &Tok, bool &EvaluatedDefined,
                                           bool CheckForEoD) {
-  SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
+  auto PPDir = [PackedFlagOwner = this] {
+    const bool PackedFlagOld = PackedFlagOwner->getParsingIfOrElifDirective();
+    PackedFlagOwner->setParsingIfOrElifDirective(true);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setParsingIfOrElifDirective(PackedFlagOld);
+    });
+  }();
   // Save the current state of 'DisableMacroExpansion' and reset it to false. If
   // 'DisableMacroExpansion' is true, then we must be in a macro argument list
   // in which case a directive is undefined behavior.  We want macros to be able

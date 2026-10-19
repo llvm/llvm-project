@@ -87,7 +87,7 @@ static void checkAndSetWeakAlias(SymbolTable &symtab, InputFile *f,
         // Weak aliases as produced by GCC are named in the form
         // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
         // of another symbol emitted near the weak symbol.
-        if (symtab.ctx.config.allowDuplicateWeak) {
+        if (symtab.ctx.config.getAllowDuplicateWeak()) {
           auto isAbsZero = [](Symbol *sym) -> bool {
             return isa<DefinedAbsolute>(sym) &&
                    dyn_cast<DefinedAbsolute>(sym)->getVA() == 0;
@@ -1228,7 +1228,7 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
 
 ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx.getSymtab(getMachineType(m)), ImportKind, m),
-      live(!ctx.config.doGC) {}
+      live(!ctx.config.getDoGC()) {}
 
 MachineTypes ImportFile::getMachineType(MemoryBufferRef m) {
   uint16_t machine =

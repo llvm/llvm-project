@@ -1025,7 +1025,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     if (OI->PostOutlineCB)
       OI->PostOutlineCB(*OutlinedFn);
 
-    if (OI->FixUpNonEntryAllocas)
+    if (OI->getFixUpNonEntryAllocas())
       hoistNonEntryAllocasToEntryBlock(OutlinedFn);
   }
 
@@ -1076,10 +1076,10 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
   }
 
-  IsFinalized = true;
+  setIsFinalized(true);
 }
 
-bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
+bool OpenMPIRBuilder::isFinalized() { return getIsFinalized(); }
 
 void OpenMPIRBuilder::registerDeclareTargetGlobalReplacement(
     GlobalValue *Original, GlobalValue *Replacement) {
@@ -2113,7 +2113,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     };
   }
 
-  OI->FixUpNonEntryAllocas = true;
+  OI->setFixUpNonEntryAllocas(true);
   OI->OuterAllocBB = OuterAllocaBlock;
   OI->EntryBB = PRegEntryBB;
   OI->ExitBB = PRegExitBB;
@@ -11772,7 +11772,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     Value *OldValue = nullptr;
     Value *SuccessOrFail = nullptr;
 
-    if (!IsInteger && HandleFPNegZero) {
+    if (!IsInteger && getHandleFPNegZeroFlag()) {
       // IEEE 754 special cases for cmpxchg (which is bitwise):
       //   1. -0.0 == +0.0 but they have different bit patterns.
       //   2. NaN != NaN but identical NaN bit patterns would match.
@@ -11966,7 +11966,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
     // For the HandleFPNegZero path, handle V.Var and R.Var using the
     // pre-computed OldValue and SuccessOrFail.
-    if (HandleFPNegZero && !IsInteger) {
+    if (getHandleFPNegZeroFlag() && !IsInteger) {
       if (V.Var) {
         assert(OldValue->getType() == V.ElemTy &&
                "OldValue and V must be of same type");

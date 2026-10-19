@@ -42,6 +42,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include <algorithm>
@@ -152,7 +153,8 @@ private:
   const DataLayout *DL;
   BasicBlock *Entry;
   ProfileSummaryInfo *PSI;
-  bool OptForSize;
+  bool getOptForSize() const { return ConstIntInfoVec.getFlag(0); }
+  void setOptForSize(bool Value) { ConstIntInfoVec.setFlag(0, Value); }
 
   /// Keeps track of constant candidates found in the function.
   using ConstCandVecType = std::vector<consthoist::ConstantCandidate>;
@@ -163,7 +165,7 @@ private:
   /// These are the final constants we decided to hoist.
   using ConstInfoVecType = SmallVector<consthoist::ConstantInfo, 8>;
   using GVInfoVecMapType = MapVector<GlobalVariable *, ConstInfoVecType>;
-  ConstInfoVecType ConstIntInfoVec;
+  llvm::SmallVectorWithFlagsFor<ConstInfoVecType, 1> ConstIntInfoVec;
   GVInfoVecMapType ConstGEPInfoMap;
 
   /// Keep track of cast instructions we already cloned.

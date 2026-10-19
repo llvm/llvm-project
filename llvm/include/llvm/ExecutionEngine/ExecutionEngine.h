@@ -17,6 +17,7 @@
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -114,24 +115,28 @@ class LLVM_ABI ExecutionEngine {
   const DataLayout DL;
 
   /// Whether lazy JIT compilation is enabled.
-  bool CompilingLazily;
+  bool getCompilingLazily() const { return Modules.getFlag(0); }
+  void setCompilingLazily(bool Value) { Modules.setFlag(0, Value); }
 
   /// Whether JIT compilation of external global variables is allowed.
-  bool GVCompilationDisabled;
+  bool getGVCompilationDisabled() const { return Modules.getFlag(1); }
+  void setGVCompilationDisabled(bool Value) { Modules.setFlag(1, Value); }
 
   /// Whether the JIT should perform lookups of external symbols (e.g.,
   /// using dlsym).
-  bool SymbolSearchingDisabled;
+  bool getSymbolSearchingDisabled() const { return Modules.getFlag(2); }
+  void setSymbolSearchingDisabled(bool Value) { Modules.setFlag(2, Value); }
 
   /// Whether the JIT should verify IR modules during compilation.
-  bool VerifyModules;
+  bool getVerifyModulesFlag() const { return Modules.getFlag(3); }
+  void setVerifyModulesFlag(bool Value) { Modules.setFlag(3, Value); }
 
   friend class EngineBuilder;  // To allow access to JITCtor and InterpCtor.
 
 protected:
   /// The list of Modules that we are JIT'ing from.  We use a SmallVector to
   /// optimize for the case where there is only one module.
-  SmallVector<std::unique_ptr<Module>, 1> Modules;
+  llvm::SmallVectorWithFlags<std::unique_ptr<Module>, 1, 4> Modules;
 
   /// getMemoryforGV - Allocate memory for a global variable.
   virtual char *getMemoryForGV(const GlobalVariable *GV);
@@ -457,42 +462,34 @@ public:
   /// (ExecutionEngine::lock) or otherwise ensure that no other thread calls a
   /// lazy stub.  See http://llvm.org/PR5184 for details.
   void DisableLazyCompilation(bool Disabled = true) {
-    CompilingLazily = !Disabled;
+    setCompilingLazily(!Disabled);
   }
-  bool isCompilingLazily() const {
-    return CompilingLazily;
-  }
+  bool isCompilingLazily() const { return getCompilingLazily(); }
 
   /// DisableGVCompilation - If called, the JIT will abort if it's asked to
   /// allocate space and populate a GlobalVariable that is not internal to
   /// the module.
   void DisableGVCompilation(bool Disabled = true) {
-    GVCompilationDisabled = Disabled;
+    setGVCompilationDisabled(Disabled);
   }
-  bool isGVCompilationDisabled() const {
-    return GVCompilationDisabled;
-  }
+  bool isGVCompilationDisabled() const { return getGVCompilationDisabled(); }
 
   /// DisableSymbolSearching - If called, the JIT will not try to lookup unknown
   /// symbols with dlsym.  A client can still use InstallLazyFunctionCreator to
   /// resolve symbols in a custom way.
   void DisableSymbolSearching(bool Disabled = true) {
-    SymbolSearchingDisabled = Disabled;
+    setSymbolSearchingDisabled(Disabled);
   }
   bool isSymbolSearchingDisabled() const {
-    return SymbolSearchingDisabled;
+    return getSymbolSearchingDisabled();
   }
 
   /// Enable/Disable IR module verification.
   ///
   /// Note: Module verification is enabled by default in Debug builds, and
   /// disabled by default in Release. Use this method to override the default.
-  void setVerifyModules(bool Verify) {
-    VerifyModules = Verify;
-  }
-  bool getVerifyModules() const {
-    return VerifyModules;
-  }
+  void setVerifyModules(bool Verify) { setVerifyModulesFlag(Verify); }
+  bool getVerifyModules() const { return getVerifyModulesFlag(); }
 
   /// InstallLazyFunctionCreator - If an unknown function is needed, the
   /// specified function pointer is invoked to create it.  If it returns null,
@@ -545,9 +542,11 @@ private:
   std::optional<CodeModel::Model> CMModel;
   std::string MArch;
   std::string MCPU;
-  SmallVector<std::string, 4> MAttrs;
-  bool VerifyModules;
-  bool EmulatedTLS = true;
+  llvm::SmallVectorWithFlags<std::string, 4, 2> MAttrs;
+  bool getVerifyModulesFlag() const { return MAttrs.getFlag(0); }
+  void setVerifyModulesFlag(bool Value) { MAttrs.setFlag(0, Value); }
+  bool getEmulatedTLSFlag() const { return !MAttrs.getFlag(1); }
+  void setEmulatedTLSFlag(bool Value) { MAttrs.setFlag(1, !Value); }
 
 public:
   /// Default constructor for EngineBuilder.
@@ -632,7 +631,7 @@ public:
   /// setVerifyModules - Set whether the JIT implementation should verify
   /// IR modules during compilation.
   EngineBuilder &setVerifyModules(bool Verify) {
-    VerifyModules = Verify;
+    setVerifyModulesFlag(Verify);
     return *this;
   }
 
@@ -645,16 +644,16 @@ public:
   }
 
   void setEmulatedTLS(bool EmulatedTLS) {
-    this->EmulatedTLS = EmulatedTLS;
+    this->setEmulatedTLSFlag(EmulatedTLS);
   }
 
   LLVM_ABI TargetMachine *selectTarget();
 
   /// selectTarget - Pick a target either via -march or by guessing the native
   /// arch.  Add any CPU features specified via -mcpu or -mattr.
-  LLVM_ABI TargetMachine *
-  selectTarget(const Triple &TargetTriple, StringRef MArch, StringRef MCPU,
-               const SmallVectorImpl<std::string> &MAttrs);
+  LLVM_ABI TargetMachine *selectTarget(const Triple &TargetTriple,
+                                       StringRef MArch, StringRef MCPU,
+                                       ArrayRef<std::string> MAttrs);
 
   ExecutionEngine *create() {
     return create(selectTarget());

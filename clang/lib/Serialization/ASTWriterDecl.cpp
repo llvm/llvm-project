@@ -3118,7 +3118,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   assert(ID >= FirstDeclID && "invalid decl ID");
 
   RecordData Record;
-  ASTDeclWriter W(*this, Context, Record, GeneratingReducedBMI);
+  ASTDeclWriter W(*this, Context, Record, getGeneratingReducedBMI());
 
   // Build a record for this declaration
   W.Visit(D);

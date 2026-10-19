@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGMACRO_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Error.h"
@@ -102,11 +103,12 @@ class DWARFDebugMacro {
     // a macinfo[.dwo] section which doesn't have header itself, hence
     // for that case other fields in the `Header` are uninitialized.
     MacroHeader Header;
-    SmallVector<Entry, 4> Macros;
+    llvm::SmallVectorWithFlags<Entry, 4> Macros;
     uint64_t Offset;
 
     /// Whether or not this is a .debug_macro section.
-    bool IsDebugMacro;
+    bool getIsDebugMacro() const { return Macros.getFlag(0); }
+    void setIsDebugMacro(bool Value) { Macros.setFlag(0, Value); }
   };
 
   /// A list of all the macro entries in the debug_macinfo section.

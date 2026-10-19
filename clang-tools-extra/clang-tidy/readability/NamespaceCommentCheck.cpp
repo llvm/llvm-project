@@ -28,14 +28,18 @@ NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
           llvm::Regex::IgnoreCase),
       ShortNamespaceLines(Options.get("ShortNamespaceLines", 1U)),
       SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)),
-      AllowOmittingNamespaceComments(
-          Options.get("AllowOmittingNamespaceComments", false)) {}
+      Ends(decltype(this->Ends)::withFlags([&] {
+        unsigned PackedFlags = 0;
+        PackedFlags |= unsigned(
+            bool(Options.get("AllowOmittingNamespaceComments", false)));
+        return PackedFlags;
+      }())) {}
 
 void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortNamespaceLines", ShortNamespaceLines);
   Options.store(Opts, "SpacesBeforeComments", SpacesBeforeComments);
   Options.store(Opts, "AllowOmittingNamespaceComments",
-                AllowOmittingNamespaceComments);
+                getAllowOmittingNamespaceComments());
 }
 
 void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -193,7 +197,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
           : ("namespace '" + *NamespaceNameAsWritten + "'");
 
   // If no namespace comment is allowed
-  if (!HasComment && AllowOmittingNamespaceComments)
+  if (!HasComment && getAllowOmittingNamespaceComments())
     return;
 
   std::string Fix(SpacesBeforeComments, ' ');

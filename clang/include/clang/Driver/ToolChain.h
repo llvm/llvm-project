@@ -185,11 +185,9 @@ private:
   Tool *getOffloadPackager() const;
   Tool *getLinkerWrapper() const;
 
-  /// Track if diagnostics have been emitted for sanitizer arguments already to
-  /// avoid duplicate diagnostics.
-  mutable bool SanitizerArgsChecked = false;
-
   /// Set of BoundArch values which have already had diagnostics emitted.
+  /// A nonempty set also records that common sanitizer-argument diagnostics
+  /// have already been emitted.
   mutable llvm::SmallSet<StringRef, 4> BoundArchSanitizerArgsChecked;
 
   /// The effective clang triple for the current Job.

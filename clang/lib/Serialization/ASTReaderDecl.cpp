@@ -57,6 +57,7 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -67,6 +68,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -4449,13 +4451,18 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
 void ASTReader::PassInterestingDeclsToConsumer() {
   assert(Consumer);
 
-  if (!CanPassDeclsToConsumer)
+  if (!getCanPassDeclsToConsumer())
     return;
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
-                                             /*NewValue=*/false);
+  auto GuardPassingDeclsToConsumer = [PackedFlagOwner = this] {
+    const bool PackedFlagOld = PackedFlagOwner->getCanPassDeclsToConsumer();
+    PackedFlagOwner->setCanPassDeclsToConsumer(false);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setCanPassDeclsToConsumer(PackedFlagOld);
+    });
+  }();
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.

@@ -182,9 +182,8 @@ protected:
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
 
-  void analyzeFormalArgumentsCompute(
-    CCState &State,
-    const SmallVectorImpl<ISD::InputArg> &Ins) const;
+  void analyzeFormalArgumentsCompute(CCState &State,
+                                     llvm::ArrayRef<ISD::InputArg> Ins) const;
 
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI,
@@ -260,7 +259,7 @@ public:
   static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 

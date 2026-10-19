@@ -30,6 +30,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -1368,12 +1369,13 @@ public:
     const SCEV *SymbolicMaxNotTaken;
 
     // Not taken either exactly ConstantMaxNotTaken or zero times
-    bool MaxOrZero = false;
+    bool isMaxOrZero() const { return Predicates.getFlag(0); }
 
     /// A vector of predicate guards for this ExitLimit. The result is only
     /// valid if all of the predicates in \c Predicates evaluate to 'true' at
     /// run-time.
-    SmallVector<const SCEVPredicate *, 4> Predicates;
+    // Flag bit 0 records whether the exit count is the maximum or zero.
+    SmallVectorWithFlags<const SCEVPredicate *, 4> Predicates;
 
     /// Construct either an exact exit limit from a constant, or an unknown
     /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
@@ -1808,7 +1810,8 @@ private:
 
     /// A list of computable exits and their not-taken counts.  Loops almost
     /// never have more than one computable exit.
-    SmallVector<ExitNotTakenInfo, 1> ExitNotTaken;
+    // Flag bits 0 and 1 record completeness and a maximum-or-zero count.
+    SmallVectorWithFlags<ExitNotTakenInfo, 1, 2> ExitNotTaken;
 
     /// Expression indicating the least constant maximum backedge-taken count of
     /// the loop that is known, or a SCEVCouldNotCompute. This expression is
@@ -1817,16 +1820,14 @@ private:
 
     /// Indicating if \c ExitNotTaken has an element for every exiting block in
     /// the loop.
-    bool IsComplete = false;
 
     /// Expression indicating the least maximum backedge-taken count of the loop
     /// that is known, or a SCEVCouldNotCompute. Lazily computed on first query.
     const SCEV *SymbolicMax = nullptr;
 
     /// True iff the backedge is taken either exactly Max or zero times.
-    bool MaxOrZero = false;
 
-    bool isComplete() const { return IsComplete; }
+    bool isComplete() const { return ExitNotTaken.getFlag(0); }
     const SCEV *getConstantMax() const { return ConstantMax; }
 
     LLVM_ABI const ExitNotTakenInfo *getExitNotTaken(

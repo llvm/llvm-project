@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Option/OptSpecifier.h"
@@ -188,7 +189,8 @@ private:
 
   ArrayRef<InfoExtra> InfoExtrasTable;
 
-  bool IgnoreCase;
+  bool getIgnoreCase() const { return PrefixesUnion.getFlag(0); }
+  void setIgnoreCase(bool Value) { PrefixesUnion.setFlag(0, Value); }
 
   /// The subcommand information table.
   ArrayRef<SubCommand> SubCommands;
@@ -200,8 +202,8 @@ private:
 
   ValuesCodeFnTy ValuesCodeFn = nullptr;
 
-  bool GroupedShortOptions = false;
-  bool DashDashParsing = false;
+  bool getGroupedShortOptionsFlag() const { return PrefixesUnion.getFlag(1); }
+  bool getDashDashParsingFlag() const { return PrefixesUnion.getFlag(2); }
   const char *EnvVar = nullptr;
 
   unsigned InputOptionID = 0;
@@ -213,7 +215,7 @@ private:
 
   /// The union of all option prefixes. If an argument does not begin with
   /// one of these, it is an input.
-  SmallVector<StringRef> PrefixesUnion;
+  SmallVectorWithFlagsFor<SmallVector<StringRef>, 3> PrefixesUnion;
 
   /// The union of the first element of all option prefixes.
   SmallString<8> PrefixChars;
@@ -346,11 +348,11 @@ public:
   void setInitialOptionsFromEnvironment(const char *E) { EnvVar = E; }
 
   /// Support grouped short options. e.g. -ab represents -a -b.
-  void setGroupedShortOptions(bool Value) { GroupedShortOptions = Value; }
+  void setGroupedShortOptions(bool Value) { PrefixesUnion.setFlag(1, Value); }
 
   /// Set whether "--" stops option parsing and treats all subsequent arguments
   /// as positional. E.g. -- -a -b gives two positional inputs.
-  void setDashDashParsing(bool Value) { DashDashParsing = Value; }
+  void setDashDashParsing(bool Value) { PrefixesUnion.setFlag(2, Value); }
 
   /// Find possible value for given flags. This is used for shell
   /// autocompletion.

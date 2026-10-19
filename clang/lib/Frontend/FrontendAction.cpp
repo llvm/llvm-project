@@ -630,7 +630,7 @@ static std::error_code collectModuleHeaderIncludes(
       // the module map file) so this will find the same file that we found
       // while parsing the module map.
       addHeaderInclude(H.PathRelativeToRootModuleDirectory, Includes, LangOpts,
-                       Module->IsExternC);
+                       Module->getIsExternC());
     }
   }
   // Note that Module->PrivateHeaders will not be a TopHeader.
@@ -641,7 +641,7 @@ static std::error_code collectModuleHeaderIncludes(
     if (Module->Parent)
       // Include the umbrella header for submodules.
       addHeaderInclude(UmbrellaHeader->PathRelativeToRootModuleDirectory,
-                       Includes, LangOpts, Module->IsExternC);
+                       Includes, LangOpts, Module->getIsExternC());
   } else if (std::optional<Module::DirectoryName> UmbrellaDir =
                  Module->getUmbrellaDirAsWritten()) {
     // Add all of the headers we find in this subdirectory.
@@ -697,7 +697,7 @@ static std::error_code collectModuleHeaderIncludes(
 
       // Include this header as part of the umbrella directory.
       Module->addTopHeader(*Header);
-      addHeaderInclude(RelPath, Includes, LangOpts, Module->IsExternC);
+      addHeaderInclude(RelPath, Includes, LangOpts, Module->getIsExternC());
     }
   }
 
@@ -802,8 +802,8 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     }
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
-      auto FileCharacter =
-          M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      auto FileCharacter = M->getIsSystem() ? SrcMgr::C_System_ModuleMap
+                                            : SrcMgr::C_User_ModuleMap;
       FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
           *OriginalModuleMap, FileCharacter);
       CI.getPreprocessor()
@@ -839,7 +839,7 @@ getInputBufferForModule(CompilerInstance &CI, Module *M) {
   if (std::optional<Module::Header> UmbrellaHeader =
           M->getUmbrellaHeaderAsWritten())
     addHeaderInclude(UmbrellaHeader->PathRelativeToRootModuleDirectory,
-                     HeaderContents, CI.getLangOpts(), M->IsExternC);
+                     HeaderContents, CI.getLangOpts(), M->getIsExternC());
   Err = collectModuleHeaderIncludes(
       CI.getLangOpts(), FileMgr, CI.getDiagnostics(),
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap(), M,
@@ -1204,7 +1204,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         return false;
 
       // Reinitialize the main file entry to refer to the new input.
-      auto Kind = CurrentModule->IsSystem ? SrcMgr::C_System : SrcMgr::C_User;
+      auto Kind =
+          CurrentModule->getIsSystem() ? SrcMgr::C_System : SrcMgr::C_User;
       auto &SourceMgr = CI.getSourceManager();
       auto BufferID = SourceMgr.createFileID(std::move(Buffer), Kind);
       assert(BufferID.isValid() && "couldn't create module buffer ID");
@@ -1331,7 +1332,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (!CI.loadModuleFile(ModuleFileName::makeExplicit(ModuleFile), Loaded))
       return false;
 
-    if (Loaded && Loaded->StandardCXXModule)
+    if (Loaded && Loaded->getStandardCXXModule())
       CI.getDiagnostics().Report(
           diag::warn_eagerly_load_for_standard_cplusplus_modules);
   }
@@ -1342,7 +1343,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (!CI.loadModuleFile(ModuleFile, Loaded))
       return false;
 
-    if (Loaded && Loaded->StandardCXXModule)
+    if (Loaded && Loaded->getStandardCXXModule())
       CI.getDiagnostics().Report(
           diag::warn_eagerly_load_for_standard_cplusplus_modules);
   }

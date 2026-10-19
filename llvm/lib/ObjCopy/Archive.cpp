@@ -38,7 +38,7 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
                              ChildOrErr.takeError());
 
     const CommonConfig &CC = Config.getCommonConfig();
-    if (CC.Verbose) {
+    if (CC.getVerbose()) {
       StringRef FormatName = getObjectFormatName(*ChildOrErr->get());
       printCopyMessage(MemberName(Ar.getFileName()), FormatName,
                        MemberName(CC.OutputFilename), FormatName);
@@ -51,7 +51,7 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
       return std::move(E);
 
     Expected<NewArchiveMember> Member = NewArchiveMember::getOldMember(
-        Child, Config.getCommonConfig().DeterministicArchives);
+        Child, Config.getCommonConfig().getDeterministicArchives());
     if (!Member)
       return createFileError(Ar.getFileName(), Member.takeError());
 
@@ -115,6 +115,6 @@ Error objcopy::executeObjcopyOnArchive(const MultiFormatConfig &Config,
   return deepWriteArchive(CommonConfig.OutputFilename, *NewArchiveMembersOrErr,
                           Ar.hasSymbolTable() ? SymtabWritingMode::NormalSymtab
                                               : SymtabWritingMode::NoSymtab,
-                          Ar.kind(), CommonConfig.DeterministicArchives,
+                          Ar.kind(), CommonConfig.getDeterministicArchives(),
                           Ar.isThin());
 }

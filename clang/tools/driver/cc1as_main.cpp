@@ -19,6 +19,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DataLayout.h"
@@ -102,7 +103,8 @@ struct AssemblerInvocation {
   std::string DwarfDebugFlags;
   std::string DwarfDebugProducer;
   std::string DebugCompilationDir;
-  llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
+  llvm::SmallVectorWithFlags<std::pair<std::string, std::string>, 0, 2>
+      DebugPrefixMap;
   llvm::DebugCompressionType CompressDebugSections =
       llvm::DebugCompressionType::None;
   std::string MainFileName;
@@ -121,10 +123,12 @@ struct AssemblerInvocation {
     FT_Obj   ///< Object file output.
   };
   FileType OutputType;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ShowHelp : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ShowVersion : 1;
+  unsigned getShowHelp() const { return DebugPrefixMap.getFlag(0); }
+  void setShowHelp(unsigned Value) { DebugPrefixMap.setFlag(0, (Value & 1)); }
+  unsigned getShowVersion() const { return DebugPrefixMap.getFlag(1); }
+  void setShowVersion(unsigned Value) {
+    DebugPrefixMap.setFlag(1, (Value & 1));
+  }
 
   /// @}
   /// @name Transliterate Options
@@ -352,8 +356,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
     } else
       Opts.OutputType = FileType(OutputType);
   }
-  Opts.ShowHelp = Args.hasArg(OPT_help);
-  Opts.ShowVersion = Args.hasArg(OPT_version);
+  Opts.setShowHelp(Args.hasArg(OPT_help));
+  Opts.setShowVersion(Args.hasArg(OPT_version));
 
   // Transliterate Options
   Opts.OutputAsmVariant =
@@ -704,7 +708,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (!AssemblerInvocation::CreateFromArgs(Asm, Argv, Diags))
     return 1;
 
-  if (Asm.ShowHelp) {
+  if (Asm.getShowHelp()) {
     getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1as [options] file...",
         "Clang Integrated Assembler", /*ShowHidden=*/false,
@@ -716,7 +720,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Honor -version.
   //
   // FIXME: Use a better -version message?
-  if (Asm.ShowVersion) {
+  if (Asm.getShowVersion()) {
     llvm::cl::PrintVersionMessage();
     return 0;
   }

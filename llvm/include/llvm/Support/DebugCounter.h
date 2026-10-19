@@ -45,6 +45,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -63,16 +64,26 @@ public:
 
     /// Whether counting should be enabled, either due to -debug-counter or
     /// -print-debug-counter.
-    bool Active = false;
+    bool getActive() const { return Chunks.getFlag(0); }
+    bool setActive(bool Value) {
+      Chunks.setFlag(0, Value);
+      return Value;
+    }
     /// Whether chunks for the counter are set (differs from Active in that
     /// -print-debug-counter uses Active=true, IsSet=false).
-    bool IsSet = false;
+    bool getIsSet() const { return Chunks.getFlag(1); }
+    bool setIsSet(bool Value) {
+      Chunks.setFlag(1, Value);
+      return Value;
+    }
 
     int64_t Count = 0;
     uint64_t CurrChunkIdx = 0;
     StringRef Name;
     StringRef Desc;
-    IntegerInclusiveIntervalUtils::IntervalList Chunks;
+    llvm::SmallVectorWithFlagsFor<IntegerInclusiveIntervalUtils::IntervalList,
+                                  2>
+        Chunks;
 
   public:
     CounterInfo(StringRef Name, StringRef Desc) : Name(Name), Desc(Desc) {
@@ -80,8 +91,8 @@ public:
     }
 
     void reset() {
-      Active = false;
-      IsSet = false;
+      setActive(false);
+      setIsSet(false);
       Count = 0;
       CurrChunkIdx = 0;
       Chunks.clear();
@@ -108,7 +119,7 @@ public:
   LLVM_ABI static bool shouldExecuteImpl(CounterInfo &Counter);
 
   inline static bool shouldExecute(CounterInfo &Counter) {
-    if (!Counter.Active)
+    if (!Counter.getActive())
       return true;
     return shouldExecuteImpl(Counter);
   }
@@ -116,7 +127,7 @@ public:
   // Return true if a given counter had values set (either programatically or on
   // the command line).  This will return true even if those values are
   // currently in a state where the counter will always execute.
-  static bool isCounterSet(CounterInfo &Info) { return Info.IsSet; }
+  static bool isCounterSet(CounterInfo &Info) { return Info.getIsSet(); }
 
   struct CounterState {
     int64_t Count;
@@ -165,7 +176,7 @@ public:
 
   void activateAllCounters() {
     for (auto &[_, Counter] : Counters)
-      Counter->Active = true;
+      Counter->setActive(true);
   }
 
   void resetAllCounters() {

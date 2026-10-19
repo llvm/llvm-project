@@ -19,6 +19,7 @@
 #include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
 #include "EHScopeStack.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "Address.h"
 
@@ -311,7 +312,7 @@ public:
   mlir::Operation *curFn = nullptr;
 
   /// Save Parameter Decl for coroutine.
-  llvm::SmallVector<const ParmVarDecl *> fnArgs;
+  llvm::SmallVectorWithFlags<const ParmVarDecl *> fnArgs;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -319,7 +320,7 @@ public:
   DeclMapTy localDeclMap;
 
   /// The type of the condition for the emitting switch statement.
-  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+  llvm::SmallVectorWithFlags<mlir::Type, 2, 4> condTypeStack;
 
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
@@ -368,15 +369,18 @@ public:
 
   /// Whether a cir.stacksave operation has been added. Used to avoid
   /// inserting cir.stacksave for multiple VLAs in the same scope.
-  bool didCallStackSave = false;
+  bool getDidCallStackSave() const { return condTypeStack.getFlag(0); }
+  void setDidCallStackSave(bool Value) { condTypeStack.setFlag(0, Value); }
 
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
-  bool sawAsmBlock = false;
+  bool getSawAsmBlock() const { return condTypeStack.getFlag(1); }
+  void setSawAsmBlock(bool Value) { condTypeStack.setFlag(1, Value); }
 
   /// In C++, whether we are code generating a thunk. This controls whether we
   /// should emit cleanups.
-  bool curFuncIsThunk = false;
+  bool getCurFuncIsThunk() const { return condTypeStack.getFlag(2); }
+  void setCurFuncIsThunk(bool Value) { condTypeStack.setFlag(2, Value); }
 
   mlir::Type convertTypeForMem(QualType t);
 
@@ -1375,8 +1379,8 @@ public:
       cleanupStackDepth = cgf.ehStack.stable_begin();
       lifetimeExtendedCleanupStackSize =
           cgf.lifetimeExtendedCleanupStack.size();
-      oldDidCallStackSave = cgf.didCallStackSave;
-      cgf.didCallStackSave = false;
+      oldDidCallStackSave = cgf.getDidCallStackSave();
+      cgf.setDidCallStackSave(false);
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
       cgf.currentCleanupStackDepth = cleanupStackDepth;
     }
@@ -1391,7 +1395,7 @@ public:
     /// until this object is destroyed.
     void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
-      cgf.didCallStackSave = oldDidCallStackSave;
+      cgf.setDidCallStackSave(oldDidCallStackSave);
 
       // forceDeactivate() can pop cleanup scopes that were pushed with
       // deferred deactivation, which moves the insertion point out of the
@@ -1462,7 +1466,7 @@ public:
     /// scope.
     void forceCleanupExceptLifetimeExtended() {
       assert(performCleanup && "Already forced cleanup");
-      cgf.didCallStackSave = oldDidCallStackSave;
+      cgf.setDidCallStackSave(oldDidCallStackSave);
       deactivateCleanups.forceDeactivate();
       cgf.popCleanupBlocks(cleanupStackDepth);
     }
@@ -3074,13 +3078,20 @@ public:
 private:
   QualType getVarArgType(const Expr *arg);
 
-  bool shouldEmitLifetimeMarkers = false;
+  bool getShouldEmitLifetimeMarkers() const { return condTypeStack.getFlag(3); }
+  void setShouldEmitLifetimeMarkers(bool Value) {
+    condTypeStack.setFlag(3, Value);
+  }
   /// Set when the current function has a goto/switch that may bypass a local's
   /// init; lifetime markers are then suppressed. See functionMightHaveBypass.
-  bool fnHasBypassStmt = false;
+  bool getFnHasBypassStmt() const { return fnArgs.getFlag(0); }
+  bool setFnHasBypassStmt(bool Value) {
+    fnArgs.setFlag(0, Value);
+    return Value;
+  }
 
   bool shouldEmitLifetimeMarkersForAutoVar() const {
-    return shouldEmitLifetimeMarkers && !fnHasBypassStmt;
+    return getShouldEmitLifetimeMarkers() && !getFnHasBypassStmt();
   }
 
   class InlinedInheritingConstructorScope {

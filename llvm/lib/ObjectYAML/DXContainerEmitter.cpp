@@ -245,21 +245,24 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
-            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
-            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
-            El.Stream});
+            El.Name,
+            SmallVector<uint32_t>(El.Indices.begin(), El.Indices.end()),
+            El.StartRow, El.Cols, El.StartCol, El.getAllocatedFlag(), El.Kind,
+            El.Type, El.Mode, El.DynamicMask, El.Stream});
 
       for (auto El : P.Info->SigOutputElements)
         PSV.OutputElements.push_back(mcdxbc::PSVSignatureElement{
-            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
-            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
-            El.Stream});
+            El.Name,
+            SmallVector<uint32_t>(El.Indices.begin(), El.Indices.end()),
+            El.StartRow, El.Cols, El.StartCol, El.getAllocatedFlag(), El.Kind,
+            El.Type, El.Mode, El.DynamicMask, El.Stream});
 
       for (auto El : P.Info->SigPatchOrPrimElements)
         PSV.PatchOrPrimElements.push_back(mcdxbc::PSVSignatureElement{
-            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
-            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
-            El.Stream});
+            El.Name,
+            SmallVector<uint32_t>(El.Indices.begin(), El.Indices.end()),
+            El.StartRow, El.Cols, El.StartCol, El.getAllocatedFlag(), El.Kind,
+            El.Type, El.Mode, El.DynamicMask, El.Stream});
 
       static_assert(PSV.OutputVectorMasks.size() == PSV.InputOutputMap.size());
       for (unsigned I = 0; I < PSV.OutputVectorMasks.size(); ++I) {

@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/SmallVector.h>
 
@@ -75,7 +76,7 @@ private:
     if (isBitFieldWidth(Result, *MatchedLiteral))
       return;
 
-    if (IgnoreUserDefinedLiterals &&
+    if (getIgnoreUserDefinedLiterals() &&
         isUserDefinedLiteral(Result, *MatchedLiteral))
       return;
 
@@ -88,11 +89,21 @@ private:
         << LiteralSourceText;
   }
 
-  const bool IgnoreAllFloatingPointValues;
-  const bool IgnoreBitFieldsWidths;
-  const bool IgnorePowersOf2IntegerValues;
-  const bool IgnoreTypeAliases;
-  const bool IgnoreUserDefinedLiterals;
+  bool getIgnoreAllFloatingPointValues() const {
+    return IgnoredFloatingPointValues.getFlag(0);
+  }
+  bool getIgnoreBitFieldsWidths() const {
+    return IgnoredFloatingPointValues.getFlag(1);
+  }
+  bool getIgnorePowersOf2IntegerValues() const {
+    return IgnoredFloatingPointValues.getFlag(2);
+  }
+  bool getIgnoreTypeAliases() const {
+    return IgnoredFloatingPointValues.getFlag(3);
+  }
+  bool getIgnoreUserDefinedLiterals() const {
+    return IgnoredDoublePointValues.getFlag(0);
+  }
   const StringRef RawIgnoredIntegerValues;
   const StringRef RawIgnoredFloatingPointValues;
 
@@ -103,10 +114,16 @@ private:
 
   SmallVector<int64_t, SensibleNumberOfMagicValueExceptions>
       IgnoredIntegerValues;
-  SmallVector<float, SensibleNumberOfMagicValueExceptions>
+  llvm::SmallVectorWithFlags<float, SensibleNumberOfMagicValueExceptions, 4>
       IgnoredFloatingPointValues;
-  SmallVector<double, SensibleNumberOfMagicValueExceptions>
+  llvm::SmallVectorWithFlags<double, SensibleNumberOfMagicValueExceptions>
       IgnoredDoublePointValues;
+
+public:
+  MagicNumbersCheck(const MagicNumbersCheck &) = default;
+  MagicNumbersCheck(MagicNumbersCheck &&) = default;
+  MagicNumbersCheck &operator=(const MagicNumbersCheck &) = delete;
+  MagicNumbersCheck &operator=(MagicNumbersCheck &&) = delete;
 };
 
 } // namespace clang::tidy::readability

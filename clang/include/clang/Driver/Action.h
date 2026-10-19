@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include <string>
@@ -109,13 +110,18 @@ private:
   /// The output type of this action.
   types::ID Type;
 
-  ActionList Inputs;
+  llvm::SmallVectorWithFlagsFor<ActionList, 1> Inputs;
 
   /// Flag that is set to true if this action can be collapsed with others
   /// actions that depend on it. This is true by default and set to false when
   /// the action is used by two different tool chains, which is enabled by the
   /// offloading support implementation.
-  bool CanBeCollapsedWithNextDependentAction = true;
+  bool getCanBeCollapsedWithNextDependentAction() const {
+    return !Inputs.getFlag(0);
+  }
+  void setCanBeCollapsedWithNextDependentAction(bool Value) {
+    Inputs.setFlag(0, !Value);
+  }
 
 protected:
   ///
@@ -142,7 +148,7 @@ protected:
   Action(ActionClass Kind, Action *Input)
       : Action(Kind, ActionList({Input}), Input->getType()) {}
   Action(ActionClass Kind, const ActionList &Inputs, types::ID Type)
-      : Kind(Kind), Type(Type), Inputs(Inputs) {}
+      : Kind(Kind), Type(Type), Inputs(Inputs.begin(), Inputs.end()) {}
 
 public:
   virtual ~Action();
@@ -152,8 +158,10 @@ public:
   ActionClass getKind() const { return Kind; }
   types::ID getType() const { return Type; }
 
-  ActionList &getInputs() { return Inputs; }
-  const ActionList &getInputs() const { return Inputs; }
+  llvm::SmallVectorWithFlagsFor<ActionList, 1> &getInputs() { return Inputs; }
+  const llvm::SmallVectorWithFlagsFor<ActionList, 1> &getInputs() const {
+    return Inputs;
+  }
 
   size_type size() const { return Inputs.size(); }
 
@@ -168,12 +176,12 @@ public:
 
   /// Mark this action as not legal to collapse.
   void setCannotBeCollapsedWithNextDependentAction() {
-    CanBeCollapsedWithNextDependentAction = false;
+    setCanBeCollapsedWithNextDependentAction(false);
   }
 
   /// Return true if this function can be collapsed with others.
   bool isCollapsingWithNextDependentActionLegal() const {
-    return CanBeCollapsedWithNextDependentAction;
+    return getCanBeCollapsedWithNextDependentAction();
   }
 
   /// Return a string containing the offload kind of the action.

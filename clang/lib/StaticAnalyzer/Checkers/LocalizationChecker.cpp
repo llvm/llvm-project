@@ -29,6 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Unicode.h"
 #include <optional>
 
@@ -1193,10 +1194,15 @@ class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
     // This functions like a stack. We push on any IfStmt or
     // ConditionalOperator that matches the condition
     // and pop it off when we leave that statement
-    llvm::SmallVector<const clang::Stmt *, 8> MatchingStatements;
+    llvm::SmallVectorWithFlags<const clang::Stmt *, 8> MatchingStatements;
     // This is true when we are the direct-child of a
     // matching statement
-    bool InMatchingStatement = false;
+    bool getInMatchingStatement() const {
+      return MatchingStatements.getFlag(0);
+    }
+    void setInMatchingStatement(bool Value) {
+      MatchingStatements.setFlag(0, Value);
+    }
 
   public:
     explicit MethodCrawler(BugReporter &InBR, const CheckerBase *Checker,
@@ -1269,7 +1275,7 @@ bool PluralMisuseChecker::MethodCrawler::isCheckingPlurality(
 // string. Raise a diagnostic when this is in a statement that matches
 // the condition.
 bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(CallExpr *CE) {
-  if (InMatchingStatement) {
+  if (getInMatchingStatement()) {
     if (const FunctionDecl *FD = CE->getDirectCallee()) {
       std::string NormalizedName =
           StringRef(FD->getNameInfo().getAsString()).lower();
@@ -1299,7 +1305,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitObjCMessageExpr(
 
   if (odInfo->isStr("NSBundle") &&
       ME->getSelector().getAsString() == "localizedStringForKey:value:table:") {
-    if (InMatchingStatement) {
+    if (getInMatchingStatement()) {
       reportPluralMisuseError(ME);
     }
   }
@@ -1319,11 +1325,11 @@ bool PluralMisuseChecker::MethodCrawler::EndVisitIfStmt(IfStmt *I) {
   MatchingStatements.pop_back();
   if (!MatchingStatements.empty()) {
     if (MatchingStatements.back() != nullptr) {
-      InMatchingStatement = true;
+      setInMatchingStatement(true);
       return true;
     }
   }
-  InMatchingStatement = false;
+  setInMatchingStatement(false);
   return true;
 }
 
@@ -1334,10 +1340,10 @@ bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(IfStmt *I) {
   Condition = Condition->IgnoreParenImpCasts();
   if (isCheckingPlurality(Condition)) {
     MatchingStatements.push_back(I);
-    InMatchingStatement = true;
+    setInMatchingStatement(true);
   } else {
     MatchingStatements.push_back(nullptr);
-    InMatchingStatement = false;
+    setInMatchingStatement(false);
   }
 
   return true;
@@ -1350,11 +1356,11 @@ bool PluralMisuseChecker::MethodCrawler::TraverseConditionalOperator(
   MatchingStatements.pop_back();
   if (!MatchingStatements.empty()) {
     if (MatchingStatements.back() != nullptr)
-      InMatchingStatement = true;
+      setInMatchingStatement(true);
     else
-      InMatchingStatement = false;
+      setInMatchingStatement(false);
   } else {
-    InMatchingStatement = false;
+    setInMatchingStatement(false);
   }
   return true;
 }
@@ -1364,10 +1370,10 @@ bool PluralMisuseChecker::MethodCrawler::VisitConditionalOperator(
   const Expr *Condition = C->getCond()->IgnoreParenImpCasts();
   if (isCheckingPlurality(Condition)) {
     MatchingStatements.push_back(C);
-    InMatchingStatement = true;
+    setInMatchingStatement(true);
   } else {
     MatchingStatements.push_back(nullptr);
-    InMatchingStatement = false;
+    setInMatchingStatement(false);
   }
   return true;
 }

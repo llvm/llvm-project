@@ -865,7 +865,7 @@ Expected<LibraryDepsInfo> parseELF(const object::ELFFile<ELFT> &Elf) {
     case ELF::DT_FLAGS_1:
       // Check if this is not a pie executable.
       if (Dyn.d_un.d_val & ELF::DF_1_PIE)
-        Deps.isPIE = true;
+        Deps.setIsPIE(true);
       break;
       // (Dyn.d_tag == ELF::DT_NULL) continue;
       // (Dyn.d_tag == ELF::DT_AUXILIARY || Dyn.d_tag == ELF::DT_FILTER)
@@ -1008,7 +1008,7 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
       dbgs() << "     : " << r << "\n";
   });
 
-  if (Deps.isPIE && level == 0) {
+  if (Deps.getIsPIE() && level == 0) {
     LLVM_DEBUG(dbgs() << "  Skipped PIE executable at top level: " << FilePath
                       << "\n";);
 

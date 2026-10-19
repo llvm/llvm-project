@@ -904,17 +904,16 @@ XCoreTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
-  SDValue Callee                        = CLI.Callee;
-  bool &isTailCall                      = CLI.IsTailCall;
+  SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool isVarArg                         = CLI.IsVarArg;
+  bool isVarArg = CLI.getIsVarArg();
 
   // XCore target does not yet support tail call optimization.
-  isTailCall = false;
+  CLI.setIsTailCall(false);
 
   // For now, only CallingConv::C implemented
   switch (CallConv)
@@ -923,8 +922,9 @@ XCoreTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       report_fatal_error("Unsupported calling convention");
     case CallingConv::Fast:
     case CallingConv::C:
-      return LowerCCCCallTo(Chain, Callee, CallConv, isVarArg, isTailCall,
-                            Outs, OutVals, Ins, dl, DAG, InVals);
+      return LowerCCCCallTo(Chain, Callee, CallConv, isVarArg,
+                            CLI.getIsTailCall(), Outs, OutVals, Ins, dl, DAG,
+                            InVals);
   }
 }
 
@@ -977,10 +977,10 @@ static SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
 /// TODO: isTailCall, sret.
 SDValue XCoreTargetLowering::LowerCCCCallTo(
     SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool isVarArg,
-    bool isTailCall, const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    bool isTailCall, llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1107,8 +1107,8 @@ namespace {
 /// XCore formal arguments implementation
 SDValue XCoreTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv)
   {
     default:
@@ -1126,8 +1126,8 @@ SDValue XCoreTargetLowering::LowerFormalArguments(
 /// TODO: sret
 SDValue XCoreTargetLowering::LowerCCCArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -1282,11 +1282,11 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
 //               Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-bool XCoreTargetLowering::
-CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-               bool isVarArg,
-               const SmallVectorImpl<ISD::OutputArg> &Outs,
-               LLVMContext &Context, const Type *RetTy) const {
+bool XCoreTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                         MachineFunction &MF, bool isVarArg,
+                                         llvm::ArrayRef<ISD::OutputArg> Outs,
+                                         LLVMContext &Context,
+                                         const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   if (!CCInfo.CheckReturn(Outs, RetCC_XCore))
@@ -1299,7 +1299,7 @@ CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
 SDValue
 XCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  bool isVarArg,
-                                 const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                 llvm::ArrayRef<ISD::OutputArg> Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &dl, SelectionDAG &DAG) const {
 

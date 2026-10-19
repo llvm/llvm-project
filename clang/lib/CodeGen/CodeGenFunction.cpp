@@ -63,11 +63,13 @@ using namespace CodeGen;
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), CGBuilderInserterTy(this)),
+      OMPLoopNestStack(decltype(this->OMPLoopNestStack)::withFlags(
+          (unsigned(bool(CodeGenUtils::shouldEmitLifetimeMarkers(
+               CGM.getCodeGenOpts(), CGM.getLangOpts())))
+           << 1))),
       SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
       DebugInfo(CGM.getModuleDebugInfo()),
-      PGO(std::make_unique<CodeGenPGO>(cgm)),
-      ShouldEmitLifetimeMarkers(CodeGenUtils::shouldEmitLifetimeMarkers(
-          CGM.getCodeGenOpts(), CGM.getLangOpts())) {
+      PGO(std::make_unique<CodeGenPGO>(cgm)) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
   EHStack.setCGF(this);
@@ -750,7 +752,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   const Decl *D = GD.getDecl();
 
-  DidCallStackSave = false;
+  setDidCallStackSave(false);
   CurCodeDecl = D;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD && FD->usesSEHTry())
@@ -1170,7 +1172,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     // convention.
     DI->emitFunctionStart(GD, Loc, StartLoc,
                           DI->getFunctionType(FD, RetTy, Args), CurFn,
-                          CurFuncIsThunk);
+                          getCurFuncIsThunk());
   }
 
   if (ShouldInstrumentFunction()) {
@@ -1280,7 +1282,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (getLangOpts().ObjCAutoRefCount &&
         !CurFnInfo->isReturnsRetained() &&
         RetTy->isObjCRetainableType())
-      AutoreleaseResult = true;
+      setAutoreleaseResult(true);
   }
 
   EmitStartEHSpec(CurCodeDecl);
@@ -1570,11 +1572,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   if (Body) {
     // Coroutines always emit lifetime markers.
     if (isa<CoroutineBodyStmt>(Body))
-      ShouldEmitLifetimeMarkers = true;
+      setShouldEmitLifetimeMarkers(true);
 
     // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
     bool NeedsBypassDetection =
-        ShouldEmitLifetimeMarkers ||
+        getShouldEmitLifetimeMarkers() ||
         (CGM.getLangOpts().getTrivialAutoVarInit() !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized);
     if (NeedsBypassDetection)
@@ -1659,8 +1661,9 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // C11 6.9.1p12:
   //   If the '}' that terminates a function is reached, and the value of the
   //   function call is used by the caller, the behavior is undefined.
-  if (getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() && !SawAsmBlock &&
-      !FD->getReturnType()->isVoidType() && Builder.GetInsertBlock()) {
+  if (getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() &&
+      !getSawAsmBlock() && !FD->getReturnType()->isVoidType() &&
+      Builder.GetInsertBlock()) {
     bool ShouldEmitUnreachable =
         CGM.getCodeGenOpts().StrictReturn ||
         !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
@@ -2875,19 +2878,19 @@ CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
 
 CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
     : CGF(CGF) {
-  assert(!CGF->IsSanitizerScope);
-  CGF->IsSanitizerScope = true;
+  assert(!CGF->getIsSanitizerScope());
+  CGF->setIsSanitizerScope(true);
 }
 
 CodeGenFunction::SanitizerScope::~SanitizerScope() {
-  CGF->IsSanitizerScope = false;
+  CGF->setIsSanitizerScope(false);
 }
 
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    const llvm::Twine &Name,
                                    llvm::BasicBlock::iterator InsertPt) const {
   LoopStack.InsertHelper(I);
-  if (IsSanitizerScope)
+  if (getIsSanitizerScope())
     I->setNoSanitizeMetadata();
 }
 

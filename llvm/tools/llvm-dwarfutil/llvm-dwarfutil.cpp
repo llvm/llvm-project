@@ -244,7 +244,7 @@ static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
   std::string OutputFilename = Opts.getSeparateDebugFileName();
   Config.Common.InputFilename = Opts.InputFileName;
   Config.Common.OutputFilename = OutputFilename;
-  Config.Common.OnlyKeepDebug = true;
+  Config.Common.setOnlyKeepDebug(true);
   uint32_t WrittenFileCRC32 = 0;
 
   if (Error Err = writeToOutput(
@@ -267,7 +267,7 @@ static Error saveNonDebugInfo(const Options &Opts, ObjectFile &InputFile,
   objcopy::ConfigManager Config;
   Config.Common.InputFilename = Opts.InputFileName;
   Config.Common.OutputFilename = Opts.OutputFileName;
-  Config.Common.StripDebug = true;
+  Config.Common.setStripDebug(true);
   std::string SeparateDebugFileName = Opts.getSeparateDebugFileName();
   Config.Common.AddGnuDebugLink = sys::path::filename(SeparateDebugFileName);
   Config.Common.GnuDebugLinkCRC32 = GnuDebugLinkCRC32;
@@ -350,8 +350,8 @@ saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
   std::string OutputFilename = Opts.getSeparateDebugFileName();
   Config.Common.InputFilename = Opts.InputFileName;
   Config.Common.OutputFilename = OutputFilename;
-  Config.Common.StripDebug = true;
-  Config.Common.OnlyKeepDebug = true;
+  Config.Common.setStripDebug(true);
+  Config.Common.setOnlyKeepDebug(true);
   uint32_t WrittenFileCRC32 = 0;
 
   if (Error Err =
@@ -381,7 +381,7 @@ static Error saveSingleLinkedDebugInfo(const Options &Opts,
 
   Config.Common.InputFilename = Opts.InputFileName;
   Config.Common.OutputFilename = Opts.OutputFileName;
-  Config.Common.StripDebug = true;
+  Config.Common.setStripDebug(true);
   if (Error Err =
           addSectionsFromLinkedData(Config, InputFile, LinkedDebugInfoBits))
     return Err;

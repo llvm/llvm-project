@@ -23,6 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -366,7 +367,8 @@ class DwarfDebug : public DebugHandlerBase {
   DenseMap<const MCSymbol *, uint64_t> SymSize;
 
   /// Collection of abstract variables/labels.
-  SmallVector<std::unique_ptr<DbgEntity>, 64> ConcreteEntities;
+  llvm::SmallVectorWithFlags<std::unique_ptr<DbgEntity>, 64, 2>
+      ConcreteEntities;
 
   /// Collection of DebugLocEntry. Stored in a linked list so that DIELocLists
   /// can refer to them in spite of insertions into this list.
@@ -404,8 +406,8 @@ class DwarfDebug : public DebugHandlerBase {
 
   DenseMap<const MCSection *, const MCSymbol *> SectionLabels;
 
-  SmallVector<
-      std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
+  llvm::SmallVectorWithFlags<
+      std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1, 4>
       TypeUnitsUnderConstruction;
 
   /// Symbol pointing to the current function's DWARF line table entries.
@@ -472,19 +474,39 @@ private:
   /// DWARF5 Experimental Options
   /// @{
   AccelTableKind TheAccelTableKind;
-  bool HasAppleExtensionAttributes;
-  bool HasSplitDwarf;
+  bool getHasAppleExtensionAttributes() const {
+    return TypeUnitsUnderConstruction.getFlag(0);
+  }
+  void setHasAppleExtensionAttributes(bool Value) {
+    TypeUnitsUnderConstruction.setFlag(0, Value);
+  }
+  bool getHasSplitDwarf() const {
+    return TypeUnitsUnderConstruction.getFlag(1);
+  }
+  void setHasSplitDwarf(bool Value) {
+    TypeUnitsUnderConstruction.setFlag(1, Value);
+  }
 
   /// Whether to generate the DWARF v5 string offsets table.
   /// It consists of a series of contributions, each preceded by a header.
   /// The pre-DWARF v5 string offsets table for split dwarf is, in contrast,
   /// a monolithic sequence of string offsets.
-  bool UseSegmentedStringOffsetsTable;
+  bool getUseSegmentedStringOffsetsTable() const {
+    return TypeUnitsUnderConstruction.getFlag(2);
+  }
+  void setUseSegmentedStringOffsetsTable(bool Value) {
+    TypeUnitsUnderConstruction.setFlag(2, Value);
+  }
 
   /// Enable production of call site parameters needed to print the debug entry
   /// values. Useful for testing purposes when a debugger does not support the
   /// feature yet.
-  bool EmitDebugEntryValues;
+  bool getEmitDebugEntryValues() const {
+    return TypeUnitsUnderConstruction.getFlag(3);
+  }
+  void setEmitDebugEntryValues(bool Value) {
+    TypeUnitsUnderConstruction.setFlag(3, Value);
+  }
 
   /// Separated Dwarf Variables
   /// In general these will all be for bits that are left in the
@@ -503,8 +525,10 @@ private:
   /// @}
 
   /// True iff there are multiple CUs in this module.
-  bool SingleCU;
-  bool IsDarwin;
+  bool getSingleCU() const { return ConcreteEntities.getFlag(0); }
+  void setSingleCU(bool Value) { ConcreteEntities.setFlag(0, Value); }
+  bool getIsDarwin() const { return ConcreteEntities.getFlag(1); }
+  void setIsDarwin(bool Value) { ConcreteEntities.setFlag(1, Value); }
 
   AddressPool AddrPool;
 
@@ -865,11 +889,11 @@ public:
   void setTheAccelTableKind(AccelTableKind K) { TheAccelTableKind = K; };
 
   bool useAppleExtensionAttributes() const {
-    return HasAppleExtensionAttributes;
+    return getHasAppleExtensionAttributes();
   }
 
   /// Returns whether or not to change the current debug info for split DWARF.
-  bool useSplitDwarf() const { return HasSplitDwarf; }
+  bool useSplitDwarf() const { return getHasSplitDwarf(); }
 
   /// Returns whether to generate a string offsets table with (possibly shared)
   /// contributions from each CU and type unit. This implies the use of
@@ -878,12 +902,10 @@ public:
   /// a pre-DWARF v5 implementation of split DWARF sections, which uses a
   /// monolithic string offsets table.
   bool useSegmentedStringOffsetsTable() const {
-    return UseSegmentedStringOffsetsTable;
+    return getUseSegmentedStringOffsetsTable();
   }
 
-  bool emitDebugEntryValues() const {
-    return EmitDebugEntryValues;
-  }
+  bool emitDebugEntryValues() const { return getEmitDebugEntryValues(); }
 
   bool useOpConvert() const {
     return EnableOpConvert;

@@ -367,10 +367,11 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
 
 void IntrinsicEmitter::EmitIntrinsicToScalarizableTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  EmitIntrinsicBitTable(
-      Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
-      "Intrinsic ID to trivially scalarizable bitset.",
-      [](const CodeGenIntrinsic &Int) { return Int.isTriviallyScalarizable; });
+  EmitIntrinsicBitTable(Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
+                        "Intrinsic ID to trivially scalarizable bitset.",
+                        [](const CodeGenIntrinsic &Int) {
+                          return Int.getIsTriviallyScalarizable();
+                        });
 }
 
 using TypeSigTy = SmallVector<unsigned char>;
@@ -497,7 +498,7 @@ static constexpr FixedEncodingTy IIT_Table[] = {{
 static MemoryEffects getEffectiveME(const CodeGenIntrinsic &Int) {
   MemoryEffects ME = Int.ME;
   // TODO: IntrHasSideEffects should affect not only readnone intrinsics.
-  if (ME.doesNotAccessMemory() && Int.hasSideEffects)
+  if (ME.doesNotAccessMemory() && Int.getHasSideEffects())
     ME = MemoryEffects::unknown();
   return ME;
 }
@@ -506,11 +507,12 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
                                 const CodeGenIntrinsic *R) {
   auto TieBoolAttributes = [](const CodeGenIntrinsic *I) -> auto {
     // Sort throwing intrinsics after non-throwing intrinsics.
-    return std::tie(I->canThrow, I->isNoDuplicate, I->isNoMerge, I->isNoReturn,
-                    I->isNoCallback, I->isNoSync, I->isNoFree, I->isWillReturn,
-                    I->isCold, I->isConvergent, I->isSpeculatable,
-                    I->hasSideEffects, I->isStrictFP,
-                    I->isNoCreateUndefOrPoison);
+    return std::make_tuple(I->canThrow, I->isNoDuplicate, I->isNoMerge,
+                           I->isNoReturn, I->isNoCallback, I->isNoSync,
+                           I->getIsNoFree(), I->getIsWillReturn(),
+                           I->getIsCold(), I->getIsConvergent(),
+                           I->getIsSpeculatable(), I->getHasSideEffects(),
+                           I->getIsStrictFP(), I->getIsNoCreateUndefOrPoison());
   };
 
   auto TieL = TieBoolAttributes(L);
@@ -533,9 +535,10 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
 // intrinsic has NoUnwind attribute.
 static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
   return !Int.canThrow || Int.isNoReturn || Int.isNoCallback || Int.isNoSync ||
-         Int.isNoFree || Int.isWillReturn || Int.isCold || Int.isNoDuplicate ||
-         Int.isNoMerge || Int.isConvergent || Int.isSpeculatable ||
-         Int.isStrictFP || Int.isNoCreateUndefOrPoison ||
+         Int.getIsNoFree() || Int.getIsWillReturn() || Int.getIsCold() ||
+         Int.isNoDuplicate || Int.isNoMerge || Int.getIsConvergent() ||
+         Int.getIsSpeculatable() || Int.getIsStrictFP() ||
+         Int.getIsNoCreateUndefOrPoison() ||
          getEffectiveME(Int) != MemoryEffects::unknown();
 }
 
@@ -681,23 +684,23 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
       addAttribute("NoCallback");
     if (Int.isNoSync)
       addAttribute("NoSync");
-    if (Int.isNoFree)
+    if (Int.getIsNoFree())
       addAttribute("NoFree");
-    if (Int.isWillReturn)
+    if (Int.getIsWillReturn())
       addAttribute("WillReturn");
-    if (Int.isCold)
+    if (Int.getIsCold())
       addAttribute("Cold");
     if (Int.isNoDuplicate)
       addAttribute("NoDuplicate");
     if (Int.isNoMerge)
       addAttribute("NoMerge");
-    if (Int.isConvergent)
+    if (Int.getIsConvergent())
       addAttribute("Convergent");
-    if (Int.isSpeculatable)
+    if (Int.getIsSpeculatable())
       addAttribute("Speculatable");
-    if (Int.isStrictFP)
+    if (Int.getIsStrictFP())
       addAttribute("StrictFP");
-    if (Int.isNoCreateUndefOrPoison)
+    if (Int.getIsNoCreateUndefOrPoison())
       addAttribute("NoCreateUndefOrPoison");
 
     const MemoryEffects ME = getEffectiveME(Int);

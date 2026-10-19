@@ -622,7 +622,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       break;
 
     case SD_FullExpression: {
-      if (!ShouldEmitLifetimeMarkers)
+      if (!getShouldEmitLifetimeMarkers())
         break;
 
       // Avoid creating a conditional cleanup just to hold an llvm.lifetime.end
@@ -4355,7 +4355,7 @@ void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
     ArrayRef<llvm::Value *> DynamicArgs, const TrapReason *TR) {
-  assert(IsSanitizerScope);
+  assert(getIsSanitizerScope());
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
          size_t(CheckHandler) < std::size(SanitizerHandlers));
@@ -5003,7 +5003,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   llvm::Value *eltPtr;
   auto LastIndex = dyn_cast<llvm::ConstantInt>(indices.back());
   if (!LastIndex ||
-      (!CGF.IsInPreservedAIRegion && !IsPreserveAIArrayBase(CGF, Base))) {
+      (!CGF.getIsInPreservedAIRegion() && !IsPreserveAIArrayBase(CGF, Base))) {
     addr = emitArraySubscriptGEP(CGF, addr, indices,
                                  arrayType ? CGF.ConvertTypeForMem(*arrayType)
                                            : nullptr,
@@ -6007,7 +6007,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     if (hasBPFPreserveStaticOffset(rec))
       Addr = wrapWithBPFPreserveStaticOffset(*this, Addr);
     if (!UseVolatile) {
-      if (!IsInPreservedAIRegion &&
+      if (!getIsInPreservedAIRegion() &&
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
         if (Idx != 0) {
           // For structs, we GEP to the field that the record layout suggests.
@@ -6094,7 +6094,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
       // a barrier every time CXXRecord field with vptr is referenced.
       addr = Builder.CreateLaunderInvariantGroup(addr);
 
-    if (IsInPreservedAIRegion ||
+    if (getIsInPreservedAIRegion() ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       // Remember the original union field index
       llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateStandaloneType(base.getType(),
@@ -6109,7 +6109,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     if (FieldType->isReferenceType())
       addr = addr.withElementType(CGM.getTypes().ConvertTypeForMem(FieldType));
   } else {
-    if (!IsInPreservedAIRegion &&
+    if (!getIsInPreservedAIRegion() &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>()))
       // For structs, we GEP to the field that the record layout suggests.
       addr = emitAddrOfFieldStorage(*this, addr, field, IsInBounds);

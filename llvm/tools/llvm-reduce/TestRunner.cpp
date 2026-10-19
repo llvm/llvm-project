@@ -18,9 +18,11 @@ TestRunner::TestRunner(StringRef TestName, ArrayRef<std::string> RawTestArgs,
                        std::unique_ptr<TargetMachine> TM, StringRef ToolName,
                        StringRef OutputName, bool InputIsBitcode,
                        bool OutputBitcode)
-    : TestName(TestName), ToolName(ToolName), Program(std::move(Program)),
-      TM(std::move(TM)), OutputFilename(OutputName),
-      InputIsBitcode(InputIsBitcode), EmitBitcode(OutputBitcode) {
+    : TestName(TestName), ToolName(ToolName),
+      TestArgs(decltype(this->TestArgs)::withFlags(
+          unsigned(InputIsBitcode) | (unsigned(OutputBitcode) << 1))),
+      Program(std::move(Program)), TM(std::move(TM)),
+      OutputFilename(OutputName) {
   assert(this->Program && "Initialized with null program?");
 
   TestArgs.push_back(TestName); // argv[0]
@@ -34,7 +36,7 @@ static constexpr std::array<std::optional<StringRef>, 3> NullRedirects;
 /// Runs the interestingness test, passes file to be tested as first argument
 /// and other specified test arguments after that.
 int TestRunner::run(StringRef Filename) const {
-  SmallVector<StringRef> ExecArgs(TestArgs);
+  SmallVector<StringRef> ExecArgs(TestArgs.begin(), TestArgs.end());
   ExecArgs.push_back(Filename);
 
   std::string ErrMsg;
@@ -57,14 +59,14 @@ int TestRunner::run(StringRef Filename) const {
 void TestRunner::writeOutput(StringRef Message) {
   std::error_code EC;
   raw_fd_ostream Out(OutputFilename, EC,
-                     EmitBitcode && !Program->isMIR() ? sys::fs::OF_None
-                                                      : sys::fs::OF_Text);
+                     getEmitBitcode() && !Program->isMIR() ? sys::fs::OF_None
+                                                           : sys::fs::OF_Text);
   if (EC) {
     WithColor::error(errs(), ToolName)
         << "opening output file: " << EC.message() << '\n';
     exit(1);
   }
 
-  Program->writeOutput(Out, EmitBitcode);
+  Program->writeOutput(Out, getEmitBitcode());
   errs() << Message << OutputFilename << '\n';
 }

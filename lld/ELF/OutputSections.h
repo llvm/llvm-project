@@ -12,6 +12,7 @@
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Parallel.h"
 
@@ -90,28 +91,48 @@ public:
   uint64_t crelHeader = 0;
   SmallVector<char, 0> crelBody;
 
-  SmallVector<SectionCommand *, 0> commands;
+  llvm::SmallVectorWithFlags<SectionCommand *, 0, 4> commands;
   SmallVector<StringRef, 0> phdrs;
   std::optional<std::array<uint8_t, 4>> filler;
   ConstraintKind constraint = ConstraintKind::NoConstraint;
   std::string location;
   std::string memoryRegionName;
   std::string lmaRegionName;
-  bool nonAlloc = false;
-  bool typeIsSet = false;
-  bool expressionsUseSymbols = false;
-  bool usedInExpression = false;
-  bool inOverlay = false;
-  bool firstInOverlay = false;
+  bool getNonAlloc() const { return storage.getFlag(0); }
+  void setNonAlloc(bool Value) { storage.setFlag(0, Value); }
+  bool getTypeIsSet() const { return storage.getFlag(1); }
+  void setTypeIsSet(bool Value) { storage.setFlag(1, Value); }
+  bool getExpressionsUseSymbols() const { return storage.getFlag(2); }
+  bool setExpressionsUseSymbols(bool Value) {
+    storage.setFlag(2, Value);
+    return Value;
+  }
+  bool getUsedInExpression() const { return storage.getFlag(3); }
+  bool setUsedInExpression(bool Value) {
+    storage.setFlag(3, Value);
+    return Value;
+  }
+  bool getInOverlay() const { return commands.getFlag(0); }
+  void setInOverlay(bool Value) { commands.setFlag(0, Value); }
+  bool getFirstInOverlay() const { return commands.getFlag(1); }
+  bool setFirstInOverlay(bool Value) {
+    commands.setFlag(1, Value);
+    return Value;
+  }
 
   // Tracks whether the section has ever had an input section added to it, even
   // if the section was later removed (e.g. because it is a synthetic section
   // that wasn't needed). This is needed for orphan placement.
-  bool hasInputSections = false;
+  bool getHasInputSections() const { return commands.getFlag(2); }
+  void setHasInputSections(bool Value) { commands.setFlag(2, Value); }
 
   // The output section description is specified between DATA_SEGMENT_ALIGN and
   // DATA_RELRO_END.
-  bool relro = false;
+  bool getRelro() const { return commands.getFlag(3); }
+  bool setRelro(bool Value) {
+    commands.setFlag(3, Value);
+    return Value;
+  }
 
   template <bool is64> void finalizeNonAllocCrel(Ctx &);
   void finalize(Ctx &);
@@ -132,7 +153,7 @@ public:
   CompressedData compressed;
 
 private:
-  SmallVector<InputSection *, 0> storage;
+  llvm::SmallVectorWithFlags<InputSection *, 0, 4> storage;
 };
 
 struct OutputDesc final : SectionCommand {
@@ -149,8 +170,9 @@ struct OutputDesc final : SectionCommand {
 // section descriptions. If referenced more than once, the sections can be
 // spilled to the next reference like --enable-non-contiguous-regions.
 struct SectionClass final : public SectionBase {
-  SmallVector<InputSectionDescription *, 0> commands;
-  bool assigned = false;
+  llvm::SmallVectorWithFlags<InputSectionDescription *, 0> commands;
+  bool getAssigned() const { return commands.getFlag(0); }
+  void setAssigned(bool Value) { commands.setFlag(0, Value); }
 
   SectionClass(StringRef name)
       : SectionBase(Class, nullptr, name, 0, 0, 0, 0, 0, 0) {}
@@ -168,9 +190,25 @@ struct SectionClassDesc : SectionCommand {
 int getPriority(StringRef s);
 
 InputSection *getFirstInputSection(const OutputSection *os);
-llvm::ArrayRef<InputSection *>
-getInputSections(const OutputSection &os,
-                 SmallVector<InputSection *, 0> &storage);
+template <typename StorageT>
+ArrayRef<InputSection *> getInputSections(const OutputSection &os,
+                                          StorageT &storage) {
+  ArrayRef<InputSection *> ret;
+  storage.clear();
+  for (SectionCommand *cmd : os.commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    if (ret.empty()) {
+      ret = isd->sections;
+    } else {
+      if (storage.empty())
+        storage.assign(ret.begin(), ret.end());
+      storage.insert(storage.end(), isd->sections.begin(), isd->sections.end());
+    }
+  }
+  return storage.empty() ? ret : ArrayRef(storage);
+}
 
 uint64_t getHeaderSize(Ctx &);
 } // namespace lld::elf

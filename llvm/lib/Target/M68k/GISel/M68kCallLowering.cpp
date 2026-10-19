@@ -219,7 +219,7 @@ bool M68kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc)
                  .add(Info.Callee)
                  .addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   CCAssignFn *AssignFn = TLI.getCCAssignFn(Info.CallConv, false, Info.IsVarArg);

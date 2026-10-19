@@ -375,7 +375,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsDesc(R_TLSDESC, R_GOT, type, offset, addend, sym);
       continue;
     case R_AARCH64_TLSDESC_CALL:
-      if (!ctx.arg.shared)
+      if (!ctx.arg.getShared())
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 
@@ -405,7 +405,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     rs.process(expr, type, offset, sym, addend);
   }
 
-  if (ctx.arg.branchToBranch)
+  if (ctx.arg.getBranchToBranch())
     llvm::stable_sort(sec.relocs(),
                       [](auto &l, auto &r) { return l.offset < r.offset; });
 }
@@ -841,7 +841,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkUInt(ctx, loc, val, 24, rel);
-    if (ctx.arg.relax && (val >> 12) == 0) {
+    if (ctx.arg.getRelax() && (val >> 12) == 0) {
       uint32_t inst = read32le(loc);
       // The W-form zero-extends Xd, so only the X-form is a nop.
       if ((inst & (1u << 31)) && (inst & 0x1f) == ((inst >> 5) & 0x1f)) {
@@ -985,7 +985,7 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
 AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs,
                                uint64_t secAddr, uint8_t *buf)
     : ctx(ctx) {
-  if (!ctx.arg.relax)
+  if (!ctx.arg.getRelax())
     return;
   // For a given symbol R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
   // relaxation is all-or-nothing. We can't relax only some of them, as there
@@ -1018,7 +1018,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   // to
   // NOP
   // ADR xn, sym
-  if (!ctx.arg.relax || addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
+  if (!ctx.arg.getRelax() || addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
     return false;
   // Check if the relocations apply to consecutive instructions.
   if (adrpRel.offset + 4 != addRel.offset)
@@ -1090,7 +1090,7 @@ bool AArch64Relaxer::isLegalAdrpLdrRelaxationCandidate(
   // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
   // position-independent code because these instructions produce a relative
   // address.
-  if (ctx.arg.isPic && !cast<Defined>(sym).section)
+  if (ctx.arg.getIsPic() && !cast<Defined>(sym).section)
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
@@ -1112,7 +1112,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // ADRP xn, sym
   // ADD xn, xn, :lo_12: sym
 
-  if (!ctx.arg.relax || adrpRel.type != R_AARCH64_ADR_GOT_PAGE ||
+  if (!ctx.arg.getRelax() || adrpRel.type != R_AARCH64_ADR_GOT_PAGE ||
       ldrRel.type != R_AARCH64_LD64_GOT_LO12_NC)
     return false;
 
@@ -1343,7 +1343,7 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // PAuthABI, which requires v8.3-A, we can use the non-hint space
   // instructions.
 
-  if (ctx.arg.zPacPlt) {
+  if (ctx.arg.getZPacPlt()) {
     if (ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid())
       pacEntryKind = PEK_Auth;
     else
@@ -1553,7 +1553,7 @@ void elf::createTaggedSymbols(Ctx &ctx) {
 
 void elf::setAArch64TargetInfo(Ctx &ctx) {
   if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt)
+      ctx.arg.getZPacPlt())
     ctx.target.reset(new AArch64BtiPac(ctx));
   else
     ctx.target.reset(new AArch64(ctx));

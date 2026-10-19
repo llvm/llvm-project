@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -11957,10 +11958,11 @@ class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   /// The initial value of the loop counter
   Register Init;
   /// True iff Update is a predecessor of Comp
-  bool IsUpdatePriorComp;
+  bool getIsUpdatePriorComp() const { return Cond.getFlag(0); }
+  void setIsUpdatePriorComp(bool Value) { Cond.setFlag(0, Value); }
 
   /// The normalized condition used by createTripCountGreaterCondition()
-  SmallVector<MachineOperand, 4> Cond;
+  llvm::SmallVectorWithFlags<MachineOperand, 4> Cond;
 
 public:
   AArch64PipelinerLoopInfo(MachineBasicBlock *LoopBB, MachineInstr *CondBranch,
@@ -11974,7 +11976,7 @@ public:
         LoopBB(LoopBB), CondBranch(CondBranch), Comp(Comp),
         CompCounterOprNum(CompCounterOprNum), Update(Update),
         UpdateCounterOprNum(UpdateCounterOprNum), Init(Init),
-        IsUpdatePriorComp(IsUpdatePriorComp), Cond(Cond.begin(), Cond.end()) {}
+        Cond(unsigned(IsUpdatePriorComp), Cond.begin(), Cond.end()) {}
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
     // Make the instructions for loop control be placed in stage 0.
@@ -11988,7 +11990,7 @@ public:
     // A branch instruction will be inserted as "if (Cond) goto epilogue".
     // Cond is normalized for such use.
     // The predecessors of the branch are assumed to have already been inserted.
-    CondParam = Cond;
+    CondParam.assign(Cond.begin(), Cond.end());
     return {};
   }
 
@@ -12080,7 +12082,7 @@ void AArch64PipelinerLoopInfo::createRemainingIterationsGreaterCondition(
 
       if (I != TC) {
         if (I == 0) {
-          if (Update != Comp && IsUpdatePriorComp) {
+          if (Update != Comp && getIsUpdatePriorComp()) {
             Counter =
                 LastStage0Insts[Comp]->getOperand(CompCounterOprNum).getReg();
             NextCounter = cloneInstr(Update, UpdateCounterOprNum, Counter, MBB,
@@ -12102,7 +12104,7 @@ void AArch64PipelinerLoopInfo::createRemainingIterationsGreaterCondition(
       // use initial counter value (testing if the trip count is sufficient to
       // be executed by pipelined code)
       Counter = Init;
-      if (IsUpdatePriorComp)
+      if (getIsUpdatePriorComp())
         Counter =
             cloneInstr(Update, UpdateCounterOprNum, Counter, MBB, MBB.end());
     } else {

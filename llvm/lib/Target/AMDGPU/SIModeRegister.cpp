@@ -15,6 +15,7 @@
 //
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <optional>
@@ -100,11 +101,13 @@ public:
 
   // Call and return sites, each paired with the block local mode changes that
   // precede it. Phase 3 merges the pair with Pred to get the mode at the site.
-  SmallVector<std::pair<MachineInstr *, Status>, 2> BoundarySites;
+  llvm::SmallVectorWithFlags<std::pair<MachineInstr *, Status>, 2>
+      BoundarySites;
 
   // A flag to indicate whether an Exit value has been set (we can't tell by
   // examining the Exit value itself as all values may be valid results).
-  bool ExitSet = false;
+  bool getExitSet() const { return BoundarySites.getFlag(0); }
+  void setExitSet(bool Value) { BoundarySites.setFlag(0, Value); }
 
   BlockData() = default;
 };
@@ -446,7 +449,7 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     if ((ThisBlock == PredBlock) && (std::next(P) == E)) {
       BlockInfo[ThisBlock]->Pred = DefaultStatus;
       ExitSet = true;
-    } else if (BlockInfo[PredBlock]->ExitSet) {
+    } else if (BlockInfo[PredBlock]->getExitSet()) {
       BlockInfo[ThisBlock]->Pred = BlockInfo[PredBlock]->Exit;
       ExitSet = true;
     } else if (PredBlock != ThisBlock)
@@ -455,8 +458,8 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     for (P = std::next(P); P != E; P = std::next(P)) {
       MachineBasicBlock *Pred = *P;
       unsigned PredBlock = Pred->getNumber();
-      if (BlockInfo[PredBlock]->ExitSet) {
-        if (BlockInfo[ThisBlock]->ExitSet) {
+      if (BlockInfo[PredBlock]->getExitSet()) {
+        if (BlockInfo[ThisBlock]->getExitSet()) {
           BlockInfo[ThisBlock]->Pred =
               BlockInfo[ThisBlock]->Pred.intersect(BlockInfo[PredBlock]->Exit);
         } else {
@@ -476,7 +479,10 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     for (MachineBasicBlock *Succ : MBB.successors())
       Phase2List.push(Succ);
   }
-  BlockInfo[ThisBlock]->ExitSet = ExitSet;
+  [&] {
+    auto PackedFlagValue = ExitSet;
+    return BlockInfo[ThisBlock]->setExitSet(PackedFlagValue);
+  }();
   if (RevisitRequired)
     Phase2List.push(&MBB);
 }

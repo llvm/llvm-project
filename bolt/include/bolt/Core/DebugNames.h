@@ -15,6 +15,7 @@
 #define BOLT_CORE_DEBUG_NAMES_H
 
 #include "bolt/Core/DebugData.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/AccelTable.h"
 
 #include <mutex>
@@ -67,7 +68,7 @@ public:
   /// Emit Accelerator table.
   void emitAccelTable();
   /// Returns true if the table was created.
-  bool isCreated() const { return NeedToCreate; }
+  bool isCreated() const { return getNeedToCreate(); }
   /// Returns buffer containing the accelerator table.
   std::unique_ptr<DebugBufferVector> releaseBuffer() {
     return std::move(FullTableBuffer);
@@ -89,7 +90,8 @@ public:
 
 private:
   BinaryContext &BC;
-  bool NeedToCreate = false;
+  bool getNeedToCreate() const { return AbbreviationsVector.getFlag(0); }
+  void setNeedToCreate(bool Value) { AbbreviationsVector.setFlag(0, Value); }
   BumpPtrAllocator Allocator;
   DebugStrWriter &MainBinaryStrWriter;
   StringRef StrSection;
@@ -102,7 +104,8 @@ private:
   /// multiple TUs with the same hash.
   DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
   /// Track whether AcceleratorTable have been preallocated.
-  bool Preallocated = false;
+  bool getPreallocated() const { return AbbreviationsVector.getFlag(1); }
+  void setPreallocated(bool Value) { AbbreviationsVector.setFlag(1, Value); }
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
     uint64_t StrOffset;
@@ -128,7 +131,7 @@ private:
   /// FoldingSet that uniques the abbreviations.
   FoldingSet<DebugNamesAbbrev> AbbreviationsSet;
   /// Vector containing DebugNames abbreviations for iteration in order.
-  SmallVector<DebugNamesAbbrev *, 5> AbbreviationsVector;
+  llvm::SmallVectorWithFlags<DebugNamesAbbrev *, 5, 2> AbbreviationsVector;
   /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
   /// storage container.
   BumpPtrAllocator Alloc;

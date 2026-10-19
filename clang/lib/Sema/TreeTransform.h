@@ -4172,12 +4172,12 @@ public:
                                LambdaScopeInfo *LSI) {
     for (ParmVarDecl *PVD : LSI->CallOperator->parameters()) {
       if (Expr *Init = PVD->getInit())
-        LSI->ContainsUnexpandedParameterPack |=
-            Init->containsUnexpandedParameterPack();
+        LSI->addUnexpandedParameterPack(
+            Init->containsUnexpandedParameterPack());
       else if (PVD->hasUninstantiatedDefaultArg())
-        LSI->ContainsUnexpandedParameterPack |=
+        LSI->addUnexpandedParameterPack(
             PVD->getUninstantiatedDefaultArg()
-                ->containsUnexpandedParameterPack();
+                ->containsUnexpandedParameterPack());
     }
     return getSema().BuildLambdaExpr(StartLoc, EndLoc);
   }
@@ -4550,10 +4550,10 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
       getSema(), EnterExpressionEvaluationContext::InitList,
       Construct->isListInitialization());
 
-  getSema().currentEvaluationContext().InLifetimeExtendingContext =
-      getSema().parentEvaluationContext().InLifetimeExtendingContext;
-  getSema().currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-      getSema().parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+  getSema().currentEvaluationContext().setInLifetimeExtendingContext(
+      getSema().parentEvaluationContext().getInLifetimeExtendingContext());
+  getSema().currentEvaluationContext().setRebuildDefaultArgOrDefaultInit(
+      getSema().parentEvaluationContext().getRebuildDefaultArgOrDefaultInit());
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
@@ -6165,7 +6165,8 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   // If we have a VLA then it won't be a constant.
-  SemaRef.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
+  SemaRef.ExprEvalContexts.back().setInConditionallyConstantEvaluateContext(
+      true);
 
   // Prefer the expression from the TypeLoc;  the other may have been uniqued.
   Expr *origSize = TL.getSizeExpr();
@@ -8854,19 +8855,19 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
     if (LSI) {
       if (auto *TD = dyn_cast<TypeDecl>(Transformed)) {
         if (auto *TN = dyn_cast<TypedefNameDecl>(TD)) {
-          LSI->ContainsUnexpandedParameterPack |=
-              TN->getUnderlyingType()->containsUnexpandedParameterPack();
+          LSI->addUnexpandedParameterPack(
+              TN->getUnderlyingType()->containsUnexpandedParameterPack());
         } else {
-          LSI->ContainsUnexpandedParameterPack |=
+          LSI->addUnexpandedParameterPack(
               getSema()
                   .getASTContext()
                   .getTypeDeclType(TD)
-                  ->containsUnexpandedParameterPack();
+                  ->containsUnexpandedParameterPack());
         }
       }
       if (auto *VD = dyn_cast<VarDecl>(Transformed))
-        LSI->ContainsUnexpandedParameterPack |=
-            VD->getType()->containsUnexpandedParameterPack();
+        LSI->addUnexpandedParameterPack(
+            VD->getType()->containsUnexpandedParameterPack());
     }
 
     Decls.push_back(Transformed);
@@ -9472,8 +9473,8 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
   // P2718R0 - Lifetime extension in range-based for loops.
   if (getSema().getLangOpts().CPlusPlus23) {
     auto &LastRecord = getSema().currentEvaluationContext();
-    LastRecord.InLifetimeExtendingContext = true;
-    LastRecord.RebuildDefaultArgOrDefaultInit = true;
+    LastRecord.setInLifetimeExtendingContext(true);
+    LastRecord.setRebuildDefaultArgOrDefaultInit(true);
   }
   StmtResult Init =
       S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
@@ -9605,8 +9606,8 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
   if (S->isDependent() || S->isIterating()) {
     EnterExpressionEvaluationContext ExprEvalCtx(
         SemaRef, SemaRef.currentEvaluationContext().Context);
-    SemaRef.currentEvaluationContext().InLifetimeExtendingContext = true;
-    SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit = true;
+    SemaRef.currentEvaluationContext().setInLifetimeExtendingContext(true);
+    SemaRef.currentEvaluationContext().setRebuildDefaultArgOrDefaultInit(true);
 
     if (S->isDependent()) {
       // The expansion initializer should not be in the context of the expansion
@@ -9726,8 +9727,8 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
   {
     EnterExpressionEvaluationContext ExprEvalCtx(
         SemaRef, SemaRef.currentEvaluationContext().Context);
-    SemaRef.currentEvaluationContext().InLifetimeExtendingContext = true;
-    SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit = true;
+    SemaRef.currentEvaluationContext().setInLifetimeExtendingContext(true);
+    SemaRef.currentEvaluationContext().setRebuildDefaultArgOrDefaultInit(true);
     if (TransformStmts(PreambleStmts, S->getPreambleStmts()))
       return StmtError();
 
@@ -11457,7 +11458,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
     }
     InteropInfo.Prefs.emplace_back(NewFr, std::move(NewAttrs));
   }
-  InteropInfo.HasPreferAttrs = C->hasPreferAttrs();
+  InteropInfo.setPreferAttrs(C->hasPreferAttrs());
   return getDerived().RebuildOMPInitClause(IVR.get(), InteropInfo,
                                            C->getBeginLoc(), C->getLParenLoc(),
                                            C->getVarLoc(), C->getEndLoc());
@@ -16457,8 +16458,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         // But rule out cases e.g.
         //    [...C = Pack()] {}
         if (NewC.EllipsisLoc.isInvalid())
-          LSI->ContainsUnexpandedParameterPack |=
-              Init.get()->containsUnexpandedParameterPack();
+          LSI->addUnexpandedParameterPack(
+              Init.get()->containsUnexpandedParameterPack());
       }
 
       if (Invalid)
@@ -16526,7 +16527,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     // This is not an init-capture; however it contains an unexpanded pack e.g.
     //  ([Pack] {}(), ...)
     if (auto *VD = dyn_cast<VarDecl>(CapturedVar); VD && !C->isPackExpansion())
-      LSI->ContainsUnexpandedParameterPack |= VD->isParameterPack();
+      LSI->addUnexpandedParameterPack(VD->isParameterPack());
 
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
@@ -16542,8 +16543,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   if (TPL) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
-    LSI->ContainsUnexpandedParameterPack |=
-        TPL->containsUnexpandedParameterPack();
+    LSI->addUnexpandedParameterPack(TPL->containsUnexpandedParameterPack());
   }
 
   TypeLocBuilder NewCallOpTLBuilder;
@@ -16553,8 +16553,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       getDerived().TransformType(NewCallOpTLBuilder, OldCallOpTypeLoc);
   if (NewCallOpType.isNull())
     return ExprError();
-  LSI->ContainsUnexpandedParameterPack |=
-      NewCallOpType->containsUnexpandedParameterPack();
+  LSI->addUnexpandedParameterPack(
+      NewCallOpType->containsUnexpandedParameterPack());
   TypeSourceInfo *NewCallOpTSI =
       NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
 
@@ -16572,7 +16572,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     TRC.ConstraintExpr = E.get();
   }
 
-  LSI->BeforeCompoundStatement = false;
+  LSI->setBeforeCompoundStatement(false);
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,
@@ -17978,7 +17978,7 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
     blockScope->TheDecl->setParams(params);
 
   if (!oldBlock->blockMissingReturnType()) {
-    blockScope->HasImplicitReturnType = false;
+    blockScope->setHasImplicitReturnType(false);
     blockScope->ReturnType = exprResultType;
   }
 

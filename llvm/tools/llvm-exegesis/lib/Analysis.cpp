@@ -361,7 +361,7 @@ void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
     const auto &SI = State_.getSubtargetInfo();
     const auto &SM = SI.getSchedModel();
     OS << "<tr><td>&#10004;</td>";
-    OS << "<td>" << (RSC.WasVariant ? "&#10004;" : "&#10005;") << "</td>";
+    OS << "<td>" << (RSC.getWasVariant() ? "&#10004;" : "&#10005;") << "</td>";
     OS << "<td>" << RSC.SCDesc->NumMicroOps << "</td>";
     // Latencies.
     OS << "<td><ul>";

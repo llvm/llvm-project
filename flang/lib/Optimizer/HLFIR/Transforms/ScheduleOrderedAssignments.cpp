@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "mlir/IR/OperationSupport.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-ordered-assignment"
@@ -180,7 +181,9 @@ class Scheduler {
 public:
   Scheduler(hlfir::OrderedAssignmentTreeOpInterface root,
             bool tryFusingAssignments)
-      : root{root}, tryFusingAssignments{tryFusingAssignments} {}
+      : root{root}, independentEvaluationEffects(
+                        decltype(this->independentEvaluationEffects)::withFlags(
+                            (unsigned(tryFusingAssignments) << 2))) {}
 
   /// Start scheduling an assignment. Gather the write side effect from the
   /// assignment.
@@ -266,10 +269,19 @@ private:
   llvm::SmallVector<hlfir::DetailedEffectInstance> parentEvaluationEffects;
   /// Same as parentEvaluationEffects, but for the current "leaf group" being
   /// analyzed scheduled.
-  llvm::SmallVector<hlfir::DetailedEffectInstance> independentEvaluationEffects;
+  llvm::SmallVectorWithFlags<hlfir::DetailedEffectInstance,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 hlfir::DetailedEffectInstance>::value,
+                             3>
+      independentEvaluationEffects;
 
   /// Were any region saved for the current assignment?
-  bool savedAnyRegionForCurrentAssignment = false;
+  bool getSavedAnyRegionForCurrentAssignment() const {
+    return independentEvaluationEffects.getFlag(0);
+  }
+  void setSavedAnyRegionForCurrentAssignment(bool Value) {
+    independentEvaluationEffects.setFlag(0, Value);
+  }
 
   // Schedule being built.
   hlfir::Schedule schedule;
@@ -280,11 +292,24 @@ private:
 
   /// Is schedule.back() a schedule that is only saving region with read
   /// effects?
-  bool currentRunIsReadOnly = false;
+  bool getCurrentRunIsReadOnly() const {
+    return independentEvaluationEffects.getFlag(1);
+  }
+  void setCurrentRunIsReadOnly(bool Value) {
+    independentEvaluationEffects.setFlag(1, Value);
+  }
 
   /// Option to tell if the scheduler should try fusing to assignments in the
   /// same loops.
-  const bool tryFusingAssignments;
+  bool getTryFusingAssignments() const {
+    return independentEvaluationEffects.getFlag(2);
+  }
+
+public:
+  Scheduler(const Scheduler &) = default;
+  Scheduler(Scheduler &&) = default;
+  Scheduler &operator=(const Scheduler &) = delete;
+  Scheduler &operator=(Scheduler &&) = delete;
 };
 } // namespace
 
@@ -783,7 +808,7 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
 void Scheduler::saveEvaluation(
     mlir::Region &yieldRegion,
     llvm::ArrayRef<hlfir::DetailedEffectInstance> effects, bool anyWrite) {
-  savedAnyRegionForCurrentAssignment = true;
+  setSavedAnyRegionForCurrentAssignment(true);
   auto &state = regionStates[&yieldRegion];
   if (state.modifiedInRun) {
     // The region was modified in a previous run, but we now realize we need its
@@ -807,13 +832,13 @@ void Scheduler::saveEvaluation(
     // could try to prove the effects do not conflict with the previous
     // schedule.
     schedule.emplace_back(hlfir::Run{});
-    currentRunIsReadOnly = false;
-  } else if (!currentRunIsReadOnly) {
+    setCurrentRunIsReadOnly(false);
+  } else if (!getCurrentRunIsReadOnly()) {
     // For now, do not try to fuse an evaluation with a previous
     // run that contains any write effects. One could try to prove
     // that "effects" do not conflict with the current run assignments.
     schedule.emplace_back(hlfir::Run{});
-    currentRunIsReadOnly = true;
+    setCurrentRunIsReadOnly(true);
   }
   // Otherwise, save the yielded entity in the current run, that already
   // saving other read only entities.
@@ -833,7 +858,7 @@ void Scheduler::saveEvaluation(
 bool Scheduler::canFuseAssignmentWithPreviousRun() {
   // If a region was saved for the current assignment, the previous
   // run is already known to conflict. Skip the analysis.
-  if (savedAnyRegionForCurrentAssignment || schedule.empty())
+  if (getSavedAnyRegionForCurrentAssignment() || schedule.empty())
     return false;
   auto &previousRunEffects = schedule.back().memoryEffects;
   return !conflict(previousRunEffects, assignEffects).isAny() &&
@@ -873,8 +898,8 @@ void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign,
                                            bool leafRegionsMayOnlyRead) {
   // Schedule the assignment in a new run, unless it can be fused with the
   // previous run (if enabled and proven safe).
-  currentRunIsReadOnly = false;
-  bool fuse = tryFusingAssignments && canFuseAssignmentWithPreviousRun();
+  setCurrentRunIsReadOnly(false);
+  bool fuse = getTryFusingAssignments() && canFuseAssignmentWithPreviousRun();
   if (!fuse) {
     // If we cannot fuse, we are about to start a new run.
     // Check if any parent region was modified in a previous run and needs to be
@@ -921,7 +946,7 @@ void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign,
   assignEvaluateEffects.clear();
   parentEvaluationEffects.clear();
   independentEvaluationEffects.clear();
-  savedAnyRegionForCurrentAssignment = false;
+  setSavedAnyRegionForCurrentAssignment(false);
   LLVM_DEBUG(logAssignmentEvaluation(llvm::dbgs(), schedule.size(), assign));
 }
 

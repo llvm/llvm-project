@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -223,13 +224,22 @@ public:
     using NodeList = SmallVector<BlockNode, 4>;
 
     LoopData *Parent;        ///< The parent loop.
-    bool IsPackaged = false; ///< Whether this has been packaged.
+    bool getIsPackaged() const { return Nodes.getFlag(0); }
+    void setIsPackaged(bool Value) {
+      Nodes.setFlag(0, Value);
+    } ///< Whether this has been packaged.
     // Has an irreducible SCC in its own nodes; sub-loops package theirs first.
-    bool ContainsIrreducible = false;
+    bool getContainsIrreducible() const { return Nodes.getFlag(1); }
+    bool setContainsIrreducible(bool Value) {
+      Nodes.setFlag(1, Value);
+      return Value;
+    }
     // A multi-entry SCC rather than a natural loop.
-    bool IsIrreducible = false;
+    bool getIsIrreducible() const { return Nodes.getFlag(2); }
+    void setIsIrreducible(bool Value) { Nodes.setFlag(2, Value); }
     ExitMap Exits;          ///< Successor edges (and weights).
-    NodeList Nodes;         ///< Header and the members of the loop.
+    llvm::SmallVectorWithFlagsFor<NodeList, 3>
+        Nodes;              ///< Header and the members of the loop.
     BlockMass BackedgeMass; ///< Mass that circulates, not exits.
     BlockMass Mass;
     Scaled64 Scale;
@@ -241,12 +251,12 @@ public:
     /// region is concerned, so the lowest-RPO member stands for the package
     /// and solveIrreducibleMass distributes mass among them all.
     LoopData(LoopData *Parent, NodeList &&Members)
-        : Parent(Parent), IsIrreducible(true), Nodes(std::move(Members)) {}
+        : Parent(Parent), Nodes(4, std::move(Members)) {}
 
     bool isHeader(const BlockNode &Node) const { return Node == Nodes[0]; }
 
     BlockNode getHeader() const { return Nodes[0]; }
-    bool isIrreducible() const { return IsIrreducible; }
+    bool isIrreducible() const { return getIsIrreducible(); }
 
     NodeList::const_iterator members_begin() const { return Nodes.begin() + 1; }
 
@@ -300,10 +310,10 @@ public:
     /// Packaging is transient state: this answers what represents Node at the
     /// level being processed, not where Node sits in the loop nest.
     LoopData *getPackagedLoop() const {
-      if (!Loop || !Loop->IsPackaged)
+      if (!Loop || !Loop->getIsPackaged())
         return nullptr;
       auto *L = Loop;
-      while (L->Parent && L->Parent->IsPackaged)
+      while (L->Parent && L->Parent->getIsPackaged())
         L = L->Parent;
       return L;
     }
@@ -312,7 +322,7 @@ public:
     /// loop it heads.
     BlockMass &getMass() {
       BlockMass *M = &Mass;
-      for (LoopData *L = Loop; L && L->IsPackaged && L->isHeader(Node);
+      for (LoopData *L = Loop; L && L->getIsPackaged() && L->isHeader(Node);
            L = L->Parent)
         M = &L->Mass;
       return *M;
@@ -322,7 +332,7 @@ public:
     bool isPackaged() const { return getResolvedNode() != Node; }
 
     /// Has Loop been packaged up?
-    bool isAPackage() const { return isLoopHeader() && Loop->IsPackaged; }
+    bool isAPackage() const { return isLoopHeader() && Loop->getIsPackaged(); }
   };
 
   /// Unscaled probability weight.
@@ -358,11 +368,11 @@ public:
   /// \a DidOverflow indicates whether \a Total did overflow while adding to
   /// the distribution.  It should never overflow twice.
   struct Distribution {
-    using WeightList = SmallVector<Weight, 4>;
+    // Flag bit 0 records overflow of the total weight.
+    using WeightList = SmallVectorWithFlags<Weight, 4>;
 
     WeightList Weights;       ///< Individual successor weights.
     uint64_t Total = 0;       ///< Sum of all weights.
-    bool DidOverflow = false; ///< Whether \a Total did overflow.
 
     Distribution() = default;
 
@@ -1074,7 +1084,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeLoops() {
       // No LoopData yet; ask computeIrreducibleMass to package the SCC
       // that contains this cycle.
       if (Parent)
-        Parent->ContainsIrreducible = true;
+        Parent->setContainsIrreducible(true);
       else
         TopContainsIrreducible = true;
     }
@@ -1118,7 +1128,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInLoops() {
   // computeIrreducibleMass inserts each new loop immediately after *L.
   for (auto L = Loops.end(), B = Loops.begin(); L != B;) {
     --L;
-    if (L->ContainsIrreducible)
+    if (L->getContainsIrreducible())
       computeIrreducibleMass(&*L, std::next(L));
     computeMassInLoop(*L);
   }

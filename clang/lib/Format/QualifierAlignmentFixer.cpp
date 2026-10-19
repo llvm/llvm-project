@@ -573,7 +573,9 @@ LeftRightQualifierAlignmentFixer::LeftRightQualifierAlignmentFixer(
     const Environment &Env, const FormatStyle &Style,
     const std::string &Qualifier,
     const std::vector<tok::TokenKind> &QualifierTokens, bool RightAlign)
-    : TokenAnalyzer(Env, Style), Qualifier(Qualifier), RightAlign(RightAlign),
+    : TokenAnalyzer(Env, Style), Qualifier(Qualifier),
+      QualifierTokens(
+          decltype(this->QualifierTokens)::withFlags(unsigned(RightAlign))),
       ConfiguredQualifierTokens(QualifierTokens) {}
 
 std::pair<tooling::Replacements, unsigned>
@@ -588,7 +590,7 @@ LeftRightQualifierAlignmentFixer::analyze(
 }
 
 void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
-    SmallVectorImpl<AnnotatedLine *> &AnnotatedLines, FormatTokenLexer &Tokens,
+    ArrayRef<AnnotatedLine *> AnnotatedLines, FormatTokenLexer &Tokens,
     tooling::Replacements &Fixes) {
   const AdditionalKeywords &Keywords = Tokens.getKeywords();
   const SourceManager &SourceMgr = Env.getSourceManager();
@@ -612,7 +614,7 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
         break;
       if (Tok->is(tok::comment))
         continue;
-      if (RightAlign) {
+      if (getRightAlign()) {
         Tok = analyzeRight(SourceMgr, Keywords, Fixes, Tok, Qualifier,
                            QualifierToken);
       } else {

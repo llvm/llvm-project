@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_SPARSETENSOR_IR_DETAIL_DIMLVLMAP_H
 
 #include "Var.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -267,8 +268,9 @@ private:
   // All these fields are const-after-ctor.
   unsigned symRank;
   SmallVector<DimSpec> dimSpecs;
-  SmallVector<LvlSpec> lvlSpecs;
-  bool mustPrintLvlVars;
+  llvm::SmallVectorWithFlags<LvlSpec> lvlSpecs;
+  bool getMustPrintLvlVars() const { return lvlSpecs.getFlag(0); }
+  void setMustPrintLvlVars(bool Value) { lvlSpecs.setFlag(0, Value); }
 };
 
 //===----------------------------------------------------------------------===//

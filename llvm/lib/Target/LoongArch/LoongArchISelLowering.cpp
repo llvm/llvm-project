@@ -9965,9 +9965,8 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
 }
 
 void LoongArchTargetLowering::analyzeInputArgs(
-    MachineFunction &MF, CCState &CCInfo,
-    const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
-    LoongArchCCAssignFn Fn) const {
+    MachineFunction &MF, CCState &CCInfo, llvm::ArrayRef<ISD::InputArg> Ins,
+    bool IsRet, LoongArchCCAssignFn Fn) const {
   FunctionType *FType = MF.getFunction().getFunctionType();
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     MVT ArgVT = Ins[i].VT;
@@ -9988,9 +9987,8 @@ void LoongArchTargetLowering::analyzeInputArgs(
 }
 
 void LoongArchTargetLowering::analyzeOutputArgs(
-    MachineFunction &MF, CCState &CCInfo,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsRet,
-    CallLoweringInfo *CLI, LoongArchCCAssignFn Fn) const {
+    MachineFunction &MF, CCState &CCInfo, llvm::ArrayRef<ISD::OutputArg> Outs,
+    bool IsRet, CallLoweringInfo *CLI, LoongArchCCAssignFn Fn) const {
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT ArgVT = Outs[i].VT;
     Type *OrigTy = CLI ? CLI->getArgs()[Outs[i].OrigArgIndex].Ty : nullptr;
@@ -10180,8 +10178,8 @@ static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
 // Transform physical registers into virtual registers.
 SDValue LoongArchTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
 
@@ -10444,16 +10442,15 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                    SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   MVT GRLenVT = Subtarget.getGRLenVT();
-  bool &IsTailCall = CLI.IsTailCall;
 
   MachineFunction &MF = DAG.getMachineFunction();
 
@@ -10467,10 +10464,11 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI, CC_LoongArch);
 
   // Check if it's really possible to do a tail call.
-  if (IsTailCall)
-    IsTailCall = isEligibleForTailCallOptimization(ArgCCInfo, CLI, MF, ArgLocs);
+  if (CLI.getIsTailCall())
+    CLI.setIsTailCall(
+        isEligibleForTailCallOptimization(ArgCCInfo, CLI, MF, ArgLocs));
 
-  if (IsTailCall)
+  if (CLI.getIsTailCall())
     ++NumTailCalls;
   else if (CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
@@ -10502,7 +10500,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     ByValArgs.push_back(FIPtr);
   }
 
-  if (!IsTailCall)
+  if (!CLI.getIsTailCall())
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
   // Copy argument values to their designated locations.
@@ -10556,7 +10554,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
       // For musttail calls, reuse incoming indirect pointers instead of
       // creating new stack temporaries. The incoming pointers point to the
       // caller's caller's frame, which remains valid after a tail call.
-      if (IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
+      if (CLI.getIsTailCall() && CLI.CB && CLI.CB->isMustTailCall()) {
         LoongArchMachineFunctionInfo *LAFI =
             MF.getInfo<LoongArchMachineFunctionInfo>();
         unsigned CallArgIdx = Outs[OutIdx].OrigArgIndex;
@@ -10709,7 +10707,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      assert((!IsTailCall || (CLI.CB && CLI.CB->isMustTailCall())) &&
+      assert((!CLI.getIsTailCall() || (CLI.CB && CLI.CB->isMustTailCall())) &&
              "Tail call not allowed if stack is used for passing parameters");
 
       // Work out the address of the stack slot.
@@ -10763,7 +10761,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
 
-  if (!IsTailCall) {
+  if (!CLI.getIsTailCall()) {
     // Add a register mask operand representing the call-preserved registers.
     const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
     const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
@@ -10782,26 +10780,28 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   default:
     report_fatal_error("Unsupported code model");
   case CodeModel::Small:
-    Op = IsTailCall ? LoongArchISD::TAIL : LoongArchISD::CALL;
+    Op = CLI.getIsTailCall() ? LoongArchISD::TAIL : LoongArchISD::CALL;
     break;
   case CodeModel::Medium:
-    Op = IsTailCall ? LoongArchISD::TAIL_MEDIUM : LoongArchISD::CALL_MEDIUM;
+    Op = CLI.getIsTailCall() ? LoongArchISD::TAIL_MEDIUM
+                             : LoongArchISD::CALL_MEDIUM;
     break;
   case CodeModel::Large:
     assert(Subtarget.is64Bit() && "Large code model requires LA64");
-    Op = IsTailCall ? LoongArchISD::TAIL_LARGE : LoongArchISD::CALL_LARGE;
+    Op = CLI.getIsTailCall() ? LoongArchISD::TAIL_LARGE
+                             : LoongArchISD::CALL_LARGE;
     break;
   }
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(Op, DL, NodeTys, Ops);
-    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.getNoMerge());
     return Ret;
   }
 
   Chain = DAG.getNode(Op, DL, NodeTys, Ops);
-  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.getNoMerge());
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
@@ -10842,7 +10842,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool LoongArchTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    llvm::ArrayRef<ISD::OutputArg> Outs, LLVMContext &Context,
     const Type *RetTy) const {
   SmallVector<CCValAssign> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
@@ -10857,11 +10857,12 @@ bool LoongArchTargetLowering::CanLowerReturn(
   return true;
 }
 
-SDValue LoongArchTargetLowering::LowerReturn(
-    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
-    SelectionDAG &DAG) const {
+SDValue
+LoongArchTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                     bool IsVarArg,
+                                     llvm::ArrayRef<ISD::OutputArg> Outs,
+                                     const SmallVectorImpl<SDValue> &OutVals,
+                                     const SDLoc &DL, SelectionDAG &DAG) const {
   // Stores the assignment of the return value to a location.
   SmallVector<CCValAssign> RVLocs;
 

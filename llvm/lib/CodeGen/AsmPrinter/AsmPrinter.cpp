@@ -407,9 +407,9 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       PointerSize(tm.getTargetTriple().getArchPointerBitWidth() / 8),
       SM(*this) {
-  VerboseAsm = OutStreamer->isVerboseAsm();
-  DwarfUsesRelocationsAcrossSections =
-      MAI.doesDwarfUseRelocationsAcrossSections();
+  setVerboseAsm(OutStreamer->isVerboseAsm());
+  setDwarfUsesRelocationsAcrossSectionsFlag(
+      MAI.doesDwarfUseRelocationsAcrossSections());
   GetMMI = [this]() {
     auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
     return MMIWP ? &MMIWP->getMMI() : nullptr;
@@ -532,9 +532,9 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 bool AsmPrinter::doInitialization(Module &M) {
   MMI = GetMMI();
   PointerSize = M.getDataLayout().getPointerSize(0);
-  HasSplitStack = false;
-  HasNoSplitStack = false;
-  DbgInfoAvailable = !M.debug_compile_units().empty();
+  setHasSplitStack(false);
+  setHasNoSplitStack(false);
+  setDbgInfoAvailable(!M.debug_compile_units().empty());
   const Triple &Target = M.getTargetTriple();
 
   AddrLabelSymbols = nullptr;
@@ -3157,10 +3157,10 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
   // split-stack is used.
-  if (M.getTargetTriple().isOSBinFormatELF() && HasSplitStack) {
+  if (M.getTargetTriple().isOSBinFormatELF() && getHasSplitStack()) {
     OutStreamer->switchSection(OutContext.getELFSection(".note.GNU-split-stack",
                                                         ELF::SHT_PROGBITS, 0));
-    if (HasNoSplitStack)
+    if (getHasNoSplitStack())
       OutStreamer->switchSection(OutContext.getELFSection(
           ".note.GNU-no-split-stack", ELF::SHT_PROGBITS, 0));
   }
@@ -3242,12 +3242,12 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   // Record that there are split-stack functions, so we will emit a special
   // section to tell the linker.
   if (MF.shouldSplitStack()) {
-    HasSplitStack = true;
+    setHasSplitStack(true);
 
     if (!MF.getFrameInfo().needsSplitStackProlog())
-      HasNoSplitStack = true;
+      setHasNoSplitStack(true);
   } else
-    HasNoSplitStack = true;
+    setHasNoSplitStack(true);
 
   // Get the function symbol.
   if (!MAI.isAIX()) {

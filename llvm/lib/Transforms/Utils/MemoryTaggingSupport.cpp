@@ -31,7 +31,7 @@ namespace memtag {
 
 void forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const LoopInfo &LI, const AllocaInfo &AInfo,
-                          const SmallVectorImpl<Instruction *> &RetVec,
+                          ArrayRef<Instruction *> RetVec,
                           llvm::function_ref<void(Instruction *)> Callback) {
   if (AInfo.LifetimeEnd.size() == 1 && AInfo.LifetimeStart.size() == 1 &&
       PDT.dominates(AInfo.LifetimeEnd[0], AInfo.LifetimeStart[0])) {
@@ -121,7 +121,7 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
 
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (CI->canReturnTwice()) {
-      Info.CallsReturnTwice = true;
+      Info.setCallsReturnTwice(true);
     }
   }
   if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {

@@ -204,7 +204,7 @@ void AssumptionCache::AffectedValueCallbackVH::allUsesReplacedWith(Value *NV) {
 }
 
 void AssumptionCache::scanFunction() {
-  assert(!Scanned && "Tried to scan the function twice!");
+  assert(!isScanned() && "Tried to scan the function twice!");
   assert(AssumeHandles.empty() && "Already have assumes when scanning!");
 
   // Go through all instructions in all blocks, add all calls to @llvm.assume
@@ -215,7 +215,7 @@ void AssumptionCache::scanFunction() {
         AssumeHandles.push_back(&I);
 
   // Mark the scan as complete.
-  Scanned = true;
+  AssumeHandles.setFlag(0, true);
 
   // Update affected values.
   for (auto &A : AssumeHandles)
@@ -246,7 +246,7 @@ findCacheViolation(const Function &F, ArrayRef<WeakVH> Assumptions,
 void AssumptionCache::registerAssumption(AssumeInst *CI) {
   // If we haven't scanned the function yet, just drop this assumption. It will
   // be found when we scan later.
-  if (!Scanned)
+  if (!isScanned())
     return;
 
   AssumeHandles.push_back(CI);

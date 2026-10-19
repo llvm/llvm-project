@@ -127,9 +127,9 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
   // be resolved is reset to its loaded stage and marked again from scratch, so
   // no reference recorded under one resolution mode survives into another.
   assert((SubtreeDependencyRefs.empty() ||
-          InterCUProcessingWasStarted == InterCUProcessingStarted) &&
+          getInterCUProcessingWasStarted() == InterCUProcessingStarted) &&
          "recorded subtrees would be walked in a different resolution mode");
-  InterCUProcessingWasStarted = InterCUProcessingStarted;
+  setInterCUProcessingWasStarted(InterCUProcessingStarted);
 
   // Search for live root DIEs.
   CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
@@ -326,7 +326,7 @@ void DependencyTracker::materializeSubtreeSummaries() {
       std::atomic<bool> HasNewInterconnectedCUs = false;
       [[maybe_unused]] bool Res = markDIEEntryAsKeptRec(
           Ref.Action, Ref.ReferencedBy, Ref.Subtree,
-          InterCUProcessingWasStarted, HasNewInterconnectedCUs,
+          getInterCUProcessingWasStarted(), HasNewInterconnectedCUs,
           TreeWalkKindTy::RecordSubtreeDeps);
       assert(Res && !HasNewInterconnectedCUs && "record-deps-only walk failed");
     }
@@ -998,7 +998,7 @@ bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
         return false;
 
       if (!IsLiveParent && Info.getIsInFunctionScope() &&
-          !Entry.CU->getGlobalData().getOptions().KeepFunctionForStatic)
+          !Entry.CU->getGlobalData().getOptions().getKeepFunctionForStatic())
         return false;
     }
   }

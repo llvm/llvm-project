@@ -27,6 +27,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGenUtils/ClassUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1005,7 +1006,7 @@ private:
   // Returns true if a CXXCtorInitializer represents a member initialization
   // that can be rolled into a memcpy.
   bool isMemberInitMemcpyable(CXXCtorInitializer *MemberInit) const {
-    if (!MemcpyableCtor)
+    if (!getMemcpyableCtor())
       return false;
     FieldDecl *Field = MemberInit->getMember();
     assert(Field && "No field for member init.");
@@ -1032,10 +1033,10 @@ public:
                         FunctionArgList &Args)
       : FieldMemcpyizer(CGF, CD->getParent(),
                         getTrivialCopySource(CGF, CD, Args)),
-        ConstructorDecl(CD),
-        MemcpyableCtor(CD->isDefaulted() && CD->isCopyOrMoveConstructor() &&
-                       CGF.getLangOpts().getGC() == LangOptions::NonGC),
-        Args(Args) {}
+        ConstructorDecl(CD), Args(Args),
+        AggregatedInits(decltype(this->AggregatedInits)::withFlags(
+            unsigned(bool(CD->isDefaulted() && CD->isCopyOrMoveConstructor() &&
+                          CGF.getLangOpts().getGC() == LangOptions::NonGC)))) {}
 
   void addMemberInitializer(CXXCtorInitializer *MemberInit) {
     if (isMemberInitMemcpyable(MemberInit)) {
@@ -1089,9 +1090,10 @@ public:
 
 private:
   const CXXConstructorDecl *ConstructorDecl;
-  bool MemcpyableCtor;
+  bool getMemcpyableCtor() const { return AggregatedInits.getFlag(0); }
+  void setMemcpyableCtor(bool Value) { AggregatedInits.setFlag(0, Value); }
   FunctionArgList &Args;
-  SmallVector<CXXCtorInitializer *, 16> AggregatedInits;
+  llvm::SmallVectorWithFlags<CXXCtorInitializer *, 16> AggregatedInits;
 };
 
 class AssignmentMemcpyizer : public FieldMemcpyizer {
@@ -2910,7 +2912,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          CFITypeCheckKind TCK,
                                          SourceLocation Loc) {
-  assert(IsSanitizerScope);
+  assert(getIsSanitizerScope());
 
   if (!CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
       !CGM.HasHiddenLTOVisibility(RD))

@@ -573,13 +573,13 @@ static void buildLambdaScopeReturnType(Sema &S, LambdaScopeInfo *LSI,
                                        CXXMethodDecl *CallOperator,
                                        bool ExplicitResultType) {
   if (ExplicitResultType) {
-    LSI->HasImplicitReturnType = false;
+    LSI->setHasImplicitReturnType(false);
     LSI->ReturnType = CallOperator->getReturnType();
     if (!LSI->ReturnType->isDependentType() && !LSI->ReturnType->isVoidType())
       S.RequireCompleteType(CallOperator->getBeginLoc(), LSI->ReturnType,
                             diag::err_lambda_incomplete_result);
   } else {
-    LSI->HasImplicitReturnType = true;
+    LSI->setHasImplicitReturnType(true);
   }
 }
 
@@ -597,8 +597,8 @@ void Sema::buildLambdaScope(LambdaScopeInfo *LSI, CXXMethodDecl *CallOperator,
     LSI->ImpCaptureStyle = LambdaScopeInfo::ImpCap_LambdaByref;
   LSI->CaptureDefaultLoc = CaptureDefaultLoc;
   LSI->IntroducerRange = IntroducerRange;
-  LSI->ExplicitParams = ExplicitParams;
-  LSI->Mutable = Mutable;
+  LSI->setExplicitParams(ExplicitParams);
+  LSI->setMutable(Mutable);
 }
 
 void Sema::finishLambdaExplicitCaptures(LambdaScopeInfo *LSI) {
@@ -751,7 +751,7 @@ static void adjustBlockReturnsToEnum(Sema &S, ArrayRef<ReturnStmt*> returns,
 }
 
 void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
-  assert(CSI.HasImplicitReturnType);
+  assert(CSI.getHasImplicitReturnType());
   // If it was ever a placeholder, it had to been deduced to DependentTy.
   assert(CSI.ReturnType.isNull() || !CSI.ReturnType->isUndeducedType());
   assert((!isa<LambdaScopeInfo>(CSI) || !getLangOpts().CPlusPlus14) &&
@@ -1135,7 +1135,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     LSI->ImpCaptureStyle = LambdaScopeInfo::ImpCap_LambdaByref;
   LSI->CaptureDefaultLoc = Intro.DefaultLoc;
   LSI->IntroducerRange = Intro.Range;
-  LSI->AfterParameterList = false;
+  LSI->setAfterParameterList(false);
 
   assert(LSI->NumExplicitTemplateParams == 0);
 
@@ -1395,7 +1395,9 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
   }
   finishLambdaExplicitCaptures(LSI);
-  LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
+  LSI->setContainsUnexpandedParameterPack(
+      LSI->getContainsUnexpandedParameterPack() |
+      (ContainsUnexpandedParameterPack));
   PopDeclContext();
 }
 
@@ -1403,7 +1405,7 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
                                         SourceLocation MutableLoc) {
 
   LambdaScopeInfo *LSI = getCurrentLambdaScopeUnsafe(*this);
-  LSI->Mutable = MutableLoc.isValid();
+  LSI->setMutable(MutableLoc.isValid());
   ContextRAII Context(*this, LSI->CallOperator, /*NewThisContext*/ false);
 
   // C++11 [expr.prim.lambda]p9:
@@ -1449,10 +1451,13 @@ void Sema::ActOnLambdaClosureParameters(
     AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
                                               TemplateParams);
     LSI->Lambda->setLambdaIsGeneric(true);
-    LSI->ContainsUnexpandedParameterPack |=
-        TemplateParams->containsUnexpandedParameterPack();
+    [&] {
+      auto PackedFlagValue = TemplateParams->containsUnexpandedParameterPack();
+      return LSI->setContainsUnexpandedParameterPack(
+          LSI->getContainsUnexpandedParameterPack() | PackedFlagValue);
+    }();
   }
-  LSI->AfterParameterList = true;
+  LSI->setAfterParameterList(true);
 }
 
 void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
@@ -1461,7 +1466,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   LambdaScopeInfo *LSI = getCurrentLambdaScopeUnsafe(*this);
   LSI->CallOperator->setConstexprKind(DS.getConstexprSpecifier());
-  LSI->BeforeCompoundStatement = false;
+  LSI->setBeforeCompoundStatement(false);
 
   SmallVector<ParmVarDecl *, 8> Params;
   bool ExplicitResultType;
@@ -1486,7 +1491,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   if (ParamInfo.isFunctionDeclarator() != 0) {
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
-    LSI->ExplicitParams = FTI.getLParenLoc().isValid();
+    LSI->setExplicitParams(FTI.getLParenLoc().isValid());
     if (!FTIHasSingleVoidParameter(FTI)) {
       Params.reserve(Params.size());
       for (unsigned I = 0; I < FTI.NumParams; ++I) {
@@ -2219,10 +2224,11 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   CXXRecordDecl *Class = LSI->Lambda;
   CXXMethodDecl *CallOperator = LSI->CallOperator;
   SourceRange IntroducerRange = LSI->IntroducerRange;
-  bool ExplicitParams = LSI->ExplicitParams;
-  bool ExplicitResultType = !LSI->HasImplicitReturnType;
+  bool ExplicitParams = LSI->getExplicitParams();
+  bool ExplicitResultType = !LSI->getHasImplicitReturnType();
   CleanupInfo LambdaCleanup = LSI->Cleanup;
-  bool ContainsUnexpandedParameterPack = LSI->ContainsUnexpandedParameterPack;
+  bool ContainsUnexpandedParameterPack =
+      LSI->getContainsUnexpandedParameterPack();
   bool IsGenericLambda = Class->isGenericLambda();
 
   CallOperator->setLexicalDeclContext(Class);

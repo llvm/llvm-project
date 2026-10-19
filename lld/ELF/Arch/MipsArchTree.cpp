@@ -69,7 +69,7 @@ static void checkFlags(Ctx &ctx, ArrayRef<FileFlags> files) {
   bool fp = files[0].flags & EF_MIPS_FP64;
 
   for (const FileFlags &f : files) {
-    if (ctx.arg.is64 && f.flags & EF_MIPS_MICROMIPS)
+    if (ctx.arg.getIs64() && f.flags & EF_MIPS_MICROMIPS)
       Err(ctx) << f.file << ": microMIPS 64-bit is not supported";
 
     uint32_t abi2 = f.flags & (EF_MIPS_ABI | EF_MIPS_ABI2);
@@ -299,7 +299,7 @@ template <class ELFT> uint32_t elf::calcMipsEFlags(Ctx &ctx) {
     // If we don't have any input files, we'll have to rely on the information
     // we can derive from emulation information, since this at least gets us
     // ABI.
-    if (ctx.arg.emulation.empty() || ctx.arg.is64)
+    if (ctx.arg.emulation.empty() || ctx.arg.getIs64())
       return 0;
     return ctx.arg.mipsN32Abi ? EF_MIPS_ABI2 : EF_MIPS_ABI_O32;
   }

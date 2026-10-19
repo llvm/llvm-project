@@ -50,8 +50,8 @@ getFullRankPaddingSizes(Builder &b, ArrayRef<OpFoldResult> indexingSizes,
     //   - 1 if we are padding to the next multiple of.
     //   - indexingSizes[idx] otherwise
     if (isZeroInteger(paddingSizes[idx])) {
-      paddingSizes[idx] =
-          options.padToMultipleOf ? b.getIndexAttr(1) : indexingSizes[idx];
+      paddingSizes[idx] = options.getPadToMultipleOfFlag() ? b.getIndexAttr(1)
+                                                           : indexingSizes[idx];
     }
     LLVM_DEBUG(DBGS() << "----idx: " << idx << " : " << paddingSizes[idx]
                       << "\n");
@@ -149,7 +149,7 @@ linalg::computePaddedShape(OpBuilder &builder, TypedValue<RankedTensorType> v,
 
       // If we are padding to the next multiple of, compose with ceil(sz) * sz.
       OpFoldResult paddingDimOfr;
-      if (options.padToMultipleOf) {
+      if (options.getPadToMultipleOfFlag()) {
         AffineExpr d0, s0;
         bindDims(builder.getContext(), d0);
         bindSymbols(builder.getContext(), s0);

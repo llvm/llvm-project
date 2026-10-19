@@ -15,6 +15,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -304,7 +305,7 @@ public:
   void addComponents(const ComponentVector &Components);
 
   /// Accessor for Usages.
-  const UsageResult &getUsages() const { return Usages; }
+  ArrayRef<Usage> getUsages() const { return Usages; }
 
   /// Adds the Usage if it was not added before.
   void addUsage(const Usage &U);
@@ -325,12 +326,12 @@ public:
   /// simply be removed but rather replaced with a use of the alias variable.
   /// For example, variables declared in the condition of an if, switch, or for
   /// stmt.
-  bool aliasUseRequired() const { return ReplaceWithAliasUse; }
+  bool aliasUseRequired() const { return getReplaceWithAliasUse(); }
 
   /// Indicates if the alias declaration came from the init clause of a
   /// nested for loop. SourceRanges provided by Clang for DeclStmts in this
   /// case need to be adjusted.
-  bool aliasFromForInit() const { return AliasFromForInit; }
+  bool aliasFromForInit() const { return getAliasFromForInit(); }
 
 private:
   /// Typedef used in CRTP functions.
@@ -365,14 +366,19 @@ private:
   const Expr *ContainerExpr;
   /// The Expr which refers to the terminating condition for array-based loops.
   const Expr *ArrayBoundExpr;
-  bool ContainerNeedsDereference;
+  bool getContainerNeedsDereference() const { return Usages.getFlag(0); }
+  void setContainerNeedsDereference(bool Value) { Usages.setFlag(0, Value); }
 
   // Output member variables:
   /// A container which holds all usages of IndexVar as the index of
   /// ArraySubscriptExpressions.
-  UsageResult Usages;
+  llvm::SmallVectorWithFlagsFor<UsageResult, 4> Usages;
   llvm::SmallSet<SourceLocation, 8> UsageLocations;
-  bool OnlyUsedAsIndex = true;
+  bool getOnlyUsedAsIndex() const { return !Usages.getFlag(1); }
+  bool setOnlyUsedAsIndex(bool Value) {
+    Usages.setFlag(1, !Value);
+    return Value;
+  }
   /// The DeclStmt for an alias to the container element.
   const DeclStmt *AliasDecl = nullptr;
   Confidence ConfidenceLevel;
@@ -392,9 +398,17 @@ private:
   const Stmt *CurrStmtParent = nullptr;
 
   /// \see aliasUseRequired().
-  bool ReplaceWithAliasUse = false;
+  bool getReplaceWithAliasUse() const { return Usages.getFlag(2); }
+  bool setReplaceWithAliasUse(bool Value) {
+    Usages.setFlag(2, Value);
+    return Value;
+  }
   /// \see aliasFromForInit().
-  bool AliasFromForInit = false;
+  bool getAliasFromForInit() const { return Usages.getFlag(3); }
+  bool setAliasFromForInit(bool Value) {
+    Usages.setFlag(3, Value);
+    return Value;
+  }
 };
 
 struct TUTrackingInfo {

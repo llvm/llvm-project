@@ -27,6 +27,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Support/TypeSize.h"
@@ -287,8 +288,10 @@ public:
                             AssumptionCache *AC, bool AllowRuntimeSCEVChecks,
                             AAResults *AA)
       : Opts(Opts), TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT),
-        LAIs(LAIs), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
-        AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
+        LAIs(LAIs), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), AA(AA),
+        CountableExitingBlocks(
+            decltype(this->CountableExitingBlocks)::withFlags(
+                unsigned(AllowRuntimeSCEVChecks))) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -462,7 +465,7 @@ public:
 
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
-  bool hasVectorCallVariants() const { return VecCallVariantsFound; }
+  bool hasVectorCallVariants() const { return getVecCallVariantsFound(); }
 
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
@@ -494,7 +497,7 @@ public:
 
   /// Returns all exiting blocks with a countable exit, i.e. the
   /// exit-not-taken count is known exactly at compile time.
-  const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {
+  ArrayRef<BasicBlock *> getCountableExitingBlocks() const {
     return CountableExitingBlocks;
   }
 
@@ -726,7 +729,12 @@ private:
   SmallVector<HistogramInfo, 1> Histograms;
 
   /// Whether or not creating SCEV predicates is allowed.
-  bool AllowRuntimeSCEVChecks;
+  bool getAllowRuntimeSCEVChecks() const {
+    return CountableExitingBlocks.getFlag(0);
+  }
+  void setAllowRuntimeSCEVChecks(bool Value) {
+    CountableExitingBlocks.setFlag(0, Value);
+  }
 
   // Alias Analysis results used to check for possible aliasing with loads
   // used in uncountable exit conditions.
@@ -736,11 +744,17 @@ private:
   /// vectorized variant, record that fact so that LoopVectorize can
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
-  bool VecCallVariantsFound = false;
+  bool getVecCallVariantsFound() const {
+    return CountableExitingBlocks.getFlag(1);
+  }
+  bool setVecCallVariantsFound(bool Value) {
+    CountableExitingBlocks.setFlag(1, Value);
+    return Value;
+  }
 
   /// Keep track of all the countable and uncountable exiting blocks if
   /// the exact backedge taken count is not computable.
-  SmallVector<BasicBlock *, 4> CountableExitingBlocks;
+  llvm::SmallVectorWithFlags<BasicBlock *, 4, 2> CountableExitingBlocks;
 
   /// Records whether we have an uncountable early exit in a loop that's
   /// either read-only or read-write.

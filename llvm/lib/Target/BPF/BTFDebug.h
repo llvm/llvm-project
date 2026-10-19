@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -145,10 +146,12 @@ public:
 class BTFTypeFuncProto : public BTFTypeBase {
   const DISubroutineType *STy;
   SmallDenseMap<uint32_t, StringRef> FuncArgNames;
-  SmallVector<uint32_t, 8> AliveParamIndices;
-  bool UseFilteredParams = false;
+  llvm::SmallVectorWithFlags<uint32_t, 8, 2> AliveParamIndices;
+  bool getUseFilteredParams() const { return AliveParamIndices.getFlag(0); }
+  void setUseFilteredParams(bool Value) { AliveParamIndices.setFlag(0, Value); }
   std::vector<struct BTF::BTFParam> Parameters;
-  bool VoidReturn = false;
+  bool getVoidReturn() const { return AliveParamIndices.getFlag(1); }
+  void setVoidReturn(bool Value) { AliveParamIndices.setFlag(1, Value); }
 
 public:
   BTFTypeFuncProto(const DISubroutineType *STy, uint32_t NumParams,

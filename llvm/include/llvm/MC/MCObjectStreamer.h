@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
@@ -39,9 +40,12 @@ class raw_pwrite_stream;
 /// implementation.
 class LLVM_ABI MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
-  bool EmitEHFrame;
-  bool EmitDebugFrame;
-  bool EmitSFrame;
+  bool getEmitEHFrame() const { return FragStorage.getFlag(0); }
+  void setEmitEHFrame(bool Value) { FragStorage.setFlag(0, Value); }
+  bool getEmitDebugFrame() const { return FragStorage.getFlag(1); }
+  void setEmitDebugFrame(bool Value) { FragStorage.setFlag(1, Value); }
+  bool getEmitSFrame() const { return FragStorage.getFlag(2); }
+  void setEmitSFrame(bool Value) { FragStorage.setFlag(2, Value); }
 
   struct PendingAssignment {
     MCSymbol *Symbol;
@@ -53,7 +57,7 @@ class LLVM_ABI MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
-  SmallVector<std::unique_ptr<uint8_t[]>, 0> FragStorage;
+  llvm::SmallVectorWithFlags<std::unique_ptr<uint8_t[]>, 0, 4> FragStorage;
   // Available bytes in the current block for trailing data or new fragments.
   size_t FragSpace = 0;
   // Used to allocate special fragments that do not use MCFragment's fixed-size
@@ -68,7 +72,8 @@ class LLVM_ABI MCObjectStreamer : public MCStreamer {
 protected:
   // Within .bundle_lock/.bundle_unlock. A section cannot be switched while a
   // group is open, so no per-section state is needed.
-  bool BundleLocked = false;
+  bool getBundleLocked() const { return FragStorage.getFlag(3); }
+  void setBundleLocked(bool Value) { FragStorage.setFlag(3, Value); }
 
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
@@ -93,7 +98,7 @@ public:
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
 
-  bool isBundleLocked() const { return BundleLocked; }
+  bool isBundleLocked() const { return getBundleLocked(); }
 
   /// \name MCStreamer Interface
   /// @{

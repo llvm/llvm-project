@@ -16,6 +16,7 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -113,7 +114,8 @@ private:
   SmallVector<DominatorTree::UpdateType, 16> DTUpdates;
 
   // Whether or not the current loop has irreducible CFG.
-  bool HasIrreducibleCFG = false;
+  bool getHasIrreducibleCFG() const { return FoldCandidates.getFlag(0); }
+  void setHasIrreducibleCFG(bool Value) { FoldCandidates.setFlag(0, Value); }
   // Whether or not the current loop will still exist after terminator constant
   // folding will be done. In theory, there are two ways how it can happen:
   // 1. Loop's latch(es) become unreachable from loop header;
@@ -122,9 +124,11 @@ private:
   // current loop and its preheader and do not affect preheader's reachibility
   // from any other block. So this variable set to true means that loop's latch
   // has become unreachable from loop header.
-  bool DeleteCurrentLoop = false;
+  bool getDeleteCurrentLoop() const { return FoldCandidates.getFlag(1); }
+  void setDeleteCurrentLoop(bool Value) { FoldCandidates.setFlag(1, Value); }
   // Whether or not we enter the loop through an indirectbr.
-  bool HasIndirectEntry = false;
+  bool getHasIndirectEntry() const { return FoldCandidates.getFlag(2); }
+  void setHasIndirectEntry(bool Value) { FoldCandidates.setFlag(2, Value); }
 
   // The blocks of the original loop that will still be reachable from entry
   // after the constant folding.
@@ -143,16 +147,15 @@ private:
   // The blocks that have terminators with constant condition that can be
   // folded. Note: fold candidates should be in L but not in any of its
   // subloops to avoid complex LI updates.
-  SmallVector<BasicBlock *, 8> FoldCandidates;
+  llvm::SmallVectorWithFlags<BasicBlock *, 8, 3> FoldCandidates;
 
   void dump() const {
     dbgs() << "Constant terminator folding for loop " << L << "\n";
     dbgs() << "After terminator constant-folding, the loop will";
-    if (!DeleteCurrentLoop)
+    if (!getDeleteCurrentLoop())
       dbgs() << " not";
     dbgs() << " be destroyed\n";
-    auto PrintOutVector = [&](const char *Message,
-                           const SmallVectorImpl<BasicBlock *> &S) {
+    auto PrintOutVector = [&](const char *Message, ArrayRef<BasicBlock *> S) {
       dbgs() << Message << "\n";
       for (const BasicBlock *BB : S)
         dbgs() << "\t" << BB->getName() << "\n";
@@ -169,7 +172,7 @@ private:
     PrintOutVector("Dead blocks from the original loop:", DeadLoopBlocks);
     PrintOutSet("Live exit blocks:", LiveExitBlocks);
     PrintOutVector("Dead exit blocks:", DeadExitBlocks);
-    if (!DeleteCurrentLoop)
+    if (!getDeleteCurrentLoop())
       PrintOutSet("The following blocks will still be part of the loop:",
                   BlocksInLoopAfterFolding);
   }
@@ -209,7 +212,7 @@ private:
     // on this). We can later decide to support such cases by altering the
     // algorithms, but so far we just give up analyzing them.
     if (hasIrreducibleCFG(DFS)) {
-      HasIrreducibleCFG = true;
+      setHasIrreducibleCFG(true);
       return;
     }
 
@@ -222,7 +225,7 @@ private:
                       return isa<IndirectBrInst>(Pred->getTerminator());
                     }) &&
              "Loop should have preheader if it is not entered indirectly");
-      HasIndirectEntry = true;
+      setHasIndirectEntry(true);
       return;
     }
 
@@ -285,11 +288,11 @@ private:
     };
 
     // The loop will not be destroyed if its latch is live.
-    DeleteCurrentLoop = !IsEdgeLive(L.getLoopLatch(), L.getHeader());
+    setDeleteCurrentLoop(!IsEdgeLive(L.getLoopLatch(), L.getHeader()));
 
     // If we are going to delete the current loop completely, no extra analysis
     // is needed.
-    if (DeleteCurrentLoop)
+    if (getDeleteCurrentLoop())
       return;
 
     // Otherwise, we should check which blocks will still be a part of the
@@ -561,12 +564,12 @@ public:
     LLVM_DEBUG(dbgs() << "In function " << Header->getParent()->getName()
                       << ": ");
 
-    if (HasIrreducibleCFG) {
+    if (getHasIrreducibleCFG()) {
       LLVM_DEBUG(dbgs() << "Loops with irreducible CFG are not supported!\n");
       return false;
     }
 
-    if (HasIndirectEntry) {
+    if (getHasIndirectEntry()) {
       LLVM_DEBUG(dbgs() << "Loops which can be entered indirectly are not"
                            " supported!\n");
       return false;
@@ -581,7 +584,7 @@ public:
     }
 
     // TODO: Support deletion of the current loop.
-    if (DeleteCurrentLoop) {
+    if (getDeleteCurrentLoop()) {
       LLVM_DEBUG(
           dbgs()
           << "Give up constant terminator folding in loop " << Header->getName()
@@ -656,9 +659,7 @@ public:
     return true;
   }
 
-  bool foldingBreaksCurrentLoop() const {
-    return DeleteCurrentLoop;
-  }
+  bool foldingBreaksCurrentLoop() const { return getDeleteCurrentLoop(); }
 };
 } // namespace
 

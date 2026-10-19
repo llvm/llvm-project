@@ -49,7 +49,7 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
     // keep sym if it was defined, otherwise it's unused and can be dropped.
     sym->isUsedInRegularObj = false;
 
-  if (ctx.hasDynDbg) {
+  if (ctx.getHasDynDbg()) {
     if (sym->isDynDbgRef)
       wrap->isDynDbgRef = true;
     if (real->isDynDbgRef)
@@ -222,7 +222,7 @@ void SymbolTable::scanVersionScript() {
       found |= !findByVersion({(pat.name + "@" + v.name).toStringRef(buf),
                                pat.isExternCpp, /*hasWildCard=*/false})
                     .empty();
-      if (!found && !ctx.arg.undefinedVersion)
+      if (!found && !ctx.arg.getUndefinedVersion())
         Err(ctx) << "version script assignment of '" << ver << "' to symbol '"
                  << pat.name << "' failed: symbol not defined";
     };

@@ -22,6 +22,7 @@
 
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -318,13 +319,14 @@ private:
   const uint32_t *Mask;
   // Cache of frame indexes used on previous instruction processing.
   FrameIndexesCache &CacheFI;
-  bool AllowGCPtrInCSR;
+  bool getAllowGCPtrInCSR() const { return RegsToReload.getFlag(0); }
+  void setAllowGCPtrInCSR(bool Value) { RegsToReload.setFlag(0, Value); }
   // Operands with physical registers requiring spilling.
   SmallVector<unsigned, 8> OpsToSpill;
   // Set of register to spill.
   SmallVector<Register, 8> RegsToSpill;
   // Set of registers to reload after statepoint.
-  SmallVector<Register, 8> RegsToReload;
+  llvm::SmallVectorWithFlags<Register, 8> RegsToReload;
   // Map Register to Frame Slot index.
   DenseMap<Register, int> RegToSlotIdx;
 
@@ -333,7 +335,9 @@ public:
                   FrameIndexesCache &CacheFI, bool AllowGCPtrInCSR)
       : MI(MI), MF(*MI.getMF()), TRI(*MF.getSubtarget().getRegisterInfo()),
         TII(*MF.getSubtarget().getInstrInfo()), MFI(MF.getFrameInfo()),
-        Mask(Mask), CacheFI(CacheFI), AllowGCPtrInCSR(AllowGCPtrInCSR) {
+        Mask(Mask), CacheFI(CacheFI),
+        RegsToReload(decltype(this->RegsToReload)::withFlags(
+            unsigned(AllowGCPtrInCSR))) {
 
     // Find statepoint's landing pad, if any.
     EHPad = nullptr;
@@ -383,7 +387,7 @@ public:
       Register Reg = MO.getReg();
       assert(Reg.isPhysical() && "Only physical regs are expected");
 
-      if (isCalleeSaved(Reg) && (AllowGCPtrInCSR || !GCRegs.contains(Reg)))
+      if (isCalleeSaved(Reg) && (getAllowGCPtrInCSR() || !GCRegs.contains(Reg)))
         continue;
 
       LLVM_DEBUG(dbgs() << "Will spill " << printReg(Reg, &TRI) << " at index "
@@ -484,13 +488,13 @@ public:
       // We skipped undef uses and did not spill them, so we should not
       // proceed with defs here.
       if (MI.getOperand(MI.findTiedOperandIdx(I)).isUndef()) {
-        if (AllowGCPtrInCSR) {
+        if (getAllowGCPtrInCSR()) {
           NewIndices.push_back(NewMI->getNumOperands());
           MIB.addReg(Reg, RegState::Define);
         }
         continue;
       }
-      if (!AllowGCPtrInCSR) {
+      if (!getAllowGCPtrInCSR()) {
         assert(is_contained(RegsToSpill, Reg));
         RegsToReload.push_back(Reg);
       } else {
@@ -522,7 +526,7 @@ public:
       } else {
         MIB.add(MO);
         unsigned OldDef;
-        if (AllowGCPtrInCSR && MI.isRegTiedToDefOperand(I, &OldDef)) {
+        if (getAllowGCPtrInCSR() && MI.isRegTiedToDefOperand(I, &OldDef)) {
           assert(OldDef < NumDefs);
           assert(NewIndices[OldDef] < NumOps);
           MIB->tieOperands(NewIndices[OldDef], MIB->getNumOperands() - 1);

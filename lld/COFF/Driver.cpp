@@ -282,7 +282,7 @@ InputFile *LinkerDriver::addObjectFile(COFFLinkerContext &ctx,
     }
   }
 
-  if (ctx.config.fatLTOObjects) {
+  if (ctx.config.getFatLTOObjects()) {
     Expected<MemoryBufferRef> fatLTOData =
         IRObjectFile::findBitcodeInObject(*coffObj);
 
@@ -408,7 +408,7 @@ void LinkerDriver::handleReproFile(StringRef path, InputOpt inputOpt) {
 
 void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
   auto future = std::make_shared<std::future<MBErrPair>>(
-      createFutureForFile(std::string(path), ctx.config.prefetchInputs));
+      createFutureForFile(std::string(path), ctx.config.getPrefetchInputs()));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
     llvm::TimeTraceScope timeScope("File: ", path);
@@ -429,7 +429,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
           mb = std::move(*retryMb);
           // Prefetch memory pages in the background as we will need them soon
           // enough.
-          if (ctx.config.prefetchInputs)
+          if (ctx.config.getPrefetchInputs())
             mb->willNeedIfMmap();
         }
       } else {
@@ -528,7 +528,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
             "could not get the filename for the member defining symbol " +
                 toCOFFString(ctx, sym));
   auto future = std::make_shared<std::future<MBErrPair>>(
-      createFutureForFile(childName, ctx.config.prefetchInputs));
+      createFutureForFile(childName, ctx.config.getPrefetchInputs()));
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
@@ -751,7 +751,7 @@ StringRef LinkerDriver::findLib(StringRef filename) {
 // consideration. This never returns the same path (in that case,
 // it returns std::nullopt).
 std::optional<StringRef> LinkerDriver::findLibIfNew(StringRef filename) {
-  if (ctx.config.noDefaultLibAll)
+  if (ctx.config.getNoDefaultLibAll())
     return std::nullopt;
   if (!visitedLibs.insert(filename.lower()).second)
     return std::nullopt;
@@ -927,8 +927,8 @@ void LinkerDriver::addLibSearchPaths() {
 
 uint64_t LinkerDriver::getDefaultImageBase() {
   if (ctx.config.is64())
-    return ctx.config.dll ? 0x180000000 : 0x140000000;
-  return ctx.config.dll ? 0x10000000 : 0x400000;
+    return ctx.config.getDll() ? 0x180000000 : 0x140000000;
+  return ctx.config.getDll() ? 0x10000000 : 0x400000;
 }
 
 static std::string rewritePath(StringRef s) {
@@ -1069,8 +1069,8 @@ std::string LinkerDriver::getImportName(bool asLib) {
   } else {
     out.assign(ctx.config.importName);
     if (!sys::path::has_extension(out))
-      sys::path::replace_extension(out,
-                                   (ctx.config.dll || asLib) ? ".dll" : ".exe");
+      sys::path::replace_extension(
+          out, (ctx.config.getDll() || asLib) ? ".dll" : ".exe");
   }
 
   return std::string(out);
@@ -1491,7 +1491,7 @@ void LinkerDriver::pullArm64ECIcallHelper() {
 // than MinGW in the case that nothing is explicitly exported.
 void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
   if (!args.hasArg(OPT_export_all_symbols)) {
-    if (!ctx.config.dll)
+    if (!ctx.config.getDll())
       return;
 
     if (ctx.symtab.hadExplicitExports ||
@@ -1777,8 +1777,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /verbose
   if (args.hasArg(OPT_verbose))
-    config->verbose = true;
-  ctx.e.verbose = config->verbose;
+    config->setVerbose(true);
+  ctx.e.verbose = config->getVerbose();
 
   // Handle /force or /force:unresolved
   if (args.hasArg(OPT_force, OPT_force_unresolved))
@@ -1851,7 +1851,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle /demangle
-  config->demangle = args.hasFlag(OPT_demangle, OPT_demangle_no, true);
+  config->setDemangle(args.hasFlag(OPT_demangle, OPT_demangle_no, true));
 
   // Handle /debugtype
   config->debugTypes = parseDebugTypes(ctx, args);
@@ -1903,7 +1903,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /dll
   if (args.hasArg(OPT_dll)) {
-    config->dll = true;
+    config->setDll(true);
     config->manifestID = 2;
   }
 
@@ -1953,7 +1953,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /nodefaultlib
   if (args.hasArg(OPT_nodefaultlib_all))
-    config->noDefaultLibAll = true;
+    config->setNoDefaultLibAll(true);
 
   // Handle /base
   if (auto *arg = args.getLastArg(OPT_base))
@@ -2035,7 +2035,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_implib))
     config->implib = arg->getValue();
 
-  config->noimplib = args.hasArg(OPT_noimplib);
+  config->setNoimplib(args.hasArg(OPT_noimplib));
 
   if (args.hasArg(OPT_profile))
     doGC = true;
@@ -2091,11 +2091,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (!icfLevel)
     icfLevel = doGC ? ICFLevel::All : ICFLevel::None;
-  config->doGC = doGC;
+  config->setDoGC(doGC);
   config->doICF = *icfLevel;
   config->tailMerge =
       (tailMerge == 1 && config->doICF != ICFLevel::None) || tailMerge == 2;
-  config->ltoDebugPassManager = ltoDebugPM;
+  config->setLtoDebugPassManager(ltoDebugPM);
 
   // Handle /lldsavetemps
   if (args.hasArg(OPT_lldsavetemps)) {
@@ -2221,8 +2221,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor);
 
   // Handle /thinlto-distributor-arg:<arg>
-  config->dtltoDistributorArgs =
-      args::getStrings(args, OPT_thinlto_distributor_arg);
+  config->dtltoDistributorArgs.assign(
+      args::getStrings(args, OPT_thinlto_distributor_arg));
 
   // Handle /thinlto-remote-compiler:<path>
   config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler);
@@ -2231,16 +2231,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                 "/thinlto-distributor is specified.";
 
   // Handle /thinlto-remote-compiler-prepend-arg:<arg>
-  config->dtltoCompilerPrependArgs =
-      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+  config->dtltoCompilerPrependArgs.assign(
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg));
 
   // Handle /thinlto-remote-compiler-arg:<arg>
-  config->dtltoCompilerArgs =
-      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
+  config->dtltoCompilerArgs.assign(
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg));
 
   // Handle /fat-lto-objects
-  config->fatLTOObjects =
-      args.hasFlag(OPT_fat_lto_objects, OPT_fat_lto_objects_no, false);
+  config->setFatLTOObjects(
+      args.hasFlag(OPT_fat_lto_objects, OPT_fat_lto_objects_no, false));
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
@@ -2256,18 +2256,18 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(ctx, args, OPT_thinlto_object_suffix_replace);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
-  config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
+  config->setLtoCSProfileGenerate(args.hasArg(OPT_lto_cs_profile_generate));
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   config->ltoSampleProfileName = args.getLastArgValue(OPT_lto_sample_profile);
   // Handle miscellaneous boolean flags.
-  config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
-                                            OPT_lto_pgo_warn_mismatch_no, true);
+  config->setLtoPGOWarnMismatch(args.hasFlag(
+      OPT_lto_pgo_warn_mismatch, OPT_lto_pgo_warn_mismatch_no, true));
   config->allowBind = args.hasFlag(OPT_allowbind, OPT_allowbind_no, true);
   config->allowIsolation =
       args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
   config->incremental =
       args.hasFlag(OPT_incremental, OPT_incremental_no,
-                   !config->doGC && config->doICF == ICFLevel::None &&
+                   !config->getDoGC() && config->doICF == ICFLevel::None &&
                        !args.hasArg(OPT_order) && !args.hasArg(OPT_profile));
   config->integrityCheck =
       args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
@@ -2284,19 +2284,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_swaprun))
     parseSwaprun(arg->getValue());
   config->terminalServerAware =
-      !config->dll && args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
+      !config->getDll() && args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   config->autoImport =
       args.hasFlag(OPT_auto_import, OPT_auto_import_no, config->mingw);
   config->pseudoRelocs = args.hasFlag(
       OPT_runtime_pseudo_reloc, OPT_runtime_pseudo_reloc_no, config->mingw);
-  config->callGraphProfileSort = args.hasFlag(
-      OPT_call_graph_profile_sort, OPT_call_graph_profile_sort_no, true);
+  config->setCallGraphProfileSort(args.hasFlag(
+      OPT_call_graph_profile_sort, OPT_call_graph_profile_sort_no, true));
   config->stdcallFixup =
       args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
   config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
-  config->allowDuplicateWeak =
-      args.hasFlag(OPT_lld_allow_duplicate_weak,
-                   OPT_lld_allow_duplicate_weak_no, config->mingw);
+  config->setAllowDuplicateWeak(args.hasFlag(OPT_lld_allow_duplicate_weak,
+                                             OPT_lld_allow_duplicate_weak_no,
+                                             config->mingw));
 
   if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
     Warn(ctx) << "ignoring '/inferasanlibs', this flag is not supported";
@@ -2311,7 +2311,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
-  if (config->incremental && config->doGC) {
+  if (config->incremental && config->getDoGC()) {
     Warn(ctx) << "ignoring '/incremental' because REF is enabled; use "
                  "'/opt:noref' to "
                  "disable";
@@ -2326,12 +2326,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
-    config->prefetchInputs = true;
+    config->setPrefetchInputs(true);
 
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
   config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
   config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
-  config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  config->setOptRemarksWithHotness(args.hasArg(OPT_opt_remarks_with_hotness));
   if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
     auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
     if (!resultOrErr)
@@ -2523,7 +2523,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle generation of import library from a def file.
   if (!args.hasArg(OPT_INPUT, OPT_wholearchive_file)) {
     ctx.forEachSymtab([](SymbolTable &symtab) { symtab.fixupExports(); });
-    if (!config->noimplib)
+    if (!config->getNoimplib())
       createImportLibrary(/*asLib=*/true);
     return;
   }
@@ -2584,7 +2584,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (config->outputFile.empty()) {
     config->outputFile = getOutputPath(
         (*args.filtered(OPT_INPUT, OPT_wholearchive_file).begin())->getValue(),
-        config->dll, config->driver);
+        config->getDll(), config->driver);
   }
 
   // Fail early if an output file is not writable.
@@ -2601,7 +2601,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     for (auto *arg : args.filtered(OPT_map_info)) {
       std::string s = StringRef(arg->getValue()).lower();
       if (s == "exports")
-        config->mapInfo = true;
+        config->setMapInfo(true);
       else
         Err(ctx) << "unknown option: /mapinfo:" << s;
     }
@@ -2875,7 +2875,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   });
 
   // Identify unreferenced COMDAT sections.
-  if (config->doGC) {
+  if (config->getDoGC()) {
     if (config->mingw) {
       // markLive doesn't traverse .eh_frame, but the personality function is
       // only reached that way. The proper solution would be to parse and
@@ -2925,11 +2925,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file. In MinGW mode, we only do that when the
   // -implib option is given explicitly, for compatibility with GNU ld.
-  if (config->dll || !ctx.symtab.exports.empty() ||
+  if (config->getDll() || !ctx.symtab.exports.empty() ||
       (ctx.config.machine == ARM64X && !ctx.hybridSymtab->exports.empty())) {
     llvm::TimeTraceScope timeScope("Create .lib exports");
     ctx.forEachActiveSymtab([](SymbolTable &symtab) { symtab.fixupExports(); });
-    if (!config->noimplib && (!config->mingw || !config->implib.empty()))
+    if (!config->getNoimplib() && (!config->mingw || !config->implib.empty()))
       createImportLibrary(/*asLib=*/false);
     ctx.forEachActiveSymtab(
         [](SymbolTable &symtab) { symtab.assignExportOrdinals(); });
@@ -2979,11 +2979,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       Err(ctx) << "/order and /call-graph-order-file may not be used together";
     parseOrderFile(arg->getValue());
-    config->callGraphProfileSort = false;
+    config->setCallGraphProfileSort(false);
   }
 
   // Handle /call-graph-ordering-file and /call-graph-profile-sort (default on).
-  if (config->callGraphProfileSort) {
+  if (config->getCallGraphProfileSort()) {
     llvm::TimeTraceScope timeScope("Call graph");
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       parseCallGraphFile(arg->getValue());

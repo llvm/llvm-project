@@ -152,7 +152,7 @@ RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
 static void relocateImpl(const TargetInfo &target, InputSectionBase &sec,
                          uint64_t secAddr, uint8_t *buf) {
   auto &ctx = target.ctx;
-  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  const unsigned bits = ctx.arg.getIs64() ? 64 : 32;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
@@ -177,5 +177,5 @@ uint64_t TargetInfo::getImageBase() const {
   // Use --image-base if set. Fall back to the target default if not.
   if (ctx.arg.imageBase)
     return *ctx.arg.imageBase;
-  return ctx.arg.isPic ? 0 : defaultImageBase;
+  return ctx.arg.getIsPic() ? 0 : defaultImageBase;
 }

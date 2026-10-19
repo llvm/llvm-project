@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
@@ -55,9 +56,10 @@ struct Summary {
 };
 
 struct LineInfo {
-  SmallVector<const GCOVBlock *, 1> blocks;
+  llvm::SmallVectorWithFlags<const GCOVBlock *, 1> blocks;
   uint64_t count = 0;
-  bool exists = false;
+  bool getExists() const { return blocks.getFlag(0); }
+  void setExists(bool Value) { blocks.setFlag(0, Value); }
 };
 
 struct SourceInfo {
@@ -201,14 +203,15 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
     buf.de.skip(buf.cursor, pos - buf.cursor.tell());
   }
 
-  GCNOInitialized = true;
+  setGCNOInitialized(true);
   return true;
 }
 
 /// readGCDA - Read GCDA buffer. It is required that readGCDA() can only be
 /// called after readGCNO().
 bool GCOVFile::readGCDA(GCOVBuffer &buf) {
-  assert(GCNOInitialized && "readGCDA() can only be called after readGCNO()");
+  assert(getGCNOInitialized() &&
+         "readGCDA() can only be called after readGCNO()");
   if (!buf.readGCDAFormat())
     return false;
   GCOV::GCOVVersion GCDAVersion;
@@ -523,7 +526,7 @@ GCOVBlock::augmentOneCycle(GCOVBlock *src,
 // Assuming a reducible flow graph, the count is the sum of back edge counts.
 // Identifying loops is complex, so we simply find cycles and perform cycle
 // cancelling iteratively.
-uint64_t GCOVBlock::getCyclesCount(const BlockVector &blocks) {
+uint64_t GCOVBlock::getCyclesCount(ArrayRef<const GCOVBlock *> blocks) {
   std::vector<std::pair<GCOVBlock *, size_t>> stack;
   uint64_t count = 0, d;
   for (;;) {
@@ -712,7 +715,7 @@ void Context::collectFunction(GCOVFunction &f, Summary &summary) {
         locSource.lines.resize(maxLineNum + 1);
       for (uint32_t lineNum : loc.lines) {
         LineInfo &line = locSource.lines[lineNum];
-        line.exists = true;
+        line.setExists(true);
         line.count += b.count;
         line.blocks.push_back(&b);
         if (f.srcIdx == loc.srcIdx) {
@@ -749,7 +752,7 @@ void Context::collectSourceLine(SourceInfo &si, Summary *summary,
 
   count += GCOVBlock::getCyclesCount(line.blocks);
   line.count = count;
-  if (line.exists) {
+  if (line.getExists()) {
     ++summary->lines;
     if (line.count != 0)
       ++summary->linesExec;
@@ -807,7 +810,7 @@ void Context::annotateSource(SourceInfo &si, const GCOVFile &file,
     if (options.BranchInfo && lineNum < si.startLineToFunctions.size())
       for (const auto *f : si.startLineToFunctions[lineNum])
         printFunctionDetails(*f, os);
-    if (!line.exists)
+    if (!line.getExists())
       os << "        -:";
     else if (line.count == 0)
       os << "    #####:";

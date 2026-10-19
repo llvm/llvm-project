@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace llvm {
 
@@ -25,11 +26,16 @@ class MachineInstr;
 // instcombinerWorkList?
 template<unsigned N>
 class GISelWorkList {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  SmallVectorWithFlags<MachineInstr *, N> Worklist;
+#else
   SmallVector<MachineInstr *, N> Worklist;
+#endif
   DenseMap<MachineInstr *, unsigned> WorklistMap;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  bool Finalized = true;
+  bool isFinalized() const { return !Worklist.getFlag(0); }
+  void setFinalized(bool Value) { Worklist.setFlag(0, !Value); }
 #endif
 
 public:
@@ -48,7 +54,7 @@ public:
   void deferred_insert(MachineInstr *I) {
     Worklist.push_back(I);
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    Finalized = false;
+    setFinalized(false);
 #endif
   }
 
@@ -64,14 +70,14 @@ public:
       if (!WorklistMap.try_emplace(Worklist[i], i).second)
         llvm_unreachable("Duplicate elements in the list");
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    Finalized = true;
+    setFinalized(true);
 #endif
   }
 
   /// Add the specified instruction to the worklist if it isn't already in it.
   void insert(MachineInstr *I) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(Finalized && "GISelWorkList used without finalizing");
+    assert(isFinalized() && "GISelWorkList used without finalizing");
 #endif
     if (WorklistMap.try_emplace(I, Worklist.size()).second)
       Worklist.push_back(I);
@@ -80,7 +86,7 @@ public:
   /// Remove I from the worklist if it exists.
   void remove(const MachineInstr *I) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(Finalized && "GISelWorkList used without finalizing");
+    assert(isFinalized() && "GISelWorkList used without finalizing");
 #endif
     auto It = WorklistMap.find(I);
     if (It == WorklistMap.end())
@@ -99,7 +105,7 @@ public:
 
   MachineInstr *pop_back_val() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(Finalized && "GISelWorkList used without finalizing");
+    assert(isFinalized() && "GISelWorkList used without finalizing");
 #endif
     MachineInstr *I;
     do {

@@ -10,6 +10,7 @@
 #define LLD_WASM_CONFIG_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
@@ -60,14 +61,27 @@ struct Config {
   bool disableVerify;
   bool emitRelocs;
   bool exportAll;
-  bool exportDynamic;
-  bool exportTable;
-  bool extendedConst;
-  bool growableTable;
-  bool gcSections;
+  bool getExportDynamic() const { return buildIdVector.getFlag(0); }
+  void setExportDynamic(bool Value) { buildIdVector.setFlag(0, Value); }
+  bool getExportTable() const { return buildIdVector.getFlag(1); }
+  bool setExportTable(bool Value) {
+    buildIdVector.setFlag(1, Value);
+    return Value;
+  }
+  bool getExtendedConst() const { return buildIdVector.getFlag(2); }
+  bool setExtendedConst(bool Value) {
+    buildIdVector.setFlag(2, Value);
+    return Value;
+  }
+  bool getGrowableTable() const { return buildIdVector.getFlag(3); }
+  void setGrowableTable(bool Value) { buildIdVector.setFlag(3, Value); }
+  bool getGcSections() const { return rpath.getFlag(0); }
+  void setGcSections(bool Value) { rpath.setFlag(0, Value); }
   llvm::StringSet<> keepSections;
-  bool cooperativeThreading;
-  bool libcallThreadContext;
+  bool getCooperativeThreading() const { return rpath.getFlag(1); }
+  void setCooperativeThreading(bool Value) { rpath.setFlag(1, Value); }
+  bool getLibcallThreadContext() const { return rpath.getFlag(2); }
+  void setLibcallThreadContext(bool Value) { rpath.setFlag(2, Value); }
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
@@ -97,7 +111,8 @@ struct Config {
   uint64_t initialHeap;
   uint64_t initialMemory;
   uint64_t maxMemory;
-  bool noGrowableMemory;
+  bool getNoGrowableMemory() const { return rpath.getFlag(3); }
+  void setNoGrowableMemory(bool Value) { rpath.setFlag(3, Value); }
   // The table offset at which to place function addresses.  We reserve zero
   // for the null function pointer.  This gets set to 1 for executables and 0
   // for shared libraries (since they always added to a dynamic offset at
@@ -109,7 +124,8 @@ struct Config {
   unsigned ltoo;
   llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
-  bool ltoDebugPassManager;
+  bool getLtoDebugPassManager() const { return searchPaths.getFlag(0); }
+  void setLtoDebugPassManager(bool Value) { searchPaths.setFlag(0, Value); }
   UnresolvedPolicy unresolvedSymbols;
   BuildIdKind buildId = BuildIdKind::None;
 
@@ -130,14 +146,16 @@ struct Config {
   llvm::StringSet<> allowUndefinedSymbols;
   llvm::StringSet<> exportedSymbols;
   std::vector<llvm::StringRef> requiredExports;
-  llvm::SmallVector<llvm::StringRef, 0> searchPaths;
-  llvm::SmallVector<llvm::StringRef, 0> rpath;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0> searchPaths;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> rpath;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
-  llvm::SmallVector<uint8_t, 0> buildIdVector;
+  llvm::SmallVectorWithFlags<uint8_t, 0, 4> buildIdVector;
 
-  bool isMultithreaded() const { return sharedMemory || cooperativeThreading; }
+  bool isMultithreaded() const {
+    return sharedMemory || getCooperativeThreading();
+  }
 };
 
 // The Ctx object hold all other (non-configuration) global state.
@@ -271,19 +289,27 @@ struct Ctx {
   WasmSym sym;
 
   // True if we are creating position-independent code.
-  bool isPic = false;
+  bool getIsPic() const { return whyExtractRecords.getFlag(0); }
+  void setIsPic(bool Value) { whyExtractRecords.setFlag(0, Value); }
 
   // True if we have an MVP input that uses __indirect_function_table and which
   // requires it to be allocated to table number 0.
-  bool legacyFunctionTable = false;
+  bool getLegacyFunctionTable() const { return whyExtractRecords.getFlag(1); }
+  void setLegacyFunctionTable(bool Value) {
+    whyExtractRecords.setFlag(1, Value);
+  }
 
   // Will be set to true if bss data segments should be emitted. In most cases
   // this is not necessary.
-  bool emitBssSegments = false;
+  bool getEmitBssSegments() const { return whyExtractRecords.getFlag(2); }
+  bool setEmitBssSegments(bool Value) {
+    whyExtractRecords.setFlag(2, Value);
+    return Value;
+  }
 
   // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
-  llvm::SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
-                    0>
+  llvm::SmallVectorWithFlags<
+      std::tuple<std::string, const InputFile *, const Symbol &>, 0, 3>
       whyExtractRecords;
 
   Ctx();

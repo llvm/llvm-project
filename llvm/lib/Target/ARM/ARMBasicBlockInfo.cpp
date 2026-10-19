@@ -53,9 +53,9 @@ void ARMBasicBlockUtils::computeBlockSize(MachineBasicBlock *MBB) {
     // For inline asm, getInstSizeInBytes returns a conservative estimate.
     // The actual size may be smaller, but still a multiple of the instr size.
     if (I.isInlineAsm())
-      BBI.Unalign = isThumb ? 1 : 2;
+      BBI.Unalign = getIsThumb() ? 1 : 2;
     // Also consider instructions that may be shrunk later.
-    else if (isThumb && mayOptimizeThumb2Instruction(&I))
+    else if (getIsThumb() && mayOptimizeThumb2Instruction(&I))
       BBI.Unalign = 1;
   }
 
@@ -90,7 +90,7 @@ unsigned ARMBasicBlockUtils::getOffsetOf(MachineInstr *MI) const {
 bool ARMBasicBlockUtils::isBBInRange(MachineInstr *MI,
                                      MachineBasicBlock *DestBB,
                                      unsigned MaxDisp) const {
-  unsigned PCAdj      = isThumb ? 4 : 8;
+  unsigned PCAdj = getIsThumb() ? 4 : 8;
   unsigned BrOffset   = getOffsetOf(MI) + PCAdj;
   unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
 

@@ -420,7 +420,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(
       Info.Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
   MIB.setOperandDead(0); // implicit-def $ra
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
   MIB.addDef(Mips::SP, RegState::Implicit);
   if (IsCalleeGlobalPIC) {

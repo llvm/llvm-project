@@ -182,8 +182,9 @@ static Error handleArgs(const CommonConfig &Config,
     if (!Config.OnlySection.empty() && !Config.OnlySection.matches(Sec.Name))
       return true;
 
-    if (Config.StripDebug || Config.StripAll || Config.StripAllGNU ||
-        Config.DiscardMode == DiscardType::All || Config.StripUnneeded) {
+    if (Config.getStripDebug() || Config.getStripAll() ||
+        Config.getStripAllGNU() || Config.DiscardMode == DiscardType::All ||
+        Config.getStripUnneeded()) {
       if (isDebugSection(Sec) &&
           (Sec.Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) != 0)
         return true;
@@ -195,7 +196,7 @@ static Error handleArgs(const CommonConfig &Config,
     return false;
   });
 
-  if (Config.OnlyKeepDebug) {
+  if (Config.getOnlyKeepDebug()) {
     const data_directory *DebugDir =
         Obj.DataDirectories.size() > DEBUG_DIRECTORY
             ? &Obj.DataDirectories[DEBUG_DIRECTORY]
@@ -214,12 +215,12 @@ static Error handleArgs(const CommonConfig &Config,
   }
 
   // StripAll removes all symbols and thus also removes all relocations.
-  if (Config.StripAll || Config.StripAllGNU)
+  if (Config.getStripAll() || Config.getStripAllGNU())
     for (Section &Sec : Obj.getMutableSections())
       Sec.Relocs.clear();
 
   // If we need to do per-symbol removals, initialize the Referenced field.
-  if (Config.StripUnneeded || Config.DiscardMode == DiscardType::All ||
+  if (Config.getStripUnneeded() || Config.DiscardMode == DiscardType::All ||
       !Config.SymbolsToRemove.empty())
     if (Error E = Obj.markSymbols())
       return E;
@@ -233,7 +234,7 @@ static Error handleArgs(const CommonConfig &Config,
   auto ToRemove = [&](const Symbol &Sym) -> Expected<bool> {
     // For StripAll, all relocations have been stripped and we remove all
     // symbols.
-    if (Config.StripAll || Config.StripAllGNU)
+    if (Config.getStripAll() || Config.getStripAllGNU())
       return true;
 
     if (Config.SymbolsToRemove.matches(Sym.Name)) {
@@ -256,7 +257,7 @@ static Error handleArgs(const CommonConfig &Config,
       // local symbol instead of removing all of such.
       if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC ||
           Sym.Sym.SectionNumber == 0)
-        if (Config.StripUnneeded ||
+        if (Config.getStripUnneeded() ||
             Config.UnneededSymbolsToRemove.matches(Sym.Name))
           return true;
 

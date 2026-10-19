@@ -23,6 +23,7 @@ using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
+using ::testing::Property;
 
 static std::string ErrorToString(Error E) {
   std::string ErrMsg;
@@ -155,18 +156,18 @@ TEST(MemProf, DataAccessProfile) {
         ElementsAre(
             AllOf(Field(&DataAccessProfRecordRef::SymbolID, 0),
                   Field(&DataAccessProfRecordRef::AccessCount, 100),
-                  Field(&DataAccessProfRecordRef::IsStringLiteral, false),
+                  Property(&DataAccessProfRecordRef::isStringLiteral, false),
                   Field(&DataAccessProfRecordRef::Locations, IsEmpty())),
             AllOf(Field(&DataAccessProfRecordRef::SymbolID, 2),
                   Field(&DataAccessProfRecordRef::AccessCount, 123),
-                  Field(&DataAccessProfRecordRef::IsStringLiteral, false),
+                  Property(&DataAccessProfRecordRef::isStringLiteral, false),
                   Field(&DataAccessProfRecordRef::Locations,
                         ElementsAre(
                             AllOf(Field(&SourceLocationRef::FileName, "file2"),
                                   Field(&SourceLocationRef::Line, 3))))),
             AllOf(Field(&DataAccessProfRecordRef::SymbolID, 135246),
                   Field(&DataAccessProfRecordRef::AccessCount, 1000),
-                  Field(&DataAccessProfRecordRef::IsStringLiteral, true),
+                  Property(&DataAccessProfRecordRef::isStringLiteral, true),
                   Field(&DataAccessProfRecordRef::Locations,
                         ElementsAre(
                             AllOf(Field(&SourceLocationRef::FileName, "file1"),

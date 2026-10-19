@@ -754,7 +754,7 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
     if (!hasReliableSymbolDifference) {
       if (!SA.isInSection() || &SecA != &SecB ||
           (!SA.isTemporary() && FB.getAtom() != SA.getFragment()->getAtom() &&
-           SubsectionsViaSymbols))
+           getSubsectionsViaSymbols()))
         return false;
       return true;
     }
@@ -917,7 +917,7 @@ uint64_t MachObjectWriter::writeObject() {
 
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
-              SubsectionsViaSymbols);
+              getSubsectionsViaSymbols());
   uint32_t Prot =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   writeSegmentLoadCommand("", NumSections, 0, VMSize, SectionDataStart,

@@ -1623,7 +1623,7 @@ void MicrosoftCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
   // without making our codegen depend on debug info settings.
   llvm::Value *This = loadIncomingCXXThis(CGF);
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(CGF.CurGD.getDecl());
-  if (!CGF.CurFuncIsThunk && MD->isVirtual()) {
+  if (!CGF.getCurFuncIsThunk() && MD->isVirtual()) {
     CharUnits Adjustment = getVirtualFunctionPrologueThisAdjustment(CGF.CurGD);
     if (!Adjustment.isZero()) {
       assert(Adjustment.isPositive());
@@ -2156,7 +2156,7 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
   // Start codegen.
   CodeGenFunction CGF(CGM);
   CGF.CurGD = GlobalDecl(MD);
-  CGF.CurFuncIsThunk = true;
+  CGF.setCurFuncIsThunk(true);
 
   // Build FunctionArgs, but only include the implicit 'this' parameter
   // declaration.

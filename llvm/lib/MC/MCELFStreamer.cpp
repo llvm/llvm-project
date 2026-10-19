@@ -86,7 +86,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     getContext().reportError(
         getStartTokLoc(), "unterminated .bundle_lock when changing a section");
     // Clean up bundle state to allow continuing.
-    BundleLocked = false;
+    setBundleLocked(false);
     BundleBA = nullptr;
   }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
@@ -316,9 +316,9 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
       ".comment", ELF::SHT_PROGBITS, ELF::SHF_MERGE | ELF::SHF_STRINGS, 1);
   pushSection();
   switchSection(Comment);
-  if (!SeenIdent) {
+  if (!getSeenIdent()) {
     emitInt8(0);
-    SeenIdent = true;
+    setSeenIdent(true);
   }
   emitBytes(IdentString);
   emitInt8(0);
@@ -363,7 +363,7 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd,
     return getContext().reportError(
         Loc, ".bundle_lock is only allowed in an executable section");
 
-  BundleLocked = true;
+  setBundleLocked(true);
   BundleBA =
       newSpecialFragment<MCBoundaryAlignFragment>(Asm.getBundleAlign(), STI);
   BundleBA->setAlignToEnd(AlignToEnd);
@@ -380,7 +380,7 @@ void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
     return getContext().reportError(Loc,
                                     ".bundle_unlock without matching lock");
 
-  BundleLocked = false;
+  setBundleLocked(false);
   MCFragment *CF = getCurrentFragment();
   BundleBA->setLastFragment(CF);
 
@@ -464,6 +464,7 @@ void MCELFStreamer::finishImpl() {
     MCSection *DummyAttributeSection = nullptr;
     createAttributesSection("gnu", ".gnu.attributes", ELF::SHT_GNU_ATTRIBUTES,
                             DummyAttributeSection, GNUAttributes);
+    GNUAttributes.clear();
   }
 
   if (Ctx.getTargetTriple().isLFI())
@@ -536,8 +537,8 @@ MCELFStreamer::getAttributeItem(unsigned Attribute) {
   return nullptr;
 }
 
-size_t MCELFStreamer::calculateContentSize(
-    SmallVector<AttributeItem, 64> &AttrsVec) const {
+size_t
+MCELFStreamer::calculateContentSize(ArrayRef<AttributeItem> AttrsVec) const {
   size_t Result = 0;
   for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
@@ -561,9 +562,10 @@ size_t MCELFStreamer::calculateContentSize(
   return Result;
 }
 
-void MCELFStreamer::createAttributesSection(
-    StringRef Vendor, const Twine &Section, unsigned Type,
-    MCSection *&AttributeSection, SmallVector<AttributeItem, 64> &AttrsVec) {
+void MCELFStreamer::createAttributesSection(StringRef Vendor,
+                                            const Twine &Section, unsigned Type,
+                                            MCSection *&AttributeSection,
+                                            ArrayRef<AttributeItem> AttrsVec) {
   // <format-version>
   // [ <section-length> "vendor-name"
   // [ <file-tag> <size> <attribute>*
@@ -619,8 +621,6 @@ void MCELFStreamer::createAttributesSection(
       break;
     }
   }
-
-  AttrsVec.clear();
 }
 
 void MCELFStreamer::createAttributesWithSubsection(

@@ -421,7 +421,7 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
   // their VA is that relative offset. In single-threaded builds TLS is instead
   // lowered to normal data with a fixed base and so is assigned addresses as
   // usual.
-  if (ctx.isPic && ctx.arg.isMultithreaded() && isTLS())
+  if (ctx.getIsPic() && ctx.arg.isMultithreaded() && isTLS())
     return getChunkOffset(offset);
   return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
@@ -452,7 +452,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     Symbol *sym = file->getSymbol(rel);
     // Runtime relocations are needed when we don't know the address of
     // a symbol statically.
-    bool requiresRuntimeReloc = ctx.isPic || sym->hasGOTIndex();
+    bool requiresRuntimeReloc = ctx.getIsPic() || sym->hasGOTIndex();
     if (!requiresRuntimeReloc)
       continue;
 
@@ -471,7 +471,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     writePtrConst(os, offset, is64, "offset");
 
     // In PIC mode we need to add the __memory_base
-    if (ctx.isPic) {
+    if (ctx.getIsPic()) {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (isTLS())
         writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "tls_base");
@@ -495,7 +495,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
         writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
-      assert(ctx.isPic);
+      assert(ctx.getIsPic());
       const GlobalSymbol *baseSymbol = ctx.sym.memoryBase;
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)

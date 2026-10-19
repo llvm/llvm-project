@@ -79,6 +79,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -95,8 +96,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
-#include <llvm/Support/raw_ostream.h>
 #include <list>
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -883,7 +884,10 @@ public:
 private:
   /// True if the pending Q should be checked/updated before scheduling another
   /// instruction.
-  bool CheckPending;
+  bool getCheckPending() const { return ResourceGroupSubUnitMasks.getFlag(0); }
+  void setCheckPending(bool Value) {
+    ResourceGroupSubUnitMasks.setFlag(0, Value);
+  }
 
   /// Number of cycles it takes to issue the instructions scheduled in this
   /// zone. It is defined as: scheduled-micro-ops / issue-width + stalls.
@@ -922,7 +926,13 @@ private:
   unsigned ZoneCritResIdx;
 
   // Is the scheduled region resource limited vs. latency limited.
-  bool IsResourceLimited;
+  bool getIsResourceLimited() const {
+    return ResourceGroupSubUnitMasks.getFlag(1);
+  }
+  bool setIsResourceLimited(bool Value) {
+    ResourceGroupSubUnitMasks.setFlag(1, Value);
+    return Value;
+  }
 
 public:
 private:
@@ -962,7 +972,7 @@ private:
   SmallVector<unsigned, 16> ReservedCyclesIndex;
 
   // For each PIdx, stores the resource group IDs of its subunits
-  SmallVector<APInt, 16> ResourceGroupSubUnitMasks;
+  llvm::SmallVectorWithFlags<APInt, 16, 2> ResourceGroupSubUnitMasks;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Remember the greatest possible stall as an upper bound on the number of
@@ -1033,7 +1043,7 @@ public:
   unsigned getZoneCritResIdx() const { return ZoneCritResIdx; }
 
   // Is the scheduled region resource limited vs. latency limited.
-  bool isResourceLimited() const { return IsResourceLimited; }
+  bool isResourceLimited() const { return getIsResourceLimited(); }
 
   /// Get the difference between the given SUnit's ready time and the current
   /// cycle.

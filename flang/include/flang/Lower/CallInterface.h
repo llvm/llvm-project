@@ -30,6 +30,7 @@
 #include "flang/Common/reference.h"
 #include "flang/Evaluate/characteristics.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <optional>
 
 namespace Fortran::semantics {
@@ -230,7 +231,7 @@ public:
   /// Is the Fortran result passed as an extra MLIR argument ?
   bool mustPassResult() const { return passedResult.has_value(); }
   /// Must the MLIR result be saved with a fir.save_result ?
-  bool mustSaveResult() const { return saveResult; }
+  bool mustSaveResult() const { return passedArguments.getFlag(0); }
 
   /// Can the associated procedure be called via an implicit interface?
   bool canBeCalledViaImplicitInterface() const {
@@ -258,9 +259,9 @@ protected:
   llvm::SmallVector<FirPlaceHolder> outputs;
   llvm::SmallVector<FirPlaceHolder> inputs;
   mlir::func::FuncOp func;
-  llvm::SmallVector<PassedEntity> passedArguments;
+  // Flag 0 records whether the caller must save the result.
+  llvm::SmallVectorWithFlags<PassedEntity> passedArguments;
   std::optional<PassedEntity> passedResult;
-  bool saveResult = false;
 
   Fortran::lower::AbstractConverter &converter;
   /// Store characteristic once created, it is required for further information

@@ -22,6 +22,7 @@
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -473,7 +474,10 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunctionInfo,
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
   // Default/requested number of work groups for the function.
-  SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
+  llvm::SmallVectorWithFlags<
+      unsigned,
+      llvm::CalculateSmallVectorDefaultInlinedElements<unsigned>::value, 4>
+      MaxNumWorkGroups = {0, 0, 0};
 
   // Requested cluster dimensions.
   AMDGPU::ClusterDimsAttr ClusterDims;
@@ -485,10 +489,24 @@ private:
   unsigned NumWaveDispatchSGPRs = 0;
   unsigned NumWaveDispatchVGPRs = 0;
 
-  bool HasSpilledSGPRs = false;
-  bool HasSpilledVGPRs = false;
-  bool HasNonSpillStackObjects = false;
-  bool IsStackRealigned = false;
+  bool getHasSpilledSGPRsFlag() const { return MaxNumWorkGroups.getFlag(0); }
+  void setHasSpilledSGPRsFlag(bool Value) {
+    MaxNumWorkGroups.setFlag(0, Value);
+  }
+  bool getHasSpilledVGPRsFlag() const { return MaxNumWorkGroups.getFlag(1); }
+  void setHasSpilledVGPRsFlag(bool Value) {
+    MaxNumWorkGroups.setFlag(1, Value);
+  }
+  bool getHasNonSpillStackObjectsFlag() const {
+    return MaxNumWorkGroups.getFlag(2);
+  }
+  void setHasNonSpillStackObjectsFlag(bool Value) {
+    MaxNumWorkGroups.setFlag(2, Value);
+  }
+  bool getIsStackRealignedFlag() const { return MaxNumWorkGroups.getFlag(3); }
+  void setIsStackRealignedFlag(bool Value) {
+    MaxNumWorkGroups.setFlag(3, Value);
+  }
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
@@ -504,20 +522,60 @@ private:
   GCNUserSGPRUsageInfo UserSGPRInfo;
 
   // Feature bits required for inputs passed in system SGPRs.
-  bool WorkGroupIDX : 1; // Always initialized.
-  bool WorkGroupIDY : 1;
-  bool WorkGroupIDZ : 1;
-  bool WorkGroupInfo : 1;
-  bool LDSKernelId : 1;
-  bool PrivateSegmentWaveByteOffset : 1;
+  bool getWorkGroupIDX() const { return PrologEpilogSGPRSpills.getFlag(0); }
+  bool setWorkGroupIDX(bool Value) {
+    PrologEpilogSGPRSpills.setFlag(0, Value);
+    return Value;
+  } // Always initialized.
+  bool getWorkGroupIDY() const { return PrologEpilogSGPRSpills.getFlag(1); }
+  bool setWorkGroupIDY(bool Value) {
+    PrologEpilogSGPRSpills.setFlag(1, Value);
+    return Value;
+  }
+  bool getWorkGroupIDZ() const { return PrologEpilogSGPRSpills.getFlag(2); }
+  bool setWorkGroupIDZ(bool Value) {
+    PrologEpilogSGPRSpills.setFlag(2, Value);
+    return Value;
+  }
+  bool getWorkGroupInfo() const { return PrologEpilogSGPRSpills.getFlag(3); }
+  void setWorkGroupInfo(bool Value) {
+    PrologEpilogSGPRSpills.setFlag(3, Value);
+  }
+  bool getLDSKernelId() const { return SpillPhysVGPRs.getFlag(0); }
+  bool setLDSKernelId(bool Value) {
+    SpillPhysVGPRs.setFlag(0, Value);
+    return Value;
+  }
+  bool getPrivateSegmentWaveByteOffsetFlag() const {
+    return SpillPhysVGPRs.getFlag(1);
+  }
+  void setPrivateSegmentWaveByteOffsetFlag(bool Value) {
+    SpillPhysVGPRs.setFlag(1, Value);
+  }
 
-  bool WorkItemIDX : 1; // Always initialized.
-  bool WorkItemIDY : 1;
-  bool WorkItemIDZ : 1;
+  bool getWorkItemIDXFlag() const { return SpillPhysVGPRs.getFlag(2); }
+  bool setWorkItemIDXFlag(bool Value) {
+    SpillPhysVGPRs.setFlag(2, Value);
+    return Value;
+  } // Always initialized.
+  bool getWorkItemIDYFlag() const { return SpillPhysVGPRs.getFlag(3); }
+  bool setWorkItemIDYFlag(bool Value) {
+    SpillPhysVGPRs.setFlag(3, Value);
+    return Value;
+  }
+  bool getWorkItemIDZFlag() const { return SpillVGPRs.getFlag(0); }
+  bool setWorkItemIDZFlag(bool Value) {
+    SpillVGPRs.setFlag(0, Value);
+    return Value;
+  }
 
   // Pointer to where the ABI inserts special kernel arguments separate from the
   // user arguments. This is an offset from the KernargSegmentPtr.
-  bool ImplicitArgPtr : 1;
+  bool getImplicitArgPtr() const { return SpillVGPRs.getFlag(1); }
+  bool setImplicitArgPtr(bool Value) {
+    SpillVGPRs.setFlag(1, Value);
+    return Value;
+  }
 
   /// Minimum number of AGPRs required to allocate in the function. Only
   /// relevant for gfx90a-gfx950. For gfx908, this should be infinite.
@@ -552,9 +610,11 @@ public:
   static bool MFMAVGPRForm;
 
   struct VGPRSpillToAGPR {
-    SmallVector<MCPhysReg, 32> Lanes;
-    bool FullyAllocated = false;
-    bool IsDead = false;
+    SmallVectorWithFlags<MCPhysReg, 32, 2> Lanes;
+    bool isFullyAllocated() const { return Lanes.getFlag(0); }
+    void setFullyAllocated(bool Value) { Lanes.setFlag(0, Value); }
+    bool isDead() const { return Lanes.getFlag(1); }
+    void setIsDead(bool Value) { Lanes.setFlag(1, Value); }
   };
 
 private:
@@ -568,8 +628,8 @@ private:
       SGPRSpillsToPhysicalVGPRLanes;
   unsigned NumVirtualVGPRSpillLanes = 0;
   unsigned NumPhysicalVGPRSpillLanes = 0;
-  SmallVector<Register, 2> SpillVGPRs;
-  SmallVector<Register, 2> SpillPhysVGPRs;
+  llvm::SmallVectorWithFlags<Register, 2, 4> SpillVGPRs;
+  llvm::SmallVectorWithFlags<Register, 2, 4> SpillPhysVGPRs;
   using WWMSpillsMap = MapVector<Register, int>;
   // To track the registers used in instructions that can potentially modify the
   // inactive lanes. The WWM instructions and the writelane instructions for
@@ -591,7 +651,8 @@ private:
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
 
-  bool IsWholeWaveFunction = false;
+  bool getIsWholeWaveFunction() const { return SpillVGPRs.getFlag(2); }
+  void setIsWholeWaveFunction(bool Value) { SpillVGPRs.setFlag(2, Value); }
 
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
@@ -599,7 +660,8 @@ private:
   // frame lowering. Even though the SGPR spills are handled during
   // SILowerSGPRSpills pass, some special handling needed later during the
   // PrologEpilogInserter.
-  SmallVector<PrologEpilogSGPRSpill, 3> PrologEpilogSGPRSpills;
+  llvm::SmallVectorWithFlags<PrologEpilogSGPRSpill, 3, 4>
+      PrologEpilogSGPRSpills;
 
   // To save/restore EXEC MASK around WWM spills and copies.
   Register SGPRForEXECCopy;
@@ -619,7 +681,12 @@ private:
   // Ordinary SGPR spills fell back to memory because no WWM VGPR pool was
   // available. This path may require additional nested VGPR scavenging slots
   // during frame-index elimination.
-  bool HasNoWWMPoolSGPRSpillFallback = false;
+  bool getHasNoWWMPoolSGPRSpillFallback() const {
+    return SpillVGPRs.getFlag(3);
+  }
+  void setHasNoWWMPoolSGPRSpillFallback(bool Value) {
+    SpillVGPRs.setFlag(3, Value);
+  }
 
   // Map each VGPR CSR to the mask needed to save and restore it using block
   // load/store instructions. Only used if the subtarget feature for VGPR block
@@ -703,7 +770,7 @@ public:
     return WWMReservedRegs.contains(Reg);
   }
 
-  bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
+  bool isWholeWaveFunction() const { return getIsWholeWaveFunction(); }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
@@ -839,7 +906,7 @@ public:
   void setVGPRToAGPRSpillDead(int FrameIndex) {
     auto I = VGPRToAGPRSpills.find(FrameIndex);
     if (I != VGPRToAGPRSpills.end())
-      I->second.IsDead = true;
+      I->second.setIsDead(true);
   }
 
   // To bring the allocated WWM registers in \p WWMVGPRs to the lowest available
@@ -861,9 +928,11 @@ public:
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
   std::optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
 
-  void setNoWWMPoolSGPRSpillFallback() { HasNoWWMPoolSGPRSpillFallback = true; }
+  void setNoWWMPoolSGPRSpillFallback() {
+    setHasNoWWMPoolSGPRSpillFallback(true);
+  }
   bool hasNoWWMPoolSGPRSpillFallback() const {
-    return HasNoWWMPoolSGPRSpillFallback;
+    return getHasNoWWMPoolSGPRSpillFallback();
   }
 
   unsigned getBytesInStackArgArea() const {
@@ -933,7 +1002,7 @@ public:
     return ArgInfo.WorkGroupInfo.getRegister();
   }
 
-  bool hasLDSKernelId() const { return LDSKernelId; }
+  bool hasLDSKernelId() const { return getLDSKernelId(); }
 
   // Add special VGPR inputs
   void setWorkItemIDX(ArgDescriptor Arg) {
@@ -959,41 +1028,25 @@ public:
     ArgInfo.PrivateSegmentWaveByteOffset = ArgDescriptor::createRegister(Reg);
   }
 
-  bool hasWorkGroupIDX() const {
-    return WorkGroupIDX;
-  }
+  bool hasWorkGroupIDX() const { return getWorkGroupIDX(); }
 
-  bool hasWorkGroupIDY() const {
-    return WorkGroupIDY;
-  }
+  bool hasWorkGroupIDY() const { return getWorkGroupIDY(); }
 
-  bool hasWorkGroupIDZ() const {
-    return WorkGroupIDZ;
-  }
+  bool hasWorkGroupIDZ() const { return getWorkGroupIDZ(); }
 
-  bool hasWorkGroupInfo() const {
-    return WorkGroupInfo;
-  }
+  bool hasWorkGroupInfo() const { return getWorkGroupInfo(); }
 
   bool hasPrivateSegmentWaveByteOffset() const {
-    return PrivateSegmentWaveByteOffset;
+    return getPrivateSegmentWaveByteOffsetFlag();
   }
 
-  bool hasWorkItemIDX() const {
-    return WorkItemIDX;
-  }
+  bool hasWorkItemIDX() const { return getWorkItemIDXFlag(); }
 
-  bool hasWorkItemIDY() const {
-    return WorkItemIDY;
-  }
+  bool hasWorkItemIDY() const { return getWorkItemIDYFlag(); }
 
-  bool hasWorkItemIDZ() const {
-    return WorkItemIDZ;
-  }
+  bool hasWorkItemIDZ() const { return getWorkItemIDZFlag(); }
 
-  bool hasImplicitArgPtr() const {
-    return ImplicitArgPtr;
-  }
+  bool hasImplicitArgPtr() const { return getImplicitArgPtr(); }
 
   AMDGPUFunctionArgInfo &getArgInfo() {
     return ArgInfo;
@@ -1094,36 +1147,26 @@ public:
     return ArgInfo.ImplicitBufferPtr.getRegister();
   }
 
-  bool hasSpilledSGPRs() const {
-    return HasSpilledSGPRs;
-  }
+  bool hasSpilledSGPRs() const { return getHasSpilledSGPRsFlag(); }
 
-  void setHasSpilledSGPRs(bool Spill = true) {
-    HasSpilledSGPRs = Spill;
-  }
+  void setHasSpilledSGPRs(bool Spill = true) { setHasSpilledSGPRsFlag(Spill); }
 
-  bool hasSpilledVGPRs() const {
-    return HasSpilledVGPRs;
-  }
+  bool hasSpilledVGPRs() const { return getHasSpilledVGPRsFlag(); }
 
-  void setHasSpilledVGPRs(bool Spill = true) {
-    HasSpilledVGPRs = Spill;
-  }
+  void setHasSpilledVGPRs(bool Spill = true) { setHasSpilledVGPRsFlag(Spill); }
 
   bool hasNonSpillStackObjects() const {
-    return HasNonSpillStackObjects;
+    return getHasNonSpillStackObjectsFlag();
   }
 
   void setHasNonSpillStackObjects(bool StackObject = true) {
-    HasNonSpillStackObjects = StackObject;
+    setHasNonSpillStackObjectsFlag(StackObject);
   }
 
-  bool isStackRealigned() const {
-    return IsStackRealigned;
-  }
+  bool isStackRealigned() const { return getIsStackRealignedFlag(); }
 
   void setIsStackRealigned(bool Realigned = true) {
-    IsStackRealigned = Realigned;
+    setIsStackRealignedFlag(Realigned);
   }
 
   unsigned getNumSpilledSGPRs() const {
@@ -1241,7 +1284,9 @@ public:
   }
 
   /// \returns Default/requested number of work groups for this function.
-  SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }
+  SmallVector<unsigned> getMaxNumWorkGroups() const {
+    return {MaxNumWorkGroups.begin(), MaxNumWorkGroups.end()};
+  }
 
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }

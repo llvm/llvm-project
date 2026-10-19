@@ -450,8 +450,8 @@ ForLoopIndexUseVisitor::ForLoopIndexUseVisitor(ASTContext *Context,
                                                bool ContainerNeedsDereference)
     : Context(Context), IndexVar(IndexVar), EndVar(EndVar),
       ContainerExpr(ContainerExpr), ArrayBoundExpr(ArrayBoundExpr),
-      ContainerNeedsDereference(ContainerNeedsDereference),
-
+      Usages(decltype(this->Usages)::withFlags(
+          unsigned(ContainerNeedsDereference))),
       ConfidenceLevel(Confidence::CL_Safe) {
   if (ContainerExpr)
     addComponent(ContainerExpr);
@@ -459,7 +459,7 @@ ForLoopIndexUseVisitor::ForLoopIndexUseVisitor(ASTContext *Context,
 
 bool ForLoopIndexUseVisitor::findAndVerifyUsages(const Stmt *Body) {
   TraverseStmt(const_cast<Stmt *>(Body));
-  return OnlyUsedAsIndex && ContainerExpr;
+  return getOnlyUsedAsIndex() && ContainerExpr;
 }
 
 void ForLoopIndexUseVisitor::addComponents(const ComponentVector &Components) {
@@ -557,7 +557,7 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
   if (Obj && exprReferencesVariable(IndexVar, Obj)) {
     // Member calls on the iterator with '.' are not allowed.
     if (!Member->isArrow()) {
-      OnlyUsedAsIndex = false;
+      setOnlyUsedAsIndex(false);
       return true;
     }
 
@@ -604,7 +604,7 @@ bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
   if (Ident && Ident->isStr("at") && MemberCall->getNumArgs() == 1 &&
       isIndexInSubscriptExpr(Context, MemberCall->getArg(0), IndexVar,
                              Member->getBase(), ContainerExpr,
-                             ContainerNeedsDereference)) {
+                             getContainerNeedsDereference())) {
     addUsage(Usage(MemberCall));
     return true;
   }
@@ -649,7 +649,7 @@ bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
       break;
     if (isIndexInSubscriptExpr(Context, OpCall->getArg(1), IndexVar,
                                OpCall->getArg(0), ContainerExpr,
-                               ContainerNeedsDereference)) {
+                               getContainerNeedsDereference())) {
       addUsage(Usage(OpCall));
       return true;
     }
@@ -691,7 +691,7 @@ bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
                              ArrayBoundExpr)) {
     // If we have already discovered the array being indexed and this isn't it
     // or this array doesn't match, mark this loop as unconvertible.
-    OnlyUsedAsIndex = false;
+    setOnlyUsedAsIndex(false);
     return VisitorBase::TraverseArraySubscriptExpr(E);
   }
 
@@ -739,7 +739,7 @@ bool ForLoopIndexUseVisitor::VisitDeclRefExpr(DeclRefExpr *E) {
   if (areSameVariable(IndexVar, TheDecl) ||
       exprReferencesVariable(IndexVar, E) || areSameVariable(EndVar, TheDecl) ||
       exprReferencesVariable(EndVar, E))
-    OnlyUsedAsIndex = false;
+    setOnlyUsedAsIndex(false);
   if (containsExpr(Context, &DependentExprs, E))
     ConfidenceLevel.lowerTo(Confidence::CL_Risky);
   return true;
@@ -798,13 +798,13 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
     if (CurrStmtParent) {
       if (isa<IfStmt>(CurrStmtParent) || isa<WhileStmt>(CurrStmtParent) ||
           isa<SwitchStmt>(CurrStmtParent)) {
-        ReplaceWithAliasUse = true;
+        setReplaceWithAliasUse(true);
       } else if (isa<ForStmt>(CurrStmtParent)) {
         if (cast<ForStmt>(CurrStmtParent)->getConditionVariableDeclStmt() == S)
-          ReplaceWithAliasUse = true;
+          setReplaceWithAliasUse(true);
         else
           // It's assumed S came the for loop's init clause.
-          AliasFromForInit = true;
+          setAliasFromForInit(true);
       }
     }
   }

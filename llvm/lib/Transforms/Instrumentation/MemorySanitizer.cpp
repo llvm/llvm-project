@@ -157,6 +157,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -1046,11 +1047,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
-  bool InsertChecks;
-  bool PropagateShadow;
-  bool PoisonStack;
-  bool PoisonUndef;
-  bool PoisonUndefVectors;
+  bool getInsertChecks() const { return StoreList.getFlag(0); }
+  void setInsertChecks(bool Value) { StoreList.setFlag(0, Value); }
+  bool getPropagateShadow() const { return StoreList.getFlag(1); }
+  void setPropagateShadow(bool Value) { StoreList.setFlag(1, Value); }
+  bool getPoisonStack() const { return StoreList.getFlag(2); }
+  void setPoisonStack(bool Value) { StoreList.setFlag(2, Value); }
+  bool getPoisonUndef() const { return StoreList.getFlag(3); }
+  void setPoisonUndef(bool Value) { StoreList.setFlag(3, Value); }
+  bool getPoisonUndefVectors() const { return LifetimeStartList.getFlag(0); }
+  void setPoisonUndefVectors(bool Value) {
+    LifetimeStartList.setFlag(0, Value);
+  }
 
   struct ShadowOriginAndInsertPoint {
     Value *Shadow;
@@ -1063,8 +1071,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
   DenseMap<const DILocation *, int> LazyWarningDebugLocationCount;
   SmallSetVector<AllocaInst *, 16> AllocaSet;
-  SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
-  SmallVector<StoreInst *, 16> StoreList;
+  llvm::SmallVectorWithFlags<std::pair<IntrinsicInst *, AllocaInst *>, 16>
+      LifetimeStartList;
+  llvm::SmallVectorWithFlags<StoreInst *, 16, 4> StoreList;
   int64_t SplittableBlocksCount = 0;
 
   MemorySanitizerVisitor(Function &F, MemorySanitizer &MS,
@@ -1073,11 +1082,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         TLI(&TLI) {
     bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeMemory) &&
                             !Opts.msan_disable_checks;
-    InsertChecks = SanitizeFunction;
-    PropagateShadow = SanitizeFunction;
-    PoisonStack = SanitizeFunction && Opts.msan_poison_stack;
-    PoisonUndef = SanitizeFunction && Opts.msan_poison_undef;
-    PoisonUndefVectors = SanitizeFunction && Opts.msan_poison_undef_vectors;
+    setInsertChecks(SanitizeFunction);
+    setPropagateShadow(SanitizeFunction);
+    setPoisonStack(SanitizeFunction && Opts.msan_poison_stack);
+    setPoisonUndef(SanitizeFunction && Opts.msan_poison_undef);
+    setPoisonUndefVectors(SanitizeFunction && Opts.msan_poison_undef_vectors);
 
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -1095,7 +1104,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertKmsanPrologue(IRB);
     }
 
-    LLVM_DEBUG(if (!InsertChecks) dbgs()
+    LLVM_DEBUG(if (!getInsertChecks()) dbgs()
                << "MemorySanitizer is not inserting checks into '"
                << F.getName() << "'\n");
   }
@@ -1834,7 +1843,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
              "setShadow called with mismatching types");
     }
 
-    ShadowMap[V] = PropagateShadow ? SV : getCleanShadow(V);
+    ShadowMap[V] = getPropagateShadow() ? SV : getCleanShadow(V);
   }
 
   /// Set Origin to be the origin value for V.
@@ -1895,7 +1904,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// or extracts if from ParamTLS (for function arguments).
   Value *getShadow(Value *V) {
     if (Instruction *I = dyn_cast<Instruction>(V)) {
-      if (!PropagateShadow || I->getMetadata(LLVMContext::MD_nosanitize))
+      if (!getPropagateShadow() || I->getMetadata(LLVMContext::MD_nosanitize))
         return getCleanShadow(V);
       // For instructions the shadow is already stored in the map.
       Value *Shadow = ShadowMap[V];
@@ -1908,8 +1917,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Handle fully undefined values
     // (partially undefined constant vectors are handled later)
     if ([[maybe_unused]] UndefValue *U = dyn_cast<UndefValue>(V)) {
-      Value *AllOnes = (PropagateShadow && PoisonUndef) ? getPoisonedShadow(V)
-                                                        : getCleanShadow(V);
+      Value *AllOnes = (getPropagateShadow() && getPoisonUndef())
+                           ? getPoisonedShadow(V)
+                           : getCleanShadow(V);
       LLVM_DEBUG(dbgs() << "Undef: " << *U << " ==> " << *AllOnes << "\n");
       return AllOnes;
     }
@@ -1951,7 +1961,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             std::tie(CpShadowPtr, CpOriginPtr) =
                 getShadowOriginPtr(V, EntryIRB, EntryIRB.getInt8Ty(), ArgAlign,
                                    /*isStore*/ true);
-            if (!PropagateShadow || Overflow) {
+            if (!getPropagateShadow() || Overflow) {
               // ParamTLS overflow.
               EntryIRB.CreateMemSet(
                   CpShadowPtr, Constant::getNullValue(EntryIRB.getInt8Ty()),
@@ -1977,7 +1987,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             }
           }
 
-          if (!PropagateShadow || Overflow || FArg.hasByValAttr() ||
+          if (!getPropagateShadow() || Overflow || FArg.hasByValAttr() ||
               (MS.EagerChecks && FArg.hasAttribute(Attribute::NoUndef))) {
             ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
@@ -2005,8 +2015,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Check for partially-undefined constant vectors
     // TODO: scalable vectors (this is hard because we do not have IRBuilder)
     if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V) &&
-        cast<Constant>(V)->containsUndefOrPoisonElement() && PropagateShadow &&
-        PoisonUndefVectors) {
+        cast<Constant>(V)->containsUndefOrPoisonElement() &&
+        getPropagateShadow() && getPoisonUndefVectors()) {
       unsigned NumElems = cast<FixedVectorType>(V->getType())->getNumElements();
       SmallVector<Constant *, 32> ShadowVector(NumElems);
       for (unsigned i = 0; i != NumElems; ++i) {
@@ -2037,7 +2047,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *getOrigin(Value *V) {
     if (!MS.TrackOrigins)
       return nullptr;
-    if (!PropagateShadow || isa<Constant>(V) || isa<InlineAsm>(V))
+    if (!getPropagateShadow() || isa<Constant>(V) || isa<InlineAsm>(V))
       return getCleanOrigin();
     assert((isa<Instruction>(V) || isa<Argument>(V)) &&
            "Unexpected value type in getOrigin()");
@@ -2061,7 +2071,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// UMR warning in runtime if the shadow value is not 0.
   void insertCheckShadow(Value *Shadow, Value *Origin, Instruction *OrigIns) {
     assert(Shadow);
-    if (!InsertChecks)
+    if (!getInsertChecks())
       return;
 
     if (!DebugCounter::shouldExecute(DebugInsertCheck)) {
@@ -2207,7 +2217,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Addr = I.getPointerOperand();
     Value *ShadowPtr = nullptr, *OriginPtr = nullptr;
     const Align Alignment = I.getAlign();
-    if (PropagateShadow) {
+    if (getPropagateShadow()) {
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
       setShadow(&I,
@@ -2223,7 +2233,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       I.setOrdering(addAcquireOrdering(I.getOrdering()));
 
     if (MS.TrackOrigins) {
-      if (PropagateShadow) {
+      if (getPropagateShadow()) {
         const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
         setOrigin(
             &I, IRB.CreateAlignedLoad(MS.OriginTy, OriginPtr, OriginAlignment));
@@ -3306,7 +3316,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Type *ShadowTy = getShadowTy(&I);
     Value *ShadowPtr = nullptr, *OriginPtr = nullptr;
-    if (PropagateShadow) {
+    if (getPropagateShadow()) {
       // We don't know the pointer alignment (could be unaligned SSE load!).
       // Have to assume to worst case.
       const Align Alignment = Align(1);
@@ -3322,7 +3332,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertCheckShadowOf(Addr, &I);
 
     if (MS.TrackOrigins) {
-      if (PropagateShadow)
+      if (getPropagateShadow())
         setOrigin(&I, IRB.CreateLoad(MS.OriginTy, OriginPtr));
       else
         setOrigin(&I, getCleanOrigin());
@@ -3425,7 +3435,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void handleLifetimeStart(IntrinsicInst &I) {
-    if (!PoisonStack)
+    if (!getPoisonStack())
       return;
     AllocaInst *AI = dyn_cast<AllocaInst>(I.getArgOperand(0));
     if (AI)
@@ -4318,7 +4328,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void handleLdmxcsr(IntrinsicInst &I) {
-    if (!InsertChecks)
+    if (!getInsertChecks())
       return;
 
     IRBuilder<> IRB(&I);
@@ -4350,7 +4360,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertCheckShadowOf(Mask, &I);
     }
 
-    if (!PropagateShadow) {
+    if (!getPropagateShadow()) {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       return;
@@ -4410,7 +4420,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertCheckShadow(MaskedPtrShadow, getOrigin(Ptrs), &I);
     }
 
-    if (!PropagateShadow) {
+    if (!getPropagateShadow()) {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       return;
@@ -4507,7 +4517,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertCheckShadowOf(Mask, &I);
     }
 
-    if (!PropagateShadow) {
+    if (!getPropagateShadow()) {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       return;
@@ -4555,7 +4565,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Mask, getShadow(Divisor), getCleanShadow(Divisor), "_msmaskeddivisor");
     insertCheckShadow(MaskedDivisorShadow, getOrigin(Divisor), &I);
 
-    if (!PropagateShadow) {
+    if (!getPropagateShadow()) {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       return;
@@ -7754,7 +7764,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           std::tie(AShadowPtr, AOriginPtr) =
               getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment,
                                  /*isStore*/ false);
-          if (!PropagateShadow) {
+          if (!getPropagateShadow()) {
             Store = IRB.CreateMemSet(ArgShadowBase,
                                      Constant::getNullValue(IRB.getInt8Ty()),
                                      Size, Alignment);
@@ -7891,7 +7901,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitPHINode(PHINode &I) {
     IRBuilder<> IRB(&I);
-    if (!PropagateShadow) {
+    if (!getPropagateShadow()) {
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
       return;
@@ -7918,7 +7928,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void poisonAllocaUserspace(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
-    if (PoisonStack && Opts.msan_poison_stack_with_call) {
+    if (getPoisonStack() && Opts.msan_poison_stack_with_call) {
       IRB.CreateCall(MS.MsanPoisonStackFn, {&I, Len});
     } else {
       Value *ShadowBase, *OriginBase;
@@ -7926,11 +7936,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           &I, IRB, IRB.getInt8Ty(), Align(1), /*isStore*/ true);
 
       Value *PoisonValue =
-          IRB.getInt8(PoisonStack ? Opts.msan_poison_stack_pattern : 0);
+          IRB.getInt8(getPoisonStack() ? Opts.msan_poison_stack_pattern : 0);
       IRB.CreateMemSet(ShadowBase, PoisonValue, Len, I.getAlign());
     }
 
-    if (PoisonStack && MS.TrackOrigins) {
+    if (getPoisonStack() && MS.TrackOrigins) {
       Value *Idptr = getLocalVarIdptr(I);
       if (Opts.msan_print_stack_names) {
         Value *Descr = getLocalVarDescription(I);
@@ -7944,7 +7954,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void poisonAllocaKmsan(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
     Value *Descr = getLocalVarDescription(I);
-    if (PoisonStack) {
+    if (getPoisonStack()) {
       IRB.CreateCall(MS.MsanPoisonAllocaFn, {&I, Len, Descr});
     } else {
       IRB.CreateCall(MS.MsanUnpoisonAllocaFn, {&I, Len});

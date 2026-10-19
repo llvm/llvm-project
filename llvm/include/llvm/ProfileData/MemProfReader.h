@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -143,8 +144,8 @@ public:
                    llvm::SmallVectorImpl<SegmentEntry> &Seg,
                    llvm::MapVector<uint64_t, MemInfoBlock> &Prof,
                    CallStackMap &SM, bool KeepName = false)
-      : SegmentInfo(Seg.begin(), Seg.end()), CallstackProfileData(Prof),
-        StackMap(SM), KeepSymbolName(KeepName) {
+      : SegmentInfo(unsigned(KeepName), Seg.begin(), Seg.end()),
+        CallstackProfileData(Prof), StackMap(SM) {
     // We don't call initialize here since there is no raw profile to read. The
     // test should pass in the raw profile as structured data.
 
@@ -158,7 +159,9 @@ public:
 
 private:
   RawMemProfReader(object::OwningBinary<object::Binary> &&Bin, bool KeepName)
-      : Binary(std::move(Bin)), KeepSymbolName(KeepName) {}
+      : Binary(std::move(Bin)),
+        SegmentInfo(
+            decltype(this->SegmentInfo)::withFlags(unsigned(KeepName))) {}
   // Initializes the RawMemProfReader with the contents in `DataBuffer`.
   Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer);
   // Read and parse the contents of the `DataBuffer` as a binary format profile.
@@ -195,7 +198,7 @@ private:
 
   // The memory mapped segment information for all executable segments in the
   // profiled binary (filtered from the raw profile using the build id).
-  llvm::SmallVector<SegmentEntry, 2> SegmentInfo;
+  llvm::SmallVectorWithFlags<SegmentEntry, 2> SegmentInfo;
 
   // A map from callstack id (same as key in CallStackMap below) to the heap
   // information recorded for that allocation context.
@@ -206,7 +209,8 @@ private:
   llvm::DenseMap<uint64_t, llvm::SmallVector<FrameId>> SymbolizedFrame;
 
   // Whether to keep the symbol name for each frame after hashing.
-  bool KeepSymbolName = false;
+  bool getKeepSymbolName() const { return SegmentInfo.getFlag(0); }
+  void setKeepSymbolName(bool Value) { SegmentInfo.setFlag(0, Value); }
   // A mapping of the hash to symbol name, only used if KeepSymbolName is true.
   llvm::DenseMap<uint64_t, std::string> GuidToSymbolName;
 };

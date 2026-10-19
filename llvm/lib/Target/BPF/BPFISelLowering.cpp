@@ -407,8 +407,8 @@ static SDValue convertLocValType(SelectionDAG &DAG, const SDLoc &DL,
 
 SDValue BPFTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv) {
   default:
     report_fatal_error("unimplemented calling convention: " + Twine(CallConv));
@@ -502,13 +502,12 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   MachineFunction &MF = DAG.getMachineFunction();
 
   // BPF target does not support tail call optimization.
-  IsTailCall = false;
+  CLI.setIsTailCall(false);
 
   switch (CallConv) {
   default:
@@ -649,7 +648,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Chain = DAG.getNode(BPFISD::CALL, CLI.DL, NodeTys, Ops);
   InGlue = Chain.getValue(1);
 
-  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.getNoMerge());
 
   // Create the CALLSEQ_END node.
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, CLI.DL);
@@ -661,12 +660,12 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          InVals);
 }
 
-SDValue
-BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               const SmallVectorImpl<SDValue> &OutVals,
-                               const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                       bool IsVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       const SmallVectorImpl<SDValue> &OutVals,
+                                       const SDLoc &DL,
+                                       SelectionDAG &DAG) const {
   unsigned Opc = BPFISD::RET_GLUE;
 
   // CCValAssign - represent the assignment of the return value to a location
@@ -707,8 +706,8 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 SDValue BPFTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   // Assign locations to each value returned by this call.
@@ -860,12 +859,12 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   auto PtrVT = getPointerTy(MF.getDataLayout());
   CLI.Callee = DAG.getTargetGlobalAddress(Fn, DL, PtrVT);
   CLI.Chain = N->getOperand(0);
-  CLI.IsTailCall = false;
+  CLI.setIsTailCall(false);
   CLI.CallConv = CallingConv::C;
-  CLI.IsVarArg = false;
+  CLI.setIsVarArg(false);
   CLI.DL = std::move(DL);
-  CLI.NoMerge = false;
-  CLI.DoesNotReturn = true;
+  CLI.setNoMerge(false);
+  CLI.setDoesNotReturn(true);
   return LowerCall(CLI, InVals);
 }
 
@@ -1248,10 +1247,11 @@ bool BPFTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
-bool BPFTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool BPFTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                       MachineFunction &MF, bool IsVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       LLVMContext &Context,
+                                       const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);

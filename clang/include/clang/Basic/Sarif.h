@@ -35,6 +35,7 @@
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -519,7 +520,8 @@ private:
   /// A closed document is one on which a new runs must be created.
   /// This could be a document that is freshly created, or has recently
   /// finished writing to a previous run.
-  bool Closed = true;
+  bool getClosed() const { return !CurrentRules.getFlag(0); }
+  void setClosed(bool Value) { CurrentRules.setFlag(0, !Value); }
 
   /// A sequence of SARIF runs.
   /// Each run object describes a single run of an analysis tool and contains
@@ -536,7 +538,7 @@ private:
   /// also known as "reportingDescriptor" objects in SARIF.
   ///
   /// Reference: <a href="https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317556">rules property</a>
-  llvm::SmallVector<SarifRule, 32> CurrentRules;
+  llvm::SmallVectorWithFlags<SarifRule, 32> CurrentRules;
 
   /// The list of artifacts that have been encountered on the most recent active
   /// run. An artifact is defined in SARIF as a sequence of bytes addressable

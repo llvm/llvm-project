@@ -326,7 +326,7 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
 }
 
 void LoopVectorizationLegality::collectUnitStridePredicates() const {
-  if (!AllowRuntimeSCEVChecks || !TheLoop->isInnermost())
+  if (!getAllowRuntimeSCEVChecks() || !TheLoop->isInnermost())
     return;
 
   for (BasicBlock *BB : TheLoop->blocks())
@@ -343,12 +343,12 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // masked access.
   // Stride versioning requires adding a SCEV equality predicate; only consult
   // the symbolic strides when runtime SCEV checks are permitted.
-  const auto &Strides = LAI && AllowRuntimeSCEVChecks
+  const auto &Strides = LAI && getAllowRuntimeSCEVChecks()
                             ? LAI->getSymbolicStrides()
                             : SymbolicStrideMap();
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
-                            AllowRuntimeSCEVChecks ? &Predicates : nullptr)
+                            getAllowRuntimeSCEVChecks() ? &Predicates : nullptr)
                    .value_or(0);
   if (Stride != 1 && Stride != -1)
     return 0;
@@ -947,7 +947,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   // If we found a vectorized variant of a function, note that so LV can
   // make better decisions about maximum VF.
   if (CI && !VFDatabase::getMappings(*CI).empty())
-    VecCallVariantsFound = true;
+    setVecCallVariantsFound(true);
 
   // Check that the instruction return and stored types are vectorizable.
   if (!canWidenTypes(I, /*AllowStructCalls=*/true, ORE, TheLoop))
@@ -2011,7 +2011,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   if (Result) {
     LLVM_DEBUG(dbgs() << "LV: Loop passed LoopVectorizationLegality checks"
-                      << (LAI->getRuntimePointerChecking()->Need
+                      << (LAI->getRuntimePointerChecking()->needsChecking()
                               ? " (with a runtime bound check)"
                               : "")
                       << "!\n");

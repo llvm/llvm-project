@@ -149,8 +149,8 @@ void Distribution::add(const BlockNode &Node, uint64_t Amount,
 
   // Check for overflow.  It should be impossible to overflow twice.
   bool IsOverflow = NewTotal < Total;
-  assert(!(DidOverflow && IsOverflow) && "unexpected repeated overflow");
-  DidOverflow |= IsOverflow;
+  assert(!(Weights.getFlag(0) && IsOverflow) && "unexpected repeated overflow");
+  Weights.setFlag(0, Weights.getFlag(0) || IsOverflow);
 
   // Update the total.
   Total = NewTotal;
@@ -251,7 +251,7 @@ void Distribution::normalize() {
   // If we shift at all, shift by 1 extra.  Otherwise, the lower limit of 1
   // for each weight can cause a 32-bit overflow.
   int Shift = 0;
-  if (DidOverflow)
+  if (Weights.getFlag(0))
     Shift = 33;
   else if (Total > UINT32_MAX)
     Shift = 33 - llvm::countl_zero(Total);
@@ -405,7 +405,7 @@ void BlockFrequencyInfoImplBase::packageLoop(LoopData &Loop) {
       Loop->Exits.clear();
     LLVM_DEBUG(dbgs() << " - node: " << getBlockName(M.Index) << "\n");
   }
-  Loop.IsPackaged = true;
+  Loop.setIsPackaged(true);
 }
 
 #ifndef NDEBUG
@@ -501,7 +501,7 @@ static void unwrapLoop(BlockFrequencyInfoImplBase &BFI, LoopData &Loop) {
                     << ": mass = " << Loop.Mass << ", scale = " << Loop.Scale
                     << "\n");
   Loop.Scale *= Loop.Mass.toScaled();
-  Loop.IsPackaged = false;
+  Loop.setIsPackaged(false);
   LLVM_DEBUG(dbgs() << "  => combined-scale = " << Loop.Scale << "\n");
 
   // Propagate the head scale through the loop.  Since members are visited in

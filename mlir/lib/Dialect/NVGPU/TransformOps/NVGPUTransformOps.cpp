@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
@@ -441,8 +442,15 @@ private:
     std::tuple<IndexCalculator, IndexCalculator, IndexCalculator> indexFns;
     std::tuple<SmallVector<int64_t>, SmallVector<int64_t>, SmallVector<int64_t>>
         vectorShapes;
-    SmallVector<int64_t> mmaShape;
-    bool tf32Enabled;
+    llvm::SmallVectorWithFlags<int64_t> mmaShape;
+    bool getTf32Enabled() const { return mmaShape.getFlag(0); }
+    void setTf32Enabled(bool Value) { mmaShape.setFlag(0, Value); }
+
+    MmaSyncInfo(decltype(indexFns) indexFns,
+                decltype(vectorShapes) vectorShapes,
+                SmallVector<int64_t> mmaShape, bool tf32Enabled)
+        : indexFns(std::move(indexFns)), vectorShapes(std::move(vectorShapes)),
+          mmaShape(unsigned(tf32Enabled), std::move(mmaShape)) {}
   };
 
   /// Return the specific index calculator for the given `linalgOp` or failure
@@ -789,8 +797,8 @@ FailureOr<Operation *> MmaSyncBuilder::buildMmaSync(LinalgOp linalgOp) {
                                             rhsIndexFn, rhsShape);
   Value res = buildMmaSyncMemRefLoadOperand(b, loc, laneId, resMemRef,
                                             resIndexFn, resShape);
-  res =
-      MmaSyncOp::create(b, loc, lhs, rhs, res, info.mmaShape, info.tf32Enabled);
+  res = MmaSyncOp::create(b, loc, lhs, rhs, res, info.mmaShape,
+                          info.getTf32Enabled());
   buildMmaSyncMemRefStoreOperand(b, loc, res, laneId, resMemRef, resIndexFn,
                                  resShape);
   return res.getDefiningOp();

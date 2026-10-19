@@ -226,11 +226,11 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
   // as true if any of the sources are true.
   bool mergedApprox =
       llvm::any_of(sources, [](const fir::AliasAnalysis::Source &s) {
-        return s.approximateSource;
+        return s.getApproximateSource();
       });
   bool mergedCaptured =
       llvm::any_of(sources, [](const fir::AliasAnalysis::Source &s) {
-        return s.isCapturedInInternalProcedure;
+        return s.getIsCapturedInInternalProcedure();
       });
 
   fir::AliasAnalysis::SourceKind mergedKind;
@@ -317,10 +317,10 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
   fir::AliasAnalysis::Source::AccessPath mergedPath;
   if (allPathsSame) {
     mergedPath = sources[0].accessPath;
-    mergedPath.isApproximate |= mergedApprox;
+    mergedPath.setIsApproximate(mergedPath.isApproximate() || mergedApprox);
   } else {
     mergedPath = {};
-    mergedPath.isApproximate = true;
+    mergedPath.setIsApproximate(true);
   }
 
   mlir::Type mergedTy = allTypesSame ? sources[0].valueType : fallbackType;
@@ -358,15 +358,16 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
         unsigned idx = it->second;
         auto &mergedScopedOrigin = mergedScopedOrigins[idx];
         if (mergedScopedOrigin.isData != scopedOrigin.isData ||
-            mergedScopedOrigin.accessPath.steps !=
-                scopedOrigin.accessPath.steps) {
+            llvm::ArrayRef(mergedScopedOrigin.accessPath.steps) !=
+                llvm::ArrayRef(scopedOrigin.accessPath.steps)) {
           // Mark as not-seen so the entry is dropped after this pred.
           continue;
         }
         mergedScopedOrigin.attributes |= scopedOrigin.attributes;
         mergedScopedOrigin.approximateSource |= scopedOrigin.approximateSource;
-        mergedScopedOrigin.accessPath.isApproximate |=
-            scopedOrigin.accessPath.isApproximate;
+        mergedScopedOrigin.accessPath.setIsApproximate(
+            mergedScopedOrigin.accessPath.isApproximate() ||
+            scopedOrigin.accessPath.isApproximate());
         seenThisPred[idx] = true;
       }
       // Drop entries this predecessor did not match. Iterate in reverse
@@ -413,7 +414,7 @@ void AliasAnalysis::Source::AccessPath::print(llvm::raw_ostream &os) const {
     }
   }
   os << "]";
-  if (isApproximate)
+  if (isApproximate())
     os << "(~)";
 }
 
@@ -776,7 +777,8 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     }
   }
 
-  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
+  bool approximateSource =
+      lhsSrc.getApproximateSource() || rhsSrc.getApproximateSource();
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
@@ -1120,7 +1122,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   // procedures may be captured or passed. As this is tricky to analyze, always
   // consider such variables may be accessed in any calls.
   if (varSrc.kind == fir::AliasAnalysis::SourceKind::HostAssoc ||
-      varSrc.isCapturedInInternalProcedure)
+      varSrc.getIsCapturedInInternalProcedure())
     return ModRefResult::getModAndRef();
   // At that stage, it has been ruled out that local (including the saved ones)
   // and dummy cannot be indirectly accessed in the call.
@@ -1240,8 +1242,8 @@ void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Operation *op,
     // conservatively assume both Mod and Ref (this mirrors the uncached
     // AliasAnalysis::getModRef which returns ModAndRef in this case).
     if (!isRecursive) {
-      out.hasUnknownWrite = true;
-      out.hasUnknownRead = true;
+      out.setHasUnknownWrite(true);
+      out.setHasUnknownRead(true);
     }
     return;
   }
@@ -1264,9 +1266,9 @@ void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Operation *op,
 
     if (!v) {
       if (isRead)
-        out.hasUnknownRead = true;
+        out.setHasUnknownRead(true);
       if (isWrite)
-        out.hasUnknownWrite = true;
+        out.setHasUnknownWrite(true);
       continue;
     }
 
@@ -1297,8 +1299,8 @@ AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
   }
 
   const Summary &s = it->second;
-  bool mod = s.hasUnknownWrite;
-  bool ref = s.hasUnknownRead;
+  bool mod = s.getHasUnknownWrite();
+  bool ref = s.getHasUnknownRead();
 
   if (!mod) {
     for (mlir::Value v : s.writeLocations) {
@@ -1566,7 +1568,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
   // Access path steps collected during the backward walk (leaf-to-root order).
   // Reversed into the final AccessPath at the end, unless the box-load branch
   // composes the full path directly.
-  llvm::SmallVector<Source::PathStep, 4> pathSteps;
+  llvm::SmallVectorWithFlags<Source::PathStep, 4> pathSteps;
   Source::AccessPath accessPath;
   bool accessPathFinalized{false};
 
@@ -1686,9 +1688,9 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                                     /*getLastInstantiationPoint=*/false,
                                     collectScopedOrigins);
             attributes |= boxSrc.attributes;
-            approximateSource |= boxSrc.approximateSource;
+            approximateSource |= boxSrc.getApproximateSource();
             isCapturedInInternalProcedure |=
-                boxSrc.isCapturedInInternalProcedure;
+                boxSrc.getIsCapturedInInternalProcedure();
 
             if (getLastInstantiationPoint) {
               if (!instantiationPoint)
@@ -1707,8 +1709,8 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             accessPath.steps.push_back(derefStep);
             for (int i = pathSteps.size() - 1; i >= 0; --i)
               accessPath.steps.push_back(pathSteps[i]);
-            accessPath.isApproximate =
-                boxSrc.accessPath.isApproximate || approximateSource;
+            accessPath.setIsApproximate(boxSrc.accessPath.isApproximate() ||
+                                        approximateSource);
             accessPathFinalized = true;
 
             // Rebase each forwarded ScopedOrigin from the inner walk's
@@ -1720,7 +1722,9 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                 scopedOrigin.accessPath.steps.push_back(derefStep);
                 for (int i = pathSteps.size() - 1; i >= 0; --i)
                   scopedOrigin.accessPath.steps.push_back(pathSteps[i]);
-                scopedOrigin.accessPath.isApproximate |= approximateSource;
+                scopedOrigin.accessPath.setIsApproximate(
+                    scopedOrigin.accessPath.isApproximate() ||
+                    approximateSource);
                 if (isPointerBox)
                   scopedOrigin.attributes.set(Attribute::Pointer);
                 scopedOrigin.approximateSource |= approximateSource;
@@ -1873,7 +1877,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             scopedOrigin.declValue = opResult;
             scopedOrigin.accessPath.steps.assign(pathSteps.rbegin(),
                                                  pathSteps.rend());
-            scopedOrigin.accessPath.isApproximate = approximateSource;
+            scopedOrigin.accessPath.setIsApproximate(approximateSource);
             scopedOrigin.attributes = attributes;
             scopedOrigin.approximateSource = approximateSource;
             scopedOrigin.isData = followingData;
@@ -2068,10 +2072,13 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                                             collectScopedOrigins));
           regionBranchReturn = mergeRegionBranchPredecessorSources(
               predSources, v, ty, followingData);
-          regionBranchReturn->attributes |= attributes;
-          regionBranchReturn->approximateSource |= approximateSource;
-          regionBranchReturn->isCapturedInInternalProcedure |=
-              isCapturedInInternalProcedure;
+          auto &returnSource = *regionBranchReturn;
+          returnSource.attributes |= attributes;
+          returnSource.setApproximateSource(
+              int(returnSource.getApproximateSource()) | (approximateSource));
+          returnSource.setIsCapturedInInternalProcedure(
+              int(returnSource.getIsCapturedInInternalProcedure()) |
+              (isCapturedInInternalProcedure));
           // Prepend the outer (leaf-closer) scopedOrigins -- declares
           // already crossed between leaf and this region-branch op --
           // to the merged predecessors' snapshots. The inner snapshots'
@@ -2085,7 +2092,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             combined.append(scopedOrigins.begin(), scopedOrigins.end());
             combined.append(regionBranchReturn->scopedOrigins.begin(),
                             regionBranchReturn->scopedOrigins.end());
-            regionBranchReturn->scopedOrigins = std::move(combined);
+            regionBranchReturn->scopedOrigins.assign(std::move(combined));
           }
           breakFromLoop = true;
         })
@@ -2129,7 +2136,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
   if (!accessPathFinalized) {
     std::reverse(pathSteps.begin(), pathSteps.end());
     accessPath.steps = std::move(pathSteps);
-    accessPath.isApproximate = approximateSource;
+    accessPath.setIsApproximate(approximateSource);
   }
 
   if (type == SourceKind::Global) {
@@ -2234,7 +2241,7 @@ fir::AliasAnalysis::Source fir::AliasAnalysis::buildSourceAtDeclare(
   // "declare-as-root, original-query-as-leaf".
   source.accessPath = scopedOrigin.accessPath;
   source.attributes = scopedOrigin.attributes;
-  source.approximateSource = scopedOrigin.approximateSource;
+  source.setApproximateSource(scopedOrigin.approximateSource);
   source.origin.isData = scopedOrigin.isData;
   return source;
 }

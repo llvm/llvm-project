@@ -13,6 +13,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -92,7 +93,7 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
           unless(hasAncestor(functionDecl(isDefaulted())))),
       this);
 
-  if (UseNullptrT)
+  if (getUseNullptrT())
     Finder->addMatcher(typeLoc(loc(decltypeType(decltypeTypeNullptrLiteral())))
                            .bind("matchDecltypeNullptr"),
                        this);
@@ -509,13 +510,17 @@ private:
 UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
+      NullMacros(decltype(this->NullMacros)::withFlags([&] {
+        unsigned PackedFlags = 0;
+        PackedFlags |= unsigned(bool(Options.get("UseNullptrT", true)));
+        return PackedFlags;
+      }())),
       IgnoredTypes(utils::options::parseStringList(
           Options.get("IgnoredTypes", DefaultIgnoredTypes))),
-      UseNullptrT(Options.get("UseNullptrT", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {
-  NullMacrosStr.split(NullMacros, ",");
+  llvm::append_range(NullMacros, llvm::split(NullMacrosStr, ','));
 }
 
 void UseNullptrCheck::registerPPCallbacks(const SourceManager &SM,
@@ -529,7 +534,7 @@ void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredTypes",
                 utils::options::serializeStringList(IgnoredTypes));
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  Options.store(Opts, "UseNullptrT", UseNullptrT);
+  Options.store(Opts, "UseNullptrT", getUseNullptrT());
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {

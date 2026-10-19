@@ -838,7 +838,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
 
   // When we import C++20 modules, we must run their initializers first.
   SmallVector<llvm::Function *, 8> ModuleInits;
-  if (CXX20ModuleInits)
+  if (getCXX20ModuleInits())
     for (Module *M : CodeGenUtils::importedModulesToInitialize(
              getContext().getCurrentNamedModule(),
              ImportedModules.getArrayRef())) {
@@ -912,7 +912,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // with priority emitted above.  Module implementation units behave the same
   // way as a non-modular TU with imports.
   llvm::Function *Fn;
-  if (CXX20ModuleInits && getContext().getCurrentNamedModule() &&
+  if (getCXX20ModuleInits() && getContext().getCurrentNamedModule() &&
       !getContext().getCurrentNamedModule()->isModuleImplementation()) {
     SmallString<256> InitFnName;
     llvm::raw_svector_ostream Out(InitFnName);

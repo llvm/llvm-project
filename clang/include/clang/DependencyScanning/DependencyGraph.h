@@ -14,6 +14,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include <string>
 #include <variant>
@@ -80,7 +81,8 @@ struct ModuleDeps {
   ModuleID ID;
 
   /// Whether this is a "system" module.
-  bool IsSystem;
+  bool getIsSystem() const { return LinkLibraries.getFlag(0); }
+  void setIsSystem(bool Value) { LinkLibraries.setFlag(0, Value); }
 
   /// Whether this module is fully composed of file & module inputs from
   /// locations likely to stay the same across the active development and build
@@ -88,10 +90,15 @@ struct ModuleDeps {
   ///
   /// External paths, as opposed to virtual file paths, are always used
   /// for computing this value.
-  bool IsInStableDirectories;
+  bool getIsInStableDirectories() const { return LinkLibraries.getFlag(1); }
+  bool setIsInStableDirectories(bool Value) {
+    LinkLibraries.setFlag(1, Value);
+    return Value;
+  }
 
   /// Whether current working directory is ignored.
-  bool IgnoreCWD;
+  bool getIgnoreCWD() const { return LinkLibraries.getFlag(2); }
+  void setIgnoreCWD(bool Value) { LinkLibraries.setFlag(2, Value); }
 
   /// The path to the modulemap file which defines this module.
   ///
@@ -126,7 +133,7 @@ struct ModuleDeps {
 
   /// The set of libraries or frameworks to link against when
   /// an entity from this module is used.
-  llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
+  llvm::SmallVectorWithFlags<Module::LinkLibrary, 2, 3> LinkLibraries;
 
   /// Invokes \c Cb for all file dependencies of this module. Each provided
   /// \c StringRef is only valid within the individual callback invocation.

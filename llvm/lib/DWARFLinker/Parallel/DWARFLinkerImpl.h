@@ -15,6 +15,7 @@
 #include "StringEntryToDwarfStringPoolEntryMap.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
@@ -68,20 +69,20 @@ public:
 
   /// Verify the input DWARF.
   void setVerifyInputDWARF(bool Verify) override {
-    GlobalData.Options.VerifyInputDWARF = Verify;
+    GlobalData.Options.setVerifyInputDWARF(Verify);
   }
 
   /// Do not unique types according to ODR.
-  void setNoODR(bool NoODR) override { GlobalData.Options.NoODR = NoODR; }
+  void setNoODR(bool NoODR) override { GlobalData.Options.setNoODR(NoODR); }
 
   /// Update index tables only(do not modify rest of DWARF).
   void setUpdateIndexTablesOnly(bool UpdateIndexTablesOnly) override {
-    GlobalData.Options.UpdateIndexTablesOnly = UpdateIndexTablesOnly;
+    GlobalData.Options.setUpdateIndexTablesOnly(UpdateIndexTablesOnly);
   }
 
   /// Set to keep the enclosing function for a static variable.
   void setKeepFunctionForStatic(bool KeepFunctionForStatic) override {
-    GlobalData.Options.KeepFunctionForStatic = KeepFunctionForStatic;
+    GlobalData.Options.setKeepFunctionForStatic(KeepFunctionForStatic);
   }
 
   /// Use specified number of threads for parallel files linking.
@@ -165,7 +166,7 @@ protected:
     UnitListTy CompileUnits;
 
     /// Set of Compile Units for modules.
-    UnitListTy ModulesCompileUnits;
+    llvm::SmallVectorWithFlagsFor<UnitListTy, 1> ModulesCompileUnits;
 
     /// Index of this object file in the link order (used for deterministic
     /// type DIE allocation).
@@ -176,7 +177,12 @@ protected:
 
     /// Flag indicating that all inter-connected units are loaded
     /// and the dwarf linking process for these units is started.
-    bool InterCUProcessingStarted = false;
+    bool getInterCUProcessingStarted() const {
+      return ModulesCompileUnits.getFlag(0);
+    }
+    void setInterCUProcessingStarted(bool Value) {
+      ModulesCompileUnits.setFlag(0, Value);
+    }
 
     StringMap<uint64_t> &ClangModules;
 

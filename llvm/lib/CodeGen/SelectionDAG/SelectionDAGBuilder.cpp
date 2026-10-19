@@ -17,6 +17,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -1111,10 +1112,10 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
   LPadToCallSiteMap.clear();
   this->TTI = &TTI;
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
-  AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
-      *DAG.getMachineFunction().getFunction().getParent());
-  CanDescribeGlobalAddressInLocationList =
-      canDescribeGlobalAddressInLocationList(DAG.getMachineFunction());
+  setAssignmentTrackingEnabled(isAssignmentTrackingEnabled(
+      *DAG.getMachineFunction().getFunction().getParent()));
+  setCanDescribeGlobalAddressInLocationList(
+      canDescribeGlobalAddressInLocationList(DAG.getMachineFunction()));
 }
 
 void SelectionDAGBuilder::clear() {
@@ -1125,7 +1126,7 @@ void SelectionDAGBuilder::clear() {
   PendingConstrainedFP.clear();
   PendingConstrainedFPStrict.clear();
   CurInst = nullptr;
-  HasTailCall = false;
+  setHasTailCall(false);
   SDNodeOrder = LowestSDNodeOrder;
   StatepointLowering.clear();
 }
@@ -1135,7 +1136,8 @@ void SelectionDAGBuilder::clearDanglingDebugInfo() {
 }
 
 // Update DAG root to include dependencies on Pending chains.
-SDValue SelectionDAGBuilder::updateRoot(SmallVectorImpl<SDValue> &Pending) {
+template <typename PendingT>
+SDValue SelectionDAGBuilder::updateRoot(PendingT &Pending) {
   SDValue Root = DAG.getRoot();
 
   if (Pending.empty())
@@ -1395,7 +1397,7 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
 
   visit(I.getOpcode(), I);
 
-  if (!I.isTerminator() && !HasTailCall &&
+  if (!I.isTerminator() && !getHasTailCall() &&
       !isa<GCStatepointInst>(I)) // statepoints handle their exports internally
     CopyToExportRegsIfNeeded(&I);
 
@@ -1702,7 +1704,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     // way falls through to be described by whatever materializes it instead.
     // So does one that a location list could not name, should the variable
     // need one; salvageUnresolvedDbgValue names it if nothing materializes it.
-    if (CanDescribeGlobalAddressInLocationList)
+    if (getCanDescribeGlobalAddressInLocationList())
       if (const GlobalValue *GV = getGlobalAddressDbgOperand(
               V, Expr, OpIdx, DAG.getMachineFunction())) {
         LocationOps.emplace_back(SDDbgOperand::fromGlobalAddr(GV));
@@ -3410,13 +3412,13 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 
   MachineBasicBlock* MBB = B.Cases[0].ThisBB;
 
-  if (!B.FallthroughUnreachable)
+  if (!B.getFallthroughUnreachable())
     addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
   addSuccessorWithProb(SwitchBB, MBB, B.Prob);
   SwitchBB->normalizeSuccProbs();
 
   SDValue Root = CopyTo;
-  if (!B.FallthroughUnreachable) {
+  if (!B.getFallthroughUnreachable()) {
     // Conditional branch to the default block.
     SDValue RangeCmp = DAG.getSetCC(dl,
         TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
@@ -8050,7 +8052,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getExternalSymbol(TrapFuncName.data(),
                               TLI.getPointerTy(DAG.getDataLayout())),
         std::move(Args));
-    CLI.NoMerge = I.hasFnAttr(Attribute::NoMerge);
+    CLI.setNoMerge(I.hasFnAttr(Attribute::NoMerge));
     std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
     DAG.setRoot(Result.second);
     return;
@@ -8454,7 +8456,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
               0);
     DAG.setRoot(N);
     setValue(&I, N);
-    HasTailCall = true;
+    setHasTailCall(true);
     return;
   }
 
@@ -8524,7 +8526,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(!Result.first.getNode() && !Result.second.getNode() &&
            "Should've lowered as tail call");
 
-    HasTailCall = true;
+    setHasTailCall(true);
     return;
   }
   case Intrinsic::amdgcn_call_whole_wave: {
@@ -9360,7 +9362,7 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
 
-  assert((CLI.IsTailCall || Result.second.getNode()) &&
+  assert((CLI.getIsTailCall() || Result.second.getNode()) &&
          "Non-null chain expected with non-tail call!");
   assert((Result.second.getNode() || !Result.first.getNode()) &&
          "Null value expected with tail call!");
@@ -9368,7 +9370,7 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   if (!Result.second.getNode()) {
     // As a special case, a null chain means that a tail call has been emitted
     // and the DAG root is already updated.
-    HasTailCall = true;
+    setHasTailCall(true);
 
     // Since there's no actual continuation from this block, nothing can be
     // relying on us setting vregs for them.
@@ -10453,10 +10455,14 @@ static bool isFunction(SDValue Op) {
 namespace {
 
 struct ConstraintDecisionInfo {
-  SmallVector<SDISelAsmOperandInfo, 16> ConstraintOperands;
+  llvm::SmallVectorWithFlags<SDISelAsmOperandInfo, 16> ConstraintOperands;
   std::vector<SDValue> AsmNodeOperands;
   SDValue Glue, Chain;
-  bool HasSideEffect = false;
+  bool getHasSideEffect() const { return ConstraintOperands.getFlag(0); }
+  bool setHasSideEffect(bool Value) {
+    ConstraintOperands.setFlag(0, Value);
+    return Value;
+  }
   MCSymbol *BeginLabel = nullptr;
 
   SmallVector<char> Buffer;
@@ -10480,8 +10486,8 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
     if (OpInfo.CallOperandVal)
       OpInfo.CallOperand = Builder.getValue(OpInfo.CallOperandVal);
 
-    if (!Info.HasSideEffect)
-      Info.HasSideEffect = OpInfo.hasMemory(TLI);
+    if (!Info.getHasSideEffect())
+      Info.setHasSideEffect(OpInfo.hasMemory(TLI));
 
     // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
     // FIXME: Could we compute this on OpInfo rather than T?
@@ -10855,13 +10861,13 @@ determineConstraints(ConstraintDecisionInfo &Info,
   ExtraFlags ExtraInfo(Call);
 
   // First pass: Construct operand info objects.
-  Info.HasSideEffect = IA->hasSideEffects();
+  Info.setHasSideEffect(IA->hasSideEffects());
   if (constructOperandInfo(Info, TargetConstraints, Builder, TLI, ExtraInfo))
     return true;
 
   // We won't need to flush pending loads if this asm doesn't touch
   // memory and is nonvolatile.
-  Info.Chain = Info.HasSideEffect ? Builder.getRoot() : DAG.getRoot();
+  Info.Chain = Info.getHasSideEffect() ? Builder.getRoot() : DAG.getRoot();
 
   bool IsCallBr = isa<CallBrInst>(Call);
   bool EmitEHLabels = isa<InvokeInst>(Call);
@@ -11038,7 +11044,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     Chain = lowerEndEH(Chain, II, EHPadBB, Info.BeginLabel);
 
   // Only Update Root if inline assembly has a memory effect.
-  if (ResultValues.empty() || Info.HasSideEffect || !OutChains.empty() ||
+  if (ResultValues.empty() || Info.getHasSideEffect() || !OutChains.empty() ||
       IsCallBr || isa<InvokeInst>(Call))
     DAG.setRoot(Chain);
 }
@@ -11526,11 +11532,11 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
 /// value of the given call.
 static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
   SmallVector<Attribute::AttrKind, 2> Attrs;
-  if (CLI.RetSExt)
+  if (CLI.getRetSExt())
     Attrs.push_back(Attribute::SExt);
-  if (CLI.RetZExt)
+  if (CLI.getRetZExt())
     Attrs.push_back(Attribute::ZExt);
-  if (CLI.IsInReg)
+  if (CLI.getIsInReg())
     Attrs.push_back(Attribute::InReg);
 
   return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
@@ -11562,7 +11568,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       RetVTs.push_back(getValueType(DL, Ty));
   }
 
-  if (CLI.IsPostTypeLegalization) {
+  if (CLI.getIsPostTypeLegalizationFlag()) {
     // If we are lowering a libcall after legalization, split the return type.
     SmallVector<Type *, 4> OldRetOrigTys;
     SmallVector<EVT, 4> OldRetVTs;
@@ -11589,7 +11595,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   bool CanLowerReturn =
       this->CanLowerReturn(CLI.CallConv, CLI.DAG.getMachineFunction(),
-                           CLI.IsVarArg, Outs, Context, CLI.RetTy);
+                           CLI.getIsVarArg(), Outs, Context, CLI.RetTy);
 
   SDValue DemoteStackSlot;
   int DemoteStackIdx = -100;
@@ -11615,10 +11621,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
     // sret demotion isn't compatible with tail-calls, since the sret argument
     // points into the callers stack frame.
-    CLI.IsTailCall = false;
+    CLI.setIsTailCall(false);
   } else {
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
-        CLI.RetTy, CLI.CallConv, CLI.IsVarArg, DL);
+        CLI.RetTy, CLI.CallConv, CLI.getIsVarArg(), DL);
     for (unsigned I = 0, E = RetVTs.size(); I != E; ++I) {
       ISD::ArgFlagsTy Flags;
       if (NeedsRegBlock) {
@@ -11632,17 +11638,18 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           getNumRegistersForCallingConv(Context, CLI.CallConv, VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
         ISD::InputArg Ret(Flags, RegisterVT, VT, RetOrigTys[I],
-                          CLI.IsReturnValueUsed, ISD::InputArg::NoArgIndex, 0);
+                          CLI.getIsReturnValueUsed(), ISD::InputArg::NoArgIndex,
+                          0);
         if (CLI.RetTy->isPointerTy()) {
           Ret.Flags.setPointer();
           Ret.Flags.setPointerAddrSpace(
               cast<PointerType>(CLI.RetTy)->getAddressSpace());
         }
-        if (CLI.RetSExt)
+        if (CLI.getRetSExt())
           Ret.Flags.setSExt();
-        if (CLI.RetZExt)
+        if (CLI.getRetZExt())
           Ret.Flags.setZExt();
-        if (CLI.IsInReg)
+        if (CLI.getIsInReg())
           Ret.Flags.setInReg();
         CLI.Ins.push_back(Ret);
       }
@@ -11675,7 +11682,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     if (Args[i].IsByVal)
       FinalType = Args[i].IndirectType;
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
-        FinalType, CLI.CallConv, CLI.IsVarArg, DL);
+        FinalType, CLI.CallConv, CLI.getIsVarArg(), DL);
     for (unsigned Value = 0, NumValues = OrigArgTys.size(); Value != NumValues;
          ++Value) {
       Type *OrigArgTy = OrigArgTys[Value];
@@ -11805,8 +11812,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // parameter extension method is not compatible with the return
         // extension method
         if ((NumParts * PartVT.getSizeInBits() == VT.getSizeInBits()) ||
-            (ExtendKind != ISD::ANY_EXTEND && CLI.RetSExt == Args[i].IsSExt &&
-             CLI.RetZExt == Args[i].IsZExt))
+            (ExtendKind != ISD::ANY_EXTEND &&
+             CLI.getRetSExt() == Args[i].IsSExt &&
+             CLI.getRetZExt() == Args[i].IsZExt))
           Flags.setReturned();
       }
 
@@ -11841,21 +11849,22 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   CLI.Chain = LowerCall(CLI, InVals);
 
   // Update CLI.InVals to use outside of this function.
-  CLI.InVals = InVals;
+  if (CLI.InVals.data() != InVals.data())
+    CLI.InVals.assign(InVals.begin(), InVals.end());
 
   // Verify that the target's LowerCall behaved as expected.
   assert(CLI.Chain.getNode() && CLI.Chain.getValueType() == MVT::Other &&
          "LowerCall didn't return a valid chain!");
-  assert((!CLI.IsTailCall || InVals.empty()) &&
+  assert((!CLI.getIsTailCall() || InVals.empty()) &&
          "LowerCall emitted a return value for a tail call!");
-  assert((CLI.IsTailCall || InVals.size() == CLI.Ins.size()) &&
+  assert((CLI.getIsTailCall() || InVals.size() == CLI.Ins.size()) &&
          "LowerCall didn't emit the correct number of values!");
 
   // For a tail call, the return value is merely live-out and there aren't
   // any nodes in the DAG representing it. Return a special value to
   // indicate that a tail call has been emitted and no more Instructions
   // should be processed in the current block.
-  if (CLI.IsTailCall) {
+  if (CLI.getIsTailCall()) {
     CLI.DAG.setRoot(CLI.Chain);
     return std::make_pair(SDValue(), SDValue());
   }
@@ -11900,9 +11909,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // Collect the legal value parts into potentially illegal values
     // that correspond to the original function's return values.
     std::optional<ISD::NodeType> AssertOp;
-    if (CLI.RetSExt)
+    if (CLI.getRetSExt())
       AssertOp = ISD::AssertSext;
-    else if (CLI.RetZExt)
+    else if (CLI.getRetZExt())
       AssertOp = ISD::AssertZext;
     unsigned CurReg = 0;
     for (EVT VT : RetVTs) {
@@ -12642,7 +12651,7 @@ void SelectionDAGBuilder::updateDAGForMaybeTailCall(SDValue MaybeTC) {
   if (MaybeTC.getNode() != nullptr)
     DAG.setRoot(MaybeTC);
   else
-    HasTailCall = true;
+    setHasTailCall(true);
 }
 
 void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
@@ -12839,18 +12848,18 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // If the cases in bit test don't form a contiguous range, we evenly
         // distribute the probability on the edge to Fallthrough to two
         // successors of CurMBB.
-        if (!BTB->ContiguousRange) {
+        if (!BTB->getContiguousRange()) {
           BTB->Prob += DefaultProb / 2;
           BTB->DefaultProb -= DefaultProb / 2;
         }
 
         if (FallthroughUnreachable)
-          BTB->FallthroughUnreachable = true;
+          BTB->setFallthroughUnreachable(true);
 
         // If we're in the right place, emit the bit test header right now.
         if (CurMBB == SwitchMBB) {
           visitBitTestHeader(*BTB, SwitchMBB);
-          BTB->Emitted = true;
+          BTB->setEmitted(true);
         }
         break;
       }

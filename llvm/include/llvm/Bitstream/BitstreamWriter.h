@@ -143,6 +143,14 @@ class BitstreamWriter {
   }
 
 public:
+  /// Create a bitstream in writer-owned storage.
+  BitstreamWriter() : Buffer(OwnBuffer), FS(nullptr), FlushThreshold(0) {}
+
+  /// Access the current storage. FlushToWord() completes any pending word.
+  /// Moving the buffer out finishes the stream; do not emit more data
+  /// afterward.
+  SmallVectorImpl<char> &getBuffer() { return Buffer; }
+
   /// Create a BitstreamWriter over a raw_ostream \p OutStream.
   /// If \p OutStream is a raw_svector_ostream, the BitstreamWriter will write
   /// directly to the latter's buffer. In all other cases, the BitstreamWriter

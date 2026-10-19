@@ -145,11 +145,11 @@ AMDGPUTargetStreamer *AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
-  IsTargetStreamerInitialized = false;
+  setIsTargetStreamerInitialized(false);
 }
 
 void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
-  IsTargetStreamerInitialized = true;
+  setIsTargetStreamerInitialized(true);
 
   // TODO: Which one is called first, emitStartOfAsmFile or
   // emitFunctionBodyStart?
@@ -174,7 +174,7 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
 
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Init target streamer if it has not yet happened
-  if (!IsTargetStreamerInitialized)
+  if (!getIsTargetStreamerInitialized())
     initTargetStreamer(M);
 
   const Triple &TT = M.getTargetTriple();
@@ -683,7 +683,7 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
     return;
 
   AMDGPU::InfoSectionData Data;
-  Data.Funcs = std::move(FunctionInfos);
+  Data.Funcs = SmallVector<AMDGPU::FuncInfo, 8>(std::move(FunctionInfos));
 
   for (auto &[F, TypeId] : AddrTakenTypeIds) {
     MCSymbol *Sym = getSymbol(F);
@@ -897,7 +897,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Init target streamer lazily on the first function so that previous passes
   // can set metadata.
-  if (!IsTargetStreamerInitialized)
+  if (!getIsTargetStreamerInitialized())
     initTargetStreamer(*MF.getFunction().getParent());
 
   ResourceUsage = GetResourceUsage(MF);

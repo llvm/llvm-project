@@ -66,9 +66,9 @@ void Ctx::reset() {
   syntheticGlobals.clear();
   syntheticTables.clear();
   whyExtractRecords.clear();
-  isPic = false;
-  legacyFunctionTable = false;
-  emitBssSegments = false;
+  setIsPic(false);
+  setLegacyFunctionTable(false);
+  setEmitBssSegments(false);
   sym = WasmSym{};
 }
 
@@ -507,8 +507,8 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.emitRelocs = args.hasArg(OPT_emit_relocs);
   ctx.arg.entry = getEntry(args);
   ctx.arg.exportAll = args.hasArg(OPT_export_all);
-  ctx.arg.exportTable = args.hasArg(OPT_export_table);
-  ctx.arg.growableTable = args.hasArg(OPT_growable_table);
+  ctx.arg.setExportTable(args.hasArg(OPT_export_table));
+  ctx.arg.setGrowableTable(args.hasArg(OPT_growable_table));
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   if (args.hasArg(OPT_import_memory_with_name)) {
@@ -531,7 +531,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
-  ctx.arg.cooperativeThreading = args.hasArg(OPT_cooperative_threading);
+  ctx.arg.setCooperativeThreading(args.hasArg(OPT_cooperative_threading));
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
@@ -543,14 +543,14 @@ static void readConfigs(opt::InputArgList &args) {
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
-  ctx.arg.ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  ctx.arg.setLtoDebugPassManager(args.hasArg(OPT_lto_debug_pass_manager));
   ctx.arg.mapFile = args.getLastArgValue(OPT_Map);
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
   ctx.arg.relocatable = args.hasArg(OPT_relocatable);
-  ctx.arg.rpath = args::getStrings(args, OPT_rpath);
-  ctx.arg.gcSections =
-      args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !ctx.arg.relocatable);
+  ctx.arg.rpath.assign(args::getStrings(args, OPT_rpath));
+  ctx.arg.setGcSections(
+      args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !ctx.arg.relocatable));
   for (auto *arg : args.filtered(OPT_keep_section))
     ctx.arg.keepSections.insert(arg->getValue());
   ctx.arg.mergeDataSegments =
@@ -560,7 +560,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.printGcSections =
       args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   ctx.arg.saveTemps = args.hasArg(OPT_save_temps);
-  ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
+  ctx.arg.searchPaths.assign(args::getStrings(args, OPT_library_path));
   ctx.arg.shared = args.hasArg(OPT_shared);
   ctx.arg.shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   ctx.arg.stripAll = args.hasArg(OPT_strip_all);
@@ -606,7 +606,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   ctx.arg.initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   ctx.arg.maxMemory = args::getInteger(args, OPT_max_memory, 0);
-  ctx.arg.noGrowableMemory = args.hasArg(OPT_no_growable_memory);
+  ctx.arg.setNoGrowableMemory(args.hasArg(OPT_no_growable_memory));
   ctx.arg.zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmDefaultPageSize);
   ctx.arg.pageSize = args::getInteger(args, OPT_page_size, WasmDefaultPageSize);
@@ -617,14 +617,14 @@ static void readConfigs(opt::InputArgList &args) {
   if (ctx.arg.pie || ctx.arg.shared)
     ctx.arg.isStatic = false;
 
-  if (ctx.arg.maxMemory != 0 && ctx.arg.noGrowableMemory) {
+  if (ctx.arg.maxMemory != 0 && ctx.arg.getNoGrowableMemory()) {
     // Erroring out here is simpler than defining precedence rules.
     error("--max-memory is incompatible with --no-growable-memory");
   }
 
   // Default value of exportDynamic depends on `-shared`
-  ctx.arg.exportDynamic =
-      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, ctx.arg.shared);
+  ctx.arg.setExportDynamic(
+      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, ctx.arg.shared));
 
   // Parse wasm32/64.
   if (auto *arg = args.getLastArg(OPT_m)) {
@@ -675,7 +675,9 @@ static void readConfigs(opt::InputArgList &args) {
   if (args.hasArg(OPT_print_map))
     ctx.arg.mapFile = "-";
 
-  std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(args);
+  auto [BuildId, BuildIdVector] = getBuildId(args);
+  ctx.arg.buildId = BuildId;
+  ctx.arg.buildIdVector.assign(std::move(BuildIdVector));
 }
 
 // Some Config members do not directly correspond to any particular
@@ -683,10 +685,10 @@ static void readConfigs(opt::InputArgList &args) {
 // This function initialize such members. See Config.h for the details
 // of these values.
 static void setConfigs() {
-  ctx.isPic = ctx.arg.pie || ctx.arg.shared;
+  ctx.setIsPic(ctx.arg.pie || ctx.arg.shared);
 
-  if (ctx.isPic) {
-    if (ctx.arg.exportTable)
+  if (ctx.getIsPic()) {
+    if (ctx.arg.getExportTable())
       error("-shared/-pie is incompatible with --export-table");
     ctx.arg.importTable = true;
   } else {
@@ -703,9 +705,9 @@ static void setConfigs() {
   }
 
   if (ctx.arg.relocatable) {
-    if (ctx.arg.exportTable)
+    if (ctx.arg.getExportTable())
       error("--relocatable is incompatible with --export-table");
-    if (ctx.arg.growableTable)
+    if (ctx.arg.getGrowableTable())
       error("--relocatable is incompatible with --growable-table");
     // Ignore any --import-table, as it's redundant.
     ctx.arg.importTable = true;
@@ -725,10 +727,10 @@ static void setConfigs() {
   if (!ctx.arg.memoryExport.has_value() && !ctx.arg.memoryImport.has_value()) {
     ctx.arg.memoryExport = memoryName;
   }
-  if (ctx.arg.cooperativeThreading) {
+  if (ctx.arg.getCooperativeThreading()) {
     if (ctx.arg.sharedMemory)
       error("--cooperative-threading is incompatible with --shared-memory");
-    ctx.arg.libcallThreadContext = true;
+    ctx.arg.setLibcallThreadContext(true);
 
     // Cooperative threading requires the table is either imported or exported
     // or otherwise there's no way for embedders to read spawned functions from
@@ -736,7 +738,7 @@ static void setConfigs() {
     // imported (e.g in `isPic` mode) then export the table instead to ensure
     // that it's visible to the outside world.
     if (!ctx.arg.importTable)
-      ctx.arg.exportTable = true;
+      ctx.arg.setExportTable(true);
   }
 }
 
@@ -758,13 +760,13 @@ static void checkOptions(opt::InputArgList &args) {
   if (ctx.arg.outputFile.empty() && !ctx.arg.thinLTOIndexOnly)
     error("no output file specified");
 
-  if (ctx.arg.importTable && ctx.arg.exportTable)
+  if (ctx.arg.importTable && ctx.arg.getExportTable())
     error("--import-table and --export-table may not be used together");
 
   if (ctx.arg.relocatable) {
     if (!ctx.arg.entry.empty())
       error("entry point specified for relocatable output file");
-    if (ctx.arg.gcSections)
+    if (ctx.arg.getGcSections())
       error("-r and --gc-sections may not be used together");
     if (ctx.arg.compressRelocations)
       error("-r -and --compress-relocations may not be used together");
@@ -782,7 +784,7 @@ static void checkOptions(opt::InputArgList &args) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
   }
 
-  if (ctx.isPic) {
+  if (ctx.getIsPic()) {
     if (ctx.arg.globalBase)
       error("--global-base may not be used with -shared/-pie");
     if (ctx.arg.tableBase)
@@ -918,10 +920,11 @@ static void createSyntheticSymbols() {
 
   bool is64 = ctx.arg.is64.value_or(false);
 
-  auto stack_pointer_name =
-      ctx.arg.libcallThreadContext ? "__init_stack_pointer" : "__stack_pointer";
-  if (ctx.isPic) {
-    if (ctx.arg.libcallThreadContext) {
+  auto stack_pointer_name = ctx.arg.getLibcallThreadContext()
+                                ? "__init_stack_pointer"
+                                : "__stack_pointer";
+  if (ctx.getIsPic()) {
+    if (ctx.arg.getLibcallThreadContext()) {
       ctx.sym.stackPointer = createUndefinedGlobal(
           stack_pointer_name,
           ctx.arg.is64.value_or(false) ? &globalTypeI64 : &globalTypeI32);
@@ -943,14 +946,14 @@ static void createSyntheticSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer =
-        createGlobalVariable(stack_pointer_name, !ctx.arg.libcallThreadContext);
+    ctx.sym.stackPointer = createGlobalVariable(
+        stack_pointer_name, !ctx.arg.getLibcallThreadContext());
   }
 
   if (ctx.arg.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
-        ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
+        ctx.arg.getLibcallThreadContext() ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
@@ -961,7 +964,7 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    if (ctx.arg.libcallThreadContext) {
+    if (ctx.arg.getLibcallThreadContext()) {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
@@ -986,7 +989,7 @@ static void createOptionalSymbols() {
   auto addDataLayoutSymbol = [&](StringRef s) -> DefinedData * {
     // Data layout symbols are either defined by lld, or (in the case
     // of PIC code) defined by the dynamic linker / embedder.
-    if (ctx.isPic) {
+    if (ctx.getIsPic()) {
       ctx.arg.allowUndefinedSymbols.insert(s);
       return nullptr;
     } else {
@@ -1005,7 +1008,7 @@ static void createOptionalSymbols() {
 
   // for pic, __memory_base and __table_base are handled in
   // createSyntheticSymbols.
-  if (!ctx.isPic) {
+  if (!ctx.getIsPic()) {
     ctx.sym.memoryBase = createOptionalGlobal("__memory_base", false);
     ctx.sym.tableBase = createOptionalGlobal("__table_base", false);
   }
@@ -1481,7 +1484,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       sym->forceExport = true;
   }
 
-  if (!ctx.arg.relocatable && !ctx.isPic) {
+  if (!ctx.arg.relocatable && !ctx.getIsPic()) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();

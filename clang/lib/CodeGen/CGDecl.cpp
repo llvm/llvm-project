@@ -1366,7 +1366,7 @@ void CodeGenFunction::EmitAutoVarDecl(const VarDecl &D) {
 /// Emit a lifetime.begin marker if some criteria are satisfied.
 /// \return whether the marker was emitted.
 bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
-  if (!ShouldEmitLifetimeMarkers)
+  if (!getShouldEmitLifetimeMarkers())
     return false;
 
   assert(Addr->getType()->getPointerAddressSpace() ==
@@ -1378,7 +1378,7 @@ bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
 }
 
 void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Addr) {
-  if (!ShouldEmitLifetimeMarkers)
+  if (!getShouldEmitLifetimeMarkers())
     return;
 
   assert(Addr->getType()->getPointerAddressSpace() ==
@@ -1727,7 +1727,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     }
 
     if (!VarAllocated) {
-      if (!DidCallStackSave) {
+      if (!getDidCallStackSave()) {
         // Save the stack.
         Address Stack =
             CreateDefaultAlignTempAlloca(AllocaInt8PtrTy, "saved_stack");
@@ -1736,7 +1736,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         assert(V->getType() == AllocaInt8PtrTy);
         Builder.CreateStore(V, Stack);
 
-        DidCallStackSave = true;
+        setDidCallStackSave(true);
 
         // Push a cleanup block and restore the stack there.
         // FIXME: in general circumstances, this should be an EH cleanup.
@@ -2810,7 +2810,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Push a destructor cleanup for this parameter if the ABI requires it.
     // Don't push a cleanup in a thunk for a method that will also emit a
     // cleanup.
-    if (Ty->isRecordType() && !CurFuncIsThunk &&
+    if (Ty->isRecordType() && !getCurFuncIsThunk() &&
         Ty->castAsRecordDecl()->isParamDestroyedInCallee()) {
       if (QualType::DestructionKind DtorKind =
               D.needsDestruction(getContext())) {
@@ -2844,7 +2844,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   LValue lv = MakeAddrLValue(DeclPtr, Ty);
   // If this is a thunk, don't bother with ARC lifetime management.
   // The true implementation will take care of that.
-  if (IsScalar && !CurFuncIsThunk) {
+  if (IsScalar && !getCurFuncIsThunk()) {
     Qualifiers qs = Ty.getQualifiers();
     if (Qualifiers::ObjCLifetime lt = qs.getObjCLifetime()) {
       // We honor __attribute__((ns_consumed)) for types with lifetime.
@@ -2927,7 +2927,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
 
   // Emit debug info for param declarations in non-thunk functions.
   if (CGDebugInfo *DI = getDebugInfo()) {
-    if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk &&
+    if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !getCurFuncIsThunk() &&
         !NoDebugInfo) {
       llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
           &D, AllocaPtr.getPointer(), ArgNo, Builder, UseIndirectDebugAddress);

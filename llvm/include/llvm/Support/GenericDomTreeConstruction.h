@@ -569,7 +569,9 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
     // Step #0: Number blocks in depth-first order and initialize variables used
     // in later stages of the algorithm.
-    DT.Roots = FindRoots(DT, PostViewBUI);
+    RootsT NewRoots = FindRoots(DT, PostViewBUI);
+    NewRoots.setFlags(DT.Roots.getFlags());
+    DT.Roots = std::move(NewRoots);
     SNCA.doFullDFSWalk(DT, AlwaysDescend);
 
     SNCA.runSemiNCA();
@@ -655,7 +657,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       DT.Roots.push_back(From);
     }
 
-    DT.DFSInfoValid = false;
+    DT.setDFSInfoValid(false);
 
     const TreeNodePtr ToTN = DT.getNode(To);
     if (!ToTN)
@@ -685,8 +687,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     return true;
   }
 
-  static bool isPermutation(const SmallVectorImpl<NodePtr> &A,
-                            const SmallVectorImpl<NodePtr> &B) {
+  static bool isPermutation(ArrayRef<NodePtr> A, ArrayRef<NodePtr> B) {
     if (A.size() != B.size())
       return false;
     SmallPtrSet<NodePtr, 4> Set(llvm::from_range, A);
@@ -942,7 +943,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
     // If To dominates From -- nothing to do.
     if (ToTN != NCD) {
-      DT.DFSInfoValid = false;
+      DT.setDFSInfoValid(false);
 
       const TreeNodePtr ToIDom = ToTN->getIDom();
       LLVM_DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
@@ -1322,7 +1323,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // be valid, and when that is the case, we don't verify the numbers.
   // Running time: O(N log(N)).
   static bool VerifyDFSNumbers(const DomTreeT &DT) {
-    if (!DT.DFSInfoValid || !DT.Parent)
+    if (!DT.isDFSInfoValid() || !DT.Parent)
       return true;
 
     const NodePtr RootBB = IsPostDom ? nullptr : *DT.root_begin();

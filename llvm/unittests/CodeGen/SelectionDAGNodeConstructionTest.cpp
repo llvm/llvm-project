@@ -9,7 +9,9 @@
 #include "SelectionDAGTestBase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 using namespace llvm;
 
@@ -537,4 +539,44 @@ TEST_F(SelectionDAGNodeConstructionTest, VectorRepeat) {
   ASSERT_EQ(NXV1.getOperand(0).getOpcode(), ISD::EXTRACT_VECTOR_ELT);
   EXPECT_EQ(NXV1.getOperand(0).getOperand(0), V1);
   EXPECT_TRUE(isNullConstant(NXV1.getOperand(0).getOperand(1)));
+}
+
+TEST_F(SelectionDAGNodeConstructionTest, TokenFactorPreservesVectorFlags) {
+  SmallVectorWithFlags<SDValue, 8, 3> Chains;
+  Chains.setFlags(5);
+  Chains.assign(SDNode::getMaxNumOperands() + 1, DAG->getEntryNode());
+  SDValue Root = DAG->getTokenFactor(SDLoc(), Chains);
+  EXPECT_EQ(Root.getValueType(), MVT::Other);
+  EXPECT_EQ(Chains.size(), 2u);
+  EXPECT_EQ(Chains.getFlags(), 5u);
+}
+
+TEST_F(SelectionDAGNodeConstructionTest,
+       CallFlagsSurviveArgumentGrowthAndCopy) {
+  TargetLowering::CallLoweringInfo CLI(*DAG);
+  EXPECT_TRUE(CLI.getIsReturnValueUsed());
+  EXPECT_FALSE(CLI.getIsTailCall());
+  CLI.setSExtResult().setConvergent().setTailCall();
+  CLI.setNoMerge(true);
+  CLI.Outs.assign(65, ISD::OutputArg({}, MVT::i32, MVT::i32, nullptr, 0, 0));
+  CLI.Ins.assign(65,
+                 ISD::InputArg({}, MVT::i32, MVT::i32, nullptr, true, 0, 0));
+  CLI.InVals.assign(17, DAG->getEntryNode());
+
+  auto Copy = CLI;
+  CLI.Outs.clear();
+  CLI.Ins.clear();
+  CLI.InVals.clear();
+  for (const auto *Info : {&CLI, &Copy}) {
+    EXPECT_TRUE(Info->getRetSExt());
+    EXPECT_TRUE(Info->getIsReturnValueUsed());
+    EXPECT_TRUE(Info->getIsConvergent());
+    EXPECT_TRUE(Info->getNoMerge());
+    EXPECT_TRUE(Info->getIsTailCall());
+    EXPECT_FALSE(Info->getRetZExt());
+  }
+  EXPECT_EQ(Copy.Outs.size(), 65u);
+  EXPECT_EQ(Copy.Ins.size(), 65u);
+  EXPECT_EQ(Copy.InVals.size(), 17u);
+  EXPECT_EQ(Copy.InVals.front(), DAG->getEntryNode());
 }

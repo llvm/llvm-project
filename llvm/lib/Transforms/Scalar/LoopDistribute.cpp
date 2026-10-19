@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -96,12 +97,14 @@ class InstPartition {
 
 public:
   InstPartition(Instruction *I, Loop *L, bool DepCycle = false)
-      : DepCycle(DepCycle), OrigLoop(L) {
+      : OrigLoop(L),
+        ClonedLoopBlocks(
+            decltype(this->ClonedLoopBlocks)::withFlags(unsigned(DepCycle))) {
     Set.insert(I);
   }
 
   /// Returns whether this partition contains a dependence cycle.
-  bool hasDepCycle() const { return DepCycle; }
+  bool hasDepCycle() const { return getDepCycle(); }
 
   /// Adds an instruction to this partition.
   void add(Instruction *I) { Set.insert(I); }
@@ -118,7 +121,7 @@ public:
   void moveTo(InstPartition &Other) {
     Other.Set.insert_range(Set);
     Set.clear();
-    Other.DepCycle |= DepCycle;
+    Other.setDepCycle(int(Other.getDepCycle()) | (getDepCycle()));
   }
 
   /// Populates the partition with a transitive closure of all the
@@ -151,9 +154,12 @@ public:
   Loop *cloneLoopWithPreheader(BasicBlock *InsertBefore, BasicBlock *LoopDomBB,
                                unsigned Index, LoopInfo *LI,
                                DominatorTree *DT) {
+    SmallVector<BasicBlock *, 8> Blocks;
+    Blocks = std::move(ClonedLoopBlocks);
     ClonedLoop = ::cloneLoopWithPreheader(InsertBefore, LoopDomBB, OrigLoop,
                                           VMap, Twine(".ldist") + Twine(Index),
-                                          LI, DT, ClonedLoopBlocks);
+                                          LI, DT, Blocks);
+    ClonedLoopBlocks.assign(std::move(Blocks));
     return ClonedLoop;
   }
 
@@ -205,7 +211,7 @@ public:
   }
 
   void print(raw_ostream &OS) const {
-    OS << (DepCycle ? " (cycle)\n" : "\n");
+    OS << (getDepCycle() ? " (cycle)\n" : "\n");
     for (auto *I : Set)
       // Prefix with the block name.
       OS << "  " << I->getParent()->getName() << ":" << *I << "\n";
@@ -221,7 +227,8 @@ private:
   InstructionSet Set;
 
   /// Whether this partition contains a dependence cycle.
-  bool DepCycle;
+  bool getDepCycle() const { return ClonedLoopBlocks.getFlag(0); }
+  void setDepCycle(bool Value) { ClonedLoopBlocks.setFlag(0, Value); }
 
   /// The original loop.
   Loop *OrigLoop;
@@ -232,7 +239,7 @@ private:
 
   /// The blocks of ClonedLoop including the preheader.  If this
   /// partition is mapped to the original loop, this is empty.
-  SmallVector<BasicBlock *, 8> ClonedLoopBlocks;
+  llvm::SmallVectorWithFlags<BasicBlock *, 8> ClonedLoopBlocks;
 
   /// These gets populated once the set of instructions have been
   /// finalized. If this partition is mapped to the original loop, these are not
@@ -596,9 +603,8 @@ public:
   AccessesType::const_iterator begin() const { return Accesses.begin(); }
   AccessesType::const_iterator end() const { return Accesses.end(); }
 
-  MemoryInstructionDependences(
-      const SmallVectorImpl<Instruction *> &Instructions,
-      const SmallVectorImpl<Dependence> &Dependences) {
+  MemoryInstructionDependences(ArrayRef<Instruction *> Instructions,
+                               const SmallVectorImpl<Dependence> &Dependences) {
     Accesses.append(Instructions.begin(), Instructions.end());
 
     LLVM_DEBUG(dbgs() << "LDist: Backward dependences:\n");

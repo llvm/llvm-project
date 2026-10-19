@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
@@ -151,7 +152,9 @@ private:
   Instructions Insts;
 
   /// Keep track of the predecessor / successor basic blocks.
-  SmallVector<MachineBasicBlock *, 4> Predecessors;
+  // Flag bits 0-3 mark cleanup funclets, section boundaries, and asm-br
+  // targets.
+  SmallVectorWithFlags<MachineBasicBlock *, 4, 4> Predecessors;
   SmallVector<MachineBasicBlock *, 2> Successors;
 
   /// Keep track of the probabilities to the successors. This vector has the
@@ -206,7 +209,6 @@ private:
   bool IsEHFuncletEntry = false;
 
   /// Indicate that this basic block is the entry block of a cleanup funclet.
-  bool IsCleanupFuncletEntry = false;
 
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
@@ -216,13 +218,10 @@ private:
   MBBSectionID SectionID{0};
 
   // Indicate that this basic block begins a section.
-  bool IsBeginSection = false;
 
   // Indicate that this basic block ends a section.
-  bool IsEndSection = false;
 
   /// Indicate that this basic block is the indirect dest of an INLINEASM_BR.
-  bool IsInlineAsmBrIndirectTarget = false;
 
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
@@ -280,7 +279,7 @@ public:
   /// more detailed checks that this function aggregates together.
   bool hasAddressTaken() const {
     return MachineBlockAddressTaken || AddressTakenIRBlock ||
-           IsInlineAsmBrIndirectTarget;
+           isInlineAsmBrIndirectTarget();
   }
 
   /// Test whether this block is used as something other than the target of a
@@ -692,20 +691,20 @@ public:
   void setIsEHFuncletEntry(bool V = true) { IsEHFuncletEntry = V; }
 
   /// Returns true if this is the entry block of a cleanup funclet.
-  bool isCleanupFuncletEntry() const { return IsCleanupFuncletEntry; }
+  bool isCleanupFuncletEntry() const { return Predecessors.getFlag(0); }
 
   /// Indicates if this is the entry block of a cleanup funclet.
-  void setIsCleanupFuncletEntry(bool V = true) { IsCleanupFuncletEntry = V; }
+  void setIsCleanupFuncletEntry(bool V = true) { Predecessors.setFlag(0, V); }
 
   /// Returns true if this block begins any section.
-  bool isBeginSection() const { return IsBeginSection; }
+  bool isBeginSection() const { return Predecessors.getFlag(1); }
 
   /// Returns true if this block ends any section.
-  bool isEndSection() const { return IsEndSection; }
+  bool isEndSection() const { return Predecessors.getFlag(2); }
 
-  void setIsBeginSection(bool V = true) { IsBeginSection = V; }
+  void setIsBeginSection(bool V = true) { Predecessors.setFlag(1, V); }
 
-  void setIsEndSection(bool V = true) { IsEndSection = V; }
+  void setIsEndSection(bool V = true) { Predecessors.setFlag(2, V); }
 
   std::optional<UniqueBBID> getBBID() const { return BBID; }
 
@@ -730,13 +729,11 @@ public:
   LLVM_ABI bool mayHaveInlineAsmBr() const;
 
   /// Returns true if this is the indirect dest of an INLINEASM_BR.
-  bool isInlineAsmBrIndirectTarget() const {
-    return IsInlineAsmBrIndirectTarget;
-  }
+  bool isInlineAsmBrIndirectTarget() const { return Predecessors.getFlag(3); }
 
   /// Indicates if this is the indirect dest of an INLINEASM_BR.
   void setIsInlineAsmBrIndirectTarget(bool V = true) {
-    IsInlineAsmBrIndirectTarget = V;
+    Predecessors.setFlag(3, V);
   }
 
   /// Returns true if it is legal to hoist instructions into this block.

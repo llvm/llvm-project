@@ -166,14 +166,14 @@ bool Compilation::CleanupFileMap(const ArgStringMap &Files,
 int Compilation::ExecuteCommand(const Command &C,
                                 const Command *&FailingCommand,
                                 bool LogOnly) const {
-  if ((getDriver().CCPrintOptions ||
-       getArgs().hasArg(options::OPT_v)) && !getDriver().CCGenDiagnostics) {
+  if ((getDriver().getCCPrintOptions() || getArgs().hasArg(options::OPT_v)) &&
+      !getDriver().CCGenDiagnostics) {
     raw_ostream *OS = &llvm::errs();
     std::unique_ptr<llvm::raw_fd_ostream> OwnedStream;
 
     // Follow gcc implementation of CC_PRINT_OPTIONS; we could also cache the
     // output stream.
-    if (getDriver().CCPrintOptions &&
+    if (getDriver().getCCPrintOptions() &&
         !getDriver().CCPrintOptionsFilename.empty()) {
       std::error_code EC;
       OwnedStream.reset(new llvm::raw_fd_ostream(
@@ -188,10 +188,10 @@ int Compilation::ExecuteCommand(const Command &C,
       OS = OwnedStream.get();
     }
 
-    if (getDriver().CCPrintOptions)
+    if (getDriver().getCCPrintOptions())
       *OS << "[Logging clang options]\n";
 
-    C.Print(*OS, "\n", /*Quote=*/getDriver().CCPrintOptions);
+    C.Print(*OS, "\n", /*Quote=*/getDriver().getCCPrintOptions());
   }
 
   if (LogOnly)
@@ -370,7 +370,7 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
   // In all but CLMode, execute all the jobs unless the necessary inputs for the
   // job is missing due to previous failures.
   bool CanRunJobsInParallel =
-      !LogOnly && !getDriver().CCPrintOptions &&
+      !LogOnly && !getDriver().getCCPrintOptions() &&
       !getDriver().CCPrintProcessStats && !getDriver().CCGenDiagnostics &&
       !getDriver().IsCLMode() && !getArgs().hasArg(options::OPT_v) &&
       Redirects.empty() && !PostCallback;

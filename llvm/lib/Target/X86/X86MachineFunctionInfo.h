@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -118,11 +119,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   unsigned NumLocalDynamics = 0;
   /// HasPushSequences - Keeps track of whether this function uses sequences
   /// of pushes to pass function parameters.
-  bool HasPushSequences = false;
 
   /// True if the function recovers from an SEH exception, and therefore needs
   /// to spill and restore the frame pointer.
-  bool HasSEHFramePtrSave = false;
 
   /// The frame index of a stack object containing the original frame pointer
   /// used to address arguments in a function using a base pointer.
@@ -147,7 +146,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// Whether this function has an extended frame record [Ctx, RBP, Return
   /// addr]. If so, bit 60 of the in-memory frame pointer will be 1 to enable
   /// other tools to detect the extended record.
-  bool HasSwiftAsyncContext = false;
 
   /// Candidate registers for push2/pop2
   std::set<Register> CandidatesForPush2Pop2;
@@ -155,7 +153,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// True if this function has CFI directives that adjust the CFA.
   /// This is used to determine if we should direct the debugger to use
   /// the CFA instead of the stack pointer.
-  bool HasCFIAdjustCfa = false;
 
   MachineInstr *StackPtrSaveMI = nullptr;
 
@@ -164,14 +161,11 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   // Preallocated fields are only used during isel.
   // FIXME: Can we find somewhere else to store these?
   DenseMap<const Value *, size_t> PreallocatedIds;
-  SmallVector<size_t, 0> PreallocatedStackSizes;
-  SmallVector<SmallVector<size_t, 4>, 0> PreallocatedArgOffsets;
+  llvm::SmallVectorWithFlags<size_t, 0, 4> PreallocatedStackSizes;
+  llvm::SmallVectorWithFlags<SmallVector<size_t, 4>, 0, 4>
+      PreallocatedArgOffsets;
 
   // True if a function clobbers FP/BP according to its calling convention.
-  bool FPClobberedByCall = false;
-  bool BPClobberedByCall = false;
-  bool FPClobberedByInvoke = false;
-  bool BPClobberedByInvoke = false;
 
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
@@ -194,8 +188,10 @@ public:
   bool getForceFramePointer() const { return ForceFramePointer;}
   void setForceFramePointer(bool forceFP) { ForceFramePointer = forceFP; }
 
-  bool getHasPushSequences() const { return HasPushSequences; }
-  void setHasPushSequences(bool HasPush) { HasPushSequences = HasPush; }
+  bool getHasPushSequences() const { return PreallocatedArgOffsets.getFlag(0); }
+  void setHasPushSequences(bool HasPush) {
+    PreallocatedArgOffsets.setFlag(0, HasPush);
+  }
 
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset!=0; }
   void setRestoreBasePointer(const MachineFunction *MF);
@@ -247,8 +243,10 @@ public:
   unsigned getNumLocalDynamicTLSAccesses() const { return NumLocalDynamics; }
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamics; }
 
-  bool getHasSEHFramePtrSave() const { return HasSEHFramePtrSave; }
-  void setHasSEHFramePtrSave(bool V) { HasSEHFramePtrSave = V; }
+  bool getHasSEHFramePtrSave() const {
+    return PreallocatedArgOffsets.getFlag(1);
+  }
+  void setHasSEHFramePtrSave(bool V) { PreallocatedArgOffsets.setFlag(1, V); }
 
   int getSEHFramePtrSaveIndex() const { return SEHFramePtrSaveIndex; }
   void setSEHFramePtrSaveIndex(int Index) { SEHFramePtrSaveIndex = Index; }
@@ -276,8 +274,10 @@ public:
   bool hasPreallocatedCall() const { return HasPreallocatedCall; }
   void setHasPreallocatedCall(bool v) { HasPreallocatedCall = v; }
 
-  bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
-  void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
+  bool hasSwiftAsyncContext() const {
+    return PreallocatedArgOffsets.getFlag(2);
+  }
+  void setHasSwiftAsyncContext(bool v) { PreallocatedArgOffsets.setFlag(2, v); }
 
   bool isCandidateForPush2Pop2(Register Reg) const {
     return CandidatesForPush2Pop2.find(Reg) != CandidatesForPush2Pop2.end();
@@ -289,8 +289,8 @@ public:
     return CandidatesForPush2Pop2.size();
   }
 
-  bool hasCFIAdjustCfa() const { return HasCFIAdjustCfa; }
-  void setHasCFIAdjustCfa(bool v) { HasCFIAdjustCfa = v; }
+  bool hasCFIAdjustCfa() const { return PreallocatedArgOffsets.getFlag(3); }
+  void setHasCFIAdjustCfa(bool v) { PreallocatedArgOffsets.setFlag(3, v); }
 
   void setStackPtrSaveMI(MachineInstr *MI) { StackPtrSaveMI = MI; }
   MachineInstr *getStackPtrSaveMI() const { return StackPtrSaveMI; }
@@ -327,17 +327,25 @@ public:
     return PreallocatedArgOffsets[Id];
   }
 
-  bool getFPClobberedByCall() const { return FPClobberedByCall; }
-  void setFPClobberedByCall(bool C) { FPClobberedByCall = C; }
+  bool getFPClobberedByCall() const {
+    return PreallocatedStackSizes.getFlag(0);
+  }
+  void setFPClobberedByCall(bool C) { PreallocatedStackSizes.setFlag(0, C); }
 
-  bool getBPClobberedByCall() const { return BPClobberedByCall; }
-  void setBPClobberedByCall(bool C) { BPClobberedByCall = C; }
+  bool getBPClobberedByCall() const {
+    return PreallocatedStackSizes.getFlag(1);
+  }
+  void setBPClobberedByCall(bool C) { PreallocatedStackSizes.setFlag(1, C); }
 
-  bool getFPClobberedByInvoke() const { return FPClobberedByInvoke; }
-  void setFPClobberedByInvoke(bool C) { FPClobberedByInvoke = C; }
+  bool getFPClobberedByInvoke() const {
+    return PreallocatedStackSizes.getFlag(2);
+  }
+  void setFPClobberedByInvoke(bool C) { PreallocatedStackSizes.setFlag(2, C); }
 
-  bool getBPClobberedByInvoke() const { return BPClobberedByInvoke; }
-  void setBPClobberedByInvoke(bool C) { BPClobberedByInvoke = C; }
+  bool getBPClobberedByInvoke() const {
+    return PreallocatedStackSizes.getFlag(3);
+  }
+  void setBPClobberedByInvoke(bool C) { PreallocatedStackSizes.setFlag(3, C); }
 };
 
 } // End llvm namespace

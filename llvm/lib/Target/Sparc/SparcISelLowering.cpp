@@ -237,10 +237,11 @@ static unsigned toCallerWindow(unsigned Reg) {
   return Reg;
 }
 
-bool SparcTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool SparcTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                         MachineFunction &MF, bool isVarArg,
+                                         llvm::ArrayRef<ISD::OutputArg> Outs,
+                                         LLVMContext &Context,
+                                         const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, Subtarget->is64Bit() ? RetCC_Sparc64
@@ -250,7 +251,7 @@ bool SparcTargetLowering::CanLowerReturn(
 SDValue
 SparcTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  bool IsVarArg,
-                                 const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                 llvm::ArrayRef<ISD::OutputArg> Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &DL, SelectionDAG &DAG) const {
   if (Subtarget->is64Bit())
@@ -261,7 +262,7 @@ SparcTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 SDValue
 SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
                                     bool IsVarArg,
-                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                    llvm::ArrayRef<ISD::OutputArg> Outs,
                                     const SmallVectorImpl<SDValue> &OutVals,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -352,7 +353,7 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
 SDValue
 SparcTargetLowering::LowerReturn_64(SDValue Chain, CallingConv::ID CallConv,
                                     bool IsVarArg,
-                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                    llvm::ArrayRef<ISD::OutputArg> Outs,
                                     const SmallVectorImpl<SDValue> &OutVals,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of the return value to locations.
@@ -428,8 +429,8 @@ SparcTargetLowering::LowerReturn_64(SDValue Chain, CallingConv::ID CallConv,
 
 SDValue SparcTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   if (Subtarget->is64Bit())
     return LowerFormalArguments_64(Chain, CallConv, IsVarArg, Ins,
                                    DL, DAG, InVals);
@@ -442,8 +443,8 @@ SDValue SparcTargetLowering::LowerFormalArguments(
 /// pass FP values in FP registers for fastcc functions.
 SDValue SparcTargetLowering::LowerFormalArguments_32(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   SparcMachineFunctionInfo *FuncInfo = MF.getInfo<SparcMachineFunctionInfo>();
@@ -649,8 +650,8 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
 // Lower formal arguments for the 64 bit ABI.
 SDValue SparcTargetLowering::LowerFormalArguments_64(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze arguments according to CC_Sparc64.
@@ -846,14 +847,13 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
                                   SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
-  SDValue Callee                        = CLI.Callee;
-  bool &isTailCall                      = CLI.IsTailCall;
+  SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool isVarArg                         = CLI.IsVarArg;
+  bool isVarArg = CLI.getIsVarArg();
   MachineFunction &MF = DAG.getMachineFunction();
   LLVMContext &Ctx = *DAG.getContext();
   EVT PtrVT = getPointerTy(MF.getDataLayout());
@@ -864,8 +864,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
                  *DAG.getContext());
   CCInfo.AnalyzeCallOperands(Outs, CC_Sparc32);
 
-  isTailCall = isTailCall && IsEligibleForTailCallOptimization(
-                                 CCInfo, CLI, DAG.getMachineFunction());
+  CLI.setIsTailCall(
+      CLI.getIsTailCall() &&
+      IsEligibleForTailCallOptimization(CCInfo, CLI, DAG.getMachineFunction()));
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getStackSize();
@@ -905,9 +906,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  assert(!isTailCall || ArgsSize == 0);
+  assert(!CLI.getIsTailCall() || ArgsSize == 0);
 
-  if (!isTailCall)
+  if (!CLI.getIsTailCall())
     Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, dl);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
@@ -956,7 +957,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     if (Flags.isSRet()) {
       assert(VA.needsCustom());
 
-      if (isTailCall)
+      if (CLI.getIsTailCall())
         continue;
 
       // store SRet argument in %sp+64
@@ -1114,7 +1115,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // stuck together.
   SDValue InGlue;
   for (const auto &[OrigReg, N] : RegsToPass) {
-    Register Reg = isTailCall ? OrigReg : toCallerWindow(OrigReg);
+    Register Reg = CLI.getIsTailCall() ? OrigReg : toCallerWindow(OrigReg);
     Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
@@ -1137,7 +1138,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   if (hasStructRetAttr)
     Ops.push_back(DAG.getTargetConstant(SRetArgSize, dl, MVT::i32));
   for (const auto &[OrigReg, N] : RegsToPass) {
-    Register Reg = isTailCall ? OrigReg : toCallerWindow(OrigReg);
+    Register Reg = CLI.getIsTailCall() ? OrigReg : toCallerWindow(OrigReg);
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
   }
 
@@ -1157,7 +1158,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
-  if (isTailCall) {
+  if (CLI.getIsTailCall()) {
     DAG.getMachineFunction().getFrameInfo().setHasTailCall();
     return DAG.getNode(SPISD::TAIL_CALL, dl, MVT::Other, Ops);
   }
@@ -1292,12 +1293,13 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
+  CCState CCInfo(CLI.CallConv, CLI.getIsVarArg(), DAG.getMachineFunction(),
+                 ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeCallOperands(CLI.Outs, CC_Sparc64);
 
-  CLI.IsTailCall = CLI.IsTailCall && IsEligibleForTailCallOptimization(
-                                         CCInfo, CLI, DAG.getMachineFunction());
+  CLI.setIsTailCall(
+      CLI.getIsTailCall() &&
+      IsEligibleForTailCallOptimization(CCInfo, CLI, DAG.getMachineFunction()));
 
   // Get the size of the outgoing arguments stack space requirement.
   // The stack offset computed by CC_Sparc64 includes all arguments.
@@ -1310,15 +1312,15 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   ArgsSize = alignTo(ArgsSize, 16);
 
   // Varargs calls require special treatment.
-  if (CLI.IsVarArg)
+  if (CLI.getIsVarArg())
     fixupVariableFloatArgs(ArgLocs, CLI.Outs);
 
-  assert(!CLI.IsTailCall || ArgsSize == StackReserved);
+  assert(!CLI.getIsTailCall() || ArgsSize == StackReserved);
 
   // Adjust the stack pointer to make room for the arguments.
   // FIXME: Use hasReservedCallFrame to avoid %sp adjustments around all calls
   // with more than 6 arguments.
-  if (!CLI.IsTailCall)
+  if (!CLI.getIsTailCall())
     Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, DL);
 
   // Collect the set of registers to pass to the function and their values.
@@ -1382,7 +1384,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 
         Register HiReg = VA.getLocReg();
         Register LoReg = VA.getLocReg() + 1;
-        if (!CLI.IsTailCall) {
+        if (!CLI.getIsTailCall()) {
           HiReg = toCallerWindow(HiReg);
           LoReg = toCallerWindow(LoReg);
         }
@@ -1411,7 +1413,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
       }
 
       Register Reg = VA.getLocReg();
-      if (!CLI.IsTailCall)
+      if (!CLI.getIsTailCall())
         Reg = toCallerWindow(Reg);
       RegsToPass.push_back(std::make_pair(Reg, Arg));
       continue;
@@ -1481,7 +1483,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(InGlue);
 
   // Now the call itself.
-  if (CLI.IsTailCall) {
+  if (CLI.getIsTailCall()) {
     DAG.getMachineFunction().getFrameInfo().setHasTailCall();
     return DAG.getNode(SPISD::TAIL_CALL, DL, MVT::Other, Ops);
   }
@@ -1498,8 +1500,8 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState RVInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), RVLocs,
-                 *DAG.getContext());
+  CCState RVInfo(CLI.CallConv, CLI.getIsVarArg(), DAG.getMachineFunction(),
+                 RVLocs, *DAG.getContext());
 
   // Set inreg flag manually for codegen generated library calls that
   // return float.

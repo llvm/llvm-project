@@ -1186,8 +1186,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
 /// calling convention analysis function and the register type (Ins[x].VT) as
 /// the ValVT.
 void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
-  CCState &State,
-  const SmallVectorImpl<ISD::InputArg> &Ins) const {
+    CCState &State, llvm::ArrayRef<ISD::InputArg> Ins) const {
   const MachineFunction &MF = State.getMachineFunction();
   const Function &Fn = MF.getFunction();
   LLVMContext &Ctx = Fn.getContext();
@@ -1299,12 +1298,12 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   }
 }
 
-SDValue AMDGPUTargetLowering::LowerReturn(
-  SDValue Chain, CallingConv::ID CallConv,
-  bool isVarArg,
-  const SmallVectorImpl<ISD::OutputArg> &Outs,
-  const SmallVectorImpl<SDValue> &OutVals,
-  const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue
+AMDGPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                  bool isVarArg,
+                                  llvm::ArrayRef<ISD::OutputArg> Outs,
+                                  const SmallVectorImpl<SDValue> &OutVals,
+                                  const SDLoc &DL, SelectionDAG &DAG) const {
   // FIXME: Fails for r600 tests
   //assert(!isVarArg && Outs.empty() && OutVals.empty() &&
   // "wave terminate should not have return values");
@@ -1378,7 +1377,7 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
   DAG.getContext()->diagnose(
       DiagnosticInfoUnsupported(Fn, Reason + FuncName, CLI.DL.getDebugLoc()));
 
-  if (!CLI.IsTailCall) {
+  if (!CLI.getIsTailCall()) {
     for (ISD::InputArg &Arg : CLI.Ins)
       InVals.push_back(DAG.getPOISON(Arg.VT));
   }

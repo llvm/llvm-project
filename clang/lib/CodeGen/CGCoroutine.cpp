@@ -928,7 +928,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   GetReturnObjectManager GroManager(*this, S);
   CurCoro.Data->SuspendBB =
       GroManager.DirectEmit ? RetBB : createBasicBlock("pre.gvo.conv");
-  assert(ShouldEmitLifetimeMarkers &&
+  assert(getShouldEmitLifetimeMarkers() &&
          "Must emit lifetime intrinsics for coroutines");
 
   // Backend is allowed to elide memory allocations, to help it, emit

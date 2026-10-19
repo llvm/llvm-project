@@ -9,7 +9,7 @@
 #ifndef LLVM_MC_MCINSTPRINTER_H
 #define LLVM_MC_MCINSTPRINTER_H
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -72,12 +72,13 @@ protected:
   /// If true, a branch immediate (e.g. bl 4) will be printed as a hexadecimal
   /// address (e.g. bl 0x20004). This is useful for a stream disassembler
   /// (llvm-objdump -d).
-  bool PrintBranchImmAsAddress = false;
+  bool getPrintBranchImmAsAddress() const { return ColorStack.getFlag(0); }
 
   /// If true, symbolize branch target and memory reference operands.
-  bool SymbolizeOperands = false;
+  bool getSymbolizeOperands() const { return ColorStack.getFlag(1); }
 
-  SmallVector<raw_ostream::Colors, 4> ColorStack{raw_ostream::Colors::RESET};
+  SmallVectorWithFlags<raw_ostream::Colors, 4, 2> ColorStack{
+      raw_ostream::Colors::RESET};
 
   /// Utility function for printing annotations.
   void printAnnotation(raw_ostream &OS, StringRef Annot);
@@ -165,11 +166,9 @@ public:
 
   void setPrintHexStyle(HexStyle::Style Value) { PrintHexStyle = Value; }
 
-  void setPrintBranchImmAsAddress(bool Value) {
-    PrintBranchImmAsAddress = Value;
-  }
+  void setPrintBranchImmAsAddress(bool Value) { ColorStack.setFlag(0, Value); }
 
-  void setSymbolizeOperands(bool Value) { SymbolizeOperands = Value; }
+  void setSymbolizeOperands(bool Value) { ColorStack.setFlag(1, Value); }
   void setMCInstrAnalysis(const MCInstrAnalysis *Value) { MIA = Value; }
 
   /// Utility function to print immediates in decimal or hex.

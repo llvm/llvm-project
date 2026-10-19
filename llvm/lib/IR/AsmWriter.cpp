@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -2986,12 +2987,14 @@ class AssemblyWriter {
   SlotTracker &Machine;
   TypePrinting TypePrinter;
   AssemblyAnnotationWriter *AnnotationWriter = nullptr;
-  bool IsForDebug;
-  bool ShouldPreserveUseListOrder;
+  bool getIsForDebug() const { return SSNs.getFlag(0); }
+  void setIsForDebug(bool Value) { SSNs.setFlag(0, Value); }
+  bool getShouldPreserveUseListOrder() const { return SSNs.getFlag(1); }
+  void setShouldPreserveUseListOrder(bool Value) { SSNs.setFlag(1, Value); }
   UseListOrderMap UseListOrders;
   SmallVector<StringRef, 8> MDNames;
   /// Synchronization scope names registered with LLVMContext.
-  SmallVector<StringRef, 8> SSNs;
+  llvm::SmallVectorWithFlags<StringRef, 8, 2> SSNs;
   DenseMap<const GlobalValueSummary *, GlobalValue::GUID> SummaryToGUIDMap;
 
 public:
@@ -3089,17 +3092,19 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const Module *M, AssemblyAnnotationWriter *AAW,
                                bool IsForDebug, bool ShouldPreserveUseListOrder)
     : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
-      IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(
-          PreserveAssemblyUseListOrder.getNumOccurrences()
-              ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {}
+      SSNs(decltype(this->SSNs)::withFlags(
+          unsigned(IsForDebug) |
+          (unsigned(bool(PreserveAssemblyUseListOrder.getNumOccurrences()
+                             ? PreserveAssemblyUseListOrder
+                             : ShouldPreserveUseListOrder))
+           << 1))) {}
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
     : Out(o), TheIndex(Index), Machine(Mac), TypePrinter(/*Module=*/nullptr),
-      IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(PreserveAssemblyUseListOrder) {}
+      SSNs(decltype(this->SSNs)::withFlags(
+          unsigned(IsForDebug) |
+          (unsigned(bool(PreserveAssemblyUseListOrder)) << 1))) {}
 
 void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   if (!Operand) {
@@ -3117,8 +3122,11 @@ void AssemblyWriter::writeSyncScope(const LLVMContext &Context,
     break;
   }
   default: {
-    if (SSNs.empty())
-      Context.getSyncScopeNames(SSNs);
+    if (SSNs.empty()) {
+      SmallVector<StringRef, 8> Names;
+      Context.getSyncScopeNames(Names);
+      SSNs.assign(std::move(Names));
+    }
 
     Out << " syncscope(\"";
     printEscapedString(SSNs[SSID], Out);
@@ -3205,7 +3213,7 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
 void AssemblyWriter::printModule(const Module *M) {
   Machine.initializeIfNeeded();
 
-  if (ShouldPreserveUseListOrder)
+  if (getShouldPreserveUseListOrder())
     UseListOrders = predictUseListOrder(M);
 
   if (!M->getModuleIdentifier().empty() &&
@@ -4296,7 +4304,7 @@ void AssemblyWriter::printFunction(const Function *F) {
   Out << '(';
 
   // Loop over the arguments, printing them...
-  if (F->isDeclaration() && !IsForDebug) {
+  if (F->isDeclaration() && !getIsForDebug()) {
     // We're only interested in the type here - don't print argument names.
     ListSeparator LS;
     for (unsigned I = 0, E = FT->getNumParams(); I != E; ++I) {
@@ -5097,8 +5105,11 @@ void AssemblyWriter::printMetadataAttachments(
   if (MDs.empty())
     return;
 
-  if (MDNames.empty())
-    MDs[0].second->getContext().getMDKindNames(MDNames);
+  if (MDNames.empty()) {
+    SmallVector<StringRef, 8> Names;
+    MDs[0].second->getContext().getMDKindNames(Names);
+    MDNames.assign(std::move(Names));
+  }
 
   auto WriterCtx = getContext();
   for (const auto &I : MDs) {

@@ -28,6 +28,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -326,24 +327,28 @@ class Intrinsic {
   std::string TargetGuard;
   /// Set if the Unavailable bit is 1. This means we don't generate a body,
   /// just an "unavailable" attribute on a declaration.
-  bool IsUnavailable;
+  bool getIsUnavailable() const { return ImmChecks.getFlag(0); }
+  void setIsUnavailable(bool Value) { ImmChecks.setFlag(0, Value); }
   /// Is this intrinsic safe for big-endian? or does it need its arguments
   /// reversing?
-  bool BigEndianSafe;
+  bool getBigEndianSafe() const { return ImmChecks.getFlag(1); }
+  void setBigEndianSafe(bool Value) { ImmChecks.setFlag(1, Value); }
 
   /// The types of return value [0] and parameters [1..].
   std::vector<Type> Types;
 
-  SmallVector<ImmCheck, 2> ImmChecks;
+  llvm::SmallVectorWithFlags<ImmCheck, 2, 4> ImmChecks;
   /// The index of the key type passed to CGBuiltin.cpp for polymorphic calls.
   int PolymorphicKeyType;
   /// The local variables defined.
   std::map<std::string, Variable, std::less<>> Variables;
   /// NeededEarly - set if any other intrinsic depends on this intrinsic.
-  bool NeededEarly;
+  bool getNeededEarlyFlag() const { return ImmChecks.getFlag(2); }
+  void setNeededEarlyFlag(bool Value) { ImmChecks.setFlag(2, Value); }
   /// UseMacro - set if we should implement using a macro or unset for a
   ///            function.
-  bool UseMacro;
+  bool getUseMacro() const { return ImmChecks.getFlag(3); }
+  void setUseMacro(bool Value) { ImmChecks.setFlag(3, Value); }
   /// The set of intrinsics that this intrinsic uses/requires.
   std::set<Intrinsic *> Dependencies;
   /// The "base type", which is Type('d', OutTS). InBaseType is only
@@ -358,7 +363,7 @@ class Intrinsic {
   std::stringstream OS;
 
   bool isBigEndianSafe() const {
-    if (BigEndianSafe)
+    if (getBigEndianSafe())
       return true;
 
     for (const auto &T : Types){
@@ -375,9 +380,10 @@ public:
             bool IsUnavailable, bool BigEndianSafe)
       : R(R), Name(Name.str()), OutTS(OutTS), InTS(InTS), CK(CK), Body(Body),
         ArchGuard(ArchGuard.str()), TargetGuard(TargetGuard.str()),
-        IsUnavailable(IsUnavailable), BigEndianSafe(BigEndianSafe),
-        PolymorphicKeyType(0), NeededEarly(false), UseMacro(false),
-        BaseType(OutTS, "."), InBaseType(InTS, "."), Emitter(Emitter) {
+        ImmChecks(decltype(ImmChecks)::withFlags(
+            unsigned(IsUnavailable) | (unsigned(BigEndianSafe) << 1))),
+        PolymorphicKeyType(0), BaseType(OutTS, "."), InBaseType(InTS, "."),
+        Emitter(Emitter) {
     // Modify the TypeSpec per-argument to get a concrete Type, and create
     // known variables for each.
     // Types[0] is the return value.
@@ -404,7 +410,7 @@ public:
       // taking a scalar float16_t must be implemented as macros.
       if (Type.isImmediate() || Type.isPointer() ||
           (Type.isScalar() && Type.isHalf()))
-        UseMacro = true;
+        setUseMacro(true);
     }
 
     int ArgIdx, Kind, TypeArgIdx;
@@ -488,7 +494,7 @@ public:
 
   bool hasBody() const { return Body && !Body->empty(); }
 
-  void setNeededEarly() { NeededEarly = true; }
+  void setNeededEarly() { setNeededEarlyFlag(true); }
 
   bool operator<(const Intrinsic &Other) const {
     // Sort lexicographically on a three-tuple (ArchGuard, TargetGuard, Name)
@@ -1204,7 +1210,7 @@ void Intrinsic::initVariables() {
 }
 
 void Intrinsic::emitPrototype(StringRef NamePrefix) {
-  if (UseMacro) {
+  if (getUseMacro()) {
     OS << "#define ";
   } else {
     OS << "__ai ";
@@ -1225,7 +1231,7 @@ void Intrinsic::emitPrototype(StringRef NamePrefix) {
     assert(Variables.find(Name) != Variables.end());
     Variable &V = Variables[Name];
 
-    if (!UseMacro)
+    if (!getUseMacro())
       OS << V.getType().str() << " ";
     OS << V.getName();
   }
@@ -1234,7 +1240,7 @@ void Intrinsic::emitPrototype(StringRef NamePrefix) {
 }
 
 void Intrinsic::emitOpeningBrace() {
-  if (UseMacro)
+  if (getUseMacro())
     OS << " __extension__ ({";
   else
     OS << " {";
@@ -1242,14 +1248,14 @@ void Intrinsic::emitOpeningBrace() {
 }
 
 void Intrinsic::emitClosingBrace() {
-  if (UseMacro)
+  if (getUseMacro())
     OS << "})";
   else
     OS << "}";
 }
 
 void Intrinsic::emitNewLine() {
-  if (UseMacro)
+  if (getUseMacro())
     OS << " \\\n";
   else
     OS << "\n";
@@ -1318,7 +1324,7 @@ void Intrinsic::emitReturnReversal() {
 void Intrinsic::emitShadowedArgs() {
   // Macro arguments are not type-checked like inline function arguments,
   // so assign them to local temporaries to get the right type checking.
-  if (!UseMacro)
+  if (!getUseMacro())
     return;
 
   for (unsigned I = 0; I < getNumParams(); ++I) {
@@ -1464,7 +1470,7 @@ void Intrinsic::emitBody(StringRef CallPrefix) {
 void Intrinsic::emitReturn() {
   if (RetVar.getType().isVoid())
     return;
-  if (UseMacro)
+  if (getUseMacro())
     OS << "  " << RetVar.getName() << ";";
   else
     OS << "  return " << RetVar.getName() << ";";
@@ -1887,7 +1893,7 @@ std::string Intrinsic::generate() {
 
   // If we're needed early, create a non-swapping variant for
   // big-endian.
-  if (NeededEarly) {
+  if (getNeededEarlyFlag()) {
     generateImpl(false, "__noswap_", "__noswap_");
   }
   OS << "#endif\n\n";
@@ -1905,7 +1911,7 @@ void Intrinsic::generateImpl(bool ReverseArguments,
   //
   // indexBody() should have set up the Dependencies set by now.
   for (auto *I : Dependencies)
-    if (I->UseMacro) {
+    if (I->getUseMacro()) {
       VariablePostfix = "_" + utostr(Emitter.getUniqueNumber());
       break;
     }
@@ -1914,7 +1920,7 @@ void Intrinsic::generateImpl(bool ReverseArguments,
 
   emitPrototype(NamePrefix);
 
-  if (IsUnavailable) {
+  if (getIsUnavailable()) {
     OS << " __attribute__((unavailable));";
   } else {
     emitOpeningBrace();

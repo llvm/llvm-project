@@ -13,6 +13,7 @@
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Regex.h"
 #include <list>
@@ -43,9 +44,10 @@ private:
   bool isMainHeader(StringRef IncludeName) const;
 
   const IncludeStyle Style;
-  bool IsMainFile;
+  bool getIsMainFile() const { return CategoryRegexs.getFlag(0); }
+  void setIsMainFile(bool Value) { CategoryRegexs.setFlag(0, Value); }
   std::string FileName;
-  SmallVector<llvm::Regex, 4> CategoryRegexs;
+  llvm::SmallVectorWithFlags<llvm::Regex, 4> CategoryRegexs;
 };
 
 enum class IncludeDirective { Include, Import };

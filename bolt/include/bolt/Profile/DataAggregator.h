@@ -16,6 +16,7 @@
 
 #include "bolt/Profile/DataReader.h"
 #include "bolt/Profile/YAMLProfileWriter.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
@@ -163,9 +164,10 @@ private:
 
   /// Perf.data or pre-aggregated inputs to aggregate and merge into this
   /// reader. The first entry is the primary profile input.
-  SmallVector<std::string, 1> InputFilenames;
+  llvm::SmallVectorWithFlags<std::string, 1> InputFilenames;
 
-  bool Parsed{false};
+  bool getParsed() const { return InputFilenames.getFlag(0); }
+  void setParsed(bool Value) { InputFilenames.setFlag(0, Value); }
 
   /// Filter pre-aggregated entries belonging to a DSO with this buildid.
   /// Set when processing a shared library, empty implies main binary.
@@ -193,11 +195,14 @@ private:
     static constexpr StringLiteral PerfProcessTypeNames[] = {
         "BUILDIDS", "MAIN", "MEM", "MMAP", "TASK"};
 
+    explicit PerfProcessInfo(PerfProcessType Type) : Type(Type) {}
+
     enum PerfProcessType Type;
-    bool IsFinished{false};
+    bool getIsFinished() const { return StderrPath.getFlag(0); }
+    void setIsFinished(bool Value) { StderrPath.setFlag(0, Value); }
     sys::ProcessInfo PI{};
     SmallVector<char, 256> StdoutPath{};
-    SmallVector<char, 256> StderrPath{};
+    llvm::SmallVectorWithFlags<char, 256> StderrPath{};
 
     /// Helper variables for parsing perfscript profile.
     /// Length: Total size of the content from \p Offset.
@@ -207,11 +212,11 @@ private:
   };
 
   /// Process info for spawned processes
-  PerfProcessInfo BuildIDProcessInfo = {PerfProcessType::BUILDIDS};
-  PerfProcessInfo MainEventsPPI = {PerfProcessType::MAIN_EVENTS};
-  PerfProcessInfo MemEventsPPI = {PerfProcessType::MEM_EVENTS};
-  PerfProcessInfo MMapEventsPPI = {PerfProcessType::MMAP_EVENTS};
-  PerfProcessInfo TaskEventsPPI = {PerfProcessType::TASK_EVENTS};
+  PerfProcessInfo BuildIDProcessInfo{PerfProcessType::BUILDIDS};
+  PerfProcessInfo MainEventsPPI{PerfProcessType::MAIN_EVENTS};
+  PerfProcessInfo MemEventsPPI{PerfProcessType::MEM_EVENTS};
+  PerfProcessInfo MMapEventsPPI{PerfProcessType::MMAP_EVENTS};
+  PerfProcessInfo TaskEventsPPI{PerfProcessType::TASK_EVENTS};
 
   /// Kernel VM starts at fixed based address
   /// https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt

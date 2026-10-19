@@ -17,6 +17,7 @@
 
 #include "Encoding.h"
 #include "FormatToken.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 class SourceManager;
@@ -459,7 +460,11 @@ struct LineState {
   FormatToken *NextToken;
 
   /// \c true if \p NextToken should not continue this line.
-  bool NoContinuation;
+  bool getNoContinuation() const { return Stack.getFlag(0); }
+  bool setNoContinuation(bool Value) {
+    Stack.setFlag(0, Value);
+    return Value;
+  }
 
   /// The \c NestingLevel at the start of this line.
   unsigned StartOfLineLevel;
@@ -472,11 +477,18 @@ struct LineState {
   unsigned StartOfStringLiteral;
 
   /// Disallow line breaks for this line.
-  bool NoLineBreak;
+  bool getNoLineBreak() const { return Stack.getFlag(1); }
+  bool setNoLineBreak(bool Value) {
+    Stack.setFlag(1, Value);
+    return Value;
+  }
 
   /// A stack keeping track of properties applying to parenthesis
   /// levels.
-  SmallVector<ParenState> Stack;
+  llvm::SmallVectorWithFlags<
+      ParenState,
+      llvm::CalculateSmallVectorDefaultInlinedElements<ParenState>::value, 3>
+      Stack;
 
   /// Ignore the stack of \c ParenStates for state comparison.
   ///
@@ -491,7 +503,11 @@ struct LineState {
   /// later.
   ///
   /// FIXME: Come up with a better algorithm instead.
-  bool IgnoreStackForComparison;
+  bool getIgnoreStackForComparison() const { return Stack.getFlag(2); }
+  bool setIgnoreStackForComparison(bool Value) {
+    Stack.setFlag(2, Value);
+    return Value;
+  }
 
   /// The indent of the first token.
   unsigned FirstIndent;
@@ -507,17 +523,17 @@ struct LineState {
       return NextToken < Other.NextToken;
     if (Column != Other.Column)
       return Column < Other.Column;
-    if (NoContinuation != Other.NoContinuation)
-      return NoContinuation;
+    if (getNoContinuation() != Other.getNoContinuation())
+      return getNoContinuation();
     if (StartOfLineLevel != Other.StartOfLineLevel)
       return StartOfLineLevel < Other.StartOfLineLevel;
     if (LowestLevelOnLine != Other.LowestLevelOnLine)
       return LowestLevelOnLine < Other.LowestLevelOnLine;
     if (StartOfStringLiteral != Other.StartOfStringLiteral)
       return StartOfStringLiteral < Other.StartOfStringLiteral;
-    if (IgnoreStackForComparison || Other.IgnoreStackForComparison)
+    if (getIgnoreStackForComparison() || Other.getIgnoreStackForComparison())
       return false;
-    return Stack < Other.Stack;
+    return llvm::ArrayRef(Stack) < llvm::ArrayRef(Other.Stack);
   }
 };
 

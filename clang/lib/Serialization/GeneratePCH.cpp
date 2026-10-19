@@ -30,11 +30,11 @@ PCHGenerator::PCHGenerator(
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool GeneratingReducedBMI)
     : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
-      Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
-      Writer(Stream, this->Buffer->Data, ModCache, CodeGenOpts, Extensions,
+      Buffer(std::move(Buffer)),
+      Writer(Stream, Stream.getBuffer(), ModCache, CodeGenOpts, Extensions,
              IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors) {
-  this->Buffer->IsComplete = false;
+  this->Buffer->setIsComplete(false);
 }
 
 PCHGenerator::~PCHGenerator() {
@@ -84,7 +84,9 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
 
   Buffer->Signature = Writer.WriteAST(Subject, OutputFile, Module, isysroot);
 
-  Buffer->IsComplete = true;
+  Stream.FlushToWord();
+  Buffer->Data.assign(std::move(Stream.getBuffer()));
+  Buffer->setIsComplete(true);
 }
 
 ASTMutationListener *PCHGenerator::GetASTMutationListener() {
@@ -131,7 +133,7 @@ void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
     return;
   }
 
-  *OS << getBufferPtr()->Data;
+  *OS << StringRef(getBufferPtr()->Data.data(), getBufferPtr()->Data.size());
   OS->flush();
 }
 

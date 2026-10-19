@@ -94,11 +94,11 @@ bool PatternParser::parsePatternList(
 static const CodeGenInstruction &
 getInstrForIntrinsic(const CodeGenTarget &CGT, const CodeGenIntrinsic *I) {
   StringRef Opc;
-  if (I->isConvergent) {
-    Opc = I->hasSideEffects ? "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS"
-                            : "G_INTRINSIC_CONVERGENT";
+  if (I->getIsConvergent()) {
+    Opc = I->getHasSideEffects() ? "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS"
+                                 : "G_INTRINSIC_CONVERGENT";
   } else {
-    Opc = I->hasSideEffects ? "G_INTRINSIC_W_SIDE_EFFECTS" : "G_INTRINSIC";
+    Opc = I->getHasSideEffects() ? "G_INTRINSIC_W_SIDE_EFFECTS" : "G_INTRINSIC";
   }
 
   RecordKeeper &RK = I->TheDef->getRecords();

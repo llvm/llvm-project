@@ -35,7 +35,8 @@ Reproducer::~Reproducer() = default;
 
 ReproducerGenerate::ReproducerGenerate(std::error_code &EC, int Argc,
                                        char **Argv, bool GenerateOnExit)
-    : Root(createReproducerDir(EC)), GenerateOnExit(GenerateOnExit) {
+    : Root(createReproducerDir(EC)),
+      Args(decltype(Args)::withFlags(unsigned(GenerateOnExit))) {
   llvm::append_range(Args, ArrayRef(Argv, Argc));
   auto RealFS = vfs::getRealFileSystem();
   if (!Root.empty())
@@ -44,16 +45,16 @@ ReproducerGenerate::ReproducerGenerate(std::error_code &EC, int Argc,
 }
 
 ReproducerGenerate::~ReproducerGenerate() {
-  if (GenerateOnExit && !Generated)
+  if (getGenerateOnExit() && !getGenerated())
     generate();
-  else if (!Generated && !Root.empty())
+  else if (!getGenerated() && !Root.empty())
     sys::fs::remove_directories(Root, /* IgnoreErrors */ true);
 }
 
 void ReproducerGenerate::generate() {
   if (!FC)
     return;
-  Generated = true;
+  setGenerated(true);
   FC->copyFiles(false);
   SmallString<128> Mapping(Root);
   sys::path::append(Mapping, "mapping.yaml");

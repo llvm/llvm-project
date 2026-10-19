@@ -3721,7 +3721,7 @@ inline bool PushIgnoreDiags(InterpState &S) {
     return true;
   assert(S.PrevDiags == nullptr);
   S.PrevDiags = S.getEvalStatus().Diag;
-  S.PrevDiagsEmitted = S.getEvalStatus().DiagEmitted;
+  S.setPrevDiagsEmitted(S.getEvalStatus().DiagEmitted);
   S.getEvalStatus().Diag = nullptr;
   assert(!S.diagnosing());
   return true;
@@ -3732,7 +3732,7 @@ inline bool PopIgnoreDiags(InterpState &S) {
   --S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth == 0) {
     S.getEvalStatus().Diag = S.PrevDiags;
-    S.getEvalStatus().DiagEmitted = S.PrevDiagsEmitted;
+    S.getEvalStatus().DiagEmitted = S.getPrevDiagsEmitted();
     S.PrevDiags = nullptr;
   }
   return true;

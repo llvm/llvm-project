@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -204,12 +205,13 @@ struct AliasAnalysis {
     /// the same derived-type variable and tracks pointer dereferences for
     /// pointer/target aliasing (Fortran 2018 8.5.7, 15.5.2.13).
     struct AccessPath {
-      llvm::SmallVector<PathStep, 4> steps;
+      llvm::SmallVectorWithFlags<PathStep, 4> steps;
 
       /// Whether the path is approximate (e.g. contains array indexing or
       /// went through PackArrayOp). An approximate path cannot yield
       /// MustAlias.
-      bool isApproximate{false};
+      bool isApproximate() const { return steps.getFlag(0); }
+      void setIsApproximate(bool value) { steps.setFlag(0, value); }
 
       /// Return true if any step is a PointerDeref.
       bool hasPointerDeref() const {
@@ -218,9 +220,7 @@ struct AliasAnalysis {
         });
       }
 
-      bool operator==(const AccessPath &o) const {
-        return isApproximate == o.isApproximate && steps == o.steps;
-      }
+      bool operator==(const AccessPath &o) const { return steps == o.steps; }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 
       void print(llvm::raw_ostream &os) const;
@@ -288,16 +288,34 @@ struct AliasAnalysis {
     Attributes attributes;
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
-    bool approximateSource;
+    bool getApproximateSource() const { return scopedOrigins.getFlag(0); }
+    void setApproximateSource(bool Value) { scopedOrigins.setFlag(0, Value); }
     /// The structured access path from the root variable.
     AccessPath accessPath;
     /// Source object is used in an internal procedure via host association.
-    bool isCapturedInInternalProcedure{false};
+    bool getIsCapturedInInternalProcedure() const {
+      return scopedOrigins.getFlag(1);
+    }
+    void setIsCapturedInInternalProcedure(bool Value) {
+      scopedOrigins.setFlag(1, Value);
+    }
     /// Per-declare checkpoints collected as getSource() walked through
     /// [hl]fir.declare operations, ordered from leaf-closest (front) to
     /// root-closest (back). Empty when no declare was crossed (e.g. the
     /// walk terminated at Unknown).
-    llvm::SmallVector<ScopedOrigin, 4> scopedOrigins;
+    llvm::SmallVectorWithFlags<ScopedOrigin, 4, 2> scopedOrigins;
+
+    Source() = default;
+    Source(SourceOrigin origin, SourceKind kind, mlir::Type valueType,
+           Attributes attributes, bool approximateSource,
+           AccessPath accessPath = {},
+           bool isCapturedInInternalProcedure = false,
+           llvm::SmallVector<ScopedOrigin, 4> scopedOrigins = {})
+        : origin(origin), kind(kind), valueType(valueType),
+          attributes(attributes), accessPath(std::move(accessPath)),
+          scopedOrigins(unsigned(approximateSource) |
+                            (unsigned(isCapturedInInternalProcedure) << 1),
+                        std::move(scopedOrigins)) {}
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;
@@ -581,11 +599,19 @@ private:
   };
 
   struct Summary {
-    bool hasUnknownWrite = false;
-    bool hasUnknownRead = false;
+    bool getHasUnknownWrite() const { return calls.getFlag(0); }
+    bool setHasUnknownWrite(bool Value) {
+      calls.setFlag(0, Value);
+      return Value;
+    }
+    bool getHasUnknownRead() const { return calls.getFlag(1); }
+    bool setHasUnknownRead(bool Value) {
+      calls.setFlag(1, Value);
+      return Value;
+    }
     llvm::SmallVector<mlir::Value, 16> writeLocations;
     llvm::SmallVector<mlir::Value, 16> readLocations;
-    llvm::SmallVector<CallInfo, 4> calls;
+    llvm::SmallVectorWithFlags<CallInfo, 4, 2> calls;
   };
 
   /// Populate `out` with the effects of `op` itself and, if op has

@@ -3725,7 +3725,7 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
       CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 
   if (ExprEvalContexts.back().isDiscardedStatementContext() &&
-      (HasDeducedReturnType || CurCap->HasImplicitReturnType)) {
+      (HasDeducedReturnType || CurCap->getHasImplicitReturnType())) {
     if (RetValExp) {
       ExprResult ER =
           ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue*/ false);
@@ -3757,7 +3757,7 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
       return StmtError();
     }
     CurCap->ReturnType = FnRetType = FD->getReturnType();
-  } else if (CurCap->HasImplicitReturnType) {
+  } else if (CurCap->getHasImplicitReturnType()) {
     // For blocks/lambdas with implicit return types, we check each return
     // statement individually, and deduce the common return type when the block
     // or lambda is completed.
@@ -3874,14 +3874,14 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   // If we need to check for the named return value optimization,
   // or if we need to infer the return type,
   // save the return statement in our scope for later processing.
-  if (CurCap->HasImplicitReturnType || NRVOCandidate)
+  if (CurCap->getHasImplicitReturnType() || NRVOCandidate)
     FunctionScopes.back()->Returns.push_back(Result);
 
   if (FunctionScopes.back()->FirstReturnLoc.isInvalid())
     FunctionScopes.back()->FirstReturnLoc = ReturnLoc;
 
   if (auto *CurBlock = dyn_cast<BlockScopeInfo>(CurCap);
-      CurBlock && CurCap->HasImplicitReturnType && RetValExp &&
+      CurBlock && CurCap->getHasImplicitReturnType() && RetValExp &&
       RetValExp->containsErrors())
     CurBlock->TheDecl->setInvalidDecl();
 
@@ -4003,7 +4003,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
       //  each return statement. [...] if the type deduced is not the same in
       //  each deduction, the program is ill-formed.
       const LambdaScopeInfo *LambdaSI = getCurLambda();
-      if (LambdaSI && LambdaSI->HasImplicitReturnType)
+      if (LambdaSI && LambdaSI->getHasImplicitReturnType())
         Diag(ReturnLoc, diag::err_typecheck_missing_return_type_incompatible)
             << Info.SecondArg << Info.FirstArg << true /*IsLambda*/;
       else
@@ -4889,7 +4889,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
 
   PushExpressionEvaluationContext(
       ExpressionEvaluationContext::PotentiallyEvaluated);
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext = false;
+  ExprEvalContexts.back().setInImmediateEscalatingFunctionContext(false);
 }
 
 void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,

@@ -17,6 +17,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -489,7 +490,10 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   /// A flag that is set when the current count should be recorded on the
   /// next statement, such as at the exit of a loop.
-  bool RecordNextStmtCount;
+  bool getRecordNextStmtCount() const { return BreakContinueStack.getFlag(0); }
+  void setRecordNextStmtCount(bool Value) {
+    BreakContinueStack.setFlag(0, Value);
+  }
 
   /// The count at the current location in the traversal.
   uint64_t CurrentCount;
@@ -503,16 +507,16 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     uint64_t ContinueCount = 0;
     BreakContinue() = default;
   };
-  SmallVector<BreakContinue, 8> BreakContinueStack;
+  llvm::SmallVectorWithFlags<BreakContinue, 8> BreakContinueStack;
 
   ComputeRegionCounts(llvm::DenseMap<const Stmt *, uint64_t> &CountMap,
                       CodeGenPGO &PGO)
-      : PGO(PGO), RecordNextStmtCount(false), CountMap(CountMap) {}
+      : PGO(PGO), CountMap(CountMap) {}
 
   void RecordStmtCount(const Stmt *S) {
-    if (RecordNextStmtCount) {
+    if (getRecordNextStmtCount()) {
       CountMap[S] = CurrentCount;
-      RecordNextStmtCount = false;
+      setRecordNextStmtCount(false);
     }
   }
 
@@ -567,7 +571,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     if (S->getRetValue())
       Visit(S->getRetValue());
     CurrentCount = 0;
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitCXXThrowExpr(const CXXThrowExpr *E) {
@@ -575,17 +579,17 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     if (E->getSubExpr())
       Visit(E->getSubExpr());
     CurrentCount = 0;
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitGotoStmt(const GotoStmt *S) {
     RecordStmtCount(S);
     CurrentCount = 0;
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitLabelStmt(const LabelStmt *S) {
-    RecordNextStmtCount = false;
+    setRecordNextStmtCount(false);
     // Counter tracks the block following the label.
     uint64_t BlockCount = setCount(PGO.getRegionCount(S));
     CountMap[S] = BlockCount;
@@ -597,7 +601,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     assert(!BreakContinueStack.empty() && "break not in a loop or switch!");
     BreakContinueStack.back().BreakCount += CurrentCount;
     CurrentCount = 0;
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitContinueStmt(const ContinueStmt *S) {
@@ -605,7 +609,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     assert(!BreakContinueStack.empty() && "continue stmt not in a loop!");
     BreakContinueStack.back().ContinueCount += CurrentCount;
     CurrentCount = 0;
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitWhileStmt(const WhileStmt *S) {
@@ -630,7 +634,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     CountMap[S->getCond()] = CondCount;
     Visit(S->getCond());
     setCount(BC.BreakCount + CondCount - BodyCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitDoStmt(const DoStmt *S) {
@@ -651,7 +655,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     CountMap[S->getCond()] = CondCount;
     Visit(S->getCond());
     setCount(BC.BreakCount + CondCount - LoopCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitForStmt(const ForStmt *S) {
@@ -686,7 +690,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
       Visit(S->getCond());
     }
     setCount(BC.BreakCount + CondCount - BodyCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
@@ -720,7 +724,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     CountMap[S->getCond()] = CondCount;
     Visit(S->getCond());
     setCount(BC.BreakCount + CondCount - BodyCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
@@ -737,7 +741,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
     setCount(BC.BreakCount + ParentCount + BackedgeCount + BC.ContinueCount -
              BodyCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitSwitchStmt(const SwitchStmt *S) {
@@ -754,11 +758,11 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
       BreakContinueStack.back().ContinueCount += BC.ContinueCount;
     // Counter tracks the exit block of the switch.
     setCount(PGO.getRegionCount(S));
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitSwitchCase(const SwitchCase *S) {
-    RecordNextStmtCount = false;
+    setRecordNextStmtCount(false);
     // Counter for this particular case. This counts only jumps from the
     // switch header and does not include fallthrough from the case before
     // this one.
@@ -767,7 +771,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     // We need the count without fallthrough in the mapping, so it's more useful
     // for branch probabilities.
     CountMap[S] = CaseCount;
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
     Visit(S->getSubStmt());
   }
 
@@ -802,7 +806,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     } else
       OutCount += ElseCount;
     setCount(OutCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitCXXTryStmt(const CXXTryStmt *S) {
@@ -812,11 +816,11 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
       Visit(S->getHandler(I));
     // Counter tracks the continuation block of the try statement.
     setCount(PGO.getRegionCount(S));
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitCXXCatchStmt(const CXXCatchStmt *S) {
-    RecordNextStmtCount = false;
+    setRecordNextStmtCount(false);
     // Counter tracks the catch statement's handler block.
     uint64_t CatchCount = setCount(PGO.getRegionCount(S));
     CountMap[S] = CatchCount;
@@ -841,7 +845,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     OutCount += CurrentCount;
 
     setCount(OutCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
@@ -853,7 +857,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     CountMap[E->getRHS()] = RHSCount;
     Visit(E->getRHS());
     setCount(ParentCount + RHSCount - CurrentCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 
   void VisitBinLOr(const BinaryOperator *E) {
@@ -865,7 +869,7 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     CountMap[E->getRHS()] = RHSCount;
     Visit(E->getRHS());
     setCount(ParentCount + RHSCount - CurrentCount);
-    RecordNextStmtCount = true;
+    setRecordNextStmtCount(true);
   }
 };
 } // end anonymous namespace

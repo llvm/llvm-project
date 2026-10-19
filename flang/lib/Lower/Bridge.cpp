@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
@@ -101,7 +102,8 @@ struct IncrementLoopInfo {
       : loopVariableSym{&sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
         upperExpr{Fortran::semantics::GetExpr(upper)},
         stepExpr{Fortran::semantics::GetExpr(step)},
-        isConcurrent{isConcurrent} {}
+        sharedSymList(
+            decltype(this->sharedSymList)::withFlags(unsigned(isConcurrent))) {}
 
   IncrementLoopInfo(IncrementLoopInfo &&) = default;
   IncrementLoopInfo &operator=(IncrementLoopInfo &&x) = default;
@@ -124,19 +126,25 @@ struct IncrementLoopInfo {
   const Fortran::lower::SomeExpr *upperExpr;
   const Fortran::lower::SomeExpr *stepExpr;
   const Fortran::lower::SomeExpr *maskExpr = nullptr;
-  bool isConcurrent;
+  bool getIsConcurrent() const { return sharedSymList.getFlag(0); }
+  void setIsConcurrent(bool Value) { sharedSymList.setFlag(0, Value); }
   llvm::SmallVector<const Fortran::semantics::Symbol *> localSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> reduceSymList;
   llvm::SmallVector<fir::ReduceOperationEnum> reduceOperatorList;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
+  llvm::SmallVectorWithFlags<const Fortran::semantics::Symbol *,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 const Fortran::semantics::Symbol *>::value,
+                             2>
+      sharedSymList;
   mlir::Value loopVariable = nullptr;
 
   // Data members for structured loops.
   mlir::Operation *loopOp = nullptr;
 
   // Data members for unstructured loops.
-  bool hasRealControl = false;
+  bool getHasRealControl() const { return sharedSymList.getFlag(1); }
+  void setHasRealControl(bool Value) { sharedSymList.setFlag(1, Value); }
   mlir::Value tripVariable = nullptr;
   mlir::Value stepVariable = nullptr;
   mlir::Block *headerBlock = nullptr; // loop entry and test block
@@ -1845,7 +1853,7 @@ private:
   getActiveAncestor(const Fortran::lower::pft::Evaluation &eval) {
     Fortran::lower::pft::Evaluation *ancestor = eval.parentConstruct;
     for (; ancestor; ancestor = ancestor->parentConstruct)
-      if (ancestor->activeConstruct)
+      if (ancestor->getActiveConstruct())
         break;
     return ancestor;
   }
@@ -2040,11 +2048,11 @@ private:
   void pushActiveConstruct(Fortran::lower::pft::Evaluation &eval,
                            Fortran::lower::StatementContext &stmtCtx) {
     activeConstructStack.push_back(ConstructContext{eval, stmtCtx});
-    eval.activeConstruct = true;
+    eval.setActiveConstruct(true);
   }
   void popActiveConstruct() {
     assert(!activeConstructStack.empty() && "invalid active construct stack");
-    activeConstructStack.back().eval.activeConstruct = false;
+    activeConstructStack.back().eval.setActiveConstruct(false);
     if (activeConstructStack.back().pushedScope)
       localSymbols.popScope();
     activeConstructStack.pop_back();
@@ -2952,8 +2960,8 @@ private:
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
         maybeWrapAndRecalc();
-        info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
-            Fortran::common::TypeCategory::Real);
+        info.setHasRealControl(info.loopVariableSym->GetType()->IsNumeric(
+            Fortran::common::TypeCategory::Real));
         info.headerBlock = headerBlock;
         info.bodyBlock = bodyBlock;
         info.exitBlock = exitBlock;
@@ -2993,7 +3001,7 @@ private:
     // Introduce a `do concurrent` scope to bind symbols corresponding to local,
     // local_init, and reduce region arguments.
     if (!incrementLoopNestInfo.empty() &&
-        incrementLoopNestInfo.back().isConcurrent)
+        incrementLoopNestInfo.back().getIsConcurrent())
       localSymbols.pushScope();
 
     // Increment loop begin code. (Infinite/while code was already generated.)
@@ -3031,7 +3039,7 @@ private:
         attachAccessGroupAttrToDoLoopOperations(loopOp);
 
     if (!incrementLoopNestInfo.empty() &&
-        incrementLoopNestInfo.back().isConcurrent)
+        incrementLoopNestInfo.back().getIsConcurrent())
       localSymbols.popScope();
 
     // Add attribute(s) on operations in fir::DoLoopOp if necessary
@@ -3047,7 +3055,7 @@ private:
                               const IncrementLoopInfo &info,
                               bool *isConst = nullptr) {
     mlir::Location loc = toLocation();
-    mlir::Type controlType = info.isStructured() && info.isConcurrent
+    mlir::Type controlType = info.isStructured() && info.getIsConcurrent()
                                  ? builder->getIndexType()
                                  : info.getLoopVariableType();
     Fortran::lower::StatementContext stmtCtx;
@@ -3060,7 +3068,7 @@ private:
 
     if (isConst)
       *isConst = true;
-    if (info.hasRealControl)
+    if (info.getHasRealControl())
       return builder->createRealConstant(loc, controlType, 1u);
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
@@ -3096,11 +3104,11 @@ private:
     bool genDoConcurrent = false;
 
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
-      genDoConcurrent = info.isStructured() && info.isConcurrent;
+      genDoConcurrent = info.isStructured() && info.getIsConcurrent();
 
       if (!genDoConcurrent)
         info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
-                                                   info.isConcurrent);
+                                                   info.getIsConcurrent());
 
       if (!getLoweringOptions().getIntegerWrapAround()) {
         iofBackup = builder->getIntegerOverflowFlags();
@@ -3150,7 +3158,7 @@ private:
 
       // Unstructured loop preheader - initialize tripVariable and loopVariable.
       mlir::Value tripCount;
-      if (info.hasRealControl) {
+      if (info.getHasRealControl()) {
         auto diff1 =
             mlir::arith::SubFOp::create(*builder, loc, upperValue, lowerValue);
         auto diff2 =
@@ -3216,7 +3224,7 @@ private:
 
       for (IncrementLoopInfo &info : llvm::reverse(incrementLoopNestInfo)) {
         info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
-                                                   info.isConcurrent);
+                                                   info.getIsConcurrent());
       }
 
       builder->setInsertionPointToEnd(loopWrapperOp.getBody());
@@ -3279,7 +3287,7 @@ private:
       IncrementLoopInfo &info = *it;
       if (info.isStructured()) {
         // End fir.do_concurent.loop.
-        if (info.isConcurrent) {
+        if (info.getIsConcurrent()) {
           builder->setInsertionPointAfter(info.loopOp->getParentOp());
           continue;
         }
@@ -3325,7 +3333,7 @@ private:
         step = fir::LoadOp::create(*builder, loc, info.stepVariable);
       else
         step = genControlValue(info.stepExpr, info);
-      if (info.hasRealControl)
+      if (info.getHasRealControl())
         value = mlir::arith::AddFOp::create(*builder, loc, value, step);
       else
         value =
@@ -3358,9 +3366,11 @@ private:
         };
         setCurrentPosition(e.position);
         if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
-          topIfOp = currentIfOp = genIfOp(genIfCondition(s, e.negateCondition));
+          topIfOp = currentIfOp =
+              genIfOp(genIfCondition(s, e.getNegateCondition()));
         } else if (auto *s = e.getIf<Fortran::parser::IfStmt>()) {
-          topIfOp = currentIfOp = genIfOp(genIfCondition(s, e.negateCondition));
+          topIfOp = currentIfOp =
+              genIfOp(genIfCondition(s, e.getNegateCondition()));
         } else if (auto *s = e.getIf<Fortran::parser::ElseIfStmt>()) {
           builder->setInsertionPointToStart(
               &currentIfOp.getElseRegion().front());
@@ -3420,10 +3430,10 @@ private:
       setCurrentPosition(e.position);
       if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
         maybeStartBlock(e.block);
-        genIfBranch(genIfCondition(s, e.negateCondition));
+        genIfBranch(genIfCondition(s, e.getNegateCondition()));
       } else if (auto *s = e.getIf<Fortran::parser::IfStmt>()) {
         maybeStartBlock(e.block);
-        genIfBranch(genIfCondition(s, e.negateCondition));
+        genIfBranch(genIfCondition(s, e.getNegateCondition()));
       } else if (auto *s = e.getIf<Fortran::parser::ElseIfStmt>()) {
         startBlock(e.block);
         genIfBranch(genIfCondition(s));
@@ -4369,8 +4379,8 @@ private:
     builder->restoreInsertionPoint(insertPt);
 
     // Register if a target region was found
-    ompDeviceCodeFound =
-        ompDeviceCodeFound || Fortran::lower::isOpenMPTargetConstruct(omp);
+    setOmpDeviceCodeFound(getOmpDeviceCodeFound() ||
+                          Fortran::lower::isOpenMPTargetConstruct(omp));
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
@@ -4378,10 +4388,10 @@ private:
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     // Register if a declare target construct intended for a target device was
     // found
-    ompDeviceCodeFound =
-        ompDeviceCodeFound ||
+    setOmpDeviceCodeFound(
+        getOmpDeviceCodeFound() ||
         Fortran::lower::isOpenMPDeviceDeclareTarget(
-            *this, bridge.getSemanticsContext(), getEval(), ompDecl);
+            *this, bridge.getSemanticsContext(), getEval(), ompDecl));
     Fortran::lower::gatherOpenMPDeferredDeclareTargets(
         *this, bridge.getSemanticsContext(), getEval(), ompDecl,
         ompDeferredDeclareTarget);
@@ -6318,8 +6328,8 @@ private:
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
 
-    if (eval.skipNextLowering) {
-      eval.skipNextLowering = false;
+    if (eval.getSkipNextLowering()) {
+      eval.setSkipNextLowering(false);
       return;
     }
 
@@ -6418,7 +6428,7 @@ private:
     mlir::Location loc = toLocation();
     mlir::Location endLoc =
         toLocation(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
-    if (funit.hasIeeeAccess) {
+    if (funit.getHasIeeeAccess()) {
       // Subject to F18 Clause 17.1p3, 17.3p3 states: If a flag is signaling
       // on entry to a procedure [...], the processor will set it to quiet
       // on entry and restore it to signaling on return. If a flag signals
@@ -6436,7 +6446,7 @@ private:
         fir::CallOp::create(*builder, endLoc, raiseExcept, exceptSet);
       });
     }
-    if (funit.mayModifyHaltingMode) {
+    if (funit.getMayModifyHaltingMode()) {
       // F18 Clause 17.6p1: In a procedure [...], the processor shall not
       // change the halting mode on entry, and on return shall ensure that
       // the halting mode is the same as it was on entry.
@@ -6454,7 +6464,7 @@ private:
         fir::CallOp::create(*builder, endLoc, enableExcept, exceptSet);
       });
     }
-    if (funit.mayModifyRoundingMode) {
+    if (funit.getMayModifyRoundingMode()) {
       // F18 Clause 17.4p5: In a procedure [...], the processor shall not
       // change the rounding modes on entry, and on return shall ensure that
       // the rounding modes are the same as they were on entry.
@@ -6468,7 +6478,7 @@ private:
         fir::CallOp::create(*builder, endLoc, setRounding, roundingMode);
       });
     }
-    if ((funit.mayModifyUnderflowMode) &&
+    if ((funit.getMayModifyUnderflowMode()) &&
         (bridge.getTargetCharacteristics().hasSubnormalFlushingControl(
             /*any=*/true))) {
       // F18 Clause 17.5p2: In a procedure [...], the processor shall not
@@ -6718,7 +6728,7 @@ private:
           evaluationList) {
     mlir::Region *region = &builder->getRegion();
     for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
-      if (eval.isNewBlock)
+      if (eval.getIsNewBlock())
         eval.block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
         if (Fortran::lower::pft::isWrappableConstruct(
@@ -6728,7 +6738,7 @@ private:
           if (eval.hasNestedEvaluations()) {
             Fortran::lower::pft::Evaluation &constructStmt =
                 eval.getFirstNestedEvaluation();
-            if (constructStmt.isNewBlock)
+            if (constructStmt.getIsNewBlock())
               constructStmt.block = builder->createBlock(region);
           }
         } else if (eval.lowerAsUnstructured()) {
@@ -6737,7 +6747,7 @@ private:
           // A structured construct that is a target starts a new block.
           Fortran::lower::pft::Evaluation &constructStmt =
               eval.getFirstNestedEvaluation();
-          if (constructStmt.isNewBlock)
+          if (constructStmt.getIsNewBlock())
             constructStmt.block = builder->createBlock(region);
         }
       }
@@ -7126,11 +7136,11 @@ private:
       bool deferredDeviceFuncFound =
           Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
               getModuleOp().getOperation(), ompDeferredDeclareTarget, *this);
-      ompDeviceCodeFound = ompDeviceCodeFound || deferredDeviceFuncFound;
+      setOmpDeviceCodeFound(getOmpDeviceCodeFound() || deferredDeviceFuncFound);
     }
 
     // Set the module attribute related to OpenMP requires directives
-    if (ompDeviceCodeFound) {
+    if (getOmpDeviceCodeFound()) {
       for (const Fortran::semantics::Symbol *sym : globalOmpRequiresSymbol)
         Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(), sym);
     }
@@ -7229,7 +7239,7 @@ private:
   llvm::DenseMap<const Fortran::lower::SomeExpr *, std::string> literalNamesMap;
 
   /// Storage for Constant expressions used as keys for literalNamesMap.
-  llvm::SmallVector<std::unique_ptr<Fortran::lower::SomeExpr>>
+  llvm::SmallVectorWithFlags<std::unique_ptr<Fortran::lower::SomeExpr>>
       literalExprsStorage;
 
   /// A counter for uniquing names in `literalNamesMap`.
@@ -7237,7 +7247,10 @@ private:
 
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected
-  bool ompDeviceCodeFound = false;
+  bool getOmpDeviceCodeFound() const { return literalExprsStorage.getFlag(0); }
+  void setOmpDeviceCodeFound(bool Value) {
+    literalExprsStorage.setFlag(0, Value);
+  }
 
   /// Keeps track of symbols defined as declare target that could not be
   /// processed at the time of lowering the declare target construct, such

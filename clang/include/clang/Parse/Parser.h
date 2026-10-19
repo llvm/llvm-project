@@ -23,6 +23,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
@@ -684,7 +685,12 @@ private:
   /// Gets set to true after calling ProduceSignatureHelp, it is for a
   /// workaround to make sure ProduceSignatureHelp is only called at the deepest
   /// function call.
-  bool CalledSignatureHelp = false;
+  bool getCalledSignatureHelp() const {
+    return TentativelyDeclaredIdentifiers.getFlag(0);
+  }
+  void setCalledSignatureHelp(bool Value) {
+    TentativelyDeclaredIdentifiers.setFlag(0, Value);
+  }
 
   bool isTokenSEHExcept();
 
@@ -692,7 +698,12 @@ private:
   ///
   /// This option can be used, for example, to speed up searches for
   /// declarations/definitions when indexing.
-  bool SkipFunctionBodies;
+  bool getSkipFunctionBodies() const {
+    return TentativelyDeclaredIdentifiers.getFlag(1);
+  }
+  void setSkipFunctionBodies(bool Value) {
+    TentativelyDeclaredIdentifiers.setFlag(1, Value);
+  }
 
   //===--------------------------------------------------------------------===//
   // Low-Level token peeking and consumption methods.
@@ -1353,7 +1364,7 @@ private:
   /// the method declarations and possibly attached inline definitions
   /// will be stored here with the tokens that will be parsed to create those
   /// entities.
-  typedef SmallVector<LateParsedDeclaration *, 2>
+  typedef llvm::SmallVectorWithFlags<LateParsedDeclaration *, 2, 2>
       LateParsedDeclarationsContainer;
 
   /// Utility to re-enter a possibly-templated scope while parsing its
@@ -2919,15 +2930,17 @@ private:
   /// parsed after the corresponding top-level class is complete.
   struct ParsingClass {
     ParsingClass(Decl *TagOrTemplate, bool TopLevelClass, bool IsInterface)
-        : TopLevelClass(TopLevelClass), IsInterface(IsInterface),
-          TagOrTemplate(TagOrTemplate) {}
+        : TagOrTemplate(TagOrTemplate) {
+      LateParsedDeclarations.setFlag(0, TopLevelClass);
+      LateParsedDeclarations.setFlag(1, IsInterface);
+    }
 
     /// Whether this is a "top-level" class, meaning that it is
     /// not nested within another class.
-    bool TopLevelClass : 1;
+    bool isTopLevelClass() const { return LateParsedDeclarations.getFlag(0); }
 
     /// Whether this class is an __interface.
-    bool IsInterface : 1;
+    bool isInterface() const { return LateParsedDeclarations.getFlag(1); }
 
     /// The class or class template whose definition we are parsing.
     Decl *TagOrTemplate;
@@ -4522,12 +4535,22 @@ private:
   /// code like "foo : bar" as if it were a typo for "foo :: bar".  This is not
   /// safe in case statements and a few other things.  This is managed by the
   /// ColonProtectionRAIIObject RAII object.
-  bool ColonIsSacred;
+  bool getColonIsSacred() const {
+    return TentativelyDeclaredIdentifiers.getFlag(2);
+  }
+  void setColonIsSacred(bool Value) {
+    TentativelyDeclaredIdentifiers.setFlag(2, Value);
+  }
 
   // ParsingGenericAssociationType - Currently parsing the typename in
   // _Generic association. This is to consume the colon if what comes after it
   // is a type.
-  bool ParsingGenericAssociationType;
+  bool getParsingGenericAssociationType() const {
+    return TentativelyDeclaredIdentifiers.getFlag(3);
+  }
+  void setParsingGenericAssociationType(bool Value) {
+    TentativelyDeclaredIdentifiers.setFlag(3, Value);
+  }
 
   /// ParseCXXAmbiguousParenExpression - We have parsed the left paren of a
   /// parenthesized ambiguous type-id. This uses tentative parsing to
@@ -5740,20 +5763,23 @@ private:
   struct ObjCImplParsingDataRAII {
     Parser &P;
     Decl *Dcl;
-    bool HasCFunction;
+    bool getHasCFunction() const { return LateParsedObjCMethods.getFlag(0); }
+    void setHasCFunction(bool Value) {
+      LateParsedObjCMethods.setFlag(0, Value);
+    }
     typedef SmallVector<LexedMethod *, 8> LateParsedObjCMethodContainer;
-    LateParsedObjCMethodContainer LateParsedObjCMethods;
+    llvm::SmallVectorWithFlagsFor<LateParsedObjCMethodContainer, 2>
+        LateParsedObjCMethods;
 
     ObjCImplParsingDataRAII(Parser &parser, Decl *D)
-        : P(parser), Dcl(D), HasCFunction(false),
-          PrevParsedObjCImpl(parser.CurParsedObjCImpl) {
+        : P(parser), Dcl(D), PrevParsedObjCImpl(parser.CurParsedObjCImpl) {
       P.CurParsedObjCImpl = this;
-      Finished = false;
+      setFinished(false);
     }
     ~ObjCImplParsingDataRAII();
 
     void finish(SourceRange AtEnd);
-    bool isFinished() const { return Finished; }
+    bool isFinished() const { return getFinished(); }
 
   private:
     /// The \@implementation that was still open when this one started; made
@@ -5762,7 +5788,8 @@ private:
     /// still open (e.g. through an intervening namespace). For valid code
     /// this is always null.
     ObjCImplParsingDataRAII *PrevParsedObjCImpl;
-    bool Finished;
+    bool getFinished() const { return LateParsedObjCMethods.getFlag(1); }
+    void setFinished(bool Value) { LateParsedObjCMethods.setFlag(1, Value); }
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
 
@@ -6226,10 +6253,11 @@ private:
   };
 
   struct OpenACCWaitParseInfo {
-    bool Failed = false;
+    bool getFailed() const { return QueueIdExprs.getFlag(0); }
+    void setFailed(bool Value) { QueueIdExprs.setFlag(0, Value); }
     Expr *DevNumExpr = nullptr;
     SourceLocation QueuesLoc;
-    SmallVector<Expr *> QueueIdExprs;
+    llvm::SmallVectorWithFlags<Expr *> QueueIdExprs;
 
     SmallVector<Expr *> getAllExprs() {
       SmallVector<Expr *> Out;
@@ -8037,7 +8065,8 @@ private:
   };
 
   /// Identifiers which have been declared within a tentative parse.
-  SmallVector<const IdentifierInfo *, 8> TentativelyDeclaredIdentifiers;
+  llvm::SmallVectorWithFlags<const IdentifierInfo *, 8, 4>
+      TentativelyDeclaredIdentifiers;
 
   /// Tracker for '<' tokens that might have been intended to be treated as an
   /// angle bracket instead of a less-than comparison.

@@ -278,10 +278,10 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
 std::error_code
 SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(SecType Type,
                                                        bool IsNested) {
-  if (UseMD5IndexedTables) {
+  if (getUseMD5IndexedTablesFlag()) {
     // Eytzinger layout requires MD5 representation and does not support
     // multi-context Context-Sensitive profiles.
-    if (!UseMD5 || FunctionSamples::ProfileIsCS)
+    if (!getUseMD5Flag() || FunctionSamples::ProfileIsCS)
       return sampleprof_error::unsupported_writing_format;
     return writeEytzingerFuncOffsetTable(Type, IsNested);
   }
@@ -430,7 +430,7 @@ stabilizeTable(MapVector<KeyT, ValT> &Table) {
 }
 
 std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
-  if (!UseMD5)
+  if (!getUseMD5Flag())
     return SampleProfileWriterBinary::writeNameTable();
 
   auto &OS = *OutputStream;
@@ -456,7 +456,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   // so compiler won't strip the suffix during profile matching after
   // seeing the flag in the profile.
   // Original names are unavailable if using MD5, so this option has no use.
-  if (!UseMD5) {
+  if (!getUseMD5Flag()) {
     for (const auto &I : NameTable) {
       if (I.first.stringRef().contains(FunctionSamples::UniqSuffix)) {
         addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagUniqSuffix);
@@ -465,7 +465,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     }
   }
 
-  if (UseMD5 && UseMD5IndexedTables) {
+  if (getUseMD5Flag() && getUseMD5IndexedTablesFlag()) {
     // Eytzinger name tables do not support CSSPGO profiles
     // (FunctionSamples::ProfileIsCS).
     if (FunctionSamples::ProfileIsCS)
@@ -596,7 +596,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeProfileSymbolListSection() {
-  if (UseMD5ProfSymList)
+  if (getUseMD5ProfSymList())
     return writeMD5ProfileSymbolListSection();
   return writeStringBasedProfileSymbolListSection();
 }
@@ -658,9 +658,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
     addSectionFlag(SecProfSummary,
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
-  if (Type == SecProfileSymbolList && UseMD5ProfSymList)
+  if (Type == SecProfileSymbolList && getUseMD5ProfSymList())
     addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
-  if (Type == SecNameTable && UseMD5IndexedTables && UseMD5)
+  if (Type == SecNameTable && getUseMD5IndexedTablesFlag() && getUseMD5Flag())
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagEytzinger);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);

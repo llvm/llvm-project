@@ -48,17 +48,14 @@ bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
     : AMDGPUMachineFunctionInfo(F, *STI), Mode(F, *STI),
-      GWSResourcePSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
-      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
-      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
-      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
-      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
-      IsWholeWaveFunction(F.getCallingConv() ==
-                          CallingConv::AMDGPU_Gfx_WholeWave) {
+      GWSResourcePSV(getTM(STI)), UserSGPRInfo(F, *STI), GITPtrHigh(0xffffffff),
+      HighBitsOf32BitAddress(0) {
+  setIsWholeWaveFunction(F.getCallingConv() ==
+                         CallingConv::AMDGPU_Gfx_WholeWave);
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
-  MaxNumWorkGroups = AMDGPU::getMaxNumWorkGroups(F);
+  MaxNumWorkGroups.assign(AMDGPU::getMaxNumWorkGroups(F));
   assert(MaxNumWorkGroups.size() == 3);
 
   DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
@@ -71,8 +68,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                         CC == CallingConv::SPIR_KERNEL;
 
   if (IsKernel) {
-    WorkGroupIDX = true;
-    WorkItemIDX = true;
+    setWorkGroupIDX(true);
+    setWorkItemIDXFlag(true);
   } else if (CC == CallingConv::AMDGPU_PS) {
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
@@ -107,9 +104,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
     if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&
         !AMDGPU::isChainCC(CC))
-      ImplicitArgPtr = true;
+      setImplicitArgPtr(true);
   } else {
-    ImplicitArgPtr = false;
+    setImplicitArgPtr(false);
     MaxKernArgAlign =
         std::max(ST.getAlignmentForImplicitArgPtr(), MaxKernArgAlign);
   }
@@ -119,41 +116,41 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
        ST.hasArchitectedSGPRs())) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x") ||
         !F.hasFnAttribute("amdgpu-no-cluster-id-x"))
-      WorkGroupIDX = true;
+      setWorkGroupIDX(true);
 
     if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y") ||
         !F.hasFnAttribute("amdgpu-no-cluster-id-y"))
-      WorkGroupIDY = true;
+      setWorkGroupIDY(true);
 
     if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z") ||
         !F.hasFnAttribute("amdgpu-no-cluster-id-z"))
-      WorkGroupIDZ = true;
+      setWorkGroupIDZ(true);
   }
 
   if (!AMDGPU::isGraphics(CC)) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workitem-id-x"))
-      WorkItemIDX = true;
+      setWorkItemIDXFlag(true);
 
     if (!F.hasFnAttribute("amdgpu-no-workitem-id-y") &&
         ST.getMaxWorkitemID(F, 1) != 0)
-      WorkItemIDY = true;
+      setWorkItemIDYFlag(true);
 
     if (!F.hasFnAttribute("amdgpu-no-workitem-id-z") &&
         ST.getMaxWorkitemID(F, 2) != 0)
-      WorkItemIDZ = true;
+      setWorkItemIDZFlag(true);
 
     if (!IsKernel && !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
-      LDSKernelId = true;
+      setLDSKernelId(true);
   }
 
   if (isEntryFunction()) {
     // X, XY, and XYZ are the only supported combinations, so make sure Y is
     // enabled if Z is.
-    if (WorkItemIDZ)
-      WorkItemIDY = true;
+    if (getWorkItemIDZFlag())
+      setWorkItemIDYFlag(true);
 
     if (!ST.hasArchitectedFlatScratch()) {
-      PrivateSegmentWaveByteOffset = true;
+      setPrivateSegmentWaveByteOffsetFlag(true);
 
       // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
       if (ST.getGeneration() >= AMDGPUSubtarget::GFX9 &&
@@ -498,7 +495,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 
   // This has already been allocated.
   if (!Spill.Lanes.empty())
-    return Spill.FullyAllocated;
+    return Spill.isFullyAllocated();
 
   unsigned Size = FrameInfo.getObjectSize(FI);
   unsigned NumLanes = Size / 4;
@@ -510,7 +507,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 
   auto &SpillRegs = isAGPRtoVGPR ? SpillAGPR : SpillVGPR;
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  Spill.FullyAllocated = true;
+  Spill.setFullyAllocated(true);
 
   // FIXME: Move allocation logic out of MachineFunctionInfo and initialize
   // once.
@@ -538,7 +535,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
         });
 
     if (NextSpillReg == Regs.end()) { // Registers exhausted
-      Spill.FullyAllocated = false;
+      Spill.setFullyAllocated(false);
       break;
     }
 
@@ -548,7 +545,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
     Spill.Lanes[I] = *NextSpillReg++;
   }
 
-  return Spill.FullyAllocated;
+  return Spill.isFullyAllocated();
 }
 
 bool SIMachineFunctionInfo::removeDeadFrameIndices(
@@ -587,7 +584,7 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   }
 
   for (auto &R : VGPRToAGPRSpills) {
-    if (R.second.IsDead)
+    if (R.second.isDead())
       MFI.RemoveStackObject(R.first);
   }
 
@@ -790,14 +787,14 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   IsEntryFunction = YamlMFI.IsEntryFunction;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
-  HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
-  HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
-  HasNoWWMPoolSGPRSpillFallback = YamlMFI.HasNoWWMPoolSGPRSpillFallback;
+  setHasSpilledSGPRsFlag(YamlMFI.HasSpilledSGPRs);
+  setHasSpilledVGPRsFlag(YamlMFI.HasSpilledVGPRs);
+  setHasNoWWMPoolSGPRSpillFallback(YamlMFI.HasNoWWMPoolSGPRSpillFallback);
   NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
   NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
-  IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  setIsWholeWaveFunction(YamlMFI.IsWholeWaveFunction);
   MinNumAGPRs = YamlMFI.MinNumAGPRs;
   // This can also be set by the function attribute, MFI has higher precedence
   // though.

@@ -1909,7 +1909,7 @@ Value *ScalarExprEmitter::EmitNullValue(QualType Ty) {
 void ScalarExprEmitter::EmitBinOpCheck(
     ArrayRef<std::pair<Value *, SanitizerKind::SanitizerOrdinal>> Checks,
     const BinOpInfo &Info) {
-  assert(CGF.IsSanitizerScope);
+  assert(CGF.getIsSanitizerScope());
   SanitizerHandler Check;
   SmallVector<llvm::Constant *, 4> StaticData;
   SmallVector<llvm::Value *, 2> DynamicData;

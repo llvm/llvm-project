@@ -9320,8 +9320,8 @@ SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
 
 SDValue AArch64TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &F = MF.getFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -9987,8 +9987,8 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
                                 CCState &CCInfo) {
   const SelectionDAG &DAG = CLI.DAG;
   CallingConv::ID CalleeCC = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
-  const SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
+  bool IsVarArg = CLI.getIsVarArg();
+  const auto &Outs = CLI.Outs;
   bool IsCalleeWin64 = Subtarget->isCallingConvWin64(CalleeCC, IsVarArg);
 
   // For Arm64EC thunks, allocate 32 extra bytes at the bottom of the stack
@@ -10061,10 +10061,10 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   SDValue Callee = CLI.Callee;
-  bool IsVarArg = CLI.IsVarArg;
-  const SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
+  bool IsVarArg = CLI.getIsVarArg();
+  const auto &Outs = CLI.Outs;
   const SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
-  const SmallVector<ISD::InputArg, 32> &Ins = CLI.Ins;
+  const auto &Ins = CLI.Ins;
   const SelectionDAG &DAG = CLI.DAG;
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
@@ -10446,14 +10446,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                                  SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
-  SmallVector<ISD::InputArg, 32> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID &CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -10519,9 +10518,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     // Check if it's really possible to do a tail call.
-    IsTailCall = isEligibleForTailCallOptimization(CLI);
+    CLI.setIsTailCall(isEligibleForTailCallOptimization(CLI));
 
     // If we have a tail-call, it's safe to drop ZAMarkerNode since
     // 1. INOUT_ZA_USE is the only marker node that can reach this point
@@ -10530,7 +10529,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // 2. INOUT_ZA_USE is redunant on a tail call, since a tail call is a return
     // for which MachineSMEABIPass requires an acitve ZA state anyway, the
     // marker node doesn't add anything.
-    if (IsTailCall && ZAMarkerNode) {
+    if (CLI.getIsTailCall() && ZAMarkerNode) {
       assert(ZAMarkerNode == AArch64ISD::INOUT_ZA_USE &&
              "Unexpected SME ZA marker node");
       ZAMarkerNode = std::nullopt;
@@ -10538,15 +10537,15 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
-    if (!ZAMarkerNode && !TailCallOpt && IsTailCall &&
+    if (!ZAMarkerNode && !TailCallOpt && CLI.getIsTailCall() &&
         CallConv != CallingConv::Tail && CallConv != CallingConv::SwiftTail)
       IsSibCall = true;
 
-    if (IsTailCall)
+    if (CLI.getIsTailCall())
       ++NumTailCalls;
   }
 
-  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
+  if (!CLI.getIsTailCall() && CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
@@ -10567,7 +10566,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   int FPDiff = 0;
   const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
-  if (IsTailCall && !IsSibCall) {
+  if (CLI.getIsTailCall() && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
 
     // In general, neither NumBytes nor NumReusableBytes is guaranteed to be
@@ -10642,7 +10641,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (Outs.size() < 2)
       report_fatal_error("variadic arm64ec_thunk_x64 call is missing the "
                          "x4/x5 (pointer/length) arguments");
-    if (IsTailCall)
+    if (CLI.getIsTailCall())
       report_fatal_error("tail calls are not supported for variadic "
                          "arm64ec_thunk_x64 calls");
 
@@ -10675,7 +10674,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // These operations are automatically eliminated by the prolog/epilog pass
   assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
   if (!IsSibCall) {
-    Chain = DAG.getCALLSEQ_START(Chain, IsTailCall ? 0 : NumBytes, 0, DL);
+    Chain =
+        DAG.getCALLSEQ_START(Chain, CLI.getIsTailCall() ? 0 : NumBytes, 0, DL);
     if (ZAMarkerNode) {
       // Note: We need the CALLSEQ_START to glue the ZAMarkerNode to, simply
       // using a chain can result in incorrect scheduling. The markers refer to
@@ -10899,7 +10899,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       unsigned LocMemOffset = VA.getLocMemOffset();
       int32_t Offset = LocMemOffset + BEAlign;
 
-      if (IsTailCall) {
+      if (CLI.getIsTailCall()) {
         // When the frame pointer is perfectly aligned for the tail call and the
         // same stack argument is passed down intact, we can reuse it.
         if (!FPDiff && !shouldLowerTailCallStackArg(MF, VA, Arg, Flags, Offset))
@@ -10950,7 +10950,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && Subtarget->isWindowsArm64EC() &&
       !(CLI.CB && CLI.CB->isMustTailCall()) && !IsArm64ECVarArgExitThunk) {
     SDValue ParamPtr = StackPtr;
-    if (IsTailCall) {
+    if (CLI.getIsTailCall()) {
       // Create a dummy object at the top of the stack that can be used to get
       // the SP after the epilogue
       int FI = MF.getFrameInfo().CreateFixedObject(1, FPDiff, true);
@@ -10999,7 +10999,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (OpFlags & AArch64II::MO_GOT) {
       Callee = DAG.getTargetGlobalAddress(CalledGlobal, DL, PtrVT, 0, OpFlags);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
-    } else if (!CLI.PAI || !IsTailCall) {
+    } else if (!CLI.PAI || !CLI.getIsTailCall()) {
       const GlobalValue *GV = G->getGlobal();
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
     }
@@ -11020,12 +11020,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // the frame up *after* the call, however in the ABI-changing tail-call case
   // we've carefully laid out the parameters so that when sp is reset they'll be
   // in the correct location.
-  if (IsTailCall && !IsSibCall) {
+  if (CLI.getIsTailCall() && !IsSibCall) {
     Chain = DAG.getCALLSEQ_END(Chain, 0, 0, InGlue, DL);
     InGlue = Chain.getValue(1);
   }
 
-  unsigned Opc = IsTailCall ? AArch64ISD::TC_RETURN : AArch64ISD::CALL;
+  unsigned Opc = CLI.getIsTailCall() ? AArch64ISD::TC_RETURN : AArch64ISD::CALL;
 
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
@@ -11035,7 +11035,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // be expanded to the call, directly followed by a special marker sequence and
   // a call to an ObjC library function.  Use CALL_RVMARKER to do that.
   if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
-    assert(!IsTailCall &&
+    assert(!CLI.getIsTailCall() &&
            "tail calls cannot be marked with clang.arc.attachedcall");
     Opc = AArch64ISD::CALL_RVMARKER;
 
@@ -11057,7 +11057,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Opc = AArch64ISD::CALL_BTI;
   }
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
@@ -11077,7 +11077,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (Opc == AArch64ISD::CALL_RVMARKER)
       Opc = AArch64ISD::AUTH_CALL_RVMARKER;
     else
-      Opc = IsTailCall ? AArch64ISD::AUTH_TC_RETURN : AArch64ISD::AUTH_CALL;
+      Opc = CLI.getIsTailCall() ? AArch64ISD::AUTH_TC_RETURN
+                                : AArch64ISD::AUTH_CALL;
     Ops.push_back(DAG.getTargetConstant(Key, DL, MVT::i32));
     Ops.push_back(IntDisc);
     Ops.push_back(AddrDisc);
@@ -11119,13 +11120,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(Opc, DL, MVT::Other, Ops);
     if (IsCFICall)
       Ret->setCFIType(CLI.CFIType->getZExtValue());
 
-    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.getNoMerge());
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     if (CalledGlobal &&
         MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
@@ -11138,7 +11139,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsCFICall)
     Chain->setCFIType(CLI.CFIType->getZExtValue());
 
-  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.getNoMerge());
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
   if (CalledGlobal &&
@@ -11199,10 +11200,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   return Result;
 }
 
-bool AArch64TargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool AArch64TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                           MachineFunction &MF, bool isVarArg,
+                                           llvm::ArrayRef<ISD::OutputArg> Outs,
+                                           LLVMContext &Context,
+                                           const Type *RetTy) const {
   CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
@@ -11212,7 +11214,7 @@ bool AArch64TargetLowering::CanLowerReturn(
 SDValue
 AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    bool isVarArg,
-                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                   llvm::ArrayRef<ISD::OutputArg> Outs,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
   auto &MF = DAG.getMachineFunction();

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -513,8 +514,7 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
-        IsFinalized(false) {}
+      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -2678,10 +2678,15 @@ public:
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocBB;
     SmallVector<BasicBlock *> OuterDeallocBBs;
-    SmallVector<Value *, 2> ExcludeArgsFromAggregate;
+    llvm::SmallVectorWithFlags<Value *, 2> ExcludeArgsFromAggregate;
     SetVector<Value *> Inputs, Outputs;
     // TODO: this should be safe to enable by default
-    bool FixUpNonEntryAllocas = false;
+    bool getFixUpNonEntryAllocas() const {
+      return ExcludeArgsFromAggregate.getFlag(0);
+    }
+    void setFixUpNonEntryAllocas(bool Value) {
+      ExcludeArgsFromAggregate.setFlag(0, Value);
+    }
 
     virtual ~OutlineInfo() = default;
 
@@ -2719,7 +2724,7 @@ public:
 
   /// Collection of declare target globals to rewrite uses of during
   /// device module finalizaiton.
-  SmallVector<DeclareTargetGlobalReplacement, 8>
+  llvm::SmallVectorWithFlags<DeclareTargetGlobalReplacement, 8, 2>
       DeclareTargetGlobalReplacements;
 
   /// Collection of owned canonical loop objects that eventually need to be
@@ -2985,11 +2990,12 @@ public:
   /// mappers, and non-contiguous information.
   struct MapInfosTy {
     struct StructNonContiguousInfo {
-      bool IsNonContiguous = false;
+      bool getIsNonContiguous() const { return Strides.getFlag(0); }
+      void setIsNonContiguous(bool Value) { Strides.setFlag(0, Value); }
       MapDimArrayTy Dims;
       MapNonContiguousArrayTy Offsets;
       MapNonContiguousArrayTy Counts;
-      MapNonContiguousArrayTy Strides;
+      llvm::SmallVectorWithFlagsFor<MapNonContiguousArrayTy, 1> Strides;
     };
     MapValuesArrayTy BasePointers;
     MapValuesArrayTy Pointers;
@@ -4050,7 +4056,12 @@ private:
   Value *emitRMWOpAsInstruction(Value *Src1, Value *Src2,
                                 AtomicRMWInst::BinOp RMWOp);
 
-  bool IsFinalized;
+  bool getIsFinalized() const {
+    return DeclareTargetGlobalReplacements.getFlag(0);
+  }
+  void setIsFinalized(bool Value) {
+    DeclareTargetGlobalReplacements.setFlag(0, Value);
+  }
 
 public:
   /// a struct to pack relevant information while generating atomic Ops
@@ -4203,13 +4214,18 @@ public:
   /// \return Insertion point after generated atomic capture IR.
   /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
   /// atomic compare operations on floating-point types.
-  bool HandleFPNegZero = false;
+  bool getHandleFPNegZeroFlag() const {
+    return DeclareTargetGlobalReplacements.getFlag(1);
+  }
+  void setHandleFPNegZeroFlag(bool Value) {
+    DeclareTargetGlobalReplacements.setFlag(1, Value);
+  }
 
   /// Set whether atomic compare should handle -0.0/+0.0 equivalence.
   /// Returns the previous value so callers can save and restore it.
   bool setHandleFPNegZero(bool FPNegZero) {
-    bool Old = HandleFPNegZero;
-    HandleFPNegZero = FPNegZero;
+    bool Old = getHandleFPNegZeroFlag();
+    setHandleFPNegZeroFlag(FPNegZero);
     return Old;
   }
 

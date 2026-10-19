@@ -73,10 +73,9 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
     : PP(pp),
       PreferredType(&actions.getASTContext(), pp.isCodeCompletionEnabled()),
       Actions(actions), Diags(PP.getDiagnostics()), StackHandler(Diags),
-      GreaterThanIsOperator(true), ColonIsSacred(false),
-      ParsingGenericAssociationType(false), InMessageExpression(false),
+      GreaterThanIsOperator(true), InMessageExpression(false),
       ParsingInObjCContainer(false), TemplateParameterDepth(0) {
-  SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
+  setSkipFunctionBodies(pp.isCodeCompletionEnabled() || skipFunctionBodies);
   Tok = Token::createEof();
   Actions.CurScope = nullptr;
   NumCachedScopes = 0;
@@ -1263,7 +1262,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     D.complete(DP);
     D.getMutableDeclSpec().abort();
 
-    if (SkipFunctionBodies && (!DP || Actions.canSkipFunctionBody(DP)) &&
+    if (getSkipFunctionBodies() && (!DP || Actions.canSkipFunctionBody(DP)) &&
         trySkippingFunctionBody()) {
       BodyScope.Exit();
       return Actions.ActOnSkippedFunctionBody(DP);
@@ -1294,7 +1293,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     if (FuncDecl) {
       // Consume the tokens and store them for later parsing.
       StashAwayMethodOrFunctionBodyTokens(FuncDecl);
-      CurParsedObjCImpl->HasCFunction = true;
+      CurParsedObjCImpl->setHasCFunction(true);
       return FuncDecl;
     }
     // FIXME: Should we really fall through here?
@@ -1397,7 +1396,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     ParseLexedAttributeList(*LateParsedAttrs, Res, /*EnterScope=*/false,
                             /*OnDefinition=*/true);
 
-  if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
+  if (getSkipFunctionBodies() && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
     Actions.ActOnSkippedFunctionBody(Res);

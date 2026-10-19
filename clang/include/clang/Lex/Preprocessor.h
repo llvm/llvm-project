@@ -43,6 +43,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -297,13 +298,28 @@ class Preprocessor {
   bool PragmasEnabled : 1;
 
   /// True if the current build action is a preprocessing action.
-  bool PreprocessedOutput : 1;
+  bool getPreprocessedOutputFlag() const {
+    return PendingModuleMacroNames.getFlag(0);
+  }
+  void setPreprocessedOutputFlag(bool Value) {
+    PendingModuleMacroNames.setFlag(0, Value);
+  }
 
   /// True if we are currently preprocessing a #if or #elif directive
-  bool ParsingIfOrElifDirective;
+  bool getParsingIfOrElifDirective() const {
+    return PendingModuleMacroNames.getFlag(1);
+  }
+  void setParsingIfOrElifDirective(bool Value) {
+    PendingModuleMacroNames.setFlag(1, Value);
+  }
 
   /// True if we are pre-expanding macro arguments.
-  bool InMacroArgPreExpansion;
+  bool getInMacroArgPreExpansion() const {
+    return PendingModuleMacroNames.getFlag(2);
+  }
+  void setInMacroArgPreExpansion(bool Value) {
+    PendingModuleMacroNames.setFlag(2, Value);
+  }
 
   /// Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
@@ -339,7 +355,12 @@ class Preprocessor {
   EmptylineHandler *Emptyline = nullptr;
 
   /// True to avoid tearing down the lexer etc on EOF
-  bool IncrementalProcessing = false;
+  bool getIncrementalProcessing() const {
+    return PendingModuleMacroNames.getFlag(3);
+  }
+  void setIncrementalProcessing(bool Value) {
+    PendingModuleMacroNames.setFlag(3, Value);
+  }
 
 public:
   /// The kind of translation unit we are processing.
@@ -384,10 +405,20 @@ private:
   unsigned CheckPointCounter = 0;
 
   /// Whether to record lexer check points for diagnostic snippet highlighting.
-  bool RecordCheckPoints = false;
+  bool getRecordCheckPoints() const {
+    return BuildingSubmoduleStack.getFlag(0);
+  }
+  void setRecordCheckPoints(bool Value) {
+    BuildingSubmoduleStack.setFlag(0, Value);
+  }
 
   /// Whether we're importing a standard C++20 named Modules.
-  bool ImportingCXXNamedModules = false;
+  bool getImportingCXXNamedModules() const {
+    return BuildingSubmoduleStack.getFlag(1);
+  }
+  void setImportingCXXNamedModules(bool Value) {
+    BuildingSubmoduleStack.setFlag(1, Value);
+  }
 
   /// Whether the last token we lexed was an 'export' keyword.
   Token LastExportKeyword;
@@ -690,7 +721,12 @@ private:
   SourceLocation PreambleRecordedPragmaAssumeNonNullLoc;
 
   /// True if we hit the code-completion point.
-  bool CodeCompletionReached = false;
+  bool getCodeCompletionReachedFlag() const {
+    return BuildingSubmoduleStack.getFlag(2);
+  }
+  void setCodeCompletionReachedFlag(bool Value) {
+    BuildingSubmoduleStack.setFlag(2, Value);
+  }
 
   /// The code completion token containing the information
   /// on the stem that is to be code completed.
@@ -719,11 +755,26 @@ private:
   FileID DeferredGMFInputsFileID;
 
   /// Whether the predefines buffer contains a synthesized GMF introducer.
-  bool HasSynthesizedGMF = false;
+  bool getHasSynthesizedGMF() const {
+    return BuildingSubmoduleStack.getFlag(3);
+  }
+  void setHasSynthesizedGMF(bool Value) {
+    BuildingSubmoduleStack.setFlag(3, Value);
+  }
 
   /// Whether setPredefines() replaced a previously initialized buffer.
-  bool PredefinesWereReplaced = false;
-  bool PredefinesInitialized = false;
+  bool getPredefinesWereReplaced() const {
+    return DelayedMacroExpandsCallbacks.getFlag(0);
+  }
+  void setPredefinesWereReplaced(bool Value) {
+    DelayedMacroExpandsCallbacks.setFlag(0, Value);
+  }
+  bool getPredefinesInitialized() const {
+    return DelayedMacroExpandsCallbacks.getFlag(1);
+  }
+  void setPredefinesInitialized(bool Value) {
+    DelayedMacroExpandsCallbacks.setFlag(1, Value);
+  }
 
   bool hasDeferredGMFInputs() const { return !DeferredGMFInputs.empty(); }
 
@@ -732,7 +783,12 @@ private:
 
   /// Whether we hit an error due to reaching max allowed include depth. Allows
   /// to avoid hitting the same error over and over again.
-  bool HasReachedMaxIncludeDepth = false;
+  bool getHasReachedMaxIncludeDepth() const {
+    return DelayedMacroExpandsCallbacks.getFlag(2);
+  }
+  void setHasReachedMaxIncludeDepth(bool Value) {
+    DelayedMacroExpandsCallbacks.setFlag(2, Value);
+  }
 
   /// The number of currently-active calls to Lex.
   ///
@@ -746,7 +802,12 @@ private:
   unsigned TokenCount = 0;
 
   /// Preprocess every token regardless of LexLevel.
-  bool PreprocessToken = false;
+  bool getPreprocessTokenFlag() const {
+    return DelayedMacroExpandsCallbacks.getFlag(3);
+  }
+  void setPreprocessTokenFlag(bool Value) {
+    DelayedMacroExpandsCallbacks.setFlag(3, Value);
+  }
 
   /// The maximum number of (LexLevel 0) tokens before issuing a -Wmax-tokens
   /// warning, or zero for unlimited.
@@ -829,7 +890,7 @@ private:
   /// Stack of Lexer unwinds completely (LexLevel returns to 0).
   /// This avoids use-after-free when HandleEndOfFile is called from
   /// within a Lexer method that still needs to access its members.
-  SmallVector<std::unique_ptr<Lexer>, 2> PendingDestroyLexers;
+  llvm::SmallVectorWithFlags<std::unique_ptr<Lexer>, 2, 4> PendingDestroyLexers;
 
   /// The current top of the stack that we're lexing from
   /// if not expanding a macro.
@@ -895,7 +956,8 @@ private:
     MacroExpandsInfo(Token Tok, MacroDefinition MD, SourceRange Range)
         : Tok(Tok), MD(MD), Range(Range) {}
   };
-  SmallVector<MacroExpandsInfo, 2> DelayedMacroExpandsCallbacks;
+  llvm::SmallVectorWithFlags<MacroExpandsInfo, 2, 4>
+      DelayedMacroExpandsCallbacks;
 
   /// Information about a name that has been used to define a module macro.
   struct FullModuleMacroInfo {
@@ -1061,7 +1123,8 @@ private:
           OuterSubmoduleState(OuterSubmoduleState),
           OuterPendingModuleMacroNames(OuterPendingModuleMacroNames) {}
   };
-  SmallVector<BuildingSubmoduleInfo, 8> BuildingSubmoduleStack;
+  llvm::SmallVectorWithFlags<BuildingSubmoduleInfo, 8, 4>
+      BuildingSubmoduleStack;
 
   /// Information about a submodule's preprocessor state.
   struct SubmoduleState {
@@ -1094,7 +1157,7 @@ private:
   llvm::UniquingSet<ModuleMacro> ModuleMacros;
 
   /// The names of potential module macros that we've not yet processed.
-  llvm::SmallVector<IdentifierInfo *, 32> PendingModuleMacroNames;
+  llvm::SmallVectorWithFlags<IdentifierInfo *, 32, 4> PendingModuleMacroNames;
 
   /// The list of module macros, for each identifier, that are not overridden by
   /// any other module macro.
@@ -1170,13 +1233,31 @@ private:
   FileID PCHThroughHeaderFileID;
 
   /// Whether tokens are being skipped until a #pragma hdrstop is seen.
-  bool SkippingUntilPragmaHdrStop = false;
+  bool getSkippingUntilPragmaHdrStop() const {
+    return PendingDestroyLexers.getFlag(0);
+  }
+  bool setSkippingUntilPragmaHdrStop(bool Value) {
+    PendingDestroyLexers.setFlag(0, Value);
+    return Value;
+  }
 
   /// Whether tokens are being skipped until the through header is seen.
-  bool SkippingUntilPCHThroughHeader = false;
+  bool getSkippingUntilPCHThroughHeader() const {
+    return PendingDestroyLexers.getFlag(1);
+  }
+  bool setSkippingUntilPCHThroughHeader(bool Value) {
+    PendingDestroyLexers.setFlag(1, Value);
+    return Value;
+  }
 
   /// Whether the main file is preprocessed module file.
-  bool MainFileIsPreprocessedModuleFile = false;
+  bool getMainFileIsPreprocessedModuleFile() const {
+    return PendingDestroyLexers.getFlag(2);
+  }
+  bool setMainFileIsPreprocessedModuleFile(bool Value) {
+    PendingDestroyLexers.setFlag(2, Value);
+    return Value;
+  }
 
   /// \{
   /// Cache of macro expanders to reduce malloc traffic.
@@ -1230,7 +1311,12 @@ private:
   /// This is used to guard against calling this function recursively.
   ///
   /// See comments at the use-site for more context about why it is needed.
-  bool SkippingExcludedConditionalBlock = false;
+  bool getSkippingExcludedConditionalBlock() const {
+    return PendingDestroyLexers.getFlag(3);
+  }
+  void setSkippingExcludedConditionalBlock(bool Value) {
+    PendingDestroyLexers.setFlag(3, Value);
+  }
 
   /// Keeps track of skipped range mappings that were recorded while skipping
   /// excluded conditional directives. It maps the source buffer pointer at
@@ -1313,7 +1399,7 @@ public:
 
   /// True if we are currently preprocessing a #if or #elif directive
   bool isParsingIfOrElifDirective() const {
-    return ParsingIfOrElifDirective;
+    return getParsingIfOrElifDirective();
   }
 
   /// Control whether the preprocessor retains comments in output.
@@ -1338,12 +1424,12 @@ public:
   /// Sets whether the preprocessor is responsible for producing output or if
   /// it is producing tokens to be consumed by Parse and Sema.
   void setPreprocessedOutput(bool IsPreprocessedOutput) {
-    PreprocessedOutput = IsPreprocessedOutput;
+    setPreprocessedOutputFlag(IsPreprocessedOutput);
   }
 
   /// Returns true if the preprocessor is responsible for generating output,
   /// false if it is producing tokens to be consumed by Parse and Sema.
-  bool isPreprocessedOutput() const { return PreprocessedOutput; }
+  bool isPreprocessedOutput() const { return getPreprocessedOutputFlag(); }
 
   /// Return true if we are lexing directly from the specified lexer.
   bool isCurrentLexer(const PreprocessorLexer *L) const {
@@ -1408,7 +1494,9 @@ public:
     GetDependencyDirectives = &Get;
   }
 
-  void setPreprocessToken(bool Preprocess) { PreprocessToken = Preprocess; }
+  void setPreprocessToken(bool Preprocess) {
+    setPreprocessTokenFlag(Preprocess);
+  }
 
   bool isMacroDefined(StringRef Id) {
     return isMacroDefined(&Identifiers.get(Id));
@@ -1589,8 +1677,9 @@ public:
   ///
   /// These predefines are automatically injected when parsing the main file.
   void setPredefines(std::string P) {
-    PredefinesWereReplaced |= PredefinesInitialized;
-    PredefinesInitialized = true;
+    setPredefinesWereReplaced(int(getPredefinesWereReplaced()) |
+                              (getPredefinesInitialized()));
+    setPredefinesInitialized(true);
     Predefines = std::move(P);
   }
 
@@ -1835,14 +1924,14 @@ public:
 
   /// Whether the main file is preprocessed module file.
   bool isPreprocessedModuleFile() const {
-    return MainFileIsPreprocessedModuleFile;
+    return getMainFileIsPreprocessedModuleFile();
   }
 
   /// Mark the main file as a preprocessed module file, then the 'module' and
   /// 'import' directive recognition will be suppressed. Only
   /// '__preprocessed_moduke' and '__preprocessed_import' are allowed.
   void markMainFileAsPreprocessedModuleFile() {
-    MainFileIsPreprocessedModuleFile = true;
+    setMainFileIsPreprocessedModuleFile(true);
   }
 
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
@@ -2069,11 +2158,13 @@ public:
   void recomputeCurLexerKind();
 
   /// Returns true if incremental processing is enabled
-  bool isIncrementalProcessingEnabled() const { return IncrementalProcessing; }
+  bool isIncrementalProcessingEnabled() const {
+    return getIncrementalProcessing();
+  }
 
   /// Enables the incremental processing
   void enableIncrementalProcessing(bool value = true) {
-    IncrementalProcessing = value;
+    setIncrementalProcessing(value);
   }
 
   /// Specify the point at which code-completion will be performed.
@@ -2112,12 +2203,14 @@ public:
 
   /// Returns true if code-completion is enabled and we have hit the
   /// code-completion point.
-  bool isCodeCompletionReached() const { return CodeCompletionReached; }
+  bool isCodeCompletionReached() const {
+    return getCodeCompletionReachedFlag();
+  }
 
   /// Note that we hit the code-completion point.
   void setCodeCompletionReached() {
     assert(isCodeCompletionEnabled() && "Code-completion not enabled!");
-    CodeCompletionReached = true;
+    setCodeCompletionReachedFlag(true);
     // Silence any diagnostics that occur after we hit the code-completion.
     getDiagnostics().setSuppressAllDiagnostics(true);
   }
@@ -2571,7 +2664,7 @@ public:
   bool isImportingCXXNamedModules() const {
     assert(getLangOpts().CPlusPlusModules &&
            "Import C++ named modules are only valid for C++20 modules");
-    return ImportingCXXNamedModules;
+    return getImportingCXXNamedModules();
   }
 
   /// Allocate a new MacroInfo object with the provided SourceLocation.

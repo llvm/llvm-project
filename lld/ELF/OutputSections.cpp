@@ -117,7 +117,7 @@ void OutputSection::recordSection(InputSectionBase *isec) {
 // other InputSections.
 void OutputSection::commitSection(InputSection *isec) {
   if (LLVM_UNLIKELY(type != isec->type)) {
-    if (!hasInputSections && !typeIsSet) {
+    if (!getHasInputSections() && !getTypeIsSet()) {
       type = isec->type;
     } else if (isStaticRelSecType(type) && isStaticRelSecType(isec->type) &&
                (type == SHT_CREL) != (isec->type == SHT_CREL)) {
@@ -130,7 +130,7 @@ void OutputSection::commitSection(InputSection *isec) {
         name = ctx.saver.save(".crel" + name);
       }
     } else {
-      if (typeIsSet || !canMergeToProgbits(ctx, type) ||
+      if (getTypeIsSet() || !canMergeToProgbits(ctx, type) ||
           !canMergeToProgbits(ctx, isec->type)) {
         // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
         // that the contents at that address is provided by some other means.
@@ -145,14 +145,14 @@ void OutputSection::commitSection(InputSection *isec) {
                    << getELFSectionTypeName(ctx.arg.emachine, type);
         }
       }
-      if (!typeIsSet)
+      if (!getTypeIsSet())
         type = SHT_PROGBITS;
     }
   }
-  if (!hasInputSections) {
+  if (!getHasInputSections()) {
     // If IS is the first section to be added to this section,
     // initialize type, entsize and flags from isec.
-    hasInputSections = true;
+    setHasInputSections(true);
     entsize = isec->entsize;
     flags = isec->flags;
   } else {
@@ -174,7 +174,7 @@ void OutputSection::commitSection(InputSection *isec) {
   uint64_t andFlags = (flags & isec->flags) & andMask;
   uint64_t orFlags = (flags | isec->flags) & orMask;
   flags = andFlags | orFlags;
-  if (nonAlloc)
+  if (getNonAlloc())
     flags &= ~(uint64_t)SHF_ALLOC;
 
   addralign = std::max(addralign, isec->addralign);
@@ -288,7 +288,7 @@ static void sortByOrder(MutableArrayRef<InputSection *> in,
 }
 
 uint64_t elf::getHeaderSize(Ctx &ctx) {
-  if (ctx.arg.oFormatBinary)
+  if (ctx.arg.getOFormatBinary())
     return 0;
   return ctx.out.elfHeader->size + ctx.out.programHeaders->size;
 }
@@ -548,8 +548,8 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
 
       // When in Arm BE8 mode, the linker has to convert the big-endian
       // instructions to little-endian, leaving the data big-endian.
-      if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
-          (flags & SHF_EXECINSTR))
+      if (ctx.arg.emachine == EM_ARM && !ctx.arg.getIsLE() &&
+          ctx.arg.getArmBe8() && (flags & SHF_EXECINSTR))
         convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
@@ -684,7 +684,7 @@ static size_t relToCrel(Ctx &ctx, raw_svector_ostream &os,
   for (auto rel : rels) {
     encodeOneCrel<typename ELFT::uint>(
         ctx, os, out, sec->getVA(rel.r_offset), file.getRelocTargetSym(rel),
-        rel.getType(ctx.arg.isMips64EL), getAddend<ELFT>(rel));
+        rel.getType(ctx.arg.getIsMips64EL()), getAddend<ELFT>(rel));
   }
   return rels.size();
 }
@@ -713,11 +713,11 @@ template <bool is64> void OutputSection::finalizeNonAllocCrel(Ctx &ctx) {
 
     // Convert REL[A] to CREL.
     if constexpr (is64) {
-      totalCount += ctx.arg.isLE
+      totalCount += ctx.arg.getIsLE()
                         ? relToCrel<ELF64LE>(ctx, os, out, relSec, sec)
                         : relToCrel<ELF64BE>(ctx, os, out, relSec, sec);
     } else {
-      totalCount += ctx.arg.isLE
+      totalCount += ctx.arg.getIsLE()
                         ? relToCrel<ELF32LE>(ctx, os, out, relSec, sec)
                         : relToCrel<ELF32BE>(ctx, os, out, relSec, sec);
     }
@@ -747,7 +747,7 @@ void OutputSection::finalize(Ctx &ctx) {
     return;
   }
 
-  if (!ctx.arg.copyRelocs || !isStaticRelSecType(type))
+  if (!ctx.arg.getCopyRelocs() || !isStaticRelSecType(type))
     return;
 
   // Skip if 'first' is synthetic, i.e. not a section created by --emit-relocs.
@@ -765,7 +765,7 @@ void OutputSection::finalize(Ctx &ctx) {
   flags |= SHF_INFO_LINK;
   // Finalize the content of non-alloc CREL.
   if (type == SHT_CREL) {
-    if (ctx.arg.is64)
+    if (ctx.arg.getIs64())
       finalizeNonAllocCrel<true>(ctx);
     else
       finalizeNonAllocCrel<false>(ctx);
@@ -848,26 +848,6 @@ InputSection *elf::getFirstInputSection(const OutputSection *os) {
   return nullptr;
 }
 
-ArrayRef<InputSection *>
-elf::getInputSections(const OutputSection &os,
-                      SmallVector<InputSection *, 0> &storage) {
-  ArrayRef<InputSection *> ret;
-  storage.clear();
-  for (SectionCommand *cmd : os.commands) {
-    auto *isd = dyn_cast<InputSectionDescription>(cmd);
-    if (!isd)
-      continue;
-    if (ret.empty()) {
-      ret = isd->sections;
-    } else {
-      if (storage.empty())
-        storage.assign(ret.begin(), ret.end());
-      storage.insert(storage.end(), isd->sections.begin(), isd->sections.end());
-    }
-  }
-  return storage.empty() ? ret : ArrayRef(storage);
-}
-
 // Sorts input sections by section name suffixes, so that .foo.N comes
 // before .foo.M if N < M. Used to sort .{init,fini}_array.N sections.
 // We want to keep the original order if the priorities are the same
@@ -884,7 +864,7 @@ std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
     return *filler;
   if (!(flags & SHF_EXECINSTR))
     return {0, 0, 0, 0};
-  if (ctx.arg.relocatable && ctx.arg.emachine == EM_RISCV) {
+  if (ctx.arg.getRelocatable() && ctx.arg.emachine == EM_RISCV) {
     // See RISCV::maybeSynthesizeAlign: Synthesized NOP bytes and ALIGN
     // relocations might be needed between two input sections. Use a NOP for the
     // filler.
@@ -892,13 +872,13 @@ std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
       return {1, 0, 1, 0};
     return {0x13, 0, 0, 0};
   }
-  if (ctx.arg.relocatable && ctx.arg.emachine == EM_LOONGARCH)
+  if (ctx.arg.getRelocatable() && ctx.arg.emachine == EM_LOONGARCH)
     return {0, 0, 0x40, 0x03};
   return ctx.target->trapInstr;
 }
 
 void OutputSection::checkDynRelAddends(Ctx &ctx) {
-  assert(ctx.arg.writeAddends && ctx.arg.checkDynamicRelocs);
+  assert(ctx.arg.writeAddends && ctx.arg.getCheckDynamicRelocs());
   assert(isStaticRelSecType(type));
   SmallVector<InputSection *, 0> storage;
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
@@ -927,7 +907,7 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
       // With -z mark-plt, the JUMP_SLOT relocation's addend is the PLT entry
       // address, but the .got.plt entry it targets holds the lazy-binding
       // address instead, so the written value intentionally differs.
-      if (ctx.arg.zMarkPlt && rel.type == ctx.target->pltRel)
+      if (ctx.arg.getZMarkPlt() && rel.type == ctx.target->pltRel)
         continue;
       const uint8_t *relocTarget =
           ctx.bufferStart + relOsec->offset + (rel.r_offset - relOsec->addr);

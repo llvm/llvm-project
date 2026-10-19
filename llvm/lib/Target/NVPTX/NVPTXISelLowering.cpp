@@ -1298,7 +1298,7 @@ static SDValue getSymbolNode(SelectionDAG &DAG, const Twine &Name, EVT T) {
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
-  if (CLI.IsVarArg &&
+  if (CLI.getIsVarArg() &&
       (!STI.hasFeature(NVPTX::PTX60) || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(
         "Support for variadic functions (unsized array parameter) introduced "
@@ -1306,7 +1306,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SelectionDAG &DAG = CLI.DAG;
   SDLoc dl = CLI.DL;
-  const SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  const auto &Ins = CLI.Ins;
   SDValue Callee = CLI.Callee;
   ArgListTy &Args = CLI.getArgs();
   Type *RetTy = CLI.RetTy;
@@ -1363,7 +1363,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   //
   // After all vararg is processed, 'VAOffset' holds the size of the
   // vararg byte array.
-  assert((CLI.IsVarArg || CLI.Args.size() <= CLI.NumFixedArgs) &&
+  assert((CLI.getIsVarArg() || CLI.Args.size() <= CLI.NumFixedArgs) &&
          "Non-VarArg function with extra arguments");
 
   const unsigned FirstVAArg = CLI.NumFixedArgs; // position of first variadic
@@ -1636,7 +1636,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const SDValue CallToken = DAG.getTokenFactor(dl, CallPrereqs);
   const SDValue Call = DAG.getNode(
       NVPTXISD::CALL, dl, MVT::Other,
-      {CallToken, GetI32(CLI.IsConvergent), GetI32(IsIndirectCall),
+      {CallToken, GetI32(CLI.getIsConvergent()), GetI32(IsIndirectCall),
        GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, Proto});
 
   SmallVector<SDValue, 16> LoadChains{Call};
@@ -1698,7 +1698,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // set IsTailCall to false for now, until we figure out how to express
   // tail call optimization in PTX
-  CLI.IsTailCall = false;
+  CLI.setIsTailCall(false);
   return CallEnd;
 }
 
@@ -4276,8 +4276,8 @@ SDValue NVPTXTargetLowering::getCallParamSymbolNode(SelectionDAG &DAG, int I,
 
 SDValue NVPTXTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   const DataLayout &DL = DAG.getDataLayout();
   LLVMContext &Ctx = *DAG.getContext();
 
@@ -4405,7 +4405,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 SDValue
 NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  bool isVarArg,
-                                 const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                 llvm::ArrayRef<ISD::OutputArg> Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &dl, SelectionDAG &DAG) const {
   const Function &F = DAG.getMachineFunction().getFunction();

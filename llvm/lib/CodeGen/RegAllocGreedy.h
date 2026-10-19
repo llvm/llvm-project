@@ -20,6 +20,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
@@ -149,9 +150,9 @@ public:
 
   // Interface to priority advisers
   bool getRegClassPriorityTrumpsGlobalness() const {
-    return RegClassPriorityTrumpsGlobalness;
+    return GlobalCand.getFlag(0);
   }
-  bool getReverseLocalAssignment() const { return ReverseLocalAssignment; }
+  bool getReverseLocalAssignment() const { return GlobalCand.getFlag(1); }
   // end (interface to priority advisers)
 
 private:
@@ -261,7 +262,7 @@ private:
   /// Candidate info for each PhysReg in AllocationOrder.
   /// This vector never shrinks, but grows to the size of the largest register
   /// class.
-  SmallVector<GlobalSplitCandidate, 32> GlobalCand;
+  llvm::SmallVectorWithFlags<GlobalSplitCandidate, 32, 2> GlobalCand;
 
   enum : unsigned { NoCand = ~0u };
 
@@ -281,9 +282,13 @@ private:
 
   /// Flags for the live range priority calculation, determined once per
   /// machine function.
-  bool RegClassPriorityTrumpsGlobalness = false;
+  void setRegClassPriorityTrumpsGlobalnessFlag(bool Value) {
+    GlobalCand.setFlag(0, Value);
+  }
 
-  bool ReverseLocalAssignment = false;
+  void setReverseLocalAssignmentFlag(bool Value) {
+    GlobalCand.setFlag(1, Value);
+  }
 
 public:
   RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F = nullptr);

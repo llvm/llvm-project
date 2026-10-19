@@ -422,8 +422,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     // If we get foo:bar, this is almost certainly a typo for foo::bar.  Recover
     // and emit a fixit hint for it.
-    if (Next.is(tok::colon) && !ColonIsSacred &&
-        !ParsingGenericAssociationType) {
+    if (Next.is(tok::colon) && !getColonIsSacred() &&
+        !getParsingGenericAssociationType()) {
       if (Actions.IsInvalidUnlessNestedName(getCurScope(), SS, IdInfo,
                                             EnteringContext) &&
           // If the token after the colon isn't an identifier, it's still an
@@ -454,7 +454,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         return false;
       }
 
-      if (ColonIsSacred) {
+      if (getColonIsSacred()) {
         const Token &Next2 = GetLookAheadToken(2);
         if (Next2.is(tok::kw_private) || Next2.is(tok::kw_protected) ||
             Next2.is(tok::kw_public) || Next2.is(tok::kw_virtual)) {
@@ -483,7 +483,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       SourceLocation ScopeBeginLoc = SS.getBeginLoc();
 
       bool IsCorrectedToColon = false;
-      bool *CorrectionFlagPtr = ColonIsSacred ? &IsCorrectedToColon : nullptr;
+      bool *CorrectionFlagPtr =
+          getColonIsSacred() ? &IsCorrectedToColon : nullptr;
       if (Actions.ActOnCXXNestedNameSpecifier(
               getCurScope(), IdInfo, EnteringContext, SS, CorrectionFlagPtr,
               OnlyNamespace)) {
@@ -1843,7 +1844,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
             Actions.CodeCompletion().ProduceConstructorSignatureHelp(
                 TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(),
                 Exprs, T.getOpenLocation(), /*Braced=*/false);
-      CalledSignatureHelp = true;
+      setCalledSignatureHelp(true);
       return PreferredType;
     };
 
@@ -1852,7 +1853,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
             PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                 RunSignatureHelp);
           })) {
-        if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+        if (PP.isCodeCompletionReached() && !getCalledSignatureHelp())
           RunSignatureHelp();
         SkipUntil(tok::r_paren, StopAtSemi);
         return ExprError();
@@ -3050,14 +3051,14 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
                   DeclaratorInfo.getEndLoc(), ConstructorArgs,
                   ConstructorLParen,
                   /*Braced=*/false);
-        CalledSignatureHelp = true;
+        setCalledSignatureHelp(true);
         return PreferredType;
       };
       if (ParseExpressionList(ConstructorArgs, [&] {
             PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                 RunSignatureHelp);
           })) {
-        if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+        if (PP.isCodeCompletionReached() && !getCalledSignatureHelp())
           RunSignatureHelp();
         SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
         return ExprError();

@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_POWERPC_PPCMACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 
@@ -91,7 +92,8 @@ private:
   bool LRStoreRequired = false;
 
   /// This function makes use of the PPC64 ELF TOC base pointer (register r2).
-  bool UsesTOCBasePtr = false;
+  bool getUsesTOCBasePtrFlag() const { return MustSaveCRs.getFlag(0); }
+  void setUsesTOCBasePtrFlag(bool Value) { MustSaveCRs.setFlag(0, Value); }
 
   /// MinReservedArea - This is the frame size that is at least reserved in a
   /// potential caller (parameter+linkage area).
@@ -104,7 +106,8 @@ private:
 
   /// HasFastCall - Does this function contain a fast call. Used to determine
   /// how the caller's stack pointer should be calculated (epilog/dynamicalloc).
-  bool HasFastCall = false;
+  bool getHasFastCallFlag() const { return MustSaveCRs.getFlag(1); }
+  void setHasFastCallFlag(bool Value) { MustSaveCRs.setFlag(1, Value); }
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex = 0;
@@ -133,7 +136,7 @@ private:
 
   /// ParamtersType - Store all the parameter's type that are saved on
   /// registers.
-  SmallVector<ParamType, 32> ParamtersType;
+  llvm::SmallVectorWithFlags<ParamType, 32> ParamtersType;
 
   /// CRSpillFrameIndex - FrameIndex for CR spill slot for 32-bit SVR4.
   int CRSpillFrameIndex = 0;
@@ -141,10 +144,11 @@ private:
   /// If any of CR[2-4] need to be saved in the prologue and restored in the
   /// epilogue then they are added to this array. This is used for the
   /// 64-bit SVR4 ABI.
-  SmallVector<Register, 3> MustSaveCRs;
+  llvm::SmallVectorWithFlags<Register, 3, 4> MustSaveCRs;
 
   /// Whether this uses the PIC Base register or not.
-  bool UsesPICBase = false;
+  bool getUsesPICBaseFlag() const { return MustSaveCRs.getFlag(2); }
+  void setUsesPICBaseFlag(bool Value) { MustSaveCRs.setFlag(2, Value); }
 
   /// We keep track attributes for each live-in virtual registers
   /// to use SExt/ZExt flags in later optimization.
@@ -152,8 +156,16 @@ private:
 
   /// Flags for aix-shared-lib-tls-model-opt, will be lazily initialized for
   /// each function.
-  bool AIXFuncUseTLSIEForLD = false;
-  bool AIXFuncTLSModelOptInitDone = false;
+  bool getAIXFuncUseTLSIEForLDFlag() const { return MustSaveCRs.getFlag(3); }
+  void setAIXFuncUseTLSIEForLDFlag(bool Value) {
+    MustSaveCRs.setFlag(3, Value);
+  }
+  bool getAIXFuncTLSModelOptInitDoneFlag() const {
+    return ParamtersType.getFlag(0);
+  }
+  void setAIXFuncTLSModelOptInitDoneFlag(bool Value) {
+    ParamtersType.setFlag(0, Value);
+  }
 
 public:
   explicit PPCFunctionInfo(const Function &F, const TargetSubtargetInfo *STI);
@@ -220,18 +232,20 @@ public:
   void setLRStoreRequired() { LRStoreRequired = true; }
   bool isLRStoreRequired() const { return LRStoreRequired; }
 
-  void setUsesTOCBasePtr()    { UsesTOCBasePtr = true; }
-  bool usesTOCBasePtr() const { return UsesTOCBasePtr; }
+  void setUsesTOCBasePtr() { setUsesTOCBasePtrFlag(true); }
+  bool usesTOCBasePtr() const { return getUsesTOCBasePtrFlag(); }
 
-  void setHasFastCall() { HasFastCall = true; }
-  bool hasFastCall() const { return HasFastCall;}
+  void setHasFastCall() { setHasFastCallFlag(true); }
+  bool hasFastCall() const { return getHasFastCallFlag(); }
 
-  void setAIXFuncTLSModelOptInitDone() { AIXFuncTLSModelOptInitDone = true; }
-  bool isAIXFuncTLSModelOptInitDone() const {
-    return AIXFuncTLSModelOptInitDone;
+  void setAIXFuncTLSModelOptInitDone() {
+    setAIXFuncTLSModelOptInitDoneFlag(true);
   }
-  void setAIXFuncUseTLSIEForLD() { AIXFuncUseTLSIEForLD = true; }
-  bool isAIXFuncUseTLSIEForLD() const { return AIXFuncUseTLSIEForLD; }
+  bool isAIXFuncTLSModelOptInitDone() const {
+    return getAIXFuncTLSModelOptInitDoneFlag();
+  }
+  void setAIXFuncUseTLSIEForLD() { setAIXFuncUseTLSIEForLDFlag(true); }
+  bool isAIXFuncUseTLSIEForLD() const { return getAIXFuncUseTLSIEForLDFlag(); }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
@@ -272,12 +286,11 @@ public:
   int getCRSpillFrameIndex() const { return CRSpillFrameIndex; }
   void setCRSpillFrameIndex(int idx) { CRSpillFrameIndex = idx; }
 
-  const SmallVectorImpl<Register> &
-    getMustSaveCRs() const { return MustSaveCRs; }
+  ArrayRef<Register> getMustSaveCRs() const { return MustSaveCRs; }
   void addMustSaveCR(Register Reg) { MustSaveCRs.push_back(Reg); }
 
-  void setUsesPICBase(bool uses) { UsesPICBase = uses; }
-  bool usesPICBase() const { return UsesPICBase; }
+  void setUsesPICBase(bool uses) { setUsesPICBaseFlag(uses); }
+  bool usesPICBase() const { return getUsesPICBaseFlag(); }
 
   MCSymbol *getPICOffsetSymbol(MachineFunction &MF) const;
 

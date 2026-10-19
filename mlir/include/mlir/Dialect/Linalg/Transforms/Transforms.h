@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <utility>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
@@ -356,16 +357,17 @@ struct PadTilingInterfaceOptions {
     return *this;
   }
   /// A list of iterator dimensions sizes to pad to.
-  SmallVector<OpFoldResult> paddingSizes;
+  llvm::SmallVectorWithFlags<OpFoldResult> paddingSizes;
   PadTilingInterfaceOptions &setPaddingSizes(ArrayRef<OpFoldResult> m) {
     paddingSizes.assign(m.begin(), m.end());
     return *this;
   }
   /// Pad iterator `paddingDimension[i]` to next multiple of `paddingSizes[i]`
   /// if true. Otherwise pad to `paddingSizes[i]`.
-  bool padToMultipleOf;
+  bool getPadToMultipleOfFlag() const { return paddingSizes.getFlag(0); }
+  void setPadToMultipleOfFlag(bool Value) { paddingSizes.setFlag(0, Value); }
   PadTilingInterfaceOptions &setPadToMultipleOf(bool b) {
-    padToMultipleOf = b;
+    setPadToMultipleOfFlag(b);
     return *this;
   }
 };
@@ -1421,29 +1423,54 @@ struct BlockPackMatmulOptions {
   /// Scalable flags for block factors. When true, the corresponding block
   /// factor is considered scalable. Must be empty (all static) or have the same
   /// size as blockFactors.
-  SmallVector<bool, 3> scalableBlockFactors;
+  llvm::SmallVectorWithFlags<bool, 3> scalableBlockFactors;
 
   /// If true, allows packing of dimensions that only partially fit into the
   /// block factors.
-  bool allowPadding = true;
+  bool getAllowPadding() const {
+    return !mnkPaddedSizesNextMultipleOf.getFlag(0);
+  }
+  void setAllowPadding(bool Value) {
+    mnkPaddedSizesNextMultipleOf.setFlag(0, !Value);
+  }
 
   /// Next multiples of the packing sizes.
-  SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
+  llvm::SmallVectorWithFlags<int64_t, 3, 4> mnkPaddedSizesNextMultipleOf;
 
   /// Permutation of matmul (M, N, K) dimensions order.
   SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
 
   /// Transpose LHS outer block layout [MB][KB] -> [KB][MB].
-  bool lhsTransposeOuterBlocks = false;
+  bool getLhsTransposeOuterBlocks() const {
+    return mnkPaddedSizesNextMultipleOf.getFlag(1);
+  }
+  void setLhsTransposeOuterBlocks(bool Value) {
+    mnkPaddedSizesNextMultipleOf.setFlag(1, Value);
+  }
 
   /// Transpose LHS inner block layout [mb][kb] -> [kb][mb].
-  bool lhsTransposeInnerBlocks = false;
+  bool getLhsTransposeInnerBlocks() const {
+    return mnkPaddedSizesNextMultipleOf.getFlag(2);
+  }
+  void setLhsTransposeInnerBlocks(bool Value) {
+    mnkPaddedSizesNextMultipleOf.setFlag(2, Value);
+  }
 
   /// Transpose RHS outer block layout [KB][NB] -> [NB][KB].
-  bool rhsTransposeOuterBlocks = true;
+  bool getRhsTransposeOuterBlocks() const {
+    return !mnkPaddedSizesNextMultipleOf.getFlag(3);
+  }
+  void setRhsTransposeOuterBlocks(bool Value) {
+    mnkPaddedSizesNextMultipleOf.setFlag(3, !Value);
+  }
 
   /// Transpose RHS inner block layout [kb][nb] -> [nb][kb].
-  bool rhsTransposeInnerBlocks = true;
+  bool getRhsTransposeInnerBlocks() const {
+    return !scalableBlockFactors.getFlag(0);
+  }
+  void setRhsTransposeInnerBlocks(bool Value) {
+    scalableBlockFactors.setFlag(0, !Value);
+  }
 };
 
 /// Function type which is used to control matmul packing.

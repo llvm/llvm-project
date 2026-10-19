@@ -23,6 +23,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/TargetParser/Triple.h"
@@ -265,13 +266,18 @@ private:
 
   // Global declaration collected for the $Globals default constant
   // buffer which will be created at the end of the translation unit.
-  llvm::SmallVector<Decl *> DefaultCBufferDecls;
+  llvm::SmallVectorWithFlags<Decl *> DefaultCBufferDecls;
 
   uint32_t ImplicitBindingNextOrderID = 0;
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
-  bool HasDeclaredAPushConstant = false;
+  bool getHasDeclaredAPushConstant() const {
+    return DefaultCBufferDecls.getFlag(0);
+  }
+  void setHasDeclaredAPushConstant(bool Value) {
+    DefaultCBufferDecls.setFlag(0, Value);
+  }
 
   // Information about the current subtree being flattened.
   struct SemanticInfo {

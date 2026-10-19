@@ -1072,19 +1072,19 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "bad format for --extract-section, expected section=file");
     Config.ExtractSection.push_back(Value);
   }
-  Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
-  Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
-  Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);
-  Config.StripDWO = InputArgs.hasArg(OBJCOPY_strip_dwo);
-  Config.StripSections = InputArgs.hasArg(OBJCOPY_strip_sections);
-  Config.StripNonAlloc = InputArgs.hasArg(OBJCOPY_strip_non_alloc);
-  Config.StripUnneeded = InputArgs.hasArg(OBJCOPY_strip_unneeded);
-  Config.ExtractDWO = InputArgs.hasArg(OBJCOPY_extract_dwo);
-  Config.ExtractMainPartition =
-      InputArgs.hasArg(OBJCOPY_extract_main_partition);
-  ELFConfig.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
-  Config.Verbose = InputArgs.hasArg(OBJCOPY_verbose);
-  Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
+  Config.setStripAll(InputArgs.hasArg(OBJCOPY_strip_all));
+  Config.setStripAllGNU(InputArgs.hasArg(OBJCOPY_strip_all_gnu));
+  Config.setStripDebug(InputArgs.hasArg(OBJCOPY_strip_debug));
+  Config.setStripDWO(InputArgs.hasArg(OBJCOPY_strip_dwo));
+  Config.setStripSections(InputArgs.hasArg(OBJCOPY_strip_sections));
+  Config.setStripNonAlloc(InputArgs.hasArg(OBJCOPY_strip_non_alloc));
+  Config.setStripUnneeded(InputArgs.hasArg(OBJCOPY_strip_unneeded));
+  Config.setExtractDWO(InputArgs.hasArg(OBJCOPY_extract_dwo));
+  Config.setExtractMainPartition(
+      InputArgs.hasArg(OBJCOPY_extract_main_partition));
+  ELFConfig.setLocalizeHidden(InputArgs.hasArg(OBJCOPY_localize_hidden));
+  Config.setVerbose(InputArgs.hasArg(OBJCOPY_verbose));
+  Config.setWeaken(InputArgs.hasArg(OBJCOPY_weaken));
   if (auto *Arg =
           InputArgs.getLastArg(OBJCOPY_discard_all, OBJCOPY_discard_locals)) {
     Config.DiscardMode = Arg->getOption().matches(OBJCOPY_discard_all)
@@ -1092,17 +1092,17 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              : DiscardType::Locals;
   }
 
-  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
-      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+  ELFConfig.setVerifyNoteSections(InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true));
 
-  Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
-  ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
+  Config.setOnlyKeepDebug(InputArgs.hasArg(OBJCOPY_only_keep_debug));
+  ELFConfig.setKeepFileSymbols(InputArgs.hasArg(OBJCOPY_keep_file_symbols));
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
-  Config.DecompressDebugSections =
-      InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
+  Config.setDecompressDebugSections(
+      InputArgs.hasArg(OBJCOPY_decompress_debug_sections));
   if (Config.DiscardMode == DiscardType::All) {
-    Config.StripDebug = true;
-    ELFConfig.KeepFileSymbols = true;
+    Config.setStripDebug(true);
+    ELFConfig.setKeepFileSymbols(true);
   }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     if (Error E = Config.SymbolsToLocalize.addMatcher(NameOrPattern::create(
@@ -1212,15 +1212,15 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
       return std::move(E);
   }
 
-  ELFConfig.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
+  ELFConfig.setAllowBrokenLinks(InputArgs.hasArg(OBJCOPY_allow_broken_links));
 
-  Config.DeterministicArchives = InputArgs.hasFlag(
+  Config.setDeterministicArchives(InputArgs.hasFlag(
       OBJCOPY_enable_deterministic_archives,
-      OBJCOPY_disable_deterministic_archives, /*default=*/true);
+      OBJCOPY_disable_deterministic_archives, /*default=*/true));
 
-  Config.PreserveDates = InputArgs.hasArg(OBJCOPY_preserve_dates);
+  Config.setPreserveDates(InputArgs.hasArg(OBJCOPY_preserve_dates));
 
-  if (Config.PreserveDates &&
+  if (Config.getPreserveDates() &&
       (Config.OutputFilename == "-" || Config.InputFilename == "-"))
     return createStringError(errc::invalid_argument,
                              "--preserve-dates requires a file");
@@ -1269,7 +1269,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "cannot specify both --remove-note and --update-section");
   }
 
-  if (Config.DecompressDebugSections &&
+  if (Config.getDecompressDebugSections() &&
       Config.CompressionType != DebugCompressionType::None) {
     return createStringError(
         errc::invalid_argument,
@@ -1277,7 +1277,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
         "--decompress-debug-sections");
   }
 
-  if (Config.ExtractPartition && Config.ExtractMainPartition)
+  if (Config.ExtractPartition && Config.getExtractMainPartition())
     return createStringError(errc::invalid_argument,
                              "cannot specify --extract-partition together with "
                              "--extract-main-partition");
@@ -1566,21 +1566,21 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
       = InputArgs.hasArg(STRIP_regex)    ? MatchStyle::Regex
       : InputArgs.hasArg(STRIP_wildcard) ? MatchStyle::Wildcard
                                          : MatchStyle::Literal;
-  ELFConfig.AllowBrokenLinks = InputArgs.hasArg(STRIP_allow_broken_links);
-  Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
+  ELFConfig.setAllowBrokenLinks(InputArgs.hasArg(STRIP_allow_broken_links));
+  Config.setStripDebug(InputArgs.hasArg(STRIP_strip_debug));
 
   if (auto *Arg = InputArgs.getLastArg(STRIP_discard_all, STRIP_discard_locals))
     Config.DiscardMode = Arg->getOption().matches(STRIP_discard_all)
                              ? DiscardType::All
                              : DiscardType::Locals;
-  Config.StripSections = InputArgs.hasArg(STRIP_strip_sections);
-  Config.StripUnneeded = InputArgs.hasArg(STRIP_strip_unneeded);
+  Config.setStripSections(InputArgs.hasArg(STRIP_strip_sections));
+  Config.setStripUnneeded(InputArgs.hasArg(STRIP_strip_unneeded));
   if (auto Arg = InputArgs.getLastArg(STRIP_strip_all, STRIP_no_strip_all))
-    Config.StripAll = Arg->getOption().getID() == STRIP_strip_all;
-  Config.StripAllGNU = InputArgs.hasArg(STRIP_strip_all_gnu);
+    Config.setStripAll(Arg->getOption().getID() == STRIP_strip_all);
+  Config.setStripAllGNU(InputArgs.hasArg(STRIP_strip_all_gnu));
   MachOConfig.StripSwiftSymbols = InputArgs.hasArg(STRIP_strip_swift_symbols);
-  Config.OnlyKeepDebug = InputArgs.hasArg(STRIP_only_keep_debug);
-  ELFConfig.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
+  Config.setOnlyKeepDebug(InputArgs.hasArg(STRIP_only_keep_debug));
+  ELFConfig.setKeepFileSymbols(InputArgs.hasArg(STRIP_keep_file_symbols));
   MachOConfig.KeepUndefined = InputArgs.hasArg(STRIP_keep_undefined);
 
   for (auto *Arg : InputArgs.filtered(STRIP_keep_section))
@@ -1603,23 +1603,23 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
             Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
 
-  if (!InputArgs.hasArg(STRIP_no_strip_all) && !Config.StripDebug &&
-      !Config.OnlyKeepDebug && !Config.StripUnneeded &&
-      Config.DiscardMode == DiscardType::None && !Config.StripAllGNU &&
+  if (!InputArgs.hasArg(STRIP_no_strip_all) && !Config.getStripDebug() &&
+      !Config.getOnlyKeepDebug() && !Config.getStripUnneeded() &&
+      Config.DiscardMode == DiscardType::None && !Config.getStripAllGNU() &&
       Config.SymbolsToRemove.empty())
-    Config.StripAll = true;
+    Config.setStripAll(true);
 
   if (Config.DiscardMode == DiscardType::All) {
-    Config.StripDebug = true;
-    ELFConfig.KeepFileSymbols = true;
+    Config.setStripDebug(true);
+    ELFConfig.setKeepFileSymbols(true);
   }
 
-  Config.DeterministicArchives =
-      InputArgs.hasFlag(STRIP_enable_deterministic_archives,
-                        STRIP_disable_deterministic_archives, /*default=*/true);
+  Config.setDeterministicArchives(InputArgs.hasFlag(
+      STRIP_enable_deterministic_archives, STRIP_disable_deterministic_archives,
+      /*default=*/true));
 
-  Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
-  Config.Verbose = InputArgs.hasArg(STRIP_verbose);
+  Config.setPreserveDates(InputArgs.hasArg(STRIP_preserve_dates));
+  Config.setVerbose(InputArgs.hasArg(STRIP_verbose));
   Config.InputFormat = FileFormat::Unspecified;
   Config.OutputFormat = FileFormat::Unspecified;
 
@@ -1648,8 +1648,9 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
     }
   }
 
-  if (Config.PreserveDates && (is_contained(Positional, "-") ||
-                               InputArgs.getLastArgValue(STRIP_output) == "-"))
+  if (Config.getPreserveDates() &&
+      (is_contained(Positional, "-") ||
+       InputArgs.getLastArgValue(STRIP_output) == "-"))
     return createStringError(errc::invalid_argument,
                              "--preserve-dates requires a file");
 

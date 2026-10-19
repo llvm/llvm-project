@@ -22,6 +22,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang::lifetimes::internal {
 
@@ -32,8 +33,9 @@ public:
   FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC,
                  const LifetimeSafetyOpts &LSOpts)
       : FactMgr(FactMgr), AC(AC), LSOpts(LSOpts),
-        IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
-                !AC.getASTContext().getLangOpts().ObjC) {}
+        EscapesInCurrentBlock(decltype(this->EscapesInCurrentBlock)::withFlags(
+            unsigned(bool(!AC.getASTContext().getLangOpts().CPlusPlus &&
+                          !AC.getASTContext().getLangOpts().ObjC)))) {}
 
   void run();
 
@@ -174,9 +176,10 @@ private:
   // Collect origins that escape the function in this block (OriginEscapesFact),
   // appended at the end of CurrentBlockFacts to ensure they appear after
   // ExpireFact entries.
-  llvm::SmallVector<Fact *> EscapesInCurrentBlock;
+  llvm::SmallVectorWithFlags<Fact *> EscapesInCurrentBlock;
   const CFGBlock *CurrentBlock;
-  bool IsCMode = false;
+  bool getIsCMode() const { return EscapesInCurrentBlock.getFlag(0); }
+  void setIsCMode(bool Value) { EscapesInCurrentBlock.setFlag(0, Value); }
 };
 
 } // namespace clang::lifetimes::internal

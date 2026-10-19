@@ -8721,7 +8721,7 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
   CombinedInfo.Names.push_back(
       Builder.CreateGlobalString("data", "data_name", 0, M.get()));
 
-  CombinedInfo.NonContigInfo.IsNonContiguous = true;
+  CombinedInfo.NonContigInfo.setIsNonContiguous(true);
   CombinedInfo.NonContigInfo.Dims.push_back(1);
   CombinedInfo.NonContigInfo.Offsets.push_back({Builder.getInt64(0)});
   CombinedInfo.NonContigInfo.Counts.push_back({CountExpr});

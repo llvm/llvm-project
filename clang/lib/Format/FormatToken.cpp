@@ -162,7 +162,7 @@ unsigned CommaSeparatedList::formatFromToken(LineState &State,
                                              bool DryRun) {
   // Formatting with 1 Column isn't really a column layout, so we don't need the
   // special logic here. We can just avoid bin packing any of the parameters.
-  if (Formats.size() == 1 || HasNestedBracedList)
+  if (Formats.size() == 1 || getHasNestedBracedList())
     State.Stack.back().AvoidBinPacking = true;
   return 0;
 }
@@ -224,7 +224,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
 
     MustBreakBeforeItem.push_back(ItemBegin->MustBreakBefore);
     if (ItemBegin->is(tok::l_brace))
-      HasNestedBracedList = true;
+      setHasNestedBracedList(true);
     const FormatToken *ItemEnd = nullptr;
     if (i == Commas.size()) {
       ItemEnd = Token->MatchingParen;

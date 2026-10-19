@@ -339,7 +339,7 @@ void Class::writeDeclTo(raw_indented_ostream &os) const {
   }
 
   // Declare the class.
-  os << (isStruct ? "struct" : "class") << ' ' << className << ' ';
+  os << (isStructDeclaration() ? "struct" : "class") << ' ' << className << ' ';
 
   // Declare the parent classes, if any.
   if (!parents.empty()) {
@@ -401,7 +401,8 @@ Visibility Class::getLastVisibilityDecl() const {
   auto reverseDecls = llvm::reverse(declarations);
   auto it = llvm::find_if(reverseDecls, llvm::IsaPred<VisibilityDeclaration>);
   return it == reverseDecls.end()
-             ? (isStruct ? Visibility::Public : Visibility::Private)
+             ? (isStructDeclaration() ? Visibility::Public
+                                      : Visibility::Private)
              : cast<VisibilityDeclaration>(**it).getVisibility();
 }
 

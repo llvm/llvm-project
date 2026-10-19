@@ -3385,14 +3385,13 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                               SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc DL                              = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
-  SDValue Callee                        = CLI.Callee;
-  bool &IsTailCall                      = CLI.IsTailCall;
+  SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool IsVarArg                         = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -3471,9 +3470,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       CalleeIsLocal = GV->isDSOLocal();
   }
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     if (!Subtarget.getCLOpts().tail_calls) {
-      IsTailCall = false;
+      CLI.setIsTailCall(false);
       if (IsMustTail)
         report_fatal_error("failed to perform tail call elimination on a call "
                            "site marked musttail");
@@ -3481,7 +3480,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       bool Eligible = isEligibleForTailCallOptimization(
           CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
       if (!Eligible || !CalleeIsLocal) {
-        IsTailCall = false;
+        CLI.setIsTailCall(false);
         if (IsMustTail)
           report_fatal_error(
               "failed to perform tail call elimination on a call "
@@ -3490,7 +3489,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  if (IsTailCall)
+  if (CLI.getIsTailCall())
     ++NumTailCalls;
 
   // Chain is the output chain of the last Load/Store or CopyToReg node.
@@ -3499,7 +3498,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned StackAlignment = TFL->getStackAlignment();
   StackSize = alignTo(StackSize, StackAlignment);
 
-  if (!(IsTailCall || MemcpyInByVal))
+  if (!(CLI.getIsTailCall() || MemcpyInByVal))
     Chain = DAG.getCALLSEQ_START(Chain, StackSize, 0, DL);
 
   SDValue StackPtr =
@@ -3527,7 +3526,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       assert(Flags.getByValSize() &&
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValIdx < CCInfo.getInRegsParamsCount());
-      assert(!IsTailCall &&
+      assert(!CLI.getIsTailCall() &&
              "Do not tail-call optimize if there is a byval argument.");
       passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
                    FirstByValReg, LastByValReg, Flags, Subtarget.isLittle(),
@@ -3618,8 +3617,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // emit ISD::STORE whichs stores the
     // parameter value to a stack Location
-    MemOpChains.push_back(passArgOnStack(StackPtr, VA.getLocMemOffset(),
-                                         Chain, Arg, DL, IsTailCall, DAG));
+    MemOpChains.push_back(passArgOnStack(StackPtr, VA.getLocMemOffset(), Chain,
+                                         Arg, DL, CLI.getIsTailCall(), DAG));
   }
 
   // Transform all store nodes into one single node because all store
@@ -3720,7 +3719,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   getOpndList(Ops, RegsToPass, IsPIC, GlobalOrExternal, LocalLinkage,
               IsCallReloc, CLI, Callee, Chain);
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(MipsISD::TailCall, DL, MVT::Other, Ops);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
@@ -3749,8 +3748,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// appropriate copies out of appropriate physical registers.
 SDValue MipsTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals,
     TargetLowering::CallLoweringInfo &CLI) const {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -3873,8 +3872,8 @@ static SDValue UnpackFromArgumentSlot(SDValue Val, const CCValAssign &VA,
 /// and generate load operations for arguments places on the stack.
 SDValue MipsTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
@@ -4028,11 +4027,11 @@ SDValue MipsTargetLowering::LowerFormalArguments(
 //               Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-bool
-MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
-                                   MachineFunction &MF, bool IsVarArg,
-                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                   LLVMContext &Context, const Type *RetTy) const {
+bool MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                        MachineFunction &MF, bool IsVarArg,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs,
+                                        LLVMContext &Context,
+                                        const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   MipsCCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_Mips);
@@ -4058,12 +4057,12 @@ MipsTargetLowering::LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
   return DAG.getNode(MipsISD::ERet, DL, MVT::Other, RetOps);
 }
 
-SDValue
-MipsTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                                bool IsVarArg,
-                                const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                const SmallVectorImpl<SDValue> &OutVals,
-                                const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue MipsTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                        bool IsVarArg,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs,
+                                        const SmallVectorImpl<SDValue> &OutVals,
+                                        const SDLoc &DL,
+                                        SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of
   // the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;

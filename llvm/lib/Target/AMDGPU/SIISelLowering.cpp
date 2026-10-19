@@ -3196,7 +3196,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
 // sequential starting from the first argument.
 void SITargetLowering::allocatePreloadKernArgSGPRs(
     CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, MachineFunction &MF,
+    llvm::ArrayRef<ISD::InputArg> Ins, MachineFunction &MF,
     const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) const {
   Function &F = MF.getFunction();
   unsigned LastExplicitArgOffset = Subtarget->getExplicitKernelArgOffset();
@@ -3498,8 +3498,8 @@ void SITargetLowering::insertCopiesSplitCSR(
 
 SDValue SITargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -3838,10 +3838,11 @@ SDValue SITargetLowering::LowerFormalArguments(
 
 // TODO: If return values can't fit in registers, we should return as many as
 // possible in registers before passing on stack.
-bool SITargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool SITargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                      MachineFunction &MF, bool IsVarArg,
+                                      llvm::ArrayRef<ISD::OutputArg> Outs,
+                                      LLVMContext &Context,
+                                      const Type *RetTy) const {
   // Replacing returns with sret/stack usage doesn't make sense for shaders.
   // FIXME: Also sort of a workaround for custom vector splitting in LowerReturn
   // for shaders. Vector types should be explicitly handled by CC.
@@ -3863,12 +3864,12 @@ bool SITargetLowering::CanLowerReturn(
   return true;
 }
 
-SDValue
-SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                              bool isVarArg,
-                              const SmallVectorImpl<ISD::OutputArg> &Outs,
-                              const SmallVectorImpl<SDValue> &OutVals,
-                              const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                      bool isVarArg,
+                                      llvm::ArrayRef<ISD::OutputArg> Outs,
+                                      const SmallVectorImpl<SDValue> &OutVals,
+                                      const SDLoc &DL,
+                                      SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
@@ -3966,8 +3967,8 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 SDValue SITargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool IsThisReturn,
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals, bool IsThisReturn,
     SDValue ThisVal) const {
   CCAssignFn *RetCC = CCAssignFnForReturn(CallConv, IsVarArg);
 
@@ -4205,9 +4206,9 @@ void SITargetLowering::passSpecialInputs(
 
 bool SITargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+    llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    SelectionDAG &DAG) const {
   if (AMDGPU::isChainCC(CalleeCC))
     return true;
 
@@ -4396,16 +4397,15 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
-  SmallVector<ISD::InputArg, 32> &Ins = CLI.Ins;
-  bool &IsTailCall = CLI.IsTailCall;
-  bool IsVarArg = CLI.IsVarArg;
+  auto &Ins = CLI.Ins;
+  bool IsVarArg = CLI.getIsVarArg();
   bool IsSibCall = false;
   MachineFunction &MF = DAG.getMachineFunction();
 
   if (Callee.isUndef() || isNullConstant(Callee)) {
-    if (!CLI.IsTailCall) {
+    if (!CLI.getIsTailCall()) {
       for (ISD::InputArg &Arg : CLI.Ins)
         InVals.push_back(DAG.getPOISON(Arg.VT));
     }
@@ -4421,15 +4421,15 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!CLI.CB)
     return lowerUnhandledCall(CLI, InVals, "unsupported libcall legalization");
 
-  if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
+  if (CLI.getIsTailCall() && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported required tail call to function ");
   }
 
-  if (IsTailCall) {
-    IsTailCall = isEligibleForTailCallOptimization(Callee, CallConv, IsVarArg,
-                                                   Outs, OutVals, Ins, DAG);
-    if (!IsTailCall &&
+  if (CLI.getIsTailCall()) {
+    CLI.setIsTailCall(isEligibleForTailCallOptimization(
+        Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG));
+    if (!CLI.getIsTailCall() &&
         ((CLI.CB && CLI.CB->isMustTailCall()) || IsChainCallConv)) {
       report_fatal_error("failed to perform tail call elimination on a call "
                          "site marked musttail or on llvm.amdgcn.cs.chain");
@@ -4439,10 +4439,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
-    if (!TailCallOpt && IsTailCall)
+    if (!TailCallOpt && CLI.getIsTailCall())
       IsSibCall = true;
 
-    if (IsTailCall)
+    if (CLI.getIsTailCall())
       ++NumTailCalls;
   }
 
@@ -4553,7 +4553,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue PtrOff = DAG.getConstant(Offset, DL, PtrVT);
       MaybeAlign Alignment;
 
-      if (IsTailCall) {
+      if (CLI.getIsTailCall()) {
         ISD::ArgFlagsTy Flags = Outs[i].Flags;
         unsigned OpSize = Flags.isByVal() ? Flags.getByValSize()
                                           : VA.getValVT().getStoreSize();
@@ -4653,7 +4653,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // the frame up *after* the call, however in the ABI-changing tail-call case
   // we've carefully laid out the parameters so that when sp is reset they'll be
   // in the correct location.
-  if (IsTailCall && !IsSibCall) {
+  if (CLI.getIsTailCall() && !IsSibCall) {
     Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, DL);
     InGlue = Chain.getValue(1);
   }
@@ -4667,7 +4667,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(Callee);
     Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
   } else {
-    if (IsTailCall) {
+    if (CLI.getIsTailCall()) {
       // isEligibleForTailCallOptimization considered whether the call target is
       // divergent, but we may still end up with a uniform value in a VGPR.
       // Insert a readfirstlane just in case.
@@ -4685,7 +4685,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
   }
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
@@ -4721,7 +4721,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MFI.setHasTailCall();
     unsigned OPC = AMDGPUISD::TC_RETURN;
     switch (CallConv) {
@@ -4741,13 +4741,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       OPC = AMDGPUISD::TC_RETURN_GFX_WholeWave;
 
     SDValue Ret = DAG.getNode(OPC, DL, MVT::Other, Ops);
-    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.getNoMerge());
     return Ret;
   }
 
   // Returns a chain and a flag for retval copy to use.
   SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
-  DAG.addNoMergeSiteInfo(Call.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Call.getNode(), CLI.getNoMerge());
   Chain = Call.getValue(0);
   InGlue = Call.getValue(1);
 

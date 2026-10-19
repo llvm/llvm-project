@@ -205,12 +205,12 @@ Driver::Driver(StringRef DriverExecutable, StringRef TargetTriple,
       SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       Offload(OffloadHostDevice), CXX20HeaderType(HeaderMode_None),
       ModulesModeCXX20(false), DriverExecutable(DriverExecutable),
-      SysRoot(DEFAULT_SYSROOT), DriverTitle(Title), CCCPrintBindings(false),
-      CCPrintOptions(false), CCLogDiagnostics(false), CCGenDiagnostics(false),
-      CCPrintProcessStats(false), CCPrintInternalStats(false),
-      TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
-      PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
-      ProbePrecompiled(true), SuppressMissingInputWarning(false) {
+      SysRoot(DEFAULT_SYSROOT), DriverTitle(Title), CCLogDiagnostics(false),
+      CCGenDiagnostics(false), CCPrintProcessStats(false),
+      CCPrintInternalStats(false), TargetTriple(TargetTriple), Saver(Alloc),
+      PrependArg(nullptr), PreferredLinker(CLANG_DEFAULT_LINKER),
+      CheckInputsExist(true), ProbePrecompiled(true),
+      SuppressMissingInputWarning(false) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
@@ -1597,7 +1597,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // options, either by introducing new ones or by overloading gcc ones like -V
   // or -b.
   CCCPrintPhases = Args.hasArg(options::OPT_ccc_print_phases);
-  CCCPrintBindings = Args.hasArg(options::OPT_ccc_print_bindings);
+  setCCCPrintBindings(Args.hasArg(options::OPT_ccc_print_bindings));
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_gcc_name))
     CCCGenericGCCName = A->getValue();
 
@@ -2926,7 +2926,7 @@ static unsigned PrintActions1(const Compilation &C, Action *A,
       SibKind = OtherSibAction;
     });
   } else {
-    const ActionList *AL = &A->getInputs();
+    const auto *AL = &A->getInputs();
 
     if (AL->size()) {
       const char *Prefix = "{";
@@ -4847,7 +4847,7 @@ class ToolSelector final {
   /// Get previous dependent action or null if that does not exist. If
   /// \a CanBeCollapsed is false, that action must be legal to collapse or
   /// null will be returned.
-  const JobAction *getPrevDependentAction(const ActionList &Inputs,
+  const JobAction *getPrevDependentAction(ArrayRef<Action *> Inputs,
                                           ActionList &SavedOffloadAction,
                                           bool CanBeCollapsed = true) {
     // An option can be collapsed only if it has a single input.
@@ -4969,7 +4969,7 @@ class ToolSelector final {
     if (!T->hasIntegratedAssembler())
       return nullptr;
 
-    Inputs = CJ->getInputs();
+    Inputs.assign(CJ->getInputs().begin(), CJ->getInputs().end());
     AppendCollapsedOffloadAction(CollapsedOffloadAction, ActionInfo,
                                  /*NumElements=*/3);
     return T;
@@ -4992,7 +4992,7 @@ class ToolSelector final {
     if (!T->hasIntegratedAssembler())
       return nullptr;
 
-    Inputs = BJ->getInputs();
+    Inputs.assign(BJ->getInputs().begin(), BJ->getInputs().end());
     AppendCollapsedOffloadAction(CollapsedOffloadAction, ActionInfo,
                                  /*NumElements=*/2);
     return T;
@@ -5037,7 +5037,7 @@ class ToolSelector final {
     if (T->canEmitIR() && EmbedBitcode)
       return nullptr;
 
-    Inputs = CJ->getInputs();
+    Inputs.assign(CJ->getInputs().begin(), CJ->getInputs().end());
     AppendCollapsedOffloadAction(CollapsedOffloadAction, ActionInfo,
                                  /*NumElements=*/2);
     return T;
@@ -5122,7 +5122,8 @@ public:
     if (!T)
       T = combineBackendCompile(ActionChain, Inputs, CollapsedOffloadAction);
     if (!T) {
-      Inputs = BaseAction->getInputs();
+      Inputs.assign(BaseAction->getInputs().begin(),
+                    BaseAction->getInputs().end());
       T = TC.SelectTool(*BaseAction);
     }
 
@@ -5351,8 +5352,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
                               TargetDeviceOffloadKind);
   }
 
-
-  ActionList Inputs = A->getInputs();
+  ActionList Inputs(A->getInputs().begin(), A->getInputs().end());
 
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
@@ -5445,7 +5445,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
       handleTimeTrace(C, Args, JA, BaseInput, Result);
   }
 
-  if (CCCPrintBindings && !CCGenDiagnostics) {
+  if (getCCCPrintBindings() && !CCGenDiagnostics) {
     llvm::errs() << "# \"" << T->getToolChain().getEffectiveTriple().str()
                  << '"' << " - \"" << T->getName() << "\", inputs: [";
     for (unsigned i = 0, e = InputInfos.size(); i != e; ++i) {
@@ -5872,8 +5872,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
 
 std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   // Search for Name in a list of paths.
-  auto SearchPaths = [&](const llvm::SmallVectorImpl<std::string> &P)
-      -> std::optional<std::string> {
+  auto SearchPaths =
+      [&](llvm::ArrayRef<std::string> P) -> std::optional<std::string> {
     // Respect a limited subset of the '-Bprefix' functionality in GCC by
     // attempting to use this prefix when looking for file paths.
     for (const auto &Dir : P) {

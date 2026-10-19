@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -481,7 +482,8 @@ public:
                  bool IsAndroid)
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
-        IsThumb(IsThumb), IsAndroid(IsAndroid) {
+        Opcodes(decltype(this->Opcodes)::withFlags(
+            unsigned(IsThumb) | (unsigned(IsAndroid) << 1))) {
     EHReset();
   }
 
@@ -521,7 +523,7 @@ public:
   /// necessary.
   void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
-    if (IsThumb)
+    if (getIsThumbFlag())
       EmitThumbMappingSymbol();
     else
       EmitARMMappingSymbol();
@@ -538,7 +540,7 @@ public:
     case '\0':
       Size = 4;
 
-      assert(!IsThumb);
+      assert(!getIsThumbFlag());
       EmitARMMappingSymbol();
       for (unsigned II = 0, IE = Size; II != IE; II++) {
         const unsigned I = LittleEndian ? (Size - II - 1) : II;
@@ -550,7 +552,7 @@ public:
     case 'w':
       Size = (Suffix == 'n' ? 2 : 4);
 
-      assert(IsThumb);
+      assert(getIsThumbFlag());
       EmitThumbMappingSymbol();
       // Thumb wide instructions are emitted as a pair of 16-bit words of the
       // appropriate endianness.
@@ -627,7 +629,7 @@ public:
     return Val;
   };
 
-  void setIsThumb(bool Val) { IsThumb = Val; }
+  void setIsThumb(bool Val) { setIsThumbFlag(Val); }
 
 private:
   enum ElfMappingSymbol {
@@ -715,8 +717,10 @@ private:
   void SwitchToExTabSection(const MCSymbol &FnStart);
   void SwitchToExIdxSection(const MCSymbol &FnStart);
 
-  bool IsThumb;
-  bool IsAndroid;
+  bool getIsThumbFlag() const { return Opcodes.getFlag(0); }
+  void setIsThumbFlag(bool Value) { Opcodes.setFlag(0, Value); }
+  bool getIsAndroid() const { return Opcodes.getFlag(1); }
+  void setIsAndroid(bool Value) { Opcodes.setFlag(1, Value); }
   DenseSet<const MCSymbol *> ThumbLabels;
 
   DenseMap<const MCSection *, std::unique_ptr<ElfMappingSymbolInfo>>
@@ -733,9 +737,11 @@ private:
   int64_t FPOffset; // Offset: (final frame pointer) - (initial $sp)
   int64_t SPOffset; // Offset: (final $sp) - (initial $sp)
   int64_t PendingOffset; // Offset: (final $sp) - (emitted $sp)
-  bool UsedFP;
-  bool CantUnwind;
-  SmallVector<uint8_t, 64> Opcodes;
+  bool getUsedFP() const { return Opcodes.getFlag(2); }
+  void setUsedFP(bool Value) { Opcodes.setFlag(2, Value); }
+  bool getCantUnwind() const { return Opcodes.getFlag(3); }
+  void setCantUnwind(bool Value) { Opcodes.setFlag(3, Value); }
+  llvm::SmallVectorWithFlags<uint8_t, 64, 4> Opcodes;
   UnwindOpcodeAssembler UnwindOpAsm;
 };
 
@@ -1094,7 +1100,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
 
 void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
   ARMELFStreamer &Streamer = getStreamer();
-  if (!Streamer.IsThumb)
+  if (!Streamer.getIsThumbFlag())
     return;
 
   Streamer.ThumbLabels.insert(Symbol);
@@ -1226,8 +1232,8 @@ void ARMELFStreamer::EHReset() {
   FPOffset = 0;
   SPOffset = 0;
   PendingOffset = 0;
-  UsedFP = false;
-  CantUnwind = false;
+  setUsedFP(false);
+  setCantUnwind(false);
 
   Opcodes.clear();
   UnwindOpAsm.Reset();
@@ -1243,7 +1249,7 @@ void ARMELFStreamer::emitFnEnd() {
   assert(FnStart && ".fnstart must precedes .fnend");
 
   // Emit unwind opcodes if there is no .handlerdata directive
-  if (!ExTab && !CantUnwind)
+  if (!ExTab && !getCantUnwind())
     FlushUnwindOpcodes(true);
 
   // Emit the exception index table entry
@@ -1254,7 +1260,7 @@ void ARMELFStreamer::emitFnEnd() {
   // linker garbage collection. We disable this for Android where the unwinder
   // is either dynamically linked or directly references the personality
   // routine.
-  if (PersonalityIndex < ARM::EHABI::NUM_PERSONALITY_INDEX && !IsAndroid)
+  if (PersonalityIndex < ARM::EHABI::NUM_PERSONALITY_INDEX && !getIsAndroid())
     EmitPersonalityFixup(GetAEABIUnwindPersonalityName(PersonalityIndex));
 
   const MCSymbolRefExpr *FnStartRef =
@@ -1262,7 +1268,7 @@ void ARMELFStreamer::emitFnEnd() {
 
   emitValue(FnStartRef, 4);
 
-  if (CantUnwind) {
+  if (getCantUnwind()) {
     emitInt32(ARM::EHABI::EXIDX_CANTUNWIND);
   } else if (ExTab) {
     // Emit a reference to the unwind opcodes in the ".ARM.extab" section.
@@ -1291,7 +1297,7 @@ void ARMELFStreamer::emitFnEnd() {
   EHReset();
 }
 
-void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }
+void ARMELFStreamer::emitCantUnwind() { setCantUnwind(true); }
 
 // Add the R_ARM_NONE fixup at the same position
 void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
@@ -1312,7 +1318,7 @@ void ARMELFStreamer::FlushPendingOffset() {
 
 void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   // Emit the unwind opcode to restore $sp.
-  if (UsedFP) {
+  if (getUsedFP()) {
     const MCRegisterInfo *MRI = getContext().getRegisterInfo();
     int64_t LastRegSaveSPOffset = SPOffset - PendingOffset;
     UnwindOpAsm.EmitSPOffset(LastRegSaveSPOffset - FPOffset);
@@ -1322,7 +1328,10 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   }
 
   // Finalize the unwind opcode sequence
-  UnwindOpAsm.Finalize(PersonalityIndex, Opcodes);
+  SmallVector<uint8_t, 64> UnwindOpcodes;
+  UnwindOpcodes = std::move(Opcodes);
+  UnwindOpAsm.Finalize(PersonalityIndex, UnwindOpcodes);
+  Opcodes.assign(std::move(UnwindOpcodes));
 
   // For compact model 0, we have to emit the unwind opcodes in the .ARM.exidx
   // section.  Thus, we don't have to create an entry in the .ARM.extab
@@ -1385,7 +1394,7 @@ void ARMELFStreamer::emitSetFP(MCRegister NewFPReg, MCRegister NewSPReg,
   assert((NewSPReg == ARM::SP || NewSPReg == FPReg) &&
          "the operand of .setfp directive should be either $sp or $fp");
 
-  UsedFP = true;
+  setUsedFP(true);
   FPReg = NewFPReg;
 
   if (NewSPReg == ARM::SP)

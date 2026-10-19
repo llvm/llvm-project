@@ -46,6 +46,7 @@
 #define LLVM_ADT_GENERICUNIFORMITYIMPL_H
 
 #include "llvm/ADT/GenericUniformityInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -388,7 +389,7 @@ public:
   /// and everything is uniform. Otherwise, values not in UniformValues
   /// (e.g. newly created) are conservatively treated as divergent.
   bool isDivergent(ConstValueRefT V) const {
-    if (!HasBranchDivergence)
+    if (!TemporalDivergenceList.getFlag(0))
       return false;
     // Only values that were present during analysis are tracked in
     // UniformValues (Instructions/Arguments for IR, Registers for MIR).
@@ -415,7 +416,9 @@ public:
   /// IR specialization iterates F.args(); default is a no-op.
   bool printDivergentArgs(raw_ostream &Out) const;
 
-  SmallVector<TemporalDivergenceTuple, 8> TemporalDivergenceList;
+  // Flag 0 records whether the target has branch divergence. It is set at
+  // the start of compute(); until then, isDivergent() returns false.
+  SmallVectorWithFlags<TemporalDivergenceTuple, 8> TemporalDivergenceList;
 
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *, CycleRef);
 
@@ -431,11 +434,6 @@ protected:
   const FunctionT &F;
   const CycleInfoT &CI;
   const TargetTransformInfo *TTI = nullptr;
-
-  // Whether the target has branch divergence. Set at the start of compute(),
-  // which is only called when the target has branch divergence. When false,
-  // isDivergent() returns false for all values.
-  bool HasBranchDivergence = false;
 
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
@@ -1155,7 +1153,7 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeControlDivergence(
 
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::compute() {
-  HasBranchDivergence = true;
+  TemporalDivergenceList.setFlag(0, true);
 
   // All values on the Worklist are divergent.
   // Their users may not have been updated yet.

@@ -13,6 +13,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -1222,7 +1223,7 @@ private:
   /// DBG_PHI read and where. Populated and edited during the machine value
   /// location problem -- we use LLVMs SSA Updater to fix changes by
   /// optimizations that destroy PHI instructions.
-  SmallVector<DebugPHIRecord, 32> DebugPHINumToValue;
+  llvm::SmallVectorWithFlags<DebugPHIRecord, 32> DebugPHINumToValue;
 
   // Map of overlapping variable fragments.
   OverlapMap OverlapFragments;
@@ -1245,7 +1246,10 @@ private:
   /// True if we need to examine call instructions for stack clobbers. We
   /// normally assume that they don't clobber SP, but stack probes on Windows
   /// do.
-  bool AdjustsStackInCalls = false;
+  bool getAdjustsStackInCalls() const { return DebugPHINumToValue.getFlag(0); }
+  void setAdjustsStackInCalls(bool Value) {
+    DebugPHINumToValue.setFlag(0, Value);
+  }
 
   /// If AdjustsStackInCalls is true, this holds the name of the target's stack
   /// probe function, which is the function we expect will alter the stack

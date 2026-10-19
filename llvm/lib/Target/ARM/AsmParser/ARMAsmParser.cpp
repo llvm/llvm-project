@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -247,7 +248,12 @@ class ARMAsmParser : public MCTargetAsmParser {
   // Map of register aliases registers via the .req directive.
   StringMap<MCRegister> RegisterReqs;
 
-  bool NextSymbolIsThumb;
+  bool getNextSymbolIsThumb() const {
+    return PendingConditionalInsts.getFlag(0);
+  }
+  void setNextSymbolIsThumb(bool Value) {
+    PendingConditionalInsts.setFlag(0, Value);
+  }
 
   bool useImplicitITThumb() const {
     return ImplicitItMode == ImplicitItModeTy::Always ||
@@ -284,7 +290,7 @@ class ARMAsmParser : public MCTargetAsmParser {
                               //         would be legal.
   } ITState;
 
-  SmallVector<MCInst, 4> PendingConditionalInsts;
+  llvm::SmallVectorWithFlags<MCInst, 4> PendingConditionalInsts;
 
   void onEndOfFile() override {
     flushPendingInstructions(getParser().getStreamer());
@@ -707,7 +713,7 @@ public:
 
     VPTState.CurPosition = ~0U;
 
-    NextSymbolIsThumb = false;
+    setNextSymbolIsThumb(false);
   }
 
   // Implementation of the MCTargetAsmParser interface:
@@ -11673,9 +11679,9 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 }
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
-  if (NextSymbolIsThumb) {
+  if (getNextSymbolIsThumb()) {
     getTargetStreamer().emitThumbFunc(Symbol);
-    NextSymbolIsThumb = false;
+    setNextSymbolIsThumb(false);
   }
 }
 
@@ -11711,7 +11717,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
 
   getTargetStreamer().emitCode16();
 
-  NextSymbolIsThumb = true;
+  setNextSymbolIsThumb(true);
   return false;
 }
 

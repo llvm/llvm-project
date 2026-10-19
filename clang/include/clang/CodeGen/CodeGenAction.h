@@ -11,6 +11,7 @@
 
 #include "clang/CodeGen/ModuleLinker.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <memory>
 
 namespace llvm {
@@ -28,9 +29,10 @@ private:
   std::unique_ptr<llvm::Module> TheModule;
 
   /// Bitcode modules to link in to our module.
-  SmallVector<LinkModule, 4> LinkModules;
+  llvm::SmallVectorWithFlags<LinkModule, 4> LinkModules;
   llvm::LLVMContext *VMContext;
-  bool OwnsVMContext;
+  bool getOwnsVMContext() const { return LinkModules.getFlag(0); }
+  void setOwnsVMContext(bool Value) { LinkModules.setFlag(0, Value); }
 
   std::unique_ptr<llvm::Module> loadModule(llvm::MemoryBufferRef MBRef);
 

@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECTYAML_DXCONTAINERYAML_H
 #define LLVM_OBJECTYAML_DXCONTAINERYAML_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
@@ -221,17 +222,22 @@ struct SignatureElement {
       : Name(StringTable.substr(El.NameOffset,
                                 StringTable.find('\0', El.NameOffset) -
                                     El.NameOffset)),
-        Indices(IdxTable.slice(El.IndicesOffset, El.Rows)),
+        Indices(decltype(this->Indices)::withFlags(
+            unsigned(bool(El.Allocated != 0)),
+            IdxTable.slice(El.IndicesOffset, El.Rows))),
         StartRow(El.StartRow), Cols(El.Cols), StartCol(El.StartCol),
-        Allocated(El.Allocated != 0), Kind(El.Kind), Type(El.Type),
-        Mode(El.Mode), DynamicMask(El.DynamicMask), Stream(El.Stream) {}
+        Kind(El.Kind), Type(El.Type), Mode(El.Mode),
+        DynamicMask(El.DynamicMask), Stream(El.Stream) {}
   StringRef Name;
-  SmallVector<uint32_t> Indices;
+  llvm::SmallVectorWithFlags<uint32_t> Indices;
 
   uint8_t StartRow;
   uint8_t Cols;
   uint8_t StartCol;
-  bool Allocated;
+  bool getAllocatedFlag() const { return Indices.getFlag(0); }
+  void setAllocatedFlag(bool Value) { Indices.setFlag(0, Value); }
+  bool isAllocated() const { return getAllocatedFlag(); }
+  void setAllocated(bool Value) { setAllocatedFlag(Value); }
   dxbc::PSV::SemanticKind Kind;
 
   dxbc::PSV::ComponentType Type;

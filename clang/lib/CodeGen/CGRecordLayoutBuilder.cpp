@@ -23,6 +23,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "clang/CodeGenUtils/TargetUtils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -191,14 +192,24 @@ struct CGRecordLowering {
   // Helpful intermediate data-structures.
   std::vector<MemberInfo> Members;
   // Output fields, consumed by CodeGenTypes::ComputeRecordLayout.
-  SmallVector<llvm::Type *, 16> FieldTypes;
+  llvm::SmallVectorWithFlags<llvm::Type *, 16, 3> FieldTypes;
   llvm::DenseMap<const FieldDecl *, unsigned> Fields;
   llvm::DenseMap<const FieldDecl *, CGBitFieldInfo> BitFields;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> NonVirtualBases;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> VirtualBases;
-  bool IsZeroInitializable : 1;
-  bool IsZeroInitializableAsBase : 1;
-  bool Packed : 1;
+  bool getIsZeroInitializable() const { return FieldTypes.getFlag(0); }
+  void setIsZeroInitializable(bool Value) { FieldTypes.setFlag(0, Value); }
+  bool getIsZeroInitializableAsBase() const { return FieldTypes.getFlag(1); }
+  bool setIsZeroInitializableAsBase(bool Value) {
+    FieldTypes.setFlag(1, Value);
+    return Value;
+  }
+  bool getPacked() const { return FieldTypes.getFlag(2); }
+  bool setPacked(bool Value) {
+    FieldTypes.setFlag(2, Value);
+    return Value;
+  }
+
 private:
   CGRecordLowering(const CGRecordLowering &) = delete;
   void operator =(const CGRecordLowering &) = delete;
@@ -210,8 +221,9 @@ CGRecordLowering::CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D,
     : Types(Types), Context(Types.getContext()), D(D),
       RD(dyn_cast<CXXRecordDecl>(D)),
       Layout(Types.getContext().getASTRecordLayout(D)),
-      DataLayout(Types.getDataLayout()), IsZeroInitializable(true),
-      IsZeroInitializableAsBase(true), Packed(Packed) {}
+      DataLayout(Types.getDataLayout()),
+      FieldTypes(
+          decltype(this->FieldTypes)::withFlags((unsigned(Packed) << 2) | 3)) {}
 
 void CGRecordLowering::setBitFieldInfo(
     const FieldDecl *FD, CharUnits StartOffset, llvm::Type *StorageType) {
@@ -324,13 +336,13 @@ void CGRecordLowering::lowerUnion(bool isNonVirtualBaseType) {
         if (const auto *FieldRD = Field->getType()->getAsRecordDecl())
           SeenNamedMember = FieldRD->findFirstNamedDataMember();
       if (SeenNamedMember && !isZeroInitializable(Field)) {
-        IsZeroInitializable = IsZeroInitializableAsBase = false;
+        setIsZeroInitializable(setIsZeroInitializableAsBase(false));
         StorageType = FieldType;
       }
     }
     // Because our union isn't zero initializable, we won't be getting a better
     // storage type.
-    if (!IsZeroInitializable)
+    if (!getIsZeroInitializable())
       continue;
     // Conditionally update our storage type if we've got a new "better" one.
     if (!StorageType ||
@@ -355,7 +367,7 @@ void CGRecordLowering::lowerUnion(bool isNonVirtualBaseType) {
          "Union's standard layout and no_unique_address layout must agree on "
          "packedness");
   if (!Layout.getDataSize().isMultipleOf(StorageAlignment))
-    Packed = true;
+    setPacked(true);
 }
 
 void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
@@ -903,18 +915,18 @@ void CGRecordLowering::accumulateVBases() {
 void CGRecordLowering::calculateZeroInit() {
   for (std::vector<MemberInfo>::const_iterator Member = Members.begin(),
                                                MemberEnd = Members.end();
-       IsZeroInitializableAsBase && Member != MemberEnd; ++Member) {
+       getIsZeroInitializableAsBase() && Member != MemberEnd; ++Member) {
     if (Member->Kind == MemberInfo::Field) {
       if (!Member->FD || isZeroInitializable(Member->FD))
         continue;
-      IsZeroInitializable = IsZeroInitializableAsBase = false;
+      setIsZeroInitializable(setIsZeroInitializableAsBase(false));
     } else if (Member->Kind == MemberInfo::Base ||
                Member->Kind == MemberInfo::VBase) {
       if (isZeroInitializable(Member->RD))
         continue;
-      IsZeroInitializable = false;
+      setIsZeroInitializable(false);
       if (Member->Kind == MemberInfo::Base)
-        IsZeroInitializableAsBase = false;
+        setIsZeroInitializableAsBase(false);
     }
   }
 }
@@ -938,7 +950,7 @@ void CGRecordLowering::checkBitfieldClipping(bool IsNonVirtualBaseType) const {
 }
 
 void CGRecordLowering::determinePacked(bool NVBaseType) {
-  if (Packed)
+  if (getPacked())
     return;
   CharUnits Alignment = CharUnits::One();
   CharUnits NVAlignment = CharUnits::One();
@@ -950,7 +962,7 @@ void CGRecordLowering::determinePacked(bool NVBaseType) {
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
     if (!Member.Offset.isMultipleOf(getAlignment(Member.Data)))
-      Packed = true;
+      setPacked(true);
     if (Member.Offset < NVSize)
       NVAlignment = std::max(NVAlignment, getAlignment(Member.Data));
     Alignment = std::max(Alignment, getAlignment(Member.Data));
@@ -958,14 +970,14 @@ void CGRecordLowering::determinePacked(bool NVBaseType) {
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
   if (!Members.back().Offset.isMultipleOf(Alignment))
-    Packed = true;
+    setPacked(true);
   // If the non-virtual sub-object is not a multiple of the non-virtual
   // sub-object's alignment, it must be packed.  We cannot have a packed
   // non-virtual sub-object and an unpacked complete object or vise versa.
   if (!NVSize.isMultipleOf(NVAlignment))
-    Packed = true;
+    setPacked(true);
   // Update the alignment of the sentinel.
-  if (!Packed)
+  if (!getPacked())
     Members.back().Data = getIntNType(Context.toBits(Alignment));
 }
 
@@ -978,8 +990,8 @@ void CGRecordLowering::insertPadding() {
     CharUnits Offset = Member.Offset;
     assert(Offset >= Size);
     // Insert padding if we need to.
-    if (Offset !=
-        Size.alignTo(Packed ? CharUnits::One() : getAlignment(Member.Data)))
+    if (Offset != Size.alignTo(getPacked() ? CharUnits::One()
+                                           : getAlignment(Member.Data)))
       Padding.push_back(std::make_pair(Size, Offset - Size));
     Size = Offset + getSize(Member.Data);
   }
@@ -1061,14 +1073,15 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
   if (isa<CXXRecordDecl>(D)) {
     BaseTy = Ty;
     if (Builder.Layout.getNonVirtualSize() != Builder.Layout.getSize()) {
-      CGRecordLowering BaseBuilder(*this, D, /*Packed=*/Builder.Packed);
+      CGRecordLowering BaseBuilder(*this, D, /*Packed=*/Builder.getPacked());
       BaseBuilder.lower(/*NonVirtualBaseType=*/true);
-      BaseTy = llvm::StructType::create(
-          getLLVMContext(), BaseBuilder.FieldTypes, "", BaseBuilder.Packed);
+      BaseTy =
+          llvm::StructType::create(getLLVMContext(), BaseBuilder.FieldTypes, "",
+                                   BaseBuilder.getPacked());
       addRecordTypeName(D, BaseTy, ".base");
       // BaseTy and Ty must agree on their packedness for getLLVMFieldNo to work
       // on both of them with the same index.
-      assert(Builder.Packed == BaseBuilder.Packed &&
+      assert(Builder.getPacked() == BaseBuilder.getPacked() &&
              "Non-virtual and complete types must agree on packedness");
     }
   }
@@ -1076,11 +1089,11 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
   // Fill in the struct *after* computing the base type.  Filling in the body
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout D while laying D out as a base type.
-  Ty->setBody(Builder.FieldTypes, Builder.Packed);
+  Ty->setBody(Builder.FieldTypes, Builder.getPacked());
 
   auto RL = std::make_unique<CGRecordLayout>(
-      Ty, BaseTy, (bool)Builder.IsZeroInitializable,
-      (bool)Builder.IsZeroInitializableAsBase);
+      Ty, BaseTy, (bool)Builder.getIsZeroInitializable(),
+      (bool)Builder.getIsZeroInitializableAsBase());
 
   RL->NonVirtualBases.swap(Builder.NonVirtualBases);
   RL->CompleteObjectVirtualBases.swap(Builder.VirtualBases);

@@ -33,6 +33,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -2948,18 +2949,20 @@ class IvarLayoutBuilder {
   CharUnits InstanceEnd;
 
   /// Whether we're generating the strong layout or the weak layout.
-  bool ForStrongLayout;
+  bool getForStrongLayout() const { return IvarsInfo.getFlag(0); }
+  void setForStrongLayout(bool Value) { IvarsInfo.setFlag(0, Value); }
 
   /// Whether the offsets in IvarsInfo might be out-of-order.
-  bool IsDisordered = false;
+  bool getIsDisordered() const { return IvarsInfo.getFlag(1); }
+  void setIsDisordered(bool Value) { IvarsInfo.setFlag(1, Value); }
 
-  llvm::SmallVector<IvarInfo, 8> IvarsInfo;
+  llvm::SmallVectorWithFlags<IvarInfo, 8, 2> IvarsInfo;
 
 public:
   IvarLayoutBuilder(CodeGenModule &CGM, CharUnits instanceBegin,
                     CharUnits instanceEnd, bool forStrongLayout)
       : CGM(CGM), InstanceBegin(instanceBegin), InstanceEnd(instanceEnd),
-        ForStrongLayout(forStrongLayout) {}
+        IvarsInfo(decltype(IvarsInfo)::withFlags(unsigned(forStrongLayout))) {}
 
   void visitRecord(const RecordType *RT, CharUnits offset);
 
@@ -3044,7 +3047,7 @@ void IvarLayoutBuilder::visitBlock(const CGBlockInfo &blockInfo) {
     // Block fields are not necessarily ordered; if we detect that we're
     // adding them out-of-order, make sure we sort later.
     if (fieldOffset < lastFieldOffset)
-      IsDisordered = true;
+      setIsDisordered(true);
     lastFieldOffset = fieldOffset;
 
     // __block variables are passed by their descriptor address.
@@ -4693,7 +4696,7 @@ void CodeGenFunction::StartObjCDirectPreconditionThunk(
   // call. Both hold whether we tail-call or not. Class realization could in
   // theory invalidate parameters, but we assume that doesn't happen in
   // practice.
-  CurFuncIsThunk = true;
+  setCurFuncIsThunk(true);
 
   // Build argument list for StartFunction.
   // We must include all parameters to match the thunk's LLVM function type.
@@ -4732,7 +4735,7 @@ void CodeGenFunction::FinishObjCDirectPreconditionThunk() {
   // Disable the final ARC autorelease.
   // Thunk functions are tailcall to actual implementation, so it doesn't need
   // to worry about ARC.
-  AutoreleaseResult = false;
+  setAutoreleaseResult(false);
 
   // Clear these to restore the invariants expected by
   // StartFunction/FinishFunction.
@@ -6197,7 +6200,7 @@ void IvarLayoutBuilder::visitRecord(const RecordType *RT, CharUnits offset) {
   // If this is a union, remember that we had one, because it might mess
   // up the ordering of layout entries.
   if (RD->isUnion())
-    IsDisordered = true;
+    setIsDisordered(true);
 
   const ASTRecordLayout *recLayout = nullptr;
   visitAggregate(RD->field_begin(), RD->field_end(), offset,
@@ -6281,8 +6284,8 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
   Qualifiers::GC GCAttr = GetGCAttrTypeForType(CGM.getContext(), fieldType);
 
   // If it matches what we're looking for, add an entry.
-  if ((ForStrongLayout && GCAttr == Qualifiers::Strong) ||
-      (!ForStrongLayout && GCAttr == Qualifiers::Weak)) {
+  if ((getForStrongLayout() && GCAttr == Qualifiers::Strong) ||
+      (!getForStrongLayout() && GCAttr == Qualifiers::Weak)) {
     assert(CGM.getContext().getTypeSizeInChars(fieldType) ==
            CGM.getPointerSize());
     IvarsInfo.push_back(IvarInfo(fieldOffset, numElts));
@@ -6305,7 +6308,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
 
   // Sort the ivar info on byte position in case we encounterred a
   // union nested in the ivar list.
-  if (IsDisordered) {
+  if (getIsDisordered()) {
     // This isn't a stable sort, but our algorithm should handle it fine.
     llvm::array_pod_sort(IvarsInfo.begin(), IvarsInfo.end());
   } else {

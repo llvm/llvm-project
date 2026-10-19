@@ -26,6 +26,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -420,15 +421,28 @@ struct Evaluation : EvaluationVariant {
   // Additional branch targets for multiway branches (computed GO TO,
   // arithmetic IF). Empty for single-target branches; the first target is in
   // controlSuccessor and the remaining ones are stored here in source order.
-  llvm::SmallVector<Evaluation *, 0> extraControlSuccessors;
+  llvm::SmallVectorWithFlags<Evaluation *, 0, 4> extraControlSuccessors;
   Evaluation *constructExit{nullptr};    // set for constructs
-  bool isNewBlock{false};                // evaluation begins a new basic block
+  bool getIsNewBlock() const { return extraControlSuccessors.getFlag(0); }
+  bool setIsNewBlock(bool Value) {
+    extraControlSuccessors.setFlag(0, Value);
+    return Value;
+  } // evaluation begins a new basic block
   ControlFlow controlFlow{ControlFlow::Structured};
-  bool negateCondition{false}; // If[Then]Stmt condition must be negated
-  bool activeConstruct{false}; // temporarily set for some constructs
+  bool getNegateCondition() const { return extraControlSuccessors.getFlag(1); }
+  void setNegateCondition(bool Value) {
+    extraControlSuccessors.setFlag(1, Value);
+  } // If[Then]Stmt condition must be negated
+  bool getActiveConstruct() const { return extraControlSuccessors.getFlag(2); }
+  void setActiveConstruct(bool Value) {
+    extraControlSuccessors.setFlag(2, Value);
+  } // temporarily set for some constructs
   // The enclosing evaluation-list traversal should skip this evaluation once
   // because directive lowering already consumed it.
-  bool skipNextLowering{false};
+  bool getSkipNextLowering() const { return extraControlSuccessors.getFlag(3); }
+  void setSkipNextLowering(bool Value) {
+    extraControlSuccessors.setFlag(3, Value);
+  }
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
@@ -794,17 +808,31 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// The primary entry point symbol is Null for an anonymous program.
   /// A named program symbol has MainProgramDetails. Other symbols have
   /// SubprogramDetails. Evaluations are filled in for alternate entries.
-  llvm::SmallVector<std::pair<const semantics::Symbol *, Evaluation *>, 1>
+  llvm::SmallVectorWithFlags<std::pair<const semantics::Symbol *, Evaluation *>,
+                             1, 4>
       entryPointList{std::pair{nullptr, nullptr}};
   /// Current index into entryPointList. Index 0 is the primary entry point.
   int activeEntry = 0;
   /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
-  bool hasIeeeAccess{false};
-  bool mayModifyHaltingMode{false};
-  bool mayModifyRoundingMode{false};
-  bool mayModifyUnderflowMode{false};
+  bool getHasIeeeAccess() const { return entryPointList.getFlag(0); }
+  void setHasIeeeAccess(bool Value) { entryPointList.setFlag(0, Value); }
+  bool getMayModifyHaltingMode() const { return entryPointList.getFlag(1); }
+  bool setMayModifyHaltingMode(bool Value) {
+    entryPointList.setFlag(1, Value);
+    return Value;
+  }
+  bool getMayModifyRoundingMode() const { return entryPointList.getFlag(2); }
+  bool setMayModifyRoundingMode(bool Value) {
+    entryPointList.setFlag(2, Value);
+    return Value;
+  }
+  bool getMayModifyUnderflowMode() const { return entryPointList.getFlag(3); }
+  bool setMayModifyUnderflowMode(bool Value) {
+    entryPointList.setFlag(3, Value);
+    return Value;
+  }
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;

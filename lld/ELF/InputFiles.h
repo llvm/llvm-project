@@ -15,6 +15,7 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -54,7 +55,7 @@ public:
 protected:
   std::unique_ptr<Symbol *[]> symbols;
   size_t numSymbols = 0;
-  SmallVector<InputSectionBase *, 0> sections;
+  llvm::SmallVectorWithFlags<InputSectionBase *, 0, 3> sections;
 
 public:
   enum Kind : uint8_t {
@@ -108,7 +109,7 @@ public:
   }
 
   template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
-    uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
+    uint32_t symIndex = rel.getSymbol(ctx.arg.getIsMips64EL());
     return getSymbol(symIndex);
   }
 
@@ -138,10 +139,12 @@ public:
 
   // True if this is a relocatable object file/bitcode file in an ar archive
   // or between --start-lib and --end-lib.
-  bool lazy = false;
+  bool getLazy() const { return sections.getFlag(0); }
+  void setLazy(bool Value) { sections.setFlag(0, Value); }
 
   // True if this is an argument for --just-symbols. Usually false.
-  bool justSymbols = false;
+  bool getJustSymbols() const { return sections.getFlag(1); }
+  void setJustSymbols(bool Value) { sections.setFlag(1, Value); }
 
   // On PPC64 we need to keep track of which files contain small code model
   // relocations that access the .toc section. To minimize the chance of a
@@ -152,7 +155,11 @@ public:
   // code model relocations support immediates in the range [-0x8000, 0x7FFC],
   // making the addressable range relative to the toc pointer
   // [.got, .got + 0xFFFC].
-  bool ppc64SmallCodeModelTocRelocs = false;
+  bool getPpc64SmallCodeModelTocRelocs() const { return sections.getFlag(2); }
+  bool setPpc64SmallCodeModelTocRelocs(bool Value) {
+    sections.setFlag(2, Value);
+    return Value;
+  }
 
 public:
   // If not empty, this stores the name of the archive containing this file.
@@ -277,11 +284,13 @@ public:
 
   // True if the file defines functions compiled with
   // -fsplit-stack. Usually false.
-  bool splitStack = false;
+  bool getSplitStack() const { return keptGroups.getFlag(0); }
+  void setSplitStack(bool Value) { keptGroups.setFlag(0, Value); }
 
   // True if the file defines functions compiled with -fsplit-stack,
   // but had one or more functions with the no_split_stack attribute.
-  bool someNoSplitStack = false;
+  bool getSomeNoSplitStack() const { return keptGroups.getFlag(1); }
+  void setSomeNoSplitStack(bool Value) { keptGroups.setFlag(1, Value); }
 
   void initDwarf();
 
@@ -318,7 +327,7 @@ private:
 
   // Section indices of kept SHT_GROUP sections, recorded by parse() in
   // ascending order, to be used by the parallel initializeSections().
-  SmallVector<uint32_t, 0> keptGroups;
+  llvm::SmallVectorWithFlags<uint32_t, 0, 2> keptGroups;
 };
 
 class BitcodeFile : public InputFile {

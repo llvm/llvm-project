@@ -24,8 +24,8 @@ using namespace llvm;
 using namespace llvm::dwarf;
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
-    : M(m), VMContext(M.getContext()), CUNode(CU),
-      AllowUnresolvedNodes(AllowUnresolvedNodes) {
+    : M(m), VMContext(M.getContext()), CUNode(CU) {
+  UnresolvedNodes.setFlag(0, AllowUnresolvedNodes);
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
       EnumTypes.assign(ETs.begin(), ETs.end());
@@ -46,7 +46,7 @@ void DIBuilder::trackIfUnresolved(MDNode *N) {
   if (N->isResolved())
     return;
 
-  assert(AllowUnresolvedNodes && "Cannot handle unresolved nodes");
+  assert(UnresolvedNodes.getFlag(0) && "Cannot handle unresolved nodes");
   UnresolvedNodes.emplace_back(N);
 }
 
@@ -72,7 +72,7 @@ void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
 
 void DIBuilder::finalize() {
   if (!CUNode) {
-    assert(!AllowUnresolvedNodes &&
+    assert(!UnresolvedNodes.getFlag(0) &&
            "creating type nodes without a CU is not supported");
     return;
   }
@@ -131,7 +131,7 @@ void DIBuilder::finalize() {
   UnresolvedNodes.clear();
 
   // Can't handle unresolved nodes anymore.
-  AllowUnresolvedNodes = false;
+  UnresolvedNodes.setFlag(0, false);
 }
 
 /// If N is compile unit return NULL otherwise return N.

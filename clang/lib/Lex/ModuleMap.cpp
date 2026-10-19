@@ -56,14 +56,14 @@ void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
     for (auto &Name : PendingLinkAs->second) {
       auto *M = findModule(Name.getKey());
       if (M)
-        M->UseExportAsModuleLinkName = true;
+        M->setUseExportAsModuleLinkName(true);
     }
   }
 }
 
 void ModuleMap::addLinkAsDependency(Module *Mod) {
   if (findModule(Mod->ExportAsModule))
-    Mod->UseExportAsModuleLinkName = true;
+    Mod->setUseExportAsModuleLinkName(true);
   else
     PendingLinkAsModule[Mod->ExportAsModule].insert(Mod->Name);
 }
@@ -111,7 +111,7 @@ ModuleMap::resolveExport(Module *Mod,
                          bool Complain) const {
   // We may have just a wildcard.
   if (Unresolved.Id.empty()) {
-    assert(Unresolved.Wildcard && "Invalid unresolved export");
+    assert(Unresolved.getWildcard() && "Invalid unresolved export");
     return Module::ExportDecl(nullptr, true);
   }
 
@@ -120,11 +120,11 @@ ModuleMap::resolveExport(Module *Mod,
   if (!Context)
     return {};
 
-  return Module::ExportDecl(Context, Unresolved.Wildcard);
+  return Module::ExportDecl(Context, Unresolved.getWildcard());
 }
 
-Module *ModuleMap::resolveModuleId(const ModuleId &Id, Module *Mod,
-                                   bool Complain) const {
+Module *ModuleMap::resolveModuleId(llvm::ArrayRef<ModuleId::value_type> Id,
+                                   Module *Mod, bool Complain) const {
   // Find the starting module.
   Module *Context = lookupModuleUnqualified(Id[0].first, Mod);
   if (!Context) {
@@ -160,7 +160,7 @@ static void appendSubframeworkPaths(Module *Mod,
   // Collect the framework names from the given module to the top-level module.
   SmallVector<StringRef, 2> Paths;
   for (; Mod; Mod = Mod->Parent) {
-    if (Mod->IsFramework)
+    if (Mod->getIsFramework())
       Paths.push_back(Mod->Name);
   }
 
@@ -212,7 +212,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
     // 'framework module FrameworkName.Private', since a 'Private.Framework'
     // does not usually exist. However, since both are currently widely used
     // for private modules, make sure we find the right path in both cases.
-    if (M->IsFramework && M->Name == "Private")
+    if (M->getIsFramework() && M->Name == "Private")
       RelativePathName.clear();
     else
       RelativePathName.resize(RelativePathLength);
@@ -333,9 +333,10 @@ bool ModuleMap::resolveAsBuiltinHeader(
     Module *Mod, const Module::UnresolvedHeaderDirective &Header) {
   if (Header.Kind == Module::HK_Excluded ||
       llvm::sys::path::is_absolute(Header.FileName) ||
-      Mod->isPartOfFramework() || !Mod->IsSystem || Header.IsUmbrella ||
+      Mod->isPartOfFramework() || !Mod->getIsSystem() || Header.IsUmbrella ||
       !BuiltinIncludeDir || BuiltinIncludeDir == Mod->Directory ||
-      !LangOpts.BuiltinHeadersInSystemModules || !isBuiltinHeaderName(Header.FileName))
+      !LangOpts.BuiltinHeadersInSystemModules ||
+      !isBuiltinHeaderName(Header.FileName))
     return false;
 
   // This is a system module with a top-level header. This header
@@ -413,7 +414,7 @@ bool ModuleMap::isBuiltinHeader(FileEntryRef File) {
 bool ModuleMap::shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
                                                         Module *Module) const {
   return LangOpts.BuiltinHeadersInSystemModules && BuiltinIncludeDir &&
-         Module->IsSystem && !Module->isPartOfFramework() &&
+         Module->getIsSystem() && !Module->isPartOfFramework() &&
          isBuiltinHeaderName(FileName);
 }
 
@@ -593,9 +594,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   } else if (RequestingModule && RequestingModuleIsModuleInterface &&
              LangOpts.isCompilingModule()) {
     // Do not diagnose when we are not compiling a module.
-    diag::kind DiagID = RequestingModule->getTopLevelModule()->IsFramework ?
-        diag::warn_non_modular_include_in_framework_module :
-        diag::warn_non_modular_include_in_module;
+    diag::kind DiagID = RequestingModule->getTopLevelModule()->getIsFramework()
+                            ? diag::warn_non_modular_include_in_framework_module
+                            : diag::warn_non_modular_include_in_module;
     Diags.Report(FilenameLoc, DiagID) << RequestingModule->getFullModuleName()
         << File.getName();
   }
@@ -763,13 +764,13 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
     while (!UmbrellaModule->getEffectiveUmbrellaDir() && UmbrellaModule->Parent)
       UmbrellaModule = UmbrellaModule->Parent;
 
-    if (UmbrellaModule->InferSubmodules) {
+    if (UmbrellaModule->getInferSubmodules()) {
       FileID UmbrellaModuleMap = getModuleMapFileIDForUniquing(UmbrellaModule);
 
       // Infer submodules for each of the directories we found between
       // the directory of the umbrella header and the directory where
       // the actual header is located.
-      bool Explicit = UmbrellaModule->InferExplicitSubmodules;
+      bool Explicit = UmbrellaModule->getInferExplicitSubmodules();
 
       for (DirectoryEntryRef SkippedDir : llvm::reverse(SkippedDirs)) {
         // Find or create the module that corresponds to this directory name.
@@ -785,7 +786,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
 
         // If inferred submodules export everything they import, add a
         // wildcard to the set of exports.
-        if (UmbrellaModule->InferExportWildcard && Result->Exports.empty())
+        if (UmbrellaModule->getInferExportWildcard() && Result->Exports.empty())
           Result->Exports.push_back(Module::ExportDecl(nullptr, true));
       }
 
@@ -800,7 +801,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
 
       // If inferred submodules export everything they import, add a
       // wildcard to the set of exports.
-      if (UmbrellaModule->InferExportWildcard && Result->Exports.empty())
+      if (UmbrellaModule->getInferExportWildcard() && Result->Exports.empty())
         Result->Exports.push_back(Module::ExportDecl(nullptr, true));
     } else {
       // Record each of the directories we stepped through as being part of
@@ -897,7 +898,7 @@ bool ModuleMap::isHeaderUnavailableInModule(
              UmbrellaModule->Parent)
         UmbrellaModule = UmbrellaModule->Parent;
 
-      if (UmbrellaModule->InferSubmodules) {
+      if (UmbrellaModule->getInferSubmodules()) {
         for (DirectoryEntryRef SkippedDir : llvm::reverse(SkippedDirs)) {
           // Find or create the module that corresponds to this directory name.
           SmallString<32> NameBuf;
@@ -948,15 +949,15 @@ Module *ModuleMap::findModule(StringRef Name) const {
 Module *ModuleMap::findOrInferSubmodule(Module *Parent, StringRef Name) {
   if (Module *SubM = Parent->findSubmodule(Name))
     return SubM;
-  if (!Parent->InferSubmodules)
+  if (!Parent->getInferSubmodules())
     return nullptr;
   Module *Result = new (ModulesAlloc.Allocate())
       Module(ModuleConstructorTag{}, Name, SourceLocation(), Parent, false,
-             Parent->InferExplicitSubmodules, 0);
-  Result->InferExplicitSubmodules = Parent->InferExplicitSubmodules;
-  Result->InferSubmodules = Parent->InferSubmodules;
-  Result->InferExportWildcard = Parent->InferExportWildcard;
-  if (Result->InferExportWildcard)
+             Parent->getInferExplicitSubmodules(), 0);
+  Result->setInferExplicitSubmodules(Parent->getInferExplicitSubmodules());
+  Result->setInferSubmodules(Parent->getInferSubmodules());
+  Result->setInferExportWildcard(Parent->getInferExportWildcard());
+  if (Result->getInferExportWildcard())
     Result->Exports.push_back(Module::ExportDecl(nullptr, true));
   return Result;
 }
@@ -1120,7 +1121,8 @@ Module *ModuleMap::createHeaderUnit(SourceLocation Loc, StringRef Name,
 /// For a framework module, infer the framework against which we
 /// should link.
 static void inferFrameworkLink(Module *Mod) {
-  assert(Mod->IsFramework && "Can only infer linking for framework modules");
+  assert(Mod->getIsFramework() &&
+         "Can only infer linking for framework modules");
   assert(!Mod->isSubFramework() &&
          "Can only infer linking for top-level frameworks");
 
@@ -1192,7 +1194,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
                          std::make_pair(*ParentDir, InferredDirectory())).first;
         }
 
-        if (inferred->second.InferModules) {
+        if (inferred->second.getInferModules()) {
           // We're allowed to infer for this directory, but make sure it's okay
           // to infer this particular module.
           StringRef Name = llvm::sys::path::stem(FrameworkDirName);
@@ -1238,10 +1240,12 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
     ModuleScopeIDs[Result] = CurrentModuleScopeID;
   }
 
-  Result->IsSystem |= Attrs.IsSystem;
-  Result->IsExternC |= Attrs.IsExternC;
-  Result->ConfigMacrosExhaustive |= Attrs.IsExhaustive;
-  Result->NoUndeclaredIncludes |= Attrs.NoUndeclaredIncludes;
+  Result->setIsSystem(int(Result->getIsSystem()) | (Attrs.IsSystem));
+  Result->setIsExternC(int(Result->getIsExternC()) | (Attrs.IsExternC));
+  Result->setConfigMacrosExhaustive(int(Result->getConfigMacrosExhaustive()) |
+                                    (Attrs.IsExhaustive));
+  Result->setNoUndeclaredIncludes(int(Result->getNoUndeclaredIncludes()) |
+                                  (Attrs.NoUndeclaredIncludes));
   Result->Directory = FrameworkDir;
 
   // Chop off the first framework bit, as that is implied.
@@ -1257,8 +1261,8 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
   Result->Exports.push_back(Module::ExportDecl(nullptr, true));
 
   // module * { export * }
-  Result->InferSubmodules = true;
-  Result->InferExportWildcard = true;
+  Result->setInferSubmodules(true);
+  Result->setInferExportWildcard(true);
 
   // Look for subframeworks.
   std::error_code EC;
@@ -1602,7 +1606,7 @@ ModuleMap::getContainingModuleMapFile(const Module *Module) const {
 }
 
 FileID ModuleMap::getModuleMapFileIDForUniquing(const Module *M) const {
-  if (M->IsInferred) {
+  if (M->getIsInferred()) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");
     return InferredModuleAllowedBy.find(M)->second;
   }
@@ -1615,7 +1619,7 @@ ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
 }
 
 void ModuleMap::setInferredModuleAllowedBy(Module *M, FileID ModMapFID) {
-  M->IsInferred = true;
+  M->setIsInferred(true);
   InferredModuleAllowedBy[M] = ModMapFID;
 }
 
@@ -1694,7 +1698,8 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
   auto *Top = Mod->getTopLevelModule();
-  auto Unresolved = std::move(Top->UnresolvedDirectUses);
+  auto Unresolved =
+      SmallVector<ModuleId, 2>(std::move(Top->UnresolvedDirectUses));
   Top->UnresolvedDirectUses.clear();
   for (auto &UDU : Unresolved) {
     Module *DirectUse = resolveModuleId(UDU, Top, Complain);
@@ -1836,7 +1841,7 @@ void ModuleMapLoader::diagnosePrivateModules(SourceLocation StartLoc) {
       if (StartLoc.isValid())
         FixItInitBegin = StartLoc;
 
-      if (ActiveModule->Parent->IsFramework)
+      if (ActiveModule->Parent->getIsFramework())
         FixedPrivModDecl.append("framework ");
       FixedPrivModDecl.append("module ");
       FixedPrivModDecl.append(Canonical);
@@ -1909,7 +1914,7 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
     //  - If the Existing module was loaded from an AST file and we've found its
     //    original source module map, or we cannot determine Existing's
     //    definition location.
-    bool LoadedFromASTFile = Existing->IsFromModuleFile;
+    bool LoadedFromASTFile = Existing->getIsFromModuleFile();
     if (LoadedFromASTFile) {
       OptionalFileEntryRef ExistingModMapFile =
           Map.getContainingModuleMapFile(Existing);
@@ -1926,7 +1931,7 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
         LoadedFromASTFile = false;
     }
     //  - If we previously inferred this module from different module map file.
-    bool Inferred = Existing->IsInferred;
+    bool Inferred = Existing->getIsInferred();
     //  - If we're building a framework that vends a module map, we might've
     //    previously seen the one in intermediate products and now the system
     //    one.
@@ -1942,7 +1947,7 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
     //        that \c Existing is part of a framework iff the redefinition of FW
     //        we have just skipped had it too. Once we do that, stop checking
     //        the local framework qualifier and only rely on \c Existing.
-    bool PartOfFramework = MD.Framework || Existing->isPartOfFramework();
+    bool PartOfFramework = MD.getFramework() || Existing->isPartOfFramework();
     //  - If we're building a (preprocessed) module and we've just loaded the
     //    module map file from which it was created.
     bool ParsedAsMainInput =
@@ -1974,27 +1979,27 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
 
   // Start defining this module.
   if (ShadowingModule) {
-    ActiveModule =
-        Map.createShadowedModule(ModuleName, MD.Framework, ShadowingModule);
+    ActiveModule = Map.createShadowedModule(ModuleName, MD.getFramework(),
+                                            ShadowingModule);
   } else {
-    ActiveModule = Map.findOrCreateModuleFirst(ModuleName, ActiveModule,
-                                               MD.Framework, MD.Explicit);
+    ActiveModule = Map.findOrCreateModuleFirst(
+        ModuleName, ActiveModule, MD.getFramework(), MD.getExplicit());
   }
 
   ActiveModule->DefinitionLoc = ModuleNameLoc;
   if (MD.Attrs.IsSystem || IsSystem)
-    ActiveModule->IsSystem = true;
+    ActiveModule->setIsSystem(true);
   if (MD.Attrs.IsExternC)
-    ActiveModule->IsExternC = true;
+    ActiveModule->setIsExternC(true);
   if (MD.Attrs.NoUndeclaredIncludes)
-    ActiveModule->NoUndeclaredIncludes = true;
+    ActiveModule->setNoUndeclaredIncludes(true);
   ActiveModule->Directory = Directory;
 
   StringRef MapFileName(
       SourceMgr.getFileEntryRefForID(ModuleMapFID)->getName());
   if (MapFileName.ends_with("module.private.modulemap") ||
       MapFileName.ends_with("module_private.map")) {
-    ActiveModule->ModuleMapIsPrivate = true;
+    ActiveModule->setModuleMapIsPrivate(true);
   }
 
   // Private modules named as FooPrivate, Foo.Private or similar are likely a
@@ -2007,7 +2012,7 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
                        StartLoc) &&
       !Diags.isIgnored(diag::warn_mmap_mismatched_private_module_name,
                        StartLoc) &&
-      ActiveModule->ModuleMapIsPrivate)
+      ActiveModule->getModuleMapIsPrivate())
     diagnosePrivateModules(MD.Location);
 
   for (const modulemap::Decl &Decl : MD.Decls) {
@@ -2040,13 +2045,13 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
 
   // If the active module is a top-level framework, and there are no link
   // libraries, automatically link against the framework.
-  if (ActiveModule->IsFramework && !ActiveModule->isSubFramework() &&
+  if (ActiveModule->getIsFramework() && !ActiveModule->isSubFramework() &&
       ActiveModule->LinkLibraries.empty())
     inferFrameworkLink(ActiveModule);
 
   // If the module meets all requirements but is still unavailable, mark the
   // whole tree as unavailable to prevent it from building.
-  if (!ActiveModule->IsAvailable && !ActiveModule->IsUnimportable &&
+  if (!ActiveModule->getIsAvailable() && !ActiveModule->getIsUnimportable() &&
       ActiveModule->Parent) {
     ActiveModule->getTopLevelModule()->markUnavailable(/*Unimportable=*/false);
     ActiveModule->getTopLevelModule()->MissingHeaders.append(
@@ -2315,7 +2320,7 @@ void ModuleMapLoader::handleConfigMacros(
   // TODO: Is this really the behavior we want for multiple config_macros
   //       declarations? If any of them are exhaustive then all of them are.
   if (CMD.Exhaustive) {
-    ActiveModule->ConfigMacrosExhaustive = true;
+    ActiveModule->setConfigMacrosExhaustive(true);
   }
   ActiveModule->ConfigMacros.insert(ActiveModule->ConfigMacros.end(),
                                     CMD.Macros.begin(), CMD.Macros.end());
@@ -2336,20 +2341,21 @@ void ModuleMapLoader::handleInferredModuleDecl(
   SourceLocation StarLoc = MD.Id.front().second;
 
   // Inferred modules must be submodules.
-  if (!ActiveModule && !MD.Framework) {
+  if (!ActiveModule && !MD.getFramework()) {
     Diags.Report(StarLoc, diag::err_mmap_top_level_inferred_submodule);
     return;
   }
 
   if (ActiveModule) {
     // Inferred modules must have umbrella directories.
-    if (ActiveModule->IsAvailable && !ActiveModule->getEffectiveUmbrellaDir()) {
+    if (ActiveModule->getIsAvailable() &&
+        !ActiveModule->getEffectiveUmbrellaDir()) {
       Diags.Report(StarLoc, diag::err_mmap_inferred_no_umbrella);
       return;
     }
 
     // Check for redefinition of an inferred module.
-    if (ActiveModule->InferSubmodules) {
+    if (ActiveModule->getInferSubmodules()) {
       Diags.Report(StarLoc, diag::err_mmap_inferred_redef);
       if (ActiveModule->InferredSubmoduleLoc.isValid())
         Diags.Report(ActiveModule->InferredSubmoduleLoc,
@@ -2358,24 +2364,24 @@ void ModuleMapLoader::handleInferredModuleDecl(
     }
 
     // Check for the 'framework' keyword, which is not permitted here.
-    if (MD.Framework) {
+    if (MD.getFramework()) {
       Diags.Report(StarLoc, diag::err_mmap_inferred_framework_submodule);
       return;
     }
-  } else if (MD.Explicit) {
+  } else if (MD.getExplicit()) {
     Diags.Report(StarLoc, diag::err_mmap_explicit_inferred_framework);
     return;
   }
 
   if (ActiveModule) {
     // Note that we have an inferred submodule.
-    ActiveModule->InferSubmodules = true;
+    ActiveModule->setInferSubmodules(true);
     ActiveModule->InferredSubmoduleLoc = StarLoc;
-    ActiveModule->InferExplicitSubmodules = MD.Explicit;
+    ActiveModule->setInferExplicitSubmodules(MD.getExplicit());
   } else {
     // We'll be inferring framework modules for this directory.
     auto &InfDir = Map.InferredDirectories[Directory];
-    InfDir.InferModules = true;
+    InfDir.setInferModules(true);
     InfDir.Attrs = MD.Attrs;
     InfDir.ModuleMapFID = ModuleMapFID;
     // FIXME: Handle the 'framework' keyword.
@@ -2412,7 +2418,7 @@ void ModuleMapLoader::handleInferredModuleDecl(
               }
 
               if (ED.Wildcard && ED.Id.size() == 0)
-                ActiveModule->InferExportWildcard = true;
+                ActiveModule->setInferExportWildcard(true);
               else
                 Diags.Report(ED.Id.front().second,
                              diag::err_mmap_expected_export_wildcard);

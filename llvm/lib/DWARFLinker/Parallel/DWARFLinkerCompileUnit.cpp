@@ -53,9 +53,9 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
 
   Language = CUDie.getLanguage();
 
-  if (!GlobalData.getOptions().NoODR && Language.has_value() &&
+  if (!GlobalData.getOptions().getNoODR() && Language.has_value() &&
       isODRLanguage(*Language))
-    NoODR = false;
+    setNoODR(false);
 
   if (const char *CUName = CUDie.getName(DINameKind::ShortName))
     UnitName = CUName;
@@ -114,7 +114,7 @@ bool CompileUnit::loadInputDIEs() {
   // load input dies, resize Info structures array.
   DieInfoArray.resize(getOrigUnit().getNumDIEs());
   OutDieOffsetArray.resize(getOrigUnit().getNumDIEs(), 0);
-  if (!NoODR)
+  if (!getNoODR())
     TypeEntries.resize(getOrigUnit().getNumDIEs());
   return true;
 }
@@ -168,11 +168,12 @@ void CompileUnit::analyzeDWARFStructureRec(const DWARFDebugInfoEntry *DieEntry,
       break;
     }
 
-    if (!isClangModule() && !getGlobalData().getOptions().UpdateIndexTablesOnly)
+    if (!isClangModule() &&
+        !getGlobalData().getOptions().getUpdateIndexTablesOnly())
       ChildInfo.setTrackLiveness();
 
     if ((!ChildInfo.getIsInAnonNamespaceScope() &&
-         !ChildIsODRUnavailableFunctionScope && !NoODR))
+         !ChildIsODRUnavailableFunctionScope && !getNoODR()))
       ChildInfo.setODRAvailable();
 
     if (CurChild->hasChildren())
@@ -250,7 +251,7 @@ void CompileUnit::cleanupDataAfterClonning() {
   FileNames.shrink_and_clear();
   DieInfoArray = SmallVector<DIEInfo>();
   OutDieOffsetArray = SmallVector<uint64_t>();
-  TypeEntries = SmallVector<TypeEntry *>();
+  TypeEntries.assign(SmallVector<TypeEntry *>());
   Dependencies.reset(nullptr);
   StmtSeqListAttributes.clear();
   getOrigUnit().clear();
@@ -556,7 +557,7 @@ void CompileUnit::addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset) {
 }
 
 Error CompileUnit::cloneAndEmitDebugLocations() {
-  if (getGlobalData().getOptions().UpdateIndexTablesOnly)
+  if (getGlobalData().getOptions().getUpdateIndexTablesOnly())
     return Error::success();
 
   if (getOrigUnit().getVersion() < 5) {
@@ -744,7 +745,7 @@ uint64_t CompileUnit::emitLocListFragment(
 }
 
 Error CompileUnit::emitDebugAddrSection() {
-  if (GlobalData.getOptions().UpdateIndexTablesOnly)
+  if (GlobalData.getOptions().getUpdateIndexTablesOnly())
     return Error::success();
 
   if (getVersion() < 5)
@@ -786,7 +787,7 @@ Error CompileUnit::emitDebugAddrSection() {
 }
 
 Error CompileUnit::cloneAndEmitRanges() {
-  if (getGlobalData().getOptions().UpdateIndexTablesOnly)
+  if (getGlobalData().getOptions().getUpdateIndexTablesOnly())
     return Error::success();
 
   // Build set of linked address ranges for unit function ranges.
@@ -1287,7 +1288,7 @@ void CompileUnit::cloneDieAttrExpression(
       assert(RealSize == ULEBsize && "padding failed");
       ArrayRef<uint8_t> ULEBbytes(ULEB, ULEBsize);
       OutputExpression.append(ULEBbytes.begin(), ULEBbytes.end());
-    } else if (!getGlobalData().getOptions().UpdateIndexTablesOnly &&
+    } else if (!getGlobalData().getOptions().getUpdateIndexTablesOnly() &&
                Op.getCode() == dwarf::DW_OP_addrx) {
       if (std::optional<object::SectionedAddress> SA =
               OrigUnit.getAddrOffsetSectionItem(Op.getRawOperand(0))) {
@@ -1309,7 +1310,7 @@ void CompileUnit::cloneDieAttrExpression(
         OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
       } else
         warn("cann't read DW_OP_addrx operand.");
-    } else if (!getGlobalData().getOptions().UpdateIndexTablesOnly &&
+    } else if (!getGlobalData().getOptions().getUpdateIndexTablesOnly() &&
                Op.getCode() == dwarf::DW_OP_constx) {
       if (std::optional<object::SectionedAddress> SA =
               OrigUnit.getAddrOffsetSectionItem(Op.getRawOperand(0))) {
@@ -1689,7 +1690,7 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   OutLineTable.Prologue.FormParams.AddrSize = getFormParams().AddrSize;
 
   // Set Line Table Rows.
-  if (getGlobalData().getOptions().UpdateIndexTablesOnly) {
+  if (getGlobalData().getOptions().getUpdateIndexTablesOnly()) {
     OutLineTable.Rows = InputLineTable->Rows;
     // If all the line table contains is a DW_LNE_end_sequence, clear the line
     // table rows, it will be inserted again in the DWARFStreamer.

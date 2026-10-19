@@ -35,6 +35,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -106,8 +107,18 @@ class ASTUnit {
   std::unique_ptr<HeaderSearchOptions> HSOpts;
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
-  bool HadModuleLoaderFatalFailure = false;
-  bool StorePreamblesInMemory = false;
+  bool getHadModuleLoaderFatalFailure() const {
+    return PreambleDiagnostics.getFlag(0);
+  }
+  void setHadModuleLoaderFatalFailure(bool Value) {
+    PreambleDiagnostics.setFlag(0, Value);
+  }
+  bool getStorePreamblesInMemory() const {
+    return PreambleDiagnostics.getFlag(1);
+  }
+  void setStorePreamblesInMemory(bool Value) {
+    PreambleDiagnostics.setFlag(1, Value);
+  }
 
   /// Utility struct for managing ASTWriter and its associated data streams.
   struct ASTWriterData {
@@ -148,13 +159,17 @@ class ASTUnit {
   // OnlyLocalDecls - when true, walking this AST should only visit declarations
   // that come from the AST itself, not from included precompiled headers.
   // FIXME: This is temporary; eventually, CIndex will always do this.
-  bool OnlyLocalDecls = false;
+  bool getOnlyLocalDeclsFlag() const { return PreambleDiagnostics.getFlag(2); }
+  void setOnlyLocalDeclsFlag(bool Value) {
+    PreambleDiagnostics.setFlag(2, Value);
+  }
 
   /// Whether to capture any diagnostics produced.
   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None;
 
   /// Track whether the main file was loaded from an AST or not.
-  bool MainFileIsAST;
+  bool getMainFileIsAST() const { return PreambleDiagnostics.getFlag(3); }
+  void setMainFileIsAST(bool Value) { PreambleDiagnostics.setFlag(3, Value); }
 
   /// What kind of translation unit this AST represents.
   TranslationUnitKind TUKind = TU_Complete;
@@ -186,7 +201,7 @@ class ASTUnit {
   std::string OriginalSourceFile;
 
   /// The set of diagnostics produced when creating the preamble.
-  SmallVector<StandaloneDiagnostic, 4> PreambleDiagnostics;
+  llvm::SmallVectorWithFlags<StandaloneDiagnostic, 4, 4> PreambleDiagnostics;
 
   /// The set of diagnostics produced when creating this
   /// translation unit.
@@ -423,7 +438,7 @@ public:
   ASTUnit &operator=(const ASTUnit &) = delete;
   ~ASTUnit();
 
-  bool isMainFileAST() const { return MainFileIsAST; }
+  bool isMainFileAST() const { return getMainFileIsAST(); }
 
   bool isUnsafeToFree() const { return UnsafeToFree; }
   void setUnsafeToFree(bool Value) { UnsafeToFree = Value; }
@@ -509,7 +524,7 @@ public:
   ASTMutationListener *getASTMutationListener();
   ASTDeserializationListener *getDeserializationListener();
 
-  bool getOnlyLocalDecls() const { return OnlyLocalDecls; }
+  bool getOnlyLocalDecls() const { return getOnlyLocalDeclsFlag(); }
 
   bool getOwnsRemappedFileBuffers() const { return OwnsRemappedFileBuffers; }
   void setOwnsRemappedFileBuffers(bool val) { OwnsRemappedFileBuffers = val; }

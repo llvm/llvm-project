@@ -45,6 +45,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -700,7 +701,8 @@ private:
   struct TempDtorContext {
     TempDtorContext() = default;
     TempDtorContext(TryResult KnownExecuted)
-        : IsConditional(true), KnownExecuted(KnownExecuted) {}
+        : CollectedMTEs(decltype(this->CollectedMTEs)::withFlags(1)),
+          KnownExecuted(KnownExecuted) {}
     /// Returns whether we need to start a new branch for a temporary destructor
     /// call. This is the case when the temporary destructor is
     /// conditionally executed, and it is the first one we encounter while
@@ -708,7 +710,7 @@ private:
     /// will be added to the same block and are executed under the same
     /// condition.
     bool needsTempDtorBranch() const {
-      return IsConditional && !TerminatorExpr;
+      return getIsConditional() && !TerminatorExpr;
     }
 
     /// Remember the successor S of a temporary destructor decision branch for
@@ -722,11 +724,18 @@ private:
       CollectedMTEs.push_back(MTE);
     }
 
-    const bool IsConditional = false;
-    SmallVector<const MaterializeTemporaryExpr *, 5> CollectedMTEs;
+    bool getIsConditional() const { return CollectedMTEs.getFlag(0); }
+    llvm::SmallVectorWithFlags<const MaterializeTemporaryExpr *, 5>
+        CollectedMTEs;
     const TryResult KnownExecuted = true;
     CFGBlock *Succ = nullptr;
     CXXBindTemporaryExpr *TerminatorExpr = nullptr;
+
+  public:
+    TempDtorContext(const TempDtorContext &) = default;
+    TempDtorContext(TempDtorContext &&) = default;
+    TempDtorContext &operator=(const TempDtorContext &) = delete;
+    TempDtorContext &operator=(TempDtorContext &&) = delete;
   };
 
   // Visitors to walk an AST and generate destructors of temporaries in
@@ -5298,7 +5307,8 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaries(
     InsertTempDecisionBlock(RHSContext);
 
     if (BuildOpts.AddLifetime)
-      Context.CollectedMTEs.append(RHSContext.CollectedMTEs);
+      Context.CollectedMTEs.append(RHSContext.CollectedMTEs.begin(),
+                                   RHSContext.CollectedMTEs.end());
 
     return Block;
   }
@@ -5409,8 +5419,10 @@ CFGBlock *CFGBuilder::VisitConditionalOperatorForTemporaries(
     InsertTempDecisionBlock(FalseContext);
   }
   if (BuildOpts.AddLifetime) {
-    Context.CollectedMTEs.append(TrueContext.CollectedMTEs);
-    Context.CollectedMTEs.append(FalseContext.CollectedMTEs);
+    Context.CollectedMTEs.append(TrueContext.CollectedMTEs.begin(),
+                                 TrueContext.CollectedMTEs.end());
+    Context.CollectedMTEs.append(FalseContext.CollectedMTEs.begin(),
+                                 FalseContext.CollectedMTEs.end());
   }
 
   return Block;

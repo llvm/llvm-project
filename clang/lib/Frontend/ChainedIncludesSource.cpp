@@ -183,7 +183,7 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
 
     ParseAST(Clang->getSema());
     Clang->getDiagnosticClient().EndSourceFile();
-    assert(Buffer->IsComplete && "serialization did not complete");
+    assert(Buffer->getIsComplete() && "serialization did not complete");
     auto &serialAST = Buffer->Data;
     SerialBufs.push_back(llvm::MemoryBuffer::getMemBufferCopy(
         StringRef(serialAST.data(), serialAST.size())));

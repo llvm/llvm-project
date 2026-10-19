@@ -49,8 +49,8 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
-  shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
-      cgm.getCodeGenOpts(), getContext().getLangOpts());
+  setShouldEmitLifetimeMarkers(CodeGenUtils::shouldEmitLifetimeMarkers(
+      cgm.getCodeGenOpts(), getContext().getLangOpts()));
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -402,7 +402,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   // That influences whether the terminating op is trap, unreachable, or
   // return.
   if (fd && cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
-      !cgf.sawAsmBlock && !fd->getReturnType()->isVoidType() &&
+      !cgf.getSawAsmBlock() && !fd->getReturnType()->isVoidType() &&
       builder.getInsertionBlock() &&
       !previousOpIsNonYieldingCleanup(builder.getInsertionBlock())) {
     bool shouldEmitUnreachable =
@@ -521,7 +521,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
   const Decl *d = gd.getDecl();
 
-  didCallStackSave = false;
+  setDidCallStackSave(false);
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
@@ -787,8 +787,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       fn->setAttr(cir::CIRDialect::getMustProgressAttrName(),
                   mlir::UnitAttr::get(&getMLIRContext()));
 
-    if (shouldEmitLifetimeMarkers)
-      fnHasBypassStmt = functionMightHaveBypass(body);
+    if (getShouldEmitLifetimeMarkers())
+      setFnHasBypassStmt(functionMightHaveBypass(body));
 
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);

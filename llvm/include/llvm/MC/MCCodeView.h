@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <deque>
@@ -254,7 +255,7 @@ private:
   };
 
   /// Array storing added file information.
-  SmallVector<FileInfo, 4> Files;
+  llvm::SmallVectorWithFlags<FileInfo, 4> Files;
 
   /// The offset of the first and last .cv_loc directive for a given function
   /// id.
@@ -268,7 +269,8 @@ private:
 
   /// Indicate whether we have already laid out the checksum table addresses or
   /// not.
-  bool ChecksumOffsetsAssigned = false;
+  bool getChecksumOffsetsAssigned() const { return Files.getFlag(0); }
+  void setChecksumOffsetsAssigned(bool Value) { Files.setFlag(0, Value); }
 
   /// Append-only storage of MCCVDefRangeFragment::Ranges.
   std::deque<SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 0>>

@@ -13,6 +13,7 @@
 
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/AST/ASTConsumer.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "TreeTransform.h"
 #include "clang/AST/ASTContext.h"
@@ -202,15 +203,42 @@ private:
     /// 'ordered' clause, the second one is true if the regions has 'ordered'
     /// clause, false otherwise.
     std::optional<std::pair<const Expr *, OMPOrderedClause *>> OrderedRegion;
-    bool RegionHasOrderConcurrent = false;
+    bool getRegionHasOrderConcurrent() const {
+      return IteratorVarDecls.getFlag(0);
+    }
+    void setRegionHasOrderConcurrent(bool Value) {
+      IteratorVarDecls.setFlag(0, Value);
+    }
     unsigned AssociatedLoops = 1;
-    bool HasMutipleLoops = false;
+    bool getHasMutipleLoops() const { return IteratorVarDecls.getFlag(1); }
+    bool setHasMutipleLoops(bool Value) {
+      IteratorVarDecls.setFlag(1, Value);
+      return Value;
+    }
     const Decl *PossiblyLoopCounter = nullptr;
-    bool NowaitRegion = false;
-    bool UntiedRegion = false;
-    bool CancelRegion = false;
-    bool LoopStart = false;
-    bool BodyComplete = false;
+    bool getNowaitRegion() const { return IteratorVarDecls.getFlag(2); }
+    void setNowaitRegion(bool Value) { IteratorVarDecls.setFlag(2, Value); }
+    bool getUntiedRegion() const { return IteratorVarDecls.getFlag(3); }
+    void setUntiedRegion(bool Value) { IteratorVarDecls.setFlag(3, Value); }
+    bool getCancelRegion() const {
+      return ImplicitDefaultFirstprivateFDs.getFlag(0);
+    }
+    bool setCancelRegion(bool Value) {
+      ImplicitDefaultFirstprivateFDs.setFlag(0, Value);
+      return Value;
+    }
+    bool getLoopStart() const {
+      return ImplicitDefaultFirstprivateFDs.getFlag(1);
+    }
+    void setLoopStart(bool Value) {
+      ImplicitDefaultFirstprivateFDs.setFlag(1, Value);
+    }
+    bool getBodyComplete() const {
+      return ImplicitDefaultFirstprivateFDs.getFlag(2);
+    }
+    void setBodyComplete(bool Value) {
+      ImplicitDefaultFirstprivateFDs.setFlag(2, Value);
+    }
     SourceLocation PrevScanLocation;
     SourceLocation PrevOrderedLocation;
     SourceLocation InnerTeamsRegionLoc;
@@ -240,10 +268,10 @@ private:
           : FD(FD), StackLevel(StackLevel), VD(VD) {}
     };
     /// List of captured fields
-    llvm::SmallVector<ImplicitDefaultFDInfoTy, 8>
+    llvm::SmallVectorWithFlags<ImplicitDefaultFDInfoTy, 8, 3>
         ImplicitDefaultFirstprivateFDs;
     Expr *DeclareMapperVar = nullptr;
-    SmallVector<VarDecl *, 16> IteratorVarDecls;
+    llvm::SmallVectorWithFlags<VarDecl *, 16, 4> IteratorVarDecls;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -262,10 +290,16 @@ private:
   /// from current directive.
   OpenMPClauseKind ClauseKindMode = OMPC_unknown;
   Sema &SemaRef;
-  bool ForceCapturing = false;
+  bool getForceCapturing() const { return ConstructTraits.getFlag(0); }
+  void setForceCapturing(bool Value) { ConstructTraits.setFlag(0, Value); }
   /// true if all the variables in the target executable directives must be
   /// captured by reference.
-  bool ForceCaptureByReferenceInTargetExecutable = false;
+  bool getForceCaptureByReferenceInTargetExecutableFlag() const {
+    return ConstructTraits.getFlag(1);
+  }
+  void setForceCaptureByReferenceInTargetExecutableFlag(bool Value) {
+    ConstructTraits.setFlag(1, Value);
+  }
   CriticalsWithHintsTy Criticals;
   unsigned IgnoredStackElements = 0;
 
@@ -363,7 +397,7 @@ private:
   SmallVector<SourceLocation, 2> TargetLocations;
   SourceLocation AtomicLocation;
   /// Vector of declare variant construct traits.
-  SmallVector<llvm::omp::TraitProperty, 8> ConstructTraits;
+  llvm::SmallVectorWithFlags<llvm::omp::TraitProperty, 8, 2> ConstructTraits;
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -404,18 +438,18 @@ public:
 
   bool isBodyComplete() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
-    return Top && Top->BodyComplete;
+    return Top && Top->getBodyComplete();
   }
-  void setBodyComplete() { getTopOfStack().BodyComplete = true; }
+  void setBodyComplete() { getTopOfStack().setBodyComplete(true); }
 
-  bool isForceVarCapturing() const { return ForceCapturing; }
-  void setForceVarCapturing(bool V) { ForceCapturing = V; }
+  bool isForceVarCapturing() const { return getForceCapturing(); }
+  void setForceVarCapturing(bool V) { setForceCapturing(V); }
 
   void setForceCaptureByReferenceInTargetExecutable(bool V) {
-    ForceCaptureByReferenceInTargetExecutable = V;
+    setForceCaptureByReferenceInTargetExecutableFlag(V);
   }
   bool isForceCaptureByReferenceInTargetExecutable() const {
-    return ForceCaptureByReferenceInTargetExecutable;
+    return getForceCaptureByReferenceInTargetExecutableFlag();
   }
 
   void push(OpenMPDirectiveKind DKind, const DeclarationNameInfo &DirName,
@@ -468,19 +502,19 @@ public:
   void loopInit() {
     assert(isOpenMPLoopDirective(getCurrentDirective()) &&
            "Expected loop-based directive.");
-    getTopOfStack().LoopStart = true;
+    getTopOfStack().setLoopStart(true);
   }
   /// Start capturing of the variables in the loop context.
   void loopStart() {
     assert(isOpenMPLoopDirective(getCurrentDirective()) &&
            "Expected loop-based directive.");
-    getTopOfStack().LoopStart = false;
+    getTopOfStack().setLoopStart(false);
   }
   /// true, if variables are captured, false otherwise.
   bool isLoopStarted() const {
     assert(isOpenMPLoopDirective(getCurrentDirective()) &&
            "Expected loop-based directive.");
-    return !getTopOfStack().LoopStart;
+    return !getTopOfStack().getLoopStart();
   }
   /// Marks (or clears) declaration as possibly loop counter.
   void resetPossibleLoopCounter(const Decl *D = nullptr) {
@@ -925,44 +959,53 @@ public:
   }
   /// Marks current region as having an 'order' clause.
   void setRegionHasOrderConcurrent(bool HasOrderConcurrent) {
-    getTopOfStack().RegionHasOrderConcurrent = HasOrderConcurrent;
+    [&] {
+      auto PackedFlagValue = HasOrderConcurrent;
+      return getTopOfStack().setRegionHasOrderConcurrent(PackedFlagValue);
+    }();
   }
   /// Returns true, if parent region is order (has associated
   /// 'order' clause), false - otherwise.
   bool isParentOrderConcurrent() const {
     if (const SharingMapTy *Parent = getSecondOnStackOrNull())
-      return Parent->RegionHasOrderConcurrent;
+      return Parent->getRegionHasOrderConcurrent();
     return false;
   }
   /// Marks current region as nowait (it has a 'nowait' clause).
   void setNowaitRegion(bool IsNowait = true) {
-    getTopOfStack().NowaitRegion = IsNowait;
+    [&] {
+      auto PackedFlagValue = IsNowait;
+      return getTopOfStack().setNowaitRegion(PackedFlagValue);
+    }();
   }
   /// Returns true, if parent region is nowait (has associated
   /// 'nowait' clause), false - otherwise.
   bool isParentNowaitRegion() const {
     if (const SharingMapTy *Parent = getSecondOnStackOrNull())
-      return Parent->NowaitRegion;
+      return Parent->getNowaitRegion();
     return false;
   }
   /// Marks current region as untied (it has a 'untied' clause).
   void setUntiedRegion(bool IsUntied = true) {
-    getTopOfStack().UntiedRegion = IsUntied;
+    [&] {
+      auto PackedFlagValue = IsUntied;
+      return getTopOfStack().setUntiedRegion(PackedFlagValue);
+    }();
   }
   /// Return true if current region is untied.
   bool isUntiedRegion() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
-    return Top ? Top->UntiedRegion : false;
+    return Top ? Top->getUntiedRegion() : false;
   }
   /// Marks parent region as cancel region.
   void setParentCancelRegion(bool Cancel = true) {
     if (SharingMapTy *Parent = getSecondOnStackOrNull())
-      Parent->CancelRegion |= Cancel;
+      Parent->setCancelRegion(Parent->getCancelRegion() | (Cancel));
   }
   /// Return true if current region has inner cancel construct.
   bool isCancelRegion() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
-    return Top ? Top->CancelRegion : false;
+    return Top ? Top->getCancelRegion() : false;
   }
 
   /// Mark that parent region already has scan directive.
@@ -1000,7 +1043,7 @@ public:
   void setAssociatedLoops(unsigned Val) {
     getTopOfStack().AssociatedLoops = Val;
     if (Val > 1)
-      getTopOfStack().HasMutipleLoops = true;
+      getTopOfStack().setHasMutipleLoops(true);
   }
   /// Return collapse value for region.
   unsigned getAssociatedLoops() const {
@@ -1010,7 +1053,7 @@ public:
   /// Returns true if the construct is associated with multiple loops.
   bool hasMutipleLoops() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
-    return Top ? Top->HasMutipleLoops : false;
+    return Top ? Top->getHasMutipleLoops() : false;
   }
 
   /// Marks current target region as one with closely nested teams
@@ -8231,7 +8274,7 @@ static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
   for (const OMPInteropPref &P : Info.Prefs) {
     const Expr *E = P.Fr;
     if (!E) {
-      assert(Info.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
+      assert(Info.hasPreferAttrs() && "null Fr requires OMP 6.0 syntax");
     } else if (!isDependent(E)) {
       if (!E->isIntegerConstantExpr(S.getASTContext()) &&
           !isa<StringLiteral>(E)) {

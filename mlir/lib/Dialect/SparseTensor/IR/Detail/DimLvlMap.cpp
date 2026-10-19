@@ -79,8 +79,7 @@ bool LvlSpec::isValid(Ranks const &ranks) const {
 
 DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
                      ArrayRef<LvlSpec> lvlSpecs)
-    : symRank(symRank), dimSpecs(dimSpecs), lvlSpecs(lvlSpecs),
-      mustPrintLvlVars(false) {
+    : symRank(symRank), dimSpecs(dimSpecs), lvlSpecs(lvlSpecs) {
   // First, check integrity of the variable-binding structure.
   // NOTE: This establishes the invariant that calls to `VarSet::add`
   // below cannot cause OOB errors.
@@ -96,7 +95,7 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
     // This LvlVar can be elided iff it isn't overtly used.
     lvlSpec.setElideVar(!isUsed);
     // If any LvlVar cannot be elided, then must forward-declare all LvlVars.
-    mustPrintLvlVars = mustPrintLvlVars || isUsed;
+    setMustPrintLvlVars(getMustPrintLvlVars() || isUsed);
   }
 }
 

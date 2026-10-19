@@ -12,6 +12,7 @@
 #include "ByteStreamer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace llvm {
 
@@ -45,17 +46,20 @@ public:
 
 private:
   SmallVector<List, 4> Lists;
-  SmallVector<Entry, 32> Entries;
+  llvm::SmallVectorWithFlags<Entry, 32> Entries;
   SmallString<256> DWARFBytes;
   std::vector<std::string> Comments;
   MCSymbol *Sym = nullptr;
 
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.
-  bool GenerateComments;
+  bool getGenerateComments() const { return Entries.getFlag(0); }
+  void setGenerateComments(bool Value) { Entries.setFlag(0, Value); }
 
 public:
-  DebugLocStream(bool GenerateComments) : GenerateComments(GenerateComments) { }
+  DebugLocStream(bool GenerateComments)
+      : Entries(
+            decltype(this->Entries)::withFlags(unsigned(GenerateComments))) {}
   size_t getNumLists() const { return Lists.size(); }
   const List &getList(size_t LI) const { return Lists[LI]; }
   ArrayRef<List> getLists() const { return Lists; }
@@ -103,7 +107,7 @@ private:
 
 public:
   BufferByteStreamer getStreamer() {
-    return BufferByteStreamer(DWARFBytes, Comments, GenerateComments);
+    return BufferByteStreamer(DWARFBytes, Comments, getGenerateComments());
   }
 
   ArrayRef<Entry> getEntries(const List &L) const {

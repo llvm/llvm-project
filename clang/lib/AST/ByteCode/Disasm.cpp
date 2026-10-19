@@ -27,6 +27,7 @@
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -164,9 +165,14 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   struct OpText {
     size_t Addr;
     std::string Op;
-    bool IsJump;
-    bool CurrentOp = false;
-    llvm::SmallVector<std::string> Args;
+    bool getIsJump() const { return Args.getFlag(0); }
+    void setIsJump(bool Value) { Args.setFlag(0, Value); }
+    bool getCurrentOp() const { return Args.getFlag(1); }
+    void setCurrentOp(bool Value) { Args.setFlag(1, Value); }
+    llvm::SmallVectorWithFlags<
+        std::string,
+        llvm::CalculateSmallVectorDefaultInlinedElements<std::string>::value, 2>
+        Args;
   };
 
   auto PrintName = [](const char *Name) -> std::string {
@@ -182,8 +188,8 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
     OpText Text;
     auto Op = PC.read<Opcode>();
     Text.Addr = Addr;
-    Text.IsJump = isJumpOpcode(Op);
-    Text.CurrentOp = (PC == OpPC);
+    Text.setIsJump(isJumpOpcode(Op));
+    Text.setCurrentOp((PC == OpPC));
     switch (Op) {
 #define GET_DISASM
 #include "Opcodes.inc"
@@ -201,7 +207,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   };
   llvm::SmallVector<JmpData> Jumps;
   for (auto &Text : Code) {
-    if (Text.IsJump)
+    if (Text.getIsJump())
       Jumps.push_back({Text.Addr, Text.Addr + std::stoi(Text.Args[0]) +
                                       align(sizeof(Opcode)) +
                                       align(sizeof(int32_t))});
@@ -215,7 +221,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
     std::string Line;
     llvm::raw_string_ostream LS(Line);
     if (OpPC) {
-      if (C.CurrentOp)
+      if (C.getCurrentOp())
         LS << " * ";
       else
         LS << "   ";

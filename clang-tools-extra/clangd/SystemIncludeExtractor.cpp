@@ -50,6 +50,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -82,22 +83,35 @@ struct DriverArgs {
   // Name of the driver program to execute or absolute path to it.
   std::string Driver;
   // Whether certain includes should be part of query.
-  bool StandardIncludes = true;
-  bool StandardCXXIncludes = true;
+  bool getStandardIncludes() const { return !Specs.getFlag(0); }
+  bool setStandardIncludes(bool Value) {
+    Specs.setFlag(0, !Value);
+    return Value;
+  }
+  bool getStandardCXXIncludes() const { return !Specs.getFlag(1); }
+  bool setStandardCXXIncludes(bool Value) {
+    Specs.setFlag(1, !Value);
+    return Value;
+  }
   // Language to use while querying.
   std::string Lang;
   std::string Sysroot;
   std::string ISysroot;
   std::string Target;
   std::string Stdlib;
-  llvm::SmallVector<std::string> Specs;
+  llvm::SmallVectorWithFlags<
+      std::string,
+      llvm::CalculateSmallVectorDefaultInlinedElements<std::string>::value, 2>
+      Specs;
 
   bool operator==(const DriverArgs &RHS) const {
-    return std::tie(Driver, StandardIncludes, StandardCXXIncludes, Lang,
-                    Sysroot, ISysroot, Target, Stdlib, Specs) ==
-           std::tie(RHS.Driver, RHS.StandardIncludes, RHS.StandardCXXIncludes,
-                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target, RHS.Stdlib,
-                    RHS.Specs);
+    return getStandardIncludes() == RHS.getStandardIncludes() &&
+           getStandardCXXIncludes() == RHS.getStandardCXXIncludes() &&
+           llvm::ArrayRef<std::string>(Specs) ==
+               llvm::ArrayRef<std::string>(RHS.Specs) &&
+           std::tie(Driver, Lang, Sysroot, ISysroot, Target, Stdlib) ==
+               std::tie(RHS.Driver, RHS.Lang, RHS.Sysroot, RHS.ISysroot,
+                        RHS.Target, RHS.Stdlib);
   }
 
   DriverArgs(const tooling::CompileCommand &Cmd, llvm::StringRef File) {
@@ -121,9 +135,9 @@ struct DriverArgs {
       }
       // Look for standard/builtin includes.
       else if (Arg == "-nostdinc" || Arg == "--no-standard-includes")
-        StandardIncludes = false;
+        setStandardIncludes(false);
       else if (Arg == "-nostdinc++")
-        StandardCXXIncludes = false;
+        setStandardCXXIncludes(false);
       // Figure out sysroot
       else if (Arg.consume_front("--sysroot")) {
         if (Arg.consume_front("="))
@@ -187,9 +201,9 @@ struct DriverArgs {
     // FIXME: Don't treat lang specially?
     assert(!Lang.empty());
     llvm::SmallVector<llvm::StringRef> Args = {"-x", Lang};
-    if (!StandardIncludes)
+    if (!getStandardIncludes())
       Args.push_back("-nostdinc");
-    if (!StandardCXXIncludes)
+    if (!getStandardCXXIncludes())
       Args.push_back("-nostdinc++");
     if (!Sysroot.empty())
       Args.append({"--sysroot", Sysroot});
@@ -218,8 +232,8 @@ template <> struct DenseMapInfo<DriverArgs> {
   static unsigned getHashValue(const DriverArgs &Val) {
     unsigned FixedFieldsHash = llvm::hash_value(std::tuple{
         Val.Driver,
-        Val.StandardIncludes,
-        Val.StandardCXXIncludes,
+        Val.getStandardIncludes(),
+        Val.getStandardCXXIncludes(),
         Val.Lang,
         Val.Sysroot,
         Val.ISysroot,

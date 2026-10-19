@@ -18,6 +18,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 
@@ -25,10 +26,11 @@ class CoroutineStmtBuilder : public CoroutineBodyStmt::CtorArgs {
   Sema &S;
   FunctionDecl &FD;
   sema::FunctionScopeInfo &Fn;
-  bool IsValid = true;
+  bool getIsValid() const { return !ParamMovesVector.getFlag(0); }
+  void setIsValid(bool Value) { ParamMovesVector.setFlag(0, !Value); }
   SourceLocation Loc;
-  SmallVector<Stmt *, 4> ParamMovesVector;
-  const bool IsPromiseDependentType;
+  llvm::SmallVectorWithFlags<Stmt *, 4, 2> ParamMovesVector;
+  bool getIsPromiseDependentType() const { return ParamMovesVector.getFlag(1); }
   CXXRecordDecl *PromiseRecordDecl = nullptr;
 
 public:
@@ -50,7 +52,7 @@ public:
   /// name lookup.
   bool buildDependentStatements();
 
-  bool isInvalid() const { return !this->IsValid; }
+  bool isInvalid() const { return !this->getIsValid(); }
 
 private:
   bool makePromiseStmt();

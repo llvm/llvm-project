@@ -654,9 +654,9 @@ void Preprocessor::HandleMicrosoftCommentPaste(Token &Tok) {
     // mode (#if COMMENT) in which case we have to return it to that mode and
     // return EOD.
     FoundLexer = ISI.ThePPLexer;
-    FoundLexer->LexingRawMode = true;
-    LexerWasInPPMode = FoundLexer->ParsingPreprocessorDirective;
-    FoundLexer->ParsingPreprocessorDirective = true;
+    FoundLexer->setLexingRawMode(true);
+    LexerWasInPPMode = FoundLexer->getParsingPreprocessorDirectiveFlag();
+    FoundLexer->setParsingPreprocessorDirectiveFlag(true);
     break;
   }
 
@@ -678,14 +678,14 @@ void Preprocessor::HandleMicrosoftCommentPaste(Token &Tok) {
   if (Tok.is(tok::eod)) {
     assert(FoundLexer && "Can't get end of line without an active lexer");
     // Restore the lexer back to normal mode instead of raw mode.
-    FoundLexer->LexingRawMode = false;
+    FoundLexer->setLexingRawMode(false);
 
     // If the lexer was already in preprocessor mode, just return the EOD token
     // to finish the preprocessor line.
     if (LexerWasInPPMode) return;
 
     // Otherwise, switch out of PP mode and return the next lexed token.
-    FoundLexer->ParsingPreprocessorDirective = false;
+    FoundLexer->setParsingPreprocessorDirectiveFlag(false);
     return Lex(Tok);
   }
 

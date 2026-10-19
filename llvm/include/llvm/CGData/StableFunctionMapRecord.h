@@ -109,7 +109,7 @@ struct StableFunctionMapRecord {
     assert(
         FunctionMap->empty() &&
         "Cannot change ReadStableFunctionMapNames after the map is populated");
-    FunctionMap->ReadStableFunctionMapNames = Read;
+    FunctionMap->setReadStableFunctionMapNames(Read);
   }
 
 private:

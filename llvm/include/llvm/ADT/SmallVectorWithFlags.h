@@ -56,6 +56,20 @@ public:
     setFlags(Value ? getFlags() | Mask : getFlags() & ~Mask);
   }
 
+  using Base::assign;
+
+  /// Replace the elements with an ordinary vector, preserving this vector's
+  /// flags. Take over its heap buffer when the capacity fits in this header.
+  void assign(SmallVectorImpl<T> &&RHS) {
+    if (RHS.capacity() <= this->max_size()) {
+      this->moveAssignFrom(std::move(RHS));
+    } else {
+      Base::assign(std::make_move_iterator(RHS.begin()),
+                   std::make_move_iterator(RHS.end()));
+      RHS.clear();
+    }
+  }
+
   SmallVectorWithFlagsImpl(const SmallVectorWithFlagsImpl &) = delete;
 
   SmallVectorWithFlagsImpl &operator=(const SmallVectorWithFlagsImpl &RHS) {
@@ -145,6 +159,14 @@ class LLVM_GSL_OWNER SmallVectorWithFlags
 public:
   SmallVectorWithFlags() : Base(N) {}
 
+  /// Construct a vector and set its complete flag mask.
+  template <typename... Args>
+  static SmallVectorWithFlags withFlags(unsigned Flags, Args &&...Arguments) {
+    SmallVectorWithFlags Result(std::forward<Args>(Arguments)...);
+    Result.setFlags(Flags);
+    return Result;
+  }
+
   ~SmallVectorWithFlags() { this->destroy_range(this->begin(), this->end()); }
 
   explicit SmallVectorWithFlags(size_t Size) : Base(N) { this->resize(Size); }
@@ -182,6 +204,30 @@ public:
 
   SmallVectorWithFlags(unsigned Flags, Base &&RHS)
       : SmallVectorWithFlags(std::move(RHS)) {
+    this->setFlags(Flags);
+  }
+
+  /// Copy elements from an ordinary vector, starting with clear flags.
+  explicit SmallVectorWithFlags(const SmallVectorImpl<T> &RHS) : Base(N) {
+    this->append(RHS.begin(), RHS.end());
+  }
+
+  /// Move elements from an ordinary vector, starting with clear flags.
+  explicit SmallVectorWithFlags(SmallVectorImpl<T> &&RHS)
+      : SmallVectorWithFlags(0, std::move(RHS)) {}
+
+  /// Move elements from an ordinary vector and supply their flag mask.
+  SmallVectorWithFlags(unsigned Flags, SmallVectorImpl<T> &&RHS) : Base(N) {
+    if (!RHS.empty()) {
+      if (RHS.capacity() <= this->max_size()) {
+        this->moveConstructFrom(std::move(RHS));
+      } else {
+        // A plain vector can reserve more capacity than this header can hold.
+        this->append(std::make_move_iterator(RHS.begin()),
+                     std::make_move_iterator(RHS.end()));
+        RHS.clear();
+      }
+    }
     this->setFlags(Flags);
   }
 
@@ -234,6 +280,21 @@ public:
     return *this;
   }
 };
+
+namespace detail {
+template <typename Vector, unsigned FlagBits> struct SmallVectorWithFlagsType;
+
+template <typename T, unsigned N, unsigned FlagBits>
+struct SmallVectorWithFlagsType<SmallVector<T, N>, FlagBits> {
+  using type = SmallVectorWithFlags<T, N, FlagBits>;
+};
+} // namespace detail
+
+/// Preserve a SmallVector alias's element type and inline capacity while adding
+/// flags, including when the capacity is selected by the target's data layout.
+template <typename Vector, unsigned FlagBits = 1>
+using SmallVectorWithFlagsFor =
+    typename detail::SmallVectorWithFlagsType<Vector, FlagBits>::type;
 
 /// Also covers complete containers, including across inline capacities.
 template <typename T, unsigned FlagBits>

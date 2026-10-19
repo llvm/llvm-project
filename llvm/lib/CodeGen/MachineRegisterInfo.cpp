@@ -42,11 +42,10 @@ static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
 // Pin the vtable to this file.
 void MachineRegisterInfo::Delegate::anchor() {}
 
-MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF),
-      TracksSubRegLiveness(EnableSubRegLiveness.getNumOccurrences()
-                               ? EnableSubRegLiveness
-                               : MF->getSubtarget().enableSubRegLiveness()) {
+MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF) : MF(MF) {
+  UpdatedCSRs.setFlag(0, EnableSubRegLiveness.getNumOccurrences()
+                             ? EnableSubRegLiveness
+                             : MF->getSubtarget().enableSubRegLiveness());
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   UsedPhysRegMask.resize(NumRegs);
@@ -625,7 +624,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
   assert(Reg && (Reg < TRI->getNumRegs()) &&
          "Trying to disable an invalid register");
 
-  if (!IsUpdatedCSRsInitialized) {
+  if (!isUpdatedCSRsInitialized()) {
     const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
     for (const MCPhysReg *I = CSR; *I; ++I)
       UpdatedCSRs.push_back(*I);
@@ -634,7 +633,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
     // (no more registers should be pushed).
     UpdatedCSRs.push_back(0);
 
-    IsUpdatedCSRsInitialized = true;
+    UpdatedCSRs.setFlag(1, true);
   }
 
   // Remove the register (and its aliases from the list).
@@ -643,7 +642,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
-  if (IsUpdatedCSRsInitialized)
+  if (isUpdatedCSRsInitialized())
     return UpdatedCSRs.data();
 
   const MCPhysReg *Regs = getTargetRegisterInfo()->getCalleeSavedRegs(MF);
@@ -656,7 +655,7 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
-  if (IsUpdatedCSRsInitialized)
+  if (isUpdatedCSRsInitialized())
     UpdatedCSRs.clear();
 
   append_range(UpdatedCSRs, CSRs);
@@ -664,7 +663,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   // Zero value represents the end of the register list
   // (no more registers should be pushed).
   UpdatedCSRs.push_back(0);
-  IsUpdatedCSRsInitialized = true;
+  UpdatedCSRs.setFlag(1, true);
 }
 
 bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {

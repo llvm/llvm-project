@@ -31,7 +31,7 @@ public:
   // Determines which lines are affected by the SourceRanges given as input.
   // Returns \c true if at least one line in \p Lines or one of their
   // children is affected.
-  bool computeAffectedLines(SmallVectorImpl<AnnotatedLine *> &Lines);
+  bool computeAffectedLines(ArrayRef<AnnotatedLine *> Lines);
 
   // Returns true if 'Range' intersects with one of the input ranges.
   bool affectsCharSourceRange(const CharSourceRange &Range);
@@ -53,7 +53,7 @@ private:
   // Determines whether 'Line' is affected by the SourceRanges given as input.
   // Returns \c true if line or one if its children is affected.
   bool nonPPLineAffected(AnnotatedLine *Line, const AnnotatedLine *PreviousLine,
-                         SmallVectorImpl<AnnotatedLine *> &Lines);
+                         ArrayRef<AnnotatedLine *> Lines);
 
   const SourceManager &SourceMgr;
   const SmallVector<CharSourceRange, 8> Ranges;

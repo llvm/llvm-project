@@ -143,10 +143,10 @@ public:
 
 protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
-      : name(name), file(f), symbolKind(k), referenced(!ctx.arg.gcSections),
-        requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
-        forceImport(false), canInline(false), traced(false), isStub(false),
-        flags(flags) {}
+      : name(name), file(f), symbolKind(k),
+        referenced(!ctx.arg.getGcSections()), requiresGOT(false),
+        isUsedInRegularObj(false), forceExport(false), forceImport(false),
+        canInline(false), traced(false), isStub(false), flags(flags) {}
 
   StringRef name;
   InputFile *file;

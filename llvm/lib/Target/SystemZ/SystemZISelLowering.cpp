@@ -933,7 +933,7 @@ bool SystemZVectorConstantInfo::isVectorConstantLegal(
     const SystemZSubtarget &Subtarget) {
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   if (!Subtarget.hasVector() ||
-      (isFP128 && !Subtarget.hasVectorEnhancements1()))
+      (getIsFP128() && !Subtarget.hasVectorEnhancements1()))
     return false;
 
   // Try using VECTOR GENERATE BYTE MASK.  This is the architecturally-
@@ -2037,8 +2037,8 @@ SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
 
 // The first part of a split stack argument is at index I in Args (and
 // ArgLocs). Return the type of a part and the number of them by reference.
-template <class ArgTy>
-static bool analyzeArgSplit(const SmallVectorImpl<ArgTy> &Args,
+template <class ArgRangeT>
+static bool analyzeArgSplit(const ArgRangeT &Args,
                             SmallVector<CCValAssign, 16> &ArgLocs, unsigned I,
                             MVT &PartVT, unsigned &NumParts) {
   if (!Args[I].Flags.isSplit())
@@ -2059,8 +2059,8 @@ static bool analyzeArgSplit(const SmallVectorImpl<ArgTy> &Args,
 
 SDValue SystemZTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -2261,7 +2261,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
 static bool canUseSiblingCall(const CCState &ArgCCInfo,
                               SmallVectorImpl<CCValAssign> &ArgLocs,
-                              SmallVectorImpl<ISD::OutputArg> &Outs) {
+                              ArrayRef<ISD::OutputArg> Outs) {
   // Punt if there are any indirect or stack arguments, or if the call
   // needs the callee-saved argument register R6, or if the call uses
   // the callee-saved register arguments SwiftSelf and SwiftError.
@@ -2373,14 +2373,13 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                  SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   MachineFunction &MF = DAG.getMachineFunction();
   EVT PtrVT = getPointerTy(MF.getDataLayout());
   LLVMContext &Ctx = *DAG.getContext();
@@ -2388,7 +2387,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // FIXME: z/OS support to be added in later.
   if (Subtarget.isTargetXPLINK64())
-    IsTailCall = false;
+    CLI.setIsTailCall(false);
 
   // Integer args <=32 bits should have an extension attribute.
   verifyNarrowIntegerArgs_Call(Outs, &MF.getFunction(), Callee);
@@ -2400,14 +2399,14 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected
   // sibling calls.
-  if (IsTailCall && !canUseSiblingCall(ArgCCInfo, ArgLocs, Outs))
-    IsTailCall = false;
+  if (CLI.getIsTailCall() && !canUseSiblingCall(ArgCCInfo, ArgLocs, Outs))
+    CLI.setIsTailCall(false);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getStackSize();
 
   // Mark the start of the call.
-  if (!IsTailCall)
+  if (!CLI.getIsTailCall())
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
 
   // Copy argument values to their designated locations.
@@ -2524,7 +2523,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
     } else if (auto *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
       Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT);
       Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
-    } else if (IsTailCall) {
+    } else if (CLI.getIsTailCall()) {
       Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, Callee, Glue);
       Glue = Chain.getValue(1);
       Callee = DAG.getRegister(SystemZ::R1D, Callee.getValueType());
@@ -2559,13 +2558,13 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     SDValue Ret = DAG.getNode(SystemZISD::SIBCALL, DL, NodeTys, Ops);
-    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.getNoMerge());
     return Ret;
   }
   Chain = DAG.getNode(SystemZISD::CALL, DL, NodeTys, Ops);
-  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.getNoMerge());
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
@@ -2626,10 +2625,11 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
   return LowerCallTo(CLI);
 }
 
-bool SystemZTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool SystemZTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                           MachineFunction &MF, bool IsVarArg,
+                                           llvm::ArrayRef<ISD::OutputArg> Outs,
+                                           LLVMContext &Context,
+                                           const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
@@ -2644,7 +2644,7 @@ bool SystemZTargetLowering::CanLowerReturn(
 SDValue
 SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    bool IsVarArg,
-                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                   llvm::ArrayRef<ISD::OutputArg> Outs,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -11518,9 +11518,9 @@ bool SystemZTargetLowering::isInternal(const Function *Fn) const {
   return Itr->second;
 }
 
-void SystemZTargetLowering::
-verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                             const Function *F, SDValue Callee) const {
+void SystemZTargetLowering::verifyNarrowIntegerArgs_Call(
+    llvm::ArrayRef<ISD::OutputArg> Outs, const Function *F,
+    SDValue Callee) const {
   // Temporarily only do the check when explicitly requested, until it can be
   // enabled by default.
   if (!EnableIntArgExtCheck)
@@ -11544,9 +11544,8 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
   }
 }
 
-void SystemZTargetLowering::
-verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                            const Function *F) const {
+void SystemZTargetLowering::verifyNarrowIntegerArgs_Ret(
+    llvm::ArrayRef<ISD::OutputArg> Outs, const Function *F) const {
   // Temporarily only do the check when explicitly requested, until it can be
   // enabled by default.
   if (!EnableIntArgExtCheck)
@@ -11563,7 +11562,7 @@ verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
 // Verify that narrow integer arguments are extended as required by the ABI.
 // Return false if an error is found.
 bool SystemZTargetLowering::verifyNarrowIntegerArgs(
-    const SmallVectorImpl<ISD::OutputArg> &Outs) const {
+    llvm::ArrayRef<ISD::OutputArg> Outs) const {
   if (!Subtarget.isTargetELF())
     return true;
 

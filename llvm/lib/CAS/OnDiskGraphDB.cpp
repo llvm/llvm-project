@@ -48,6 +48,7 @@
 #include "OnDiskCommon.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
@@ -437,11 +438,11 @@ using StandaloneDataMapTy = StandaloneDataMap<16>;
 class InternalRefVector {
 public:
   void push_back(InternalRef Ref) {
-    if (NeedsFull)
+    if (getNeedsFull())
       return FullRefs.push_back(Ref);
     if (std::optional<InternalRef4B> Small = InternalRef4B::tryToShrink(Ref))
       return SmallRefs.push_back(*Small);
-    NeedsFull = true;
+    setNeedsFull(true);
     assert(FullRefs.empty());
     FullRefs.reserve(SmallRefs.size() + 1);
     for (InternalRef4B Small : SmallRefs)
@@ -452,14 +453,15 @@ public:
 
   operator InternalRefArrayRef() const {
     assert(SmallRefs.empty() || FullRefs.empty());
-    return NeedsFull ? InternalRefArrayRef(FullRefs)
-                     : InternalRefArrayRef(SmallRefs);
+    return getNeedsFull() ? InternalRefArrayRef(FullRefs)
+                          : InternalRefArrayRef(SmallRefs);
   }
 
 private:
-  bool NeedsFull = false;
+  bool getNeedsFull() const { return FullRefs.getFlag(0); }
+  void setNeedsFull(bool Value) { FullRefs.setFlag(0, Value); }
   SmallVector<InternalRef4B> SmallRefs;
-  SmallVector<InternalRef> FullRefs;
+  llvm::SmallVectorWithFlags<InternalRef> FullRefs;
 };
 
 } // namespace

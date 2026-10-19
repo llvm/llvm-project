@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
@@ -56,9 +57,11 @@ public:
         bool SaveTempsArg)
       : Base(std::move(Conf), writeIndexesBackendInstance(),
              ParallelCodeGenParallelismLevel, LTOMode),
-        AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg),
-        ShouldEmitIndexFiles(EmitIndexFiles),
-        ShouldEmitImportFiles(EmitImportsFiles), OnIndexWriteCb(OnWrite),
+        AddBuffer(AddBufferArg),
+        Jobs(decltype(this->Jobs)::withFlags(
+            unsigned(SaveTempsArg) | (unsigned(EmitIndexFiles) << 1) |
+            (unsigned(EmitImportsFiles) << 2))),
+        OnIndexWriteCb(OnWrite),
         DistributorParams{Distributor,        DistributorArgs,
                           RemoteCompiler,     RemoteCompilerPrependArgs,
                           RemoteCompilerArgs, LinkerOutputFile} {
@@ -138,7 +141,8 @@ private:
   // Normalized output directory from LinkerOutputFile.
   SString LinkerOutputDir;
   // Keep temporary files when true.
-  bool SaveTemps = false;
+  bool getSaveTemps() const { return Jobs.getFlag(0); }
+  void setSaveTemps(bool Value) { Jobs.setFlag(0, Value); }
 
   // Saves the content of Buffer to Path overwriting any existing file.
   static Error save(StringRef Buffer, StringRef Path);
@@ -168,7 +172,9 @@ public:
 
 private:
   // Backend compilation jobs, one per module.
-  SmallVector<Job> Jobs;
+  llvm::SmallVectorWithFlags<
+      Job, llvm::CalculateSmallVectorDefaultInlinedElements<Job>::value, 3>
+      Jobs;
   // Input module IDs that must be extracted to individual files.
   DenseSet<StringRef> InputModuleIDsToExtract;
   // Task index offset for first ThinLTO job.
@@ -176,9 +182,11 @@ private:
   // Optional cache for native objects.
   FileCache Cache;
   // Keep summary index files when true.
-  bool ShouldEmitIndexFiles = false;
+  bool getShouldEmitIndexFiles() const { return Jobs.getFlag(1); }
+  void setShouldEmitIndexFiles(bool Value) { Jobs.setFlag(1, Value); }
   // Keep summary import files when true.
-  bool ShouldEmitImportFiles = false;
+  bool getShouldEmitImportFiles() const { return Jobs.getFlag(2); }
+  void setShouldEmitImportFiles(bool Value) { Jobs.setFlag(2, Value); }
   // On index file write callback.
   IndexWriteCallback OnIndexWriteCb;
 

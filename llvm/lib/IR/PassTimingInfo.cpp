@@ -167,7 +167,7 @@ void llvm::reportAndResetTimings(raw_ostream *OutStream) {
 /// Each time it creates a new timer.
 Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
   TimerGroup &TG = IsPass ? PassTG : AnalysisTG;
-  if (!PerRun) {
+  if (!getPerRun()) {
     TimerVector &Timers = TimingData[PassID];
     if (Timers.size() == 0)
       Timers.emplace_back(new Timer(PassID, PassID, TG));
@@ -189,7 +189,8 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
 }
 
 TimePassesHandler::TimePassesHandler(bool Enabled, bool PerRun)
-    : Enabled(Enabled), PerRun(PerRun) {}
+    : AnalysisActiveTimerStack(decltype(AnalysisActiveTimerStack)::withFlags(
+          unsigned(Enabled) | (unsigned(PerRun) << 1))) {}
 
 TimePassesHandler::TimePassesHandler()
     : TimePassesHandler(TimePassesIsEnabled, TimePassesPerRun) {}
@@ -199,7 +200,7 @@ void TimePassesHandler::setOutStream(raw_ostream &Out) {
 }
 
 void TimePassesHandler::print() {
-  if (!Enabled)
+  if (!getEnabled())
     return;
   std::unique_ptr<raw_ostream> MaybeCreated;
   raw_ostream *OS = OutStream;
@@ -303,7 +304,7 @@ void TimePassesHandler::stopAnalysisTimer(StringRef PassID) {
 }
 
 void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (!Enabled)
+  if (!getEnabled())
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(

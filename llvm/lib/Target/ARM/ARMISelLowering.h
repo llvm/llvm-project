@@ -637,10 +637,10 @@ class VectorType;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
-                            const SmallVectorImpl<ISD::InputArg> &Ins,
-                            const SDLoc &dl, SelectionDAG &DAG,
-                            SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                            SDValue ThisVal, bool isCmseNSCall) const;
+                            llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                            SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+                            bool isThisReturn, SDValue ThisVal,
+                            bool isCmseNSCall) const;
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(
@@ -659,8 +659,8 @@ class VectorType;
 
     SDValue
     LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                         const SmallVectorImpl<ISD::InputArg> &Ins,
-                         const SDLoc &dl, SelectionDAG &DAG,
+                         llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                         SelectionDAG &DAG,
                          SmallVectorImpl<SDValue> &InVals) const override;
 
     int StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG, const SDLoc &dl,
@@ -686,13 +686,12 @@ class VectorType;
         TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
         SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const;
 
-    bool CanLowerReturn(CallingConv::ID CallConv,
-                        MachineFunction &MF, bool isVarArg,
-                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+    bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                        bool isVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                         LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        llvm::ArrayRef<ISD::OutputArg> Outs,
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 

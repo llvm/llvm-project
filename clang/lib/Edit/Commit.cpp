@@ -52,7 +52,7 @@ bool Commit::insert(SourceLocation loc, StringRef text,
   FileOffset Offs;
   if ((!afterToken && !canInsert(loc, Offs)) ||
       ( afterToken && !canInsertAfterToken(loc, Offs, loc))) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
@@ -66,20 +66,20 @@ bool Commit::insertFromRange(SourceLocation loc,
   FileOffset RangeOffs;
   unsigned RangeLen;
   if (!canRemoveRange(range, RangeOffs, RangeLen)) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
   FileOffset Offs;
   if ((!afterToken && !canInsert(loc, Offs)) ||
       ( afterToken && !canInsertAfterToken(loc, Offs, loc))) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
   if (PPRec &&
       PPRec->areInDifferentConditionalDirectiveRegion(loc, range.getBegin())) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
@@ -91,7 +91,7 @@ bool Commit::remove(CharSourceRange range) {
   FileOffset Offs;
   unsigned Len;
   if (!canRemoveRange(range, Offs, Len)) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
@@ -119,7 +119,7 @@ bool Commit::replace(CharSourceRange range, StringRef text) {
   FileOffset Offs;
   unsigned Len;
   if (!canInsert(range.getBegin(), Offs) || !canRemoveRange(range, Offs, Len)) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
@@ -133,14 +133,14 @@ bool Commit::replaceWithInner(CharSourceRange range,
   FileOffset OuterBegin;
   unsigned OuterLen;
   if (!canRemoveRange(range, OuterBegin, OuterLen)) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
   FileOffset InnerBegin;
   unsigned InnerLen;
   if (!canRemoveRange(replacementRange, InnerBegin, InnerLen)) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
@@ -150,7 +150,7 @@ bool Commit::replaceWithInner(CharSourceRange range,
       InnerBegin < OuterBegin ||
       InnerBegin > OuterEnd ||
       InnerEnd > OuterEnd) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 
@@ -169,7 +169,7 @@ bool Commit::replaceText(SourceLocation loc, StringRef text,
   FileOffset Offs;
   unsigned Len;
   if (!canReplaceText(loc, replacementText, Offs, Len)) {
-    IsCommitable = false;
+    setIsCommitable(false);
     return false;
   }
 

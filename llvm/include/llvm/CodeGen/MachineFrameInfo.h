@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEFRAMEINFO_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
@@ -248,7 +249,8 @@ private:
 
   /// This boolean keeps track of whether there is a call
   /// to builtin \@llvm.experimental.patchpoint.
-  bool HasPatchPoint = false;
+  bool getHasPatchPointFlag() const { return LocalFrameObjects.getFlag(0); }
+  void setHasPatchPointFlag(bool Value) { LocalFrameObjects.setFlag(0, Value); }
 
   /// The prolog/epilog code inserter calculates the final stack
   /// offsets for all of the fixed size objects, updating the Objects list
@@ -311,11 +313,12 @@ private:
   std::vector<CalleeSavedInfo> CSInfo;
 
   /// Has CSInfo been set yet?
-  bool CSIValid = false;
+  bool getCSIValid() const { return LocalFrameObjects.getFlag(1); }
+  void setCSIValid(bool Value) { LocalFrameObjects.setFlag(1, Value); }
 
   /// References to frame indices which are mapped
   /// into the local frame allocation block. <FrameIdx, LocalOffset>
-  SmallVector<std::pair<int, int64_t>, 32> LocalFrameObjects;
+  llvm::SmallVectorWithFlags<std::pair<int, int64_t>, 32, 2> LocalFrameObjects;
 
   /// Size of the pre-allocated local frame block.
   int64_t LocalFrameSize = 0;
@@ -406,8 +409,8 @@ public:
   /// This method may be called any time after instruction
   /// selection is complete to determine if there is a call to builtin
   /// \@llvm.experimental.patchpoint.
-  bool hasPatchPoint() const { return HasPatchPoint; }
-  void setHasPatchPoint(bool s = true) { HasPatchPoint = s; }
+  bool hasPatchPoint() const { return getHasPatchPointFlag(); }
+  void setHasPatchPoint(bool s = true) { setHasPatchPointFlag(s); }
 
   /// Return true if this function requires a split stack prolog, even if it
   /// uses no stack space. This is only meaningful for functions where
@@ -869,9 +872,9 @@ public:
   }
 
   /// Has the callee saved info been calculated yet?
-  bool isCalleeSavedInfoValid() const { return CSIValid; }
+  bool isCalleeSavedInfoValid() const { return getCSIValid(); }
 
-  void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
+  void setCalleeSavedInfoValid(bool v) { setCSIValid(v); }
 
   const SaveRestorePoints &getRestorePoints() const { return RestorePoints; }
 

@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/BlockExtractor.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -41,7 +42,9 @@ static cl::opt<bool>
 namespace {
 class BlockExtractor {
 public:
-  BlockExtractor(bool EraseFunctions) : EraseFunctions(EraseFunctions) {}
+  BlockExtractor(bool EraseFunctions)
+      : BlocksByName(
+            decltype(BlocksByName)::withFlags(unsigned(EraseFunctions))) {}
   bool runOnModule(Module &M);
   void
   init(const std::vector<std::vector<BasicBlock *>> &GroupsOfBlocksToExtract) {
@@ -52,9 +55,11 @@ public:
 
 private:
   std::vector<std::vector<BasicBlock *>> GroupsOfBlocks;
-  bool EraseFunctions;
+  bool getEraseFunctions() const { return BlocksByName.getFlag(0); }
+  void setEraseFunctions(bool Value) { BlocksByName.setFlag(0, Value); }
   /// Map a function name to groups of blocks.
-  SmallVector<std::pair<std::string, SmallVector<std::string, 4>>, 4>
+  llvm::SmallVectorWithFlags<
+      std::pair<std::string, SmallVector<std::string, 4>>, 4>
       BlocksByName;
 
   void loadFile();
@@ -181,7 +186,7 @@ bool BlockExtractor::runOnModule(Module &M) {
   }
 
   // Erase the functions.
-  if (EraseFunctions || BlockExtractorEraseFuncs) {
+  if (getEraseFunctions() || BlockExtractorEraseFuncs) {
     for (Function *F : Functions) {
       LLVM_DEBUG(dbgs() << "BlockExtractor: Trying to delete " << F->getName()
                         << "\n");

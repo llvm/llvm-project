@@ -9,6 +9,7 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
@@ -20,6 +21,23 @@
 using namespace llvm;
 
 namespace {
+
+TEST(BitstreamWriterTest, OwnedBufferTransfer) {
+  SmallVectorWithFlags<char, 0> Bytes;
+  Bytes.setFlag(0, true);
+  {
+    BitstreamWriter Writer;
+    Writer.Emit(0x1234, 16);
+    Writer.FlushToWord();
+    auto *Buffer = Writer.getBuffer().data();
+    Bytes.assign(std::move(Writer.getBuffer()));
+    EXPECT_EQ(Bytes.data(), Buffer);
+    EXPECT_TRUE(Writer.getBuffer().empty());
+  }
+  EXPECT_TRUE(Bytes.getFlag(0));
+  EXPECT_EQ(StringRef(Bytes.data(), Bytes.size()),
+            StringRef("\x34\x12\0\0", 4));
+}
 
 TEST(BitstreamWriterTest, emitBlob) {
   SmallString<64> Buffer;

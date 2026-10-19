@@ -15,6 +15,7 @@
 
 #include "LoongArchSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
@@ -49,9 +50,10 @@ private:
 
   /// Pairs of `jr` instructions and corresponding JTI operands, used for the
   /// `annotate-tablejump` option.
-  SmallVector<std::pair<MachineInstr *, int>, 4> JumpInfos;
+  llvm::SmallVectorWithFlags<std::pair<MachineInstr *, int>, 4> JumpInfos;
 
-  bool HasDynamicAllocation = false;
+  bool getHasDynamicAllocation() const { return JumpInfos.getFlag(0); }
+  void setHasDynamicAllocation(bool Value) { JumpInfos.setFlag(0, Value); }
 
 public:
   LoongArchMachineFunctionInfo(const Function &F,
@@ -102,8 +104,8 @@ public:
   MachineInstr *getJumpInfoJrMI(unsigned Idx) { return JumpInfos[Idx].first; }
   int getJumpInfoJTIIndex(unsigned Idx) { return JumpInfos[Idx].second; }
 
-  bool hasDynamicAllocation() const { return HasDynamicAllocation; }
-  void setDynamicAllocation() { HasDynamicAllocation = true; }
+  bool hasDynamicAllocation() const { return getHasDynamicAllocation(); }
+  void setDynamicAllocation() { setHasDynamicAllocation(true); }
 };
 
 } // end namespace llvm

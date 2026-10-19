@@ -1234,7 +1234,7 @@ void SymtabSection::emitStabs() {
 
       // Constant-folded symbols go in the executable's symbol table, but don't
       // get a stabs entry unless --keep-icf-stabs flag is specified.
-      if (!config->keepICFStabs &&
+      if (!config->getKeepICFStabs() &&
           defined->identicalCodeFoldingKind != Symbol::ICFFoldKind::None)
         continue;
 
@@ -1761,7 +1761,7 @@ void DeduplicatedCStringSection::finalizeContents() {
         assert(isec.align != 0);
         auto align = getStringPieceAlignment(isec, piece);
         auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
-        if (config->tailMergeStrings && wasInserted)
+        if (config->getTailMergeStrings() && wasInserted)
           deduplicatedStrs.push_back(s);
         if (!wasInserted && it->second < align)
           it->second = align;
@@ -1812,8 +1812,8 @@ void DeduplicatedCStringSection::finalizeContents() {
     auto s = isec.getCachedHashStringRef(pieceIdx);
     // Any string can be tail merged with itself with an offset of zero
     uint64_t tailMergeOffset = 0;
-    auto mergeIt =
-        config->tailMergeStrings ? tailMergeMap.find(s) : tailMergeMap.end();
+    auto mergeIt = config->getTailMergeStrings() ? tailMergeMap.find(s)
+                                                 : tailMergeMap.end();
     if (mergeIt != tailMergeMap.end()) {
       auto &[superString, offset] = mergeIt->second;
       // s can be tail merged with superString. Do not layout s. Instead layout

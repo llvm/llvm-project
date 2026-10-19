@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LEX_MODULEMAPFILE_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 // TODO: Consider moving ModuleId to another header, parsing a modulemap file is
 //   intended to not depend on anything about the clang::Module class.
 #include "clang/Basic/Module.h"
@@ -68,15 +69,15 @@ struct UmbrellaDirDecl {
 };
 
 struct ModuleDecl {
-  ModuleId Id;
+  llvm::SmallVectorWithFlagsFor<ModuleId, 2> Id;
   SourceLocation Location; /// Points to the first keyword in the decl.
   ModuleAttributes Attrs;
   std::vector<Decl> Decls;
 
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Explicit : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Framework : 1;
+  unsigned getExplicit() const { return Id.getFlag(0); }
+  void setExplicit(unsigned Value) { Id.setFlag(0, (Value & 1)); }
+  unsigned getFramework() const { return Id.getFlag(1); }
+  void setFramework(unsigned Value) { Id.setFlag(1, (Value & 1)); }
 };
 
 struct ExcludeDecl {

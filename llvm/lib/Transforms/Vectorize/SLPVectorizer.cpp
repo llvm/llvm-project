@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -289,39 +290,45 @@ public:
   /// dependency between two distinct, range-checkable base objects, i.e. a
   /// dependency that could be turned into a runtime alias check.
   bool hasRuntimeCheckableBlockers() const {
-    return HasRuntimeCheckableBlockers;
+    return getHasRuntimeCheckableBlockersFlag();
   }
 
   /// Records whether a may-alias dependency between distinct, range-checkable
   /// base objects has been observed, so the caller can decide to retry with
   /// runtime alias checks enabled.
   void setHasRuntimeCheckableBlockers(bool V) {
-    HasRuntimeCheckableBlockers = V;
+    setHasRuntimeCheckableBlockersFlag(V);
   }
 
   /// Returns true if the last buildTree() kept a may-alias memory dependency
   /// that is not runtime-checkable (call or a non-simple mem access). Such a
   /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
   /// region and would be pure overhead.
-  bool hasNonCheckableMemBlocker() const { return HasNonCheckableMemBlocker; }
+  bool hasNonCheckableMemBlocker() const {
+    return getHasNonCheckableMemBlockerFlag();
+  }
 
   /// Records that a non-runtime-checkable may-alias dependency was kept.
-  void setHasNonCheckableMemBlocker(bool V) { HasNonCheckableMemBlocker = V; }
+  void setHasNonCheckableMemBlocker(bool V) {
+    setHasNonCheckableMemBlockerFlag(V);
+  }
 
   /// Returns true if the current vectorization attempt may drop
   /// runtime-checkable may-alias dependencies and guard the region with
   /// runtime alias checks.
-  bool isTryingRuntimeAliasChecks() const { return TryRuntimeAliasChecks; }
+  bool isTryingRuntimeAliasChecks() const {
+    return getTryRuntimeAliasChecksFlag();
+  }
 
   /// Enables or disables dropping runtime-checkable may-alias dependencies in
   /// favor of runtime alias checks for the current vectorization attempt.
-  void setTryRuntimeAliasChecks(bool V) { TryRuntimeAliasChecks = V; }
+  void setTryRuntimeAliasChecks(bool V) { setTryRuntimeAliasChecksFlag(V); }
 
   /// Resets the runtime alias check data.
   void resetRuntimeAliasCheckState() {
-    HasRuntimeCheckableBlockers = false;
-    HasNonCheckableMemBlocker = false;
-    RTChecksFinalized = false;
+    setHasRuntimeCheckableBlockersFlag(false);
+    setHasNonCheckableMemBlockerFlag(false);
+    setRTChecksFinalized(false);
     RTChecks.clear();
     RTOrigBodyOrder.clear();
   }
@@ -369,7 +376,7 @@ public:
 
   /// Returns true if vectorization changed the CFG (i.e. a block was versioned
   /// with runtime alias checks). When true, CFG analyses must not be preserved.
-  bool isCFGChanged() const { return CFGChanged; }
+  bool isCFGChanged() const { return getCFGChanged(); }
 
   TreeEntry &getRootNode() {
     assert(!VectorizableTree.empty() && "No graph to get the first node from");
@@ -475,7 +482,7 @@ public:
     EntryToLastInstruction.clear();
     LastInstructionToPos.clear();
     LoadEntriesToVectorize.clear();
-    IsGraphTransformMode = false;
+    setIsGraphTransformMode(false);
     GatheredLoadsEntriesFirst.reset();
     SplatGatheredScalarsRoots.clear();
     NumCanonicalSplatSubtreeEntries = 0;
@@ -485,9 +492,9 @@ public:
     ExternalUsesWithNonUsers.clear();
     ExternalUseReplacements.clear();
     RTChecks.clear();
-    HasRuntimeCheckableBlockers = false;
-    HasNonCheckableMemBlocker = false;
-    RTChecksFinalized = false;
+    setHasRuntimeCheckableBlockersFlag(false);
+    setHasNonCheckableMemBlockerFlag(false);
+    setRTChecksFinalized(false);
     for (auto &Iter : BlocksSchedules) {
       BlockScheduling *BS = Iter.second.get();
       BS->clear();
@@ -3411,7 +3418,8 @@ private:
   SetVector<unsigned> LoadEntriesToVectorize;
 
   /// true if graph nodes transforming mode is on.
-  bool IsGraphTransformMode = false;
+  bool getIsGraphTransformMode() const { return MergedLoopBTCs.getFlag(0); }
+  void setIsGraphTransformMode(bool Value) { MergedLoopBTCs.setFlag(0, Value); }
 
   /// The index of the first gathered load entry in the VectorizeTree.
   std::optional<unsigned> GatheredLoadsEntriesFirst;
@@ -3450,11 +3458,17 @@ private:
 
   /// The loop nest, used to check if only a single loop nest is vectorized, not
   /// multiple, to avoid side-effects from the loop-aware cost model.
-  SmallVector<const Loop *> CurrentLoopNest;
+  llvm::SmallVectorWithFlags<
+      const Loop *,
+      llvm::CalculateSmallVectorDefaultInlinedElements<const Loop *>::value, 2>
+      CurrentLoopNest;
 
   /// Per-depth SCEVs trip counts at every loop level where the tree builder has
   /// joined diverging sibling loops.
-  SmallVector<const SCEV *> MergedLoopBTCs;
+  llvm::SmallVectorWithFlags<
+      const SCEV *,
+      llvm::CalculateSmallVectorDefaultInlinedElements<const SCEV *>::value, 4>
+      MergedLoopBTCs;
 
   /// Maps the loops to their loop nests.
   SmallDenseMap<const Loop *, SmallVector<const Loop *>> LoopToLoopNest;
@@ -3542,7 +3556,12 @@ private:
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
   /// checks instead.
-  bool TryRuntimeAliasChecks = false;
+  bool getTryRuntimeAliasChecksFlag() const {
+    return MergedLoopBTCs.getFlag(1);
+  }
+  void setTryRuntimeAliasChecksFlag(bool Value) {
+    MergedLoopBTCs.setFlag(1, Value);
+  }
 
   /// Runtime alias checks collected during the last optimistic buildTree().
   RuntimeAliasCheckInfo RTChecks;
@@ -3568,18 +3587,30 @@ private:
 
   /// True, if a may-alias dependency between distinct, range-checkable base
   /// objects is observed (whether or not it was dropped).
-  bool HasRuntimeCheckableBlockers = false;
+  bool getHasRuntimeCheckableBlockersFlag() const {
+    return MergedLoopBTCs.getFlag(2);
+  }
+  void setHasRuntimeCheckableBlockersFlag(bool Value) {
+    MergedLoopBTCs.setFlag(2, Value);
+  }
 
   /// True, if a kept may-alias dependency is not runtime-checkable (call or a
   /// non-simple memaccess).
-  bool HasNonCheckableMemBlocker = false;
+  bool getHasNonCheckableMemBlockerFlag() const {
+    return MergedLoopBTCs.getFlag(3);
+  }
+  void setHasNonCheckableMemBlockerFlag(bool Value) {
+    MergedLoopBTCs.setFlag(3, Value);
+  }
 
   /// Runtime checks are validated and bounded the collected checks.
-  bool RTChecksFinalized = false;
+  bool getRTChecksFinalized() const { return CurrentLoopNest.getFlag(0); }
+  void setRTChecksFinalized(bool Value) { CurrentLoopNest.setFlag(0, Value); }
 
   /// Set when a block was versioned with runtime alias checks, which changes
   /// the CFG. Used to drop CFG-analysis preservation for the run.
-  bool CFGChanged = false;
+  bool getCFGChanged() const { return CurrentLoopNest.getFlag(1); }
+  void setCFGChanged(bool Value) { CurrentLoopNest.setFlag(1, Value); }
 
   /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
   /// source order.
@@ -3929,13 +3960,15 @@ private:
 
   class ScheduleBundle final : public ScheduleEntity {
     /// The schedule data for the instructions in the bundle.
-    SmallVector<ScheduleEntity *> Bundle;
+    llvm::SmallVectorWithFlags<ScheduleEntity *> Bundle;
     /// True if this bundle is valid.
-    bool IsValid = true;
+    bool getIsValid() const { return !Bundle.getFlag(0); }
+    void setIsValid(bool Value) { Bundle.setFlag(0, !Value); }
     /// The TreeEntry that this instruction corresponds to.
     TreeEntry *TE = nullptr;
     ScheduleBundle(bool IsValid)
-        : ScheduleEntity(Kind::ScheduleBundle), IsValid(IsValid) {}
+        : ScheduleEntity(Kind::ScheduleBundle),
+          Bundle(decltype(this->Bundle)::withFlags(unsigned(!(IsValid)))) {}
 
   public:
     ScheduleBundle() : ScheduleEntity(Kind::ScheduleBundle) {}
@@ -4002,7 +4035,7 @@ private:
 
     static ScheduleBundle invalid() { return {false}; }
 
-    operator bool() const { return IsValid; }
+    operator bool() const { return getIsValid(); }
 
 #ifndef NDEBUG
     void dump(raw_ostream &OS) const {
@@ -4182,8 +4215,8 @@ private:
       ScheduleEnd = nullptr;
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
-      RegionHasStackSave = false;
-      RegionHasMayThrow = false;
+      setRegionHasStackSave(false);
+      setRegionHasMayThrow(false);
 
       // Reduce the maximum schedule region size by the size of the
       // previous scheduling run.
@@ -5241,7 +5274,11 @@ private:
     SmallDenseMap<Instruction *, SmallVector<ScheduleBundle *>>
         ScheduledBundles;
     /// The list of ScheduleBundles.
-    SmallVector<std::unique_ptr<ScheduleBundle>> ScheduledBundlesList;
+    llvm::SmallVectorWithFlags<std::unique_ptr<ScheduleBundle>,
+                               llvm::CalculateSmallVectorDefaultInlinedElements<
+                                   std::unique_ptr<ScheduleBundle>>::value,
+                               2>
+        ScheduledBundlesList;
 
     /// The ready-list for scheduling (only used for the dry-run).
     SetVector<ScheduleEntity *> ReadyInsts;
@@ -5263,16 +5300,28 @@ private:
     /// Is there an llvm.stacksave or llvm.stackrestore in the scheduling
     /// region?  Used to optimize the dependence calculation for the
     /// common case where there isn't.
-    bool RegionHasStackSave = false;
+    bool getRegionHasStackSave() const {
+      return ScheduledBundlesList.getFlag(0);
+    }
+    bool setRegionHasStackSave(bool Value) {
+      ScheduledBundlesList.setFlag(0, Value);
+      return Value;
+    }
 
     /// Used to skip the dependencies calculation for writes that are visible
     /// after unwinding.
-    bool RegionHasMayThrow = false;
+    bool getRegionHasMayThrow() const {
+      return ScheduledBundlesList.getFlag(1);
+    }
+    bool setRegionHasMayThrow(bool Value) {
+      ScheduledBundlesList.setFlag(1, Value);
+      return Value;
+    }
 
     /// Returns true if \p I writes memory that the caller can still see
     /// after an unwind.
     bool isWriteVisibleOnUnwind(Instruction *I) const {
-      if (!RegionHasMayThrow || !I->mayWriteToMemory())
+      if (!getRegionHasMayThrow() || !I->mayWriteToMemory())
         return false;
       MemoryLocation Loc = getLocation(I);
       if (!Loc.Ptr)
@@ -9466,7 +9515,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
-      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
+      if (!getIsGraphTransformMode() && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -9474,7 +9523,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::CompressVectorize;
     case LoadsState::ScatterVectorize:
-      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
+      if (!getIsGraphTransformMode() && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -9482,7 +9531,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::ScatterVectorize;
     case LoadsState::StridedVectorize:
-      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
+      if (!getIsGraphTransformMode() && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -9490,7 +9539,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return IsGatheredNode() ? TreeEntry::NeedToGather
                               : TreeEntry::StridedVectorize;
     case LoadsState::BlendedLoadVectorize:
-      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
+      if (!getIsGraphTransformMode() && VectorizableTree.size() > 1) {
         // Delay slow vectorized nodes for better vectorization attempts.
         LoadEntriesToVectorize.insert(VectorizableTree.size());
         return TreeEntry::NeedToGather;
@@ -11984,8 +12033,12 @@ static void scanAssociativeOperands(
   };
   // Signs ride with the columns so the parallel lists cannot drift apart.
   struct SignedColumn {
-    BoUpSLP::ValueList Col;
-    bool Negated;
+    SignedColumn(BoUpSLP::ValueList Col, bool Negated)
+        : Col(unsigned(Negated), std::move(Col)) {}
+
+    llvm::SmallVectorWithFlagsFor<BoUpSLP::ValueList, 1> Col;
+    bool getNegated() const { return Col.getFlag(0); }
+    void setNegated(bool Value) { Col.setFlag(0, Value); }
   };
   SmallVector<SignedColumn, 4> Columns = {
       {std::move(Operands[0]), false},
@@ -12029,7 +12082,7 @@ static void scanAssociativeOperands(
       ++Idx;
       continue;
     }
-    BoUpSLP::ValueList Column = std::move(Columns[Idx].Col);
+    BoUpSLP::ValueList Column = BoUpSLP::ValueList(std::move(Columns[Idx].Col));
     // The absorbing constants of the peeled lanes keep the identity as the
     // other operand: the poison operand is not frozen in the flattened node.
     SmallVector<BoUpSLP::ValueList> SubOperands = Analysis.buildOperands(
@@ -12042,17 +12095,18 @@ static void scanAssociativeOperands(
       if (!isa<PoisonValue>(V) && !ColS.isCopyableElement(V))
         ReassocScalars.push_back(V);
     // A peeled subtract negates its second operand column.
-    const bool Negated = Columns[Idx].Negated;
-    Columns[Idx].Col = std::move(SubOperands.front());
+    const bool Negated = Columns[Idx].getNegated();
+    Columns[Idx].Col.assign(std::move(SubOperands.front()));
     Columns.insert(
         std::next(Columns.begin(), Idx + 1),
         {std::move(SubOperands.back()), IsSub(ColS.getOpcode()) != Negated});
     // Do not advance Idx: re-examine the column that was just placed here.
   }
   Operands.clear();
-  for (auto &[Col, Negated] : Columns) {
-    Operands.push_back(std::move(Col));
-    NegatedColumns.push_back(Negated);
+  for (auto &Column : Columns) {
+    Operands.push_back(
+        llvm::SmallVector<llvm::Value *, 8>(std::move(Column.Col)));
+    NegatedColumns.push_back(Column.getNegated());
   }
 }
 
@@ -12384,7 +12438,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
             BailOutToGather();
             return;
           }
-          CurrentLoopNest.assign(NewLoopNest);
+          CurrentLoopNest.assign(NewLoopNest.begin(), NewLoopNest.end());
         } else if (CommonLen < CurrentLoopNest.size() &&
                    CommonLen < NewLoopNest.size()) {
           // Divergence below the common prefix: the tree now spans sibling
@@ -14401,15 +14455,14 @@ void BoUpSLP::transformNodes() {
   BaseGraphSize = VectorizableTree.size();
   // Turn graph transforming mode on and off, when done.
   class GraphTransformModeRAAI {
-    bool &SavedIsGraphTransformMode;
+    BoUpSLP &R;
 
   public:
-    GraphTransformModeRAAI(bool &IsGraphTransformMode)
-        : SavedIsGraphTransformMode(IsGraphTransformMode) {
-      IsGraphTransformMode = true;
+    GraphTransformModeRAAI(BoUpSLP &R) : R(R) {
+      R.setIsGraphTransformMode(true);
     }
-    ~GraphTransformModeRAAI() { SavedIsGraphTransformMode = false; }
-  } TransformContext(IsGraphTransformMode);
+    ~GraphTransformModeRAAI() { R.setIsGraphTransformMode(false); }
+  } TransformContext(*this);
   // Operands are profitable if they are:
   // 1. At least one constant
   // or
@@ -15085,7 +15138,8 @@ void BoUpSLP::transformNodes() {
 /// end of the process, to reduce the number of emitted instructions and further
 /// analysis/transformations.
 class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
-  bool IsFinalized = false;
+  bool getIsFinalized() const { return InVectors.getFlag(0); }
+  void setIsFinalized(bool Value) { InVectors.setFlag(0, Value); }
   SmallVector<int> CommonMask;
 
   // Each input vector can be tagged with extra context information
@@ -15102,7 +15156,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                  TargetTransformInfo::VectorInstrContext::None)
         : Vec(Vec), Ctx(Ctx) {}
   };
-  SmallVector<InVector, 2> InVectors;
+  llvm::SmallVectorWithFlags<InVector, 2, 2> InVectors;
   /// Captures the original scalar VL of a single, "clean" gather() call so
   /// the values can be forwarded as the Args operand to getShuffleCost() for
   /// the final permutation in finalize(). This lets the target cost model
@@ -15126,7 +15180,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   /// can delay actual cost estimation (virtual shuffle instruction emission).
   /// May help better estimate the cost if same nodes must be permuted + allows
   /// to move most of the long shuffles cost estimation to TTI.
-  bool SameNodesEstimated = true;
+  bool getSameNodesEstimated() const { return !InVectors.getFlag(1); }
+  void setSameNodesEstimated(bool Value) { InVectors.setFlag(1, !Value); }
 
   static Constant *getAllOnesValue(const DataLayout &DL, Type *Ty) {
     if (Ty->getScalarType()->isPointerTy()) {
@@ -15329,7 +15384,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   void estimateNodesPermuteCost(const TreeEntry &E1, const TreeEntry *E2,
                                 ArrayRef<int> Mask, unsigned Part,
                                 unsigned SliceSize) {
-    if (SameNodesEstimated) {
+    if (getSameNodesEstimated()) {
       // Delay the cost estimation if the same nodes are reshuffling.
       // If we already requested the cost of reshuffling of E1 and E2 before, no
       // need to estimate another cost with the sub-Mask, instead include this
@@ -15363,7 +15418,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                         {}, InVectors.front().Ctx, InVectors.back().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     }
-    SameNodesEstimated = false;
+    setSameNodesEstimated(false);
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
       if (Value *V1 = InVectors.front().Vec.dyn_cast<Value *>()) {
@@ -15789,7 +15844,7 @@ public:
     InVectors.assign(1, E);
     CommonMask.assign(Mask.begin(), Mask.end());
     transformMaskAfterShuffle(CommonMask, CommonMask);
-    SameNodesEstimated = false;
+    setSameNodesEstimated(false);
     if (NumParts != 1 && UniqueBases.size() != 1) {
       UseVecBaseAsInput = true;
       VecBase =
@@ -15807,12 +15862,12 @@ public:
   }
   /// Reset the builder to handle perfect diamond match.
   void resetForSameNode() {
-    IsFinalized = false;
+    setIsFinalized(false);
     CommonMask.clear();
     InVectors.clear();
     Cost = 0;
     VectorizedVals.clear();
-    SameNodesEstimated = true;
+    setSameNodesEstimated(true);
   }
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
     BVValues.reset();
@@ -15852,7 +15907,7 @@ public:
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
     estimateNodesPermuteCost(E1, nullptr, Mask, Part, SliceSize);
-    if (!SameNodesEstimated && InVectors.size() == 1)
+    if (!getSameNodesEstimated() && InVectors.size() == 1)
       InVectors.emplace_back(&E1);
   }
   /// Adds 2 input vectors and the mask for their shuffling.
@@ -16023,7 +16078,7 @@ public:
       function_ref<void(Value *&, SmallVectorImpl<int> &,
                         function_ref<Value *(Value *, Value *, ArrayRef<int>)>)>
           Action = {}) {
-    IsFinalized = true;
+    setIsFinalized(true);
     if (Action) {
       const PointerUnion<Value *, const TreeEntry *> &Vec =
           InVectors.front().Vec;
@@ -16131,7 +16186,7 @@ public:
   }
 
   ~ShuffleCostEstimator() {
-    assert((IsFinalized || CommonMask.empty()) &&
+    assert((getIsFinalized() || CommonMask.empty()) &&
            "Shuffle construction must be finalized.");
   }
 };
@@ -22552,7 +22607,8 @@ Value *BoUpSLP::gather(
 /// \endcode
 /// instead.
 class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
-  bool IsFinalized = false;
+  bool getIsFinalized() const { return InVectors.getFlag(0); }
+  void setIsFinalized(bool Value) { InVectors.setFlag(0, Value); }
   /// Combined mask for all applied operands and masks. It is built during
   /// analysis and actual emission of shuffle vector instructions.
   SmallVector<int> CommonMask;
@@ -22561,7 +22617,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   /// shuffle with \p CommonMask mask, the first operand sets to be the
   /// resulting shuffle and the second operand sets to be the newly added
   /// operand. The \p CommonMask is transformed in the proper way after that.
-  SmallVector<Value *, 2> InVectors;
+  llvm::SmallVectorWithFlags<Value *, 2> InVectors;
   IRBuilderBase &Builder;
   BoUpSLP &R;
 
@@ -22856,7 +22912,7 @@ public:
   }
   /// Reset the builder to handle perfect diamond match.
   void resetForSameNode() {
-    IsFinalized = false;
+    setIsFinalized(false);
     CommonMask.clear();
     InVectors.clear();
   }
@@ -23014,7 +23070,7 @@ public:
       function_ref<void(Value *&, SmallVectorImpl<int> &,
                         function_ref<Value *(Value *, Value *, ArrayRef<int>)>)>
           Action = {}) {
-    IsFinalized = true;
+    setIsFinalized(true);
     if (Action) {
       Value *Vec = InVectors.front();
       if (InVectors.size() == 2) {
@@ -23113,7 +23169,7 @@ public:
   }
 
   ~ShuffleInstructionBuilder() {
-    assert((IsFinalized || CommonMask.empty()) &&
+    assert((getIsFinalized() || CommonMask.empty()) &&
            "Shuffle construction must be finalized.");
   }
 };
@@ -25708,7 +25764,7 @@ static bool blockBodyHasVectorInstructions(const VectorizeOptions &Opts,
 
 void BoUpSLP::captureRuntimeCheckBodySnapshot() {
   RTOrigBodyOrder.clear();
-  if (!TryRuntimeAliasChecks || !RTChecks.BB)
+  if (!getTryRuntimeAliasChecksFlag() || !RTChecks.BB)
     return;
   BasicBlock *BB = RTChecks.BB;
   // Allocas are not duplicated, keep them in the header block.
@@ -25739,7 +25795,7 @@ bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
                  RTChecks.BasePairs.contains({Base2, Base1});
   // After the checks have been validated and bounded, do not introduce new
   // pairs.
-  if (RTChecksFinalized)
+  if (getRTChecksFinalized())
     return Present;
   RTChecks.BB = BB;
   if (!Present)
@@ -25938,7 +25994,7 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
 
   // Freeze the check set so the final scheduleBlock() keeps the same dropped
   // dependencies the bounds were just computed for.
-  RTChecksFinalized = true;
+  setRTChecksFinalized(true);
   return true;
 }
 
@@ -26002,8 +26058,8 @@ Value *BoUpSLP::emitRuntimeAliasCheck(IRBuilderBase &Builder,
 
 void BoUpSLP::versionBlocksForRuntimeChecks() {
   // Only version when this is the optimistic attempt that collected the checks.
-  if (!TryRuntimeAliasChecks || RTChecks.BasePairs.empty() || !RTChecks.BB ||
-      RTOrigBodyOrder.empty())
+  if (!getTryRuntimeAliasChecksFlag() || RTChecks.BasePairs.empty() ||
+      !RTChecks.BB || RTOrigBodyOrder.empty())
     return;
   BasicBlock *BB = RTChecks.BB;
   Function *Fn = BB->getParent();
@@ -26131,10 +26187,10 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // The checks have been emitted; clear so any later vectorizeTree() in the
   // same attempt does not version again.
   RTChecks.clear();
-  RTChecksFinalized = false;
+  setRTChecksFinalized(false);
   RTOrigBodyOrder.clear();
   // The CFG was modified; CFG analyses can no longer be preserved.
-  CFGChanged = true;
+  setCFGChanged(true);
 }
 
 Value *BoUpSLP::vectorizeTree() {
@@ -27510,7 +27566,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (ScheduleData *BundleMember = getScheduleData(SD->getInst());
               BundleMember && BundleMember->hasValidDependencies()) {
             BundleMember->clearDirectDependencies();
-            if (RegionHasStackSave ||
+            if (getRegionHasStackSave() ||
                 !isGuaranteedToTransferExecutionToSuccessor(
                     BundleMember->getInst()) ||
                 isWriteVisibleOnUnwind(BundleMember->getInst()))
@@ -27540,7 +27596,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             if (ScheduleData *OpSD = getScheduleData(Op);
                 OpSD && OpSD->hasValidDependencies()) {
               OpSD->clearDirectDependencies();
-              if (RegionHasStackSave ||
+              if (getRegionHasStackSave() ||
                   !isGuaranteedToTransferExecutionToSuccessor(
                       OpSD->getInst()) ||
                   isWriteVisibleOnUnwind(OpSD->getInst()))
@@ -27879,9 +27935,9 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
 
     if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
         match(I, m_Intrinsic<Intrinsic::stackrestore>()))
-      RegionHasStackSave = true;
+      setRegionHasStackSave(true);
     if (I->mayThrow())
-      RegionHasMayThrow = true;
+      setRegionHasMayThrow(true);
   }
   if (NextLoadStore) {
     if (CurrentLoadStore)
@@ -28062,7 +28118,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       }
     }
 
-    if (RegionHasStackSave) {
+    if (getRegionHasStackSave()) {
       // If we have an inalloc alloca instruction, it needs to be scheduled
       // after any preceeding stacksave.  We also need to prevent any alloca
       // from reordering above a preceeding stackrestore.
@@ -30970,12 +31026,17 @@ class HorizontalReduction {
   RecurKind RdxKind;
   /// Checks if the optimization of original scalar identity operations on
   /// matched horizontal reductions is enabled and allowed.
-  bool IsSupportedHorRdxIdentityOp = false;
+  bool getIsSupportedHorRdxIdentityOp() const {
+    return VectorValuesAndScales.getFlag(0);
+  }
+  void setIsSupportedHorRdxIdentityOp(bool Value) {
+    VectorValuesAndScales.setFlag(0, Value);
+  }
   /// The minimum number of the reduced values.
   const unsigned ReductionLimit = Opts.slp_vectorize_non_power_of_2 ? 3 : 4;
   /// Contains vector values for reduction including their scale factor,
   /// signedness and sign of their contribution to the reduction result.
-  SmallVector<ReductionVectorPart> VectorValuesAndScales;
+  llvm::SmallVectorWithFlags<ReductionVectorPart> VectorValuesAndScales;
 
   /// Narrow reduced values mapped to the shift and the mask applied after
   /// widening.
@@ -32997,13 +33058,13 @@ public:
 
       // Check if we support repeated scalar values processing (optimization of
       // original scalar identity operations on matched horizontal reductions).
-      IsSupportedHorRdxIdentityOp =
+      setIsSupportedHorRdxIdentityOp(
           RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
           RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd &&
-          (!Opts.slp_revec || !Candidates.front()->getType()->isVectorTy());
+          (!Opts.slp_revec || !Candidates.front()->getType()->isVectorTy()));
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
-      if (IsSupportedHorRdxIdentityOp)
+      if (getIsSupportedHorRdxIdentityOp())
         for (const auto [Idx, V] : enumerate(Candidates)) {
           Value *OrigV = TrackedToOrig[Idx];
           ++SameValuesCounter.try_emplace(OrigV).first->second;
@@ -33019,7 +33080,7 @@ public:
       // this analysis, other operations may require an extra estimation of
       // the profitability.
       bool SameScaleFactor = false;
-      bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
+      bool OptReusedScalars = getIsSupportedHorRdxIdentityOp() &&
                               SameValuesCounter.size() != Candidates.size();
       BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
       for (Value *RdxVal : ExcludedVectorizedReducedVals)
@@ -33201,7 +33262,7 @@ public:
                make_isa_range<Instruction>(ReducedVals[Cnt]))
             LocalExternallyUsedValues.insert(TrackedVals[Inst]);
         }
-        if (!IsSupportedHorRdxIdentityOp) {
+        if (!getIsSupportedHorRdxIdentityOp()) {
           // Number of uses of the candidates in the vector of values.
           assert(SameValuesCounter.empty() &&
                  "Reused values counter map is not empty");
@@ -33220,7 +33281,7 @@ public:
         const bool LoopAccCandidate =
             !GroupNegated &&
             LoopAcc.isCandidate(VectorizedTree, !VectorValuesAndScales.empty(),
-                                IsSupportedHorRdxIdentityOp, ReducedVals,
+                                getIsSupportedHorRdxIdentityOp(), ReducedVals,
                                 Candidates, I, Pos, ReduxWidth,
                                 OptReusedScalars, SameScaleFactor);
 
@@ -33248,7 +33309,7 @@ public:
             LocalExternallyUsedValues.insert(RdxVal);
         }
         // Do not need the list of reused scalars in regular mode anymore.
-        if (!IsSupportedHorRdxIdentityOp)
+        if (!getIsSupportedHorRdxIdentityOp())
           SameValuesCounter.clear();
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
@@ -33460,7 +33521,7 @@ public:
         // Count vectorized reduced values to exclude them from final reduction.
         for (const auto [Idx, RdxVal] : enumerate(VL)) {
           Value *OrigV = TrackedToOrig[Pos + Idx];
-          if (IsSupportedHorRdxIdentityOp) {
+          if (getIsSupportedHorRdxIdentityOp()) {
             VectorizedVals.try_emplace(OrigV, At(SameValuesCounter, OrigV));
             continue;
           }
@@ -34833,7 +34894,7 @@ private:
   /// Emits optimized code for unique scalar value reused \p Cnt times.
   Value *emitScaleForReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
                                unsigned Cnt) {
-    assert(IsSupportedHorRdxIdentityOp &&
+    assert(getIsSupportedHorRdxIdentityOp() &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
     if (Cnt == 1)
@@ -34909,7 +34970,7 @@ private:
   emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
                 const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
                 ArrayRef<Value *> TrackedToOrig) {
-    assert(IsSupportedHorRdxIdentityOp &&
+    assert(getIsSupportedHorRdxIdentityOp() &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
     ArrayRef<Value *> VL = R.getRootNodeScalars();

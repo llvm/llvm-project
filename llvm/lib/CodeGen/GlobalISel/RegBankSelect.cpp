@@ -13,6 +13,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -344,12 +345,14 @@ class RegBankSelectImpl {
     /// Index of the operand that will be repaired.
     unsigned OpIdx;
     /// Are all the insert points materializeable?
-    bool CanMaterialize;
+    bool getCanMaterialize() const { return InsertPoints.getFlag(0); }
+    void setCanMaterialize(bool Value) { InsertPoints.setFlag(0, Value); }
     /// Is there any of the insert points needing splitting?
-    bool HasSplit = false;
+    bool getHasSplit() const { return InsertPoints.getFlag(1); }
+    void setHasSplit(bool Value) { InsertPoints.setFlag(1, Value); }
     /// Insertion point for the repair code.
     /// The repairing code needs to happen just before these points.
-    InsertionPoints InsertPoints;
+    llvm::SmallVectorWithFlagsFor<InsertionPoints, 2> InsertPoints;
     /// Some insertion points may need to update the liveness and such.
     Pass *P;
     MachineFunctionAnalysisManager *MFAM;
@@ -369,8 +372,8 @@ class RegBankSelectImpl {
     /// @{
     RepairingKind getKind() const { return Kind; }
     unsigned getOpIdx() const { return OpIdx; }
-    bool canMaterialize() const { return CanMaterialize; }
-    bool hasSplit() { return HasSplit; }
+    bool canMaterialize() const { return getCanMaterialize(); }
+    bool hasSplit() { return getHasSplit(); }
     /// @}
 
     /// \name Overloaded methods to add an insertion point.
@@ -408,8 +411,8 @@ class RegBankSelectImpl {
       assert(NewKind != Kind && "Already of the right Kind");
       Kind = NewKind;
       InsertPoints.clear();
-      CanMaterialize = NewKind != RepairingKind::Impossible;
-      HasSplit = false;
+      setCanMaterialize(NewKind != RepairingKind::Impossible);
+      setHasSplit(false);
       assert(NewKind != RepairingKind::Insert &&
              "We would need more MI to switch to Insert");
     }
@@ -1400,7 +1403,9 @@ RegBankSelectImpl::RepairingPlacement::RepairingPlacement(
     RepairingPlacement::RepairingKind Kind)
     // Default is, we are going to insert code to repair OpIdx.
     : Kind(Kind), OpIdx(OpIdx),
-      CanMaterialize(Kind != RepairingKind::Impossible), P(P) {
+      InsertPoints(decltype(this->InsertPoints)::withFlags(
+          unsigned(bool(Kind != RepairingKind::Impossible)))),
+      P(P) {
   const MachineOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isReg() && "Trying to repair a non-reg operand");
 
@@ -1506,8 +1511,14 @@ void RegBankSelectImpl::RepairingPlacement::addInsertPoint(
 
 void RegBankSelectImpl::RepairingPlacement::addInsertPoint(
     RegBankSelectImpl::InsertPoint &Point) {
-  CanMaterialize &= Point.canMaterialize();
-  HasSplit |= Point.isSplit();
+  [&] {
+    auto PackedFlagValue = Point.canMaterialize();
+    return setCanMaterialize(getCanMaterialize() & PackedFlagValue);
+  }();
+  [&] {
+    auto PackedFlagValue = Point.isSplit();
+    return setHasSplit(getHasSplit() | PackedFlagValue);
+  }();
   InsertPoints.emplace_back(&Point);
 }
 

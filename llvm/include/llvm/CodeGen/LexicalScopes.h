@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -45,7 +46,8 @@ class LexicalScope {
 public:
   LexicalScope(LexicalScope *P, const DILocalScope *D, const DILocation *I,
                bool A)
-      : Parent(P), Desc(D), InlinedAtLocation(I), AbstractScope(A) {
+      : Parent(P), Desc(D), InlinedAtLocation(I) {
+    Children.setFlag(0, A);
     assert(D);
     assert(D->getSubprogram()->getUnit()->getEmissionKind() !=
            DICompileUnit::NoDebug &&
@@ -64,8 +66,8 @@ public:
   const MDNode *getDesc() const { return Desc; }
   const DILocation *getInlinedAt() const { return InlinedAtLocation; }
   const DILocalScope *getScopeNode() const { return Desc; }
-  bool isAbstractScope() const { return AbstractScope; }
-  SmallVectorImpl<LexicalScope *> &getChildren() { return Children; }
+  bool isAbstractScope() const { return Children.getFlag(0); }
+  SmallVectorWithFlagsImpl<LexicalScope *> &getChildren() { return Children; }
   SmallVectorImpl<InsnRange> &getRanges() { return Ranges; }
 
   /// Add a child scope.
@@ -125,9 +127,9 @@ private:
   const DILocalScope *Desc;                    // Debug info descriptor.
   const DILocation *InlinedAtLocation;         // Location at which this
                                                // scope is inlined.
-  bool AbstractScope;                          // Abstract Scope
-  SmallVector<LexicalScope *, 4> Children;     // Scopes defined in scope.
-                                               // Contents not owned.
+  // Flag bit 0 marks an abstract scope.
+  SmallVectorWithFlags<LexicalScope *, 4> Children; // Scopes defined in scope.
+                                                    // Contents not owned.
   SmallVector<InsnRange, 4> Ranges;
 
   const MachineInstr *LastInsn = nullptr;  // Last instruction of this scope.

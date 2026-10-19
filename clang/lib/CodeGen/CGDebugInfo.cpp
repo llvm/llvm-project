@@ -6976,11 +6976,11 @@ SanitizerDebugLocation::SanitizerDebugLocation(
     SanitizerHandler Handler)
     : CGF(CGF),
       Apply(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)) {
-  assert(!CGF->IsSanitizerScope);
-  CGF->IsSanitizerScope = true;
+  assert(!CGF->getIsSanitizerScope());
+  CGF->setIsSanitizerScope(true);
 }
 
 SanitizerDebugLocation::~SanitizerDebugLocation() {
-  assert(CGF->IsSanitizerScope);
-  CGF->IsSanitizerScope = false;
+  assert(CGF->getIsSanitizerScope());
+  CGF->setIsSanitizerScope(false);
 }

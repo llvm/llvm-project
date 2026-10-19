@@ -24,7 +24,7 @@ namespace wasm {
 class InputElement {
 protected:
   InputElement(StringRef name, ObjFile *f)
-      : file(f), live(!ctx.arg.gcSections), name(name) {}
+      : file(f), live(!ctx.arg.getGcSections()), name(name) {}
 
 public:
   StringRef getName() const { return name; }

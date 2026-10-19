@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_CFGDIFF_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CFGUpdate.h"
@@ -64,12 +65,12 @@ template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
   // to apply these updates as given. If UpdatedAreReverseApplied is set, the
   // updates will be applied in reverse: deleted edges are considered re-added
   // and inserted edges are considered deleted when returning children.
-  bool UpdatedAreReverseApplied;
+  bool updatesAreReverseApplied() const { return LegalizedUpdates.getFlag(0); }
 
   // Keep the list of legalized updates for a deterministic order of updates
   // when using a GraphDiff for incremental updates in the DominatorTree.
   // The list is kept in reverse to allow popping from end.
-  SmallVector<cfg::Update<NodePtr>, 4> LegalizedUpdates;
+  SmallVectorWithFlags<cfg::Update<NodePtr>, 4> LegalizedUpdates;
 
   void printMap(raw_ostream &OS, const UpdateMapType &M) const {
     StringRef DIText[2] = {"Delete", "Insert"};
@@ -89,7 +90,7 @@ template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
   }
 
 public:
-  GraphDiff() : UpdatedAreReverseApplied(false) {}
+  GraphDiff() = default;
   GraphDiff(ArrayRef<cfg::Update<NodePtr>> Updates,
             bool ReverseApplyUpdates = false) {
     cfg::LegalizeUpdates<NodePtr>(Updates, LegalizedUpdates, InverseGraph);
@@ -99,7 +100,7 @@ public:
       Succ[U.getFrom()].DI[IsInsert].push_back(U.getTo());
       Pred[U.getTo()].DI[IsInsert].push_back(U.getFrom());
     }
-    UpdatedAreReverseApplied = ReverseApplyUpdates;
+    LegalizedUpdates.setFlag(0, ReverseApplyUpdates);
   }
 
   auto getLegalizedUpdates() const {
@@ -112,7 +113,7 @@ public:
     assert(!LegalizedUpdates.empty() && "No updates to apply!");
     auto U = LegalizedUpdates.pop_back_val();
     unsigned IsInsert =
-        (U.getKind() == cfg::UpdateKind::Insert) == !UpdatedAreReverseApplied;
+        (U.getKind() == cfg::UpdateKind::Insert) == !updatesAreReverseApplied();
     auto &SuccDIList = Succ[U.getFrom()];
     auto &SuccList = SuccDIList.DI[IsInsert];
     assert(SuccList.back() == U.getTo());

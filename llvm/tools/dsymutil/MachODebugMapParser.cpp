@@ -13,6 +13,7 @@
 #include "dsymutil.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Chrono.h"
@@ -39,8 +40,8 @@ public:
       : BinaryPath(std::string(BinaryPath)), Archs(Archs),
         DSYMSearchPaths(DSYMSearchPaths), PathPrefix(std::string(PathPrefix)),
         VariantSuffix(std::string(VariantSuffix)), BinHolder(BinHolder),
-        CurrentDebugMapObject(nullptr), SkipDebugMapObject(false),
-        ObjectFilter(ObjectFilter), ObjectFilterType(ObjectFilterType) {}
+        CurrentDebugMapObject(nullptr), ObjectFilter(ObjectFilter),
+        ObjectFilterType(ObjectFilterType) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
   /// multiple maps in case it is a universal binary.
@@ -56,7 +57,7 @@ public:
 private:
   std::string BinaryPath;
   SmallVector<StringRef, 1> Archs;
-  SmallVector<StringRef, 1> DSYMSearchPaths;
+  llvm::SmallVectorWithFlags<StringRef, 1> DSYMSearchPaths;
   std::string PathPrefix;
   std::string VariantSuffix;
 
@@ -83,7 +84,8 @@ private:
   DebugMapObject *CurrentDebugMapObject;
 
   /// Whether we need to skip the current debug map object.
-  bool SkipDebugMapObject;
+  bool getSkipDebugMapObject() const { return DSYMSearchPaths.getFlag(0); }
+  void setSkipDebugMapObject(bool Value) { DSYMSearchPaths.setFlag(0, Value); }
 
   /// Optional set of object paths to filter on.
   const std::optional<StringSet<>> &ObjectFilter;
@@ -177,7 +179,7 @@ void MachODebugMapParser::resetParserState() {
   CurrentObjectAliasMap.clear();
   SeenAliasValues.clear();
   CurrentDebugMapObject = nullptr;
-  SkipDebugMapObject = false;
+  setSkipDebugMapObject(false);
 }
 
 /// Commons symbols won't show up in the symbol map but might need to be
@@ -212,7 +214,7 @@ void MachODebugMapParser::switchToNewDebugMapObject(
   sys::path::append(Path, Filename);
 
   if (!shouldIncludeObject(Path)) {
-    SkipDebugMapObject = true;
+    setSkipDebugMapObject(true);
     return;
   }
 
@@ -664,7 +666,7 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
     if (!CurrentDebugMapObject ||
         CurrentDebugMapObject->getType() != MachO::N_LIB) {
       if (Duplicates.count(OSO(Name, Value))) {
-        SkipDebugMapObject = true;
+        setSkipDebugMapObject(true);
         return;
       }
       switchToNewDebugMapObject(Name, sys::toTimePoint(Value));
@@ -672,7 +674,7 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
     return;
   }
 
-  if (SkipDebugMapObject)
+  if (getSkipDebugMapObject())
     return;
 
   if (Type == MachO::N_AST) {

@@ -34,6 +34,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
@@ -1259,28 +1260,24 @@ public:
 typedef SmallVector<Token, 4> CachedTokens;
 
 // A list of late-parsed attributes.  Used by ParseGNUAttributes.
-class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
+class LateParsedAttrList
+    : public llvm::SmallVectorWithFlags<LateParsedAttribute *, 2, 3> {
 public:
   LateParsedAttrList(bool PSoon = false,
                      bool LateAttrParseExperimentalExtOnly = false,
-                     bool LateAttrParseTypeAttrOnly = false)
-      : ParseSoon(PSoon),
-        LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly),
-        LateAttrParseTypeAttrOnly(LateAttrParseTypeAttrOnly) {}
-
-  bool parseSoon() const { return ParseSoon; }
-  /// returns true iff the attribute to be parsed should only be late parsed
-  /// if it is annotated with `LateAttrParseExperimentalExt`
-  bool lateAttrParseExperimentalExtOnly() const {
-    return LateAttrParseExperimentalExtOnly;
+                     bool LateAttrParseTypeAttrOnly = false) {
+    // Flag bits 0-2 select immediate parsing and the two attribute filters.
+    setFlags(unsigned(PSoon) |
+             (unsigned(LateAttrParseExperimentalExtOnly) << 1) |
+             (unsigned(LateAttrParseTypeAttrOnly) << 2));
   }
 
-  bool lateAttrParseTypeAttrOnly() const { return LateAttrParseTypeAttrOnly; }
+  bool parseSoon() const { return getFlag(0); }
+  /// returns true iff the attribute to be parsed should only be late parsed
+  /// if it is annotated with `LateAttrParseExperimentalExt`
+  bool lateAttrParseExperimentalExtOnly() const { return getFlag(1); }
 
-private:
-  bool ParseSoon; // Are we planning to parse these shortly after creation?
-  bool LateAttrParseExperimentalExtOnly;
-  bool LateAttrParseTypeAttrOnly;
+  bool lateAttrParseTypeAttrOnly() const { return getFlag(2); }
 };
 
 /// One instance of this struct is used for each type in a

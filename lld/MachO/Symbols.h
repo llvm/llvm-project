@@ -276,7 +276,7 @@ public:
   // Symbols from weak libraries/frameworks are also weakly-referenced.
   bool isWeakRef() const override {
     return refState == RefState::Weak ||
-           (file && getFile()->umbrella->forceWeakImport);
+           (file && getFile()->umbrella->getForceWeakImport());
   }
   bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }

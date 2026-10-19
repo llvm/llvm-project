@@ -94,6 +94,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
@@ -1479,8 +1480,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
                                        CLANG_VERSION_MINOR,
                                        !isysroot.empty(),
                                        isWritingStdCXXNamedModules(),
-                                       IncludeTimestamps,
-                                       ASTHasCompilerErrors};
+                                       getIncludeTimestamps(),
+                                       getASTHasCompilerErrors()};
     Stream.EmitRecordWithBlob(MetadataAbbrevCode, Record,
                               getClangFullRepositoryVersion());
   }
@@ -1605,11 +1606,11 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
       AddSourceLocation(M.ImportLoc, Record);
       AddStringBlob(M.ModuleName, Record, Blob);
-      Record.push_back(M.StandardCXXModule);
+      Record.push_back(M.getStandardCXXModule());
 
       // We don't want to hard code the information about imported modules
       // in the C++20 named modules.
-      if (M.StandardCXXModule) {
+      if (M.getStandardCXXModule()) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
@@ -1744,7 +1745,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // If we're building an implicit module with a context hash, the importer is
   // guaranteed to have the same macros defined on the command line. Skip
   // writing them.
-  bool SkipMacros = BuildingImplicitModule && !HSOpts.DisableModuleHash;
+  bool SkipMacros = getBuildingImplicitModule() && !HSOpts.DisableModuleHash;
   bool WriteMacros = !SkipMacros;
   Record.push_back(WriteMacros);
   if (WriteMacros) {
@@ -2127,12 +2128,14 @@ namespace {
       data_type(const HeaderFileInfo &HFI, bool AlreadyIncluded,
                 ArrayRef<ModuleMap::KnownHeader> KnownHeaders,
                 UnresolvedModule Unresolved)
-          : HFI(HFI), AlreadyIncluded(AlreadyIncluded),
-            KnownHeaders(KnownHeaders), Unresolved(Unresolved) {}
+          : HFI(HFI), KnownHeaders(decltype(this->KnownHeaders)::withFlags(
+                          unsigned(AlreadyIncluded), KnownHeaders)),
+            Unresolved(Unresolved) {}
 
       HeaderFileInfo HFI;
-      bool AlreadyIncluded;
-      SmallVector<ModuleMap::KnownHeader, 1> KnownHeaders;
+      bool getAlreadyIncluded() const { return KnownHeaders.getFlag(0); }
+      void setAlreadyIncluded(bool Value) { KnownHeaders.setFlag(0, Value); }
+      llvm::SmallVectorWithFlags<ModuleMap::KnownHeader, 1> KnownHeaders;
       UnresolvedModule Unresolved;
     };
     using data_type_ref = const data_type &;
@@ -2180,11 +2183,11 @@ namespace {
       endian::Writer LE(Out, llvm::endianness::little);
       uint64_t Start = Out.tell(); (void)Start;
 
-      unsigned char Flags = (Data.AlreadyIncluded << 6)
-                          | (Data.HFI.isImport << 5)
-                          | (Writer.isWritingStdCXXNamedModules() ? 0 :
-                             Data.HFI.isPragmaOnce << 4)
-                          | (Data.HFI.DirInfo << 1);
+      unsigned char Flags =
+          (Data.getAlreadyIncluded() << 6) | (Data.HFI.isImport << 5) |
+          (Writer.isWritingStdCXXNamedModules() ? 0
+                                                : Data.HFI.isPragmaOnce << 4) |
+          (Data.HFI.DirInfo << 1);
       LE.write<uint8_t>(Flags);
 
       if (Data.HFI.LazyControllingMacro.isID())
@@ -2246,7 +2249,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       for (const auto &U : M->MissingHeaders) {
         // Check that we were given enough information to build a module
         // without this file existing on disk.
-        if (!U.Size || (!U.ModTime && IncludeTimestamps)) {
+        if (!U.Size || (!U.ModTime && getIncludeTimestamps())) {
           PP->Diag(U.FileNameLoc, diag::err_module_no_size_mtime_for_header)
               << WritingModule->getFullModuleName() << U.Size.has_value()
               << U.FileName;
@@ -2262,7 +2265,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
         SavedStrings.push_back(FilenameDup.data());
 
         HeaderFileInfoTrait::key_type Key = {
-            FilenameDup, *U.Size, IncludeTimestamps ? *U.ModTime : 0};
+            FilenameDup, *U.Size, getIncludeTimestamps() ? *U.ModTime : 0};
         HeaderFileInfoTrait::data_type Data = {
             Empty, false, {}, {M, ModuleMap::headerKindToRole(U.Kind)}};
         // FIXME: Deal with cases where there are multiple unresolved header
@@ -3141,7 +3144,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     ModuleMap &ModMap = PP->getHeaderSearchInfo().getModuleMap();
     FileID UnadjustedInferredFID;
-    if (Mod->IsInferred)
+    if (Mod->getIsInferred())
       UnadjustedInferredFID = ModMap.getModuleMapFileIDForUniquing(Mod);
     int InferredFID = getAdjustedFileID(UnadjustedInferredFID).getOpaqueValue();
 
@@ -3153,16 +3156,16 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
                                          (RecordData::value_type)Mod->Kind,
                                          DefinitionLoc,
                                          (RecordData::value_type)InferredFID,
-                                         Mod->IsFramework,
-                                         Mod->IsExplicit,
-                                         Mod->IsSystem,
-                                         Mod->IsExternC,
-                                         Mod->InferSubmodules,
-                                         Mod->InferExplicitSubmodules,
-                                         Mod->InferExportWildcard,
-                                         Mod->ConfigMacrosExhaustive,
-                                         Mod->ModuleMapIsPrivate,
-                                         Mod->NamedModuleHasInit};
+                                         Mod->getIsFramework(),
+                                         Mod->getIsExplicit(),
+                                         Mod->getIsSystem(),
+                                         Mod->getIsExternC(),
+                                         Mod->getInferSubmodules(),
+                                         Mod->getInferExplicitSubmodules(),
+                                         Mod->getInferExportWildcard(),
+                                         Mod->getConfigMacrosExhaustive(),
+                                         Mod->getModuleMapIsPrivate(),
+                                         Mod->getNamedModuleHasInit()};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -3272,7 +3275,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the reachable initializers.
     // The initializer may only be unreachable in reduced BMI.
-    if (Context && !GeneratingReducedBMI) {
+    if (Context && !getGeneratingReducedBMI()) {
       RecordData Inits;
       for (Decl *D : Context->getModuleInitializers(Mod))
         if (wasDeclEmitted(D))
@@ -3495,13 +3498,13 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
     return 0;
 
   // In reduced BMI, we don't care the declarations in functions.
-  if (GeneratingReducedBMI && DC->isFunctionOrMethod())
+  if (getGeneratingReducedBMI() && DC->isFunctionOrMethod())
     return 0;
 
   uint64_t Offset = Stream.GetCurrentBitNo();
   SmallVector<DeclID, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
-    if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
+    if (getDoneWritingDeclsAndTypesFlag() && !wasDeclEmitted(D))
       continue;
 
     // We don't need to write decls with internal linkage into reduced BMI.
@@ -3509,7 +3512,7 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
     // the program illegal. However, there are too many use of static inline
     // functions in the global module fragment and it will be breaking change
     // to forbid that. So we have to allow to emit such declarations from GMF.
-    if (GeneratingReducedBMI && !D->isFromExplicitGlobalModule() &&
+    if (getGeneratingReducedBMI() && !D->isFromExplicitGlobalModule() &&
         IsInternalDeclFromFileContext(D))
       continue;
 
@@ -4779,7 +4782,8 @@ void ASTWriter::GenerateNameLookupTable(
     // Also in reduced BMI, we'd like to avoid writing unreachable
     // declarations in GMF, so we need to avoid writing declarations
     // that entirely external or unreachable.
-    if (GeneratingReducedBMI && isLookupResultNotInteresting(*this, Result))
+    if (getGeneratingReducedBMI() &&
+        isLookupResultNotInteresting(*this, Result))
       continue;
     // We also skip empty results. If any of the results could be external and
     // the currently available results are empty, then all of the results are
@@ -5004,12 +5008,12 @@ void ASTWriter::WriteDeclContextVisibleBlock(
         if (ND->isFromASTFile())
           continue;
 
-        if (DoneWritingDeclsAndTypes && !wasDeclEmitted(ND))
+        if (getDoneWritingDeclsAndTypesFlag() && !wasDeclEmitted(ND))
           continue;
 
         // We don't need to force emitting internal decls into reduced BMI.
         // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
-        if (GeneratingReducedBMI && !ND->isFromExplicitGlobalModule() &&
+        if (getGeneratingReducedBMI() && !ND->isFromExplicitGlobalModule() &&
             IsInternalDeclFromFileContext(ND))
           continue;
 
@@ -5242,7 +5246,7 @@ void ASTWriter::WriteOptimizePragmaOptions(Sema &SemaRef) {
 /// Write the state of 'pragma ms_struct' at the end of the module.
 void ASTWriter::WriteMSStructPragmaOptions(Sema &SemaRef) {
   RecordData Record;
-  Record.push_back(SemaRef.MSStructPragmaOn ? PMSST_ON : PMSST_OFF);
+  Record.push_back(SemaRef.getMSStructPragmaOn() ? PMSST_ON : PMSST_OFF);
   Stream.EmitRecord(MSSTRUCT_PRAGMA_OPTIONS, Record);
 }
 
@@ -5457,7 +5461,8 @@ void ASTWriter::AddStringBlob(StringRef Str, RecordDataImpl &Record,
 }
 
 bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
-  assert(WritingAST && "can't prepare path for output when not writing AST");
+  assert(getWritingAST() &&
+         "can't prepare path for output when not writing AST");
 
   // Leave special file names as they are.
   StringRef PathStr(Path.data(), Path.size());
@@ -5541,9 +5546,12 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      bool IncludeTimestamps, bool BuildingImplicitModule,
                      bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModCache(ModCache),
-      CodeGenOpts(CodeGenOpts), IncludeTimestamps(IncludeTimestamps),
-      BuildingImplicitModule(BuildingImplicitModule),
-      GeneratingReducedBMI(GeneratingReducedBMI) {
+      CodeGenOpts(CodeGenOpts),
+      Redeclarations(decltype(this->Redeclarations)::withFlags(
+          (unsigned(GeneratingReducedBMI) << 1))),
+      PendingEmittingVTables(decltype(this->PendingEmittingVTables)::withFlags(
+          unsigned(IncludeTimestamps) |
+          (unsigned(BuildingImplicitModule) << 1))) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));
@@ -5553,12 +5561,12 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
 ASTWriter::~ASTWriter() = default;
 
 const LangOptions &ASTWriter::getLangOpts() const {
-  assert(WritingAST && "can't determine lang opts when not writing AST");
+  assert(getWritingAST() && "can't determine lang opts when not writing AST");
   return PP->getLangOpts();
 }
 
 time_t ASTWriter::getTimestampForOutput(time_t ModTime) const {
-  return IncludeTimestamps ? ModTime : 0;
+  return getIncludeTimestamps() ? ModTime : 0;
 }
 
 ASTFileSignature
@@ -5566,13 +5574,14 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                     StringRef OutputFile, Module *WritingModule,
                     StringRef isysroot) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
-  WritingAST = true;
+  setWritingAST(true);
 
   Sema *SemaPtr = dyn_cast<Sema *>(Subject);
   Preprocessor &PPRef =
       SemaPtr ? SemaPtr->getPreprocessor() : *cast<Preprocessor *>(Subject);
 
-  ASTHasCompilerErrors = PPRef.getDiagnostics().hasUncompilableErrorOccurred();
+  setASTHasCompilerErrors(
+      PPRef.getDiagnostics().hasUncompilableErrorOccurred());
 
   // Emit the file header.
   Stream.Emit((unsigned)'C', 8);
@@ -5589,7 +5598,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   this->WritingModule = nullptr;
   this->BaseDirectory.clear();
 
-  WritingAST = false;
+  setWritingAST(false);
 
   return Signature;
 }
@@ -5710,7 +5719,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
 void ASTWriter::prepareLazyUpdates() {
   // In C++20 named modules with reduced BMI, we only apply the update
   // if these updates are touched.
-  if (!GeneratingReducedBMI)
+  if (!getGeneratingReducedBMI())
     return;
 
   DeclUpdateMap DeclUpdatesTmp;
@@ -5796,7 +5805,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     if (D->isFromASTFile())
       continue;
 
-    if (GeneratingReducedBMI) {
+    if (getGeneratingReducedBMI()) {
       if (D->isFromExplicitGlobalModule())
         continue;
 
@@ -5822,7 +5831,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     GetDeclRef(D);
   }
 
-  if (GeneratingReducedBMI)
+  if (getGeneratingReducedBMI())
     return;
 
   // Writing all of the tentative definitions in this file, in
@@ -5989,7 +5998,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
                       UnusedLocalTypedefNameCandidates);
 
-  if (!GeneratingReducedBMI) {
+  if (!getGeneratingReducedBMI()) {
     // Write the record containing pending implicit instantiations.
     RecordData PendingInstantiations;
     for (const auto &I : SemaRef.PendingInstantiations) {
@@ -6461,11 +6470,11 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
     }
   } while (!DeclUpdates.empty());
 
-  DoneWritingDeclsAndTypes = true;
+  setDoneWritingDeclsAndTypesFlag(true);
 
   // DelayedNamespace is only meaningful in reduced BMI.
   // See the comments of DelayedNamespace for details.
-  assert(DelayedNamespace.empty() || GeneratingReducedBMI);
+  assert(DelayedNamespace.empty() || getGeneratingReducedBMI());
   RecordData DelayedNamespaceRecord;
   for (NamespaceDecl *NS : DelayedNamespace) {
     LookupBlockOffsets Offsets;
@@ -6789,7 +6798,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
 
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
-    if (!GeneratingReducedBMI || !CanElideDeclDef(D)) {
+    if (!getGeneratingReducedBMI() || !CanElideDeclDef(D)) {
       if (HasUpdatedBody) {
         const auto *Def = cast<FunctionDecl>(D);
         Record.push_back(
@@ -7113,7 +7122,7 @@ TypeID ASTWriter::GetOrCreateTypeID(ASTContext &Context, QualType T) {
 
     TypeIdx &Idx = TypeIdxs[T];
     if (Idx.getValue() == 0) {
-      if (DoneWritingDeclsAndTypes) {
+      if (getDoneWritingDeclsAndTypesFlag()) {
         assert(0 && "New type seen after serializing all the types to emit!");
         return TypeIdx();
       }
@@ -7167,7 +7176,8 @@ void ASTWriter::AddDeclRef(const Decl *D, RecordDataImpl &Record) {
 }
 
 LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
-  assert(WritingAST && "Cannot request a declaration ID before AST writing");
+  assert(getWritingAST() &&
+         "Cannot request a declaration ID before AST writing");
 
   if (!D) {
     return LocalDeclID();
@@ -7187,7 +7197,7 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
   LocalDeclID &ID = DeclIDs[D];
   if (ID.isInvalid()) {
-    if (DoneWritingDeclsAndTypes) {
+    if (getDoneWritingDeclsAndTypesFlag()) {
       assert(0 && "New decl seen after serializing all the decls to emit!");
       return LocalDeclID();
     }
@@ -7217,7 +7227,7 @@ LocalDeclID ASTWriter::getDeclID(const Decl *D) {
 bool ASTWriter::wasDeclEmitted(const Decl *D) const {
   assert(D);
 
-  assert(DoneWritingDeclsAndTypes &&
+  assert(getDoneWritingDeclsAndTypesFlag() &&
          "wasDeclEmitted should only be called after writing declarations");
 
   if (D->isFromASTFile())
@@ -7225,13 +7235,13 @@ bool ASTWriter::wasDeclEmitted(const Decl *D) const {
 
   bool Emitted = DeclIDs.contains(D);
   assert((Emitted || (!D->getOwningModule() && isWritingStdCXXNamedModules()) ||
-          GeneratingReducedBMI) &&
+          getGeneratingReducedBMI()) &&
          "The declaration within modules can only be omitted in reduced BMI.");
   return Emitted;
 }
 
 void ASTWriter::getLazyUpdates(const Decl *D) {
-  if (!GeneratingReducedBMI)
+  if (!getGeneratingReducedBMI())
     return;
 
   if (auto *Iter = DeclUpdatesLazy.find(D); Iter != DeclUpdatesLazy.end()) {
@@ -7742,7 +7752,7 @@ void ASTWriter::ModuleRead(serialization::SubmoduleID ID, Module *Mod) {
 void ASTWriter::CompletedTagDefinition(const TagDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(D->isCompleteDefinition());
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     // We are interested when a PCH decl is modified.
     if (RD->isFromASTFile()) {
@@ -7790,7 +7800,7 @@ void ASTWriter::AddedVisibleDecl(const DeclContext *DC, const Decl *D) {
 
   assert(DC == DC->getPrimaryContext() && "added to non-primary context");
   assert(!getDefinitiveDeclContext(DC) && "DeclContext not definitive!");
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (UpdatedDeclContexts.insert(DC) && !cast<Decl>(DC)->isFromASTFile()) {
     // We're adding a visible declaration to a predefined decl context. Ensure
     // that we write out all of its lookup results so we don't get a nasty
@@ -7814,14 +7824,14 @@ void ASTWriter::AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) {
 
   // A decl coming from PCH was modified.
   assert(RD->isCompleteDefinition());
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   DeclUpdates[RD].push_back(
       DeclUpdate(DeclUpdateKind::CXXAddedImplicitMember, D));
 }
 
 void ASTWriter::ResolvedExceptionSpec(const FunctionDecl *FD) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!DoneWritingDeclsAndTypes && "Already done writing updates!");
+  assert(!getDoneWritingDeclsAndTypesFlag() && "Already done writing updates!");
   if (!Chain) return;
   Chain->forEachImportedKeyDecl(FD, [&](const Decl *D) {
     // If we don't already know the exception specification for this redecl
@@ -7836,7 +7846,7 @@ void ASTWriter::ResolvedExceptionSpec(const FunctionDecl *FD) {
 
 void ASTWriter::DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!Chain) return;
   Chain->forEachImportedKeyDecl(FD, [&](const Decl *D) {
     DeclUpdates[D].push_back(
@@ -7848,7 +7858,7 @@ void ASTWriter::ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                                        const FunctionDecl *Delete,
                                        Expr *ThisArg) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   assert(Delete && "Not given an operator delete");
   if (!Chain) return;
   Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
@@ -7861,7 +7871,7 @@ void ASTWriter::ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
                                            const FunctionDecl *GlobDelete) {
   if (Chain && Chain->isProcessingUpdateRecords())
     return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   assert(GlobDelete && "Not given an operator delete");
   if (!Chain)
     return;
@@ -7875,7 +7885,7 @@ void ASTWriter::ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
                                             const FunctionDecl *ArrayDelete) {
   if (Chain && Chain->isProcessingUpdateRecords())
     return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   assert(ArrayDelete && "Not given an operator delete");
   if (!Chain)
     return;
@@ -7889,7 +7899,7 @@ void ASTWriter::ResolvedOperatorGlobArrayDelete(
     const CXXDestructorDecl *DD, const FunctionDecl *GlobArrayDelete) {
   if (Chain && Chain->isProcessingUpdateRecords())
     return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   assert(GlobArrayDelete && "Not given an operator delete");
   if (!Chain)
     return;
@@ -7901,7 +7911,7 @@ void ASTWriter::ResolvedOperatorGlobArrayDelete(
 
 void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return; // Declaration not imported from PCH.
 
@@ -7916,7 +7926,7 @@ void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
 
 void ASTWriter::VariableDefinitionInstantiated(const VarDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -7925,7 +7935,7 @@ void ASTWriter::VariableDefinitionInstantiated(const VarDecl *D) {
 
 void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -7939,7 +7949,7 @@ void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
 
 void ASTWriter::InstantiationRequested(const ValueDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -7956,7 +7966,7 @@ void ASTWriter::InstantiationRequested(const ValueDecl *D) {
 
 void ASTWriter::DefaultArgumentInstantiated(const ParmVarDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -7965,7 +7975,7 @@ void ASTWriter::DefaultArgumentInstantiated(const ParmVarDecl *D) {
 }
 
 void ASTWriter::DefaultMemberInitializerInstantiated(const FieldDecl *D) {
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -7976,7 +7986,7 @@ void ASTWriter::DefaultMemberInitializerInstantiated(const FieldDecl *D) {
 void ASTWriter::AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                              const ObjCInterfaceDecl *IFD) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!IFD->isFromASTFile())
     return; // Declaration not imported from PCH.
 
@@ -7987,7 +7997,7 @@ void ASTWriter::AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
 
 void ASTWriter::DeclarationMarkedUsed(const Decl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
 
   // If there is *any* declaration of the entity that's not from an AST file,
   // we can skip writing the update record. We make sure that isUsed() triggers
@@ -8001,7 +8011,7 @@ void ASTWriter::DeclarationMarkedUsed(const Decl *D) {
 
 void ASTWriter::DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -8011,7 +8021,7 @@ void ASTWriter::DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {
 
 void ASTWriter::DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -8022,7 +8032,7 @@ void ASTWriter::DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {
 void ASTWriter::DeclarationMarkedOpenMPIndirectCall(const Decl *D) {
   if (Chain && Chain->isProcessingUpdateRecords())
     return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -8033,7 +8043,7 @@ void ASTWriter::DeclarationMarkedOpenMPIndirectCall(const Decl *D) {
 void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                                      const Attr *Attr) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;
 
@@ -8043,7 +8053,7 @@ void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
 
 void ASTWriter::RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   assert(!D->isUnconditionallyVisible() && "expected a hidden declaration");
   DeclUpdates[D].push_back(DeclUpdate(DeclUpdateKind::DeclExported, M));
 }
@@ -8051,7 +8061,7 @@ void ASTWriter::RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {
 void ASTWriter::AddedAttributeToRecord(const Attr *Attr,
                                        const RecordDecl *Record) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
   if (!Record->isFromASTFile())
     return;
   DeclUpdates[Record].push_back(
@@ -8060,7 +8070,7 @@ void ASTWriter::AddedAttributeToRecord(const Attr *Attr,
 
 void ASTWriter::AddedCXXTemplateSpecialization(
     const ClassTemplateDecl *TD, const ClassTemplateSpecializationDecl *D) {
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
 
   if (!TD->getFirstDecl()->isFromASTFile())
     return;
@@ -8072,7 +8082,7 @@ void ASTWriter::AddedCXXTemplateSpecialization(
 
 void ASTWriter::AddedCXXTemplateSpecialization(
     const VarTemplateDecl *TD, const VarTemplateSpecializationDecl *D) {
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
 
   if (!TD->getFirstDecl()->isFromASTFile())
     return;
@@ -8084,7 +8094,7 @@ void ASTWriter::AddedCXXTemplateSpecialization(
 
 void ASTWriter::AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
                                                const FunctionDecl *D) {
-  assert(!WritingAST && "Already writing the AST!");
+  assert(!getWritingAST() && "Already writing the AST!");
 
   if (!TD->getFirstDecl()->isFromASTFile())
     return;

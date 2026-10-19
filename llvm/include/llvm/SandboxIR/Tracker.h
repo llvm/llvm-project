@@ -50,6 +50,7 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -467,14 +468,20 @@ private:
 
 #ifndef NDEBUG
   /// One checker per nested snapshot.
-  SmallVector<IRSnapshotChecker> SnapshotChecker;
+  llvm::SmallVectorWithFlags<IRSnapshotChecker> SnapshotChecker;
 #endif
 
 public:
 #ifndef NDEBUG
   /// Helps catch bugs where we are creating new change objects while in the
   /// middle of creating other change objects.
-  bool InMiddleOfCreatingChange = false;
+  bool getInMiddleOfCreatingChange() const {
+    return SnapshotChecker.getFlag(0);
+  }
+  bool setInMiddleOfCreatingChange(bool Value) {
+    SnapshotChecker.setFlag(0, Value);
+    return Value;
+  }
 #endif // NDEBUG
 
   explicit Tracker(Context &Ctx) : Ctx(Ctx) {}
@@ -488,15 +495,15 @@ public:
   void track(std::unique_ptr<IRChangeBase> &&Change) {
     assert(State == TrackerState::Record && "The tracker should be tracking!");
 #ifndef NDEBUG
-    assert(!InMiddleOfCreatingChange &&
+    assert(!getInMiddleOfCreatingChange() &&
            "We are in the middle of creating another change!");
     if (isTracking())
-      InMiddleOfCreatingChange = true;
+      setInMiddleOfCreatingChange(true);
 #endif // NDEBUG
     Changes.push_back(std::move(Change));
 
 #ifndef NDEBUG
-    InMiddleOfCreatingChange = false;
+    setInMiddleOfCreatingChange(false);
 #endif
   }
   /// A convenience wrapper for `track()` that constructs and tracks the Change

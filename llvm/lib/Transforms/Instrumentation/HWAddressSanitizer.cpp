@@ -1382,7 +1382,7 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
-    if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
+    if (DetectUseAfterScope && !SInfo.getCallsReturnTwice() &&
         memtag::isSupportedLifetime(Info, &DT, &LI)) {
       TagStarts();
       memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec, TagEnd);

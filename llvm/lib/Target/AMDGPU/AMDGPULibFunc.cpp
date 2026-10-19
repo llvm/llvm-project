@@ -12,6 +12,7 @@
 
 #include "AMDGPULibFunc.h"
 #include "AMDGPU.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -786,8 +787,10 @@ namespace {
 // substitution.
 
 class ItaniumMangler {
-  SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substitutions
-  bool  UseAddrSpace;
+  llvm::SmallVectorWithFlags<AMDGPULibFunc::Param, 10>
+      Str; // list of accumulated substitutions
+  bool getUseAddrSpace() const { return Str.getFlag(0); }
+  void setUseAddrSpace(bool Value) { Str.setFlag(0, Value); }
 
   int findSubst(const AMDGPULibFunc::Param& P) const {
     for(unsigned I = 0; I < Str.size(); ++I) {
@@ -815,7 +818,7 @@ class ItaniumMangler {
 
 public:
   ItaniumMangler(bool useAddrSpace)
-    : UseAddrSpace(useAddrSpace) {}
+      : Str(decltype(Str)::withFlags(unsigned(useAddrSpace))) {}
 
   template <typename Stream>
   void operator()(Stream& os, AMDGPULibFunc::Param p) {
@@ -837,7 +840,7 @@ public:
       os << 'P';
       if (p.PtrKind & AMDGPULibFunc::CONST) os << 'K';
       if (p.PtrKind & AMDGPULibFunc::VOLATILE) os << 'V';
-      unsigned AS = UseAddrSpace
+      unsigned AS = getUseAddrSpace()
                         ? AMDGPULibFuncBase::getAddrSpaceFromEPtrKind(p.PtrKind)
                         : 0;
       if (EnableOCLManglingMismatchWA || AS != 0)

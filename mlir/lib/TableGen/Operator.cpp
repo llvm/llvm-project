@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -400,7 +401,7 @@ void Operator::populateTypeInferenceInfo(
   // to determine if the result types an be inferred.
   auto &recordKeeper = def.getRecords();
   auto *inferTrait = recordKeeper.getDef(inferTypeOpInterface);
-  allResultsHaveKnownTypes = false;
+  builders.setFlag(0, false);
   if (!inferTrait)
     return;
 
@@ -430,7 +431,7 @@ void Operator::populateTypeInferenceInfo(
     for (int i = 0; i < getNumResults(); ++i)
       resultTypeMapping.emplace_back(operandIdx, "$_self");
 
-    allResultsHaveKnownTypes = true;
+    builders.setFlag(0, true);
     traits.push_back(Trait::create(inferTrait->getDefInit()));
     return;
   }
@@ -442,9 +443,10 @@ void Operator::populateTypeInferenceInfo(
   /// is known to have a fully-inferred type, `inferred` is set to true.
   struct ResultTypeInference {
     /// The list of incoming type inference edges.
-    SmallVector<InferredResultType> sources;
+    llvm::SmallVectorWithFlags<InferredResultType> sources;
     /// This flag is set to true when the result type is known to be inferrable.
-    bool inferred = false;
+    bool getInferred() const { return sources.getFlag(0); }
+    void setInferred(bool Value) { sources.setFlag(0, Value); }
   };
 
   // This vector represents the type inference graph, with one node for each
@@ -457,7 +459,7 @@ void Operator::populateTypeInferenceInfo(
     if (getResult(idx).constraint.getBuilderCall()) {
       infer.sources.emplace_back(InferredResultType::mapResultIndex(idx),
                                  "$_self");
-      infer.inferred = true;
+      infer.setInferred(true);
     }
   }
 
@@ -487,16 +489,17 @@ void Operator::populateTypeInferenceInfo(
       int resultIndex = InferredResultType::unmapResultIndex(target);
       ResultTypeInference &infer = inference[resultIndex];
       // If the type of the result has already been inferred, do nothing.
-      if (infer.inferred)
+      if (infer.getInferred())
         continue;
       int sourceIndex =
           argumentsAndResultsIndex.lookup(def.getValueAsString("lhs"));
       infer.sources.emplace_back(sourceIndex,
                                  def.getValueAsString("transformer").str());
       // Locally propagate inferredness.
-      infer.inferred =
+      infer.setInferred(
           InferredResultType::isArgIndex(sourceIndex) ||
-          inference[InferredResultType::unmapResultIndex(sourceIndex)].inferred;
+          inference[InferredResultType::unmapResultIndex(sourceIndex)]
+              .getInferred());
       continue;
     }
 
@@ -515,13 +518,13 @@ void Operator::populateTypeInferenceInfo(
           InferredResultType::isArgIndex(shapedIndex)) {
         int resultIndex = InferredResultType::unmapResultIndex(elementsIndex);
         ResultTypeInference &infer = inference[resultIndex];
-        if (!infer.inferred) {
+        if (!infer.getInferred()) {
           infer.sources.emplace_back(
               shapedIndex,
               "::llvm::SmallVector<::mlir::Type>(::llvm::cast<::mlir::"
               "ShapedType>($_self).getNumElements(), "
               "::llvm::cast<::mlir::ShapedType>($_self).getElementType())");
-          infer.inferred = true;
+          infer.setInferred(true);
         }
       }
 
@@ -547,7 +550,7 @@ void Operator::populateTypeInferenceInfo(
       if (InferredResultType::isResultIndex(index))
         resultIndices.push_back(InferredResultType::unmapResultIndex(index));
       if (InferredResultType::isArgIndex(index) ||
-          inference[InferredResultType::unmapResultIndex(index)].inferred)
+          inference[InferredResultType::unmapResultIndex(index)].getInferred())
         fullyInferredIndex = index;
     }
     if (fullyInferredIndex) {
@@ -555,9 +558,9 @@ void Operator::populateTypeInferenceInfo(
       // aren't already inferred -- a 1 -> N fanout.
       for (int resultIndex : resultIndices) {
         ResultTypeInference &infer = inference[resultIndex];
-        if (!infer.inferred) {
+        if (!infer.getInferred()) {
           infer.sources.assign(1, {*fullyInferredIndex, "$_self"});
-          infer.inferred = true;
+          infer.setInferred(true);
         }
       }
     } else {
@@ -576,7 +579,7 @@ void Operator::populateTypeInferenceInfo(
   // Propagate inferredness until a fixed point.
   std::vector<ResultTypeInference *> worklist;
   for (ResultTypeInference &infer : inference)
-    if (!infer.inferred)
+    if (!infer.getInferred())
       worklist.push_back(&infer);
   bool changed;
   do {
@@ -589,7 +592,7 @@ void Operator::populateTypeInferenceInfo(
             assert(InferredResultType::isResultIndex(source.getIndex()));
             return inference[InferredResultType::unmapResultIndex(
                                  source.getIndex())]
-                .inferred;
+                .getInferred();
           });
       if (iter == infer.sources.end()) {
         ++cur;
@@ -597,17 +600,17 @@ void Operator::populateTypeInferenceInfo(
       }
 
       changed = true;
-      infer.inferred = true;
+      infer.setInferred(true);
       // Make this the only source for the result. This breaks any cycles.
       infer.sources.assign(1, *iter);
       cur = worklist.erase(cur);
     }
   } while (changed);
 
-  allResultsHaveKnownTypes = worklist.empty();
+  builders.setFlag(0, worklist.empty());
 
   // If the types could be computed, then add type inference trait.
-  if (allResultsHaveKnownTypes) {
+  if (allResultTypesKnown()) {
     traits.push_back(Trait::create(inferTrait->getDefInit()));
     for (const ResultTypeInference &infer : inference)
       resultTypeMapping.push_back(infer.sources.front());

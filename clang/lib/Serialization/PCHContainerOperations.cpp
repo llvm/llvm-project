@@ -35,14 +35,14 @@ public:
   ~RawPCHContainerGenerator() override = default;
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    if (Buffer->IsComplete) {
+    if (Buffer->getIsComplete()) {
       // Make sure it hits disk now.
-      *OS << Buffer->Data;
+      *OS << StringRef(Buffer->Data.data(), Buffer->Data.size());
       OS->flush();
     }
     // Free the space of the temporary buffer.
     llvm::SmallVector<char, 0> Empty;
-    Buffer->Data = std::move(Empty);
+    Buffer->Data.assign(std::move(Empty));
   }
 };
 

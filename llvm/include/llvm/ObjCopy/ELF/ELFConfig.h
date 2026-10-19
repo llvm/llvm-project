@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJCOPY_ELF_ELFCONFIG_H
 #define LLVM_OBJCOPY_ELF_ELFCONFIG_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/Object/ELFTypes.h"
 
@@ -33,13 +34,17 @@ struct ELFConfig {
   // --change-start is used.
   std::function<uint64_t(uint64_t)> EntryExpr;
 
-  bool AllowBrokenLinks = false;
-  bool KeepFileSymbols = false;
-  bool LocalizeHidden = false;
-  bool VerifyNoteSections = true;
+  bool getAllowBrokenLinks() const { return NotesToRemove.getFlag(0); }
+  void setAllowBrokenLinks(bool Value) { NotesToRemove.setFlag(0, Value); }
+  bool getKeepFileSymbols() const { return NotesToRemove.getFlag(1); }
+  void setKeepFileSymbols(bool Value) { NotesToRemove.setFlag(1, Value); }
+  bool getLocalizeHidden() const { return NotesToRemove.getFlag(2); }
+  void setLocalizeHidden(bool Value) { NotesToRemove.setFlag(2, Value); }
+  bool getVerifyNoteSections() const { return !NotesToRemove.getFlag(3); }
+  void setVerifyNoteSections(bool Value) { NotesToRemove.setFlag(3, !Value); }
 
   // Notes specified by --remove-note option.
-  SmallVector<RemoveNoteInfo, 0> NotesToRemove;
+  llvm::SmallVectorWithFlags<RemoveNoteInfo, 0, 4> NotesToRemove;
 };
 
 } // namespace objcopy

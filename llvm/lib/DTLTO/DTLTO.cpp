@@ -75,7 +75,7 @@ void lto::DTLTO::waitForCleanup() { BackgroundDeleter.waitForTasks(); }
 
 // Remove temporary files created to enable distribution.
 void lto::DTLTO::cleanup() {
-  if (SaveTemps)
+  if (getSaveTemps())
     return;
 
   BackgroundDeleter.removeFiles(std::move(CleanupList), Conf);
@@ -197,16 +197,16 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
   if (OnIndexWriteCb)
     OnIndexWriteCb(J.SummaryIndexPath.str());
 
-  if (ShouldEmitImportFiles)
+  if (getShouldEmitImportFiles())
     if (Error Err = save(join(J.ImportsFilesList, "\n"), J.ImportsPath))
       return Err;
 
-  if (!SaveTemps) {
+  if (!getSaveTemps()) {
     if (!J.Cached)
       addToCleanup(J.NativeObjectPath.str());
-    if (!ShouldEmitIndexFiles)
+    if (!getShouldEmitIndexFiles())
       addToCleanup(J.SummaryIndexPath.str());
-    if (!ShouldEmitImportFiles)
+    if (!getShouldEmitImportFiles())
       addToCleanup(J.ImportsPath.str());
   }
   return Error::success();
@@ -283,7 +283,7 @@ Error lto::DTLTO::performCodegen() {
   // Build common remote compiler options.
   buildCommonRemoteCompilerOptions();
 
-  DistributionDriver Distributor(DistributorParams, Jobs, SaveTemps,
+  DistributionDriver Distributor(DistributorParams, Jobs, getSaveTemps(),
                                  [&](StringRef S) { addToCleanup(S); });
 
   if (CachedJobs.load() < Jobs.size()) {

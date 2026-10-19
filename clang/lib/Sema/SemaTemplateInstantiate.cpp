@@ -1788,7 +1788,7 @@ namespace {
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       // Do not rebuild lambdas to avoid creating a new type.
       // Lambdas have already been processed inside their eval contexts.
-      if (SemaRef.RebuildingImmediateInvocation)
+      if (SemaRef.getRebuildingImmediateInvocation())
         return E;
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
                                     /*InstantiatingLambdaOrBlock=*/true);
@@ -2837,7 +2837,7 @@ TemplateInstantiator::TransformNestedRequirement(
 
   auto NestedReqWithDiag = [&C, this](Expr *E,
                                       ConstraintSatisfaction Satisfaction) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     SmallString<128> Entity;
     llvm::raw_svector_ostream OS(Entity);
     E->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
@@ -2891,7 +2891,7 @@ TemplateInstantiator::TransformNestedRequirement(
   // FIXME: const correctness
   // MLTAL might be dependent.
   if (!NewConstraint) {
-    if (!Satisfaction.IsSatisfied)
+    if (!Satisfaction.isSatisfied())
       return NestedReqWithDiag(Constraint, Satisfaction);
 
     NewConstraint = Constraint;
@@ -4229,7 +4229,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         if (Function->getTrailingRequiresClause()) {
           ConstraintSatisfaction Satisfaction;
           if (CheckFunctionConstraints(Function, Satisfaction) ||
-              !Satisfaction.IsSatisfied) {
+              !Satisfaction.isSatisfied()) {
             continue;
           }
         }
@@ -4796,7 +4796,7 @@ LocalInstantiationScope::getInstantiationOfIfExists(const Decl *D) {
     } while (CheckD);
 
     // If we aren't combined with our outer scope, we're done.
-    if (!Current->CombineWithOuterScope)
+    if (!Current->getCombineWithOuterScope())
       break;
   }
 
@@ -4844,7 +4844,7 @@ void LocalInstantiationScope::InstantiatedLocal(const Decl *D, Decl *Inst) {
 #ifndef NDEBUG
     // It should not be present in any surrounding scope either.
     LocalInstantiationScope *Current = this;
-    while (Current->CombineWithOuterScope && Current->Outer) {
+    while (Current->getCombineWithOuterScope() && Current->Outer) {
       Current = Current->Outer;
       assert(!Current->LocalDecls.contains(D) &&
              "Instantiated local in inner and outer scopes");
@@ -4869,7 +4869,7 @@ void LocalInstantiationScope::MakeInstantiatedLocalArgPack(const Decl *D) {
 #ifndef NDEBUG
   // This should be the first time we've been told about this decl.
   for (LocalInstantiationScope *Current = this;
-       Current && Current->CombineWithOuterScope; Current = Current->Outer)
+       Current && Current->getCombineWithOuterScope(); Current = Current->Outer)
     assert(!Current->LocalDecls.contains(D) &&
            "Creating local pack after instantiation of local");
 #endif
@@ -4920,7 +4920,7 @@ NamedDecl *LocalInstantiationScope::getPartiallySubstitutedPack(
       return Current->PartiallySubstitutedPack;
     }
 
-    if (!Current->CombineWithOuterScope)
+    if (!Current->getCombineWithOuterScope())
       break;
   }
 

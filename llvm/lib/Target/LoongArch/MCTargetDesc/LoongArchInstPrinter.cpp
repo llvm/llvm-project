@@ -110,7 +110,7 @@ void LoongArchInstPrinter::printBranchOperand(const MCInst *MI,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
   // Do not print the numeric target address when symbolizing.
-  if (SymbolizeOperands)
+  if (getSymbolizeOperands())
     return;
 
   return printOperand(MI, OpNo, STI, O);

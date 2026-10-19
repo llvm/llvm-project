@@ -648,7 +648,7 @@ void CIRGenFunction::startThunk(cir::FuncOp fn, GlobalDecl gd,
                                 bool isUnprototyped) {
   assert(!curGD.getDecl() && "curGD was already set!");
   curGD = gd;
-  curFuncIsThunk = true;
+  setCurFuncIsThunk(true);
 
   // Build FunctionArgs.
   const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());

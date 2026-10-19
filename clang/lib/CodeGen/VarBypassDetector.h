@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 
@@ -43,7 +44,7 @@ class VarBypassDetector {
   // declaration.
   llvm::SmallVector<std::pair<unsigned, const VarDecl *>, 48> Scopes;
   // List of jumps with scopes.
-  llvm::SmallVector<std::pair<const Stmt *, unsigned>, 16> FromScopes;
+  llvm::SmallVectorWithFlags<std::pair<const Stmt *, unsigned>, 16> FromScopes;
   // Lookup map to find scope for destinations.
   llvm::DenseMap<const Stmt *, unsigned> ToScopes;
   // Set of variables which were bypassed by some jump.
@@ -53,7 +54,7 @@ class VarBypassDetector {
   llvm::DenseMap<const Stmt *, llvm::SmallSetVector<const VarDecl *, 4>>
       BypassedVarsAtSource;
   // If true assume that all variables are being bypassed.
-  bool AlwaysBypassed = false;
+  void setAlwaysBypassed(bool Value) { FromScopes.setFlag(0, Value); }
 
 public:
   void Init(CodeGenModule &CGM, const Stmt *Body);
@@ -61,12 +62,12 @@ public:
   /// Returns true if the variable declaration was by bypassed by any goto or
   /// switch statement.
   bool IsBypassed(const VarDecl *D) const {
-    return AlwaysBypassed || Bypasses.contains(D);
+    return isAlwaysBypassed() || Bypasses.contains(D);
   }
 
   /// Returns true if jump sources cannot be determined (e.g. computed gotos),
   /// so all variables must be treated as bypassed.
-  bool isAlwaysBypassed() const { return AlwaysBypassed; }
+  bool isAlwaysBypassed() const { return FromScopes.getFlag(0); }
 
   /// Returns the variables bypassed by jumps from the given source statement,
   /// or nullptr if it bypasses none.

@@ -80,6 +80,7 @@
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -160,10 +161,12 @@ private:
   const MipsInstrInfo *TII;
 
   MachineFunction *MFp;
-  SmallVector<MBBInfo, 16> MBBInfos;
-  bool IsPIC;
+  llvm::SmallVectorWithFlags<MBBInfo, 16, 2> MBBInfos;
+  bool getIsPIC() const { return MBBInfos.getFlag(0); }
+  void setIsPIC(bool Value) { MBBInfos.setFlag(0, Value); }
   MipsABIInfo ABI;
-  bool ForceLongBranchFirstPass = false;
+  bool getForceLongBranchFirstPass() const { return MBBInfos.getFlag(1); }
+  void setForceLongBranchFirstPass(bool Value) { MBBInfos.setFlag(1, Value); }
 };
 
 } // end of anonymous namespace
@@ -408,7 +411,7 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
   MFp->insert(FallThroughMBB, LongBrMBB);
   MBB->replaceSuccessor(TgtMBB, LongBrMBB);
 
-  if (IsPIC) {
+  if (getIsPIC()) {
     MachineBasicBlock *BalTgtMBB = MFp->CreateMachineBasicBlock(BB);
     MFp->insert(FallThroughMBB, BalTgtMBB);
     LongBrMBB->addSuccessor(BalTgtMBB);
@@ -876,10 +879,10 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
 
       if ((Br != End) && Br->isBranch() && !Br->isIndirectBranch() &&
           (Br->isConditionalBranch() ||
-           (Br->isUnconditionalBranch() && IsPIC))) {
+           (Br->isUnconditionalBranch() && getIsPIC()))) {
         int64_t Offset = computeOffset(&*Br);
 
-        if (ForceLongBranchFirstPass ||
+        if (getForceLongBranchFirstPass() ||
             !TII->isBranchOffsetInRange(Br->getOpcode(), Offset)) {
           MBBInfos[I].Offset = Offset;
           MBBInfos[I].Br = &*Br;
@@ -887,7 +890,7 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
       }
     } // End for
 
-    ForceLongBranchFirstPass = false;
+    setForceLongBranchFirstPass(false);
 
     SmallVectorImpl<MBBInfo>::iterator I, E = MBBInfos.end();
 
@@ -910,18 +913,18 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
 
 bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   const TargetMachine &TM = MF.getTarget();
-  IsPIC = TM.isPositionIndependent();
+  setIsPIC(TM.isPositionIndependent());
   STI = &MF.getSubtarget<MipsSubtarget>();
   ABI = STI->getABI();
   TII = STI->getInstrInfo();
 
-  if (IsPIC && ABI.IsO32() &&
+  if (getIsPIC() && ABI.IsO32() &&
       MF.getInfo<MipsFunctionInfo>()->globalBaseRegSet())
     emitGPDisp(MF, TII);
 
   MFp = &MF;
 
-  ForceLongBranchFirstPass = STI->getCLOpts().force_mips_long_branch;
+  setForceLongBranchFirstPass(STI->getCLOpts().force_mips_long_branch);
   // Run these at least once.
   bool longBranchChanged = handlePossibleLongBranch();
   bool forbiddenSlotChanged = handleForbiddenSlot();

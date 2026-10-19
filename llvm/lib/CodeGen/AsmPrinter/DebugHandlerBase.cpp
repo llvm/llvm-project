@@ -122,7 +122,7 @@ void DebugHandlerBase::identifyScopeMarkers() {
   while (!WorkList.empty()) {
     LexicalScope *S = WorkList.pop_back_val();
 
-    const SmallVectorImpl<LexicalScope *> &Children = S->getChildren();
+    ArrayRef<LexicalScope *> Children = S->getChildren();
     if (!Children.empty())
       WorkList.append(Children.begin(), Children.end());
 

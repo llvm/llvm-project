@@ -21,7 +21,7 @@ namespace lld::wasm {
 static bool requiresGOTAccess(const Symbol *sym) {
   if (sym->isShared())
     return true;
-  if (!ctx.isPic &&
+  if (!ctx.getIsPic() &&
       ctx.arg.unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
@@ -144,7 +144,7 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (ctx.isPic || sym->isShared() ||
+    if (ctx.getIsPic() || sym->isShared() ||
         (sym->isUndefined() &&
          ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {

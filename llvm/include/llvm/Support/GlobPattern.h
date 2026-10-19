@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -95,7 +96,6 @@ private:
   StringRef Pattern;
   size_t PrefixSize = 0;
   size_t SuffixSize = 0;
-  bool SlashAgnostic = false;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
@@ -105,7 +105,7 @@ private:
     LLVM_ABI bool match(StringRef S, bool SlashAgnostic) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
     /// \returns \p true if this sub-pattern matches exactly one string.
-    bool isLiteral() const { return Brackets.empty() && !HasWildcard; }
+    bool isLiteral() const { return Brackets.empty() && !Pat.getFlag(0); }
 
     // Brackets with their end position and matched bytes.
     struct Bracket {
@@ -113,11 +113,11 @@ private:
       BitVector Bytes;
     };
     SmallVector<Bracket, 0> Brackets;
-    // Set while parsing if an unescaped '*' or '?' is present.
-    bool HasWildcard = false;
-    SmallVector<char, 0> Pat;
+    // Flag bit 0 is set if an unescaped '*' or '?' is present.
+    SmallVectorWithFlags<char, 0> Pat;
   };
-  SmallVector<SubGlobPattern, 1> SubGlobs;
+  // Flag bit 0 records slash-agnostic matching.
+  SmallVectorWithFlags<SubGlobPattern, 1> SubGlobs;
 };
 }
 

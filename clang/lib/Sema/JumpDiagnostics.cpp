@@ -22,6 +22,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 using namespace clang;
 
 namespace {
@@ -41,7 +42,7 @@ class JumpScopeChecker {
 
   /// Permissive - True when recovering from errors, in which case precautions
   /// are taken to handle incomplete scope information.
-  const bool Permissive;
+  bool getPermissive() const { return MustTailStmts.getFlag(0); }
 
   /// GotoScope - This is a record that we use to keep track of all of the
   /// scopes that are introduced by VLAs and other things that scope jumps like
@@ -75,7 +76,7 @@ class JumpScopeChecker {
 
   SmallVector<Stmt*, 4> IndirectJumps;
   SmallVector<LabelDecl *, 4> IndirectJumpTargets;
-  SmallVector<AttributedStmt *, 4> MustTailStmts;
+  llvm::SmallVectorWithFlags<AttributedStmt *, 4> MustTailStmts;
 
 public:
   JumpScopeChecker(Stmt *Body, Sema &S);
@@ -102,10 +103,12 @@ private:
 };
 } // end anonymous namespace
 
-#define CHECK_PERMISSIVE(x) (assert(Permissive || !(x)), (Permissive && (x)))
+#define CHECK_PERMISSIVE(x)                                                    \
+  (assert(getPermissive() || !(x)), (getPermissive() && (x)))
 
 JumpScopeChecker::JumpScopeChecker(Stmt *Body, Sema &s)
-    : S(s), Permissive(s.hasAnyUnrecoverableErrorsInThisFunction()) {
+    : S(s), MustTailStmts(decltype(this->MustTailStmts)::withFlags(
+                unsigned(bool(s.hasAnyUnrecoverableErrorsInThisFunction())))) {
   // Add a scope entry for function scope.
   Scopes.push_back(GotoScope(~0U, ~0U, ~0U, SourceLocation()));
 

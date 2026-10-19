@@ -36,7 +36,7 @@ void NVPTXTargetStreamer::outputDwarfFileDirectives() {
 }
 
 void NVPTXTargetStreamer::closeLastSection() {
-  if (HasSections)
+  if (getHasSections())
     getStreamer().emitRawText("\t}");
 }
 
@@ -98,7 +98,7 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
     OS << "\t.section\t" << Section->getName() << '\n';
     // DWARF sections are enclosed into braces - emit the open one.
     OS << "\t{\n";
-    HasSections = true;
+    setHasSections(true);
   }
 }
 

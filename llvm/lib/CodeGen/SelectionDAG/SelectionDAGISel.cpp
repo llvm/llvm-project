@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -885,7 +886,8 @@ void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
   // Lower the instructions. If a call is emitted as a tail call, cease emitting
   // nodes for this block. If an instruction is elided, don't emit it, but do
   // handle any debug-info attached to it.
-  for (BasicBlock::const_iterator I = Begin; I != End && !SDB->HasTailCall; ++I) {
+  for (BasicBlock::const_iterator I = Begin; I != End && !SDB->getHasTailCall();
+       ++I) {
     if (!ElidedArgCopyInstrs.count(&*I))
       SDB->visit(*I);
     else
@@ -894,7 +896,7 @@ void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
 
   // Make sure the root of the DAG is up-to-date.
   CurDAG->setRoot(SDB->getControlRoot());
-  HadTailCall = SDB->HasTailCall;
+  HadTailCall = SDB->getHasTailCall();
   SDB->resolveOrClearDbgInfo();
   SDB->clear();
 
@@ -2048,7 +2050,7 @@ SelectionDAGISel::FinishBasicBlock() {
   // Lower each BitTestBlock.
   for (auto &BTB : SDB->SL->BitTestCases) {
     // Lower header first, if it wasn't already lowered
-    if (!BTB.Emitted) {
+    if (!BTB.getEmitted()) {
       // Set the current basic block to the mbb we wish to insert the code into
       FuncInfo->MBB = BTB.Parent;
       FuncInfo->InsertPt = FuncInfo->MBB->end();
@@ -2076,7 +2078,8 @@ SelectionDAGISel::FinishBasicBlock() {
       // test, and delete the last bit test.
 
       MachineBasicBlock *NextMBB;
-      if ((BTB.ContiguousRange || BTB.FallthroughUnreachable) && j + 2 == ej) {
+      if ((BTB.getContiguousRange() || BTB.getFallthroughUnreachable()) &&
+          j + 2 == ej) {
         // Second-to-last bit-test with contiguous range or omitted range
         // check: fall through to the target of the final bit test.
         NextMBB = BTB.Cases[j + 1].TargetBB;
@@ -2095,7 +2098,8 @@ SelectionDAGISel::FinishBasicBlock() {
       SDB->clear();
       CodeGenAndEmitDAG();
 
-      if ((BTB.ContiguousRange || BTB.FallthroughUnreachable) && j + 2 == ej) {
+      if ((BTB.getContiguousRange() || BTB.getFallthroughUnreachable()) &&
+          j + 2 == ej) {
         // Since we're not going to use the final bit test, remove it.
         BTB.Cases.pop_back();
         break;
@@ -2113,9 +2117,9 @@ SelectionDAGISel::FinishBasicBlock() {
       // from last "case" BB, unless the latter was skipped.
       if (PHIBB == BTB.Default) {
         PHI.addReg(P.second).addMBB(BTB.Parent);
-        if (!BTB.ContiguousRange) {
+        if (!BTB.getContiguousRange()) {
           PHI.addReg(P.second).addMBB(BTB.Cases.back().ThisBB);
-         }
+        }
       }
       // One of "cases" BB.
       for (const SwitchCG::BitTestCase &BT : BTB.Cases) {
@@ -3290,7 +3294,7 @@ struct MatchScope {
   unsigned FailIndex;
 
   /// NodeStack - The node stack when the scope was formed.
-  SmallVector<SDValue, 4> NodeStack;
+  llvm::SmallVectorWithFlags<SDValue, 4> NodeStack;
 
   /// NumRecordedNodes - The number of recorded nodes when the scope was formed.
   unsigned NumRecordedNodes;
@@ -3302,7 +3306,8 @@ struct MatchScope {
   SDValue InputChain, InputGlue;
 
   /// HasChainNodesMatched - True if the ChainNodesMatched list is non-empty.
-  bool HasChainNodesMatched;
+  bool getHasChainNodesMatched() const { return NodeStack.getFlag(0); }
+  void setHasChainNodesMatched(bool Value) { NodeStack.setFlag(0, Value); }
 };
 
 /// \A DAG update listener to keep the matching state
@@ -3574,7 +3579,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       NewEntry.NumMatchedMemRefs = MatchedMemRefs.size();
       NewEntry.InputChain = InputChain;
       NewEntry.InputGlue = InputGlue;
-      NewEntry.HasChainNodesMatched = !ChainNodesMatched.empty();
+      NewEntry.setHasChainNodesMatched(!ChainNodesMatched.empty());
       continue;
     }
     case OPC_RecordNode: {
@@ -4556,7 +4561,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       InputChain = LastScope.InputChain;
       InputGlue = LastScope.InputGlue;
-      if (!LastScope.HasChainNodesMatched)
+      if (!LastScope.getHasChainNodesMatched())
         ChainNodesMatched.clear();
 
       // Check to see what the offset is at the new MatcherIndex.  If it is zero

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_NAMESPACECOMMENTCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang::tidy::readability {
@@ -34,8 +35,8 @@ private:
   llvm::Regex NamespaceCommentPattern;
   const unsigned ShortNamespaceLines;
   const unsigned SpacesBeforeComments;
-  const bool AllowOmittingNamespaceComments;
-  SmallVector<SourceLocation, 4> Ends;
+  bool getAllowOmittingNamespaceComments() const { return Ends.getFlag(0); }
+  llvm::SmallVectorWithFlags<SourceLocation, 4> Ends;
 };
 
 } // namespace clang::tidy::readability

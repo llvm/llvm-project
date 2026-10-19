@@ -48,12 +48,12 @@ void VarBypassDetector::Init(CodeGenModule &CGM, const Stmt *Body) {
   Bypasses.clear();
   BypassedVarsAtSource.clear();
   Scopes = {{~0U, nullptr}};
-  AlwaysBypassed = false;
+  setAlwaysBypassed(false);
   if (!hasJumpStmts(Body))
     return;
   unsigned ParentScope = 0;
-  AlwaysBypassed = !BuildScopeInformation(CGM, Body, ParentScope);
-  if (!AlwaysBypassed)
+  setAlwaysBypassed(!BuildScopeInformation(CGM, Body, ParentScope));
+  if (!isAlwaysBypassed())
     Detect();
 }
 

@@ -25,6 +25,7 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -75,13 +76,15 @@ private:
     int64_t ExpectedDist = 0;
 
     // The sequence of storing instructions used to pass the parameters
-    SmallVector<MachineInstr *, 4> ArgStoreVector;
+    llvm::SmallVectorWithFlags<MachineInstr *, 4, 2> ArgStoreVector;
 
     // True if this call site has no stack parameters
-    bool NoStackParams = false;
+    bool getNoStackParams() const { return ArgStoreVector.getFlag(0); }
+    void setNoStackParams(bool Value) { ArgStoreVector.setFlag(0, Value); }
 
     // True if this call site can use push instructions
-    bool UsePush = false;
+    bool getUsePush() const { return ArgStoreVector.getFlag(1); }
+    void setUsePush(bool Value) { ArgStoreVector.setFlag(1, Value); }
   };
 
   typedef SmallVector<CallContext, 8> ContextVector;
@@ -212,10 +215,10 @@ bool X86CallFrameOptimizationImpl::isProfitable(MachineFunction &MF,
     // Call sites where no parameters are passed on the stack
     // do not affect the cost, since there needs to be no
     // stack adjustment.
-    if (CC.NoStackParams)
+    if (CC.getNoStackParams())
       continue;
 
-    if (!CC.UsePush) {
+    if (!CC.getUsePush()) {
       // If we don't use pushes for a particular call site,
       // we pay for not having a reserved call frame with an
       // additional sub/add esp pair. The cost is ~3 bytes per instruction,
@@ -271,7 +274,7 @@ bool X86CallFrameOptimizationImpl::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   for (const auto &CC : CallSeqVector) {
-    if (CC.UsePush) {
+    if (CC.getUsePush()) {
       adjustCallSequence(MF, CC);
       Changed = true;
     }
@@ -373,7 +376,7 @@ void X86CallFrameOptimizationImpl::collectCallInfo(
 
   // A zero adjustment means no stack parameters
   if (!MaxAdjust) {
-    Context.NoStackParams = true;
+    Context.setNoStackParams(true);
     return;
   }
 
@@ -490,7 +493,7 @@ void X86CallFrameOptimizationImpl::collectCallInfo(
     if (*MMI != nullptr)
       return;
 
-  Context.UsePush = true;
+  Context.setUsePush(true);
 }
 
 void X86CallFrameOptimizationImpl::adjustCallSequence(

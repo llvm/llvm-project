@@ -1233,7 +1233,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 
     // Make sure we don't do an autorelease.
-    AutoreleaseResult = false;
+    setAutoreleaseResult(false);
     return;
   }
 
@@ -1290,7 +1290,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     EmitReturnOfRValue(RV, propType);
 
     // objc_getProperty does an autorelease, so we should suppress ours.
-    AutoreleaseResult = false;
+    setAutoreleaseResult(false);
 
     return;
   }
@@ -1356,7 +1356,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
           } else
             value = EmitLoadOfLValue(LV, SourceLocation()).getScalarVal();
 
-          AutoreleaseResult = false;
+          setAutoreleaseResult(false);
         }
 
         value = Builder.CreateBitCast(
@@ -1777,7 +1777,7 @@ void CodeGenFunction::GenerateObjCCtorDtorMethod(ObjCImplementationDecl *IMP,
   // Emit .cxx_construct.
   if (ctor) {
     // Suppress the final autorelease in ARC.
-    AutoreleaseResult = false;
+    setAutoreleaseResult(false);
 
     for (const auto *IvarInit : IMP->inits()) {
       FieldDecl *Field = IvarInit->getAnyMember();

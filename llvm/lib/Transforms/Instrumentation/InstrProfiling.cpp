@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -426,8 +427,9 @@ public:
       const InstrumentationOptions &Opts,
       DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCands,
       Loop &CurLoop, LoopInfo &LI, BlockFrequencyInfo *BFI, bool IsAtomic)
-      : Opts(Opts), LoopToCandidates(LoopToCands), L(CurLoop), LI(LI), BFI(BFI),
-        IsAtomic(IsAtomic) {
+      : Opts(Opts), LoopToCandidates(LoopToCands),
+        InsertPts(decltype(this->InsertPts)::withFlags(unsigned(IsAtomic))),
+        L(CurLoop), LI(LI), BFI(BFI) {
 
     // Skip collection of ExitBlocks and InsertPts for loops that will not be
     // able to have counters promoted.
@@ -468,7 +470,7 @@ public:
     //  3) convert all (promoted and unpromotable) updates to atomicRMW.
     // This requires that promoted candidates are set to nullptr in the
     // Candidates array by the promoteCandidates() function.
-    if (IsAtomic)
+    if (getIsAtomic())
       for (auto &Cand : Candidates)
         if (Cand.first != nullptr && Cand.second != nullptr)
           makeAtomic(Cand.first, Cand.second);
@@ -518,7 +520,7 @@ private:
 
       PGOCounterPromoterHelper Promoter(
           Opts, Cand.first, Cand.second, SSA, InitVal, L.getLoopPreheader(),
-          ExitBlocks, InsertPts, LoopToCandidates, LI, IsAtomic);
+          ExitBlocks, InsertPts, LoopToCandidates, LI, getIsAtomic());
       Promoter.run(SmallVector<Instruction *, 2>({Cand.first, Cand.second}));
 
       Cand = {nullptr, nullptr};
@@ -614,11 +616,13 @@ private:
   const InstrumentationOptions &Opts;
   DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCandidates;
   SmallVector<BasicBlock *, 8> ExitBlocks;
-  SmallVector<Instruction *, 8> InsertPts;
+  llvm::SmallVectorWithFlags<Instruction *, 8> InsertPts;
   Loop &L;
   LoopInfo &LI;
   BlockFrequencyInfo *BFI;
-  const bool IsAtomic; // Whether to convert counter updates to atomics.
+  bool getIsAtomic() const {
+    return InsertPts.getFlag(0);
+  } // Whether to convert counter updates to atomics.
 };
 
 enum class ValueProfilingCallType {

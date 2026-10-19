@@ -248,16 +248,15 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &dl = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
-  bool &IsTailCall = CLI.IsTailCall;
+  bool IsVarArg = CLI.getIsVarArg();
 
-  IsTailCall = false; // Do not support tail calls yet.
+  CLI.setIsTailCall(false); // Do not support tail calls yet.
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
@@ -320,7 +319,7 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue Store =
           DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo());
       MemOpChains.push_back(Store);
-      IsTailCall = false;
+      CLI.setIsTailCall(false);
     }
   }
 
@@ -382,7 +381,7 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  if (IsTailCall)
+  if (CLI.getIsTailCall())
     return Chain;
   return lowerCallResult(Chain, Glue, RVLocs, dl, DAG, InVals);
 }
@@ -452,8 +451,8 @@ struct ArgDataPair {
 /// ARC formal arguments implementation
 SDValue ARCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv) {
   default:
     llvm_unreachable("Unsupported calling convention");
@@ -467,7 +466,7 @@ SDValue ARCTargetLowering::LowerFormalArguments(
 /// operations for argument places on the stack.
 SDValue ARCTargetLowering::LowerCallArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc dl, SelectionDAG &DAG,
+    llvm::ArrayRef<ISD::InputArg> Ins, SDLoc dl, SelectionDAG &DAG,
     SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -612,10 +611,11 @@ SDValue ARCTargetLowering::LowerCallArguments(
 //               Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-bool ARCTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool ARCTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                       MachineFunction &MF, bool IsVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       LLVMContext &Context,
+                                       const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   if (!CCInfo.CheckReturn(Outs, RetCC_ARC))
@@ -625,12 +625,12 @@ bool ARCTargetLowering::CanLowerReturn(
   return true;
 }
 
-SDValue
-ARCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               const SmallVectorImpl<SDValue> &OutVals,
-                               const SDLoc &dl, SelectionDAG &DAG) const {
+SDValue ARCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                       bool IsVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       const SmallVectorImpl<SDValue> &OutVals,
+                                       const SDLoc &dl,
+                                       SelectionDAG &DAG) const {
   auto *AFI = DAG.getMachineFunction().getInfo<ARCFunctionInfo>();
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 

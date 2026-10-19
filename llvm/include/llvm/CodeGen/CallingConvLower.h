@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/CallingConv.h"
@@ -171,14 +172,21 @@ typedef bool CCCustomFn(unsigned &ValNo, MVT &ValVT,
 class CCState {
 private:
   CallingConv::ID CallingConv;
-  bool IsVarArg;
-  bool AnalyzingMustTailForwardedRegs = false;
+  bool getIsVarArg() const { return ByValRegs.getFlag(0); }
+  void setIsVarArg(bool Value) { ByValRegs.setFlag(0, Value); }
+  bool getAnalyzingMustTailForwardedRegs() const {
+    return ByValRegs.getFlag(1);
+  }
+  void setAnalyzingMustTailForwardedRegs(bool Value) {
+    ByValRegs.setFlag(1, Value);
+  }
   MachineFunction &MF;
   const TargetRegisterInfo &TRI;
   SmallVectorImpl<CCValAssign> &Locs;
   LLVMContext &Context;
   // True if arguments should be allocated at negative offsets.
-  bool NegativeOffsets;
+  bool getNegativeOffsets() const { return ByValRegs.getFlag(2); }
+  void setNegativeOffsets(bool Value) { ByValRegs.setFlag(2, Value); }
 
   uint64_t StackSize;
   Align MaxStackArgAlign;
@@ -222,7 +230,7 @@ private:
     // First after last register allocated for current parameter.
     unsigned End;
   };
-  SmallVector<ByValInfo, 4 > ByValRegs;
+  llvm::SmallVectorWithFlags<ByValInfo, 4, 3> ByValRegs;
 
   // InRegsParamsProcessed - shows how many instances of ByValRegs was proceed
   // during argument analysis.
@@ -240,7 +248,7 @@ public:
   LLVMContext &getContext() const { return Context; }
   MachineFunction &getMachineFunction() const { return MF; }
   CallingConv::ID getCallingConv() const { return CallingConv; }
-  bool isVarArg() const { return IsVarArg; }
+  bool isVarArg() const { return getIsVarArg(); }
 
   /// Returns the size of the currently allocated portion of the stack.
   uint64_t getStackSize() const { return StackSize; }
@@ -260,30 +268,27 @@ public:
 
   /// AnalyzeFormalArguments - Analyze an array of argument values,
   /// incorporating info about the formals into this state.
-  LLVM_ABI void
-  AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                         CCAssignFn Fn);
+  LLVM_ABI void AnalyzeFormalArguments(llvm::ArrayRef<ISD::InputArg> Ins,
+                                       CCAssignFn Fn);
 
   /// The function will invoke AnalyzeFormalArguments.
-  void AnalyzeArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                        CCAssignFn Fn) {
+  void AnalyzeArguments(llvm::ArrayRef<ISD::InputArg> Ins, CCAssignFn Fn) {
     AnalyzeFormalArguments(Ins, Fn);
   }
 
   /// AnalyzeReturn - Analyze the returned values of a return,
   /// incorporating info about the result values into this state.
-  LLVM_ABI void AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  LLVM_ABI void AnalyzeReturn(llvm::ArrayRef<ISD::OutputArg> Outs,
                               CCAssignFn Fn);
 
   /// CheckReturn - Analyze the return values of a function, returning
   /// true if the return can be performed without sret-demotion, and
   /// false otherwise.
-  LLVM_ABI bool CheckReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                            CCAssignFn Fn);
+  LLVM_ABI bool CheckReturn(llvm::ArrayRef<ISD::OutputArg> Outs, CCAssignFn Fn);
 
   /// AnalyzeCallOperands - Analyze the outgoing arguments to a call,
   /// incorporating info about the passed values into this state.
-  LLVM_ABI void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  LLVM_ABI void AnalyzeCallOperands(llvm::ArrayRef<ISD::OutputArg> Outs,
                                     CCAssignFn Fn);
 
   /// AnalyzeCallOperands - Same as above except it takes vectors of types
@@ -294,14 +299,13 @@ public:
                                     CCAssignFn Fn);
 
   /// The function will invoke AnalyzeCallOperands.
-  void AnalyzeArguments(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        CCAssignFn Fn) {
+  void AnalyzeArguments(llvm::ArrayRef<ISD::OutputArg> Outs, CCAssignFn Fn) {
     AnalyzeCallOperands(Outs, Fn);
   }
 
   /// AnalyzeCallResult - Analyze the return values of a call,
   /// incorporating info about the passed values into this state.
-  LLVM_ABI void AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
+  LLVM_ABI void AnalyzeCallResult(llvm::ArrayRef<ISD::InputArg> Ins,
                                   CCAssignFn Fn);
 
   /// A shadow allocated register is a register that was allocated
@@ -407,7 +411,7 @@ public:
   /// and alignment.
   int64_t AllocateStack(unsigned Size, Align Alignment) {
     int64_t Offset;
-    if (NegativeOffsets) {
+    if (getNegativeOffsets()) {
       StackSize = alignTo(StackSize + Size, Alignment);
       Offset = -StackSize;
     } else {
@@ -507,18 +511,19 @@ public:
 
   /// Returns true if the results of the two calling conventions are compatible.
   /// This is usually part of the check for tailcall eligibility.
-  LLVM_ABI static bool
-  resultsCompatible(CallingConv::ID CalleeCC, CallingConv::ID CallerCC,
-                    MachineFunction &MF, LLVMContext &C,
-                    const SmallVectorImpl<ISD::InputArg> &Ins,
-                    CCAssignFn CalleeFn, CCAssignFn CallerFn);
+  LLVM_ABI static bool resultsCompatible(CallingConv::ID CalleeCC,
+                                         CallingConv::ID CallerCC,
+                                         MachineFunction &MF, LLVMContext &C,
+                                         llvm::ArrayRef<ISD::InputArg> Ins,
+                                         CCAssignFn CalleeFn,
+                                         CCAssignFn CallerFn);
 
   /// The function runs an additional analysis pass over function arguments.
   /// It will mark each argument with the attribute flag SecArgPass.
   /// After running, it will sort the locs list.
-  template <class T>
-  void AnalyzeArgumentsSecondPass(const SmallVectorImpl<T> &Args,
-                                  CCAssignFn Fn) {
+  template <class ArgRangeT>
+  void AnalyzeArgumentsSecondPass(const ArgRangeT &Args, CCAssignFn Fn) {
+    using T = typename ArgRangeT::value_type;
     unsigned NumFirstPassLocs = Locs.size();
 
     /// Creates similar argument list to \p Args in which each argument is

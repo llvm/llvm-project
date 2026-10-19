@@ -1944,8 +1944,8 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
   // P2718R0 - Lifetime extension in range-based for loops.
   if (getLangOpts().CPlusPlus23) {
     auto &LastRecord = Actions.currentEvaluationContext();
-    LastRecord.InLifetimeExtendingContext = true;
-    LastRecord.RebuildDefaultArgOrDefaultInit = true;
+    LastRecord.setInLifetimeExtendingContext(true);
+    LastRecord.setRebuildDefaultArgOrDefaultInit(true);
   }
 
   if (FRI.ExpansionStmt) {
@@ -2620,7 +2620,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 }
 
 bool Parser::trySkippingFunctionBody() {
-  assert(SkipFunctionBodies &&
+  assert(getSkipFunctionBodies() &&
          "Should only be called when SkipFunctionBodies is enabled");
   if (!PP.isCodeCompletionEnabled()) {
     SkipFunctionBody();

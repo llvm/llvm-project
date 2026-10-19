@@ -205,7 +205,7 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // R_390_TLS_GDCALL/LDCALL (at the instruction start) for the same brasl.
     // When optimizing TLS, skip PLT32DBL before maybeReportUndefined would
     // flag __tls_get_offset as undefined.
-    if (type == R_390_PLT32DBL && !ctx.arg.shared &&
+    if (type == R_390_PLT32DBL && !ctx.arg.getShared() &&
         std::next(it) != rels.end()) {
       RelType nextType = std::next(it)->getType(false);
       if (nextType == R_390_TLS_GDCALL || nextType == R_390_TLS_LDCALL)
@@ -345,7 +345,7 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // TLS DTPREL relocations:
     case R_390_TLS_LDO32:
     case R_390_TLS_LDO64:
-      if (ctx.arg.shared)
+      if (ctx.arg.getShared())
         sec.addReloc({R_DTPREL, type, offset, addend, &sym});
       else
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
@@ -426,7 +426,7 @@ void SystemZ::relaxTlsGdCall(uint8_t *loc, const Relocation &rel) const {
 RelExpr SystemZ::adjustGotPcExpr(RelType type, int64_t addend,
                                  const uint8_t *loc) const {
   // Only R_390_GOTENT with addend 2 can be relaxed.
-  if (!ctx.arg.relax || addend != 2 || type != R_390_GOTENT)
+  if (!ctx.arg.getRelax() || addend != 2 || type != R_390_GOTENT)
     return R_GOT_PC;
   const uint16_t op = read16be(loc - 2);
 

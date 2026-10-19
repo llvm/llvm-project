@@ -28,8 +28,10 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -100,10 +102,12 @@ class IndVarSimplify {
   const TargetTransformInfo *TTI;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
-  SmallVector<WeakTrackingVH, 16> DeadInsts;
-  bool WidenIndVars;
+  llvm::SmallVectorWithFlags<WeakTrackingVH, 16, 2> DeadInsts;
+  bool getWidenIndVars() const { return DeadInsts.getFlag(0); }
+  void setWidenIndVars(bool Value) { DeadInsts.setFlag(0, Value); }
 
-  bool RunUnswitching = false;
+  bool getRunUnswitching() const { return DeadInsts.getFlag(1); }
+  void setRunUnswitching(bool Value) { DeadInsts.setFlag(1, Value); }
 
   bool handleFloatingPointIV(Loop *L, PHINode *PH);
   bool rewriteNonIntegerIVs(Loop *L);
@@ -127,20 +131,29 @@ class IndVarSimplify {
 
   bool sinkUnusedInvariants(Loop *L);
 
+  template <typename CallbackT>
+  decltype(auto) withDeadInsts(CallbackT &&Callback) {
+    SmallVector<WeakTrackingVH, 16> Pending;
+    Pending = std::move(DeadInsts);
+    auto Restore = scope_exit([&] { DeadInsts.assign(std::move(Pending)); });
+    return Callback(Pending);
+  }
+
 public:
   IndVarSimplify(const ScalarOptions &Opts, LoopInfo *LI, ScalarEvolution *SE,
                  DominatorTree *DT, const DataLayout &DL,
                  TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
                  MemorySSA *MSSA, bool WidenIndVars)
       : Opts(Opts), LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
-        WidenIndVars(WidenIndVars) {
+        DeadInsts(
+            decltype(this->DeadInsts)::withFlags(unsigned(WidenIndVars))) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
 
   bool run(Loop *L);
 
-  bool runUnswitching() const { return RunUnswitching; }
+  bool runUnswitching() const { return getRunUnswitching(); }
 };
 
 } // end anonymous namespace
@@ -695,26 +708,30 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      const auto &[C, U] = simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts,
-                                             Rewriter, &Visitor);
+      const auto &[C, U] = withDeadInsts([&](auto &DeadInsts) {
+        return simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
+                                 &Visitor);
+      });
 
       Changed |= C;
-      RunUnswitching |= U;
+      setRunUnswitching(int(getRunUnswitching()) | (U));
       if (Visitor.WI.WidestNativeType) {
         WideIVs.push_back(Visitor.WI);
       }
     } while(!LoopPhis.empty());
 
     // Continue if we disallowed widening.
-    if (!WidenIndVars)
+    if (!getWidenIndVars())
       continue;
 
     for (; !WideIVs.empty(); WideIVs.pop_back()) {
       unsigned ElimExt;
       unsigned Widened;
-      if (PHINode *WidePhi = createWideIV(
-              WideIVs.back(), LI, SE, Rewriter, DT, DeadInsts, ElimExt, Widened,
-              HasGuards, Opts.indvars_post_increment_ranges)) {
+      if (PHINode *WidePhi = withDeadInsts([&](auto &DeadInsts) {
+            return createWideIV(WideIVs.back(), LI, SE, Rewriter, DT, DeadInsts,
+                                ElimExt, Widened, HasGuards,
+                                Opts.indvars_post_increment_ranges);
+          })) {
         NumElimExt += ElimExt;
         NumWidened += Widened;
         Changed = true;
@@ -1646,7 +1663,9 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // unconditional exit, we can still replace header phis with their
       // preheader value.
       if (!L->contains(BI->getSuccessor(CI->isNullValue())))
-        replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts, *SE);
+        withDeadInsts([&](auto &DeadInsts) {
+          return replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts, *SE);
+        });
       return true;
     }
 
@@ -1707,9 +1726,11 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // will remain the same within iteration space?
       auto *BI = cast<CondBrInst>(ExitingBB->getTerminator());
       auto OptimizeCond = [&](bool SkipLastIter) {
-        return optimizeLoopExitWithUnknownExitCount(L, BI, ExitingBB,
-                                                    MaxBECount, SkipLastIter,
-                                                    SE, Rewriter, DeadInsts);
+        return withDeadInsts([&](auto &DeadInsts) {
+          return optimizeLoopExitWithUnknownExitCount(L, BI, ExitingBB,
+                                                      MaxBECount, SkipLastIter,
+                                                      SE, Rewriter, DeadInsts);
+        });
       };
 
       // TODO: We might have proved that we can skip the last iteration for
@@ -1744,8 +1765,12 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // We know that the backedge can't be taken, so we replace all
     // the header PHIs with values coming from the preheader.
     if (ExactExitCount->isZero()) {
-      foldExit(L, ExitingBB, true, DeadInsts);
-      replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts, *SE);
+      withDeadInsts([&](auto &DeadInsts) {
+        return foldExit(L, ExitingBB, true, DeadInsts);
+      });
+      withDeadInsts([&](auto &DeadInsts) {
+        return replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts, *SE);
+      });
       Changed = true;
       continue;
     }
@@ -1764,7 +1789,9 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // one?
     if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT, MaxBECount,
                                      ExactExitCount)) {
-      foldExit(L, ExitingBB, false, DeadInsts);
+      withDeadInsts([&](auto &DeadInsts) {
+        return foldExit(L, ExitingBB, false, DeadInsts);
+      });
       Changed = true;
       continue;
     }
@@ -1774,7 +1801,9 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // exiting iteration, but (from the visit order) strictly follows another
     // which does the same and is thus dead.
     if (!DominatingExactExitCounts.insert(ExactExitCount).second) {
-      foldExit(L, ExitingBB, false, DeadInsts);
+      withDeadInsts([&](auto &DeadInsts) {
+        return foldExit(L, ExitingBB, false, DeadInsts);
+      });
       Changed = true;
       continue;
     }
@@ -2005,7 +2034,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (OldCond->use_empty())
       DeadInsts.emplace_back(OldCond);
     Changed = true;
-    RunUnswitching = true;
+    setRunUnswitching(true);
   }
 
   return Changed;
@@ -2057,15 +2086,19 @@ bool IndVarSimplify::run(Loop *L) {
   // loop into any instructions outside of the loop that use the final values
   // of the current expressions.
   if (Opts.replexitval != NeverRepl) {
-    if (int Rewrites = rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT,
-                                             Opts.replexitval, DeadInsts)) {
+    if (int Rewrites = withDeadInsts([&](auto &DeadInsts) {
+          return rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT,
+                                       Opts.replexitval, DeadInsts);
+        })) {
       NumReplaced += Rewrites;
       Changed = true;
     }
   }
 
   // Eliminate redundant IV cycles.
-  NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts, TTI);
+  NumElimIV += withDeadInsts([&](auto &DeadInsts) {
+    return Rewriter.replaceCongruentIVs(L, DT, DeadInsts, TTI);
+  });
 
   // Try to convert exit conditions to unsigned and rotate computation
   // out of the loop.  Note: Handles invalidation internally if needed.

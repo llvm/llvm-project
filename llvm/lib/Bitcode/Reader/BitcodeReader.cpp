@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
@@ -590,7 +591,8 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   uint64_t NextUnreadBit = 0;
   // Last function offset found in the VST.
   uint64_t LastFunctionBlockBit = 0;
-  bool SeenValueSymbolTable = false;
+  bool getSeenValueSymbolTable() const { return SSIDs.getFlag(0); }
+  void setSeenValueSymbolTable(bool Value) { SSIDs.setFlag(0, Value); }
   uint64_t VSTOffset = 0;
 
   std::vector<std::string> SectionTable;
@@ -617,7 +619,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   std::optional<MetadataLoader> MDLoader;
   std::vector<Comdat *> ComdatList;
   DenseSet<GlobalObject *> ImplicitComdatObjects;
-  SmallVector<Instruction *, 64> InstructionList;
+  llvm::SmallVectorWithFlags<Instruction *, 64, 4> InstructionList;
 
   std::vector<std::pair<GlobalVariable *, unsigned>> GlobalInits;
   std::vector<std::pair<GlobalValue *, unsigned>> IndirectSymbolInits;
@@ -652,7 +654,8 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
   // we've done this yet.
-  bool SeenFirstFunctionBody = false;
+  bool getSeenFirstFunctionBody() const { return SSIDs.getFlag(1); }
+  void setSeenFirstFunctionBody(bool Value) { SSIDs.setFlag(1, Value); }
 
   /// When function bodies are initially scanned, this map contains info about
   /// where to find deferred function body in the stream.
@@ -682,22 +685,30 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   /// operands are not relative to the instruction ID: basic block numbers, and
   /// types. Once the old style function blocks have been phased out, we would
   /// not need this flag.
-  bool UseRelativeIDs = false;
+  bool getUseRelativeIDs() const { return SSIDs.getFlag(2); }
+  void setUseRelativeIDs(bool Value) { SSIDs.setFlag(2, Value); }
 
   /// True if all functions will be materialized, negating the need to process
   /// (e.g.) blockaddress forward references.
-  bool WillMaterializeAllForwardRefs = false;
+  bool getWillMaterializeAllForwardRefs() const { return SSIDs.getFlag(3); }
+  void setWillMaterializeAllForwardRefs(bool Value) { SSIDs.setFlag(3, Value); }
 
   /// Tracks whether we have seen debug intrinsics or records in this bitcode;
   /// seeing both in a single module is currently a fatal error.
-  bool SeenDebugIntrinsic = false;
-  bool SeenDebugRecord = false;
+  bool getSeenDebugIntrinsic() const { return InstructionList.getFlag(0); }
+  bool setSeenDebugIntrinsic(bool Value) {
+    InstructionList.setFlag(0, Value);
+    return Value;
+  }
+  bool getSeenDebugRecord() const { return InstructionList.getFlag(1); }
+  void setSeenDebugRecord(bool Value) { InstructionList.setFlag(1, Value); }
 
-  bool StripDebugInfo = false;
+  bool getStripDebugInfoFlag() const { return InstructionList.getFlag(2); }
+  void setStripDebugInfoFlag(bool Value) { InstructionList.setFlag(2, Value); }
   TBAAVerifier TBAAVerifyHelper;
 
   std::vector<std::string> BundleTags;
-  SmallVector<SyncScope::ID, 8> SSIDs;
+  llvm::SmallVectorWithFlags<SyncScope::ID, 8, 4> SSIDs;
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
@@ -708,7 +719,12 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
   /// debug records by globalCleanup(); the caller is expected to perform the
   /// upgrade manually after any custom processing.
-  bool SkipDebugIntrinsicUpgrade = false;
+  bool getSkipDebugIntrinsicUpgrade() const {
+    return InstructionList.getFlag(3);
+  }
+  void setSkipDebugIntrinsicUpgrade(bool Value) {
+    InstructionList.setFlag(3, Value);
+  }
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
@@ -779,7 +795,7 @@ private:
     if (Slot == Record.size()) return true;
     unsigned ValNo = (unsigned)Record[Slot++];
     // Adjust the ValNo, if it was encoded relative to the InstNum.
-    if (UseRelativeIDs)
+    if (getUseRelativeIDs())
       ValNo = InstNum - ValNo;
     if (ValNo < InstNum) {
       // If this is not a forward reference, just return the value we already
@@ -846,7 +862,7 @@ private:
     if (Slot == Record.size()) return nullptr;
     unsigned ValNo = (unsigned)Record[Slot];
     // Adjust the ValNo, if it was encoded relative to the InstNum.
-    if (UseRelativeIDs)
+    if (getUseRelativeIDs())
       ValNo = InstNum - ValNo;
     return getFnValueByID(ValNo, Ty, TyID, ConstExprInsertBB);
   }
@@ -858,7 +874,7 @@ private:
     if (Slot == Record.size()) return nullptr;
     unsigned ValNo = (unsigned)decodeSignRotatedValue(Record[Slot]);
     // Adjust the ValNo, if it was encoded relative to the InstNum.
-    if (UseRelativeIDs)
+    if (getUseRelativeIDs())
       ValNo = InstNum - ValNo;
     return getFnValueByID(ValNo, Ty, TyID, ConstExprInsertBB);
   }
@@ -1101,11 +1117,11 @@ BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
 }
 
 Error BitcodeReader::materializeForwardReferencedFunctions() {
-  if (WillMaterializeAllForwardRefs)
+  if (getWillMaterializeAllForwardRefs())
     return Error::success();
 
   // Prevent recursion.
-  WillMaterializeAllForwardRefs = true;
+  setWillMaterializeAllForwardRefs(true);
 
   while (!BasicBlockFwdRefQueue.empty()) {
     Function *F = BasicBlockFwdRefQueue.front();
@@ -1134,7 +1150,7 @@ Error BitcodeReader::materializeForwardReferencedFunctions() {
   BackwardRefFunctions.clear();
 
   // Reset state.
-  WillMaterializeAllForwardRefs = false;
+  setWillMaterializeAllForwardRefs(false);
   return Error::success();
 }
 
@@ -4045,7 +4061,7 @@ Error BitcodeReader::materializeMetadata() {
   return Error::success();
 }
 
-void BitcodeReader::setStripDebugInfo() { StripDebugInfo = true; }
+void BitcodeReader::setStripDebugInfo() { setStripDebugInfoFlag(true); }
 
 /// When we see the block for a function body, remember where it is and then
 /// skip it.  This lets us lazily deserialize the functions.
@@ -4084,7 +4100,7 @@ Error BitcodeReader::globalCleanup() {
     Function *NewFn;
     if (UpgradeIntrinsicFunction(&F,
                                  NewFn, /*CanUpgradeDebugIntrinsicsToRecords=*/
-                                 !SkipDebugIntrinsicUpgrade))
+                                 !getSkipDebugIntrinsicUpgrade()))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4127,12 +4143,12 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   if (Stream.AtEndOfStream())
     return error("Could not find function in stream");
 
-  if (!SeenFirstFunctionBody)
+  if (!getSeenFirstFunctionBody())
     return error("Trying to materialize functions before seeing function blocks");
 
   // An old bitcode file with the symbol table at the end would have
   // finished the parse greedily.
-  assert(SeenValueSymbolTable);
+  assert(getSeenValueSymbolTable());
 
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
@@ -4709,7 +4725,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           return Err;
         break;
       case bitc::VALUE_SYMTAB_BLOCK_ID:
-        if (!SeenValueSymbolTable) {
+        if (!getSeenValueSymbolTable()) {
           // Either this is an old form VST without function index and an
           // associated VST forward declaration record (which would have caused
           // the VST to be jumped to and parsed before it was encountered
@@ -4718,7 +4734,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           assert(VSTOffset == 0 || FunctionsWithBodies.empty());
           if (Error Err = parseValueSymbolTable())
             return Err;
-          SeenValueSymbolTable = true;
+          setSeenValueSymbolTable(true);
         } else {
           // We must have had a VST forward declaration record, which caused
           // the parser to jump to and parse the VST earlier.
@@ -4753,21 +4769,21 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
         // If this is the first function body we've seen, reverse the
         // FunctionsWithBodies list.
-        if (!SeenFirstFunctionBody) {
+        if (!getSeenFirstFunctionBody()) {
           std::reverse(FunctionsWithBodies.begin(), FunctionsWithBodies.end());
           if (Error Err = globalCleanup())
             return Err;
-          SeenFirstFunctionBody = true;
+          setSeenFirstFunctionBody(true);
         }
 
         if (VSTOffset > 0) {
           // If we have a VST forward declaration record, make sure we
           // parse the VST now if we haven't already. It is needed to
           // set up the DeferredFunctionInfo vector for lazy reading.
-          if (!SeenValueSymbolTable) {
+          if (!getSeenValueSymbolTable()) {
             if (Error Err = BitcodeReader::parseValueSymbolTable(VSTOffset))
               return Err;
-            SeenValueSymbolTable = true;
+            setSeenValueSymbolTable(true);
             // Fall through so that we record the NextUnreadBit below.
             // This is necessary in case we have an anonymous function that
             // is later materialized. Since it will not have a VST entry we
@@ -4796,7 +4812,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         // materialization calls will resume it when necessary. If the bitcode
         // file is old, the symbol table will be at the end instead and will not
         // have been seen yet. In this case, just finish the parse now.
-        if (SeenValueSymbolTable) {
+        if (getSeenValueSymbolTable()) {
           NextUnreadBit = Stream.GetCurrentBitNo();
           // After the VST has been parsed, we need to make sure intrinsic name
           // are auto-upgraded.
@@ -4833,7 +4849,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       Expected<unsigned> VersionOrErr = parseVersionRecord(Record);
       if (!VersionOrErr)
         return VersionOrErr.takeError();
-      UseRelativeIDs = *VersionOrErr >= 1;
+      setUseRelativeIDs(*VersionOrErr >= 1);
       break;
     }
     case bitc::MODULE_CODE_TRIPLE: {  // TRIPLE: [strchr x N]
@@ -4960,7 +4976,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   };
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
-  SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
+  setSkipDebugIntrinsicUpgrade(Callbacks.SkipDebugIntrinsicUpgrade);
   return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
@@ -6335,7 +6351,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         // negative IDs (for forward references).  Use a signed VBR
         // representation to keep the encoding small.
         Value *V;
-        if (UseRelativeIDs)
+        if (getUseRelativeIDs())
           V = getValueSigned(Record, i * 2 + 1, NextValueNo, Ty, TyID, EdgeBB);
         else
           V = getValue(Record, i * 2 + 1, NextValueNo, Ty, TyID, EdgeBB);
@@ -6859,7 +6875,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_LABEL: {
       // DbgLabelRecords are placed after the Instructions that they are
       // attached to.
-      SeenDebugRecord = true;
+      setSeenDebugRecord(true);
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
@@ -6876,7 +6892,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
       // DbgVariableRecords are placed after the Instructions that they are
       // attached to.
-      SeenDebugRecord = true;
+      setSeenDebugRecord(true);
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
@@ -7045,7 +7061,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<CallInst>(I)->setTailCallKind(TCK);
       cast<CallInst>(I)->setAttributes(PAL);
       if (isa<DbgInfoIntrinsic>(I))
-        SeenDebugIntrinsic = true;
+        setSeenDebugIntrinsic(true);
       if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I)) {
         unsigned ArgNo = Intrinsic::NoAliasScopeDeclScopeArg;
         if (auto *ListAsValue =
@@ -7248,10 +7264,10 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // All parsed Functions should load into the debug info format dictated by the
   // Module.
-  if (SeenDebugIntrinsic && SeenDebugRecord)
+  if (getSeenDebugIntrinsic() && getSeenDebugRecord())
     return error("Mixed debug intrinsics and debug records in bitcode module!");
 
-  if (StripDebugInfo)
+  if (getStripDebugInfoFlag())
     stripDebugInfo(*F);
 
   // Finish fn->subprogram upgrade for materialized functions.
@@ -7343,7 +7359,7 @@ Error BitcodeReader::materializeModule() {
     return Err;
 
   // Promise to materialize all forward references.
-  WillMaterializeAllForwardRefs = true;
+  setWillMaterializeAllForwardRefs(true);
 
   // Iterate over the module, deserializing any functions that are still on
   // disk.

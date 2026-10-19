@@ -1239,13 +1239,14 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         OpenACCWaitParseInfo Info =
             ParseOpenACCWaitArgument(ClauseLoc,
                                      /*IsDirective=*/false);
-        if (Info.Failed) {
+        if (Info.getFailed()) {
           Parens.skipToEnd();
           return OpenACCCanContinue();
         }
 
-        ParsedClause.setWaitDetails(Info.DevNumExpr, Info.QueuesLoc,
-                                    std::move(Info.QueueIdExprs));
+        ParsedClause.setWaitDetails(
+            Info.DevNumExpr, Info.QueuesLoc,
+            SmallVector<Expr *>(std::move(Info.QueueIdExprs)));
         break;
       }
       default:
@@ -1290,12 +1291,12 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
         Loc);
     if (Res.first.isInvalid() &&
         Res.second == OpenACCParseCanContinue::Cannot) {
-      Result.Failed = true;
+      Result.setFailed(true);
       return Result;
     }
 
     if (ExpectAndConsume(tok::colon)) {
-      Result.Failed = true;
+      Result.setFailed(true);
       return Result;
     }
 
@@ -1325,7 +1326,7 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
 
   if (Res.first.isInvalid() &&
       Res.second == OpenACCParseCanContinue::Cannot) {
-    Result.Failed = true;
+    Result.setFailed(true);
     return Result;
   }
 
@@ -1334,7 +1335,7 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
 
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     if (ExpectAndConsume(tok::comma)) {
-      Result.Failed = true;
+      Result.setFailed(true);
       return Result;
     }
 
@@ -1346,7 +1347,7 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
 
     if (Res.first.isInvalid() &&
         Res.second == OpenACCParseCanContinue::Cannot) {
-      Result.Failed = true;
+      Result.setFailed(true);
       return Result;
     }
 
@@ -1539,7 +1540,7 @@ Parser::ParseOpenACCDirective() {
     case OpenACCDirectiveKind::Wait:
       // OpenACC has an optional paren-wrapped 'wait-argument'.
       WaitInfo = ParseOpenACCWaitArgument(DirLoc, /*IsDirective=*/true);
-      if (WaitInfo.Failed)
+      if (WaitInfo.getFailed())
         T.skipToEnd();
       else
         T.consumeClose();

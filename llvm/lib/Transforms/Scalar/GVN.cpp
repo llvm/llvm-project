@@ -25,6 +25,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
@@ -291,7 +292,8 @@ private:
   // This is set 'true' initially and also when new blocks have been added to
   // the function being analyzed. This boolean is used to control the updating
   // of BlockRPONumber prior to accessing the contents of BlockRPONumber.
-  bool InvalidBlockRPONumbers = true;
+  bool getInvalidBlockRPONumbers() const { return !ToSplit.getFlag(0); }
+  void setInvalidBlockRPONumbers(bool Value) { ToSplit.setFlag(0, !Value); }
 
   using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
   using AvailValInBlkVect = SmallVector<AvailableValueInBlock, 64>;
@@ -303,7 +305,7 @@ private:
            OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
 
   // List of critical edges to be split between iterations.
-  SmallVector<std::pair<Instruction *, unsigned>, 4> ToSplit;
+  llvm::SmallVectorWithFlags<std::pair<Instruction *, unsigned>, 4> ToSplit;
 
   enum class DepKind {
     Other = 0, // Unknown value.
@@ -3422,7 +3424,7 @@ void GVNPassImpl::assignBlockRPONumber(Function &F) {
   ReversePostOrderTraversal<Function *> RPOT(&F);
   for (BasicBlock *BB : RPOT)
     BlockRPONumber[BB] = NextBlockNumber++;
-  InvalidBlockRPONumbers = false;
+  setInvalidBlockRPONumbers(false);
 }
 
 /// The given values are known to be equal in every use
@@ -3853,7 +3855,7 @@ bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   // IsMSSAEnabled is turned on.
   VN.setMemorySSA(MSSA, isMemorySSAEnabled());
   ORE = RunORE;
-  InvalidBlockRPONumbers = true;
+  setInvalidBlockRPONumbers(true);
   MemorySSAUpdater Updater(MSSA);
   MSSAU = MSSA ? &Updater : nullptr;
 
@@ -4022,7 +4024,7 @@ bool GVNPassImpl::performScalarPRE(Instruction *CurInst) {
   BasicBlock *CurrentBlock = CurInst->getParent();
 
   // Update the RPO numbers for this function.
-  if (InvalidBlockRPONumbers)
+  if (getInvalidBlockRPONumbers())
     assignBlockRPONumber(*CurrentBlock->getParent());
 
   SmallVector<std::pair<Value *, BasicBlock *>, 8> PredMap;
@@ -4177,7 +4179,7 @@ BasicBlock *GVNPassImpl::splitCriticalEdges(BasicBlock *Pred,
   if (BB) {
     if (MD)
       MD->invalidateCachedPredecessors();
-    InvalidBlockRPONumbers = true;
+    setInvalidBlockRPONumbers(true);
   }
   return BB;
 }
@@ -4198,7 +4200,7 @@ bool GVNPassImpl::splitCriticalEdges() {
   if (Changed) {
     if (MD)
       MD->invalidateCachedPredecessors();
-    InvalidBlockRPONumbers = true;
+    setInvalidBlockRPONumbers(true);
   }
   return Changed;
 }
@@ -4225,7 +4227,7 @@ void GVNPassImpl::cleanupGlobalSets() {
   LeaderTable.clear();
   BlockRPONumber.clear();
   ICF->clear();
-  InvalidBlockRPONumbers = true;
+  setInvalidBlockRPONumbers(true);
 }
 
 void GVNPassImpl::removeInstruction(Instruction *I) {

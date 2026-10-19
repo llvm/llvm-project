@@ -15,6 +15,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -51,7 +52,7 @@ struct AllocaInfo {
 LLVM_ABI void
 forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                      const LoopInfo &LI, const AllocaInfo &AInfo,
-                     const SmallVectorImpl<Instruction *> &RetVec,
+                     ArrayRef<Instruction *> RetVec,
                      llvm::function_ref<void(Instruction *)> Callback);
 
 LLVM_ABI bool isSupportedLifetime(const AllocaInfo &AInfo,
@@ -61,8 +62,9 @@ LLVM_ABI Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
-  SmallVector<Instruction *, 8> RetVec;
-  bool CallsReturnTwice = false;
+  llvm::SmallVectorWithFlags<Instruction *, 8> RetVec;
+  bool getCallsReturnTwice() const { return RetVec.getFlag(0); }
+  void setCallsReturnTwice(bool Value) { RetVec.setFlag(0, Value); }
 };
 
 enum class AllocaInterestingness {

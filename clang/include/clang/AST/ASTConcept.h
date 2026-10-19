@@ -22,6 +22,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <utility>
 
 namespace clang {
@@ -48,7 +49,8 @@ class ConstraintSatisfaction : public llvm::FoldingSetNode {
   // The template-like entity that 'owns' the constraint checked here (can be a
   // constrained entity or a concept).
   const NamedDecl *ConstraintOwner = nullptr;
-  llvm::SmallVector<TemplateArgument, 4> TemplateArgs;
+  /// Flag bits 0 and 1 record satisfaction and the presence of errors.
+  llvm::SmallVectorWithFlags<TemplateArgument, 4, 2> TemplateArgs;
 
 public:
 
@@ -58,8 +60,10 @@ public:
                          ArrayRef<TemplateArgument> TemplateArgs)
       : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
 
-  bool IsSatisfied = false;
-  bool ContainsErrors = false;
+  bool isSatisfied() const { return TemplateArgs.getFlag(0); }
+  void setIsSatisfied(bool Value) { TemplateArgs.setFlag(0, Value); }
+  bool containsErrors() const { return TemplateArgs.getFlag(1); }
+  void setContainsErrors(bool Value) { TemplateArgs.setFlag(1, Value); }
 
   /// \brief The substituted constraint expr, if the template arguments could be
   /// substituted into them, or a diagnostic if substitution resulted in an

@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXTARGETSTREAMER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCStreamer.h"
 #include <optional>
 
@@ -21,8 +22,9 @@ class formatted_raw_ostream;
 /// Implments NVPTX-specific streamer.
 class NVPTXTargetStreamer : public MCTargetStreamer {
 private:
-  SmallVector<std::string, 4> DwarfFiles;
-  bool HasSections = false;
+  llvm::SmallVectorWithFlags<std::string, 4> DwarfFiles;
+  bool getHasSections() const { return DwarfFiles.getFlag(0); }
+  void setHasSections(bool Value) { DwarfFiles.setFlag(0, Value); }
 
 public:
   NVPTXTargetStreamer(MCStreamer &S);

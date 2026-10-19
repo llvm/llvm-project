@@ -31,6 +31,7 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -329,7 +330,7 @@ protected:
 
   /// A set of custom visitors which generate "event" diagnostics at
   /// interesting points in the path.
-  VisitorList Callbacks;
+  llvm::SmallVectorWithFlagsFor<VisitorList, 1> Callbacks;
 
   /// Used for ensuring the visitors are only added once.
   llvm::FoldingSet<BugReporterVisitor> CallbacksSet;
@@ -337,7 +338,8 @@ protected:
   /// When set, this flag disables all callstack pruning from a diagnostic
   /// path.  This is useful for some reports that want maximum fidelty
   /// when reporting an issue.
-  bool DoNotPrunePath = false;
+  bool getDoNotPrunePath() const { return Callbacks.getFlag(0); }
+  void setDoNotPrunePath(bool Value) { Callbacks.setFlag(0, Value); }
 
   /// Used to track unique reasons why a bug report might be invalid.
   ///
@@ -408,10 +410,10 @@ public:
 
   /// Indicates whether or not any path pruning should take place
   /// when generating a PathDiagnostic from this BugReport.
-  bool shouldPrunePath() const { return !DoNotPrunePath; }
+  bool shouldPrunePath() const { return !getDoNotPrunePath(); }
 
   /// Disable all path pruning when generating a PathDiagnostic.
-  void disablePathPruning() { DoNotPrunePath = true; }
+  void disablePathPruning() { setDoNotPrunePath(true); }
 
   /// Get the location on which the report should be uniqued.
   PathDiagnosticLocation getUniqueingLocation() const override {

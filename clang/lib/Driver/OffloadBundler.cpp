@@ -112,7 +112,7 @@ bool OffloadTargetInfo::isOffloadKindCompatible(
       (OffloadKind == "hipv4" && TargetOffloadKind == "hip"))
     return true;
 
-  if (BundlerConfig.HipOpenmpCompatible) {
+  if (BundlerConfig.getHipOpenmpCompatible()) {
     bool HIPCompatibleWithOpenMP = OffloadKind.starts_with_insensitive("hip") &&
                                    TargetOffloadKind == "openmp";
     bool OpenMPCompatibleWithHIP =
@@ -714,7 +714,7 @@ private:
   Error executeObjcopy(StringRef Objcopy, ArrayRef<StringRef> Args) {
     // If the user asked for the commands to be printed out, we do that
     // instead of executing it.
-    if (BundlerConfig.PrintExternalCommands) {
+    if (BundlerConfig.getPrintExternalCommands()) {
       errs() << "\"" << Objcopy << "\"";
       for (StringRef Arg : drop_begin(Args, 1))
         errs() << " \"" << Arg << "\"";
@@ -965,11 +965,11 @@ OffloadBundlerConfig::OffloadBundlerConfig()
     return;
   auto VerboseEnvVarOpt = llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_VERBOSE");
   if (VerboseEnvVarOpt.has_value())
-    Verbose = VerboseEnvVarOpt.value() == "1";
+    setVerbose(VerboseEnvVarOpt.value() == "1");
   auto CompressEnvVarOpt =
       llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_COMPRESS");
   if (CompressEnvVarOpt.has_value())
-    Compress = CompressEnvVarOpt.value() == "1";
+    setCompress(CompressEnvVarOpt.value() == "1");
   auto CompressionLevelEnvVarOpt =
       llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_COMPRESSION_LEVEL");
   if (CompressionLevelEnvVarOpt.has_value()) {
@@ -1064,7 +1064,7 @@ Error OffloadBundler::ListBundleIDsInFile(
     // Decompress the input if necessary.
     Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
         CompressedOffloadBundle::decompress(
-            **CodeOrErr, BundlerConfig.Verbose ? &llvm::errs() : nullptr);
+            **CodeOrErr, BundlerConfig.getVerbose() ? &llvm::errs() : nullptr);
     if (!DecompressedBufferOrErr)
       return createStringError(
           inconvertibleErrorCode(),
@@ -1189,12 +1189,14 @@ Error OffloadBundler::BundleFiles() {
   }
 
   // Get the file handler. We use the host buffer as reference.
-  assert((BundlerConfig.HostInputIndex != ~0u || BundlerConfig.AllowNoHost) &&
-         "Host input index undefined??");
-  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr = CreateFileHandler(
-      *InputBuffers[BundlerConfig.AllowNoHost ? 0
-                                              : BundlerConfig.HostInputIndex],
-      BundlerConfig);
+  assert(
+      (BundlerConfig.HostInputIndex != ~0u || BundlerConfig.getAllowNoHost()) &&
+      "Host input index undefined??");
+  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+      CreateFileHandler(*InputBuffers[BundlerConfig.getAllowNoHost()
+                                          ? 0
+                                          : BundlerConfig.HostInputIndex],
+                        BundlerConfig);
   if (!FileHandlerOrErr)
     return FileHandlerOrErr.takeError();
 
@@ -1224,7 +1226,7 @@ Error OffloadBundler::BundleFiles() {
     return createFileError(BundlerConfig.OutputFileNames.front(), EC);
 
   SmallVector<char, 0> CompressedBuffer;
-  if (BundlerConfig.Compress) {
+  if (BundlerConfig.getCompress()) {
     std::unique_ptr<llvm::MemoryBuffer> BufferMemory =
         llvm::MemoryBuffer::getMemBufferCopy(
             llvm::StringRef(Buffer.data(), Buffer.size()));
@@ -1232,7 +1234,7 @@ Error OffloadBundler::BundleFiles() {
         {BundlerConfig.CompressionFormat, BundlerConfig.CompressionLevel,
          /*zstdEnableLdm=*/true},
         *BufferMemory, BundlerConfig.CompressedBundleVersion,
-        BundlerConfig.Verbose ? &llvm::errs() : nullptr);
+        BundlerConfig.getVerbose() ? &llvm::errs() : nullptr);
     if (auto Error = CompressionResult.takeError())
       return Error;
 
@@ -1315,7 +1317,7 @@ Error OffloadBundler::UnbundleFiles() {
     // Decompress the blob if necessary.
     Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
         CompressedOffloadBundle::decompress(
-            **BlobOrErr, BundlerConfig.Verbose ? &llvm::errs() : nullptr);
+            **BlobOrErr, BundlerConfig.getVerbose() ? &llvm::errs() : nullptr);
     if (!DecompressedBufferOrErr)
       return createStringError(
           inconvertibleErrorCode(),
@@ -1386,7 +1388,7 @@ Error OffloadBundler::UnbundleFiles() {
       Offset += NextBundleStart;
   }
 
-  if (!BundlerConfig.AllowMissingBundles && !Worklist.empty()) {
+  if (!BundlerConfig.getAllowMissingBundles() && !Worklist.empty()) {
     std::string ErrMsg = "Can't find bundles for";
     std::set<StringRef> Sorted;
     for (auto &E : Worklist)
@@ -1428,7 +1430,7 @@ Error OffloadBundler::UnbundleFiles() {
   // If we found elements, we emit an error if none of those were for the host
   // in case host bundle name was provided in command line.
   if (!(FoundHostBundle || BundlerConfig.HostInputIndex == ~0u ||
-        BundlerConfig.AllowMissingBundles))
+        BundlerConfig.getAllowMissingBundles()))
     return createStringError(inconvertibleErrorCode(),
                              "Can't find bundle for the host target");
 
@@ -1574,7 +1576,7 @@ Error OffloadBundler::UnbundleArchive() {
 
   StringRef IFName = BundlerConfig.InputFileNames.front();
 
-  if (BundlerConfig.CheckInputArchive) {
+  if (BundlerConfig.getCheckInputArchive()) {
     // For a specific processor, a feature either shows up in all target IDs, or
     // does not show up in any target IDs. Otherwise the target ID combination
     // is invalid.
@@ -1622,7 +1624,7 @@ Error OffloadBundler::UnbundleArchive() {
     Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
         CompressedOffloadBundle::decompress(
             *TempCodeObjectBuffer,
-            BundlerConfig.Verbose ? &llvm::errs() : nullptr);
+            BundlerConfig.getVerbose() ? &llvm::errs() : nullptr);
     if (!DecompressedBufferOrErr)
       return createStringError(
           inconvertibleErrorCode(),
@@ -1720,7 +1722,7 @@ Error OffloadBundler::UnbundleArchive() {
                                         getDefaultArchiveKindForHost(), true,
                                         false, nullptr))
         return WriteErr;
-    } else if (!BundlerConfig.AllowMissingBundles) {
+    } else if (!BundlerConfig.getAllowMissingBundles()) {
       std::string ErrMsg =
           Twine("no compatible code object found for the target '" + Target +
                 "' in heterogeneous archive library: " + IFName)

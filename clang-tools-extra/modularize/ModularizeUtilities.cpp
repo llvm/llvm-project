@@ -335,7 +335,7 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
 
   // Ignore explicit modules because they often have dependencies
   // we can't know.
-  if (Mod.IsExplicit)
+  if (Mod.getIsExplicit())
     return true;
 
   // Treat headers in umbrella directory as dependencies.

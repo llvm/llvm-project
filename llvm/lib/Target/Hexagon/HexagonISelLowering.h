@@ -43,11 +43,12 @@ public:
   /// IsEligibleForTailCallOptimization - Check whether the call is eligible
   /// for tail call optimization. Targets which want to do tail call
   /// optimization should implement this function.
-  bool IsEligibleForTailCallOptimization(SDValue Callee,
-      CallingConv::ID CalleeCC, bool isVarArg, bool isCalleeStructRet,
-      bool isCallerStructRet, const SmallVectorImpl<ISD::OutputArg> &Outs,
+  bool IsEligibleForTailCallOptimization(
+      SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
+      bool isCalleeStructRet, bool isCallerStructRet,
+      llvm::ArrayRef<ISD::OutputArg> Outs,
       const SmallVectorImpl<SDValue> &OutVals,
-      const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
+      llvm::ArrayRef<ISD::InputArg> Ins, SelectionDAG &DAG) const;
 
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                           const CallBase &I, MachineFunction &MF,
@@ -119,11 +120,10 @@ public:
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
-  SDValue
-  LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                       const SmallVectorImpl<ISD::InputArg> &Ins,
-                       const SDLoc &dl, SelectionDAG &DAG,
-                       SmallVectorImpl<SDValue> &InVals) const override;
+  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
+                               bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
+                               const SDLoc &dl, SelectionDAG &DAG,
+                               SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -142,9 +142,8 @@ public:
       SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
-                          const SmallVectorImpl<ISD::InputArg> &Ins,
-                          const SDLoc &dl, SelectionDAG &DAG,
-                          SmallVectorImpl<SDValue> &InVals,
+                          llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                          SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
                           const SmallVectorImpl<SDValue> &OutVals,
                           SDValue Callee) const;
 
@@ -154,15 +153,14 @@ public:
   SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 
-  bool CanLowerReturn(CallingConv::ID CallConv,
-                      MachineFunction &MF, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool isVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      const SDLoc &dl, SelectionDAG &DAG) const override;
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
+                      SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 

@@ -241,7 +241,7 @@ void OMPDeclareVariantAttr::printPrettyPragma(
       OS << "interop(";
       if (!I->Prefs.empty()) {
         OS << "prefer_type(";
-        if (I->HasPreferAttrs) {
+        if (I->hasPreferAttrs()) {
           StringRef Sep = "";
           for (const auto &P : I->Prefs) {
             OS << Sep << "{";

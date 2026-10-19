@@ -15,6 +15,7 @@
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -315,7 +316,7 @@ public:
 
   // Set to use MD5 to represent string in NameTable.
   void setUseMD5() override {
-    UseMD5 = true;
+    setUseMD5Flag(true);
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagMD5Name);
     // MD5 will be stored as plain uint64_t instead of variable-length
     // quantity format in NameTable section.
@@ -339,9 +340,9 @@ public:
     resetSecLayout(SectionLayout::CtxSplitLayout);
   }
 
-  void setUseMD5ProfileSymbolList() override { UseMD5ProfSymList = true; }
+  void setUseMD5ProfileSymbolList() override { setUseMD5ProfSymList(true); }
 
-  void setUseMD5IndexedTables() override { UseMD5IndexedTables = true; }
+  void setUseMD5IndexedTables() override { setUseMD5IndexedTablesFlag(true); }
 
   /// Select composite encoding for subsequent writes. Composite output
   /// requires CompositeProfileVersion or newer when write() is called.
@@ -359,7 +360,8 @@ public:
     }
 #endif
     SecLayout = SL;
-    SectionHdrLayout = ExtBinaryHdrLayoutTable[SL];
+    SectionHdrLayout.assign(ExtBinaryHdrLayoutTable[SL].begin(),
+                            ExtBinaryHdrLayoutTable[SL].end());
   }
 
 protected:
@@ -417,8 +419,9 @@ protected:
   // the order of sections in SecHdrTable may be different that the
   // order in SectionHdrLayout. sample Reader will follow the order
   // in SectionHdrLayout to read each section.
-  SmallVector<SecHdrTableEntry, 8> SectionHdrLayout =
-      ExtBinaryHdrLayoutTable[DefaultLayout];
+  llvm::SmallVectorWithFlags<SecHdrTableEntry, 8, 3> SectionHdrLayout{
+      ExtBinaryHdrLayoutTable[DefaultLayout].begin(),
+      ExtBinaryHdrLayoutTable[DefaultLayout].end()};
 
   // Save the start of SecLBRProfile so we can compute the offset to the
   // start of SecLBRProfile for each Function's Profile and will keep it
@@ -455,13 +458,20 @@ private:
   // SecLBRProfile section. It is used to load function profile on demand.
   MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
-  bool UseMD5 = false;
+  bool getUseMD5Flag() const { return SectionHdrLayout.getFlag(0); }
+  void setUseMD5Flag(bool Value) { SectionHdrLayout.setFlag(0, Value); }
   // Whether to write the profile symbol list as 64-bit MD5 hashes in Eytzinger
   // layout.
-  bool UseMD5ProfSymList = false;
+  bool getUseMD5ProfSymList() const { return SectionHdrLayout.getFlag(1); }
+  void setUseMD5ProfSymList(bool Value) { SectionHdrLayout.setFlag(1, Value); }
   // Whether to write MD5-based indexed NameTable and parallel FuncOffsetTable
   // in Eytzinger layout.
-  bool UseMD5IndexedTables = false;
+  bool getUseMD5IndexedTablesFlag() const {
+    return SectionHdrLayout.getFlag(2);
+  }
+  void setUseMD5IndexedTablesFlag(bool Value) {
+    SectionHdrLayout.setFlag(2, Value);
+  }
   size_t NumNested = 0;
   size_t NumFlat = 0;
 

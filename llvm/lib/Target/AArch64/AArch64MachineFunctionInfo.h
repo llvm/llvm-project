@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -82,8 +83,18 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   unsigned CalleeSavedStackSize = 0;
   unsigned ZPRCalleeSavedStackSize = 0;
   unsigned PPRCalleeSavedStackSize = 0;
-  bool HasCalleeSavedStackSize = false;
-  bool HasSVECalleeSavedStackSize = false;
+  bool getHasCalleeSavedStackSize() const {
+    return JumpTableEntryInfo.getFlag(0);
+  }
+  void setHasCalleeSavedStackSize(bool Value) {
+    JumpTableEntryInfo.setFlag(0, Value);
+  }
+  bool getHasSVECalleeSavedStackSize() const {
+    return JumpTableEntryInfo.getFlag(1);
+  }
+  void setHasSVECalleeSavedStackSize(bool Value) {
+    JumpTableEntryInfo.setFlag(1, Value);
+  }
 
   /// Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
@@ -178,12 +189,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   SignReturnAddress SignCondition = SignReturnAddress::None;
 
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
-  bool SignWithBKey = false;
+  bool getSignWithBKey() const { return JumpTableEntryInfo.getFlag(2); }
+  void setSignWithBKey(bool Value) { JumpTableEntryInfo.setFlag(2, Value); }
 
   /// HasELFSignedGOT is true if the target binary format is ELF and the IR
   /// module containing the corresponding function has "ptrauth-elf-got" flag
   /// set to 1.
-  bool HasELFSignedGOT = false;
+  bool getHasELFSignedGOT() const { return JumpTableEntryInfo.getFlag(3); }
+  void setHasELFSignedGOT(bool Value) { JumpTableEntryInfo.setFlag(3, Value); }
 
   /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
   /// within the prologue, so it can be re-used for authentication in the
@@ -198,18 +211,29 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
-  bool BranchTargetEnforcement = false;
+  bool getBranchTargetEnforcement() const { return LOHContainerSet.getFlag(0); }
+  void setBranchTargetEnforcement(bool Value) {
+    LOHContainerSet.setFlag(0, Value);
+  }
 
   /// Indicates that SP signing should be diversified with PC as-per PAuthLR.
   /// This is set by -mbranch-protection and will emit NOP instructions unless
   /// the subtarget feature +pauthlr is also used (in which case non-NOP
   /// instructions are emitted).
-  bool BranchProtectionPAuthLR = false;
+  bool getBranchProtectionPAuthLR() const { return LOHContainerSet.getFlag(1); }
+  void setBranchProtectionPAuthLR(bool Value) {
+    LOHContainerSet.setFlag(1, Value);
+  }
 
   /// Whether this function has an extended frame record [Ctx, FP, LR]. If so,
   /// bit 60 of the in-memory FP will be 1 to enable other tools to detect the
   /// extended record.
-  bool HasSwiftAsyncContext = false;
+  bool getHasSwiftAsyncContextFlag() const {
+    return LOHContainerSet.getFlag(2);
+  }
+  void setHasSwiftAsyncContextFlag(bool Value) {
+    LOHContainerSet.setFlag(2, Value);
+  }
 
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
@@ -337,7 +361,7 @@ public:
 
   void setCalleeSavedStackSize(unsigned Size) {
     CalleeSavedStackSize = Size;
-    HasCalleeSavedStackSize = true;
+    setHasCalleeSavedStackSize(true);
   }
 
   // When CalleeSavedStackSize has not been set (for example when
@@ -352,10 +376,10 @@ public:
     // Make sure the calculated size derived from the CalleeSavedInfo
     // equals the cached size that was calculated elsewhere (e.g. in
     // determineCalleeSaves).
-    ValidateCalleeSavedStackSize = HasCalleeSavedStackSize;
+    ValidateCalleeSavedStackSize = getHasCalleeSavedStackSize();
 #endif
 
-    if (!HasCalleeSavedStackSize || ValidateCalleeSavedStackSize) {
+    if (!getHasCalleeSavedStackSize() || ValidateCalleeSavedStackSize) {
       assert(MFI.isCalleeSavedInfoValid() && "CalleeSavedInfo not calculated");
       if (MFI.getCalleeSavedInfo().empty())
         return 0;
@@ -387,7 +411,8 @@ public:
       }
 
       unsigned Size = alignTo(MaxOffset - MinOffset, 16);
-      assert((!HasCalleeSavedStackSize || getCalleeSavedStackSize() == Size) &&
+      assert((!getHasCalleeSavedStackSize() ||
+              getCalleeSavedStackSize() == Size) &&
              "Invalid size calculated for callee saves");
       return Size;
     }
@@ -396,7 +421,7 @@ public:
   }
 
   unsigned getCalleeSavedStackSize() const {
-    assert(HasCalleeSavedStackSize &&
+    assert(getHasCalleeSavedStackSize() &&
            "CalleeSavedStackSize has not been calculated");
     return CalleeSavedStackSize;
   }
@@ -407,15 +432,15 @@ public:
            "expected SVE callee-save sizes to be aligned to 16-bytes");
     ZPRCalleeSavedStackSize = ZPR;
     PPRCalleeSavedStackSize = PPR;
-    HasSVECalleeSavedStackSize = true;
+    setHasSVECalleeSavedStackSize(true);
   }
   unsigned getZPRCalleeSavedStackSize() const {
-    assert(HasSVECalleeSavedStackSize &&
+    assert(getHasSVECalleeSavedStackSize() &&
            "ZPRCalleeSavedStackSize has not been calculated");
     return ZPRCalleeSavedStackSize;
   }
   unsigned getPPRCalleeSavedStackSize() const {
-    assert(HasSVECalleeSavedStackSize &&
+    assert(getHasSVECalleeSavedStackSize() &&
            "PPRCalleeSavedStackSize has not been calculated");
     return PPRCalleeSavedStackSize;
   }
@@ -522,7 +547,7 @@ public:
   using MILOHArgs = MILOHDirective::LOHArgs;
   using MILOHContainer = SmallVector<MILOHDirective, 32>;
 
-  const MILOHContainer &getLOHContainer() const { return LOHContainerSet; }
+  ArrayRef<MILOHDirective> getLOHContainer() const { return LOHContainerSet; }
 
   /// Add a LOH directive of this @p Kind and this @p Args.
   void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
@@ -578,9 +603,9 @@ public:
 
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
-  bool shouldSignWithBKey() const { return SignWithBKey; }
+  bool shouldSignWithBKey() const { return getSignWithBKey(); }
 
-  bool hasELFSignedGOT() const { return HasELFSignedGOT; }
+  bool hasELFSignedGOT() const { return getHasELFSignedGOT(); }
 
   MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }
@@ -591,14 +616,14 @@ public:
     return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
   }
 
-  bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
+  bool branchTargetEnforcement() const { return getBranchTargetEnforcement(); }
 
-  bool branchProtectionPAuthLR() const { return BranchProtectionPAuthLR; }
+  bool branchProtectionPAuthLR() const { return getBranchProtectionPAuthLR(); }
 
   void setHasSwiftAsyncContext(bool HasContext) {
-    HasSwiftAsyncContext = HasContext;
+    setHasSwiftAsyncContextFlag(HasContext);
   }
-  bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+  bool hasSwiftAsyncContext() const { return getHasSwiftAsyncContextFlag(); }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;
@@ -619,10 +644,11 @@ public:
 
 private:
   // Hold the lists of LOHs.
-  MILOHContainer LOHContainerSet;
+  llvm::SmallVectorWithFlagsFor<MILOHContainer, 3> LOHContainerSet;
   SetOfInstructions LOHRelated;
 
-  SmallVector<std::pair<unsigned, MCSymbol *>, 2> JumpTableEntryInfo;
+  llvm::SmallVectorWithFlags<std::pair<unsigned, MCSymbol *>, 2, 4>
+      JumpTableEntryInfo;
 };
 
 namespace yaml {

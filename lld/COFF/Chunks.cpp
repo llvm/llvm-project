@@ -56,7 +56,7 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
   // files will be built with -ffunction-sections or /Gy, so most things worth
   // stripping will be in a comdat.
   if (file)
-    live = !file->symtab.ctx.config.doGC || !isCOMDAT();
+    live = !file->symtab.ctx.config.getDoGC() || !isCOMDAT();
   else
     live = true;
 }
@@ -844,7 +844,7 @@ void StringChunk::writeTo(uint8_t *buf) const {
 }
 
 ImportThunkChunk::ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-    : NonSectionCodeChunk(ImportThunkKind), live(!ctx.config.doGC),
+    : NonSectionCodeChunk(ImportThunkKind), live(!ctx.config.getDoGC()),
       impSymbol(s), ctx(ctx) {}
 
 ImportThunkChunkX64::ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s)

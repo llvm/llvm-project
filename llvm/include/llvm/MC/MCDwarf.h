@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -277,18 +278,16 @@ struct MCDwarfLineTableParams {
 
 struct MCDwarfLineTableHeader {
   MCSymbol *Label = nullptr;
-  SmallVector<std::string, 3> MCDwarfDirs;
+  // Flag bits 0, 1 and 2 record sources, missing MD5s, and present MD5s.
+  SmallVectorWithFlags<std::string, 3, 3> MCDwarfDirs;
   SmallVector<MCDwarfFile, 3> MCDwarfFiles;
   StringMap<unsigned> SourceIdMap;
   std::string CompilationDir;
   MCDwarfFile RootFile;
-  bool HasAnySource = false;
-
-private:
-  bool HasAllMD5 = true;
-  bool HasAnyMD5 = false;
-
-public:
+  bool hasAnySource() const { return MCDwarfDirs.getFlag(0); }
+  void trackSource(bool HasSource) {
+    MCDwarfDirs.setFlag(0, hasAnySource() || HasSource);
+  }
   MCDwarfLineTableHeader() = default;
 
   LLVM_ABI Expected<unsigned> tryGetFile(StringRef &Directory,
@@ -305,15 +304,16 @@ public:
        ArrayRef<char> SpecialOpcodeLengths,
        std::optional<MCDwarfLineStr> &LineStr) const;
   void resetMD5Usage() {
-    HasAllMD5 = true;
-    HasAnyMD5 = false;
+    MCDwarfDirs.setFlag(1, false);
+    MCDwarfDirs.setFlag(2, false);
   }
   void trackMD5Usage(bool MD5Used) {
-    HasAllMD5 &= MD5Used;
-    HasAnyMD5 |= MD5Used;
+    MCDwarfDirs.setFlag(1, MCDwarfDirs.getFlag(1) || !MD5Used);
+    MCDwarfDirs.setFlag(2, MCDwarfDirs.getFlag(2) || MD5Used);
   }
   bool isMD5UsageConsistent() const {
-    return MCDwarfFiles.empty() || (HasAllMD5 == HasAnyMD5);
+    return MCDwarfFiles.empty() ||
+           (!MCDwarfDirs.getFlag(1) == MCDwarfDirs.getFlag(2));
   }
 
   void setRootFile(StringRef Directory, StringRef FileName,
@@ -325,7 +325,7 @@ public:
     RootFile.Checksum = Checksum;
     RootFile.Source = Source;
     trackMD5Usage(Checksum.has_value());
-    HasAnySource |= Source.has_value();
+    trackSource(Source.has_value());
   }
 
   void resetFileTable() {
@@ -333,7 +333,7 @@ public:
     MCDwarfFiles.clear();
     RootFile.Name.clear();
     resetMD5Usage();
-    HasAnySource = false;
+    MCDwarfDirs.setFlag(0, false);
   }
 
 private:
@@ -411,7 +411,7 @@ public:
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
     Header.trackMD5Usage(Checksum.has_value());
-    Header.HasAnySource |= Source.has_value();
+    Header.trackSource(Source.has_value());
   }
 
   void resetFileTable() { Header.resetFileTable(); }
@@ -432,11 +432,9 @@ public:
     Header.Label = Label;
   }
 
-  const SmallVectorImpl<std::string> &getMCDwarfDirs() const {
-    return Header.MCDwarfDirs;
-  }
+  ArrayRef<std::string> getMCDwarfDirs() const { return Header.MCDwarfDirs; }
 
-  SmallVectorImpl<std::string> &getMCDwarfDirs() {
+  SmallVectorWithFlagsImpl<std::string, 3> &getMCDwarfDirs() {
     return Header.MCDwarfDirs;
   }
 

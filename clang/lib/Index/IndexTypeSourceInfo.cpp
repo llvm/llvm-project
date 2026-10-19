@@ -13,6 +13,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 using namespace clang;
 using namespace index;
@@ -23,16 +24,18 @@ class TypeIndexer : public RecursiveASTVisitor<TypeIndexer> {
   IndexingContext &IndexCtx;
   const NamedDecl *Parent;
   const DeclContext *ParentDC;
-  bool IsBase;
-  SmallVector<SymbolRelation, 3> Relations;
+  bool getIsBase() const { return Relations.getFlag(0); }
+  void setIsBase(bool Value) { Relations.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<SymbolRelation, 3> Relations;
 
   typedef RecursiveASTVisitor<TypeIndexer> base;
 
 public:
   TypeIndexer(IndexingContext &indexCtx, const NamedDecl *parent,
               const DeclContext *DC, bool isBase, bool isIBType)
-    : IndexCtx(indexCtx), Parent(parent), ParentDC(DC), IsBase(isBase) {
-    if (IsBase) {
+      : IndexCtx(indexCtx), Parent(parent), ParentDC(DC),
+        Relations(decltype(this->Relations)::withFlags(unsigned(isBase))) {
+    if (getIsBase()) {
       assert(Parent);
       Relations.emplace_back((unsigned)SymbolRole::RelationBaseOf, Parent);
     }
@@ -65,7 +68,7 @@ public:
       return IndexCtx.handleReference(Underlying, Loc, Parent,
                                       ParentDC, SymbolRoleSet(), Relations);
     }
-    if (IsBase) {
+    if (getIsBase()) {
       TRY_TO(IndexCtx.handleReference(ND, Loc,
                                       Parent, ParentDC, SymbolRoleSet()));
       if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
@@ -181,10 +184,12 @@ public:
 
     // The relations we have to `Parent` do not apply to our template arguments,
     // so clear them while visiting the args.
-    SmallVector<SymbolRelation, 3> SavedRelations = Relations;
+    SmallVector<SymbolRelation, 3> SavedRelations(Relations.begin(),
+                                                  Relations.end());
     Relations.clear();
-    llvm::scope_exit ResetSavedRelations(
-        [&] { this->Relations = SavedRelations; });
+    llvm::scope_exit ResetSavedRelations([&] {
+      this->Relations.assign(SavedRelations.begin(), SavedRelations.end());
+    });
     for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
       if (!TraverseTemplateArgumentLoc(TL.getArgLoc(I)))
         return false;

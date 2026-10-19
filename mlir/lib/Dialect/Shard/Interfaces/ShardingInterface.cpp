@@ -354,7 +354,7 @@ shard::detail::defaultGetShardingOption(Operation *op,
   // 3. Finalize sharding option
   removeTrailingEmptySubArray(shardingOption.shardingArray);
   if (!anyShardingInResultsOrOperands)
-    shardingOption.empty = true;
+    shardingOption.setEmpty(true);
   return shardingOption;
 }
 
@@ -486,7 +486,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
 
 LogicalResult shard::detail::defaultAddShardingAnnotations(
     Operation *op, OpBuilder &b, const ShardingOption &shardingOption) {
-  assert(!shardingOption.empty && shardingOption.grid);
+  assert(!shardingOption.getEmpty() && shardingOption.grid);
 
   ShardingInterface shardingOp = llvm::cast<ShardingInterface>(op);
   SmallVector<utils::IteratorType> loopTypes =

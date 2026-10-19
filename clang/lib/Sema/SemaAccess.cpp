@@ -24,6 +24,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 using namespace clang;
 using namespace sema;
@@ -77,11 +78,11 @@ static CXXRecordDecl *FindDeclaringClass(NamedDecl *D) {
 
 namespace {
 struct EffectiveContext {
-  EffectiveContext() : Inner(nullptr), Dependent(false) {}
+  EffectiveContext() : Inner(nullptr) {}
 
   explicit EffectiveContext(DeclContext *DC)
-    : Inner(DC),
-      Dependent(DC->isDependentContext()) {
+      : Inner(DC), Records(decltype(this->Records)::withFlags(
+                       unsigned(bool(DC->isDependentContext())))) {
 
     // An implicit deduction guide is semantically in the context enclosing the
     // class template, but for access purposes behaves like the constructor
@@ -135,7 +136,7 @@ struct EffectiveContext {
     }
   }
 
-  bool isDependent() const { return Dependent; }
+  bool isDependent() const { return getDependent(); }
 
   bool includesClass(const CXXRecordDecl *R) const {
     R = R->getCanonicalDecl();
@@ -152,8 +153,9 @@ struct EffectiveContext {
 
   DeclContext *Inner;
   SmallVector<FunctionDecl*, 4> Functions;
-  SmallVector<CXXRecordDecl*, 4> Records;
-  bool Dependent;
+  llvm::SmallVectorWithFlags<CXXRecordDecl *, 4> Records;
+  bool getDependent() const { return Records.getFlag(0); }
+  void setDependent(bool Value) { Records.setFlag(0, Value); }
 };
 
 /// Like sema::AccessedEntity, but kindly lets us scribble all over
@@ -1168,20 +1170,25 @@ struct ProtectedFriendContext {
   const EffectiveContext &EC;
   TemplateSpecCandidateSet *FailedTSC;
   const CXXRecordDecl *NamingClass;
-  bool CheckDependent;
-  bool EverDependent;
+  bool getCheckDependent() const { return CurPath.getFlag(0); }
+  void setCheckDependent(bool Value) { CurPath.setFlag(0, Value); }
+  bool getEverDependent() const { return CurPath.getFlag(1); }
+  bool setEverDependent(bool Value) {
+    CurPath.setFlag(1, Value);
+    return Value;
+  }
 
   /// The path down to the current base class.
-  SmallVector<const CXXRecordDecl*, 20> CurPath;
+  llvm::SmallVectorWithFlags<const CXXRecordDecl *, 20, 2> CurPath;
 
   ProtectedFriendContext(Sema &S, const EffectiveContext &EC,
                          const CXXRecordDecl *InstanceContext,
                          const CXXRecordDecl *NamingClass,
                          TemplateSpecCandidateSet *FailedTSC)
       : S(S), EC(EC), FailedTSC(FailedTSC), NamingClass(NamingClass),
-        CheckDependent(InstanceContext->isDependentContext() ||
-                       NamingClass->isDependentContext()),
-        EverDependent(false) {}
+        CurPath(decltype(this->CurPath)::withFlags(
+            unsigned(bool(InstanceContext->isDependentContext() ||
+                          NamingClass->isDependentContext())))) {}
 
   /// Check classes in the current path for friendship, starting at
   /// the given index.
@@ -1191,7 +1198,9 @@ struct ProtectedFriendContext {
       switch (GetFriendKind(S, EC, CurPath[I], FailedTSC)) {
       case AR_accessible:   return true;
       case AR_inaccessible: continue;
-      case AR_dependent:    EverDependent = true; continue;
+      case AR_dependent:
+        setEverDependent(true);
+        continue;
       }
     }
     return false;
@@ -1209,8 +1218,8 @@ struct ProtectedFriendContext {
     if (Cur == NamingClass)
       return checkFriendshipAlongPath(PrivateDepth);
 
-    if (CheckDependent && MightInstantiateTo(Cur, NamingClass))
-      EverDependent = true;
+    if (getCheckDependent() && MightInstantiateTo(Cur, NamingClass))
+      setEverDependent(true);
 
     // Recurse into the base classes.
     for (const auto &I : Cur->bases()) {
@@ -1227,7 +1236,7 @@ struct ProtectedFriendContext {
         RD = Rec;
       } else {
         assert(T->isDependentType() && "non-dependent base wasn't a record?");
-        EverDependent = true;
+        setEverDependent(true);
         continue;
       }
 
@@ -1290,7 +1299,8 @@ static AccessResult GetProtectedFriendKind(
 
   ProtectedFriendContext PRC(S, EC, InstanceContext, NamingClass, FailedTSC);
   if (PRC.findFriendship(InstanceContext)) return AR_accessible;
-  if (PRC.EverDependent) return AR_dependent;
+  if (PRC.getEverDependent())
+    return AR_dependent;
   return AR_inaccessible;
 }
 

@@ -133,7 +133,7 @@ RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
   iRelativeRel = R_RISCV_IRELATIVE;
-  if (ctx.arg.is64) {
+  if (ctx.arg.getIs64()) {
     symbolicRel = R_RISCV_64;
     tlsModuleIndexRel = R_RISCV_TLS_DTPMOD64;
     tlsOffsetRel = R_RISCV_TLS_DTPREL64;
@@ -159,7 +159,7 @@ RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
 }
 
 static uint32_t getEFlags(Ctx &ctx, InputFile *f) {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
 }
@@ -206,25 +206,25 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return read64le(buf);
   case R_RISCV_RELATIVE:
   case R_RISCV_IRELATIVE:
-    return ctx.arg.is64 ? read64le(buf) : read32le(buf);
+    return ctx.arg.getIs64() ? read64le(buf) : read32le(buf);
   case R_RISCV_NONE:
   case R_RISCV_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
     return 0;
   case R_RISCV_TLSDESC:
-    return ctx.arg.is64 ? read64le(buf + 8) : read32le(buf + 4);
+    return ctx.arg.getIs64() ? read64le(buf + 8) : read32le(buf + 4);
   }
 }
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     write64le(buf, ctx.in.dynamic->getVA());
   else
     write32le(buf, ctx.in.dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     write64le(buf, ctx.in.plt->getVA());
   else
     write32le(buf, ctx.in.plt->getVA());
@@ -232,7 +232,7 @@ void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
-    if (ctx.arg.is64)
+    if (ctx.arg.getIs64())
       write64le(buf, s.getVA(ctx));
     else
       write32le(buf, s.getVA(ctx));
@@ -264,7 +264,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   bool lpad =
       ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
   uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
-  uint32_t load = ctx.arg.is64 ? LD : LW;
+  uint32_t load = ctx.arg.getIs64() ? LD : LW;
   uint32_t auipcReg = lpad ? X_T3 : X_T2;
   uint32_t workReg = lpad ? X_T2 : X_T3;
 
@@ -274,7 +274,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   write32le(buf + 12, itype(ADDI, X_T1, X_T1,
                             -ctx.target->pltHeaderSize - (lpad ? 16 : 12)));
   write32le(buf + 16, itype(ADDI, X_T0, auipcReg, lo12(offset)));
-  write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
+  write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.getIs64() ? 1 : 2));
   write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.wordsize));
   write32le(buf + 28, itype(JALR, X_X0, workReg, 0));
 }
@@ -303,7 +303,7 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
     write32le(buf + 0, utype(AUIPC, X_X0, 0)); // lpad 0
   write32le(buf + 0 + auipcOffset, utype(AUIPC, rd, hi20(offset)));
   write32le(buf + 4 + auipcOffset,
-            itype(ctx.arg.is64 ? LD : LW, rd, rd, lo12(offset)));
+            itype(ctx.arg.getIs64() ? LD : LW, rd, rd, lo12(offset)));
   write32le(buf + 8 + auipcOffset, itype(JALR, X_T1, rd, 0));
   if (!lpad)
     write32le(buf + 12, itype(ADDI, X_X0, X_X0, 0));
@@ -438,11 +438,11 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       // TLS symbol, so we cannot use handleTlsDesc (which sets NEEDS_TLSDESC).
       // For TLSDESC->IE, use R_TPREL as well, but relocateAlloc uses isToLe
       // (from HI20) to select the correct transform.
-      sec.addReloc({ctx.arg.shared ? R_TLSDESC_PC : R_TPREL, type, offset,
+      sec.addReloc({ctx.arg.getShared() ? R_TLSDESC_PC : R_TPREL, type, offset,
                     addend, &sym});
       continue;
     case R_RISCV_TLSDESC_CALL:
-      if (!ctx.arg.shared)
+      if (!ctx.arg.getShared())
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 
@@ -452,7 +452,7 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     case R_RISCV_TPREL_ADD:
     case R_RISCV_RELAX:
-      if (ctx.arg.relax)
+      if (ctx.arg.getRelax())
         sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
       continue;
 
@@ -514,7 +514,7 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 }
 
 void RISCV::scanSection(InputSectionBase &sec, unsigned shard) {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     elf::scanSection1<RISCV, ELF64LE>(*this, sec, shard);
   else
     elf::scanSection1<RISCV, ELF32LE>(*this, sec, shard);
@@ -722,7 +722,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   case R_RISCV_TLSDESC:
     // The addend is stored in the second word.
-    if (ctx.arg.is64)
+    if (ctx.arg.getIs64())
       write64le(loc + 8, val);
     else
       write32le(loc + 4, val);
@@ -747,7 +747,7 @@ static void tlsdescToIe(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     write32le(loc, utype(AUIPC, X_A0, hi20(val))); // auipc a0,<hi20>
     break;
   case R_RISCV_TLSDESC_CALL:
-    if (ctx.arg.is64)
+    if (ctx.arg.getIs64())
       write32le(loc, itype(LD, X_A0, X_A0, lo12(val))); // ld a0,<lo12>(a0)
     else
       write32le(loc, itype(LW, X_A0, X_A0, lo12(val))); // lw a0,<lo12>(a0)
@@ -947,7 +947,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->writes.push_back(0xa001); // c.j
     remove = 6;
   } else if (remove >= 6 && rvc && isInt<12>(displace) && rd == X_RA &&
-             !ctx.arg.is64) { // RV32C only
+             !ctx.arg.getIs64()) { // RV32C only
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
@@ -1269,8 +1269,8 @@ bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
 // output relocation section is updated with all the newly synthesized ALIGN
 // relocations.
 bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec) {
-  assert(ctx.arg.relocatable);
-  if (ctx.arg.is64)
+  assert(ctx.arg.getRelocatable());
+  if (ctx.arg.getIs64())
     return synthesizeAlignAux<ELF64LE>(dot, sec);
   return synthesizeAlignAux<ELF32LE>(dot, sec);
 }

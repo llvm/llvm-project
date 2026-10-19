@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
@@ -37,10 +38,16 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const bool CheckFunctionCalls;
+  bool getCheckFunctionCalls() const { return AssertMacros.getFlag(0); }
   const StringRef RawAssertList;
-  SmallVector<StringRef, 5> AssertMacros;
+  llvm::SmallVectorWithFlags<StringRef, 5> AssertMacros;
   const std::vector<StringRef> IgnoredFunctions;
+
+public:
+  AssertSideEffectCheck(const AssertSideEffectCheck &) = default;
+  AssertSideEffectCheck(AssertSideEffectCheck &&) = default;
+  AssertSideEffectCheck &operator=(const AssertSideEffectCheck &) = delete;
+  AssertSideEffectCheck &operator=(AssertSideEffectCheck &&) = delete;
 };
 
 } // namespace clang::tidy::bugprone

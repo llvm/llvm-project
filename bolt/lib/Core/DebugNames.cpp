@@ -23,8 +23,8 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
     const bool CreateDebugNames, BinaryContext &BC,
     DebugStrWriter &MainBinaryStrWriter)
     : BC(BC), MainBinaryStrWriter(MainBinaryStrWriter) {
-  NeedToCreate = CreateDebugNames || BC.getDebugNamesSection();
-  if (!NeedToCreate)
+  setNeedToCreate(CreateDebugNames || BC.getDebugNamesSection());
+  if (!getNeedToCreate())
     return;
   FullTableBuffer = std::make_unique<DebugStrBufferVector>();
   FullTableStream = std::make_unique<raw_svector_ostream>(*FullTableBuffer);
@@ -47,7 +47,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
       Error Err = Error::success();
       const char *CStr = StrData.getCStr(&Offset, &Err);
       if (Err) {
-        NeedToCreate = false;
+        setNeedToCreate(false);
         BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Could not extract "
                      "string from .debug_str section at offset: "
                   << Twine::utohexstr(StrOffset) << ".\n";
@@ -98,7 +98,7 @@ void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
       }
     }
   }
-  Preallocated = true;
+  setPreallocated(true);
 }
 
 void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
@@ -137,7 +137,7 @@ DWARF5AcceleratorTable::getCrossCUDie(uint64_t Offset) {
 void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
                                      const std::optional<uint64_t> &DWOID) {
   StrSection = Unit.getStringSection();
-  if (Preallocated) {
+  if (getPreallocated()) {
     if (!Unit.isTypeUnit() && !DWOID) {
       CUList.push_back(CurrentUnitOffset);
     }
@@ -302,7 +302,7 @@ uint32_t DWARF5AcceleratorTable::getUnitID(const DWARFUnit &Unit,
     }
     return LocalTUList.size() - 1;
   }
-  if (Preallocated && DWOID) {
+  if (getPreallocated() && DWOID) {
     auto Iter = CUOffsetsToPatch.find(*DWOID);
     assert(Iter != CUOffsetsToPatch.end() && "DWO ID not preallocated");
     return Iter->second;
@@ -450,7 +450,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     DWARFUnit &Unit, const DIE &Die, const std::optional<uint64_t> &DWOID,
     const uint32_t NumberParentsInChain,
     std::optional<BOLTDWARF5AccelTableData *> &Parent) {
-  if (Unit.getVersion() < 5 || !NeedToCreate)
+  if (Unit.getVersion() < 5 || !getNeedToCreate())
     return std::nullopt;
   std::string NameToUse = "";
 
@@ -538,7 +538,7 @@ static unsigned getTypeUnitKey(const BOLTDWARF5AccelTableData *Entry) {
 
 /// Bucket code as in: AccelTableBase::finalize()
 void DWARF5AcceleratorTable::finalize() {
-  if (!NeedToCreate)
+  if (!getNeedToCreate())
     return;
   // Figure out how many buckets we need, then compute the bucket contents and
   // the final ordering. The hashes and offsets can be emitted by walking these
@@ -895,7 +895,7 @@ void DWARF5AcceleratorTable::emitAugmentationString() const {
   FullTableStream->write(AugStringBuffer->data(), AugStringBuffer->size());
 }
 void DWARF5AcceleratorTable::emitAccelTable() {
-  if (!NeedToCreate)
+  if (!getNeedToCreate())
     return;
   finalize();
   populateAbbrevsMap();

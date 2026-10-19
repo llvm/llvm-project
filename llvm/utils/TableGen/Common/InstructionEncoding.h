@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/KnownBits.h"
 #include <optional>
@@ -80,10 +81,11 @@ class InstructionEncoding {
   /// Whether the custom decoding function always succeeds. If a custom decoder
   /// function is specified, the value is taken from the target description,
   /// otherwise it is inferred.
-  bool HasCompleteDecoder;
+  bool getHasCompleteDecoder() const { return Operands.getFlag(0); }
+  void setHasCompleteDecoder(bool Value) { Operands.setFlag(0, Value); }
 
   /// Information about the operands' contribution to this encoding.
-  SmallVector<OperandInfo, 16> Operands;
+  llvm::SmallVectorWithFlags<OperandInfo, 16> Operands;
 
 public:
   InstructionEncoding(const Record *EncodingDef,
@@ -127,7 +129,7 @@ public:
 
   /// Returns whether the decoder (either generated or specified by the user)
   /// always succeeds.
-  bool hasCompleteDecoder() const { return HasCompleteDecoder; }
+  bool hasCompleteDecoder() const { return getHasCompleteDecoder(); }
 
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }

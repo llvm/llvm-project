@@ -152,7 +152,7 @@ private:
                                    const SDLoc &DL) const;
 
   SDValue LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
-                           const SmallVectorImpl<ISD::InputArg> &ArgInfo,
+                           llvm::ArrayRef<ISD::InputArg> ArgInfo,
                            const SDLoc &DL, SelectionDAG &DAG,
                            const CCValAssign &VA, MachineFrameInfo &MFI,
                            unsigned ArgIdx) const;
@@ -185,16 +185,15 @@ private:
 
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool IsVarArg,
-                          const SmallVectorImpl<ISD::InputArg> &Ins,
-                          const SDLoc &DL, SelectionDAG &DAG,
+                          llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL,
+                          SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 
   /// LowerFormalArguments - transform physical registers into virtual
   /// registers and generate load operations for arguments places on the stack.
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CCID,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool IsVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
@@ -202,14 +201,13 @@ private:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      bool isVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
 
   /// Lower the result values of a call into the
   /// appropriate copies out of appropriate physical registers.
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CCID, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
@@ -250,9 +248,9 @@ private:
   bool IsEligibleForTailCallOptimization(
       SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
       bool IsCalleeStructRet, bool IsCallerStructRet, Type *RetTy,
-      const SmallVectorImpl<ISD::OutputArg> &Outs,
+      llvm::ArrayRef<ISD::OutputArg> Outs,
       const SmallVectorImpl<SDValue> &OutVals,
-      const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
+      llvm::ArrayRef<ISD::InputArg> Ins, SelectionDAG &DAG) const;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 };

@@ -3236,7 +3236,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
   // initialize the cache eagerly which would look the same to the users.
   Function &F = const_cast<Function &>(CF);
 
-  FI.IsKernel = F.hasFnAttribute("kernel");
+  FI.setIsKernel(F.hasFnAttribute("kernel"));
 
   // Walk all instructions to find interesting instructions that might be
   // queried by abstract attributes during their initialization or update.
@@ -3289,10 +3289,10 @@ void InformationCache::initializeInformationCache(const Function &CF,
         fillMapFromAssume(*Assume, KnowledgeMap);
         AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {
-        FI.ContainsMustTailCall = true;
+        FI.setContainsMustTailCall(true);
         if (auto *Callee = dyn_cast_if_present<Function>(
                 cast<CallInst>(I).getCalledOperand()))
-          getFunctionInfo(*Callee).CalledViaMustTail = true;
+          getFunctionInfo(*Callee).setCalledViaMustTail(true);
       }
       [[fallthrough]];
     case Instruction::CallBr:
@@ -3396,11 +3396,11 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // determine if it is part of a must-tail call edge. This will influence what
   // attributes we can derive.
   InformationCache::FunctionInfo &FI = InfoCache.getFunctionInfo(F);
-  if (!isModulePass() && !FI.CalledViaMustTail) {
+  if (!isModulePass() && !FI.getCalledViaMustTail()) {
     for (const Use &U : F.uses())
       if (const auto *CB = dyn_cast<CallBase>(U.getUser()))
         if (CB->isCallee(&U) && CB->isMustTailCall())
-          FI.CalledViaMustTail = true;
+          FI.setCalledViaMustTail(true);
   }
 
   IRPosition FPos = IRPosition::function(F);

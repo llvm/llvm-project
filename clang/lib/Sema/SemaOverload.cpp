@@ -44,6 +44,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -7587,7 +7588,7 @@ void Sema::AddOverloadCandidate(
     ConstraintSatisfaction Satisfaction;
     if (CheckFunctionConstraints(Function, Satisfaction, /*Loc*/ {},
                                  /*ForOverloadResolution*/ true) ||
-        !Satisfaction.IsSatisfied) {
+        !Satisfaction.isSatisfied()) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
       return;
@@ -8153,7 +8154,7 @@ void Sema::AddMethodCandidate(
     ConstraintSatisfaction Satisfaction;
     if (CheckFunctionConstraints(Method, Satisfaction, /*Loc*/ {},
                                  /*ForOverloadResolution*/ true) ||
-        !Satisfaction.IsSatisfied) {
+        !Satisfaction.isSatisfied()) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
       return;
@@ -8700,7 +8701,7 @@ void Sema::AddConversionCandidate(
   if (Conversion->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
     if (CheckFunctionConstraints(Conversion, Satisfaction) ||
-        !Satisfaction.IsSatisfied) {
+        !Satisfaction.isSatisfied()) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
       return;
@@ -8995,7 +8996,7 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
     ConstraintSatisfaction Satisfaction;
     if (CheckFunctionConstraints(Conversion, Satisfaction, /*Loc*/ {},
                                  /*ForOverloadResolution*/ true) ||
-        !Satisfaction.IsSatisfied) {
+        !Satisfaction.isSatisfied()) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
       return;
@@ -9609,12 +9610,17 @@ class BuiltinOperatorOverloadBuilder {
   // Whether a candidate whose parameters are all arithmetic, vector or matrix
   // types can be viable. It is viable if there is an arithmetic or enumeral
   // candidate type, and every argument might convert to such a type.
-  bool ArithmeticCandidatesMayBeViable;
+  bool getArithmeticCandidatesMayBeViable() const {
+    return ArithmeticTypes.getFlag(0);
+  }
+  void setArithmeticCandidatesMayBeViable(bool Value) {
+    ArithmeticTypes.setFlag(0, Value);
+  }
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
   static constexpr int ArithmeticTypesCap = 26;
-  SmallVector<CanQualType, ArithmeticTypesCap> ArithmeticTypes;
+  llvm::SmallVectorWithFlags<CanQualType, ArithmeticTypesCap> ArithmeticTypes;
 
   // Define some indices used to iterate over the arithmetic types in
   // ArithmeticTypes.  The "promoted arithmetic types" are the arithmetic
@@ -9755,13 +9761,13 @@ public:
       OverloadCandidateSet &CandidateSet)
       : S(S), Args(Args),
         VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
-        ArithmeticCandidatesMayBeViable(
-            HasArithmeticOrEnumeralCandidateType &&
-            llvm::all_of(CandidateTypes,
-                         [](const BuiltinCandidateTypeSet &Types) {
-                           return Types.mayConvertToArithmetic();
-                         })),
-        CandidateTypes(CandidateTypes), CandidateSet(CandidateSet) {
+        CandidateTypes(CandidateTypes), CandidateSet(CandidateSet),
+        ArithmeticTypes(decltype(this->ArithmeticTypes)::withFlags(unsigned(
+            bool(HasArithmeticOrEnumeralCandidateType &&
+                 llvm::all_of(CandidateTypes,
+                              [](const BuiltinCandidateTypeSet &Types) {
+                                return Types.mayConvertToArithmetic();
+                              }))))) {
     InitArithmeticTypes();
   }
 
@@ -9785,7 +9791,7 @@ public:
   //       VQ T&      operator--(VQ T&);
   //       T          operator--(VQ T&, int);
   void addPlusPlusMinusMinusArithmeticOverloads(OverloadedOperatorKind Op) {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Arith = 0; Arith < NumArithmeticTypes; ++Arith) {
@@ -9859,7 +9865,7 @@ public:
   //       T         operator+(T);
   //       T         operator-(T);
   void addUnaryPlusOrMinusArithmeticOverloads() {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Arith = FirstPromotedArithmeticType;
@@ -9889,7 +9895,7 @@ public:
   //
   //        T         operator~(T);
   void addUnaryTildePromotedIntegralOverloads() {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Int = FirstPromotedIntegralType;
@@ -10112,7 +10118,7 @@ public:
   //   between types L and R.
   // Our candidates ignore the first parameter.
   void addGenericBinaryArithmeticOverloads() {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Left = FirstPromotedArithmeticType;
@@ -10140,7 +10146,7 @@ public:
   ///  * (M2.getElementType(), M2) -> M2
   ///  * (M2, M2) -> M2 // Only if M2 is not part of CandidateTypes[0].
   void addMatrixBinaryArithmeticOverloads() {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (QualType M1 : CandidateTypes[0].matrix_types()) {
@@ -10205,7 +10211,7 @@ public:
   //   where LR is the result of the usual arithmetic conversions
   //   between types L and R.
   void addBinaryBitwiseArithmeticOverloads() {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Left = FirstPromotedIntegralType;
@@ -10370,7 +10376,7 @@ public:
   //        VQ L&      operator+=(VQ L&, R);
   //        VQ L&      operator-=(VQ L&, R);
   void addAssignmentArithmeticOverloads(bool isEqualOp) {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Left = 0; Left < NumArithmeticTypes; ++Left) {
@@ -10424,7 +10430,7 @@ public:
   //        VQ L&       operator^=(VQ L&, R);
   //        VQ L&       operator|=(VQ L&, R);
   void addAssignmentIntegralOverloads() {
-    if (!ArithmeticCandidatesMayBeViable)
+    if (!getArithmeticCandidatesMayBeViable())
       return;
 
     for (unsigned Left = FirstIntegralType; Left < LastIntegralType; ++Left) {
@@ -11530,7 +11536,7 @@ bool OverloadCandidate::NotValidBecauseConstraintExprHasError() const {
          static_cast<TemplateDeductionResult>(DeductionFailure.Result) ==
              TemplateDeductionResult::ConstraintsNotSatisfied &&
          static_cast<CNSInfo *>(DeductionFailure.Data)
-             ->Satisfaction.ContainsErrors;
+             ->Satisfaction.containsErrors();
 }
 
 void OverloadCandidateSet::AddDeferredTemplateCandidate(
@@ -11950,7 +11956,7 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
     ConstraintSatisfaction Satisfaction;
     if (S.CheckFunctionConstraints(FD, Satisfaction, Loc))
       return false;
-    if (!Satisfaction.IsSatisfied) {
+    if (!Satisfaction.isSatisfied()) {
       if (Complain) {
         if (InOverloadResolution) {
           SmallString<128> TemplateArgString;
@@ -13803,7 +13809,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
 
     assert(Cand->Specialization &&
            "Non-matching built-in candidates are not added to Cands.");
-    Cand->NoteDeductionFailure(S, ForTakingAddress, CandidateSetKind);
+    Cand->NoteDeductionFailure(S, getForTakingAddress(), CandidateSetKind);
   }
 
   if (I != E)
@@ -13856,7 +13862,8 @@ class AddressOfFunctionResolver {
   const QualType& TargetType;
   QualType TargetFunctionType; // Extracted function type from target type
 
-  bool Complain;
+  bool getComplain() const { return Matches.getFlag(0); }
+  void setComplain(bool Value) { Matches.setFlag(0, Value); }
   //DeclAccessPair& ResultFunctionAccessPair;
   ASTContext& Context;
 
@@ -13868,21 +13875,22 @@ class AddressOfFunctionResolver {
   OverloadExpr::FindResult OvlExprInfo;
   OverloadExpr *OvlExpr;
   TemplateArgumentListInfo OvlExplicitTemplateArgs;
-  SmallVector<std::pair<DeclAccessPair, FunctionDecl*>, 4> Matches;
+  llvm::SmallVectorWithFlags<std::pair<DeclAccessPair, FunctionDecl *>, 4>
+      Matches;
   TemplateSpecCandidateSet FailedCandidates;
 
 public:
   AddressOfFunctionResolver(Sema &S, Expr *SourceExpr,
                             const QualType &TargetType, bool Complain)
       : S(S), SourceExpr(SourceExpr), TargetType(TargetType),
-        Complain(Complain), Context(S.getASTContext()),
+        Context(S.getASTContext()),
         TargetTypeIsNonStaticMemberFunction(
             !!TargetType->getAs<MemberPointerType>()),
         FoundNonTemplateFunction(false),
-        StaticMemberFunctionFromBoundPointer(false),
-        HasComplained(false),
+        StaticMemberFunctionFromBoundPointer(false), HasComplained(false),
         OvlExprInfo(OverloadExpr::find(SourceExpr)),
         OvlExpr(OvlExprInfo.Expression),
+        Matches(decltype(this->Matches)::withFlags(unsigned(Complain))),
         FailedCandidates(OvlExpr->getNameLoc(), /*ForTakingAddress=*/true) {
     ExtractUnqualifiedFunctionTypeFromTargetType();
 
@@ -14069,8 +14077,8 @@ private:
       // If any candidate has a placeholder return type, trigger its deduction
       // now.
       if (completeFunctionType(S, FunDecl, SourceExpr->getBeginLoc(),
-                               Complain)) {
-        HasComplained |= Complain;
+                               getComplain())) {
+        HasComplained |= getComplain();
         return false;
       }
 
@@ -14149,7 +14157,7 @@ private:
             << Matches[0].second->getDeclName(),
         S.PDiag(diag::note_ovl_candidate)
             << (unsigned)oc_function << (unsigned)ocs_described_template,
-        Complain, TargetFunctionType);
+        getComplain(), TargetFunctionType);
 
     if (Result != MatchesCopy.end()) {
       // Make it the first and only element
@@ -14157,7 +14165,7 @@ private:
       Matches[0].second = cast<FunctionDecl>(*Result);
       Matches.resize(1);
     } else
-      HasComplained |= Complain;
+      HasComplained |= getComplain();
   }
 
   void EliminateAllTemplateMatches() {
@@ -14197,12 +14205,18 @@ private:
         Results.push_back(Matches[I]);
       }
     }
-    std::swap(Matches, Results);
+    SmallVector<std::pair<DeclAccessPair, FunctionDecl *>, 4> PreviousMatches;
+    PreviousMatches = std::move(Matches);
+    Matches.assign(std::move(Results));
+    Results = std::move(PreviousMatches);
   }
 
   void EliminateSuboptimalCudaMatches() {
+    SmallVector<std::pair<DeclAccessPair, FunctionDecl *>, 4> CudaMatches;
+    CudaMatches = std::move(Matches);
     S.CUDA().EraseUnwantedMatches(S.getCurFunctionDecl(/*AllowLambda=*/true),
-                                  Matches);
+                                  CudaMatches);
+    Matches.assign(std::move(CudaMatches));
   }
 
 public:
@@ -14868,11 +14882,11 @@ class BuildRecoveryCallExprRAII {
 
 public:
   BuildRecoveryCallExprRAII(Sema &S) : SemaRef(S), SatStack(S) {
-    assert(SemaRef.IsBuildingRecoveryCallExpr == false);
-    SemaRef.IsBuildingRecoveryCallExpr = true;
+    assert(SemaRef.getIsBuildingRecoveryCallExpr() == false);
+    SemaRef.setIsBuildingRecoveryCallExpr(true);
   }
 
-  ~BuildRecoveryCallExprRAII() { SemaRef.IsBuildingRecoveryCallExpr = false; }
+  ~BuildRecoveryCallExprRAII() { SemaRef.setIsBuildingRecoveryCallExpr(false); }
 };
 }
 
@@ -14894,7 +14908,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   //
   // template <typename T> auto foo(T t) -> decltype(foo(t)) {}
   // template <typename T> auto foo(T t) -> decltype(foo(&t)) {}
-  if (SemaRef.IsBuildingRecoveryCallExpr)
+  if (SemaRef.getIsBuildingRecoveryCallExpr())
     return ExprResult();
   BuildRecoveryCallExprRAII RCE(SemaRef);
 

@@ -617,7 +617,7 @@ getTopFrameworkDir(FileManager &FileMgr, StringRef DirName,
 static bool needModuleLookup(Module *RequestingModule,
                              bool HasSuggestedModule) {
   return HasSuggestedModule ||
-         (RequestingModule && RequestingModule->NoUndeclaredIncludes);
+         (RequestingModule && RequestingModule->getNoUndeclaredIncludes());
 }
 
 /// DoFrameworkLookup - Do a lookup of the specified file in the current
@@ -1880,7 +1880,8 @@ static bool suggestModule(HeaderSearch &HS, ModuleMap::KnownHeader Module,
                           ModuleMap::KnownHeader *SuggestedModule) {
   // If this module specifies [no_undeclared_includes], we cannot find any
   // file that's in a non-dependency module.
-  if (RequestingModule && Module && RequestingModule->NoUndeclaredIncludes) {
+  if (RequestingModule && Module &&
+      RequestingModule->getNoUndeclaredIncludes()) {
     HS.getModuleMap().resolveUses(RequestingModule, /*Complain*/ false);
     if (!RequestingModule->directlyUses(Module.getModule())) {
       // Builtin headers are a special case. Multiple modules can use the same

@@ -244,13 +244,15 @@ llvm::Error JSONTransport::run(MessageHandler &Handler) {
 }
 
 void JSONTransport::sendMessage(llvm::json::Value Msg) {
-  OutputBuffer.clear();
-  llvm::raw_svector_ostream os(OutputBuffer);
-  os << llvm::formatv(PrettyOutput ? "{0:2}\n" : "{0}", Msg);
-  Out << "Content-Length: " << OutputBuffer.size() << "\r\n\r\n"
-      << OutputBuffer;
+  SmallVector<char, 0> Buffer;
+  Buffer = std::move(OutputBuffer);
+  Buffer.clear();
+  llvm::raw_svector_ostream os(Buffer);
+  os << llvm::formatv(getPrettyOutput() ? "{0:2}\n" : "{0}", Msg);
+  Out << "Content-Length: " << Buffer.size() << "\r\n\r\n" << Buffer;
   Out.flush();
-  Logger::debug(">>> {0}\n", OutputBuffer);
+  Logger::debug(">>> {0}\n", Buffer);
+  OutputBuffer.assign(std::move(Buffer));
 }
 
 bool JSONTransport::handleMessage(llvm::json::Value Msg,

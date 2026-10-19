@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
@@ -87,16 +88,23 @@ struct MemIntrinsicInfo {
   // Same Id is set by the target for corresponding load/store intrinsics.
   unsigned short MatchingId = 0;
 
-  bool ReadMem = false;
-  bool WriteMem = false;
-  bool IsVolatile = false;
+  bool getReadMem() const { return InterestingOperands.getFlag(0); }
+  bool setReadMem(bool Value) {
+    InterestingOperands.setFlag(0, Value);
+    return Value;
+  }
+  bool getWriteMem() const { return InterestingOperands.getFlag(1); }
+  void setWriteMem(bool Value) { InterestingOperands.setFlag(1, Value); }
+  bool getIsVolatile() const { return InterestingOperands.getFlag(2); }
+  void setIsVolatile(bool Value) { InterestingOperands.setFlag(2, Value); }
 
-  SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
+  llvm::SmallVectorWithFlags<InterestingMemoryOperand, 1, 3>
+      InterestingOperands;
 
   bool isUnordered() const {
     return (Ordering == AtomicOrdering::NotAtomic ||
             Ordering == AtomicOrdering::Unordered) &&
-           !IsVolatile;
+           !getIsVolatile();
   }
 };
 

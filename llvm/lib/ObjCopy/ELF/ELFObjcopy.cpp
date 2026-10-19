@@ -155,17 +155,17 @@ static std::unique_ptr<Writer> createELFWriter(const CommonConfig &Config,
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
   switch (OutputElfType) {
   case ELFT_ELF32LE:
-    return std::make_unique<ELFWriter<ELF32LE>>(Obj, Out, !Config.StripSections,
-                                                Config.OnlyKeepDebug);
+    return std::make_unique<ELFWriter<ELF32LE>>(
+        Obj, Out, !Config.getStripSections(), Config.getOnlyKeepDebug());
   case ELFT_ELF64LE:
-    return std::make_unique<ELFWriter<ELF64LE>>(Obj, Out, !Config.StripSections,
-                                                Config.OnlyKeepDebug);
+    return std::make_unique<ELFWriter<ELF64LE>>(
+        Obj, Out, !Config.getStripSections(), Config.getOnlyKeepDebug());
   case ELFT_ELF32BE:
-    return std::make_unique<ELFWriter<ELF32BE>>(Obj, Out, !Config.StripSections,
-                                                Config.OnlyKeepDebug);
+    return std::make_unique<ELFWriter<ELF32BE>>(
+        Obj, Out, !Config.getStripSections(), Config.getOnlyKeepDebug());
   case ELFT_ELF64BE:
-    return std::make_unique<ELFWriter<ELF64BE>>(Obj, Out, !Config.StripSections,
-                                                Config.OnlyKeepDebug);
+    return std::make_unique<ELFWriter<ELF64BE>>(
+        Obj, Out, !Config.getStripSections(), Config.getOnlyKeepDebug());
   }
   llvm_unreachable("Invalid output format");
 }
@@ -225,7 +225,7 @@ Error Object::compressOrDecompressSections(const CommonConfig &Config) {
     if (!(Sec.Flags & SHF_ALLOC) && StringRef(Sec.Name).starts_with(".debug")) {
       if (Config.CompressionType != DebugCompressionType::None)
         CType = Config.CompressionType;
-      else if (Config.DecompressDebugSections)
+      else if (Config.getDecompressDebugSections())
         CType = DebugCompressionType::None;
     }
     if (!CType)
@@ -310,7 +310,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
-        ((ELFConfig.LocalizeHidden &&
+        ((ELFConfig.getLocalizeHidden() &&
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
@@ -342,7 +342,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     if (Config.SymbolsToWeaken.matches(Sym.Name) && Sym.Binding != STB_LOCAL)
       Sym.Binding = STB_WEAK;
 
-    if (Config.Weaken && Sym.Binding != STB_LOCAL &&
+    if (Config.getWeaken() && Sym.Binding != STB_LOCAL &&
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_WEAK;
 
@@ -361,7 +361,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
   // The purpose of this loop is to mark symbols referenced by sections
   // (like GroupSection or RelocationSection). This way, we know which
   // symbols are still 'needed' and which are not.
-  if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty() ||
+  if (Config.getStripUnneeded() || !Config.UnneededSymbolsToRemove.empty() ||
       !Config.OnlySection.empty() || Config.DiscardMode != DiscardType::None) {
     for (SectionBase &Sec : Obj.sections())
       Sec.markSymbols();
@@ -369,22 +369,22 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
 
   auto RemoveSymbolsPred = [&](const Symbol &Sym) {
     if (Config.SymbolsToKeep.matches(Sym.Name) ||
-        (ELFConfig.KeepFileSymbols && Sym.Type == STT_FILE))
+        (ELFConfig.getKeepFileSymbols() && Sym.Type == STT_FILE))
       return false;
 
     if (Config.SymbolsToRemove.matches(Sym.Name))
       return true;
 
-    if (Config.StripAll || Config.StripAllGNU)
+    if (Config.getStripAll() || Config.getStripAllGNU())
       return true;
 
     if (isRequiredByABISymbol(Obj, Sym))
       return false;
 
-    if (Config.StripDebug && Sym.Type == STT_FILE)
+    if (Config.getStripDebug() && Sym.Type == STT_FILE)
       return true;
 
-    if ((Config.StripUnneeded ||
+    if ((Config.getStripUnneeded() ||
          Config.UnneededSymbolsToRemove.matches(Sym.Name)) &&
         (!Obj.isRelocatable() || isUnneededSymbol(Sym)))
       return true;
@@ -419,17 +419,17 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
     };
   }
 
-  if (Config.StripDWO)
+  if (Config.getStripDWO())
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return isDWOSection(Sec) || RemovePred(Sec);
     };
 
-  if (Config.ExtractDWO)
+  if (Config.getExtractDWO())
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       return onlyKeepDWOPred(Obj, Sec) || RemovePred(Sec);
     };
 
-  if (Config.StripAllGNU)
+  if (Config.getStripAllGNU())
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -447,19 +447,19 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
       return isDebugSection(Sec);
     };
 
-  if (Config.StripSections) {
+  if (Config.getStripSections()) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || Sec.ParentSegment == nullptr;
     };
   }
 
-  if (Config.StripDebug || Config.StripUnneeded) {
+  if (Config.getStripDebug() || Config.getStripUnneeded()) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || isDebugSection(Sec);
     };
   }
 
-  if (Config.StripNonAlloc)
+  if (Config.getStripNonAlloc())
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -468,7 +468,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
       return (Sec.Flags & SHF_ALLOC) == 0 && Sec.ParentSegment == nullptr;
     };
 
-  if (Config.StripAll)
+  if (Config.getStripAll())
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -489,7 +489,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
       return (Sec.Flags & SHF_ALLOC) == 0;
     };
 
-  if (Config.ExtractPartition || Config.ExtractMainPartition) {
+  if (Config.ExtractPartition || Config.getExtractMainPartition()) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -537,7 +537,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
   // and at least one of those symbols is present
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
-  if ((!Config.SymbolsToKeep.empty() || ELFConfig.KeepFileSymbols) &&
+  if ((!Config.SymbolsToKeep.empty() || ELFConfig.getKeepFileSymbols()) &&
       Obj.SymbolTable && !Obj.SymbolTable->empty()) {
     RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
       if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
@@ -546,7 +546,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
     };
   }
 
-  if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
+  if (Error E = Obj.removeSections(ELFConfig.getAllowBrokenLinks(), RemovePred))
     return E;
 
   if (Error E = Obj.compressOrDecompressSections(Config))
@@ -794,9 +794,9 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     Obj.OSABI = Config.OutputArch->OSABI;
   }
 
-  if (!Config.SplitDWO.empty() && Config.ExtractDWO) {
+  if (!Config.SplitDWO.empty() && Config.getExtractDWO()) {
     return Obj.removeSections(
-        ELFConfig.AllowBrokenLinks,
+        ELFConfig.getAllowBrokenLinks(),
         [&Obj](const SectionBase &Sec) { return onlyKeepDWOPred(Obj, Sec); });
   }
 
@@ -903,7 +903,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     }
   }
 
-  if (Config.OnlyKeepDebug)
+  if (Config.getOnlyKeepDebug())
     for (auto &Sec : Obj.sections())
       if (Sec.Flags & SHF_ALLOC && Sec.Type != SHT_NOTE)
         Sec.Type = SHT_NOBITS;
@@ -924,7 +924,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
           Obj.addSection<OwnedDataSection>(Name, Data);
       if (Name.starts_with(".note") && Name != ".note.GNU-stack") {
         NewSection.Type = SHT_NOTE;
-        if (ELFConfig.VerifyNoteSections)
+        if (ELFConfig.getVerifyNoteSections())
           return verifyNoteSection(Name, E, Data);
       }
       return Error::success();

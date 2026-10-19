@@ -145,8 +145,7 @@ fir::factory::ArrayTemp::ArrayTemp(mlir::Location loc,
                                    llvm::ArrayRef<mlir::Value> lowerBounds,
                                    llvm::ArrayRef<mlir::Value> lengths,
                                    bool allocateOnHeap, llvm::StringRef name)
-    : allocateOnHeap{allocateOnHeap},
-      typeParams{lengths.begin(), lengths.end()} {
+    : typeParams(unsigned(allocateOnHeap), lengths.begin(), lengths.end()) {
   assert(extents.size() == lowerBounds.size() &&
          "extents and lowerBounds must have the same size");
   assert(extents.size() == declaredType.getDimension() &&
@@ -194,22 +193,22 @@ void fir::factory::ArrayTemp::pushValue(mlir::Location loc,
   // Match HomogeneousScalarStack: derived types go through the runtime path.
   if (!entity.hasIntrinsicType())
     TODO(loc, "creating ArrayTemp for derived types");
-  mlir::Value addr =
-      genArrayTempElementAddr(loc, builder, temp, indices, typeParams);
+  mlir::Value addr = genArrayTempElementAddr(
+      loc, builder, temp, indices, llvm::ArrayRef<mlir::Value>(typeParams));
   hlfir::AssignOp::create(builder, loc, value, addr);
 }
 
 mlir::Value fir::factory::ArrayTemp::fetch(mlir::Location loc,
                                            fir::FirOpBuilder &builder,
                                            mlir::ValueRange indices) {
-  mlir::Value addr =
-      genArrayTempElementAddr(loc, builder, temp, indices, typeParams);
+  mlir::Value addr = genArrayTempElementAddr(
+      loc, builder, temp, indices, llvm::ArrayRef<mlir::Value>(typeParams));
   return hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{addr});
 }
 
 void fir::factory::ArrayTemp::destroy(mlir::Location loc,
                                       fir::FirOpBuilder &builder) {
-  if (allocateOnHeap) {
+  if (getAllocateOnHeap()) {
     auto declare = temp.getDefiningOp<hlfir::DeclareOp>();
     assert(declare && "temp must have been declared");
     fir::FreeMemOp::create(builder, loc, declare.getMemref());

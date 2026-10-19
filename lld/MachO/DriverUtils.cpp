@@ -354,7 +354,7 @@ StringRef macho::rerootPath(StringRef path) {
 }
 
 uint32_t macho::getModTime(StringRef path) {
-  if (config->zeroModTime)
+  if (config->getZeroModTime())
     return 0;
 
   fs::file_status stat;

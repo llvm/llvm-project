@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -402,9 +403,9 @@ public:
 
   void addCapturedField(const FieldDecl *FD) { CapturedFields.insert(FD); }
   bool isFieldCapturedByLambda(const FieldDecl *FD) const {
-    return IsThisCapturedByLambda || CapturedFields.contains(FD);
+    return BlockToFacts.getFlag(0) || CapturedFields.contains(FD);
   }
-  void setThisCapturedByLambda() { IsThisCapturedByLambda = true; }
+  void setThisCapturedByLambda() { BlockToFacts.setFlag(0, true); }
 
 private:
   /// Classifies every origin as persistent or block-local. Called by
@@ -416,8 +417,9 @@ private:
   FactID NextFactID{0};
   LoanManager LoanMgr;
   OriginManager OriginMgr;
-  /// Facts for each CFG block, indexed by block ID.
-  llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
+  /// Facts for each CFG block, indexed by block ID. The flag tracks whether
+  /// any lambda captures the this pointer.
+  llvm::SmallVectorWithFlags<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
   /// Bit vector indexed by origin ID. If set, the origin is referenced from
   /// more than one basic block and must participate in join operations. If
@@ -431,9 +433,6 @@ private:
   /// Set of field declarations that are explicitly or init-captured in any
   /// lambda within the analyzed function.
   llvm::DenseSet<const FieldDecl *> CapturedFields;
-  /// Whether the 'this' pointer is captured by any lambda within the analyzed
-  /// function. When true, any field of 'this' is considered captured.
-  bool IsThisCapturedByLambda = false;
 };
 } // namespace clang::lifetimes::internal
 

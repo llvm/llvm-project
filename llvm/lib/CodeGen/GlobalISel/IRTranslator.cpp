@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -190,7 +191,8 @@ class IRTranslatorImpl {
 
   // List of stubbed PHI instructions, for values and basic blocks to be filled
   // in once all MachineBasicBlocks have been created.
-  SmallVector<std::pair<const PHINode *, SmallVector<MachineInstr *, 1>>, 4>
+  llvm::SmallVectorWithFlags<
+      std::pair<const PHINode *, SmallVector<MachineInstr *, 1>>, 4, 2>
       PendingPHIs;
 
   /// Record of what frame index has been allocated to specified allocas for
@@ -681,11 +683,16 @@ class IRTranslatorImpl {
 
   // True when either the Target Machine specifies no optimizations or the
   // function has the optnone attribute.
-  bool EnableOpts = false;
+  bool getEnableOpts() const { return PendingPHIs.getFlag(0); }
+  void setEnableOpts(bool Value) { PendingPHIs.setFlag(0, Value); }
 
   /// True when the block contains a tail call. This allows the IRTranslator to
   /// stop translating such blocks early.
-  bool HasTailCall = false;
+  bool getHasTailCall() const { return PendingPHIs.getFlag(1); }
+  bool setHasTailCall(bool Value) {
+    PendingPHIs.setFlag(1, Value);
+    return Value;
+  }
 
   StackProtectorDescriptor SPDescriptor;
 
@@ -1895,13 +1902,13 @@ void IRTranslatorImpl::emitBitTestHeader(SwitchCG::BitTestBlock &B,
 
   MachineBasicBlock *MBB = B.Cases[0].ThisBB;
 
-  if (!B.FallthroughUnreachable)
+  if (!B.getFallthroughUnreachable())
     addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
   addSuccessorWithProb(SwitchBB, MBB, B.Prob);
 
   SwitchBB->normalizeSuccProbs();
 
-  if (!B.FallthroughUnreachable) {
+  if (!B.getFallthroughUnreachable()) {
     // Conditional branch to the default block.
     auto RangeCst = MIB.buildConstant(SwitchOpTy, B.Range);
     auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::integer(1),
@@ -1997,18 +2004,18 @@ bool IRTranslatorImpl::lowerBitTestWorkItem(
   // If the cases in bit test don't form a contiguous range, we evenly
   // distribute the probability on the edge to Fallthrough to two
   // successors of CurMBB.
-  if (!BTB->ContiguousRange) {
+  if (!BTB->getContiguousRange()) {
     BTB->Prob += DefaultProb / 2;
     BTB->DefaultProb -= DefaultProb / 2;
   }
 
   if (FallthroughUnreachable)
-    BTB->FallthroughUnreachable = true;
+    BTB->setFallthroughUnreachable(true);
 
   // If we're in the right place, emit the bit test header right now.
   if (CurMBB == SwitchMBB) {
     emitBitTestHeader(*BTB, SwitchMBB);
-    BTB->Emitted = true;
+    BTB->setEmitted(true);
   }
   return true;
 }
@@ -2025,7 +2032,7 @@ bool IRTranslatorImpl::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
   if (++BBI != FuncInfo.MF->end())
     NextMBB = &*BBI;
 
-  if (EnableOpts) {
+  if (getEnableOpts()) {
     // Here, we order cases by probability so the most likely case will be
     // checked first. However, two clusters can have the same probability in
     // which case their relative ordering is non-deterministic. So we use Low
@@ -2635,7 +2642,7 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
   Info.CB = &CI;
   Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
-  Info.NoMerge = CI.cannotMerge();
+  Info.setNoMerge(CI.cannotMerge());
   return CLI->lowerCall(MIRBuilder, Info);
 }
 
@@ -3602,9 +3609,9 @@ bool IRTranslatorImpl::translateCallBase(const CallBase &CB,
 
   // Check if we just inserted a tail call.
   if (Success) {
-    assert(!HasTailCall && "Can't tail call return twice from block?");
+    assert(!getHasTailCall() && "Can't tail call return twice from block?");
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-    HasTailCall = TII->isTailCall(*std::prev(MIRBuilder.getInsertPt()));
+    setHasTailCall(TII->isTailCall(*std::prev(MIRBuilder.getInsertPt())));
   }
 
   return Success;
@@ -4845,7 +4852,7 @@ bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,
                                           MachineBasicBlock &MBB) {
   for (auto &BTB : SL->BitTestCases) {
     // Emit header first, if it wasn't already emitted.
-    if (!BTB.Emitted)
+    if (!BTB.getEmitted())
       emitBitTestHeader(BTB, BTB.Parent);
 
     BranchProbability UnhandledProb = BTB.Prob;
@@ -4862,7 +4869,8 @@ bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,
       // test, and delete the last bit test.
 
       MachineBasicBlock *NextMBB;
-      if ((BTB.ContiguousRange || BTB.FallthroughUnreachable) && j + 2 == ej) {
+      if ((BTB.getContiguousRange() || BTB.getFallthroughUnreachable()) &&
+          j + 2 == ej) {
         // Second-to-last bit-test with contiguous range: fall through to the
         // target of the final bit test.
         NextMBB = BTB.Cases[j + 1].TargetBB;
@@ -4876,7 +4884,8 @@ bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,
 
       emitBitTestCase(BTB, NextMBB, UnhandledProb, BTB.Reg, BTB.Cases[j], MBB);
 
-      if ((BTB.ContiguousRange || BTB.FallthroughUnreachable) && j + 2 == ej) {
+      if ((BTB.getContiguousRange() || BTB.getFallthroughUnreachable()) &&
+          j + 2 == ej) {
         // We need to record the replacement phi edge here that normally
         // happens in emitBitTestCase before we delete the case, otherwise the
         // phi edge will be lost.
@@ -4893,7 +4902,7 @@ bool IRTranslatorImpl::finalizeBasicBlock(const BasicBlock &BB,
     CFGEdge HeaderToDefaultEdge = {BTB.Parent->getBasicBlock(),
                                    BTB.Default->getBasicBlock()};
     addMachineCFGPred(HeaderToDefaultEdge, BTB.Parent);
-    if (!BTB.ContiguousRange) {
+    if (!BTB.getContiguousRange()) {
       addMachineCFGPred(HeaderToDefaultEdge, BTB.Cases.back().ThisBB);
     }
   }
@@ -5150,13 +5159,13 @@ bool IRTranslatorImpl::runOnMachineFunction(
   MRI = &MF->getRegInfo();
   DL = &F.getDataLayout();
   const TargetMachine &TM = MF->getTarget();
-  EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
+  setEnableOpts(OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts);
   FuncInfo.MF = MF;
   // Prefer the "exception-model" module flag, else the TargetOptions default.
   FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
   if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
     FuncInfo.ExceptionModel = TM.getExceptionModel();
-  if (EnableOpts) {
+  if (getEnableOpts()) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();
     AC = GetAC();
@@ -5273,14 +5282,14 @@ bool IRTranslatorImpl::runOnMachineFunction(
       // Set the insertion point of all the following translations to
       // the end of this basic block.
       CurBuilder->setMBB(MBB);
-      HasTailCall = false;
+      setHasTailCall(false);
       for (const Instruction &Inst : *BB) {
         // If we translated a tail call in the last step, then we know
         // everything after the call is either a return, or something that is
         // handled by the call itself. (E.g. a lifetime marker or assume
         // intrinsic.) In this case, we should stop translating the block and
         // move on.
-        if (HasTailCall)
+        if (getHasTailCall())
           break;
 #ifndef NDEBUG
         Verifier.setCurrentInst(&Inst);

@@ -147,12 +147,12 @@ void StableFunctionMapRecord::deserializeEntry(const unsigned char *Ptr,
                                                StableFunctionMap *FunctionMap) {
   auto FunctionNameId =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-  if (FunctionMap->ReadStableFunctionMapNames)
+  if (FunctionMap->readStableFunctionMapNames())
     assert(FunctionMap->getNameForId(FunctionNameId) &&
            "FunctionNameId out of range");
   auto ModuleNameId =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-  if (FunctionMap->ReadStableFunctionMapNames)
+  if (FunctionMap->readStableFunctionMapNames())
     assert(FunctionMap->getNameForId(ModuleNameId) &&
            "ModuleNameId out of range");
   auto InstCount =
@@ -200,7 +200,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
   const auto NamesByteSize =
       endian::readNext<uint64_t, endianness::little, unaligned>(Ptr);
   const auto NamesOffset = reinterpret_cast<uintptr_t>(Ptr);
-  if (FunctionMap->ReadStableFunctionMapNames) {
+  if (FunctionMap->readStableFunctionMapNames()) {
     for (unsigned I = 0; I < NumNames; ++I) {
       StringRef Name(reinterpret_cast<const char *>(Ptr));
       Ptr += Name.size() + 1;

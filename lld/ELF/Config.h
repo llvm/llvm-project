@@ -17,6 +17,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -189,17 +190,25 @@ struct VersionDefinition {
 // Deferred file-load job: one per input, expanded by loadFiles().
 struct LoadJob {
   enum Kind : uint8_t { Obj, Bitcode, Archive, Shared, Binary };
+  LoadJob(llvm::MemoryBufferRef mbref, llvm::StringRef path, Kind kind,
+          bool inWholeArchive, bool lazy, bool asNeeded, bool withLOption,
+          uint32_t groupId);
   llvm::MemoryBufferRef mbref;
   llvm::StringRef path;
   Kind kind;
-  bool inWholeArchive;
-  bool lazy;
-  bool asNeeded;
-  bool withLOption;
+  bool getInWholeArchive() const { return tarEntries.getFlag(0); }
+  void setInWholeArchive(bool Value) { tarEntries.setFlag(0, Value); }
+  bool getLazy() const { return tarEntries.getFlag(1); }
+  void setLazy(bool Value) { tarEntries.setFlag(1, Value); }
+  bool getAsNeeded() const { return tarEntries.getFlag(2); }
+  void setAsNeeded(bool Value) { tarEntries.setFlag(2, Value); }
+  bool getWithLOption() const { return tarEntries.getFlag(3); }
+  void setWithLOption(bool Value) { tarEntries.setFlag(3, Value); }
   uint32_t groupId;
   SmallVector<std::unique_ptr<InputFile>, 0> out;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> thinBufs;
-  SmallVector<std::pair<std::string, llvm::StringRef>, 0> tarEntries;
+  llvm::SmallVectorWithFlags<std::pair<std::string, llvm::StringRef>, 0, 4>
+      tarEntries;
 };
 
 class LinkerDriver {
@@ -300,23 +309,23 @@ struct Config {
   llvm::StringRef thinLTOPrefixReplaceNew;
   llvm::StringRef thinLTOPrefixReplaceNativeObject;
   std::string rpath;
-  llvm::SmallVector<VersionDefinition, 0> versionDefinitions;
+  llvm::SmallVectorWithFlags<VersionDefinition, 0, 4> versionDefinitions;
   std::optional<llvm::DenseSet<llvm::StringRef>> retainSymbols;
-  llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
-  llvm::SmallVector<llvm::StringRef, 0> filterList;
-  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
-  llvm::SmallVector<llvm::StringRef, 0> searchPaths;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> auxiliaryList;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> filterList;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> passPlugins;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
-  llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> thinLTOModulesToCompile;
   llvm::StringRef dtltoDistributor;
-  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> dtltoDistributorArgs;
   llvm::StringRef dtltoCompiler;
-  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
-  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
-  llvm::SmallVector<llvm::StringRef, 0> undefined;
-  llvm::SmallVector<SymbolVersion, 0> dynamicList;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> dtltoCompilerPrependArgs;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> dtltoCompilerArgs;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> undefined;
+  llvm::SmallVectorWithFlags<SymbolVersion, 0, 4> dynamicList;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
-  llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> mllvmOpts;
   llvm::MapVector<std::pair<const InputSectionBase *, const InputSectionBase *>,
                   uint64_t>
       callGraphProfile;
@@ -329,27 +338,65 @@ struct Config {
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
-  bool armCMSESupport = false;
+  bool getArmCMSESupport() const { return remapInputsWildcards.getFlag(0); }
+  bool setArmCMSESupport(bool Value) {
+    remapInputsWildcards.setFlag(0, Value);
+    return Value;
+  }
   bool asNeeded = false;
-  bool armBe8 = false;
+  bool getArmBe8() const { return remapInputsWildcards.getFlag(1); }
+  void setArmBe8(bool Value) { remapInputsWildcards.setFlag(1, Value); }
   BsymbolicKind bsymbolic = BsymbolicKind::None;
   CGProfileSortKind callGraphProfileSort;
   llvm::StringRef irpgoProfilePath;
-  bool bpStartupFunctionSort = false;
-  bool bpCompressionSortStartupFunctions = false;
-  bool bpFunctionOrderForCompression = false;
-  bool bpDataOrderForCompression = false;
-  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
-  bool bpVerboseSectionOrderer = false;
-  bool branchToBranch = false;
-  bool checkSections;
-  bool checkDynamicRelocs;
+  bool getBpStartupFunctionSort() const {
+    return remapInputsWildcards.getFlag(2);
+  }
+  void setBpStartupFunctionSort(bool Value) {
+    remapInputsWildcards.setFlag(2, Value);
+  }
+  bool getBpCompressionSortStartupFunctions() const {
+    return remapInputsWildcards.getFlag(3);
+  }
+  void setBpCompressionSortStartupFunctions(bool Value) {
+    remapInputsWildcards.setFlag(3, Value);
+  }
+  bool getBpFunctionOrderForCompression() const {
+    return packageMetadata.getFlag(0);
+  }
+  void setBpFunctionOrderForCompression(bool Value) {
+    packageMetadata.setFlag(0, Value);
+  }
+  bool getBpDataOrderForCompression() const {
+    return packageMetadata.getFlag(1);
+  }
+  void setBpDataOrderForCompression(bool Value) {
+    packageMetadata.setFlag(1, Value);
+  }
+  llvm::SmallVectorWithFlags<BPCompressionSortSpec,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 BPCompressionSortSpec>::value,
+                             4>
+      bpCompressionSortSpecs;
+  bool getBpVerboseSectionOrderer() const { return packageMetadata.getFlag(2); }
+  void setBpVerboseSectionOrderer(bool Value) {
+    packageMetadata.setFlag(2, Value);
+  }
+  bool getBranchToBranch() const { return packageMetadata.getFlag(3); }
+  void setBranchToBranch(bool Value) { packageMetadata.setFlag(3, Value); }
+  bool getCheckSections() const { return warnBackrefsExclude.getFlag(0); }
+  void setCheckSections(bool Value) { warnBackrefsExclude.setFlag(0, Value); }
+  bool getCheckDynamicRelocs() const { return warnBackrefsExclude.getFlag(1); }
+  void setCheckDynamicRelocs(bool Value) {
+    warnBackrefsExclude.setFlag(1, Value);
+  }
   std::optional<llvm::DebugCompressionType> compressDebugSections;
-  llvm::SmallVector<
-      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
+  llvm::SmallVectorWithFlags<
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0, 4>
       compressSections;
-  bool cref;
-  llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
+  bool getCref() const { return warnBackrefsExclude.getFlag(2); }
+  void setCref(bool Value) { warnBackrefsExclude.setFlag(2, Value); }
+  llvm::SmallVectorWithFlags<std::pair<llvm::GlobPattern, uint64_t>, 0, 4>
       deadRelocInNonAlloc;
   bool debugNames;
   bool demangle = true;
@@ -383,47 +430,97 @@ struct Config {
   bool mmapOutputFile;
   bool nmagic;
   bool noinhibitExec;
-  bool nostdlib;
-  bool oFormatBinary;
-  bool omagic;
-  bool optEB = false;
-  bool optEL = false;
-  bool optimizeBBJumps;
-  bool optRemarksWithHotness;
-  bool picThunk;
-  bool pie;
+  bool getNostdlib() const { return warnBackrefsExclude.getFlag(3); }
+  void setNostdlib(bool Value) { warnBackrefsExclude.setFlag(3, Value); }
+  bool getOFormatBinary() const { return shuffleSections.getFlag(0); }
+  void setOFormatBinary(bool Value) { shuffleSections.setFlag(0, Value); }
+  bool getOmagic() const { return shuffleSections.getFlag(1); }
+  void setOmagic(bool Value) { shuffleSections.setFlag(1, Value); }
+  bool getOptEB() const { return shuffleSections.getFlag(2); }
+  bool setOptEB(bool Value) {
+    shuffleSections.setFlag(2, Value);
+    return Value;
+  }
+  bool getOptEL() const { return shuffleSections.getFlag(3); }
+  bool setOptEL(bool Value) {
+    shuffleSections.setFlag(3, Value);
+    return Value;
+  }
+  bool getOptimizeBBJumps() const { return deadRelocInNonAlloc.getFlag(0); }
+  void setOptimizeBBJumps(bool Value) { deadRelocInNonAlloc.setFlag(0, Value); }
+  bool getOptRemarksWithHotness() const {
+    return deadRelocInNonAlloc.getFlag(1);
+  }
+  void setOptRemarksWithHotness(bool Value) {
+    deadRelocInNonAlloc.setFlag(1, Value);
+  }
+  bool getPicThunk() const { return deadRelocInNonAlloc.getFlag(2); }
+  void setPicThunk(bool Value) { deadRelocInNonAlloc.setFlag(2, Value); }
+  bool getPie() const { return deadRelocInNonAlloc.getFlag(3); }
+  void setPie(bool Value) { deadRelocInNonAlloc.setFlag(3, Value); }
   llvm::StringRef printGcSections;
-  bool printIcfSections;
-  bool printMemoryUsage;
+  bool getPrintIcfSections() const { return compressSections.getFlag(0); }
+  void setPrintIcfSections(bool Value) { compressSections.setFlag(0, Value); }
+  bool getPrintMemoryUsage() const { return compressSections.getFlag(1); }
+  void setPrintMemoryUsage(bool Value) { compressSections.setFlag(1, Value); }
   std::optional<uint64_t> randomizeSectionPadding;
-  bool rejectMismatch;
-  bool relax;
-  bool relaxGP;
-  bool relocatable;
-  bool resolveGroups;
-  bool relrGlibc = false;
+  bool getRejectMismatch() const { return compressSections.getFlag(2); }
+  void setRejectMismatch(bool Value) { compressSections.setFlag(2, Value); }
+  bool getRelax() const { return compressSections.getFlag(3); }
+  void setRelax(bool Value) { compressSections.setFlag(3, Value); }
+  bool getRelaxGP() const { return bpCompressionSortSpecs.getFlag(0); }
+  void setRelaxGP(bool Value) { bpCompressionSortSpecs.setFlag(0, Value); }
+  bool getRelocatable() const { return bpCompressionSortSpecs.getFlag(1); }
+  void setRelocatable(bool Value) { bpCompressionSortSpecs.setFlag(1, Value); }
+  bool getResolveGroups() const { return bpCompressionSortSpecs.getFlag(2); }
+  void setResolveGroups(bool Value) {
+    bpCompressionSortSpecs.setFlag(2, Value);
+  }
+  bool getRelrGlibc() const { return bpCompressionSortSpecs.getFlag(3); }
+  void setRelrGlibc(bool Value) { bpCompressionSortSpecs.setFlag(3, Value); }
   bool relrPackDynRelocs = false;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
-  llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
-  bool singleRoRx;
-  bool singleXoRx;
-  bool shared;
-  bool symbolic;
+  llvm::SmallVectorWithFlags<std::pair<llvm::GlobPattern, uint32_t>, 0, 4>
+      shuffleSections;
+  bool getSingleRoRx() const { return mllvmOpts.getFlag(0); }
+  void setSingleRoRx(bool Value) { mllvmOpts.setFlag(0, Value); }
+  bool getSingleXoRx() const { return mllvmOpts.getFlag(1); }
+  void setSingleXoRx(bool Value) { mllvmOpts.setFlag(1, Value); }
+  bool getShared() const { return mllvmOpts.getFlag(2); }
+  void setShared(bool Value) { mllvmOpts.setFlag(2, Value); }
+  bool getSymbolic() const { return mllvmOpts.getFlag(3); }
+  void setSymbolic(bool Value) { mllvmOpts.setFlag(3, Value); }
   bool isStatic = false;
-  bool sysvHash = false;
-  bool target1Rel;
-  bool trace;
+  bool getSysvHash() const { return dynamicList.getFlag(0); }
+  bool setSysvHash(bool Value) {
+    dynamicList.setFlag(0, Value);
+    return Value;
+  }
+  bool getTarget1Rel() const { return dynamicList.getFlag(1); }
+  void setTarget1Rel(bool Value) { dynamicList.setFlag(1, Value); }
+  bool getTrace() const { return dynamicList.getFlag(2); }
+  void setTrace(bool Value) { dynamicList.setFlag(2, Value); }
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;
-  bool thinLTOIndexOnly;
-  bool timeTraceEnabled;
-  bool tocOptimize;
-  bool pcRelOptimize;
-  bool undefinedVersion;
-  bool unique;
-  bool useAndroidRelrTags = false;
-  bool warnBackrefs;
-  llvm::SmallVector<llvm::GlobPattern, 0> warnBackrefsExclude;
+  bool getThinLTOIndexOnly() const { return dynamicList.getFlag(3); }
+  void setThinLTOIndexOnly(bool Value) { dynamicList.setFlag(3, Value); }
+  bool getTimeTraceEnabled() const { return undefined.getFlag(0); }
+  void setTimeTraceEnabled(bool Value) { undefined.setFlag(0, Value); }
+  bool getTocOptimize() const { return undefined.getFlag(1); }
+  void setTocOptimize(bool Value) { undefined.setFlag(1, Value); }
+  bool getPcRelOptimize() const { return undefined.getFlag(2); }
+  void setPcRelOptimize(bool Value) { undefined.setFlag(2, Value); }
+  bool getUndefinedVersion() const { return undefined.getFlag(3); }
+  void setUndefinedVersion(bool Value) { undefined.setFlag(3, Value); }
+  bool getUnique() const { return dtltoCompilerArgs.getFlag(0); }
+  void setUnique(bool Value) { dtltoCompilerArgs.setFlag(0, Value); }
+  bool getUseAndroidRelrTags() const { return dtltoCompilerArgs.getFlag(1); }
+  void setUseAndroidRelrTags(bool Value) {
+    dtltoCompilerArgs.setFlag(1, Value);
+  }
+  bool getWarnBackrefs() const { return dtltoCompilerArgs.getFlag(2); }
+  void setWarnBackrefs(bool Value) { dtltoCompilerArgs.setFlag(2, Value); }
+  llvm::SmallVectorWithFlags<llvm::GlobPattern, 0, 4> warnBackrefsExclude;
   bool warnCommon;
   bool warnMissingEntry;
   bool warnSymbolOrdering;
@@ -431,33 +528,78 @@ struct Config {
   bool zCombreloc;
   bool zCopyreloc;
   bool zDynamicUndefined;
-  bool zForceBti;
-  bool zForceIbt;
-  bool zGlobal;
-  bool zHazardplt;
-  bool zIfuncNoplt;
-  bool zInitfirst;
-  bool zInterpose;
-  bool zKeepDataSectionPrefix;
-  bool zKeepTextSectionPrefix;
-  bool zLrodataAfterBss;
-  bool zMarkPlt;
-  bool zNoBtCfi;
-  bool zNodefaultlib;
-  bool zNodelete;
-  bool zNodlopen;
-  bool zNow;
-  bool zOrigin;
-  bool zPacPlt;
-  bool zRelro;
-  bool zRodynamic;
-  bool zSectionHeader;
-  bool zShstk;
-  bool zStartStopGC;
+  bool getZForceBti() const { return dtltoCompilerArgs.getFlag(3); }
+  void setZForceBti(bool Value) { dtltoCompilerArgs.setFlag(3, Value); }
+  bool getZForceIbt() const { return dtltoCompilerPrependArgs.getFlag(0); }
+  void setZForceIbt(bool Value) { dtltoCompilerPrependArgs.setFlag(0, Value); }
+  bool getZGlobal() const { return dtltoCompilerPrependArgs.getFlag(1); }
+  void setZGlobal(bool Value) { dtltoCompilerPrependArgs.setFlag(1, Value); }
+  bool getZHazardplt() const { return dtltoCompilerPrependArgs.getFlag(2); }
+  void setZHazardplt(bool Value) { dtltoCompilerPrependArgs.setFlag(2, Value); }
+  bool getZIfuncNoplt() const { return dtltoCompilerPrependArgs.getFlag(3); }
+  void setZIfuncNoplt(bool Value) {
+    dtltoCompilerPrependArgs.setFlag(3, Value);
+  }
+  bool getZInitfirst() const { return dtltoDistributorArgs.getFlag(0); }
+  void setZInitfirst(bool Value) { dtltoDistributorArgs.setFlag(0, Value); }
+  bool getZInterpose() const { return dtltoDistributorArgs.getFlag(1); }
+  void setZInterpose(bool Value) { dtltoDistributorArgs.setFlag(1, Value); }
+  bool getZKeepDataSectionPrefix() const {
+    return dtltoDistributorArgs.getFlag(2);
+  }
+  void setZKeepDataSectionPrefix(bool Value) {
+    dtltoDistributorArgs.setFlag(2, Value);
+  }
+  bool getZKeepTextSectionPrefix() const {
+    return dtltoDistributorArgs.getFlag(3);
+  }
+  void setZKeepTextSectionPrefix(bool Value) {
+    dtltoDistributorArgs.setFlag(3, Value);
+  }
+  bool getZLrodataAfterBss() const {
+    return thinLTOModulesToCompile.getFlag(0);
+  }
+  void setZLrodataAfterBss(bool Value) {
+    thinLTOModulesToCompile.setFlag(0, Value);
+  }
+  bool getZMarkPlt() const { return thinLTOModulesToCompile.getFlag(1); }
+  void setZMarkPlt(bool Value) { thinLTOModulesToCompile.setFlag(1, Value); }
+  bool getZNoBtCfi() const { return thinLTOModulesToCompile.getFlag(2); }
+  void setZNoBtCfi(bool Value) { thinLTOModulesToCompile.setFlag(2, Value); }
+  bool getZNodefaultlib() const { return thinLTOModulesToCompile.getFlag(3); }
+  void setZNodefaultlib(bool Value) {
+    thinLTOModulesToCompile.setFlag(3, Value);
+  }
+  bool getZNodelete() const { return searchPaths.getFlag(0); }
+  void setZNodelete(bool Value) { searchPaths.setFlag(0, Value); }
+  bool getZNodlopen() const { return searchPaths.getFlag(1); }
+  void setZNodlopen(bool Value) { searchPaths.setFlag(1, Value); }
+  bool getZNow() const { return searchPaths.getFlag(2); }
+  void setZNow(bool Value) { searchPaths.setFlag(2, Value); }
+  bool getZOrigin() const { return searchPaths.getFlag(3); }
+  void setZOrigin(bool Value) { searchPaths.setFlag(3, Value); }
+  bool getZPacPlt() const { return passPlugins.getFlag(0); }
+  void setZPacPlt(bool Value) { passPlugins.setFlag(0, Value); }
+  bool getZRelro() const { return passPlugins.getFlag(1); }
+  bool setZRelro(bool Value) {
+    passPlugins.setFlag(1, Value);
+    return Value;
+  }
+  bool getZRodynamic() const { return passPlugins.getFlag(2); }
+  void setZRodynamic(bool Value) { passPlugins.setFlag(2, Value); }
+  bool getZSectionHeader() const { return passPlugins.getFlag(3); }
+  void setZSectionHeader(bool Value) { passPlugins.setFlag(3, Value); }
+  bool getZShstk() const { return filterList.getFlag(0); }
+  void setZShstk(bool Value) { filterList.setFlag(0, Value); }
+  bool getZStartStopGC() const { return filterList.getFlag(1); }
+  void setZStartStopGC(bool Value) { filterList.setFlag(1, Value); }
   uint8_t zStartStopVisibility;
-  bool zText;
-  bool zRetpolineplt;
-  bool zWxneeded;
+  bool getZText() const { return filterList.getFlag(2); }
+  void setZText(bool Value) { filterList.setFlag(2, Value); }
+  bool getZRetpolineplt() const { return filterList.getFlag(3); }
+  void setZRetpolineplt(bool Value) { filterList.setFlag(3, Value); }
+  bool getZWxneeded() const { return auxiliaryList.getFlag(0); }
+  void setZWxneeded(bool Value) { auxiliaryList.setFlag(0, Value); }
   ZicfilpPolicy zZicfilp;
   ZicfissPolicy zZicfiss;
   DiscardPolicy discard;
@@ -470,7 +612,8 @@ struct Config {
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
   GcsPolicy zGcs;
-  bool power10Stubs;
+  bool getPower10Stubs() const { return auxiliaryList.getFlag(1); }
+  void setPower10Stubs(bool Value) { auxiliaryList.setFlag(1, Value); }
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
   SeparateSegmentKind zSeparate;
@@ -488,20 +631,23 @@ struct Config {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
-  SmallVector<uint8_t, 0> packageMetadata;
+  llvm::SmallVectorWithFlags<uint8_t, 0, 4> packageMetadata;
 
   // The following config options do not directly correspond to any
   // particular command line options.
 
   // True if we need to pass through relocations in input files to the
   // output file. Usually false because we consume relocations.
-  bool copyRelocs;
+  bool getCopyRelocs() const { return auxiliaryList.getFlag(2); }
+  void setCopyRelocs(bool Value) { auxiliaryList.setFlag(2, Value); }
 
   // True if the target is ELF64. False if ELF32.
-  bool is64;
+  bool getIs64() const { return auxiliaryList.getFlag(3); }
+  void setIs64(bool Value) { auxiliaryList.setFlag(3, Value); }
 
   // True if the target is little-endian. False if big-endian.
-  bool isLE;
+  bool getIsLE() const { return versionDefinitions.getFlag(0); }
+  void setIsLE(bool Value) { versionDefinitions.setFlag(0, Value); }
 
   // endianness::little if isLE is true. endianness::big otherwise.
   llvm::endianness endianness;
@@ -518,7 +664,8 @@ struct Config {
   // name whatever that means. A fun hypothesis is that "EL" is short for
   // little-endian written in the little-endian order, but I don't know
   // if that's true.)
-  bool isMips64EL;
+  bool getIsMips64EL() const { return versionDefinitions.getFlag(1); }
+  void setIsMips64EL(bool Value) { versionDefinitions.setFlag(1, Value); }
 
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;
@@ -537,10 +684,12 @@ struct Config {
   // Each ABI defines its relocation type. IsRela is true if target
   // uses RELA. As far as we know, all 64-bit ABIs are using RELA. A
   // few 32-bit ABIs are using RELA too.
-  bool isRela;
+  bool getIsRela() const { return versionDefinitions.getFlag(2); }
+  void setIsRela(bool Value) { versionDefinitions.setFlag(2, Value); }
 
   // True if we are creating position-independent code.
-  bool isPic;
+  bool getIsPic() const { return versionDefinitions.getFlag(3); }
+  void setIsPic(bool Value) { versionDefinitions.setFlag(3, Value); }
 
   // 4 for ELF32, 8 for ELF64.
   int wordsize;
@@ -566,7 +715,8 @@ struct Config {
   // If an input file equals a key, remap it to the value.
   llvm::DenseMap<llvm::StringRef, llvm::StringRef> remapInputs;
   // If an input file matches a wildcard pattern, remap it to the value.
-  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::StringRef>, 0>
+  llvm::SmallVectorWithFlags<std::pair<llvm::GlobPattern, llvm::StringRef>, 0,
+                             4>
       remapInputsWildcards;
 };
 
@@ -592,8 +742,12 @@ struct UndefinedDiag {
     InputSectionBase *sec;
     uint64_t offset;
   };
-  SmallVector<Loc, 0> locs;
-  bool isWarning;
+  llvm::SmallVectorWithFlags<Loc, 0> locs;
+  bool getIsWarning() const { return locs.getFlag(0); }
+  void setIsWarning(bool Value) { locs.setFlag(0, Value); }
+
+  UndefinedDiag(Undefined *sym, SmallVector<Loc, 0> locs, bool isWarning)
+      : sym(sym), locs(unsigned(isWarning), std::move(locs)) {}
 };
 
 // Linker generated sections which can be used as inputs.
@@ -738,9 +892,11 @@ struct Ctx : CommonLinkerContext {
   SmallVector<UndefinedDiag, 0> undefErrs;
   // Symbols in a non-prevailing COMDAT group which should be changed to an
   // Undefined.
-  SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
+  llvm::SmallVectorWithFlags<std::pair<Symbol *, unsigned>, 0>
+      nonPrevailingSyms;
   // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
-  SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
+  llvm::SmallVectorWithFlags<
+      std::tuple<std::string, const InputFile *, const Symbol &>, 0, 4>
       whyExtractRecords;
   // A mapping from a symbol to an InputFile referencing it backward. Used by
   // --warn-backrefs.
@@ -756,14 +912,20 @@ struct Ctx : CommonLinkerContext {
   // Dummy Undefined for relocations without a symbol.
   Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
-  bool hasDynsym = false;
+  bool getHasDynsym() const { return whyExtractRecords.getFlag(0); }
+  void setHasDynsym(bool Value) { whyExtractRecords.setFlag(0, Value); }
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
   std::atomic<bool> hasTlsIe{false};
   // True if we need to reserve two .got entries for local-dynamic TLS model.
   std::atomic<bool> needsTlsLd{false};
   // True if all native vtable symbols have corresponding type info symbols
   // during LTO.
-  bool ltoAllVtablesHaveTypeInfos = false;
+  bool getLtoAllVtablesHaveTypeInfos() const {
+    return whyExtractRecords.getFlag(1);
+  }
+  void setLtoAllVtablesHaveTypeInfos(bool Value) {
+    whyExtractRecords.setFlag(1, Value);
+  }
   // Number of Vernaux entries (needed shared object names).
   uint32_t vernauxNum = 0;
 
@@ -790,12 +952,15 @@ struct Ctx : CommonLinkerContext {
 
   // True if performing the embedded unoptimized dynamic debugging relocatable
   // link.
-  bool inDynDbgLink = false;
+  bool getInDynDbgLink() const { return whyExtractRecords.getFlag(2); }
+  void setInDynDbgLink(bool Value) { whyExtractRecords.setFlag(2, Value); }
   // True if performing dynamic debugging style relocatable link rather than a
   // regular relocatable link.
-  bool dynDbgRelocatable = false;
+  bool getDynDbgRelocatable() const { return whyExtractRecords.getFlag(3); }
+  void setDynDbgRelocatable(bool Value) { whyExtractRecords.setFlag(3, Value); }
   // True if the link contains dynamic debugging.
-  bool hasDynDbg = false;
+  bool getHasDynDbg() const { return nonPrevailingSyms.getFlag(0); }
+  void setHasDynDbg(bool Value) { nonPrevailingSyms.setFlag(0, Value); }
   // Pointer to the output of the embedded unoptimized dynamic debugging
   // relocatable link.
   std::unique_ptr<llvm::FileOutputBuffer> dynDbgOutput;

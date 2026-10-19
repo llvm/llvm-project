@@ -1222,7 +1222,7 @@ bool AArch64CallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true, Info.PAI, MRI);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Tell the call which registers are clobbered.
@@ -1475,7 +1475,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
   unsigned CalleeOpNo = 0;
 

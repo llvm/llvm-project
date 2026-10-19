@@ -28,6 +28,7 @@
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -464,7 +465,7 @@ class OutliningRegion {
   /// A list of (block, score) pairs. A block's score is non-zero iff it's a
   /// viable sub-region entry point. Blocks with higher scores are better entry
   /// points (i.e. they are more distant ancestors of the sink block).
-  SmallVector<BlockTy, 0> Blocks = {};
+  llvm::SmallVectorWithFlags<BlockTy, 0> Blocks = {};
 
   /// The suggested entry point into the region. If the region has multiple
   /// entry points, all blocks within the region may not be reachable from this
@@ -472,7 +473,8 @@ class OutliningRegion {
   BasicBlock *SuggestedEntryPoint = nullptr;
 
   /// Whether the entire function is cold.
-  bool EntireFunctionCold = false;
+  bool getEntireFunctionCold() const { return Blocks.getFlag(0); }
+  void setEntireFunctionCold(bool Value) { Blocks.setFlag(0, Value); }
 
   /// If \p BB is a viable entry point, return \p Score. Return 0 otherwise.
   static unsigned getEntryPointScore(BasicBlock &BB, unsigned Score) {
@@ -521,7 +523,7 @@ public:
       // If the predecessor is cold and has no predecessors, the entire
       // function must be cold.
       if (SinkPostDom && pred_empty(&PredBB)) {
-        ColdRegion->EntireFunctionCold = true;
+        ColdRegion->setEntireFunctionCold(true);
         return Regions;
       }
 
@@ -554,7 +556,7 @@ public:
     if (mayExtractBlock(SinkBB)) {
       addBlockToRegion(&SinkBB, SinkScore);
       if (pred_empty(&SinkBB)) {
-        ColdRegion->EntireFunctionCold = true;
+        ColdRegion->setEntireFunctionCold(true);
         return Regions;
       }
     } else {
@@ -600,7 +602,7 @@ public:
   ArrayRef<std::pair<BasicBlock *, unsigned>> blocks() const { return Blocks; }
 
   /// Whether the entire function containing this region is cold.
-  bool isEntireFunctionCold() const { return EntireFunctionCold; }
+  bool isEntireFunctionCold() const { return getEntireFunctionCold(); }
 
   /// Remove a sub-region from this region and return it as a block sequence.
   BlockSequence takeSingleEntrySubRegion(DominatorTree &DT) {

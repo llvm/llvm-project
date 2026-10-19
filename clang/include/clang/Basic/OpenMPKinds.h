@@ -16,6 +16,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
@@ -318,11 +319,15 @@ struct OMPInteropPref final {
 };
 struct OMPInteropInfo final {
   OMPInteropInfo(bool IsTarget = false, bool IsTargetSync = false)
-      : IsTarget(IsTarget), IsTargetSync(IsTargetSync) {}
-  bool IsTarget;
-  bool IsTargetSync;
-  bool HasPreferAttrs = false;
-  llvm::SmallVector<OMPInteropPref, 4> Prefs;
+      : Prefs(decltype(this->Prefs)::withFlags(
+            unsigned(IsTarget) | (unsigned(IsTargetSync) << 1))) {}
+  bool isTarget() const { return Prefs.getFlag(0); }
+  void setIsTarget(bool Value) { Prefs.setFlag(0, Value); }
+  bool isTargetSync() const { return Prefs.getFlag(1); }
+  void setIsTargetSync(bool Value) { Prefs.setFlag(1, Value); }
+  bool hasPreferAttrs() const { return Prefs.getFlag(2); }
+  void setPreferAttrs(bool Value) { Prefs.setFlag(2, Value); }
+  llvm::SmallVectorWithFlags<OMPInteropPref, 4, 3> Prefs;
 };
 
 OpenMPDefaultClauseVariableCategory

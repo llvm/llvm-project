@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -82,16 +83,26 @@ class PEIImpl {
   // Save and Restore blocks of the current function. Typically there is a
   // single save block, unless Windows EH funclets are involved.
   MBBVector SaveBlocks;
-  MBBVector RestoreBlocks;
+  llvm::SmallVectorWithFlagsFor<MBBVector, 2> RestoreBlocks;
 
   // Flag to control whether to use the register scavenger to resolve
   // frame index materialization registers. Set according to
   // TRI->requiresFrameIndexScavenging() for the current function.
-  bool FrameIndexVirtualScavenging = false;
+  bool getFrameIndexVirtualScavenging() const {
+    return RestoreBlocks.getFlag(0);
+  }
+  void setFrameIndexVirtualScavenging(bool Value) {
+    RestoreBlocks.setFlag(0, Value);
+  }
 
   // Flag to control whether the scavenger should be passed even though
   // FrameIndexVirtualScavenging is used.
-  bool FrameIndexEliminationScavenging = false;
+  bool getFrameIndexEliminationScavenging() const {
+    return RestoreBlocks.getFlag(1);
+  }
+  void setFrameIndexEliminationScavenging(bool Value) {
+    RestoreBlocks.setFlag(1, Value);
+  }
 
   // Emit remarks.
   MachineOptimizationRemarkEmitter *ORE = nullptr;
@@ -215,7 +226,7 @@ bool PEIImpl::run(MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
   RS = TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr;
-  FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
+  setFrameIndexVirtualScavenging(TRI->requiresFrameIndexScavenging(MF));
 
   // Spill frame pointer and/or base pointer registers if they are clobbered.
   // It is placed before call frame instruction elimination so it will not mess
@@ -266,9 +277,9 @@ bool PEIImpl::run(MachineFunction &MF) {
   // and actual offsets.
   if (TFI->needsFrameIndexResolution(MF)) {
     // Allow the target to determine this after knowing the frame size.
-    FrameIndexEliminationScavenging =
-        (RS && !FrameIndexVirtualScavenging) ||
-        TRI->requiresFrameIndexReplacementScavenging(MF);
+    setFrameIndexEliminationScavenging(
+        (RS && !getFrameIndexVirtualScavenging()) ||
+        TRI->requiresFrameIndexReplacementScavenging(MF));
 
     if (TRI->eliminateFrameIndicesBackwards())
       replaceFrameIndicesBackward(MF);
@@ -279,7 +290,7 @@ bool PEIImpl::run(MachineFunction &MF) {
   // If register scavenging is needed, as we've enabled doing it as a
   // post-pass, scavenge the virtual registers that frame index elimination
   // inserted.
-  if (TRI->requiresRegisterScavenging(MF) && FrameIndexVirtualScavenging)
+  if (TRI->requiresRegisterScavenging(MF) && getFrameIndexVirtualScavenging())
     scavengeFrameVirtualRegs(MF, *RS);
 
   insertZeroCallUsedRegs(MF);
@@ -1490,7 +1501,7 @@ void PEIImpl::replaceFrameIndicesBackward(MachineBasicBlock *BB,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
-  RegScavenger *LocalRS = FrameIndexEliminationScavenging ? RS : nullptr;
+  RegScavenger *LocalRS = getFrameIndexEliminationScavenging() ? RS : nullptr;
   if (LocalRS)
     LocalRS->enterBasicBlockEnd(*BB);
 

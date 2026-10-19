@@ -22,6 +22,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Debug.h"
 #include <string>
 
@@ -66,9 +67,12 @@ struct JsImportedSymbol {
 // This struct represents both exports and imports to build up the information
 // required for sorting module references.
 struct JsModuleReference {
-  bool FormattingOff = false;
-  bool IsExport = false;
-  bool IsTypeOnly = false;
+  bool getFormattingOff() const { return Symbols.getFlag(0); }
+  void setFormattingOff(bool Value) { Symbols.setFlag(0, Value); }
+  bool getIsExport() const { return Symbols.getFlag(1); }
+  void setIsExport(bool Value) { Symbols.setFlag(1, Value); }
+  bool getIsTypeOnly() const { return Symbols.getFlag(2); }
+  void setIsTypeOnly(bool Value) { Symbols.setFlag(2, Value); }
   // Module references are sorted into these categories, in order.
   enum ReferenceCategory {
     SIDE_EFFECT,     // "import 'something';"
@@ -86,10 +90,11 @@ struct JsModuleReference {
   // Default import from "import DefaultName from '...';".
   StringRef DefaultImport;
   // Symbols from `import {SymbolA, SymbolB, ...} from ...;`.
-  SmallVector<JsImportedSymbol, 1> Symbols;
+  llvm::SmallVectorWithFlags<JsImportedSymbol, 1, 4> Symbols;
   // Whether some symbols were merged into this one. Controls if the module
   // reference needs re-formatting.
-  bool SymbolsMerged = false;
+  bool getSymbolsMerged() const { return Symbols.getFlag(3); }
+  void setSymbolsMerged(bool Value) { Symbols.setFlag(3, Value); }
   // The source location just after { and just before } in the import.
   // Extracted eagerly to allow modification of Symbols later on.
   SourceLocation SymbolsStart, SymbolsEnd;
@@ -99,8 +104,8 @@ struct JsModuleReference {
 };
 
 bool operator<(const JsModuleReference &LHS, const JsModuleReference &RHS) {
-  if (LHS.IsExport != RHS.IsExport)
-    return LHS.IsExport < RHS.IsExport;
+  if (LHS.getIsExport() != RHS.getIsExport())
+    return LHS.getIsExport() < RHS.getIsExport();
   if (LHS.Category != RHS.Category)
     return LHS.Category < RHS.Category;
   if (LHS.Category == JsModuleReference::ReferenceCategory::SIDE_EFFECT ||
@@ -167,8 +172,8 @@ public:
         ReferencesText += "\n";
         // Separate imports groups with two line breaks, but keep all exports
         // in a single group.
-        if (!Reference.IsExport &&
-            (Reference.IsExport != References[I + 1].IsExport ||
+        if (!Reference.getIsExport() &&
+            (Reference.getIsExport() != References[I + 1].getIsExport() ||
              Reference.Category != References[I + 1].Category)) {
           ReferencesText += "\n";
         }
@@ -261,13 +266,13 @@ private:
     const auto *Start = References.begin();
     SmallVector<JsModuleReference, 16> ReferencesSorted;
     while (Start != References.end()) {
-      while (Start != References.end() && Start->FormattingOff) {
+      while (Start != References.end() && Start->getFormattingOff()) {
         // Skip over all imports w/ disabled formatting.
         ReferencesSorted.push_back(*Start);
         ++Start;
       }
       SmallVector<JsModuleReference, 16> SortChunk;
-      while (Start != References.end() && !Start->FormattingOff) {
+      while (Start != References.end() && !Start->getFormattingOff()) {
         // Skip over all imports w/ disabled formatting.
         SortChunk.push_back(*Start);
         ++Start;
@@ -301,8 +306,8 @@ private:
       //   mismatching
       if (Reference->Category == JsModuleReference::SIDE_EFFECT ||
           PreviousReference->Category == JsModuleReference::SIDE_EFFECT ||
-          Reference->IsExport != PreviousReference->IsExport ||
-          Reference->IsTypeOnly != PreviousReference->IsTypeOnly ||
+          Reference->getIsExport() != PreviousReference->getIsExport() ||
+          Reference->getIsTypeOnly() != PreviousReference->getIsTypeOnly() ||
           !PreviousReference->Prefix.empty() || !Reference->Prefix.empty() ||
           !PreviousReference->DefaultImport.empty() ||
           !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||
@@ -312,8 +317,8 @@ private:
         continue;
       }
       // Merge symbols from identical imports.
-      PreviousReference->Symbols.append(Reference->Symbols);
-      PreviousReference->SymbolsMerged = true;
+      llvm::append_range(PreviousReference->Symbols, Reference->Symbols);
+      PreviousReference->setSymbolsMerged(true);
       // Remove the merged import.
       Reference = References.erase(Reference);
     }
@@ -321,19 +326,22 @@ private:
 
   // Appends ``Reference`` to ``Buffer``.
   void appendReference(std::string &Buffer, JsModuleReference &Reference) {
-    if (Reference.FormattingOff) {
+    if (Reference.getFormattingOff()) {
       Buffer +=
           getSourceText(Reference.Range.getBegin(), Reference.Range.getEnd());
       return;
     }
     // Sort the individual symbols within the import.
     // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
-    SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
+    SmallVector<JsImportedSymbol, 1> Symbols(Reference.Symbols.begin(),
+                                             Reference.Symbols.end());
     stable_sort(Symbols,
                 [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
                   return LHS.Symbol.compare_insensitive(RHS.Symbol) < 0;
                 });
-    if (!Reference.SymbolsMerged && Symbols == Reference.Symbols) {
+    if (!Reference.getSymbolsMerged() &&
+        llvm::ArrayRef<JsImportedSymbol>(Symbols) ==
+            llvm::ArrayRef<JsImportedSymbol>(Reference.Symbols)) {
       // Symbols didn't change, just emit the entire module reference.
       StringRef ReferenceStmt = getSourceText(Reference.Range);
       Buffer += ReferenceStmt;
@@ -401,7 +409,7 @@ private:
         continue;
       }
       JsModuleReference Reference;
-      Reference.FormattingOff = FormattingOff;
+      Reference.setFormattingOff(FormattingOff);
       Reference.Range.setBegin(Start);
       // References w/o a URL, e.g. export {A}, groups with RELATIVE.
       Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
@@ -415,8 +423,8 @@ private:
       Reference.Range.setEnd(LineEnd->Tok.getEndLoc());
       LLVM_DEBUG({
         llvm::dbgs() << "JsModuleReference: {"
-                     << "formatting_off: " << Reference.FormattingOff
-                     << ", is_export: " << Reference.IsExport
+                     << "formatting_off: " << Reference.getFormattingOff()
+                     << ", is_export: " << Reference.getIsExport()
                      << ", cat: " << Reference.Category
                      << ", url: " << Reference.URL
                      << ", prefix: " << Reference.Prefix;
@@ -441,10 +449,10 @@ private:
                             JsModuleReference &Reference) {
     if (!Current || Current->isNoneOf(Keywords.kw_import, tok::kw_export))
       return false;
-    Reference.IsExport = Current->is(tok::kw_export);
+    Reference.setIsExport(Current->is(tok::kw_export));
 
     nextToken();
-    if (Current->isStringLiteral() && !Reference.IsExport) {
+    if (Current->isStringLiteral() && !Reference.getIsExport()) {
       // "import 'side-effect';"
       Reference.Category = JsModuleReference::ReferenceCategory::SIDE_EFFECT;
       Reference.URL =
@@ -487,7 +495,7 @@ private:
     // * as prefix from '...';
     if (Current->is(Keywords.kw_type) && Current->Next &&
         Current->Next->is(tok::star)) {
-      Reference.IsTypeOnly = true;
+      Reference.setIsTypeOnly(true);
       nextToken();
     }
     if (Current->isNot(tok::star))
@@ -507,12 +515,12 @@ private:
                           JsModuleReference &Reference) {
     if (Current->is(Keywords.kw_type) && Current->Next &&
         Current->Next->isOneOf(tok::identifier, tok::l_brace)) {
-      Reference.IsTypeOnly = true;
+      Reference.setIsTypeOnly(true);
       nextToken();
     }
 
     // eat a potential "import X, " prefix.
-    if (!Reference.IsExport && Current->is(tok::identifier)) {
+    if (!Reference.getIsExport() && Current->is(tok::identifier)) {
       Reference.DefaultImport = Current->TokenText;
       nextToken();
       if (Current->is(Keywords.kw_from))

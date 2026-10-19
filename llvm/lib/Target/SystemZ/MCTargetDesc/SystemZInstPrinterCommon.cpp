@@ -184,7 +184,7 @@ void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI,
   // we're running the disassembler), just print the immediate.
   if (MO.isImm()) {
     int64_t Offset = MO.getImm();
-    if (PrintBranchImmAsAddress)
+    if (getPrintBranchImmAsAddress())
       markup(O, Markup::Target) << formatHex(Address + Offset);
     else
       markup(O, Markup::Immediate) << formatImm(Offset);

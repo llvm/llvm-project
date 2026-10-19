@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "ScalarOptions.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -81,7 +82,7 @@ class MemCmpExpansion {
   std::vector<BasicBlock *> LoadCmpBlocks;
   BasicBlock *EndBlock = nullptr;
   PHINode *PhiRes = nullptr;
-  const bool IsUsedForZeroCmp;
+  bool getIsUsedForZeroCmp() const { return LoadSequence.getFlag(0); }
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
   // The known common alignment of the two source pointers.
@@ -102,7 +103,7 @@ class MemCmpExpansion {
     uint64_t Offset;
   };
   using LoadEntryVector = SmallVector<LoadEntry, 8>;
-  LoadEntryVector LoadSequence;
+  llvm::SmallVectorWithFlagsFor<LoadEntryVector, 1> LoadSequence;
 
   void createLoadCmpBlocks();
   void createResultBlock();
@@ -137,9 +138,7 @@ class MemCmpExpansion {
                                                  unsigned MaxNumLoads) const;
 
   void optimiseLoadSequence(
-      LoadEntryVector &LoadSequence,
-      const TargetTransformInfo::MemCmpExpansionOptions &Options,
-      bool IsUsedForZeroCmp) const;
+      const TargetTransformInfo::MemCmpExpansionOptions &Options);
 
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size,
@@ -259,14 +258,12 @@ MemCmpExpansion::computeOverlappingLoadSequence(
 }
 
 void MemCmpExpansion::optimiseLoadSequence(
-    LoadEntryVector &LoadSequence,
-    const TargetTransformInfo::MemCmpExpansionOptions &Options,
-    bool IsUsedForZeroCmp) const {
+    const TargetTransformInfo::MemCmpExpansionOptions &Options) {
   // This part of code attempts to optimize the LoadSequence by merging allowed
   // subsequences into single loads of allowed sizes from
   // `MemCmpExpansionOptions::AllowedTailExpansions`. If it is for zero
   // comparison or if no allowed tail expansions are specified, we exit early.
-  if (IsUsedForZeroCmp || Options.AllowedTailExpansions.empty())
+  if (getIsUsedForZeroCmp() || Options.AllowedTailExpansions.empty())
     return;
 
   while (LoadSequence.size() >= 2) {
@@ -313,9 +310,10 @@ MemCmpExpansion::MemCmpExpansion(
     DomTreeUpdater *DTU, const TargetTransformInfo &TTI, Align CommonAlign,
     unsigned MaxBytesPerBlock)
     : CI(CI), Size(Size), NumLoadsPerBlock(Options.NumLoadsPerBlock),
-      MaxBytesPerBlock(MaxBytesPerBlock), IsUsedForZeroCmp(IsUsedForZeroCmp),
-      DL(TheDataLayout), TTI(TTI), CommonAlign(CommonAlign), DTU(DTU),
-      Builder(CI) {
+      MaxBytesPerBlock(MaxBytesPerBlock), DL(TheDataLayout), TTI(TTI),
+      CommonAlign(CommonAlign), DTU(DTU), Builder(CI),
+      LoadSequence(
+          decltype(this->LoadSequence)::withFlags(unsigned(IsUsedForZeroCmp))) {
   assert(Size > 0 && "zero blocks");
   assert(NumLoadsPerBlock > 0 && "zero loads per block");
   // Scale the max size down if the target can load more bytes than we need.
@@ -326,8 +324,8 @@ MemCmpExpansion::MemCmpExpansion(
   assert(!LoadSizes.empty() && "cannot load Size bytes");
   MaxLoadSize = LoadSizes.front();
   // Compute the decomposition.
-  LoadSequence =
-      computeGreedyLoadSequence(Size, LoadSizes, Options.MaxNumLoads);
+  LoadSequence.assign(
+      computeGreedyLoadSequence(Size, LoadSizes, Options.MaxNumLoads));
   assert(LoadSequence.size() <= Options.MaxNumLoads && "broken invariant");
   // If we allow overlapping loads and the load sequence is not already optimal,
   // use overlapping loads.
@@ -338,11 +336,12 @@ MemCmpExpansion::MemCmpExpansion(
     if (!OverlappingLoads.empty() &&
         (LoadSequence.empty() ||
          OverlappingLoads.size() < LoadSequence.size())) {
-      LoadSequence = OverlappingLoads;
+      if (LoadSequence.data() != OverlappingLoads.data())
+        LoadSequence.assign(OverlappingLoads.begin(), OverlappingLoads.end());
     }
   }
   assert(LoadSequence.size() <= Options.MaxNumLoads && "broken invariant");
-  optimiseLoadSequence(LoadSequence, Options, IsUsedForZeroCmp);
+  optimiseLoadSequence(Options);
 
   unsigned LoadIndex = 0;
   while (LoadIndex < getNumLoads()) {
@@ -356,7 +355,7 @@ MemCmpExpansion::MemCmpExpansion(
 }
 
 unsigned MemCmpExpansion::getNumLoadsInBlock(unsigned LoadIndex) const {
-  if (IsUsedForZeroCmp)
+  if (getIsUsedForZeroCmp())
     return std::min<uint64_t>(getNumLoads() - LoadIndex, NumLoadsPerBlock);
 
   unsigned NumLoads = 0;
@@ -662,7 +661,7 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex,
 
   // Add the loaded values to the phi nodes for calculating memcmp result only
   // if result is not used in a zero equality.
-  if (!IsUsedForZeroCmp) {
+  if (!getIsUsedForZeroCmp()) {
     ResBlock.PhiSrc1->addIncoming(Loads.Lhs, LoadCmpBlocks[BlockIndex]);
     ResBlock.PhiSrc2->addIncoming(Loads.Rhs, LoadCmpBlocks[BlockIndex]);
   }
@@ -696,7 +695,7 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex,
 void MemCmpExpansion::emitMemCmpResultBlock() {
   // Special case: if memcmp result is used in a zero equality, result does not
   // need to be calculated and can simply return 1.
-  if (IsUsedForZeroCmp) {
+  if (getIsUsedForZeroCmp()) {
     BasicBlock::iterator InsertPt = ResBlock.BB->getFirstInsertionPt();
     Builder.SetInsertPoint(InsertPt);
     Value *Res = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 1);
@@ -856,7 +855,8 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
     // calculate which source was larger. The calculation requires the
     // two loaded source values of each load compare block.
     // These will be saved in the phi nodes created by setupResultBlockPHINodes.
-    if (!IsUsedForZeroCmp) setupResultBlockPHINodes();
+    if (!getIsUsedForZeroCmp())
+      setupResultBlockPHINodes();
 
     // Create the number of required load compare basic blocks.
     createLoadCmpBlocks();
@@ -871,7 +871,7 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-  if (IsUsedForZeroCmp)
+  if (getIsUsedForZeroCmp())
     return getNumBlocks() == 1 ? getMemCmpEqZeroOneBlock()
                                : getMemCmpExpansionZeroCase();
 

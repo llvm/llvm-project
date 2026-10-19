@@ -20,7 +20,7 @@ namespace clang {
 namespace format {
 
 bool AffectedRangeManager::computeAffectedLines(
-    SmallVectorImpl<AnnotatedLine *> &Lines) {
+    ArrayRef<AnnotatedLine *> Lines) {
   ArrayRef<AnnotatedLine *>::iterator I = Lines.begin();
   ArrayRef<AnnotatedLine *>::iterator E = Lines.end();
   bool SomeLineAffected = false;
@@ -99,9 +99,9 @@ void AffectedRangeManager::markAllAsAffected(
   }
 }
 
-bool AffectedRangeManager::nonPPLineAffected(
-    AnnotatedLine *Line, const AnnotatedLine *PreviousLine,
-    SmallVectorImpl<AnnotatedLine *> &Lines) {
+bool AffectedRangeManager::nonPPLineAffected(AnnotatedLine *Line,
+                                             const AnnotatedLine *PreviousLine,
+                                             ArrayRef<AnnotatedLine *> Lines) {
   bool SomeLineAffected = false;
   Line->ChildrenAffected = computeAffectedLines(Line->Children);
   if (Line->ChildrenAffected)

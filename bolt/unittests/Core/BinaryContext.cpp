@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -72,6 +73,25 @@ protected:
 };
 
 } // namespace
+
+TEST_P(BinaryContextTester, FunctionMetadataFlags) {
+  BC->registerOrUpdateSection(".pseudo_probe_desc", ELF::SHT_PROGBITS, 0);
+  BC->registerOrUpdateSection(".pseudo_probe", ELF::SHT_PROGBITS, 0);
+  BinaryFunction *Function = BC->createInjectedBinaryFunction("metadata", true);
+  ASSERT_TRUE(Function->hasPseudoProbe());
+  EXPECT_FALSE(Function->hasMemoryProfile());
+  EXPECT_FALSE(Function->isFragment());
+  Function->setHasSDTMarker(true);
+  EXPECT_TRUE(Function->hasSDTMarker());
+  EXPECT_TRUE(Function->hasPseudoProbe());
+  EXPECT_FALSE(Function->hasMemoryProfile());
+  EXPECT_FALSE(Function->isFragment());
+  EXPECT_TRUE(Function->isSimple());
+  EXPECT_TRUE(Function->hasName("metadata"));
+  Function->setHasSDTMarker(false);
+  EXPECT_FALSE(Function->hasSDTMarker());
+  EXPECT_TRUE(Function->hasPseudoProbe());
+}
 
 #ifdef X86_AVAILABLE
 

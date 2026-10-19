@@ -1062,7 +1062,7 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
   // The user forces the compiler to behave as if omp requires
   // unified_shared_memory was given.
   if (CGM.getLangOpts().OpenMPForceUSM) {
-    HasRequiresUnifiedSharedMemory = true;
+    setHasRequiresUnifiedSharedMemory(true);
     OMPBuilder.Config.setHasRequiresUnifiedSharedMemory(true);
   }
 }
@@ -4049,7 +4049,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     FreeAgentFlag = 0x80,
     TransparentFlag = 0x100,
   };
-  unsigned Flags = Data.Tied ? TiedFlag : 0;
+  unsigned Flags = Data.getTied() ? TiedFlag : 0;
   bool NeedsCleanup = false;
   if (!Privates.empty()) {
     NeedsCleanup =
@@ -4874,7 +4874,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
   }
   auto &&ThenCodeGen = [this, &Data, TDBase, KmpTaskTQTyRD, &TaskArgs,
                         &DepTaskArgs](CodeGenFunction &CGF, PrePostActionTy &) {
-    if (!Data.Tied) {
+    if (!Data.getTied()) {
       auto PartIdFI = std::next(KmpTaskTQTyRD->field_begin(), KmpTaskTPartId);
       LValue PartIdLVal = CGF.EmitLValueForField(TDBase, *PartIdFI);
       CGF.EmitStoreOfScalar(CGF.Builder.getInt32(0), PartIdLVal);
@@ -4904,7 +4904,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
     DepWaitTaskArgs[4] = CGF.Builder.getInt32(0);
     DepWaitTaskArgs[5] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
     DepWaitTaskArgs[6] =
-        llvm::ConstantInt::get(CGF.Int32Ty, Data.HasNowaitClause);
+        llvm::ConstantInt::get(CGF.Int32Ty, Data.getHasNowaitClause());
   }
   auto &M = CGM.getModule();
   auto &&ElseCodeGen = [this, &M, &TaskArgs, ThreadID, NewTaskNewTaskTTy,
@@ -5026,7 +5026,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
           ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                       /*isSigned=*/false)
           : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0)};
-  if (Data.HasModifier)
+  if (Data.getHasModifier())
     TaskArgs.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 1));
 
   TaskArgs.push_back(Result.TaskDupFn
@@ -5034,7 +5034,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                                Result.TaskDupFn, CGF.VoidPtrTy)
                          : llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), Data.HasModifier
+                          CGM.getModule(), Data.getHasModifier()
                                                ? OMPRTL___kmpc_taskloop_5
                                                : OMPRTL___kmpc_taskloop),
                       TaskArgs);
@@ -5509,8 +5509,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   if (!CGF.HaveInsertPoint())
     return;
 
-  bool WithNowait = Options.WithNowait;
-  bool SimpleReduction = Options.SimpleReduction;
+  bool WithNowait = Options.getWithNowait();
+  bool SimpleReduction = Options.getSimpleReduction();
 
   // Next code should be emitted for reduction:
   //
@@ -6154,7 +6154,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     } else
       CGF.EmitNullInitialization(FlagsLVal.getAddress(), FlagsLVal.getType());
   }
-  if (Data.IsReductionWithTaskMod) {
+  if (Data.getIsReductionWithTaskMod()) {
     // Build call void *__kmpc_taskred_modifier_init(ident_t *loc, int gtid, int
     // is_ws, int num, void *data);
     llvm::Value *IdentTLoc = emitUpdateLocation(CGF, Loc);
@@ -6162,7 +6162,8 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
                                                   CGM.IntTy, /*isSigned=*/true);
     llvm::Value *Args[] = {
         IdentTLoc, GTid,
-        llvm::ConstantInt::get(CGM.IntTy, Data.IsWorksharingReduction ? 1 : 0,
+        llvm::ConstantInt::get(CGM.IntTy,
+                               Data.getIsWorksharingReduction() ? 1 : 0,
                                /*isSigned=*/true),
         llvm::ConstantInt::get(CGM.IntTy, Size, /*isSigned=*/true),
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
@@ -6264,7 +6265,7 @@ void CGOpenMPRuntime::emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
       DepWaitTaskArgs[4] = CGF.Builder.getInt32(0);
       DepWaitTaskArgs[5] = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
       DepWaitTaskArgs[6] =
-          llvm::ConstantInt::get(CGF.Int32Ty, Data.HasNowaitClause);
+          llvm::ConstantInt::get(CGF.Int32Ty, Data.getHasNowaitClause());
 
       CodeGenFunction::RunCleanupsScope LocalScope(CGF);
 
@@ -6466,7 +6467,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
     bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
   assert(!ParentName.empty() && "Invalid target entry parent name!");
-  HasEmittedTargetRegion = true;
+  setHasEmittedTargetRegion(true);
   SmallVector<std::pair<const Expr *, const Expr *>, 4> Allocators;
   for (const auto *C : D.getClausesOfKind<OMPUsesAllocatorsClause>()) {
     for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
@@ -8287,7 +8288,7 @@ private:
     // if the stride is not a constant expression (conservatively assumed
     // non-contiguous).
     bool IsNonContiguous =
-        CombinedInfo.NonContigInfo.IsNonContiguous ||
+        CombinedInfo.NonContigInfo.getIsNonContiguous() ||
         any_of(Components, [&](const auto &Component) {
           const auto *OASE =
               dyn_cast<ArraySectionExpr>(Component.getAssociatedExpression());
@@ -9458,8 +9459,8 @@ private:
           unsigned StructBasePointersIdx =
               GroupStructBaseCurInfo.BasePointers.size();
 
-          GroupCurInfo.NonContigInfo.IsNonContiguous =
-              L.Components.back().isNonContiguous();
+          GroupCurInfo.NonContigInfo.setIsNonContiguous(
+              L.Components.back().isNonContiguous());
           generateInfoForComponentList(
               L.MapType, L.MapModifiers, L.MotionModifiers, L.Components,
               GroupCurInfo, GroupStructBaseCurInfo, PartialStruct, AttachInfo,
@@ -11638,7 +11639,7 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
       ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
         *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
-       HasRequiresUnifiedSharedMemory)) {
+       getHasRequiresUnifiedSharedMemory())) {
     DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
     return true;
   }
@@ -11715,14 +11716,14 @@ void CGOpenMPRuntime::emitDeferredTargetDecls() const {
     if (*Res == OMPDeclareTargetDeclAttr::MT_Local ||
         ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
           *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
-         !HasRequiresUnifiedSharedMemory)) {
+         !getHasRequiresUnifiedSharedMemory())) {
       CGM.EmitGlobal(VD);
     } else {
       assert((*Res == OMPDeclareTargetDeclAttr::MT_Link ||
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
                 *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
                 *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
-               HasRequiresUnifiedSharedMemory)) &&
+               getHasRequiresUnifiedSharedMemory())) &&
              "Expected link clause or to clause with unified memory.");
       (void)CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
     }
@@ -11738,7 +11739,7 @@ void CGOpenMPRuntime::adjustTargetSpecificDataForLambdas(
 void CGOpenMPRuntime::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
     if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
-      HasRequiresUnifiedSharedMemory = true;
+      setHasRequiresUnifiedSharedMemory(true);
       OMPBuilder.Config.setHasRequiresUnifiedSharedMemory(true);
     } else if (const auto *AC =
                    dyn_cast<OMPAtomicDefaultMemOrderClause>(Clause)) {
@@ -11789,25 +11790,28 @@ bool CGOpenMPRuntime::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
 }
 
 bool CGOpenMPRuntime::hasRequiresUnifiedSharedMemory() const {
-  return HasRequiresUnifiedSharedMemory;
+  return getHasRequiresUnifiedSharedMemory();
 }
 
 CGOpenMPRuntime::DisableAutoDeclareTargetRAII::DisableAutoDeclareTargetRAII(
     CodeGenModule &CGM)
     : CGM(CGM) {
   if (CGM.getLangOpts().OpenMPIsTargetDevice) {
-    SavedShouldMarkAsGlobal = CGM.getOpenMPRuntime().ShouldMarkAsGlobal;
-    CGM.getOpenMPRuntime().ShouldMarkAsGlobal = false;
+    SavedShouldMarkAsGlobal = CGM.getOpenMPRuntime().getShouldMarkAsGlobal();
+    CGM.getOpenMPRuntime().setShouldMarkAsGlobal(false);
   }
 }
 
 CGOpenMPRuntime::DisableAutoDeclareTargetRAII::~DisableAutoDeclareTargetRAII() {
   if (CGM.getLangOpts().OpenMPIsTargetDevice)
-    CGM.getOpenMPRuntime().ShouldMarkAsGlobal = SavedShouldMarkAsGlobal;
+    [&] {
+      auto PackedFlagValue = SavedShouldMarkAsGlobal;
+      return CGM.getOpenMPRuntime().setShouldMarkAsGlobal(PackedFlagValue);
+    }();
 }
 
 bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
-  if (!CGM.getLangOpts().OpenMPIsTargetDevice || !ShouldMarkAsGlobal)
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice || !getShouldMarkAsGlobal())
     return true;
 
   const auto *D = cast<FunctionDecl>(GD.getDecl());
@@ -12718,7 +12722,7 @@ void CGOpenMPRuntime::emitOutlinedFunctionCall(
 void CGOpenMPRuntime::emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) {
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD))
-      HasEmittedDeclareTargetRegion = true;
+      setHasEmittedDeclareTargetRegion(true);
 }
 
 Address CGOpenMPRuntime::getParameterAddress(CodeGenFunction &CGF,
@@ -13568,7 +13572,7 @@ void CGOpenMPSIMDRuntime::emitReduction(
     CodeGenFunction &CGF, SourceLocation Loc, ArrayRef<const Expr *> Privates,
     ArrayRef<const Expr *> LHSExprs, ArrayRef<const Expr *> RHSExprs,
     ArrayRef<const Expr *> ReductionOps, ReductionOptionsTy Options) {
-  assert(Options.SimpleReduction && "Only simple reduction is expected.");
+  assert(Options.getSimpleReduction() && "Only simple reduction is expected.");
   CGOpenMPRuntime::emitReduction(CGF, Loc, Privates, LHSExprs, RHSExprs,
                                  ReductionOps, Options);
 }

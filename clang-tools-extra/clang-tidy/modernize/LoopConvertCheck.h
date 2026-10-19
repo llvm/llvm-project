@@ -41,7 +41,7 @@ private:
   void getAliasRange(SourceManager &SM, SourceRange &DeclRange);
 
   void doConversion(ASTContext *Context, const VarDecl *IndexVar,
-                    const ValueDecl *MaybeContainer, const UsageResult &Usages,
+                    const ValueDecl *MaybeContainer, ArrayRef<Usage> Usages,
                     const DeclStmt *AliasDecl, bool AliasUseRequired,
                     bool AliasFromForInit, const ForStmt *Loop,
                     RangeDescriptor Descriptor);
@@ -51,8 +51,7 @@ private:
 
   void getArrayLoopQualifiers(ASTContext *Context,
                               const ast_matchers::BoundNodes &Nodes,
-                              const Expr *ContainerExpr,
-                              const UsageResult &Usages,
+                              const Expr *ContainerExpr, ArrayRef<Usage> Usages,
                               RangeDescriptor &Descriptor);
 
   void getIteratorLoopQualifiers(ASTContext *Context,
@@ -63,7 +62,7 @@ private:
                                 const ast_matchers::BoundNodes &Nodes,
                                 const ForStmt *Loop, LoopFixerKind FixerKind,
                                 const Expr *ContainerExpr,
-                                const UsageResult &Usages,
+                                ArrayRef<Usage> Usages,
                                 RangeDescriptor &Descriptor);
 
   bool isConvertible(ASTContext *Context, const ast_matchers::BoundNodes &Nodes,

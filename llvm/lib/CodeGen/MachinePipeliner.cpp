@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -245,7 +246,7 @@ namespace {
 /// information related to the instruction.
 struct SUnitWithMemInfo {
   SUnit *SU;
-  SmallVector<const Value *, 2> UnderlyingObjs;
+  llvm::SmallVectorWithFlags<const Value *, 2> UnderlyingObjs;
 
   /// The value of a memory operand.
   const Value *MemOpValue = nullptr;
@@ -256,7 +257,8 @@ struct SUnitWithMemInfo {
   AAMDNodes AATags;
 
   /// True if all the underlying objects are identified.
-  bool IsAllIdentified = false;
+  bool getIsAllIdentified() const { return UnderlyingObjs.getFlag(0); }
+  void setIsAllIdentified(bool Value) { UnderlyingObjs.setFlag(0, Value); }
 
   SUnitWithMemInfo(SUnit *SU);
 
@@ -1138,7 +1140,7 @@ SUnitWithMemInfo::SUnitWithMemInfo(SUnit *SU) : SU(SU) {
     return;
   for (const Value *Obj : UnderlyingObjs)
     if (!isIdentifiedObject(Obj)) {
-      IsAllIdentified = false;
+      setIsAllIdentified(false);
       break;
     }
 }
@@ -1147,7 +1149,7 @@ bool SUnitWithMemInfo::isTriviallyDisjoint(
     const SUnitWithMemInfo &Other) const {
   // If all underlying objects are identified objects and there is no overlap
   // between them, then these two instructions are disjoint.
-  if (!IsAllIdentified || !Other.IsAllIdentified)
+  if (!getIsAllIdentified() || !Other.getIsAllIdentified())
     return false;
   for (const Value *Obj : UnderlyingObjs)
     if (llvm::is_contained(Other.UnderlyingObjs, Obj))
@@ -1168,7 +1170,9 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
     return false;
   MemOpValue = MM->getValue();
   MemOpOffset = MM->getOffset();
-  llvm::getUnderlyingObjects(MemOpValue, UnderlyingObjs);
+  SmallVector<const Value *, 2> Objects;
+  llvm::getUnderlyingObjects(MemOpValue, Objects);
+  UnderlyingObjs.assign(std::move(Objects));
 
   // TODO: A no alias scope may be valid only in a single iteration. In this
   // case we need to peel off it like LoopAccessAnalysis does.
@@ -3988,7 +3992,7 @@ LLVM_DUMP_METHOD void NodeSet::dump() const { print(dbgs()); }
 
 void ResourceManager::dumpMRT() const {
   LLVM_DEBUG({
-    if (UseDFA)
+    if (getUseDFA())
       return;
     std::stringstream SS;
     SS << "MRT:\n";
@@ -4011,7 +4015,8 @@ void ResourceManager::dumpMRT() const {
 ResourceManager::ResourceManager(const TargetSubtargetInfo *ST,
                                  ScheduleDAGInstrs *DAG)
     : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
-      DAG(DAG), UseDFA(ST->useDFAforSMS()),
+      DAG(DAG), NumScheduledMops(decltype(this->NumScheduledMops)::withFlags(
+                    unsigned(bool(ST->useDFAforSMS())))),
       ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
       IssueWidth(SM.IssueWidth) {
   initProcResourceVectors(SM, ProcResourceMasks);
@@ -4069,7 +4074,7 @@ bool ResourceManager::canReserveResources(SUnit &SU, int Cycle) {
     if (SwpDebugResource)
       dbgs() << "canReserveResources:\n";
   });
-  if (UseDFA)
+  if (getUseDFA())
     return DFAResources[positiveModulo(Cycle, InitiationInterval)]
         ->canReserveResources(&SU.getInstr()->getDesc());
 
@@ -4095,7 +4100,7 @@ void ResourceManager::reserveResources(SUnit &SU, int Cycle) {
     if (SwpDebugResource)
       dbgs() << "reserveResources:\n";
   });
-  if (UseDFA)
+  if (getUseDFA())
     return DFAResources[positiveModulo(Cycle, InitiationInterval)]
         ->reserveResources(&SU.getInstr()->getDesc());
 
@@ -4120,7 +4125,7 @@ void ResourceManager::reserveResources(SUnit &SU, int Cycle) {
 
 void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
                                        int Cycle) {
-  assert(!UseDFA);
+  assert(!getUseDFA());
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
     for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
@@ -4132,7 +4137,7 @@ void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
 
 void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
                                          int Cycle) {
-  assert(!UseDFA);
+  assert(!getUseDFA());
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
     for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
@@ -4143,7 +4148,7 @@ void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
 }
 
 bool ResourceManager::isOverbooked() const {
-  assert(!UseDFA);
+  assert(!getUseDFA());
   for (int Slot = 0; Slot < InitiationInterval; ++Slot) {
     for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
       const MCProcResourceDesc *Desc = SM.getProcResource(I);
@@ -4157,7 +4162,7 @@ bool ResourceManager::isOverbooked() const {
 }
 
 int ResourceManager::calculateResMIIDFA() const {
-  assert(UseDFA);
+  assert(getUseDFA());
 
   // Sort the instructions by the number of available choices for scheduling,
   // least to most. Use the number of critical resources as the tie breaker.
@@ -4220,7 +4225,7 @@ int ResourceManager::calculateResMIIDFA() const {
 }
 
 int ResourceManager::calculateResMII() const {
-  if (UseDFA)
+  if (getUseDFA())
     return calculateResMIIDFA();
 
   // Count each resource consumption and divide it by the number of units.

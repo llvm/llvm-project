@@ -337,7 +337,7 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
   bool IsNSW = any(Flags & SCEV::FlagNSW);
   // Don't use folder when expanding post-inc rewrites in LSRMode to preserve
   // the rewrites.
-  if (LSRMode && !PostIncLoops.empty() &&
+  if (getLSRMode() && !PostIncLoops.empty() &&
       all_of(PostIncLoops, [&](const Loop *L) {
         return !L->contains(Builder.GetInsertBlock());
       })) {
@@ -728,7 +728,7 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
 
   const SCEV *RHSExpr = S->getRHS();
   Value *RHS = expand(RHSExpr);
-  if (SafeUDivMode) {
+  if (getSafeUDivMode()) {
     bool GuaranteedNotPoison =
         ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
     if (!GuaranteedNotPoison)
@@ -1057,7 +1057,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
         continue;
 
       // Check whether we can reuse this PHI node.
-      if (LSRMode) {
+      if (getLSRMode()) {
         if (!isExpandedAddRecExprPHI(&PN, TempIncV, L))
           continue;
       } else {
@@ -1353,7 +1353,7 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   // proper type might produce non-legal types, for example expanding an i64
   // {0,+,2,+,1} addrec would need an i65 canonical IV. To avoid this just fall
   // back to non-canonical mode for nested addrecs.
-  if (!CanonicalMode || (S->getNumOperands() > 2))
+  if (!getCanonicalMode() || (S->getNumOperands() > 2))
     return expandAddRecExprLiterally(S);
 
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
@@ -1535,14 +1535,14 @@ SCEVExpander::visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S) {
 Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
-  bool PrevSafeMode = SafeUDivMode;
-  SafeUDivMode |= IsSequential;
+  bool PrevSafeMode = getSafeUDivMode();
+  setSafeUDivMode(getSafeUDivMode() | (IsSequential));
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    SafeUDivMode = (IsSequential && i != 0) || PrevSafeMode;
+    setSafeUDivMode((IsSequential && i != 0) || PrevSafeMode);
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -1558,7 +1558,7 @@ Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
     }
     LHS = Sel;
   }
-  SafeUDivMode = PrevSafeMode;
+  setSafeUDivMode(PrevSafeMode);
   return LHS;
 }
 
@@ -1611,7 +1611,7 @@ Value *SCEVExpander::FindValueInExprValueMap(
     SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
-  if (!CanonicalMode && SE.containsAddRecurrence(S))
+  if (!getCanonicalMode() && SE.containsAddRecurrence(S))
     return nullptr;
 
   // If S is a constant or unknown, it may be worse to reuse an existing Value.
@@ -2438,7 +2438,7 @@ Value *SCEVExpander::expandUnionPredicate(const SCEVUnionPredicate *Union,
 
 Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
   auto *DefI = dyn_cast<Instruction>(V);
-  if (!PreserveLCSSA || !DefI)
+  if (!getPreserveLCSSA() || !DefI)
     return V;
 
   BasicBlock::iterator InsertPt = Builder.GetInsertPoint();
@@ -2533,7 +2533,7 @@ struct SCEVFindUnsafe {
 } // namespace
 
 bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
-  SCEVFindUnsafe Search(SE, CanonicalMode);
+  SCEVFindUnsafe Search(SE, getCanonicalMode());
   visitAll(S, Search);
   return !Search.IsUnsafe;
 }

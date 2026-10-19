@@ -14,6 +14,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -325,19 +326,32 @@ struct CIRRecordLowering final {
   llvm::DenseMap<const CXXRecordDecl *, unsigned> virtualBases;
   cir::CIRDataLayout dataLayout;
 
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned zeroInitializable : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned zeroInitializableAsBase : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned packed : 1;
+  unsigned getZeroInitializable() const { return fieldKinds.getFlag(0); }
+  unsigned setZeroInitializable(unsigned Value) {
+    fieldKinds.setFlag(0, (Value & 1));
+    return (Value & 1);
+  }
+  unsigned getZeroInitializableAsBase() const { return fieldKinds.getFlag(1); }
+  unsigned setZeroInitializableAsBase(unsigned Value) {
+    fieldKinds.setFlag(1, (Value & 1));
+    return (Value & 1);
+  }
+  unsigned getPacked() const { return fieldKinds.getFlag(2); }
+  unsigned setPacked(unsigned Value) {
+    fieldKinds.setFlag(2, (Value & 1));
+    return (Value & 1);
+  }
 
 private:
   // Output fields, consumed by CIRGenTypes::computeRecordLayout.  Private so
   // that every append goes through addField and fieldKinds stays parallel to
   // fieldTypes.
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
-  llvm::SmallVector<cir::RecordMemberKind> fieldKinds;
+  llvm::SmallVectorWithFlags<cir::RecordMemberKind,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 cir::RecordMemberKind>::value,
+                             3>
+      fieldKinds;
 
   CIRRecordLowering(const CIRRecordLowering &) = delete;
   void operator=(const CIRRecordLowering &) = delete;
@@ -352,7 +366,8 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       astRecordLayout{
           cirGenTypes.getASTContext().getASTRecordLayout(recordDecl)},
       dataLayout{cirGenTypes.getCGModule().getModule()},
-      zeroInitializable{true}, zeroInitializableAsBase{true}, packed{packed} {}
+      fieldKinds(decltype(this->fieldKinds)::withFlags(
+          (unsigned((unsigned(packed) & 1)) << 2) | 3)) {}
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
                                         CharUnits startOffset,
@@ -780,21 +795,21 @@ void CIRRecordLowering::calculateZeroInit() {
     if (member.kind == MemberInfo::InfoKind::Field) {
       if (!member.fieldDecl || isZeroInitializable(member.fieldDecl))
         continue;
-      zeroInitializable = zeroInitializableAsBase = false;
+      setZeroInitializable(setZeroInitializableAsBase(false));
       return;
     } else if (member.kind == MemberInfo::InfoKind::Base ||
                member.kind == MemberInfo::InfoKind::VBase) {
       if (isZeroInitializable(member.cxxRecordDecl))
         continue;
-      zeroInitializable = false;
+      setZeroInitializable(false);
       if (member.kind == MemberInfo::InfoKind::Base)
-        zeroInitializableAsBase = false;
+        setZeroInitializableAsBase(false);
     }
   }
 }
 
 void CIRRecordLowering::determinePacked(bool nvBaseType) {
-  if (packed)
+  if (getPacked())
     return;
   CharUnits alignment = CharUnits::One();
   CharUnits nvAlignment = CharUnits::One();
@@ -810,7 +825,7 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
     if (!member.offset.isMultipleOf(getMemberAlignment(member.data)))
-      packed = true;
+      setPacked(true);
     if (member.offset < nvSize)
       nvAlignment = std::max(nvAlignment, getMemberAlignment(member.data));
     alignment = std::max(alignment, getMemberAlignment(member.data));
@@ -818,14 +833,14 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
   if (!members.back().offset.isMultipleOf(alignment))
-    packed = true;
+    setPacked(true);
   // If the non-virtual sub-object is not a multiple of the non-virtual
   // sub-object's alignment, it must be packed.  We cannot have a packed
   // non-virtual sub-object and an unpacked complete object or vise versa.
   if (!nvSize.isMultipleOf(nvAlignment))
-    packed = true;
+    setPacked(true);
   // Update the alignment of the sentinel.
-  if (!packed)
+  if (!getPacked())
     members.back().data = getUIntNType(astContext.toBits(alignment));
 }
 
@@ -850,8 +865,8 @@ void CIRRecordLowering::insertPadding() {
     CharUnits offset = member.offset;
     assert(offset >= size);
     // Insert padding if we need to.
-    if (offset != size.alignTo(packed ? CharUnits::One()
-                                      : getMemberAlignment(member.data)))
+    if (offset != size.alignTo(getPacked() ? CharUnits::One()
+                                           : getMemberAlignment(member.data)))
       padding.push_back(std::make_pair(size, offset - size));
     size = offset + getSize(member.data);
   }
@@ -913,12 +928,13 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     // union is empty, so a zero-data union does not spuriously qualify).
     if (lowering.astRecordLayout.getNonVirtualSize() !=
         lowering.astRecordLayout.getSize()) {
-      CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
+      CIRRecordLowering baseLowering(*this, rd,
+                                     /*Packed=*/lowering.getPacked());
       baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
-          baseLowering.getFieldTypes(), baseLowering.packed, baseIdentifier,
-          baseLowering.getFieldKinds());
+          baseLowering.getFieldTypes(), baseLowering.getPacked(),
+          baseIdentifier, baseLowering.getFieldKinds());
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -927,8 +943,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       // base subobject but the full size for the complete object, so the two
       // can legitimately disagree.  (Classic CodeGen derives both from the data
       // size and so needs no such exemption.)
-      assert((rd->isUnion() || lowering.packed == baseLowering.packed) &&
-             "Non-virtual and complete types must agree on packedness");
+      assert(
+          (rd->isUnion() || lowering.getPacked() == baseLowering.getPacked()) &&
+          "Non-virtual and complete types must agree on packedness");
       // Emptiness is a property of the decl, so the base subobject must answer
       // the same way the complete object does.  The two are not comparable
       // mark by mark: they see different sizes and so different tail padding.
@@ -942,8 +959,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  ty->complete(lowering.getFieldTypes(), lowering.packed, lowering.unionPadding,
-               lowering.getFieldKinds());
+  ty->complete(lowering.getFieldTypes(), lowering.getPacked(),
+               lowering.unionPadding, lowering.getFieldKinds());
 
   // The marks exist so that emptiness can be read off the type, so check that
   // answer against the AST predicate on every record CIRGen lays out.  This
@@ -972,7 +989,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
 
   auto rl = std::make_unique<CIRGenRecordLayout>(
       ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
-      (bool)lowering.zeroInitializable, (bool)lowering.zeroInitializableAsBase);
+      (bool)lowering.getZeroInitializable(),
+      (bool)lowering.getZeroInitializableAsBase());
 
   rl->nonVirtualBases.swap(lowering.nonVirtualBases);
   rl->completeObjectVirtualBases.swap(lowering.virtualBases);
@@ -1089,7 +1107,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
 
   if (firstNamedMemberItr != recordDecl->fields().end() &&
       !isZeroInitializable(*firstNamedMemberItr))
-    zeroInitializable = zeroInitializableAsBase = false;
+    setZeroInitializable(setZeroInitializableAsBase(false));
 
   // If we have no candidates for storage, we are JUST padding.
   if (getFieldTypes().empty()) {
@@ -1129,7 +1147,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));
   }
-  packed = !layoutSize.isMultipleOf(getMemberAlignment(storageType));
+  setPacked(!layoutSize.isMultipleOf(getMemberAlignment(storageType)));
 }
 
 /// The AAPCS that defines that, when possible, bit-fields should

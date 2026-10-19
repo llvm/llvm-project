@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -245,15 +246,16 @@ class ConstraintInfo;
 struct StackEntry {
   unsigned NumIn;
   unsigned NumOut;
-  bool IsSigned = false;
+  bool getIsSigned() const { return ValuesToRelease.getFlag(0); }
+  void setIsSigned(bool Value) { ValuesToRelease.setFlag(0, Value); }
   /// Variables that can be removed from the system once the stack entry gets
   /// removed.
-  SmallVector<Value *, 2> ValuesToRelease;
+  llvm::SmallVectorWithFlags<Value *, 2> ValuesToRelease;
 
   StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
              SmallVector<Value *, 2> ValuesToRelease)
-      : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
-        ValuesToRelease(std::move(ValuesToRelease)) {}
+      : NumIn(NumIn), NumOut(NumOut),
+        ValuesToRelease(unsigned(IsSigned), std::move(ValuesToRelease)) {}
 };
 
 struct ConstraintTy {
@@ -2138,12 +2140,12 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
                      SmallVectorImpl<StackEntry> &DFSInStack) {
   Info.getDecomposeCache().clear();
-  Info.popLastConstraint(E.IsSigned);
+  Info.popLastConstraint(E.getIsSigned());
   // Remove variables in the system that went out of scope.
-  auto &Mapping = Info.getValue2Index(E.IsSigned);
+  auto &Mapping = Info.getValue2Index(E.getIsSigned());
   for (Value *V : E.ValuesToRelease)
     Mapping.erase(V);
-  Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
+  Info.popLastNVariables(E.getIsSigned(), E.ValuesToRelease.size());
   DFSInStack.pop_back();
   if (ReproducerModule)
     ReproducerCondStack.pop_back();
@@ -2463,8 +2465,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         break;
       LLVM_DEBUG({
         dbgs() << "Removing ";
-        dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
-                       Info.getValue2Index(E.IsSigned));
+        dumpConstraint(Info.getCS(E.getIsSigned()).getLastConstraint(),
+                       Info.getValue2Index(E.getIsSigned()));
         dbgs() << "\n";
       });
       removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
@@ -2716,7 +2718,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
 
 #ifndef NDEBUG
   unsigned SignedEntries =
-      count_if(DFSInStack, [](const StackEntry &E) { return E.IsSigned; });
+      count_if(DFSInStack, [](const StackEntry &E) { return E.getIsSigned(); });
   assert(Info.getCS(false).size() - FunctionArgs.size() ==
              DFSInStack.size() - SignedEntries &&
          "updates to CS and DFSInStack are out of sync");

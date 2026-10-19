@@ -624,7 +624,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     Call.setMIFlag(MachineInstr::MIFlag::NoMerge);
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))

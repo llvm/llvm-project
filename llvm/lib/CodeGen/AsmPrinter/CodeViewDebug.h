@@ -411,7 +411,7 @@ private:
 
   // Construct the lexical block tree for a routine, pruning emptpy lexical
   // scopes, and populate it with local variables.
-  void collectLexicalBlockInfo(SmallVectorImpl<LexicalScope *> &Scopes,
+  void collectLexicalBlockInfo(ArrayRef<LexicalScope *> Scopes,
                                SmallVectorImpl<LexicalBlock *> &Blocks,
                                SmallVectorImpl<LocalVariable> &Locals,
                                SmallVectorImpl<CVGlobalVariable> &Globals);

@@ -763,7 +763,7 @@ void ClangMoveTool::removeDeclsInOldFiles() {
   for (auto &FileAndReplacements : Context->FileToReplacements) {
     StringRef FilePath = FileAndReplacements.first;
     // Add #include of new header to old header.
-    if (Context->Spec.OldDependOnNew &&
+    if (Context->Spec.getOldDependOnNew() &&
         MakeAbsolutePath(SM, FilePath) ==
             makeAbsolutePath(Context->Spec.OldHeader)) {
       // FIXME: Minimize the include path like clang-include-fixer.
@@ -827,7 +827,7 @@ void ClangMoveTool::moveDeclsToNewFiles() {
 
   if (!Context->Spec.NewHeader.empty()) {
     std::string OldHeaderInclude =
-        Context->Spec.NewDependOnOld
+        Context->Spec.getNewDependOnOld()
             ? "#include \"" + Context->Spec.OldHeader + "\"\n"
             : "";
     Context->FileToReplacements[Context->Spec.NewHeader] =

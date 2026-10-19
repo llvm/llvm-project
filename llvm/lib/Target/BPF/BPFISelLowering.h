@@ -97,8 +97,8 @@ private:
   // Lower the result values of a call, copying them out of physregs into vregs
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool IsVarArg,
-                          const SmallVectorImpl<ISD::InputArg> &Ins,
-                          const SDLoc &DL, SelectionDAG &DAG,
+                          llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL,
+                          SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
 
   // Lower a call into CALLSEQ_START - BPFISD:CALL - CALLSEQ_END chain
@@ -107,13 +107,12 @@ private:
 
   // Lower incoming arguments, copy physregs into vregs
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool IsVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
@@ -169,8 +168,7 @@ private:
                                      MachineBasicBlock *BB) const;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      bool IsVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
 };
 }

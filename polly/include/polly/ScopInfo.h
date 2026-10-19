@@ -23,6 +23,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -263,7 +264,7 @@ public:
   Value *getBasePtr() const { return BasePtr; }
 
   // Set IsOnHeap to the value in parameter.
-  void setIsOnHeap(bool value) { IsOnHeap = value; }
+  void setIsOnHeap(bool value) { setIsOnHeapFlag(value); }
 
   /// For indirect accesses return the origin SAI of the BP, else null.
   const ScopArrayInfo *getBasePtrOriginSAI() const { return BasePtrOriginSAI; }
@@ -343,7 +344,7 @@ public:
   ///
   /// This property is only relevant if the array is allocated by Polly instead
   /// of pre-existing. If false, it is allocated using alloca instead malloca.
-  bool isOnHeap() const { return IsOnHeap; }
+  bool isOnHeap() const { return getIsOnHeapFlag(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump a readable representation to stderr.
@@ -404,13 +405,14 @@ private:
   isl::id Id;
 
   /// True if the newly allocated array is on heap.
-  bool IsOnHeap = false;
+  bool getIsOnHeapFlag() const { return DimensionSizesPw.getFlag(0); }
+  void setIsOnHeapFlag(bool Value) { DimensionSizesPw.setFlag(0, Value); }
 
   /// The sizes of each dimension as SCEV*.
   SmallVector<const SCEV *, 4> DimensionSizes;
 
   /// The sizes of each dimension as isl::pw_aff.
-  SmallVector<isl::pw_aff, 4> DimensionSizesPw;
+  llvm::SmallVectorWithFlags<isl::pw_aff, 4> DimensionSizesPw;
 
   /// The type of this scop array info object.
   ///
@@ -566,7 +568,7 @@ private:
   Instruction *AccessInstruction = nullptr;
 
   /// Incoming block and value of a PHINode.
-  SmallVector<std::pair<BasicBlock *, Value *>, 4> Incoming;
+  llvm::SmallVectorWithFlags<std::pair<BasicBlock *, Value *>, 4> Incoming;
 
   /// The value associated with this memory access.
   ///
@@ -581,7 +583,8 @@ private:
   AssertingVH<Value> AccessValue;
 
   /// Are all the subscripts affine expression?
-  bool IsAffine = true;
+  bool getIsAffine() const { return !Incoming.getFlag(0); }
+  void setIsAffine(bool Value) { Incoming.setFlag(0, !Value); }
 
   /// Subscript expression for each dimension.
   SubscriptsTy Subscripts;
@@ -1079,7 +1082,7 @@ public:
 #endif
 
   /// Is the memory access affine?
-  bool isAffine() const { return IsAffine; }
+  bool isAffine() const { return getIsAffine(); }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, MemoryAccess::ReductionType RT);
@@ -1669,13 +1672,18 @@ private:
   AccFuncVector AccessFunctions;
 
   /// Flag to indicate that the scheduler actually optimized the SCoP.
-  bool IsOptimized = false;
+  bool getIsOptimized() const { return InvariantEquivClasses.getFlag(0); }
+  void setIsOptimized(bool Value) { InvariantEquivClasses.setFlag(0, Value); }
 
   /// True if the underlying region has a single exiting block.
-  bool HasSingleExitEdge;
+  bool getHasSingleExitEdge() const { return InvariantEquivClasses.getFlag(1); }
+  void setHasSingleExitEdge(bool Value) {
+    InvariantEquivClasses.setFlag(1, Value);
+  }
 
   /// Flag to remember if the SCoP contained an error block or not.
-  bool HasErrorBlock = false;
+  bool getHasErrorBlock() const { return InvariantEquivClasses.getFlag(2); }
+  void setHasErrorBlock(bool Value) { InvariantEquivClasses.setFlag(2, Value); }
 
   /// Max loop depth.
   unsigned MaxLoopDepth = 0;
@@ -1811,11 +1819,17 @@ private:
   isl::schedule Schedule;
 
   /// Is this Scop marked as not to be transformed by an optimization heuristic?
-  bool HasDisableHeuristicsHint = false;
+  bool getHasDisableHeuristicsHint() const {
+    return InvariantEquivClasses.getFlag(3);
+  }
+  void setHasDisableHeuristicsHint(bool Value) {
+    InvariantEquivClasses.setFlag(3, Value);
+  }
 
   /// Whether the schedule has been modified after derived from the CFG by
   /// ScopBuilder.
-  bool ScheduleModified = false;
+  bool getScheduleModified() const { return MinMaxAliasGroups.getFlag(0); }
+  void setScheduleModified(bool Value) { MinMaxAliasGroups.setFlag(0, Value); }
 
   /// The set of minimal/maximal accesses for each alias group.
   ///
@@ -1830,14 +1844,15 @@ private:
   ///
   /// During code generation we will create a runtime alias check for each alias
   /// group to ensure the SCoP is executed in an alias free environment.
-  MinMaxVectorPairVectorTy MinMaxAliasGroups;
+  llvm::SmallVectorWithFlagsFor<MinMaxVectorPairVectorTy, 1> MinMaxAliasGroups;
 
   /// Mapping from invariant loads to the representing invariant load of
   ///        their equivalence class.
   ValueToValueMap InvEquivClassVMap;
 
   /// List of invariant accesses.
-  InvariantEquivClassesTy InvariantEquivClasses;
+  llvm::SmallVectorWithFlagsFor<InvariantEquivClassesTy, 4>
+      InvariantEquivClasses;
 
   /// The smallest array index not yet assigned.
   long ArrayIdx = 0;
@@ -2130,18 +2145,16 @@ public:
   InvariantEquivClassTy *lookupInvariantEquivClass(Value *Val);
 
   /// Return the set of invariant accesses.
-  InvariantEquivClassesTy &getInvariantAccesses() {
-    return InvariantEquivClasses;
-  }
+  auto &getInvariantAccesses() { return InvariantEquivClasses; }
 
   /// Check if the scop has any invariant access.
   bool hasInvariantAccesses() { return !InvariantEquivClasses.empty(); }
 
   /// Mark the SCoP as optimized by the scheduler.
-  void markAsOptimized() { IsOptimized = true; }
+  void markAsOptimized() { setIsOptimized(true); }
 
   /// Check if the SCoP has been optimized by the scheduler.
-  bool isOptimized() const { return IsOptimized; }
+  bool isOptimized() const { return getIsOptimized(); }
 
   /// Return the ID of the Scop
   int getID() const { return ID; }
@@ -2276,9 +2289,7 @@ public:
   bool hasTrivialInvalidContext() const { return InvalidContext.is_empty(); }
 
   /// Return all alias groups for this SCoP.
-  const MinMaxVectorPairVectorTy &getAliasGroups() const {
-    return MinMaxAliasGroups;
-  }
+  const auto &getAliasGroups() const { return MinMaxAliasGroups; }
 
   void addAliasGroup(MinMaxVectorTy &MinMaxAccessesReadWrite,
                      MinMaxVectorTy &MinMaxAccessesReadOnly) {
@@ -2451,13 +2462,13 @@ public:
   bool isProfitable(bool ScalarsAreUnprofitable) const;
 
   /// Return true if the SCoP contained at least one error block.
-  bool hasErrorBlock() const { return HasErrorBlock; }
+  bool hasErrorBlock() const { return getHasErrorBlock(); }
 
   /// Notify SCoP that it contains an error block
-  void notifyErrorBlock() { HasErrorBlock = true; }
+  void notifyErrorBlock() { setHasErrorBlock(true); }
 
   /// Return true if the underlying region has a single exiting block.
-  bool hasSingleExitEdge() const { return HasSingleExitEdge; }
+  bool hasSingleExitEdge() const { return getHasSingleExitEdge(); }
 
   /// Print the static control part.
   ///
@@ -2576,7 +2587,7 @@ public:
 
   /// Whether the schedule is the original schedule as derived from the CFG by
   /// ScopBuilder.
-  bool isOriginalSchedule() const { return !ScheduleModified; }
+  bool isOriginalSchedule() const { return !getScheduleModified(); }
 
   /// Intersects the domains of all statements in the SCoP.
   ///
@@ -2672,10 +2683,12 @@ public:
 
   /// Is this Scop marked as not to be transformed by an optimization heuristic?
   /// In this case, only user-directed transformations are allowed.
-  bool hasDisableHeuristicsHint() const { return HasDisableHeuristicsHint; }
+  bool hasDisableHeuristicsHint() const {
+    return getHasDisableHeuristicsHint();
+  }
 
   /// Mark this Scop to not apply an optimization heuristic.
-  void markDisableHeuristics() { HasDisableHeuristicsHint = true; }
+  void markDisableHeuristics() { setHasDisableHeuristicsHint(true); }
 };
 
 /// Print Scop scop to raw_ostream OS.

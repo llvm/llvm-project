@@ -291,13 +291,16 @@ IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                                                     ? llvm::Regex::NoFlags
                                                     : llvm::Regex::IgnoreCase);
   }
-  IsMainFile = FileName.ends_with(".c") || FileName.ends_with(".cc") ||
-               FileName.ends_with(".cpp") || FileName.ends_with(".c++") ||
-               FileName.ends_with(".cxx") || FileName.ends_with(".m") ||
-               FileName.ends_with(".mm");
+  setIsMainFile(FileName.ends_with(".c") || FileName.ends_with(".cc") ||
+                FileName.ends_with(".cpp") || FileName.ends_with(".c++") ||
+                FileName.ends_with(".cxx") || FileName.ends_with(".m") ||
+                FileName.ends_with(".mm"));
   if (!Style.IncludeIsMainSourceRegex.empty()) {
     llvm::Regex MainFileRegex(Style.IncludeIsMainSourceRegex);
-    IsMainFile |= MainFileRegex.match(FileName);
+    [&] {
+      auto PackedFlagValue = MainFileRegex.match(FileName);
+      return setIsMainFile(getIsMainFile() | PackedFlagValue);
+    }();
   }
 }
 
@@ -309,7 +312,8 @@ int IncludeCategoryManager::getIncludePriority(StringRef IncludeName,
       Ret = Style.IncludeCategories[i].Priority;
       break;
     }
-  if (CheckMainHeader && IsMainFile && Ret > 0 && isMainHeader(IncludeName))
+  if (CheckMainHeader && getIsMainFile() && Ret > 0 &&
+      isMainHeader(IncludeName))
     Ret = 0;
   return Ret;
 }
@@ -324,7 +328,8 @@ int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
         Ret = Style.IncludeCategories[i].Priority;
       break;
     }
-  if (CheckMainHeader && IsMainFile && Ret > 0 && isMainHeader(IncludeName))
+  if (CheckMainHeader && getIsMainFile() && Ret > 0 &&
+      isMainHeader(IncludeName))
     Ret = 0;
   return Ret;
 }

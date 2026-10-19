@@ -837,10 +837,10 @@ void ASTStmtReader::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
 static ConstraintSatisfaction
 readConstraintSatisfaction(ASTRecordReader &Record) {
   ConstraintSatisfaction Satisfaction;
-  Satisfaction.IsSatisfied = Record.readInt();
-  Satisfaction.ContainsErrors = Record.readInt();
+  Satisfaction.setIsSatisfied(Record.readInt());
+  Satisfaction.setContainsErrors(Record.readInt());
   const ASTContext &C = Record.getContext();
-  if (!Satisfaction.IsSatisfied) {
+  if (!Satisfaction.isSatisfied()) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
       auto Kind = Record.readInt();

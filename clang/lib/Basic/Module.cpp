@@ -38,21 +38,20 @@ Module::Module(ModuleConstructorTag, StringRef Name,
                SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
                bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
-      VisibilityID(VisibilityID), IsUnimportable(false),
-      HasIncompatibleModuleFile(false), IsAvailable(true),
-      IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
-      IsSystem(false), IsExternC(false), IsInferred(false),
-      InferSubmodules(false), InferExplicitSubmodules(false),
-      InferExportWildcard(false), ConfigMacrosExhaustive(false),
-      NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NamedModuleHasInit(true), NameVisibility(Hidden) {
+      VisibilityID(VisibilityID),
+      HeadersStorage(decltype(this->HeadersStorage)::withFlags(
+          unsigned((unsigned(IsFramework) & 1)) |
+          (unsigned((unsigned(IsExplicit) & 1)) << 1))),
+      Requirements(decltype(this->Requirements)::withFlags(4)),
+      NameVisibility(Hidden),
+      UnresolvedDirectUses(decltype(this->UnresolvedDirectUses)::withFlags(8)) {
   if (Parent) {
-    IsAvailable = Parent->isAvailable();
-    IsUnimportable = Parent->isUnimportable();
-    IsSystem = Parent->IsSystem;
-    IsExternC = Parent->IsExternC;
-    NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
-    ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
+    setIsAvailable(Parent->isAvailable());
+    setIsUnimportable(Parent->isUnimportable());
+    setIsSystem(Parent->getIsSystem());
+    setIsExternC(Parent->getIsExternC());
+    setNoUndeclaredIncludes(Parent->getNoUndeclaredIncludes());
+    setModuleMapIsPrivate(Parent->getModuleMapIsPrivate());
 
     Parent->addSubmodule(Name, this);
   }
@@ -128,7 +127,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
 bool Module::isUnimportable(const LangOptions &LangOpts,
                             const TargetInfo &Target, Requirement &Req,
                             Module *&ShadowingModule) const {
-  if (!IsUnimportable)
+  if (!getIsUnimportable())
     return false;
 
   for (const Module *Current = this; Current; Current = Current->Parent) {
@@ -161,7 +160,7 @@ bool Module::isForBuilding(const LangOptions &LangOpts) const {
   // When building the implementation of framework Foo, we want to make sure
   // that Foo *and* Foo_Private are textually included and no modules are built
   // for either.
-  if (!LangOpts.isCompilingModule() && getTopLevelModule()->IsFramework &&
+  if (!LangOpts.isCompilingModule() && getTopLevelModule()->getIsFramework() &&
       CurrentModule == LangOpts.ModuleName &&
       !CurrentModule.ends_with("_Private") &&
       TopLevelName.ends_with("_Private"))
@@ -174,7 +173,7 @@ bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
                          Requirement &Req,
                          UnresolvedHeaderDirective &MissingHeader,
                          Module *&ShadowingModule) const {
-  if (IsAvailable)
+  if (getIsAvailable())
     return true;
 
   if (isUnimportable(LangOpts, Target, Req, ShadowingModule))
@@ -327,7 +326,7 @@ bool Module::directlyUses(const Module *Requested) {
   if (!Requested->Parent && Requested->Name == "ptrauth")
     return true;
 
-  if (NoUndeclaredIncludes)
+  if (getNoUndeclaredIncludes())
     UndeclaredUses.insert(Requested);
 
   return false;
@@ -347,7 +346,7 @@ void Module::addRequirement(StringRef Feature, bool RequiredState,
 
 void Module::markUnavailable(bool Unimportable) {
   auto needUpdate = [Unimportable](Module *M) {
-    return M->IsAvailable || (!M->IsUnimportable && Unimportable);
+    return M->getIsAvailable() || (!M->getIsUnimportable() && Unimportable);
   };
 
   if (!needUpdate(this))
@@ -361,8 +360,9 @@ void Module::markUnavailable(bool Unimportable) {
     if (!needUpdate(Current))
       continue;
 
-    Current->IsAvailable = false;
-    Current->IsUnimportable |= Unimportable;
+    Current->setIsAvailable(false);
+    Current->setIsUnimportable(int(Current->getIsUnimportable()) |
+                               (Unimportable));
     for (Module *Submodule : Current->submodules()) {
       if (needUpdate(Submodule))
         Stack.push_back(Submodule);
@@ -402,7 +402,7 @@ Module *Module::getPrivateModuleFragment() const {
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // All non-explicit submodules are exported.
   for (Module *Mod : submodules())
-    if (!Mod->IsExplicit)
+    if (!Mod->getIsExplicit())
       Exported.push_back(Mod);
 
   // Find re-exported modules by filtering the list of imported modules.
@@ -477,18 +477,18 @@ void Module::buildVisibleModulesCache() const {
 
 void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   OS.indent(Indent);
-  if (IsFramework)
+  if (getIsFramework())
     OS << "framework ";
-  if (IsExplicit)
+  if (getIsExplicit())
     OS << "explicit ";
   OS << "module ";
   printModuleId(OS, &Name, &Name + 1);
 
-  if (IsSystem || IsExternC) {
+  if (getIsSystem() || getIsExternC()) {
     OS.indent(Indent + 2);
-    if (IsSystem)
+    if (getIsSystem())
       OS << " [system]";
-    if (IsExternC)
+    if (getIsExternC())
       OS << " [extern_c]";
   }
 
@@ -519,10 +519,10 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\"\n";
   }
 
-  if (!ConfigMacros.empty() || ConfigMacrosExhaustive) {
+  if (!ConfigMacros.empty() || getConfigMacrosExhaustive()) {
     OS.indent(Indent + 2);
     OS << "config_macros ";
-    if (ConfigMacrosExhaustive)
+    if (getConfigMacrosExhaustive())
       OS << "[exhaustive]";
     for (unsigned I = 0, N = ConfigMacros.size(); I != N; ++I) {
       if (I)
@@ -579,7 +579,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     // them (requires expensive directory iteration + stat calls) when we build
     // the module. Regular inferred submodules are OK, as we need to look at all
     // those header files anyway.
-    if (!Submodule->IsInferred || Submodule->IsFramework)
+    if (!Submodule->getIsInferred() || Submodule->getIsFramework())
       Submodule->print(OS, Indent + 2, Dump);
 
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
@@ -599,7 +599,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS.indent(Indent + 2);
     OS << "export ";
     printModuleId(OS, UnresolvedExports[I].Id);
-    if (UnresolvedExports[I].Wildcard)
+    if (UnresolvedExports[I].getWildcard())
       OS << (UnresolvedExports[I].Id.empty() ? "*" : ".*");
     OS << "\n";
   }
@@ -653,12 +653,12 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\"\n";
   }
 
-  if (InferSubmodules) {
+  if (getInferSubmodules()) {
     OS.indent(Indent + 2);
-    if (InferExplicitSubmodules)
+    if (getInferExplicitSubmodules())
       OS << "explicit ";
     OS << "module * {\n";
-    if (InferExportWildcard) {
+    if (getInferExportWildcard()) {
       OS.indent(Indent + 4);
       OS << "export *\n";
     }

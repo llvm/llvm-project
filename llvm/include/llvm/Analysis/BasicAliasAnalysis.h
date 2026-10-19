@@ -50,7 +50,7 @@ class BasicAAResult : public AAResultBase {
   DominatorTree *DT_;
 
   DominatorTree *getDT(const AAQueryInfo &AAQI) const {
-    return AAQI.UseDominatorTree ? DT_ : nullptr;
+    return AAQI.usesDominatorTree() ? DT_ : nullptr;
   }
 
 public:

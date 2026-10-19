@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -94,17 +95,20 @@ class OffloadBundleFatBin {
   uint64_t Size = 0u;
   StringRef FileName;
   uint64_t NumberOfEntries;
-  bool Decompressed;
-  SmallVector<OffloadBundleEntry> Entries;
+  bool getDecompressed() const { return Entries.getFlag(0); }
+  void setDecompressed(bool Value) { Entries.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<OffloadBundleEntry> Entries;
 
 public:
   std::unique_ptr<MemoryBuffer> DecompressedBuffer;
 
-  SmallVector<OffloadBundleEntry> getEntries() { return Entries; }
+  SmallVector<OffloadBundleEntry> getEntries() {
+    return {Entries.begin(), Entries.end()};
+  }
   uint64_t getSize() const { return Size; }
   StringRef getFileName() const { return FileName; }
   uint64_t getNumEntries() const { return NumberOfEntries; }
-  bool isDecompressed() const { return Decompressed; }
+  bool isDecompressed() const { return getDecompressed(); }
 
   LLVM_ABI static Expected<std::unique_ptr<OffloadBundleFatBin>>
   create(MemoryBufferRef, uint64_t SectionOffset, StringRef FileName,
@@ -126,8 +130,8 @@ public:
 
   OffloadBundleFatBin(MemoryBufferRef Source, StringRef File,
                       bool Decompress = false)
-      : FileName(File), NumberOfEntries(0), Decompressed(Decompress),
-        Entries(SmallVector<OffloadBundleEntry>()) {
+      : FileName(File), NumberOfEntries(0),
+        Entries(decltype(this->Entries)::withFlags(unsigned(Decompress))) {
     if (Decompress)
       DecompressedBuffer =
           MemoryBuffer::getMemBufferCopy(Source.getBuffer(), File);

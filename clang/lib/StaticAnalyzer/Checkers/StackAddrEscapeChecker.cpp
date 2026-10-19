@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace ento;
@@ -476,7 +477,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     CheckerContext &Ctx;
     ProgramStateRef State;
     const StackFrame *PoppedFrame;
-    const bool TopFrame;
+    bool getTopFrame() const { return V.getFlag(0); }
 
     /// Look for stack variables referring to popped stack variables.
     /// Returns true only if it found some dangling stack variables
@@ -509,7 +510,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
       if (isa<StackArgumentsSpaceRegion>(ReferrerMemSpace) &&
           // Not a simple ptr (int*) but something deeper, e.g. int**
           isa<SymbolicRegion>(Referrer->getBaseRegion()) &&
-          ReferrerStackSpace->getStackFrame() == PoppedFrame && TopFrame) {
+          ReferrerStackSpace->getStackFrame() == PoppedFrame && getTopFrame()) {
         // Output parameter of a top-level function
         V.emplace_back(Referrer, Referred);
         return true;
@@ -527,7 +528,9 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     }
 
   public:
-    SmallVector<std::pair<const MemRegion *, const MemRegion *>, 10> V;
+    llvm::SmallVectorWithFlags<std::pair<const MemRegion *, const MemRegion *>,
+                               10>
+        V;
     // ExcludedRegions are skipped from reporting.
     // I.e., if a referrer in this set, skip the related bug report.
     // It is useful to avoid false positive for the variables that were
@@ -536,7 +539,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
     CallBack(CheckerContext &CC, bool TopFrame)
         : Ctx(CC), State(CC.getState()), PoppedFrame(CC.getStackFrame()),
-          TopFrame(TopFrame) {}
+          V(decltype(this->V)::withFlags(unsigned(TopFrame))) {}
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {

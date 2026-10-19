@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -58,8 +59,8 @@ namespace llvm {
     MapVector<MDNode *, SetVector<Metadata *>> AllMacrosPerParent;
 
     /// Track nodes that may be unresolved.
-    SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
-    bool AllowUnresolvedNodes;
+    // Flag bit 0 permits unresolved nodes.
+    SmallVectorWithFlags<TrackingMDNodeRef, 4> UnresolvedNodes;
 
     /// Each subprogram's preserved local and static local variables, labels,
     /// imported entities, and types.

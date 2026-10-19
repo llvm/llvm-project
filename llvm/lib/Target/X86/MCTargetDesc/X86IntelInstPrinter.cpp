@@ -381,7 +381,7 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
                                             raw_ostream &O) {
   // Do not print the exact form of the memory operand if it references a known
   // binary object.
-  if (SymbolizeOperands && MIA) {
+  if (getSymbolizeOperands() && MIA) {
     uint64_t Target;
     if (MIA->evaluateBranch(*MI, 0, 0, Target))
       return;

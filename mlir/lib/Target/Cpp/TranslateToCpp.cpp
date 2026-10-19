@@ -20,6 +20,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -252,7 +253,7 @@ struct CppEmitter {
 
   /// Returns if all variables for op results and basic block arguments need to
   /// be declared at the beginning of a function.
-  bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
+  bool shouldDeclareVariablesAtTop() { return getDeclareVariablesAtTop(); };
 
   /// Returns whether this file op should be emitted
   bool shouldEmitFile(FileOp file) {
@@ -294,7 +295,12 @@ private:
   /// Boolean to enforce that all variables for op results and block
   /// arguments are declared at the beginning of the function. This also
   /// includes results from ops located in nested regions.
-  bool declareVariablesAtTop;
+  bool getDeclareVariablesAtTop() const {
+    return emittedExpressionPrecedence.getFlag(0);
+  }
+  void setDeclareVariablesAtTop(bool Value) {
+    emittedExpressionPrecedence.setFlag(0, Value);
+  }
 
   /// Only emit file ops whos id matches this value.
   std::string fileId;
@@ -319,7 +325,7 @@ private:
   unsigned int valueCount{0};
 
   /// State of the current expression being emitted.
-  SmallVector<int> emittedExpressionPrecedence;
+  llvm::SmallVectorWithFlags<int> emittedExpressionPrecedence;
 
   void pushExpressionPrecedence(int precedence) {
     emittedExpressionPrecedence.push_back(precedence);
@@ -1568,9 +1574,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
 CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
                        StringRef fileId)
-    : os(os), declareVariablesAtTop(declareVariablesAtTop),
-      fileId(fileId.str()), defaultValueMapperScope(valueMapper),
-      defaultBlockMapperScope(blockMapper) {
+    : os(os), fileId(fileId.str()), defaultValueMapperScope(valueMapper),
+      defaultBlockMapperScope(blockMapper),
+      emittedExpressionPrecedence(
+          decltype(this->emittedExpressionPrecedence)::withFlags(
+              unsigned(declareVariablesAtTop))) {
   labelInScopeCount.push(0);
 }
 

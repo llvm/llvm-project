@@ -90,7 +90,7 @@ public:
     }
     if (static_cast<int>(Indent) + Offset >= 0)
       Indent += Offset;
-    if (Line.IsContinuation)
+    if (Line.getIsContinuation())
       Indent = Line.Level * Style.IndentWidth + Style.ContinuationIndentWidth;
   }
 
@@ -100,7 +100,7 @@ public:
   /// level to the same indent.
   /// Note that \c nextLine must have been called before this method.
   void adjustToUnmodifiedLine(const AnnotatedLine &Line) {
-    if (Line.InPPDirective || Line.IsContinuation)
+    if (Line.InPPDirective || Line.getIsContinuation())
       return;
     assert(Line.Level < IndentForLevel.size());
     if (Line.First->is(tok::comment) && IndentForLevel[Line.Level] != -1)
@@ -1216,13 +1216,14 @@ protected:
     const FormatToken *LBrace = State.NextToken->getPreviousNonComment();
     bool HasLBrace = LBrace && LBrace->is(tok::l_brace) && LBrace->is(BK_Block);
     FormatToken &Previous = *State.NextToken->Previous;
-    if (Previous.Children.empty() || (!HasLBrace && !LBrace->MacroParent)) {
+    if (Previous.Children.empty() ||
+        (!HasLBrace && !LBrace->getMacroParent())) {
       // The previous token does not open a block. Nothing to do. We don't
       // assert so that we can simply call this function for all tokens.
       return true;
     }
 
-    if (NewLine || Previous.MacroParent) {
+    if (NewLine || Previous.getMacroParent()) {
       const ParenState &P = State.Stack.back();
 
       int AdditionalIndent =
@@ -1430,7 +1431,7 @@ private:
       // Cut off the analysis of certain solutions if the analysis gets too
       // complex. See description of IgnoreStackForComparison.
       if (Count > 50'000)
-        Node->State.IgnoreStackForComparison = true;
+        Node->State.setIgnoreStackForComparison(true);
 
       if (!Seen.insert(&Node->State).second) {
         // State already examined with lower penalty.

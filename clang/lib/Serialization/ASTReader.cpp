@@ -753,8 +753,8 @@ bool PCHValidator::ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
   // FIXME: if the diagnostics are incompatible, save a DiagnosticOptions that
   // contains the union of their flags.
   return checkDiagnosticMappings(*Diags, ExistingDiags, ModuleFilename,
-                                 TopM->IsSystem, SystemHeaderWarningsInModule,
-                                 Complain);
+                                 TopM->getIsSystem(),
+                                 SystemHeaderWarningsInModule, Complain);
 }
 
 /// Collect the macro definitions provided by the given preprocessor
@@ -1077,7 +1077,7 @@ readULEBKeyDataLength(const unsigned char *&P) {
 void ASTReader::setDeserializationListener(ASTDeserializationListener *Listener,
                                            bool TakeOwnership) {
   DeserializationListener = Listener;
-  OwnsDeserializationListener = TakeOwnership;
+  setOwnsDeserializationListener(TakeOwnership);
 }
 
 unsigned ASTSelectorLookupTrait::ComputeHash(Selector Sel) {
@@ -2378,9 +2378,9 @@ unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
 
 HeaderFileInfoTrait::internal_key_type
 HeaderFileInfoTrait::GetInternalKey(external_key_type ekey) {
-  internal_key_type ikey = {ekey.getSize(),
-                            M.HasTimestamps ? ekey.getModificationTime() : 0,
-                            ekey.getName(), /*Imported*/ false};
+  internal_key_type ikey = {
+      ekey.getSize(), M.getHasTimestamps() ? ekey.getModificationTime() : 0,
+      ekey.getName(), /*Imported*/ false};
   return ikey;
 }
 
@@ -2900,14 +2900,14 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   uint64_t StoredContentHash = FI.ContentHash;
 
   // For standard C++ modules, we don't need to check the inputs.
-  bool SkipChecks = F.StandardCXXModule;
+  bool SkipChecks = F.getStandardCXXModule();
 
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // The option ForceCheckCXX20ModulesInputFiles is only meaningful for C++20
   // modules.
-  if (F.StandardCXXModule && HSOpts.ForceCheckCXX20ModulesInputFiles) {
+  if (F.getStandardCXXModule() && HSOpts.ForceCheckCXX20ModulesInputFiles) {
     SkipChecks = false;
     Overridden = false;
   }
@@ -2954,7 +2954,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   }
 
   auto HasInputContentChanged = [&](Change OriginalChange) {
-    assert(ValidateASTInputFilesContent &&
+    assert(getValidateASTInputFilesContent() &&
            "We should only check the content of the inputs with "
            "ValidateASTInputFilesContent enabled.");
 
@@ -2988,7 +2988,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
       // In case the modification time changes but not the content,
       // accept the cached file as legit.
-      if (ValidateASTInputFilesContent)
+      if (getValidateASTInputFilesContent())
         return HasInputContentChanged(MTimeChange);
 
       return MTimeChange;
@@ -3001,15 +3001,16 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // When ForceCheckCXX20ModulesInputFiles and ValidateASTInputFilesContent
   // enabled, it is better to check the contents of the inputs. Since we can't
   // get correct modified time information for inputs from overriden inputs.
-  if (HSOpts.ForceCheckCXX20ModulesInputFiles && ValidateASTInputFilesContent &&
-      F.StandardCXXModule && FileChange.Kind == Change::None)
+  if (HSOpts.ForceCheckCXX20ModulesInputFiles &&
+      getValidateASTInputFilesContent() && F.getStandardCXXModule() &&
+      FileChange.Kind == Change::None)
     FileChange = HasInputContentChanged(FileChange);
 
   // When we have StoredTime equal to zero and ValidateASTInputFilesContent,
   // it is better to check the content of the input files because we cannot rely
   // on the file modification time, which will be the same (zero) for these
   // files.
-  if (!StoredTime && ValidateASTInputFilesContent &&
+  if (!StoredTime && getValidateASTInputFilesContent() &&
       FileChange.Kind == Change::None)
     FileChange = HasInputContentChanged(FileChange);
 
@@ -3339,15 +3340,15 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // so we verify all input files.  Otherwise, verify only user input
         // files.
 
-        unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
-        F.InputFilesValidationStatus = ValidateSystemInputs
+        unsigned N = getValidateSystemInputs() ? NumInputs : NumUserInputs;
+        F.InputFilesValidationStatus = getValidateSystemInputs()
                                            ? InputFilesValidation::AllFiles
                                            : InputFilesValidation::UserFiles;
         auto [_, WasValidated] = wasValidatedInBuildSession(F, HSOpts);
         if (WasValidated) {
-          N = ForceValidateUserInputs ? NumUserInputs : 0;
+          N = getForceValidateUserInputs() ? NumUserInputs : 0;
           F.InputFilesValidationStatus =
-              ForceValidateUserInputs
+              getForceValidateUserInputs()
                   ? InputFilesValidation::UserFiles
                   : InputFilesValidation::SkippedInBuildSession;
         }
@@ -3429,8 +3430,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             return Result;
           }
 
-          if (DisableValidation ||
-              (AllowConfigurationMismatch && Result == ConfigurationMismatch))
+          if (DisableValidation || (getAllowConfigurationMismatch() &&
+                                    Result == ConfigurationMismatch))
             Result = Success;
 
           // If we can't load the module, exit early since we likely
@@ -3484,7 +3485,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           return OutOfDate;
 
-        if (!AllowASTWithCompilerErrors) {
+        if (!getAllowASTWithCompilerErrors()) {
           Diag(diag::err_ast_file_with_compiler_errors)
               << moduleKindForDiagnostic(F.Kind) << F.FileName;
           return HadErrors;
@@ -3496,14 +3497,14 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         Diags.UnrecoverableErrorOccurred = true;
       }
 
-      F.RelocatablePCH = Record[4];
+      F.setRelocatablePCH(Record[4]);
       // Relative paths in a relocatable PCH are relative to our sysroot.
-      if (F.RelocatablePCH)
+      if (F.getRelocatablePCH())
         F.BaseDirectory = isysroot.empty() ? "/" : isysroot;
 
-      F.StandardCXXModule = Record[5];
+      F.setStandardCXXModule(Record[5]);
 
-      F.HasTimestamps = Record[6];
+      F.setHasTimestamps(Record[6]);
 
       const std::string &CurBranch = getClangFullRepositoryVersion();
       StringRef ASTBranch = Blob;
@@ -4340,7 +4341,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
 
       // For standard C++20 module, we will only reads the instantiations
       // if it is the main file.
-      if (!F.StandardCXXModule || F.Kind == MK_MainFile) {
+      if (!F.getStandardCXXModule() || F.Kind == MK_MainFile) {
         for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
           PendingInstantiations.push_back(
               {ReadDeclID(F, Record, I),
@@ -5054,12 +5055,12 @@ bool ASTReader::loadGlobalIndex() {
   if (GlobalIndex)
     return false;
 
-  if (TriedLoadingGlobalIndex || !UseGlobalIndex ||
+  if (getTriedLoadingGlobalIndex() || !getUseGlobalIndex() ||
       !PP.getLangOpts().Modules)
     return true;
 
   // Try to load the global index.
-  TriedLoadingGlobalIndex = true;
+  setTriedLoadingGlobalIndex(true);
   StringRef SpecificModuleCachePath =
       getPreprocessor().getHeaderSearchInfo().getSpecificModuleCachePath();
   std::pair<GlobalModuleIndex *, llvm::Error> Result =
@@ -5076,8 +5077,8 @@ bool ASTReader::loadGlobalIndex() {
 }
 
 bool ASTReader::isGlobalIndexUnavailable() const {
-  return PP.getLangOpts().Modules && UseGlobalIndex &&
-         !hasGlobalIndex() && TriedLoadingGlobalIndex;
+  return PP.getLangOpts().Modules && getUseGlobalIndex() && !hasGlobalIndex() &&
+         getTriedLoadingGlobalIndex();
 }
 
 /// Given a cursor at the start of an AST file, scan ahead and drop the
@@ -5185,7 +5186,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
     }
 
     // The AST block should always have a definition for the main module.
-    if (F.isModule() && !F.DidReadTopLevelSubmodule) {
+    if (F.isModule() && !F.getDidReadTopLevelSubmodule()) {
       Error(diag::err_module_file_missing_top_level_submodule, F.FileName);
       return Failure;
     }
@@ -5543,7 +5544,7 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
   // If F was directly imported by another module, it's implicitly validated by
   // the importing module.
   if (DisableValidation || WasImportedBy ||
-      (AllowConfigurationMismatch && Result == ConfigurationMismatch))
+      (getAllowConfigurationMismatch() && Result == ConfigurationMismatch))
     return Success;
 
   if (Result == Failure) {
@@ -6578,7 +6579,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
           }
         }
 
-        F.DidReadTopLevelSubmodule = true;
+        F.setDidReadTopLevelSubmodule(true);
         CurrentModule->setASTFileNameAndKey(F.FileName, F.FileKey);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
       }
@@ -6592,17 +6593,17 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       // duplicate locations for the same module map file.
       CurrentModule->DefinitionLoc = DefinitionLoc;
       CurrentModule->Signature = F.Signature;
-      CurrentModule->IsFromModuleFile = true;
+      CurrentModule->setIsFromModuleFile(true);
       if (InferredAllowedBy.isValid())
         ModMap.setInferredModuleAllowedBy(CurrentModule, InferredAllowedBy);
-      CurrentModule->IsSystem = IsSystem || CurrentModule->IsSystem;
-      CurrentModule->IsExternC = IsExternC;
-      CurrentModule->InferSubmodules = InferSubmodules;
-      CurrentModule->InferExplicitSubmodules = InferExplicitSubmodules;
-      CurrentModule->InferExportWildcard = InferExportWildcard;
-      CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
-      CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
-      CurrentModule->NamedModuleHasInit = NamedModuleHasInit;
+      CurrentModule->setIsSystem(IsSystem || CurrentModule->getIsSystem());
+      CurrentModule->setIsExternC(IsExternC);
+      CurrentModule->setInferSubmodules(InferSubmodules);
+      CurrentModule->setInferExplicitSubmodules(InferExplicitSubmodules);
+      CurrentModule->setInferExportWildcard(InferExportWildcard);
+      CurrentModule->setConfigMacrosExhaustive(ConfigMacrosExhaustive);
+      CurrentModule->setModuleMapIsPrivate(ModuleMapIsPrivate);
+      CurrentModule->setNamedModuleHasInit(NamedModuleHasInit);
 
       if (!ParentModule && !F.BaseDirectory.empty()) {
         if (auto Dir = FileMgr.getOptionalDirectoryRef(F.BaseDirectory))
@@ -6630,9 +6631,9 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       // imported module file.
       CurrentModule->Requirements.clear();
       CurrentModule->MissingHeaders.clear();
-      CurrentModule->IsUnimportable =
-          ParentModule && ParentModule->IsUnimportable;
-      CurrentModule->IsAvailable = !CurrentModule->IsUnimportable;
+      CurrentModule->setIsUnimportable(ParentModule &&
+                                       ParentModule->getIsUnimportable());
+      CurrentModule->setIsAvailable(!CurrentModule->getIsUnimportable());
       break;
     }
 
@@ -6742,7 +6743,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       if (!ContextObj)
         break;
       // Standard C++ module has its own way to initialize variables.
-      if (!F.StandardCXXModule || F.Kind == MK_MainFile) {
+      if (!F.getStandardCXXModule() || F.Kind == MK_MainFile) {
         SmallVector<GlobalDeclID, 16> Inits;
         for (unsigned I = 0; I < Record.size(); /*in loop*/)
           Inits.push_back(ReadDeclID(F, Record, I));
@@ -11479,8 +11480,13 @@ void ASTReader::FinishedDeserializing() {
     {
       // Guard variable to avoid recursively entering the process of passing
       // decls to consumer.
-      SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
-                                                 /*NewValue=*/false);
+      auto GuardPassingDeclsToConsumer = [PackedFlagOwner = this] {
+        const bool PackedFlagOld = PackedFlagOwner->getCanPassDeclsToConsumer();
+        PackedFlagOwner->setCanPassDeclsToConsumer(false);
+        return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+          PackedFlagOwner->setCanPassDeclsToConsumer(PackedFlagOld);
+        });
+      }();
 
       // Propagate exception specification and deduced type updates along
       // redeclaration chains.
@@ -11580,12 +11586,15 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                 PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidationKind(DisableValidationKind),
-      AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
-      AllowConfigurationMismatch(AllowConfigurationMismatch),
-      ValidateSystemInputs(ValidateSystemInputs),
-      ForceValidateUserInputs(ForceValidateUserInputs),
-      ValidateASTInputFilesContent(ValidateASTInputFilesContent),
-      UseGlobalIndex(UseGlobalIndex), CurrSwitchCaseStmts(&SwitchCaseStmts) {
+      CurrSwitchCaseStmts(&SwitchCaseStmts),
+      PreloadedDeclIDs(decltype(this->PreloadedDeclIDs)::withFlags(
+          unsigned(ForceValidateUserInputs) |
+          (unsigned(ValidateASTInputFilesContent) << 1) |
+          (unsigned(UseGlobalIndex) << 2))),
+      CommentsCursors(decltype(this->CommentsCursors)::withFlags(
+          (unsigned(AllowASTWithCompilerErrors) << 1) |
+          (unsigned(AllowConfigurationMismatch) << 2) |
+          (unsigned(ValidateSystemInputs) << 3))) {
   SourceMgr.setExternalSLocEntrySource(this);
 
   PathBuf.reserve(256);
@@ -11604,7 +11613,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
 }
 
 ASTReader::~ASTReader() {
-  if (OwnsDeserializationListener)
+  if (getOwnsDeserializationListener())
     delete DeserializationListener;
 }
 

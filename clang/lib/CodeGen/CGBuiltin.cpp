@@ -3382,14 +3382,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
 
     // Nested builtin_preserve_access_index() not supported
-    if (IsInPreservedAIRegion) {
+    if (getIsInPreservedAIRegion()) {
       CGM.Error(E->getExprLoc(), "nested builtin_preserve_access_index() not supported");
       return RValue::get(EmitScalarExpr(E->getArg(0)));
     }
 
-    IsInPreservedAIRegion = true;
+    setIsInPreservedAIRegion(true);
     Value *Res = EmitScalarExpr(E->getArg(0));
-    IsInPreservedAIRegion = false;
+    setIsInPreservedAIRegion(false);
     return RValue::get(Res);
   }
 

@@ -226,7 +226,6 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numLoops,
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
       numTensors(numInputOutputTensors + 1), numLoops(numLoops),
-      hasSparseOut(false),
       lvlTypes(numTensors,
                std::vector<LevelType>(numLoops, LevelFormat::Undef)),
       loopToLvl(numTensors,
@@ -959,7 +958,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
     TensorId t = syntheticTensor;
     if (kind == TensorExp::Kind::kTensor) {
       t = expr.tensor;
-      if (hasSparseOut && t == outTensor)
+      if (latSets.getFlag(0) && t == outTensor)
         t = syntheticTensor;
     }
     latSets[s].push_back(addLat(t, i, e));

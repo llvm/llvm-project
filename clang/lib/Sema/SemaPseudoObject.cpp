@@ -37,6 +37,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaObjC.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 using namespace clang;
 using namespace sema;
@@ -186,12 +187,13 @@ namespace {
     Sema &S;
     unsigned ResultIndex;
     SourceLocation GenericLoc;
-    bool IsUnique;
-    SmallVector<Expr *, 4> Semantics;
+    bool getIsUnique() const { return Semantics.getFlag(0); }
+    void setIsUnique(bool Value) { Semantics.setFlag(0, Value); }
+    llvm::SmallVectorWithFlags<Expr *, 4> Semantics;
 
     PseudoOpBuilder(Sema &S, SourceLocation genericLoc, bool IsUnique)
-      : S(S), ResultIndex(PseudoObjectExpr::NoResult),
-        GenericLoc(genericLoc), IsUnique(IsUnique) {}
+        : S(S), ResultIndex(PseudoObjectExpr::NoResult), GenericLoc(genericLoc),
+          Semantics(decltype(Semantics)::withFlags(unsigned(IsUnique))) {}
 
     virtual ~PseudoOpBuilder() {}
 
@@ -367,7 +369,7 @@ OpaqueValueExpr *PseudoOpBuilder::capture(Expr *e) {
     new (S.Context) OpaqueValueExpr(GenericLoc, e->getType(),
                                     e->getValueKind(), e->getObjectKind(),
                                     e);
-  if (IsUnique)
+  if (getIsUnique())
     captured->setIsUnique(true);
 
   // Make sure we bind that in the semantics.

@@ -105,9 +105,8 @@ public:
 
   StringRef GetGCCLibAndIncVersion() const { return GCCLibAndIncVersion.Text; }
 
-  std::string getHexagonTargetDir(
-      const std::string &InstalledDir,
-      const SmallVectorImpl<std::string> &PrefixDirs) const;
+  std::string getHexagonTargetDir(const std::string &InstalledDir,
+                                  ArrayRef<std::string> PrefixDirs) const;
   SmallString<128> getEffectiveSysRoot(const llvm::opt::ArgList &Args) const;
   void getBaseIncludeDir(const llvm::opt::ArgList &Args,
                          llvm::SmallString<128> &) const;

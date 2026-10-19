@@ -615,7 +615,7 @@ struct ReadModuleNames : ASTReaderListener {
     for (const std::string &LoadedModule : LoadedModules) {
       if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findOrLoadModule(
               LoadedModule)) {
-        M->HasIncompatibleModuleFile = true;
+        M->setHasIncompatibleModuleFile(true);
 
         // Mark module as available if the only reason it was unavailable
         // was missing headers.
@@ -623,8 +623,9 @@ struct ReadModuleNames : ASTReaderListener {
         Stack.push_back(M);
         while (!Stack.empty()) {
           Module *Current = Stack.pop_back_val();
-          if (Current->IsUnimportable) continue;
-          Current->IsAvailable = true;
+          if (Current->getIsUnimportable())
+            continue;
+          Current->setIsAvailable(true);
           auto SubmodulesRange = Current->submodules();
           llvm::append_range(Stack, SubmodulesRange);
         }
@@ -1477,7 +1478,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
 
   auto Instance = cloneForModuleCompileImpl(
       ImportLoc, ModuleName,
-      FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
+      FrontendInputFile(FakeModuleMapFile, IK, +Module->getIsSystem()),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
       Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
 
@@ -1960,7 +1961,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     return nullptr;
   }
   if (ModuleFilename.empty()) {
-    if (M && M->HasIncompatibleModuleFile) {
+    if (M && M->getHasIncompatibleModuleFile()) {
       // We tried and failed to load a module file for this module. Fall
       // back to textual inclusion for its headers.
       return ModuleLoadResult::ConfigMismatch;
@@ -2155,7 +2156,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       while (!Worklist.empty()) {
         clang::Module *M = Worklist.back();
         Worklist.pop_back();
-        M->IsFromModuleFile = true;
+        M->setIsFromModuleFile(true);
         for (clang::Module *SubM : M->submodules())
           Worklist.push_back(SubM);
       }
@@ -2272,7 +2273,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // Make the named module visible, if it's not already part of the module
   // we are parsing.
   if (ModuleName != getLangOpts().CurrentModule) {
-    if (!Module->IsFromModuleFile && !MapPrivateSubModToTopLevel) {
+    if (!Module->getIsFromModuleFile() && !MapPrivateSubModToTopLevel) {
       // We have an umbrella header or directory that doesn't actually include
       // all of the headers within the directory it covers. Complain about
       // this missing submodule and recover by forgetting that we ever saw

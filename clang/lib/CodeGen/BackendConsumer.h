@@ -13,6 +13,7 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleLinker.h"
 #include "clang/CodeGenUtils/BackendDiagnosticHandler.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "llvm/Support/Timer.h"
 
@@ -35,13 +36,14 @@ class BackendConsumer : public ASTConsumer {
   llvm::Timer LLVMIRGeneration;
   unsigned LLVMIRGenerationRefCount = 0;
 
-  bool TimerIsEnabled = false;
+  bool getTimerIsEnabled() const { return LinkModules.getFlag(0); }
+  void setTimerIsEnabled(bool Value) { LinkModules.setFlag(0, Value); }
 
   BackendAction Action;
 
   std::unique_ptr<CodeGenerator> Gen;
 
-  SmallVector<LinkModule, 4> LinkModules;
+  llvm::SmallVectorWithFlags<LinkModule, 4> LinkModules;
 
   // Translates LLVM backend diagnostics into clang diagnostics; shared with
   // CIR so that both LLVM-emitting pipelines report backend diagnostics

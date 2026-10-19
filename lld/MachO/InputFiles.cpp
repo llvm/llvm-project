@@ -192,7 +192,7 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   if (hdr->cputype != cpuType) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-    auto msg = config->errorForArchMismatch
+    auto msg = config->getErrorForArchMismatch()
                    ? static_cast<void (*)(const Twine &)>(error)
                    : warn;
 
@@ -395,7 +395,7 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
                segname == segment_names::text) {
       splitEhFrames(data, *sections.back());
     } else if (segname == segment_names::llvm) {
-      if (config->callGraphProfileSort && name == section_names::cgProfile)
+      if (config->getCallGraphProfileSort() && name == section_names::cgProfile)
         checkError(parseCallGraph(data, callGraph));
       // ld64 does not appear to emit contents from sections within the __LLVM
       // segment. Symbols within those sections point to bitcode metadata
@@ -1829,8 +1829,10 @@ void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
                      bool isBundleLoader, bool explicitlyLinked)
-    : InputFile(DylibKind, mb), refState(RefState::Unreferenced),
-      explicitlyLinked(explicitlyLinked), isBundleLoader(isBundleLoader) {
+    : InputFile(DylibKind, mb),
+      rpaths(decltype(this->rpaths)::withFlags(
+          unsigned(explicitlyLinked) | (unsigned(isBundleLoader) << 1))),
+      refState(RefState::Unreferenced) {
   assert(!isBundleLoader || !umbrella);
   if (umbrella == nullptr)
     umbrella = this;
@@ -1856,7 +1858,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     message(toString(this));
   inputFiles.insert(this);
 
-  deadStrippable = hdr->flags & MH_DEAD_STRIPPABLE_DYLIB;
+  setDeadStrippable(hdr->flags & MH_DEAD_STRIPPABLE_DYLIB);
 
   if (!checkCompatibility(this))
     return;
@@ -2001,7 +2003,7 @@ static bool isTargetPlatformArchCompatible(
   if (is_contained(interfaceTargets, target))
     return true;
 
-  if (config->forceExactCpuSubtypeMatch)
+  if (config->getForceExactCpuSubtypeMatch())
     return false;
 
   ArchitectureSet archSet;
@@ -2016,8 +2018,10 @@ static bool isTargetPlatformArchCompatible(
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader, bool explicitlyLinked)
-    : InputFile(DylibKind, interface), refState(RefState::Unreferenced),
-      explicitlyLinked(explicitlyLinked), isBundleLoader(isBundleLoader) {
+    : InputFile(DylibKind, interface),
+      rpaths(decltype(this->rpaths)::withFlags(
+          unsigned(explicitlyLinked) | (unsigned(isBundleLoader) << 1))),
+      refState(RefState::Unreferenced) {
   // FIXME: Add test for the missing TBD code path.
 
   if (umbrella == nullptr)
@@ -2110,8 +2114,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 }
 
 DylibFile::DylibFile(DylibFile *umbrella)
-    : InputFile(DylibKind, MemoryBufferRef{}), refState(RefState::Unreferenced),
-      explicitlyLinked(false), isBundleLoader(false) {
+    : InputFile(DylibKind, MemoryBufferRef{}),
+      refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
   this->umbrella = umbrella;
@@ -2129,7 +2133,7 @@ void DylibFile::parseReexports(const InterfaceFile &interface) {
 }
 
 bool DylibFile::isExplicitlyLinked() const {
-  if (!explicitlyLinked)
+  if (!getExplicitlyLinkedFlag())
     return false;
 
   // If this dylib was explicitly linked, but at least one of the symbols
@@ -2363,7 +2367,7 @@ static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
                   uint64_t offsetInArchive, bool forceHidden, bool compatArch,
                   bool lazy) {
-  if (config->zeroModTime)
+  if (config->getZeroModTime())
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {

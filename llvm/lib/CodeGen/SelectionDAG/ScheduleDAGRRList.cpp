@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -138,7 +139,8 @@ namespace {
 class ScheduleDAGRRList : public ScheduleDAGSDNodes {
 private:
   /// NeedLatency - True if the scheduler will make use of latency information.
-  bool NeedLatency;
+  bool getNeedLatency() const { return Interferences.getFlag(0); }
+  void setNeedLatency(bool Value) { Interferences.setFlag(0, Value); }
 
   /// AvailableQueue - The priority queue to use for the available SUnits.
   SchedulingPriorityQueue *AvailableQueue;
@@ -171,7 +173,7 @@ private:
 
   // Collect interferences between physical register use/defs.
   // Each interference is an SUnit and set of physical registers.
-  SmallVector<SUnit*, 4> Interferences;
+  llvm::SmallVectorWithFlags<SUnit *, 4> Interferences;
 
   using LRegsMapT = DenseMap<SUnit *, SmallVector<unsigned, 4>>;
 
@@ -189,10 +191,12 @@ public:
   ScheduleDAGRRList(MachineFunction &mf, bool needlatency,
                     SchedulingPriorityQueue *availqueue,
                     CodeGenOptLevel OptLevel)
-      : ScheduleDAGSDNodes(mf), NeedLatency(needlatency),
-        AvailableQueue(availqueue), Topo(SUnits, nullptr) {
+      : ScheduleDAGSDNodes(mf), AvailableQueue(availqueue),
+        Interferences(
+            decltype(this->Interferences)::withFlags(unsigned(needlatency))),
+        Topo(SUnits, nullptr) {
     const TargetSubtargetInfo &STI = mf.getSubtarget();
-    if (DisableSchedCycles || !NeedLatency)
+    if (DisableSchedCycles || !getNeedLatency())
       HazardRec = new ScheduleHazardRecognizer();
     else
       HazardRec = STI.getInstrInfo()->CreateTargetHazardRecognizer(&STI, this);
@@ -286,9 +290,7 @@ private:
 
   /// forceUnitLatencies - Register-pressure-reducing scheduling doesn't
   /// need actual latency information but the hybrid scheduler does.
-  bool forceUnitLatencies() const override {
-    return !NeedLatency;
-  }
+  bool forceUnitLatencies() const override { return !getNeedLatency(); }
 };
 
 }  // end anonymous namespace

@@ -27,12 +27,12 @@ using namespace clang;
 
 #define DUMP_OVERRIDERS 0
 
-VTTBuilder::VTTBuilder(ASTContext &Ctx,
-                       const CXXRecordDecl *MostDerivedClass,
+VTTBuilder::VTTBuilder(ASTContext &Ctx, const CXXRecordDecl *MostDerivedClass,
                        bool GenerateDefinition)
     : Ctx(Ctx), MostDerivedClass(MostDerivedClass),
-      MostDerivedClassLayout(Ctx.getASTRecordLayout(MostDerivedClass)),
-      GenerateDefinition(GenerateDefinition) {
+      VTTComponents(decltype(this->VTTComponents)::withFlags(
+          unsigned(GenerateDefinition))),
+      MostDerivedClassLayout(Ctx.getASTRecordLayout(MostDerivedClass)) {
   // Lay out this VTT.
   LayoutVTT(BaseSubobject(MostDerivedClass, CharUnits::Zero()),
             /*BaseIsVirtual=*/false);
@@ -47,7 +47,7 @@ void VTTBuilder::AddVTablePointer(BaseSubobject Base, uint64_t VTableIndex,
     SecondaryVirtualPointerIndices[Base] = VTTComponents.size();
   }
 
-  if (!GenerateDefinition) {
+  if (!getGenerateDefinition()) {
     VTTComponents.push_back(VTTComponent());
     return;
   }

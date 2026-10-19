@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
@@ -126,11 +127,12 @@ private:
   }
 
   bool hasTypeStream() const {
-    return (UseGlobalHashes) ? (!!DestGlobalTypeStream) : (!!DestTypeStream);
+    return (getUseGlobalHashes()) ? (!!DestGlobalTypeStream)
+                                  : (!!DestTypeStream);
   }
 
   bool hasIdStream() const {
-    return (UseGlobalHashes) ? (!!DestGlobalIdStream) : (!!DestIdStream);
+    return (getUseGlobalHashes()) ? (!!DestGlobalIdStream) : (!!DestIdStream);
   }
 
   ArrayRef<uint8_t> remapIndices(const CVType &OriginalType,
@@ -169,9 +171,11 @@ private:
 
   std::optional<Error> LastError;
 
-  bool UseGlobalHashes = false;
+  bool getUseGlobalHashes() const { return RemapStorage.getFlag(0); }
+  void setUseGlobalHashes(bool Value) { RemapStorage.setFlag(0, Value); }
 
-  bool IsSecondPass = false;
+  bool getIsSecondPass() const { return RemapStorage.getFlag(1); }
+  void setIsSecondPass(bool Value) { RemapStorage.setFlag(1, Value); }
 
   unsigned NumBadIndices = 0;
 
@@ -195,7 +199,7 @@ private:
 
   /// Temporary storage that we use to copy a record's data while re-writing
   /// its type indices.
-  SmallVector<uint8_t, 256> RemapStorage;
+  llvm::SmallVectorWithFlags<uint8_t, 256, 2> RemapStorage;
 
   std::optional<PCHMergerInfo> PCHInfo;
 };
@@ -205,7 +209,7 @@ private:
 const TypeIndex TypeStreamMerger::Untranslated(SimpleTypeKind::NotTranslated);
 
 void TypeStreamMerger::addMapping(TypeIndex Idx) {
-  if (!IsSecondPass) {
+  if (!getIsSecondPass()) {
     assert(IndexMap.size() == slotForIndex(CurIndex) &&
            "visitKnownRecord should add one index map entry");
     IndexMap.push_back(Idx);
@@ -221,7 +225,7 @@ bool TypeStreamMerger::remapIndexFallback(TypeIndex &Idx,
 
   // If this is the second pass and this index isn't in the map, then it points
   // outside the current type stream, and this is a corrupt record.
-  if (IsSecondPass && MapPos >= Map.size()) {
+  if (getIsSecondPass() && MapPos >= Map.size()) {
     // FIXME: Print a more useful error. We can give the current record and the
     // index that we think its pointing to.
     if (LastError)
@@ -242,7 +246,7 @@ bool TypeStreamMerger::remapIndexFallback(TypeIndex &Idx,
 Error TypeStreamMerger::mergeTypeRecords(MergingTypeTableBuilder &Dest,
                                          const CVTypeArray &Types) {
   DestTypeStream = &Dest;
-  UseGlobalHashes = false;
+  setUseGlobalHashes(false);
 
   return doit(Types);
 }
@@ -252,7 +256,7 @@ Error TypeStreamMerger::mergeIdRecords(MergingTypeTableBuilder &Dest,
                                        const CVTypeArray &Ids) {
   DestIdStream = &Dest;
   TypeLookup = TypeSourceToDest;
-  UseGlobalHashes = false;
+  setUseGlobalHashes(false);
 
   return doit(Ids);
 }
@@ -262,7 +266,7 @@ Error TypeStreamMerger::mergeTypesAndIds(
     const CVTypeArray &IdsAndTypes, std::optional<PCHMergerInfo> &PCHInfo) {
   DestIdStream = &DestIds;
   DestTypeStream = &DestTypes;
-  UseGlobalHashes = false;
+  setUseGlobalHashes(false);
   auto Err = doit(IdsAndTypes);
   PCHInfo = this->PCHInfo;
   return Err;
@@ -274,7 +278,7 @@ Error TypeStreamMerger::mergeTypeRecords(
     ArrayRef<GloballyHashedType> Hashes,
     std::optional<PCHMergerInfo> &PCHInfo) {
   DestGlobalTypeStream = &Dest;
-  UseGlobalHashes = true;
+  setUseGlobalHashes(true);
   GlobalHashes = Hashes;
   auto Err = doit(Types);
   PCHInfo = this->PCHInfo;
@@ -287,7 +291,7 @@ Error TypeStreamMerger::mergeIdRecords(GlobalTypeTableBuilder &Dest,
                                        ArrayRef<GloballyHashedType> Hashes) {
   DestGlobalIdStream = &Dest;
   TypeLookup = TypeSourceToDest;
-  UseGlobalHashes = true;
+  setUseGlobalHashes(true);
   GlobalHashes = Hashes;
 
   return doit(Ids);
@@ -299,7 +303,7 @@ Error TypeStreamMerger::mergeTypesAndIds(
     std::optional<PCHMergerInfo> &PCHInfo) {
   DestGlobalIdStream = &DestIds;
   DestGlobalTypeStream = &DestTypes;
-  UseGlobalHashes = true;
+  setUseGlobalHashes(true);
   GlobalHashes = Hashes;
   auto Err = doit(IdsAndTypes);
   PCHInfo = this->PCHInfo;
@@ -319,7 +323,7 @@ Error TypeStreamMerger::doit(const CVTypeArray &Types) {
   // efficient. MASM type streams are usually very small.
   while (!LastError && NumBadIndices > 0) {
     unsigned BadIndicesRemaining = NumBadIndices;
-    IsSecondPass = true;
+    setIsSecondPass(true);
     NumBadIndices = 0;
     CurIndex = TypeIndex(TypeIndex::FirstNonSimpleIndex);
 
@@ -361,7 +365,7 @@ Error TypeStreamMerger::remapType(const CVType &Type) {
     };
     unsigned AlignedSize = alignTo(Type.RecordData.size(), 4);
 
-    if (LLVM_LIKELY(UseGlobalHashes)) {
+    if (LLVM_LIKELY(getUseGlobalHashes())) {
       GlobalTypeTableBuilder &Dest =
           isIdRecord(Type.kind()) ? *DestGlobalIdStream : *DestGlobalTypeStream;
       GloballyHashedType H = GlobalHashes[CurIndex.toArrayIndex()];
@@ -379,7 +383,7 @@ Error TypeStreamMerger::remapType(const CVType &Type) {
   addMapping(DestIdx);
 
   ++CurIndex;
-  assert((IsSecondPass || IndexMap.size() == slotForIndex(CurIndex)) &&
+  assert((getIsSecondPass() || IndexMap.size() == slotForIndex(CurIndex)) &&
          "visitKnownRecord should add one index map entry");
   return Error::success();
 }

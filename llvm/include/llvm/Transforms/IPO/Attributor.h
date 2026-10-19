@@ -105,6 +105,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
@@ -1223,7 +1224,7 @@ struct InformationCache {
   }
 
   /// Return the instructions in \p F that may read or write memory.
-  InstructionVectorTy &getReadOrWriteInstsForFunction(const Function &F) {
+  auto &getReadOrWriteInstsForFunction(const Function &F) {
     return getFunctionInfo(F).RWInsts;
   }
 
@@ -1240,14 +1241,14 @@ struct InformationCache {
   /// Return true if \p F has the "kernel" function attribute
   bool isKernel(const Function &F) {
     FunctionInfo &FI = getFunctionInfo(F);
-    return FI.IsKernel;
+    return FI.getIsKernel();
   }
 
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
     FunctionInfo &FI = getFunctionInfo(*Arg.getParent());
-    return FI.CalledViaMustTail || FI.ContainsMustTailCall;
+    return FI.getCalledViaMustTail() || FI.getContainsMustTailCall();
   }
 
   bool isOnlyUsedByAssume(const Instruction &I) const {
@@ -1312,16 +1313,22 @@ private:
 
     /// A map from functions to their instructions that may read or write
     /// memory.
-    InstructionVectorTy RWInsts;
+    llvm::SmallVectorWithFlagsFor<InstructionVectorTy, 3> RWInsts;
 
     /// Function is called by a `musttail` call.
-    bool CalledViaMustTail;
+    bool getCalledViaMustTail() const { return RWInsts.getFlag(0); }
+    bool setCalledViaMustTail(bool Value) {
+      RWInsts.setFlag(0, Value);
+      return Value;
+    }
 
     /// Function contains a `musttail` call.
-    bool ContainsMustTailCall;
+    bool getContainsMustTailCall() const { return RWInsts.getFlag(1); }
+    void setContainsMustTailCall(bool Value) { RWInsts.setFlag(1, Value); }
 
     /// Function has the `"kernel"` attribute
-    bool IsKernel;
+    bool getIsKernel() const { return RWInsts.getFlag(2); }
+    void setIsKernel(bool Value) { RWInsts.setFlag(2, Value); }
   };
 
   /// A map type from functions to informatio about it.

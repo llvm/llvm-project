@@ -40,7 +40,7 @@ public:
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
-    if (ctx.arg.is64)
+    if (ctx.arg.getIs64())
       elf::scanSection1<LoongArch, ELF64LE>(*this, sec, shard);
     else
       elf::scanSection1<LoongArch, ELF32LE>(*this, sec, shard);
@@ -233,7 +233,7 @@ LoongArch::LoongArch(Ctx &ctx) : TargetInfo(ctx) {
   relativeRel = R_LARCH_RELATIVE;
   iRelativeRel = R_LARCH_IRELATIVE;
 
-  if (ctx.arg.is64) {
+  if (ctx.arg.getIs64()) {
     symbolicRel = R_LARCH_64;
     tlsModuleIndexRel = R_LARCH_TLS_DTPMOD64;
     tlsOffsetRel = R_LARCH_TLS_DTPREL64;
@@ -258,7 +258,7 @@ LoongArch::LoongArch(Ctx &ctx) : TargetInfo(ctx) {
 }
 
 static uint32_t getEFlags(Ctx &ctx, const InputFile *f) {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
 }
@@ -338,7 +338,7 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return read64le(buf);
   case R_LARCH_RELATIVE:
   case R_LARCH_IRELATIVE:
-    return ctx.arg.is64 ? read64le(buf) : read32le(buf);
+    return ctx.arg.getIs64() ? read64le(buf) : read32le(buf);
   case R_LARCH_NONE:
   case R_LARCH_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
@@ -351,7 +351,7 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     write64le(buf, ctx.in.plt->getVA());
   else
     write32le(buf, ctx.in.plt->getVA());
@@ -359,7 +359,7 @@ void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends) {
-    if (ctx.arg.is64)
+    if (ctx.arg.getIs64())
       write64le(buf, s.getVA(ctx));
     else
       write32le(buf, s.getVA(ctx));
@@ -386,17 +386,17 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   //   ld.[wd]   $t0, $t0, Wordsize               ; t0 = link_map
   //   jr        $t3
   uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
-  uint32_t sub = ctx.arg.is64 ? SUB_D : SUB_W;
-  uint32_t ld = ctx.arg.is64 ? LD_D : LD_W;
-  uint32_t addi = ctx.arg.is64 ? ADDI_D : ADDI_W;
-  uint32_t srli = ctx.arg.is64 ? SRLI_D : SRLI_W;
+  uint32_t sub = ctx.arg.getIs64() ? SUB_D : SUB_W;
+  uint32_t ld = ctx.arg.getIs64() ? LD_D : LD_W;
+  uint32_t addi = ctx.arg.getIs64() ? ADDI_D : ADDI_W;
+  uint32_t srli = ctx.arg.getIs64() ? SRLI_D : SRLI_W;
   write32le(buf + 0, insn(PCADDU12I, R_T2, hi20(offset), 0));
   write32le(buf + 4, insn(sub, R_T1, R_T1, R_T3));
   write32le(buf + 8, insn(ld, R_T3, R_T2, lo12(offset)));
   write32le(buf + 12,
             insn(addi, R_T1, R_T1, lo12(-ctx.target->pltHeaderSize - 12)));
   write32le(buf + 16, insn(addi, R_T0, R_T2, lo12(offset)));
-  write32le(buf + 20, insn(srli, R_T1, R_T1, ctx.arg.is64 ? 1 : 2));
+  write32le(buf + 20, insn(srli, R_T1, R_T1, ctx.arg.getIs64() ? 1 : 2));
   write32le(buf + 24, insn(ld, R_T0, R_T0, ctx.arg.wordsize));
   write32le(buf + 28, insn(JIRL, R_ZERO, R_T3, 0));
 }
@@ -413,7 +413,7 @@ void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
   uint32_t offset = sym.getGotPltVA(ctx) - pltEntryAddr;
   write32le(buf + 0, insn(PCADDU12I, R_T3, hi20(offset), 0));
   write32le(buf + 4,
-            insn(ctx.arg.is64 ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
+            insn(ctx.arg.getIs64() ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
   write32le(buf + 8, insn(JIRL, R_T1, R_T3, 0));
   write32le(buf + 12, insn(ANDI, R_ZERO, R_ZERO, 0));
 }
@@ -679,7 +679,7 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        addend, sym);
       continue;
     case R_LARCH_TLS_DESC_CALL:
-      if (!ctx.arg.shared)
+      if (!ctx.arg.getShared())
         sec.addReloc(
             {sym.isPreemptible ? R_GOT : R_TPREL, type, offset, addend, &sym});
       continue;
@@ -702,7 +702,7 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // Relaxation hints:
     case R_LARCH_TLS_LE_ADD_R:
     case R_LARCH_RELAX:
-      if (ctx.arg.relax)
+      if (ctx.arg.getRelax())
         sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
       continue;
     case R_LARCH_ALIGN:
@@ -1081,8 +1081,8 @@ bool LoongArch::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
 // output relocation section is updated with all the newly synthesized ALIGN
 // relocations.
 bool LoongArch::synthesizeAlign(uint64_t &dot, InputSection *sec) {
-  assert(ctx.arg.relocatable);
-  if (ctx.arg.is64)
+  assert(ctx.arg.getRelocatable());
+  if (ctx.arg.getIs64())
     return synthesizeAlignAux<ELF64LE>(dot, sec);
   return synthesizeAlignAux<ELF32LE>(dot, sec);
 }
@@ -1137,7 +1137,7 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   if (rHi20.type == R_LARCH_GOT_PC_HI20 &&
       (!rHi20.sym || rHi20.sym != rLo12.sym || !rHi20.sym->isDefined() ||
        rHi20.sym->isPreemptible || rHi20.sym->isGnuIFunc() ||
-       (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section) ||
+       (ctx.arg.getIsPic() && !cast<Defined>(*rHi20.sym).section) ||
        rHi20.addend != 0 || rLo12.addend != 0))
     return;
 
@@ -1450,7 +1450,7 @@ void LoongArch::tlsdescToIe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_LARCH_TLS_IE_PC_HI20, val);
     break;
   case R_LARCH_TLS_DESC_CALL:
-    write32le(loc, insn(ctx.arg.is64 ? LD_D : LD_W, R_A0, R_A0,
+    write32le(loc, insn(ctx.arg.getIs64() ? LD_D : LD_W, R_A0, R_A0,
                         0)); // ld.[wd] $a0, $a0, %ie_pc_lo12
     relocateNoSym(loc, R_LARCH_TLS_IE_PC_LO12, val);
     break;
@@ -1522,7 +1522,7 @@ bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
   // GOT references to absolute symbols can't be relaxed to use PCALAU12I/ADDI
   // in position-independent code because these instructions produce a relative
   // address.
-  if ((ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section))
+  if ((ctx.arg.getIsPic() && !cast<Defined>(*rHi20.sym).section))
     return false;
 
   // Check if the addends of the both relocations are zero.
@@ -1531,7 +1531,7 @@ bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
 
   const uint32_t currInsn = read32le(loc);
   const uint32_t nextInsn = read32le(loc + 4);
-  const uint32_t ldOpcode = ctx.arg.is64 ? LD_D : LD_W;
+  const uint32_t ldOpcode = ctx.arg.getIs64() ? LD_D : LD_W;
   // Check if the first instruction is PCALAU12I and the second instruction is
   // LD.
   if ((currInsn & 0xfe000000) != PCALAU12I ||
@@ -1562,7 +1562,7 @@ bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
   write32le(loc, insn(PCALAU12I, getD5(currInsn), 0, 0));
   relocate(loc, newRHi20, pageDelta);
   // addi.w/d $a0, $a0, %pc_lo12
-  write32le(loc + 4, insn(ctx.arg.is64 ? ADDI_D : ADDI_W, getD5(nextInsn),
+  write32le(loc + 4, insn(ctx.arg.getIs64() ? ADDI_D : ADDI_W, getD5(nextInsn),
                           getJ5(nextInsn), 0));
   relocate(loc + 4, newRLo12, SignExtend64(symLocal, 64));
   return true;
@@ -1601,7 +1601,7 @@ static bool pairForGotRels(ArrayRef<Relocation> relocs) {
 }
 
 void LoongArch::relocateAlloc(InputSection &sec, uint8_t *buf) const {
-  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  const unsigned bits = ctx.arg.getIs64() ? 64 : 32;
   uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   bool isExtreme = false;
   const MutableArrayRef<Relocation> relocs = sec.relocs();

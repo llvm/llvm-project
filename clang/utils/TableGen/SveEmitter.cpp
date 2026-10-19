@@ -25,6 +25,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
@@ -181,9 +182,10 @@ class Intrinsic {
 
   uint64_t Flags;
 
-  SmallVector<ImmCheck, 2> ImmChecks;
+  llvm::SmallVectorWithFlags<ImmCheck, 2> ImmChecks;
 
-  bool SetsFPMR;
+  bool getSetsFPMR() const { return ImmChecks.getFlag(0); }
+  void setSetsFPMR(bool Value) { ImmChecks.setFlag(0, Value); }
 
 public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
@@ -292,7 +294,7 @@ public:
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
-  StringRef getFPMSuffix() const { return SetsFPMR ? "_fpm" : ""; }
+  StringRef getFPMSuffix() const { return getSetsFPMR() ? "_fpm" : ""; }
   std::string mangleName(ClassKind LocalCK) const;
   std::string mangleLLVMName() const;
   std::string replaceTemplatedArgs(std::string Name, TypeSpec TS,
@@ -1041,7 +1043,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
     std::tie(Mod, NumVectors) = getProtoModifier(Proto, I);
     SVEType T(BaseTypeSpec, Mod, NumVectors);
     Types.push_back(T);
-    SetsFPMR = T.isFpm();
+    setSetsFPMR(T.isFpm());
 
     // Add range checks for immediates
     if (I > 0) {
@@ -1060,7 +1062,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   this->Flags |= Emitter.encodeMergeType(MergeTy);
   if (hasSplat())
     this->Flags |= Emitter.encodeSplatOperand(getSplatIdx());
-  if (SetsFPMR)
+  if (getSetsFPMR())
     this->Flags |= Emitter.getEnumValueForFlag("SetsFPMR");
 }
 

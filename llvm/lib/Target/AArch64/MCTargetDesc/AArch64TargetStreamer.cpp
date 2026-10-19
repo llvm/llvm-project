@@ -171,7 +171,7 @@ void AArch64TargetStreamer::emitAttributesSubsection(
 std::unique_ptr<MCELFStreamer::AttributeSubSection>
 AArch64TargetStreamer::getActiveAttributesSubsection() {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (SubSection.IsActive) {
+    if (SubSection.getIsActive()) {
       return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
     }
   }
@@ -203,7 +203,7 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
 
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (VendorName == SubSection.VendorName) {
-      if (!SubSection.IsActive) {
+      if (!SubSection.getIsActive()) {
         assert(0 &&
                "Can not add AArch64 build attribute: subsection is not active");
         return;
@@ -236,9 +236,9 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
 void AArch64TargetStreamer::activateAttributesSubsection(StringRef VendorName) {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (VendorName == SubSection.VendorName) {
-      SubSection.IsActive = true;
+      SubSection.setIsActive(true);
     } else {
-      SubSection.IsActive = false;
+      SubSection.setIsActive(false);
     }
   }
 }

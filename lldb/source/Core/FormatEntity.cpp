@@ -435,7 +435,7 @@ void FormatEntity::Entry::Dump(Stream &s, int depth) const {
     s.Printf("printf_format = \"%s\"", printf_format.c_str());
   if (number != 0)
     s.Printf("number = %" PRIu64 " (0x%" PRIx64 "), ", number, number);
-  if (deref)
+  if (getDeref())
     s.PutCString("deref = true, ");
   s.EOL();
   for (const auto &children : children_stack) {
@@ -766,7 +766,7 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
           ? ValueObject::eValueObjectRepresentationStyleValue
           : ValueObject::eValueObjectRepresentationStyleSummary;
 
-  bool do_deref_pointer = entry.deref;
+  bool do_deref_pointer = entry.getDeref();
   bool is_script = false;
   switch (entry.type) {
   case FormatEntity::Entry::Type::ScriptVariable:
@@ -1798,10 +1798,10 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionDidChange:
-    return m_function_changed;
+    return getM_function_changed();
 
   case Entry::Type::FunctionInitialFunction:
-    return m_initial_function;
+    return getM_initial_function();
 
   case Entry::Type::FunctionName: {
     if (m_sc) {
@@ -1985,7 +1985,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionChanged:
-    return m_function_changed;
+    return getM_function_changed();
 
   case Entry::Type::FunctionIsOptimized: {
     bool is_optimized = false;
@@ -2000,7 +2000,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
   }
 
   case Entry::Type::FunctionInitial:
-    return m_initial_function;
+    return getM_initial_function();
 
   case Entry::Type::LineEntryFile:
     if (m_sc && m_sc->line_entry.IsValid()) {
@@ -2466,7 +2466,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
 
         // Check for dereferences
         if (variable[0] == '*') {
-          entry.deref = true;
+          entry.setDeref(true);
           variable = variable.drop_front();
         }
 
@@ -2507,7 +2507,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
         default:
           // Make sure someone didn't try to dereference anything but ${var}
           // or ${svar}
-          if (entry.deref) {
+          if (entry.getDeref()) {
             error = Status::FromErrorStringWithFormat(
                 "${%s} can't be dereferenced, only ${var} and ${svar} can.",
                 variable.str().c_str());

@@ -89,7 +89,7 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
 // --force-group-allocation, the SHF_GROUP flag and section groups are retained.
 static uint64_t getFlags(Ctx &ctx, uint64_t flags) {
   flags &= ~(uint64_t)SHF_INFO_LINK;
-  if (ctx.arg.resolveGroups)
+  if (ctx.arg.getResolveGroups())
     flags &= ~(uint64_t)SHF_GROUP;
   return flags;
 }
@@ -437,9 +437,10 @@ InputSectionBase *InputSection::getRelocatedSection() const {
 
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf) {
-  bool linkerRelax =
-      ctx.arg.relax && is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine);
-  if (!ctx.arg.relocatable && (linkerRelax || ctx.arg.branchToBranch)) {
+  bool linkerRelax = ctx.arg.getRelax() &&
+                     is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine);
+  if (!ctx.arg.getRelocatable() &&
+      (linkerRelax || ctx.arg.getBranchToBranch())) {
     // On LoongArch and RISC-V, relaxation might change relocations: copy
     // from internal ones that are updated by relaxation.
     InputSectionBase *sec = getRelocatedSection();
@@ -454,8 +455,9 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf) {
       const ObjFile<ELFT> &file;
       Relocation operator()(const RelTy &rel) const {
         // RelExpr is not used so set to a dummy value.
-        return Relocation{R_NONE, rel.getType(ctx.arg.isMips64EL), rel.r_offset,
-                          getAddend<ELFT>(rel), &file.getRelocTargetSym(rel)};
+        return Relocation{R_NONE, rel.getType(ctx.arg.getIsMips64EL()),
+                          rel.r_offset, getAddend<ELFT>(rel),
+                          &file.getRelocTargetSym(rel)};
       }
     };
 
@@ -495,7 +497,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
     // section, but for --emit-relocs it is a virtual address.
     p->r_offset = sec->getVA(rel.offset);
     p->setSymbolAndType(ctx.in.symTab->getSymbolIndex(sym), type,
-                        ctx.arg.isMips64EL);
+                        ctx.arg.getIsMips64EL());
 
     if (sym.type == STT_SECTION) {
       // We combine multiple section symbols into only one per
@@ -556,7 +558,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
       // writeSections will update the implicit addend. Non-SHF_ALLOC sections
       // utilize relocateNonAlloc to process raw relocations and do not need
       // this sec->relocations change.
-      else if (ctx.arg.relocatable && (sec->flags & SHF_ALLOC) &&
+      else if (ctx.arg.getRelocatable() && (sec->flags & SHF_ALLOC) &&
                type != target.noneRel)
         sec->addReloc({R_ABS, type, rel.offset, addend, &sym});
     } else if (ctx.arg.emachine == EM_PPC && type == R_PPC_PLTREL24 &&
@@ -1069,7 +1071,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
   const InputFile *f = this->file;
   for (auto it = rels.begin(), end = rels.end(); it != end; ++it) {
     const RelTy &rel = *it;
-    const RelType type = rel.getType(ctx.arg.isMips64EL);
+    const RelType type = rel.getType(ctx.arg.getIsMips64EL());
     const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
@@ -1149,7 +1151,8 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // explicit addend, such as RELA, remain unchanged and we can stop here.
     // While content relocated by relocation types with an implicit addend, such
     // as REL, needs the implicit addend updated.
-    if (ctx.arg.relocatable && (RelTy::HasAddend || sym.type != STT_SECTION))
+    if (ctx.arg.getRelocatable() &&
+        (RelTy::HasAddend || sym.type != STT_SECTION))
       continue;
 
     // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
@@ -1196,7 +1199,8 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
 
 template <class ELFT>
 void InputSection::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
-  if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
+  if ((flags & SHF_EXECINSTR) &&
+      LLVM_UNLIKELY(getFile<ELFT>()->getSplitStack()))
     adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 
   if (flags & SHF_ALLOC) {
@@ -1287,7 +1291,8 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
     // conservative.
     if (Defined *d = dyn_cast<Defined>(rel.sym))
       if (InputSection *isec = cast_or_null<InputSection>(d->section))
-        if (!isec || !isec->getFile<ELFT>() || isec->getFile<ELFT>()->splitStack)
+        if (!isec || !isec->getFile<ELFT>() ||
+            isec->getFile<ELFT>()->getSplitStack())
           continue;
 
     if (enclosingPrologueAttempted(rel.offset, prologues))
@@ -1298,7 +1303,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
       if (ctx.target->adjustPrologueForCrossSplitStack(buf + f->value, end,
                                                        f->stOther))
         continue;
-      if (!getFile<ELFT>()->someNoSplitStack)
+      if (!getFile<ELFT>()->getSomeNoSplitStack())
         Err(ctx)
             << this << ": " << f->getName() << " (with -fsplit-stack) calls "
             << rel.sym->getName()
@@ -1433,8 +1438,8 @@ void EhInputSection::preprocessRelocs(Relocs<RelTy> elfRels) {
   rels.reserve(elfRels.size());
   for (auto rel : elfRels) {
     uint64_t offset = rel.r_offset;
-    Symbol &sym = file->getSymbol(rel.getSymbol(ctx.arg.isMips64EL));
-    RelType type = rel.getType(ctx.arg.isMips64EL);
+    Symbol &sym = file->getSymbol(rel.getSymbol(ctx.arg.getIsMips64EL()));
+    RelType type = rel.getType(ctx.arg.getIsMips64EL());
     RelExpr expr = ctx.target->getRelExpr(type, sym, content().data() + offset);
     int64_t addend =
         RelTy::HasAddend

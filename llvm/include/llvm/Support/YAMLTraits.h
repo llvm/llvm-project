@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -1896,6 +1897,18 @@ struct SequenceTraits<
     SmallVectorImpl<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<SmallVectorImpl<T>, SequenceElementTraits<T>::flow> {};
+template <typename T, unsigned N, unsigned FlagBits>
+struct SequenceTraits<
+    SmallVectorWithFlags<T, N, FlagBits>,
+    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
+    : SequenceTraitsImpl<SmallVectorWithFlags<T, N, FlagBits>,
+                         SequenceElementTraits<T>::flow> {};
+template <typename T, unsigned FlagBits>
+struct SequenceTraits<
+    SmallVectorWithFlagsImpl<T, FlagBits>,
+    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
+    : SequenceTraitsImpl<SmallVectorWithFlagsImpl<T, FlagBits>,
+                         SequenceElementTraits<T>::flow> {};
 template <typename T>
 struct SequenceTraits<
     MutableArrayRef<T>,

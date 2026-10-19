@@ -1404,11 +1404,11 @@ bool MachineFunction::shouldUseDebugInstrRef() const {
 }
 
 bool MachineFunction::useDebugInstrRef() const {
-  return UseDebugInstrRef;
+  return getUseDebugInstrRefFlag();
 }
 
 void MachineFunction::setUseDebugInstrRef(bool Use) {
-  UseDebugInstrRef = Use;
+  setUseDebugInstrRefFlag(Use);
 }
 
 // Use one million as a high / reserved number.

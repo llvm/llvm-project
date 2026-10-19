@@ -605,7 +605,9 @@ void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
   IO.mapRequired("StartRow", El.StartRow);
   IO.mapRequired("Cols", El.Cols);
   IO.mapRequired("StartCol", El.StartCol);
-  IO.mapRequired("Allocated", El.Allocated);
+  bool Allocated = El.isAllocated();
+  IO.mapRequired("Allocated", Allocated);
+  El.setAllocated(Allocated);
   IO.mapRequired("Kind", El.Kind);
   IO.mapRequired("ComponentType", El.Type);
   IO.mapRequired("Interpolation", El.Mode);

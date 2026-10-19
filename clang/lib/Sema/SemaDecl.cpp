@@ -71,6 +71,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
+#include <memory>
 #include <optional>
 #include <unordered_map>
 
@@ -14460,8 +14461,14 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // we should destroy the first Temp before constructing the second.
 
   // Set context flag for OverflowBehaviorType initialization analysis
-  llvm::SaveAndRestore OBTAssignmentContext(InOverflowBehaviorAssignmentContext,
-                                            true);
+  auto OBTAssignmentContext = [PackedFlagOwner_ = this] {
+    const bool PackedFlagOld_ =
+        PackedFlagOwner_->getInOverflowBehaviorAssignmentContext();
+    PackedFlagOwner_->setInOverflowBehaviorAssignmentContext(true);
+    return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+      PackedFlagOwner_->setInOverflowBehaviorAssignmentContext(PackedFlagOld_);
+    });
+  }();
   ExprResult Result =
       ActOnFinishFullExpr(Init, VDecl->getLocation(),
                           /*DiscardedValue*/ false, VDecl->isConstexpr());
@@ -16454,8 +16461,8 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   // where we would set the CurContext to the lambda operator before
   // substituting into it. In this case the flag needs to be true such that
   // tryCaptureVariable can correctly handle potential captures thereof.
-  LSI->AfterParameterList = CurContext == CallOperator;
-  LSI->BeforeCompoundStatement = false;
+  LSI->setAfterParameterList(CurContext == CallOperator);
+  LSI->setBeforeCompoundStatement(false);
 
   // GLTemplateParameterList is necessary for getCurGenericLambda() which is
   // used at the point of dealing with potential captures.
@@ -16478,7 +16485,7 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   DeclarationNameInfo DNI = CallOperator->getNameInfo();
 
   LSI->IntroducerRange = DNI.getCXXOperatorNameRange();
-  LSI->Mutable = !CallOperator->isConst();
+  LSI->setMutable(!CallOperator->isConst());
   if (CallOperator->isExplicitObjectMemberFunction())
     LSI->ExplicitObjectParameter = CallOperator->getParamDecl(0);
 
@@ -17037,7 +17044,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         // In C++11, we don't use 'auto' deduction rules for lambda call
         // operators because we don't support return type deduction.
         auto *LSI = getCurLambda();
-        if (LSI->HasImplicitReturnType) {
+        if (LSI->getHasImplicitReturnType()) {
           deduceClosureReturnType(*LSI);
 
           // C++11 [expr.prim.lambda]p4:
@@ -20058,7 +20065,7 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
       if (S.CheckFunctionConstraints(Method, Satisfaction))
         SatisfactionStatus.push_back(false);
       else
-        SatisfactionStatus.push_back(Satisfaction.IsSatisfied);
+        SatisfactionStatus.push_back(Satisfaction.isSatisfied());
     }
   }
 

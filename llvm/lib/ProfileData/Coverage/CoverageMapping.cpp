@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/BuildID.h"
@@ -447,13 +448,14 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
   /// Never-executed test vectors
-  MCDCRecord::TestVectors NotExecVectors;
+  llvm::SmallVectorWithFlagsFor<MCDCRecord::TestVectors, 1> NotExecVectors;
 
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
 #endif
 
-  bool IsVersion11;
+  bool getIsVersion11() const { return NotExecVectors.getFlag(0); }
+  void setIsVersion11(bool Value) { NotExecVectors.setFlag(0, Value); }
 
 public:
   MCDCRecordProcessor(const BitVector &Bitmap,
@@ -464,7 +466,9 @@ public:
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
-        IndependencePairs(NumConditions), IsVersion11(IsVersion11) {}
+        IndependencePairs(NumConditions),
+        NotExecVectors(
+            decltype(this->NotExecVectors)::withFlags(unsigned(IsVersion11))) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -488,7 +492,7 @@ private:
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
       bool Executed =
-          Bitmap[IsVersion11
+          Bitmap[getIsVersion11()
                      ? DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()
                      : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx];
       if (Executed) {
@@ -531,7 +535,7 @@ private:
     MCDCRecord::TestVectors NewNotExec;
     for (const auto &IdxTuple : NotExecVectorIdxs)
       NewNotExec.push_back(std::move(NotExecVectors[IdxTuple.Ord]));
-    NotExecVectors = std::move(NewNotExec);
+    NotExecVectors.assign(std::move(NewNotExec));
   }
 
 public:
@@ -570,7 +574,8 @@ public:
     findTestVectors();
 
     // Record executed vectors, not-executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors), std::move(NotExecVectors),
+    return MCDCRecord(Region, MCDCRecord::TestVectors(std::move(ExecVectors)),
+                      MCDCRecord::TestVectors(std::move(NotExecVectors)),
                       std::move(Folded), std::move(PosToID),
                       std::move(CondLoc));
   }
@@ -730,13 +735,14 @@ struct CountedRegionEmitter {
   const CoverageMappingRecord &Record;
   CounterMappingContext &Ctx;
   FunctionRecord &Function;
-  bool IsVersion11;
+  bool getIsVersion11() const { return DecisionStack.getFlag(0); }
+  void setIsVersion11(bool Value) { DecisionStack.setFlag(0, Value); }
 
   /// Evaluated Counters.
   std::map<Counter, uint64_t> CounterValues;
 
   /// Decisions are nestable.
-  SmallVector<DecisionRecord, 1> DecisionStack;
+  llvm::SmallVectorWithFlags<DecisionRecord, 1> DecisionStack;
 
   /// A File pointed by Expansion
   struct FileInfo {
@@ -756,7 +762,9 @@ struct CountedRegionEmitter {
   CountedRegionEmitter(const CoverageMappingRecord &Record,
                        CounterMappingContext &Ctx, FunctionRecord &Function,
                        bool IsVersion11)
-      : Record(Record), Ctx(Ctx), Function(Function), IsVersion11(IsVersion11),
+      : Record(Record), Ctx(Ctx), Function(Function),
+        DecisionStack(
+            decltype(this->DecisionStack)::withFlags(unsigned(IsVersion11))),
         Files(Record.Filenames.size()) {
     // Scan MappingRegions and mark each last index by FileID.
     for (auto [I, Region] : enumerate(Record.MappingRegions)) {
@@ -815,7 +823,7 @@ struct CountedRegionEmitter {
         if (D.pushBranch(Region)) {
           // All Branches have been found in the Decision.
           auto RecordOrErr = Ctx.evaluateMCDCRegion(
-              *D.DecisionRegion, D.MCDCBranches, IsVersion11);
+              *D.DecisionRegion, D.MCDCBranches, getIsVersion11());
           if (!RecordOrErr)
             return RecordOrErr.takeError();
 

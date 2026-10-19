@@ -1261,38 +1261,39 @@ CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
                                            sema::FunctionScopeInfo &Fn,
                                            Stmt *Body)
     : S(S), FD(FD), Fn(Fn), Loc(FD.getLocation()),
-      IsPromiseDependentType(
-          !Fn.CoroutinePromise ||
-          Fn.CoroutinePromise->getType()->isDependentType()) {
+      ParamMovesVector(decltype(this->ParamMovesVector)::withFlags(
+          (unsigned(bool(!Fn.CoroutinePromise ||
+                         Fn.CoroutinePromise->getType()->isDependentType()))
+           << 1))) {
   this->Body = buildCoroutineBody(Body, S.getASTContext());
 
   for (auto KV : Fn.CoroutineParameterMoves)
     this->ParamMovesVector.push_back(KV.second);
   this->ParamMoves = this->ParamMovesVector;
 
-  if (!IsPromiseDependentType) {
+  if (!getIsPromiseDependentType()) {
     PromiseRecordDecl = Fn.CoroutinePromise->getType()->getAsCXXRecordDecl();
     assert(PromiseRecordDecl && "Type should have already been checked");
   }
-  this->IsValid = makePromiseStmt() && makeInitialAndFinalSuspend();
+  this->setIsValid(makePromiseStmt() && makeInitialAndFinalSuspend());
 }
 
 bool CoroutineStmtBuilder::buildStatements() {
-  assert(this->IsValid && "coroutine already invalid");
-  this->IsValid = makeReturnObject();
-  if (this->IsValid && !IsPromiseDependentType)
+  assert(this->getIsValid() && "coroutine already invalid");
+  this->setIsValid(makeReturnObject());
+  if (this->getIsValid() && !getIsPromiseDependentType())
     buildDependentStatements();
-  return this->IsValid;
+  return this->getIsValid();
 }
 
 bool CoroutineStmtBuilder::buildDependentStatements() {
-  assert(this->IsValid && "coroutine already invalid");
-  assert(!this->IsPromiseDependentType &&
+  assert(this->getIsValid() && "coroutine already invalid");
+  assert(!this->getIsPromiseDependentType() &&
          "coroutine cannot have a dependent promise type");
-  this->IsValid = makeOnException() && makeOnFallthrough() &&
-                  makeGroDeclAndReturnStmt() && makeReturnOnAllocFailure() &&
-                  makeNewAndDeleteExpr();
-  return this->IsValid;
+  this->setIsValid(makeOnException() && makeOnFallthrough() &&
+                   makeGroDeclAndReturnStmt() && makeReturnOnAllocFailure() &&
+                   makeNewAndDeleteExpr());
+  return this->getIsValid();
 }
 
 bool CoroutineStmtBuilder::makePromiseStmt() {
@@ -1339,7 +1340,7 @@ static bool diagReturnOnAllocFailure(Sema &S, Expr *E,
 }
 
 bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
-  assert(!IsPromiseDependentType &&
+  assert(!getIsPromiseDependentType() &&
          "cannot make statement while the promise type is dependent");
 
   // [dcl.fct.def.coroutine]p10
@@ -1427,7 +1428,7 @@ static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
 
 bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // Form and check allocation and deallocation calls.
-  assert(!IsPromiseDependentType &&
+  assert(!getIsPromiseDependentType() &&
          "cannot make statement while the promise type is dependent");
   QualType PromiseType = Fn.CoroutinePromise->getType();
 
@@ -1756,7 +1757,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 }
 
 bool CoroutineStmtBuilder::makeOnFallthrough() {
-  assert(!IsPromiseDependentType &&
+  assert(!getIsPromiseDependentType() &&
          "cannot make statement while the promise type is dependent");
 
   // [dcl.fct.def.coroutine]/p6
@@ -1813,7 +1814,7 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
 
 bool CoroutineStmtBuilder::makeOnException() {
   // Try to form 'p.unhandled_exception();'
-  assert(!IsPromiseDependentType &&
+  assert(!getIsPromiseDependentType() &&
          "cannot make statement while the promise type is dependent");
 
   const bool RequireUnhandledException = S.getLangOpts().CXXExceptions;
@@ -1878,7 +1879,7 @@ static void noteMemberDeclaredHere(Sema &S, Expr *E, FunctionScopeInfo &Fn) {
 }
 
 bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
-  assert(!IsPromiseDependentType &&
+  assert(!getIsPromiseDependentType() &&
          "cannot make statement while the promise type is dependent");
   assert(this->ReturnValue && "ReturnValue must be already formed");
 

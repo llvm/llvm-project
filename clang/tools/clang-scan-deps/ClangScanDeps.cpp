@@ -508,9 +508,9 @@ public:
         for (auto &&ModID : ModuleIDs) {
           auto &MD = Modules[ModID];
           JOS.object([&] {
-            if (MD.IsInStableDirectories)
+            if (MD.getIsInStableDirectories())
               JOS.attribute("is-in-stable-directories",
-                            MD.IsInStableDirectories);
+                            MD.getIsInStableDirectories());
             JOS.attributeArray("clang-module-deps",
                                toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",
@@ -529,8 +529,11 @@ public:
                   JOS.value(FileDep);
               });
             });
-            JOS.attributeArray("link-libraries",
-                               toJSONSorted(JOS, MD.LinkLibraries));
+            JOS.attributeArray(
+                "link-libraries",
+                toJSONSorted(JOS, SmallVector<Module::LinkLibrary, 2>(
+                                      MD.LinkLibraries.begin(),
+                                      MD.LinkLibraries.end())));
             JOS.attribute("name", StringRef(MD.ID.ModuleName));
           });
         }

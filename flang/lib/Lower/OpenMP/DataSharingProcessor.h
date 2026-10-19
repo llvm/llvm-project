@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <variant>
 
 namespace mlir {
@@ -34,7 +35,10 @@ namespace omp {
 class DataSharingProcessor {
 private:
   mlir::OpBuilder::InsertPoint lastPrivIP;
-  llvm::SmallVector<mlir::Value> loopIVs;
+  llvm::SmallVectorWithFlags<
+      mlir::Value,
+      llvm::CalculateSmallVectorDefaultInlinedElements<mlir::Value>::value, 4>
+      loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
@@ -46,16 +50,32 @@ private:
   // nonmonotonic schedule can execute chunks out of order.  When false the list
   // item is bound directly to the reduction struct (used by sections, which are
   // lexically ordered and never need the private copy).
-  bool conditionalLpUsesPrivateCopy = false;
+  bool getConditionalLpUsesPrivateCopyFlag() const {
+    return loopIVs.getFlag(0);
+  }
+  void setConditionalLpUsesPrivateCopyFlag(bool Value) {
+    loopIVs.setFlag(0, Value);
+  }
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
   lower::pft::Evaluation &eval;
-  bool shouldCollectPreDeterminedSymbols;
-  bool useDelayedPrivatization;
-  bool forceHeapAllocationForPrivateDynamicArrays = false;
+  bool getShouldCollectPreDeterminedSymbols() const {
+    return loopIVs.getFlag(1);
+  }
+  void setShouldCollectPreDeterminedSymbols(bool Value) {
+    loopIVs.setFlag(1, Value);
+  }
+  bool getUseDelayedPrivatization() const { return loopIVs.getFlag(2); }
+  void setUseDelayedPrivatization(bool Value) { loopIVs.setFlag(2, Value); }
+  bool getForceHeapAllocationForPrivateDynamicArraysFlag() const {
+    return loopIVs.getFlag(3);
+  }
+  void setForceHeapAllocationForPrivateDynamicArraysFlag(bool Value) {
+    loopIVs.setFlag(3, Value);
+  }
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
@@ -130,7 +150,7 @@ public:
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
   void setForceHeapAllocationForPrivateDynamicArrays(bool value = true) {
-    forceHeapAllocationForPrivateDynamicArrays = value;
+    setForceHeapAllocationForPrivateDynamicArraysFlag(value);
   }
 
   const llvm::SetVector<const semantics::Symbol *> &
@@ -139,7 +159,7 @@ public:
   }
 
   llvm::ArrayRef<const semantics::Symbol *> getDelayedPrivSymbols() const {
-    return useDelayedPrivatization
+    return getUseDelayedPrivatization()
                ? allPrivatizedSymbols.getArrayRef()
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
@@ -154,7 +174,7 @@ public:
   }
 
   void setConditionalLpUsesPrivateCopy(bool v) {
-    conditionalLpUsesPrivateCopy = v;
+    setConditionalLpUsesPrivateCopyFlag(v);
   }
 };
 

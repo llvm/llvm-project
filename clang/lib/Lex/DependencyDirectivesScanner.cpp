@@ -22,6 +22,7 @@
 #include "clang/Lex/Pragma.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -186,7 +187,12 @@ private:
   /// true at the end.
   bool reportError(const char *CurPtr, unsigned Err);
 
-  bool ScanningPreprocessedModuleFile = false;
+  bool getScanningPreprocessedModuleFile() const {
+    return DirsWithToks.getFlag(0);
+  }
+  void setScanningPreprocessedModuleFile(bool Value) {
+    DirsWithToks.setFlag(0, Value);
+  }
   StringMap<char> SplitIds;
   StringRef Input;
   SmallVectorImpl<dependency_directives_scan::Token> &Tokens;
@@ -201,7 +207,7 @@ private:
   /// The directives that were lexed along with the number of tokens that each
   /// directive contains. The tokens of all the directives are kept in \p Tokens
   /// vector, in the same order as the directives order in \p DirsWithToks.
-  SmallVector<DirectiveWithTokens, 64> DirsWithToks;
+  llvm::SmallVectorWithFlags<DirectiveWithTokens, 64> DirsWithToks;
   LangOptions LangOpts;
   Lexer TheLexer;
 };
@@ -735,9 +741,9 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
   }
 
   StringRef Module =
-      ScanningPreprocessedModuleFile ? "__preprocessed_module" : "module";
+      getScanningPreprocessedModuleFile() ? "__preprocessed_module" : "module";
   StringRef Import =
-      ScanningPreprocessedModuleFile ? "__preprocessed_import" : "import";
+      getScanningPreprocessedModuleFile() ? "__preprocessed_import" : "import";
 
   if (Id != Module && Id != Import) {
     skipLine(First, End);
@@ -1059,7 +1065,7 @@ bool Scanner::scanImpl(const char *First, const char *const End) {
 }
 
 bool Scanner::scan(SmallVectorImpl<Directive> &Directives) {
-  ScanningPreprocessedModuleFile = clang::isPreprocessedModuleFile(Input);
+  setScanningPreprocessedModuleFile(clang::isPreprocessedModuleFile(Input));
   bool Error = scanImpl(Input.begin(), Input.end());
 
   if (!Error) {

@@ -60,19 +60,19 @@ static void removeSections(const CommonConfig &Config, Object &Obj) {
     };
   }
 
-  if (Config.StripDebug) {
+  if (Config.getStripDebug()) {
     RemovePred = [RemovePred](const Section &Sec) {
       return RemovePred(Sec) || isDebugSection(Sec);
     };
   }
 
-  if (Config.StripAll) {
+  if (Config.getStripAll()) {
     RemovePred = [RemovePred](const Section &Sec) {
       return RemovePred(Sec) || !isEngineInterpretedSection(Sec);
     };
   }
 
-  if (Config.OnlyKeepDebug) {
+  if (Config.getOnlyKeepDebug()) {
     RemovePred = [&Config](const Section &Sec) {
       // Keep debug sections, unless explicitly requested to remove.
       // Remove everything else, including known sections.

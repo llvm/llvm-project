@@ -82,7 +82,7 @@ void DroppedVariableStatsIR::calculateDroppedVarStatsOnModule(
 
 void DroppedVariableStatsIR::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if (!DroppedVariableStatsEnabled)
+  if (!getDroppedVariableStatsEnabled())
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(

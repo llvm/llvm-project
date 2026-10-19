@@ -14,6 +14,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include <initializer_list>
 #include <optional>
@@ -30,7 +31,8 @@ class BoostReplacer : public UseRangesCheck::Replacer {
 public:
   BoostReplacer(ArrayRef<UseRangesCheck::Signature> Signatures,
                 bool IncludeSystem)
-      : Signatures(Signatures), IncludeSystem(IncludeSystem) {}
+      : Signatures(decltype(this->Signatures)::withFlags(
+            unsigned(IncludeSystem), Signatures)) {}
 
   ArrayRef<UseRangesCheck::Signature> getReplacementSignatures() const final {
     return Signatures;
@@ -52,15 +54,16 @@ public:
   std::optional<std::string>
   getHeaderInclusion(const NamedDecl &OriginalName) const final {
     auto [Path, HeaderName] = getBoostHeader(OriginalName);
-    return ((IncludeSystem ? "<boost/" : "boost/") + Path +
+    return ((getIncludeSystem() ? "<boost/" : "boost/") + Path +
             (Path.empty() ? "" : "/") + HeaderName +
-            (IncludeSystem ? ".hpp>" : ".hpp"))
+            (getIncludeSystem() ? ".hpp>" : ".hpp"))
         .str();
   }
 
 private:
-  SmallVector<UseRangesCheck::Signature> Signatures;
-  bool IncludeSystem;
+  llvm::SmallVectorWithFlags<UseRangesCheck::Signature> Signatures;
+  bool getIncludeSystem() const { return Signatures.getFlag(0); }
+  void setIncludeSystem(bool Value) { Signatures.setFlag(0, Value); }
 };
 
 /// Creates replaces where the header file lives in

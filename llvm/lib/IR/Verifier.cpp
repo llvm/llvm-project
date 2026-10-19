@@ -57,6 +57,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -178,10 +179,12 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   /// Whether we've seen a call to @llvm.localescape in this function
   /// already.
-  bool SawFrameEscape;
+  bool getSawFrameEscape() const { return NoAliasScopeDecls.getFlag(0); }
+  void setSawFrameEscape(bool Value) { NoAliasScopeDecls.setFlag(0, Value); }
 
   /// Whether the current function has a DISubprogram attached to it.
-  bool HasDebugInfo = false;
+  bool getHasDebugInfo() const { return NoAliasScopeDecls.getFlag(1); }
+  void setHasDebugInfo(bool Value) { NoAliasScopeDecls.setFlag(1, Value); }
 
   /// Stores the count of how many objects were passed to llvm.localescape for a
   /// given function and the largest index passed to llvm.localrecover.
@@ -216,7 +219,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   TBAAVerifier TBAAVerifyHelper;
   ConvergenceVerifier ConvergenceVerifyHelper;
 
-  SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
+  llvm::SmallVectorWithFlags<IntrinsicInst *, 4, 2> NoAliasScopeDecls;
 
   void checkAtomicMemAccessSize(Type *Ty, const Instruction *I);
 
@@ -224,7 +227,7 @@ public:
   explicit Verifier(raw_ostream *OS, bool ShouldTreatBrokenDebugInfoAsError,
                     const Module &M)
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
-        SawFrameEscape(false), TBAAVerifyHelper(this) {
+        TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
   }
 
@@ -277,7 +280,7 @@ public:
     DebugFnArgs.clear();
     DIScopeChainReachesCycle.clear();
     LandingPadResultTy = nullptr;
-    SawFrameEscape = false;
+    setSawFrameEscape(false);
     SiblingFuncletInfo.clear();
     verifyNoAliasScopeDecl();
     NoAliasScopeDecls.clear();
@@ -3542,8 +3545,8 @@ void Verifier::visitFunction(const Function &F) {
   }
 
   auto *N = F.getSubprogram();
-  HasDebugInfo = (N != nullptr);
-  if (!HasDebugInfo)
+  setHasDebugInfo((N != nullptr));
+  if (!getHasDebugInfo())
     return;
 
   // Check that all !dbg attachments lead to back to N.
@@ -6675,8 +6678,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     BasicBlock *BB = Call.getParent();
     Check(BB->isEntryBlock(), "llvm.localescape used outside of entry block",
           Call);
-    Check(!SawFrameEscape, "multiple calls to llvm.localescape in one function",
-          Call);
+    Check(!getSawFrameEscape(),
+          "multiple calls to llvm.localescape in one function", Call);
     for (Value *Arg : Call.args()) {
       if (isa<ConstantPointerNull>(Arg))
         continue; // Null values are allowed as placeholders.
@@ -6685,7 +6688,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "llvm.localescape only accepts static allocas", Call);
     }
     FrameEscapeInfo[BB->getParent()].first = Call.arg_size();
-    SawFrameEscape = true;
+    setSawFrameEscape(true);
     break;
   }
   case Intrinsic::localrecover: {
@@ -7839,7 +7842,7 @@ void Verifier::verifyFnArgs(const DbgVariableRecord &DVR) {
   // This function does not take the scope of noninlined function arguments into
   // account. Don't run it if current function is nodebug, because it may
   // contain inlined debug intrinsics.
-  if (!HasDebugInfo)
+  if (!getHasDebugInfo())
     return;
 
   // For performance reasons only check non-inlined ones.

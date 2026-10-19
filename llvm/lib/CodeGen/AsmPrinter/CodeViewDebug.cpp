@@ -2997,10 +2997,9 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
 /// Convenience routine for collecting lexical block information for a list
 /// of lexical scopes.
 void CodeViewDebug::collectLexicalBlockInfo(
-        SmallVectorImpl<LexicalScope *> &Scopes,
-        SmallVectorImpl<LexicalBlock *> &Blocks,
-        SmallVectorImpl<LocalVariable> &Locals,
-        SmallVectorImpl<CVGlobalVariable> &Globals) {
+    ArrayRef<LexicalScope *> Scopes, SmallVectorImpl<LexicalBlock *> &Blocks,
+    SmallVectorImpl<LocalVariable> &Locals,
+    SmallVectorImpl<CVGlobalVariable> &Globals) {
   for (LexicalScope *Scope : Scopes)
     collectLexicalBlockInfo(*Scope, Blocks, Locals, Globals);
 }

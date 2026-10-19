@@ -41,7 +41,7 @@ std::optional<std::string> StableFunctionMap::getNameForId(unsigned Id) const {
 }
 
 void StableFunctionMap::insert(const StableFunction &Func) {
-  assert(!Finalized && "Cannot insert after finalization");
+  assert(!isFinalized() && "Cannot insert after finalization");
   auto FuncNameId = getIdOrCreateForName(Func.FunctionName);
   auto ModuleNameId = getIdOrCreateForName(Func.ModuleName);
   auto IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
@@ -54,7 +54,7 @@ void StableFunctionMap::insert(const StableFunction &Func) {
 }
 
 void StableFunctionMap::merge(const StableFunctionMap &OtherMap) {
-  assert(!Finalized && "Cannot merge after finalization");
+  assert(!isFinalized() && "Cannot merge after finalization");
   deserializeLazyLoadingEntries();
   for (auto &[Hash, Funcs] : OtherMap.HashToFuncs) {
     auto &ThisFuncs = HashToFuncs[Hash].Entries;
@@ -258,5 +258,5 @@ void StableFunctionMap::finalize(bool SkipTrim) {
   for (auto It : ToDelete)
     HashToFuncs.erase(It);
 
-  Finalized = true;
+  IdToName.setFlag(0, true);
 }

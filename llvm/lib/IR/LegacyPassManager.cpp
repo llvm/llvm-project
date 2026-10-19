@@ -1201,7 +1201,7 @@ void PMDataManager::dumpUsedSet(const Pass *P) const {
 }
 
 void PMDataManager::dumpAnalysisUsage(StringRef Msg, const Pass *P,
-                                   const AnalysisUsage::VectorType &Set) const {
+                                      ArrayRef<AnalysisID> Set) const {
   assert(PassDebugging >= Details);
   if (Set.empty())
     return;

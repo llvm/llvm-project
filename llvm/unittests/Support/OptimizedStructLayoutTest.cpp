@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -21,14 +22,15 @@ class LayoutTest {
     uint64_t ExpectedOffset;
   };
 
-  SmallVector<Field, 16> Fields;
-  bool Verified = false;
+  llvm::SmallVectorWithFlags<Field, 16> Fields;
+  bool getVerified() const { return Fields.getFlag(0); }
+  void setVerified(bool Value) { Fields.setFlag(0, Value); }
 
 public:
   LayoutTest() = default;
   LayoutTest(const LayoutTest &) = delete;
   LayoutTest &operator=(const LayoutTest &) = delete;
-  ~LayoutTest() { assert(Verified); }
+  ~LayoutTest() { assert(getVerified()); }
 
   LayoutTest &flexible(uint64_t Size, uint64_t Alignment,
                        uint64_t ExpectedOffset) {
@@ -58,7 +60,7 @@ public:
       EXPECT_EQ(LF.Offset, F.ExpectedOffset);
     }
 
-    Verified = true;
+    setVerified(true);
   }
 };
 

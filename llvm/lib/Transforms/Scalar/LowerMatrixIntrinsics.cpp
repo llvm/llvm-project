@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -380,17 +381,27 @@ class LowerMatrixIntrinsics {
   /// Wrapper class representing a matrix as a set of vectors, either in row or
   /// column major layout. All vectors must have the same vector type.
   class MatrixTy {
-    SmallVector<Value *, 16> Vectors;
+    llvm::SmallVectorWithFlags<Value *, 16> Vectors;
 
     OpInfoTy OpInfo;
 
-    bool IsColumnMajor = ScalarOptions::Global.matrix_default_layout ==
-                         MatrixLayoutTy::ColumnMajor;
+    bool getIsColumnMajor() const { return Vectors.getFlag(0); }
+    void setIsColumnMajor(bool Value) { Vectors.setFlag(0, Value); }
 
   public:
-    MatrixTy() = default;
-    MatrixTy(ArrayRef<Value *> Vectors) : Vectors(Vectors) {}
-    MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy) {
+    MatrixTy()
+        : Vectors(decltype(this->Vectors)::withFlags(
+              unsigned(bool(ScalarOptions::Global.matrix_default_layout ==
+                            MatrixLayoutTy::ColumnMajor)))) {}
+    MatrixTy(ArrayRef<Value *> Vectors)
+        : Vectors(decltype(this->Vectors)::withFlags(
+              unsigned(bool(ScalarOptions::Global.matrix_default_layout ==
+                            MatrixLayoutTy::ColumnMajor)),
+              Vectors)) {}
+    MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy)
+        : Vectors(decltype(this->Vectors)::withFlags(
+              unsigned(bool(ScalarOptions::Global.matrix_default_layout ==
+                            MatrixLayoutTy::ColumnMajor)))) {
 
       unsigned D = isColumnMajor() ? NumColumns : NumRows;
       for (unsigned J = 0; J < D; ++J)
@@ -489,7 +500,7 @@ class LowerMatrixIntrinsics {
 
     const OpInfoTy &getOpInfo() const { return OpInfo; }
 
-    bool isColumnMajor() const { return IsColumnMajor; }
+    bool isColumnMajor() const { return getIsColumnMajor(); }
 
     unsigned getStride() const {
       if (isColumnMajor())

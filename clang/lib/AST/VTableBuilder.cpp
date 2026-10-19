@@ -19,6 +19,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -806,7 +807,10 @@ private:
 
   /// MostDerivedClassIsVirtual - Whether the most derived class is a virtual
   /// base. (This only makes sense when building a construction vtable).
-  bool MostDerivedClassIsVirtual;
+  bool getMostDerivedClassIsVirtual() const { return Components.getFlag(0); }
+  void setMostDerivedClassIsVirtual(bool Value) {
+    Components.setFlag(0, Value);
+  }
 
   /// LayoutClass - The class we're using for layout information. Will be
   /// different than the most derived class if we're building a construction
@@ -828,7 +832,7 @@ private:
   VBaseOffsetOffsetsMapTy VBaseOffsetOffsets;
 
   /// Components - The components of the vtable being built.
-  SmallVector<VTableComponent, 64> Components;
+  llvm::SmallVectorWithFlags<VTableComponent, 64> Components;
 
   /// AddressPoints - Address points for the vtable being built.
   AddressPointsMapTy AddressPoints;
@@ -1004,9 +1008,10 @@ public:
                        const CXXRecordDecl *LayoutClass)
       : VTables(VTables), MostDerivedClass(MostDerivedClass),
         MostDerivedClassOffset(MostDerivedClassOffset),
-        MostDerivedClassIsVirtual(MostDerivedClassIsVirtual),
         LayoutClass(LayoutClass), Context(MostDerivedClass->getASTContext()),
-        Overriders(MostDerivedClass, MostDerivedClassOffset, LayoutClass) {
+        Overriders(MostDerivedClass, MostDerivedClassOffset, LayoutClass),
+        Components(decltype(this->Components)::withFlags(
+            unsigned(MostDerivedClassIsVirtual))) {
     assert(!Context.getTargetInfo().getCXXABI().isMicrosoft());
 
     LayoutVTable();
@@ -1661,11 +1666,10 @@ void ItaniumVTableBuilder::AddMethods(
 }
 
 void ItaniumVTableBuilder::LayoutVTable() {
-  LayoutPrimaryAndSecondaryVTables(BaseSubobject(MostDerivedClass,
-                                                 CharUnits::Zero()),
-                                   /*BaseIsMorallyVirtual=*/false,
-                                   MostDerivedClassIsVirtual,
-                                   MostDerivedClassOffset);
+  LayoutPrimaryAndSecondaryVTables(
+      BaseSubobject(MostDerivedClass, CharUnits::Zero()),
+      /*BaseIsMorallyVirtual=*/false, getMostDerivedClassIsVirtual(),
+      MostDerivedClassOffset);
 
   VisitedVirtualBasesSetTy VBases;
 
@@ -2534,12 +2538,13 @@ private:
   const FinalOverriders Overriders;
 
   /// Components - The components of the vftable being built.
-  SmallVector<VTableComponent, 64> Components;
+  llvm::SmallVectorWithFlags<VTableComponent, 64> Components;
 
   MethodVFTableLocationsTy MethodVFTableLocations;
 
   /// Does this class have an RTTI component?
-  bool HasRTTIComponent = false;
+  bool getHasRTTIComponent() const { return Components.getFlag(0); }
+  void setHasRTTIComponent(bool Value) { Components.setFlag(0, Value); }
 
   /// MethodInfo - Contains information about a method in a vtable.
   /// (Used for computing 'this' pointer adjustment thunks.
@@ -2631,7 +2636,7 @@ private:
 
   void LayoutVFTable() {
     // RTTI data goes before all other entries.
-    if (HasRTTIComponent)
+    if (getHasRTTIComponent())
       Components.push_back(VTableComponent::MakeRTTI(MostDerivedClass));
 
     BasesSetVectorTy VisitedBases;
@@ -2681,7 +2686,7 @@ public:
     // dllimport or extern template instantiations, but eventually we may add a
     // flag to support additional devirtualization that needs this.
     if (Context.getLangOpts().RTTIData)
-      HasRTTIComponent = true;
+      setHasRTTIComponent(true);
 
     LayoutVFTable();
 
@@ -3162,7 +3167,8 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
     // If we got here, MD is a method not seen in any of the sub-bases or
     // it requires return adjustment. Insert the method info for this method.
     MethodInfo MI(VBIndex,
-                  HasRTTIComponent ? Components.size() - 1 : Components.size(),
+                  getHasRTTIComponent() ? Components.size() - 1
+                                        : Components.size(),
                   ReturnAdjustingThunk);
 
     assert(!MethodInfoMap.count(MD) &&

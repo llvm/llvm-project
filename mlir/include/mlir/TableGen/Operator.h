@@ -25,6 +25,7 @@
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
@@ -335,7 +336,7 @@ public:
   void print(llvm::raw_ostream &os) const;
 
   /// Return whether all the result types are known.
-  bool allResultTypesKnown() const { return allResultsHaveKnownTypes; };
+  bool allResultTypesKnown() const { return builders.getFlag(0); };
 
   ///  Return all arguments or type constraints with same type as result[index].
   /// Requires: all result types are known.
@@ -428,7 +429,8 @@ private:
   SmallVector<OperandAttrOrProp, 4> attrPropOrOperandMapping;
 
   /// The builders of this operator.
-  SmallVector<Builder> builders;
+  // Flag bit 0 records whether every result type can be inferred.
+  llvm::SmallVectorWithFlags<Builder> builders;
 
   /// The number of native attributes stored in the leading positions of
   /// `attributes`.
@@ -436,9 +438,6 @@ private:
 
   /// The TableGen definition of this op.
   const llvm::Record &def;
-
-  /// Whether the type of all results are known.
-  bool allResultsHaveKnownTypes;
 };
 
 } // namespace tblgen

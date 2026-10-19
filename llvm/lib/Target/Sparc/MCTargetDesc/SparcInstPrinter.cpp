@@ -273,7 +273,7 @@ void SparcInstPrinter::printCTILabel(const MCInst *MI, uint64_t Address,
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
     int64_t Offset = Op.getImm();
-    if (PrintBranchImmAsAddress) {
+    if (getPrintBranchImmAsAddress()) {
       uint64_t Target = Address + Offset;
       if (STI.getTargetTriple().isSPARC32())
         Target &= 0xffffffff;

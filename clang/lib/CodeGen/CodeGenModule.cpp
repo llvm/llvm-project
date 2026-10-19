@@ -599,9 +599,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   // Build C++20 Module initializers.
   // TODO: Add Microsoft here once we know the mangling required for the
   // initializers.
-  CXX20ModuleInits =
-      LangOpts.CPlusPlusModules && getCXXABI().getMangleContext().getKind() ==
-                                       ItaniumMangleContext::MK_Itanium;
+  setCXX20ModuleInits(LangOpts.CPlusPlusModules &&
+                      getCXXABI().getMangleContext().getKind() ==
+                          ItaniumMangleContext::MK_Itanium);
 
   RuntimeCC = getTargetCodeGenInfo().getABIInfo().getRuntimeCC();
 
@@ -1184,7 +1184,7 @@ CodeGenModule::StackProtectorAttribute(const Decl *D) const {
 
 void CodeGenModule::Release() {
   Module *Primary = getContext().getCurrentNamedModule();
-  if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
+  if (getCXX20ModuleInits() && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
   DeferredDecls.insert_range(EmittedDeferredDecls);
@@ -1205,7 +1205,7 @@ void CodeGenModule::Release() {
 
   // Module implementations are initialized the same way as a regular TU that
   // imports one or more modules.
-  if (CXX20ModuleInits && Primary && Primary->isInterfaceOrPartition())
+  if (getCXX20ModuleInits() && Primary && Primary->isInterfaceOrPartition())
     EmitCXXModuleInitFunc(Primary);
   else
     EmitCXXGlobalInitFunc();
@@ -4062,7 +4062,7 @@ static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
 
   // For modules that use export_as for linking, use that module
   // name instead.
-  if (Mod->UseExportAsModuleLinkName)
+  if (Mod->getUseExportAsModuleLinkName())
     return;
 
   for (const Module::LinkLibrary &LL : llvm::reverse(Mod->LinkLibraries)) {
@@ -4155,7 +4155,7 @@ void CodeGenModule::EmitModuleLinkOptions() {
     for (const auto &SM : Mod->submodules()) {
       // Skip explicit children; they need to be explicitly imported to be
       // linked against.
-      if (SM->IsExplicit)
+      if (SM->getIsExplicit())
         continue;
 
       if (Visited.insert(SM).second) {
@@ -4613,7 +4613,7 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
       // A definition of an inline constexpr static data member may change
       // linkage later if it's redeclared outside the class.
       return false;
-    if (CXX20ModuleInits && VD->getOwningModule() &&
+    if (getCXX20ModuleInits() && VD->getOwningModule() &&
         !VD->getOwningModule()->isModuleMapModule()) {
       // For CXX20, module-owned initializers need to be deferred, since it is
       // not known at this point if they will be run for the current module or
@@ -8225,7 +8225,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // For C++ standard modules we are done - we will call the module
     // initializer for imported modules, and that will likewise call those for
     // any imports it has.
-    if (CXX20ModuleInits && Import->getImportedModule() &&
+    if (getCXX20ModuleInits() && Import->getImportedModule() &&
         Import->getImportedModule()->isNamedModule())
       break;
 
@@ -8250,7 +8250,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       for (Module *Submodule : Mod->submodules()) {
         // Skip explicit children; they need to be explicitly imported to emit
         // the initializers.
-        if (Submodule->IsExplicit)
+        if (Submodule->getIsExplicit())
           continue;
 
         if (Visited.insert(Submodule).second)
@@ -9040,7 +9040,7 @@ void CodeGenModule::addPendingGlobalDelete(
   PendingMSVCGlobalDeletes.insert({GlobalDeleteAlias, OperatorDeleteFD});
 }
 
-void CodeGenModule::noteDirectGlobalDelete() { HasDirectGlobalDelete = true; }
+void CodeGenModule::noteDirectGlobalDelete() { setHasDirectGlobalDelete(true); }
 
 /// Get or create the MSVC-compatible __global_delete wrapper function.
 ///
@@ -9156,7 +9156,7 @@ void CodeGenModule::emitGlobalDeleteForwardingBodies() {
   // path), we know ::operator delete must exist, so we replace the wrapper's
   // weak alias-to-empty fallback with a real __global_delete definition that
   // forwards to it.
-  if (!HasDirectGlobalDelete)
+  if (!getHasDirectGlobalDelete())
     return;
 
   for (const auto &Entry : PendingMSVCGlobalDeletes) {

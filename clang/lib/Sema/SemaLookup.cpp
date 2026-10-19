@@ -4811,7 +4811,7 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
 
 void TypoCorrectionConsumer::addNamespaces(
     const llvm::MapVector<NamespaceDecl *, bool> &KnownNamespaces) {
-  SearchNamespaces = true;
+  setSearchNamespaces(true);
 
   for (auto KNPair : KnownNamespaces)
     Namespaces.addNameSpecifier(KNPair.first);
@@ -4873,7 +4873,7 @@ bool TypoCorrectionConsumer::resolveCorrection(TypoCorrection &Candidate) {
   CXXScopeSpec *TempSS = SS.get();
 retry_lookup:
   LookupPotentialTypoResult(SemaRef, Result, Name, S, TempSS, TempMemberContext,
-                            EnteringContext,
+                            getEnteringContext(),
                             CorrectionValidator->IsObjCIvarLookup,
                             Name == Typo && !Candidate.WillReplaceSpecifier());
   switch (Result.getResultKind()) {
@@ -4892,7 +4892,7 @@ retry_lookup:
       TempMemberContext = nullptr;
       goto retry_lookup;
     }
-    if (SearchNamespaces)
+    if (getSearchNamespaces())
       QualifiedResults.push_back(Candidate);
     break;
 
@@ -4907,7 +4907,7 @@ retry_lookup:
       Candidate.addCorrectionDecl(TRD);
     checkCorrectionVisibility(SemaRef, Candidate);
     if (!isCandidateViable(*CorrectionValidator, Candidate)) {
-      if (SearchNamespaces)
+      if (getSearchNamespaces())
         QualifiedResults.push_back(Candidate);
       break;
     }
@@ -5321,7 +5321,7 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
     const ObjCObjectPointerType *OPT, bool ErrorRecovery) {
 
   if (Diags.hasFatalErrorOccurred() || !getLangOpts().SpellChecking ||
-      DisableTypoCorrection)
+      getDisableTypoCorrection())
     return nullptr;
 
   // In Microsoft mode, don't perform typo correction in a template member
@@ -5444,9 +5444,9 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
   // to search those namespaces.
   if (SearchNamespaces) {
     // Load any externally-known namespaces.
-    if (ExternalSource && !LoadedExternalKnownNamespaces) {
+    if (ExternalSource && !getLoadedExternalKnownNamespaces()) {
       SmallVector<NamespaceDecl *, 4> ExternalKnownNamespaces;
-      LoadedExternalKnownNamespaces = true;
+      setLoadedExternalKnownNamespaces(true);
       ExternalSource->ReadKnownNamespaces(ExternalKnownNamespaces);
       for (auto *N : ExternalKnownNamespaces)
         KnownNamespaces[N] = true;

@@ -254,7 +254,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
 enum StructReturnType { NotStructReturn, RegStructReturn, StackStructReturn };
 
 static StructReturnType
-callIsStructReturn(const SmallVectorImpl<ISD::OutputArg> &Outs) {
+callIsStructReturn(llvm::ArrayRef<ISD::OutputArg> Outs) {
   if (Outs.empty())
     return NotStructReturn;
 
@@ -267,8 +267,7 @@ callIsStructReturn(const SmallVectorImpl<ISD::OutputArg> &Outs) {
 }
 
 /// Determines whether a function uses struct return semantics.
-static StructReturnType
-argsAreStructReturn(const SmallVectorImpl<ISD::InputArg> &Ins) {
+static StructReturnType argsAreStructReturn(llvm::ArrayRef<ISD::InputArg> Ins) {
   if (Ins.empty())
     return NotStructReturn;
 
@@ -450,13 +449,10 @@ SDValue M68kTargetLowering::EmitTailCallStoreRetAddr(
   return Chain;
 }
 
-SDValue
-M68kTargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
-                                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                                     const SDLoc &DL, SelectionDAG &DAG,
-                                     const CCValAssign &VA,
-                                     MachineFrameInfo &MFI,
-                                     unsigned ArgIdx) const {
+SDValue M68kTargetLowering::LowerMemArgument(
+    SDValue Chain, CallingConv::ID CallConv, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &DL, SelectionDAG &DAG, const CCValAssign &VA,
+    MachineFrameInfo &MFI, unsigned ArgIdx) const {
   // Create the nodes corresponding to a load from this parameter slot.
   ISD::ArgFlagsTy Flags = Ins[ArgIdx].Flags;
   EVT ValVT;
@@ -545,14 +541,13 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                       SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool &IsTailCall = CLI.IsTailCall;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
 
   MachineFunction &MF = DAG.getMachineFunction();
   StructReturnType SR = callIsStructReturn(Outs);
@@ -565,7 +560,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
   if (Attr.getValueAsBool())
-    IsTailCall = false;
+    CLI.setIsTailCall(false);
 
   // FIXME Add tailcalls support
 
@@ -574,20 +569,20 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Force this to be a tail call.  The verifier rules are enough to ensure
     // that we can lower this successfully without moving the return address
     // around.
-    IsTailCall = true;
-  } else if (IsTailCall) {
+    CLI.setIsTailCall(true);
+  } else if (CLI.getIsTailCall()) {
     // Check if it's really possible to do a tail call.
-    IsTailCall = IsEligibleForTailCallOptimization(
+    CLI.setIsTailCall(IsEligibleForTailCallOptimization(
         Callee, CallConv, IsVarArg, SR != NotStructReturn,
         MF.getFunction().hasStructRetAttr(), CLI.RetTy, Outs, OutVals, Ins,
-        DAG);
+        DAG));
 
     // Sibcalls are automatically detected tailcalls which do not require
     // ABI changes.
-    if (!MF.getTarget().Options.GuaranteedTailCallOpt && IsTailCall)
+    if (!MF.getTarget().Options.GuaranteedTailCallOpt && CLI.getIsTailCall())
       IsSibcall = true;
 
-    if (IsTailCall)
+    if (CLI.getIsTailCall())
       ++NumTailCalls;
   }
 
@@ -615,7 +610,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   int FPDiff = 0;
-  if (IsTailCall && !IsSibcall && !IsMustTail) {
+  if (CLI.getIsTailCall() && !IsSibcall && !IsMustTail) {
     // Lower arguments at fp - stackoffset + fpdiff.
     unsigned NumBytesCallerPushed = MFI->getBytesToPopOnReturn();
 
@@ -649,8 +644,9 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SDValue RetFI;
   // Load return address for tail calls.
-  if (IsTailCall && FPDiff)
-    Chain = EmitTailCallLoadRetAddr(DAG, RetFI, Chain, IsTailCall, FPDiff, DL);
+  if (CLI.getIsTailCall() && FPDiff)
+    Chain = EmitTailCallLoadRetAddr(DAG, RetFI, Chain, CLI.getIsTailCall(),
+                                    FPDiff, DL);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
@@ -703,7 +699,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
-    } else if (!IsSibcall && (!IsTailCall || IsByVal)) {
+    } else if (!IsSibcall && (!CLI.getIsTailCall() || IsByVal)) {
       assert(VA.isMemLoc());
       if (!StackPtr.getNode()) {
         StackPtr = DAG.getCopyFromReg(Chain, DL, RegInfo->getStackRegister(),
@@ -732,7 +728,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // For tail calls lower the arguments to the 'real' stack slots.  Sibcalls
   // don't need this because the eligibility check rejects calls that require
   // shuffling arguments passed in memory.
-  if (!IsSibcall && IsTailCall) {
+  if (!IsSibcall && CLI.getIsTailCall()) {
     // Force all the incoming stack arguments to be loaded from the stack
     // before any new outgoing arguments are stored to the stack, because the
     // outgoing stack slots may alias the incoming argument stack slots, and
@@ -836,7 +832,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<SDValue, 8> Ops;
 
-  if (!IsSibcall && IsTailCall) {
+  if (!IsSibcall && CLI.getIsTailCall()) {
     Chain = DAG.getCALLSEQ_END(Chain, NumBytesToPop, 0, InGlue, DL);
     InGlue = Chain.getValue(1);
   }
@@ -844,7 +840,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Chain);
   Ops.push_back(Callee);
 
-  if (IsTailCall)
+  if (CLI.getIsTailCall())
     Ops.push_back(DAG.getConstant(FPDiff, DL, MVT::i32));
 
   // Add argument registers to the end of the list so that they are known live
@@ -862,7 +858,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MF.getFrameInfo().setHasTailCall();
     return DAG.getNode(M68kISD::TC_RETURN, DL, MVT::Other, Ops);
   }
@@ -884,7 +880,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     NumBytesForCalleeToPop = 0; // Callee pops nothing.
   }
 
-  if (CLI.DoesNotReturn && !getTargetMachine().Options.TrapUnreachable) {
+  if (CLI.getDoesNotReturn() && !getTargetMachine().Options.TrapUnreachable) {
     // No need to reset the stack after the call if the call doesn't return. To
     // make the MI verify, we'll pretend the callee does it for us.
     NumBytesForCalleeToPop = NumBytes;
@@ -905,8 +901,8 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
 SDValue M68kTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -940,8 +936,8 @@ SDValue M68kTargetLowering::LowerCallResult(
 
 SDValue M68kTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CCID, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   M68kMachineFunctionInfo *MMFI = MF.getInfo<M68kMachineFunctionInfo>();
   // const TargetFrameLowering &TFL = *Subtarget.getFrameLowering();
@@ -1049,8 +1045,8 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
     // Compute the set of forwarded registers. The rest are scratch.
     // ??? what is this for?
-    SmallVectorImpl<ForwardedRegister> &Forwards =
-        MMFI->getForwardedMustTailRegParms();
+    SmallVector<ForwardedRegister, 1> Forwards;
+    Forwards = std::move(MMFI->getForwardedMustTailRegParms());
     CCInfo.analyzeMustTailForwardedRegisters(Forwards, RegParmTypes, CC_M68k);
 
     // Copy all forwards from physical to virtual registers.
@@ -1060,6 +1056,7 @@ SDValue M68kTargetLowering::LowerFormalArguments(
       F.VReg = MF.getRegInfo().createVirtualRegister(getRegClassFor(F.VT));
       Chain = DAG.getCopyToReg(Chain, DL, F.VReg, RegVal);
     }
+    MMFI->getForwardedMustTailRegParms().assign(std::move(Forwards));
   }
 
   // Some CCs need callee pop.
@@ -1082,21 +1079,22 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 //              Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-bool M68kTargetLowering::CanLowerReturn(
-    CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool M68kTargetLowering::CanLowerReturn(CallingConv::ID CCID,
+                                        MachineFunction &MF, bool IsVarArg,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs,
+                                        LLVMContext &Context,
+                                        const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_M68k);
 }
 
-SDValue
-M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
-                                bool IsVarArg,
-                                const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                const SmallVectorImpl<SDValue> &OutVals,
-                                const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
+                                        bool IsVarArg,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs,
+                                        const SmallVectorImpl<SDValue> &OutVals,
+                                        const SDLoc &DL,
+                                        SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   M68kMachineFunctionInfo *MFI = MF.getInfo<M68kMachineFunctionInfo>();
 
@@ -1247,9 +1245,9 @@ M68kTargetLowering::GetAlignedArgumentStackSize(unsigned StackSize,
 bool M68kTargetLowering::IsEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
     bool IsCalleeStructRet, bool IsCallerStructRet, Type *RetTy,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+    llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    SelectionDAG &DAG) const {
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 

@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -98,9 +99,10 @@ struct CallableInfo {
 
 struct LambdaProperties {
   CallableInfo Callable;
-  SmallVector<BindArgument, 4> BindArguments;
+  llvm::SmallVectorWithFlags<BindArgument, 4> BindArguments;
   StringRef BindNamespace;
-  bool IsFixitSupported = false;
+  bool getIsFixitSupported() const { return BindArguments.getFlag(0); }
+  void setIsFixitSupported(bool Value) { BindArguments.setFlag(0, Value); }
 };
 
 } // end namespace
@@ -568,9 +570,9 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
     LP.Callable.CaptureInitializer = getSourceTextForExpr(Result, CalleeExpr);
   }
 
-  LP.BindArguments = buildBindArguments(Result, LP.Callable);
+  LP.BindArguments.assign(buildBindArguments(Result, LP.Callable));
 
-  LP.IsFixitSupported = isFixitSupported(LP.Callable, LP.BindArguments);
+  LP.setIsFixitSupported(isFixitSupported(LP.Callable, LP.BindArguments));
 
   return LP;
 }
@@ -654,7 +656,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto Diag =
       diag(MatchedDecl->getBeginLoc(),
            formatv("prefer a lambda to {0}::bind", LP.BindNamespace).str());
-  if (!LP.IsFixitSupported)
+  if (!LP.getIsFixitSupported())
     return;
 
   const auto *Ref = Result.Nodes.getNodeAs<Expr>("ref");

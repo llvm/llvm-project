@@ -240,7 +240,7 @@ void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
     if (MI && NewMI != MI &&
         !MI->isIdenticalTo(*NewMI, *this, /*Syntactically=*/true))
       IsAmbiguous = true;
-    IsSystemMacro &= Active->getOwningModule()->IsSystem ||
+    IsSystemMacro &= Active->getOwningModule()->getIsSystem() ||
                      SourceMgr.isInSystemHeader(NewMI->getDefinitionLoc());
     MI = NewMI;
   }

@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace llvm {
 class DWARFDebugInfoEntry;
@@ -391,7 +392,7 @@ protected:
   DenseMap<SubtreeDependenciesKeyTy, SubtreeDependenciesTy> SubtreeSummaries;
 
   /// Roots referencing an already-marked subtree.
-  SmallVector<SubtreeDependencyRefTy> SubtreeDependencyRefs;
+  llvm::SmallVectorWithFlags<SubtreeDependencyRefTy> SubtreeDependencyRefs;
 
   /// Number of leading SubtreeDependencyRefs whose subtree is summarized.
   size_t MaterializedRefs = 0;
@@ -403,7 +404,12 @@ protected:
 
   /// Whether inter-unit references could be resolved during marking. Reused
   /// when the recorded subtrees are walked, which happens outside of marking.
-  bool InterCUProcessingWasStarted = false;
+  bool getInterCUProcessingWasStarted() const {
+    return SubtreeDependencyRefs.getFlag(0);
+  }
+  void setInterCUProcessingWasStarted(bool Value) {
+    SubtreeDependencyRefs.setFlag(0, Value);
+  }
 };
 
 } // end of namespace parallel

@@ -391,7 +391,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
   Value *FPtr = &Fn;
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::FUNCTION_PRE]) {
-    if (!IO->Enabled)
+    if (!IO->getEnabled())
       continue;
     // Count epochs eagerly.
     ++IIRB.Epoch;
@@ -405,7 +405,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
 
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::FUNCTION_POST]) {
-    if (!IO->Enabled)
+    if (!IO->getEnabled())
       continue;
     // Count epochs eagerly.
     ++IIRB.Epoch;
@@ -459,7 +459,7 @@ bool InstrumentorImpl::instrumentModule() {
     Function *&YtorFn = IsPRE ? CtorFn : DtorFn;
     for (auto &ChoiceIt : IConf.IChoices[Loc]) {
       auto *IO = ChoiceIt.second;
-      if (!IO->Enabled)
+      if (!IO->getEnabled())
         continue;
       if (!YtorFn) {
         YtorFn = CreateYtor(IsPRE);
@@ -483,7 +483,7 @@ bool InstrumentorImpl::instrumentModule() {
     Function *&YtorFn = IsPRE ? CtorFn : DtorFn;
     for (auto &ChoiceIt : IConf.IChoices[Loc]) {
       auto *IO = ChoiceIt.second;
-      if (!IO->Enabled)
+      if (!IO->getEnabled())
         continue;
       if (!YtorFn) {
         YtorFn = CreateYtor(IsPRE);
@@ -530,11 +530,11 @@ bool InstrumentorImpl::instrument() {
 
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
-    if (IO->Enabled)
+    if (IO->getEnabled())
       RegisterForAllOpcodes(InstChoicesPRE, IO);
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
-    if (IO->Enabled)
+    if (IO->getEnabled())
       RegisterForAllOpcodes(InstChoicesPOST, IO);
   Changed |= instrumentModule();
 
@@ -692,7 +692,7 @@ InstrumentationConfig::getBasePointerInfo(Value &V,
 
   auto *BPIO =
       IChoices[InstrumentationLocation::SPECIAL_VALUE]["base_pointer_info"];
-  if (!BPIO || !BPIO->Enabled) {
+  if (!BPIO || !BPIO->getEnabled()) {
     IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
         "Base pointer info disabled but required, passing nullptr.",
         DS_Warning));

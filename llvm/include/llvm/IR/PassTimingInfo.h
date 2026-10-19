@@ -16,6 +16,7 @@
 #define LLVM_IR_PASSTIMINGINFO_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -73,15 +74,17 @@ class TimePassesHandler {
   SmallVector<Timer *, 8> PassActiveTimerStack;
   /// Stack of currently active analysis timers. Analyses can request other
   /// analyses.
-  SmallVector<Timer *, 8> AnalysisActiveTimerStack;
+  llvm::SmallVectorWithFlags<Timer *, 8, 2> AnalysisActiveTimerStack;
 
   /// Custom output stream to print timing information into.
   /// By default (== nullptr) we emit time report into the stream created by
   /// CreateInfoOutputFile().
   raw_ostream *OutStream = nullptr;
 
-  bool Enabled;
-  bool PerRun;
+  bool getEnabled() const { return AnalysisActiveTimerStack.getFlag(0); }
+  void setEnabled(bool Value) { AnalysisActiveTimerStack.setFlag(0, Value); }
+  bool getPerRun() const { return AnalysisActiveTimerStack.getFlag(1); }
+  void setPerRun(bool Value) { AnalysisActiveTimerStack.setFlag(1, Value); }
 
 public:
   static constexpr StringRef PassGroupName = "pass";

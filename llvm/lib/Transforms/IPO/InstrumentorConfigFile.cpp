@@ -96,7 +96,7 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
     for (auto &[Name, Choice] : KindChoices) {
       J.attributeBegin(Name);
       J.objectBegin();
-      J.attribute("enabled", Choice->Enabled);
+      J.attribute("enabled", Choice->getEnabled());
       J.attribute("filter", Choice->Filter);
       J.attribute("filter.description",
                   "Static property filter to exclude instrumentation.");
@@ -292,7 +292,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
           Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
-      IO->Enabled = ValueMap["enabled"];
+      IO->setEnabled(ValueMap["enabled"]);
       IO->Filter = FilterStr;
       for (auto &IRArg : IO->IRTArgs) {
         IRArg.Enabled = ValueMap[IRArg.Name];
@@ -307,7 +307,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
   for (auto &IChoiceMap : IConf.IChoices)
     for (auto &It : IChoiceMap)
       if (!SeenIOs.count(It.second))
-        It.second->Enabled = false;
+        It.second->setEnabled(false);
 
   return true;
 }

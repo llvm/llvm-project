@@ -15,6 +15,7 @@
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -54,10 +55,13 @@ class HexagonCopyToCombine : public MachineFunctionPass  {
   const HexagonInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const HexagonSubtarget *ST;
-  bool ShouldCombineAggressively;
+  bool getShouldCombineAggressively() const { return DbgMItoMove.getFlag(0); }
+  void setShouldCombineAggressively(bool Value) {
+    DbgMItoMove.setFlag(0, Value);
+  }
 
   DenseSet<MachineInstr *> PotentiallyNewifiableTFR;
-  SmallVector<MachineInstr *, 8> DbgMItoMove;
+  llvm::SmallVectorWithFlags<MachineInstr *, 8> DbgMItoMove;
 
 public:
   static char ID;
@@ -270,7 +274,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
     MachineBasicBlock::reverse_iterator I = ++I2.getIterator().getReverse();
     MachineBasicBlock::reverse_iterator End = I1.getIterator().getReverse();
     // At 03 we got better results (dhrystone!) by being more conservative.
-    if (!ShouldCombineAggressively)
+    if (!getShouldCombineAggressively())
       End = ++I1.getIterator().getReverse();
     // If I2 kills its operand and we move I2 over an instruction that also
     // uses I2's use reg we need to modify that (first) instruction to now kill
@@ -318,7 +322,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
     // Look at instructions I in between I1 and (excluding) I2.
     MachineBasicBlock::iterator I(I1), End(I2);
     // At O3 we got better results (dhrystone) by being more conservative here.
-    if (!ShouldCombineAggressively)
+    if (!getShouldCombineAggressively())
       End = std::next(MachineBasicBlock::iterator(I2));
     Register I1UseReg = UseReg(I1.getOperand(1));
     // Track killed operands. If we move across an instruction that kills our
@@ -400,7 +404,8 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
         MachineInstr *DefInst = LastDef[Reg];
         if (!DefInst)
           continue;
-        if (!isCombinableInstType(*DefInst, TII, ShouldCombineAggressively))
+        if (!isCombinableInstType(*DefInst, TII,
+                                  getShouldCombineAggressively()))
           continue;
 
         // Only close newifiable stores should influence the decision.
@@ -460,8 +465,8 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   bool OptForSize = F.hasOptSize();
 
   // Combine aggressively (for code size)
-  ShouldCombineAggressively =
-      MF.getTarget().getOptLevel() <= CodeGenOptLevel::Default;
+  setShouldCombineAggressively(MF.getTarget().getOptLevel() <=
+                               CodeGenOptLevel::Default);
 
   // Disable CONST64 for tiny core since it takes a LD resource.
   if (!OptForSize && ST->isTinyCore())
@@ -483,11 +488,11 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
       // Don't combine a TFR whose user could be newified (instructions that
       // define double registers can not be newified - Programmer's Ref Manual
       // 5.4.2 New-value stores).
-      if (ShouldCombineAggressively && PotentiallyNewifiableTFR.count(&I1))
+      if (getShouldCombineAggressively() && PotentiallyNewifiableTFR.count(&I1))
         continue;
 
       // Ignore instructions that are not combinable.
-      if (!isCombinableInstType(I1, TII, ShouldCombineAggressively))
+      if (!isCombinableInstType(I1, TII, getShouldCombineAggressively()))
         continue;
 
       // Find a second instruction that can be merged into a combine
@@ -526,11 +531,11 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr &I1,
       break;
 
     // Ignore non-combinable instructions.
-    if (!isCombinableInstType(*I2, TII, ShouldCombineAggressively))
+    if (!isCombinableInstType(*I2, TII, getShouldCombineAggressively()))
       continue;
 
     // Don't combine a TFR whose user could be newified.
-    if (ShouldCombineAggressively && PotentiallyNewifiableTFR.count(&*I2))
+    if (getShouldCombineAggressively() && PotentiallyNewifiableTFR.count(&*I2))
       continue;
 
     Register I2DestReg = I2->getOperand(0).getReg();

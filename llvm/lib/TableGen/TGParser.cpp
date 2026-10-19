@@ -769,7 +769,7 @@ const Record *TGParser::ParseClassID() {
                Lex.getCurStrVal() + "'");
     else
       TokError(Msg);
-  } else if (TrackReferenceLocs) {
+  } else if (getTrackReferenceLocs()) {
     Result->appendReferenceLoc(Lex.getLocRange());
   }
 
@@ -1197,7 +1197,7 @@ const RecTy *TGParser::ParseType() {
 const Init *TGParser::ParseIDValue(Record *CurRec, const StringInit *Name,
                                    SMRange NameLoc, IDParseMode Mode) {
   if (const Init *I = CurScope->getVar(Records, CurMultiClass, Name, NameLoc,
-                                       TrackReferenceLocs))
+                                       getTrackReferenceLocs()))
     return I;
 
   if (Mode == ParseNameMode)
@@ -1205,7 +1205,7 @@ const Init *TGParser::ParseIDValue(Record *CurRec, const StringInit *Name,
 
   if (const Init *I = Records.getGlobal(Name->getValue())) {
     // Add a reference to the global if it's a record.
-    if (TrackReferenceLocs) {
+    if (getTrackReferenceLocs()) {
       if (const auto *Def = dyn_cast<DefInit>(I))
         Def->getDef()->appendReferenceLoc(NameLoc);
     }
@@ -3045,7 +3045,7 @@ const Init *TGParser::ParseSimpleValue(Record *CurRec, const RecTy *ItemType,
     if (resolveArguments(Class, Args, NameLoc.Start))
       return nullptr;
 
-    if (TrackReferenceLocs)
+    if (getTrackReferenceLocs())
       Class->appendReferenceLoc(NameLoc);
     return VarDefInit::get(NameLoc.Start, Class, Args)->Fold();
   }
@@ -3334,7 +3334,7 @@ const Init *TGParser::ParseValue(Record *CurRec, const RecTy *ItemType,
       }
 
       // Add a reference to this field if we know the record class.
-      if (TrackReferenceLocs) {
+      if (getTrackReferenceLocs()) {
         if (const auto *DI = dyn_cast<DefInit>(Result)) {
           DI->getDef()->appendValueReferenceLoc(FieldName, FieldNameLoc);
         } else if (const auto *TI = dyn_cast<TypedInit>(Result)) {
@@ -4391,7 +4391,7 @@ bool TGParser::ParseClass() {
   if (ParseObjectBody(CurRec))
     return true;
 
-  if (!NoWarnOnUnusedTemplateArgs)
+  if (!getNoWarnOnUnusedTemplateArgs())
     CurRec->checkUnusedTemplateArgs();
 
   PopScope(ClassScope);
@@ -4590,7 +4590,7 @@ bool TGParser::ParseMultiClass() {
     }
   }
 
-  if (!NoWarnOnUnusedTemplateArgs)
+  if (!getNoWarnOnUnusedTemplateArgs())
     CurMultiClass->Rec.checkUnusedTemplateArgs();
 
   PopScope(MulticlassScope);

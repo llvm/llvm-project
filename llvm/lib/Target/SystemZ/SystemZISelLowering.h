@@ -16,6 +16,7 @@
 
 #include "SystemZ.h"
 #include "SystemZInstrInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -240,8 +241,7 @@ public:
       unsigned NumParts, MVT PartVT, EVT ValueVT,
       std::optional<CallingConv::ID> CC) const override;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerCall(CallLoweringInfo &CLI,
@@ -257,12 +257,10 @@ public:
                      SDLoc DL, SDValue Chain, bool IsStrict) const;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context,
-                      const Type *RetTy) const override;
+                      bool isVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
@@ -467,12 +465,11 @@ private:
 private:
   bool isInternal(const Function *Fn) const;
   mutable std::map<const Function *, bool> IsInternalCache;
-  void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  void verifyNarrowIntegerArgs_Call(llvm::ArrayRef<ISD::OutputArg> Outs,
                                     const Function *F, SDValue Callee) const;
-  void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  void verifyNarrowIntegerArgs_Ret(llvm::ArrayRef<ISD::OutputArg> Outs,
                                    const Function *F) const;
-  bool
-  verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+  bool verifyNarrowIntegerArgs(llvm::ArrayRef<ISD::OutputArg> Outs) const;
 
 public:
 };
@@ -483,15 +480,17 @@ private:
   APInt SplatBits;           // Smallest splat value.
   APInt SplatUndef;          // Bits correspoding to undef operands of the BVN.
   unsigned SplatBitSize = 0;
-  bool isFP128 = false;
+  bool getIsFP128() const { return OpVals.getFlag(0); }
+  void setIsFP128(bool Value) { OpVals.setFlag(0, Value); }
+
 public:
   unsigned Opcode = 0;
-  SmallVector<unsigned, 2> OpVals;
+  llvm::SmallVectorWithFlags<unsigned, 2> OpVals;
   MVT VecVT;
   SystemZVectorConstantInfo(APInt IntImm);
   SystemZVectorConstantInfo(APFloat FPImm)
       : SystemZVectorConstantInfo(FPImm.bitcastToAPInt()) {
-    isFP128 = (&FPImm.getSemantics() == &APFloat::IEEEquad());
+    setIsFP128((&FPImm.getSemantics() == &APFloat::IEEEquad()));
   }
   SystemZVectorConstantInfo(BuildVectorSDNode *BVN);
   bool isVectorConstantLegal(const SystemZSubtarget &Subtarget);

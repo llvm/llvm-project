@@ -638,7 +638,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
         // instead of adding it to the frame object directly to reduce memory
         // overhead. This is because there can be many unique frames,
         // particularly for callsite frames.
-        if (KeepSymbolName) {
+        if (getKeepSymbolName()) {
           StringRef CanonicalName =
               sampleprof::FunctionSamples::getCanonicalFnName(
                   DIFrame.FunctionName);
@@ -732,7 +732,9 @@ Error RawMemProfReader::readRawProfile(
     // profiles in this binary file.
     const llvm::SmallVector<SegmentEntry> Entries =
         readSegmentEntries(Next + Header->SegmentOffset);
-    if (!SegmentInfo.empty() && SegmentInfo != Entries) {
+    if (!SegmentInfo.empty() &&
+        (llvm::ArrayRef<llvm::memprof::SegmentEntry>(SegmentInfo) !=
+         llvm::ArrayRef<llvm::memprof::SegmentEntry>(Entries))) {
       // We do not expect segment information to change when deserializing from
       // the same binary profile file. This can happen if dynamic libraries are
       // loaded/unloaded between profile dumping.
@@ -811,7 +813,7 @@ Error RawMemProfReader::readNextRecord(
   // true. This is useful for debugging and testing.
   auto IdToFrameCallback = [this](const FrameId Id) {
     Frame F = this->idToFrame(Id);
-    if (!this->KeepSymbolName)
+    if (!this->getKeepSymbolName())
       return F;
     auto Iter = this->GuidToSymbolName.find(F.Function);
     assert(Iter != this->GuidToSymbolName.end());

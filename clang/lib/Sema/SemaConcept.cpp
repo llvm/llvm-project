@@ -604,8 +604,8 @@ private:
         return nullptr;
       auto &Satisfaction = Checker.Satisfaction;
       auto &Cached = Iter->second.Satisfaction;
-      Satisfaction.ContainsErrors = Cached.ContainsErrors;
-      Satisfaction.IsSatisfied = Cached.IsSatisfied;
+      Satisfaction.setContainsErrors(Cached.containsErrors());
+      Satisfaction.setIsSatisfied(Cached.isSatisfied());
       Satisfaction.Details.insert(Satisfaction.Details.begin() +
                                       PreviousDetailsSize,
                                   Cached.Details.begin(), Cached.Details.end());
@@ -615,8 +615,8 @@ private:
     ExprResult cache(ExprResult E) {
       UnsubstitutedConstraintSatisfactionCacheResult Cache;
       auto &Satisfaction = Checker.Satisfaction;
-      Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
-      Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
+      Cache.Satisfaction.setContainsErrors(Satisfaction.containsErrors());
+      Cache.Satisfaction.setIsSatisfied(Satisfaction.isSatisfied());
       Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
                                         Satisfaction.Details.begin() +
                                             PreviousDetailsSize,
@@ -714,8 +714,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
   llvm::FoldingSetNodeID ID;
   if (Template &&
       DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, &MLTAL)) {
-    Satisfaction.IsSatisfied = false;
-    Satisfaction.ContainsErrors = true;
+    Satisfaction.setIsSatisfied(false);
+    Satisfaction.setContainsErrors(true);
     return ExprEmpty();
   }
   SatisfactionStackRAII StackRAII(S, Template, ID);
@@ -810,7 +810,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
           SubstArgs)) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     if (Trap.hasErrorOccurred())
       consumeSFINAEFailure(Info, Satisfaction);
     return std::nullopt;
@@ -872,7 +872,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     return ExprError();
   }
 
@@ -900,8 +900,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   // diagnostics. SO, add a failure detail that will cause us to make this
   // overload set not viable.
   if (SubstitutedAtomicExpr.get()->containsErrors()) {
-    Satisfaction.IsSatisfied = false;
-    Satisfaction.ContainsErrors = true;
+    Satisfaction.setIsSatisfied(false);
+    Satisfaction.setContainsErrors(true);
 
     PartialDiagnostic Msg = S.PDiag(diag::note_constraint_references_error);
     Satisfaction.Details.emplace_back(
@@ -912,8 +912,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   }
 
   if (SubstitutedAtomicExpr.get()->isValueDependent()) {
-    Satisfaction.IsSatisfied = true;
-    Satisfaction.ContainsErrors = false;
+    Satisfaction.setIsSatisfied(true);
+    Satisfaction.setContainsErrors(false);
     return SubstitutedAtomicExpr;
   }
 
@@ -935,8 +935,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
 
   assert(EvalResult.Val.isInt() &&
          "evaluating bool expression didn't produce int");
-  Satisfaction.IsSatisfied = EvalResult.Val.getInt().getBoolValue();
-  if (!Satisfaction.IsSatisfied)
+  Satisfaction.setIsSatisfied(EvalResult.Val.getInt().getBoolValue());
+  if (!Satisfaction.isSatisfied())
     Satisfaction.Details.emplace_back(SubstitutedAtomicExpr.get());
 
   return SubstitutedAtomicExpr;
@@ -971,7 +971,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
           static_cast<const NormalizedConstraintWithParamMapping &>(Constraint),
           MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     return ExprError();
   }
 
@@ -988,15 +988,15 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprEmpty();
 
   if (*NumExpansions == 0) {
-    Satisfaction.IsSatisfied = Conjunction;
+    Satisfaction.setIsSatisfied(Conjunction);
     return ExprEmpty();
   }
 
   ExprResult Out;
   for (unsigned I = 0; I < *NumExpansions; I++) {
     Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
-    Satisfaction.IsSatisfied = false;
-    Satisfaction.ContainsErrors = false;
+    Satisfaction.setIsSatisfied(false);
+    Satisfaction.setContainsErrors(false);
     ExprResult Expr =
         ConstraintSatisfactionChecker(S, Template, TopLevelConceptId,
                                       TemplateNameLoc, UnsignedOrNone(I),
@@ -1014,13 +1014,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
     }
-    if (!Conjunction && Satisfaction.IsSatisfied) {
+    if (!Conjunction && Satisfaction.isSatisfied()) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
                                      EffectiveDetailEndIndex,
                                  Satisfaction.Details.end());
       break;
     }
-    if (Satisfaction.IsSatisfied != Conjunction)
+    if (Satisfaction.isSatisfied() != Conjunction)
       return Out;
   }
 
@@ -1050,7 +1050,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
       SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
 
   if (!SubstitutedArgs) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     return ExprError();
   }
 
@@ -1076,7 +1076,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   } else if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs,
                                       OutArgs) ||
              Trap.hasErrorOccurred()) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     if (Trap.hasErrorOccurred())
       consumeSFINAEFailure(Info, Satisfaction);
     return ExprError();
@@ -1140,7 +1140,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   // ConceptIdConstraint is only relevant for diagnostics,
   // so if the normalized constraint is satisfied, we should not
   // substitute into the constraint.
-  if (Satisfaction.IsSatisfied)
+  if (Satisfaction.isSatisfied())
     return E;
 
   ParameterMappingInstantiationCache PMCache(
@@ -1163,26 +1163,27 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult LHS = Evaluate(Constraint.getLHS(), MLTAL);
 
-  if (Conjunction && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
+  if (Conjunction &&
+      (!Satisfaction.isSatisfied() || Satisfaction.containsErrors()))
     return LHS;
 
-  if (!Conjunction && !LHS.isInvalid() && Satisfaction.IsSatisfied &&
-      !Satisfaction.ContainsErrors)
+  if (!Conjunction && !LHS.isInvalid() && Satisfaction.isSatisfied() &&
+      !Satisfaction.containsErrors())
     return LHS;
 
-  Satisfaction.ContainsErrors = false;
-  Satisfaction.IsSatisfied = false;
+  Satisfaction.setContainsErrors(false);
+  Satisfaction.setIsSatisfied(false);
 
   ExprResult RHS = Evaluate(Constraint.getRHS(), MLTAL);
 
-  if (!Conjunction && !RHS.isInvalid() && Satisfaction.IsSatisfied &&
-      !Satisfaction.ContainsErrors)
+  if (!Conjunction && !RHS.isInvalid() && Satisfaction.isSatisfied() &&
+      !Satisfaction.containsErrors())
     Satisfaction.Details.erase(Satisfaction.Details.begin() +
                                    EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
 
   if (!BuildExpression)
-    return Satisfaction.ContainsErrors ? ExprError() : ExprEmpty();
+    return Satisfaction.containsErrors() ? ExprError() : ExprEmpty();
 
   if (!LHS.isUsable())
     return RHS;
@@ -1229,7 +1230,7 @@ static bool CheckConstraintSatisfaction(
     *ConvertedExpr = nullptr;
 
   if (AssociatedConstraints.empty()) {
-    Satisfaction.IsSatisfied = true;
+    Satisfaction.setIsSatisfied(true);
     return false;
   }
 
@@ -1240,7 +1241,7 @@ static bool CheckConstraintSatisfaction(
   // attempted later and diagnosed, such as function template specializations,
   // but that's not the case for concept specializations.
   if (TemplateArgsLists.isAnyArgInstantiationDependent()) {
-    Satisfaction.IsSatisfied = true;
+    Satisfaction.setIsSatisfied(true);
     return false;
   }
 
@@ -1267,7 +1268,7 @@ static bool CheckConstraintSatisfaction(
   const NormalizedConstraint *C =
       S.getNormalizedAssociatedConstraints(Template, AssociatedConstraints);
   if (!C) {
-    Satisfaction.IsSatisfied = false;
+    Satisfaction.setIsSatisfied(false);
     return true;
   }
 
@@ -1301,7 +1302,7 @@ bool Sema::CheckConstraintSatisfaction(
         return TemplateIDRange.printToString(getSourceManager());
       });
   if (AssociatedConstraints.empty()) {
-    OutSatisfaction.IsSatisfied = true;
+    OutSatisfaction.setIsSatisfied(true);
     return false;
   }
   const auto *Template = dyn_cast_if_present<const NamedDecl *>(Entity);
@@ -1313,7 +1314,7 @@ bool Sema::CheckConstraintSatisfaction(
   // Invalid templates could make their way here. Substituting them could result
   // in dependent expressions.
   if (Template->isInvalidDecl()) {
-    OutSatisfaction.IsSatisfied = false;
+    OutSatisfaction.setIsSatisfied(false);
     return true;
   }
 
@@ -1504,7 +1505,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   if (FD->isDependentContext() ||
       FD->getTemplatedKind() ==
           FunctionDecl::TK_FunctionTemplateSpecialization) {
-    Satisfaction.IsSatisfied = true;
+    Satisfaction.setIsSatisfied(true);
     return false;
   }
 
@@ -1701,7 +1702,7 @@ bool Sema::EnsureTemplateArgumentListConstraints(
   TD->getAssociatedConstraints(AssociatedConstraints);
   if (CheckConstraintSatisfaction(TD, AssociatedConstraints, TemplateArgsLists,
                                   TemplateIDRange, Satisfaction) ||
-      !Satisfaction.IsSatisfied) {
+      !Satisfaction.isSatisfied()) {
     SmallString<128> TemplateArgString;
     TemplateArgString = " ";
     TemplateArgString += getTemplateArgumentBindingsText(
@@ -1725,7 +1726,7 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   SmallVector<AssociatedConstraint, 3> TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   if (TemplateAC.empty()) {
-    Satisfaction.IsSatisfied = true;
+    Satisfaction.setIsSatisfied(true);
     return false;
   }
 
@@ -1776,7 +1777,7 @@ bool Sema::CheckFunctionTemplateConstraints(
   SmallVector<AssociatedConstraint, 3> TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   if (TemplateAC.empty()) {
-    Satisfaction.IsSatisfied = true;
+    Satisfaction.setIsSatisfied(true);
     return false;
   }
 
@@ -2056,7 +2057,7 @@ void Sema::DiagnoseUnsatisfiedConstraint(
     const ConstraintSatisfaction &Satisfaction, SourceLocation Loc,
     bool First) {
 
-  assert(!Satisfaction.IsSatisfied &&
+  assert(!Satisfaction.isSatisfied() &&
          "Attempted to diagnose a satisfied constraint");
   ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.Details, Loc, First);
 }

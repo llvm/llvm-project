@@ -46,7 +46,8 @@ namespace llvm {
 WebAssemblyAsmTypeCheck::WebAssemblyAsmTypeCheck(MCAsmParser &Parser,
                                                  const MCInstrInfo &MII,
                                                  bool Is64)
-    : Parser(Parser), MII(MII), Is64(Is64) {}
+    : Parser(Parser), MII(MII),
+      LocalTypes(decltype(this->LocalTypes)::withFlags(unsigned(Is64))) {}
 
 void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   LocalTypes.assign(Sig.Params.begin(), Sig.Params.end());
@@ -265,7 +266,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     switch (SymRef->getSpecifier()) {
     case WebAssembly::S_GOT:
     case WebAssembly::S_GOT_TLS:
-      Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+      Type = getIs64() ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
       break;
@@ -498,7 +499,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "memory.fill") {
-    Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    Type = getIs64() ? wasm::ValType::I64 : wasm::ValType::I32;
     bool Error = popType(ErrorLoc, Type);
     Error |= popType(ErrorLoc, wasm::ValType::I32);
     Error |= popType(ErrorLoc, Type);
@@ -506,7 +507,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "memory.copy") {
-    Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    Type = getIs64() ? wasm::ValType::I64 : wasm::ValType::I32;
     bool Error = popType(ErrorLoc, Type);
     Error |= popType(ErrorLoc, Type);
     Error |= popType(ErrorLoc, Type);
@@ -514,7 +515,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "memory.init") {
-    Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    Type = getIs64() ? wasm::ValType::I64 : wasm::ValType::I32;
     bool Error = popType(ErrorLoc, wasm::ValType::I32);
     Error |= popType(ErrorLoc, wasm::ValType::I32);
     Error |= popType(ErrorLoc, Type);

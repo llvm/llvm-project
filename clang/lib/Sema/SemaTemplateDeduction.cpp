@@ -48,15 +48,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <cassert>
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -870,8 +873,9 @@ public:
                      bool DeducePackIfNotAlreadyDeduced = false,
                      bool FinishingDeduction = false)
       : S(S), TemplateParams(TemplateParams), Deduced(Deduced), Info(Info),
-        DeducePackIfNotAlreadyDeduced(DeducePackIfNotAlreadyDeduced),
-        FinishingDeduction(FinishingDeduction) {
+        Packs(decltype(this->Packs)::withFlags(
+            (unsigned(DeducePackIfNotAlreadyDeduced) << 1) |
+            (unsigned(FinishingDeduction) << 3))) {
     unsigned NumNamedPacks = addPacks(Pattern);
     finishConstruction(NumNamedPacks);
   }
@@ -889,9 +893,9 @@ private:
   void addPack(unsigned Index) {
     // Save the deduced template argument for the parameter pack expanded
     // by this pack expansion, then clear out the deduction.
-    DeducedFromEarlierParameter = !Deduced[Index].isNull();
+    setDeducedFromEarlierParameter(!Deduced[Index].isNull());
     DeducedPack Pack(Index);
-    if (!FinishingDeduction) {
+    if (!getFinishingDeduction()) {
       Pack.Saved = Deduced[Index];
       Deduced[Index] = TemplateArgument();
     }
@@ -985,12 +989,12 @@ private:
     for (unsigned I = 0; I != NumNamedPacks; ++I) {
       if (Packs[I].Index >= Info.getNumExplicitArgs()) {
         IsExpanded = false;
-        IsPartiallyExpanded = false;
+        setIsPartiallyExpanded(false);
         break;
       }
       if (PartialPackDepthIndex ==
             std::make_pair(Info.getDeducedDepth(), Packs[I].Index)) {
-        IsPartiallyExpanded = true;
+        setIsPartiallyExpanded(true);
       }
     }
 
@@ -998,7 +1002,7 @@ private:
     // If we partially expanded, this is the number of partial arguments.
     // FIXME: `&& FixedNumExpansions` is a workaround for UB described in
     // https://github.com/llvm/llvm-project/issues/100095
-    if (IsPartiallyExpanded)
+    if (getIsPartiallyExpanded())
       PackElements += NumPartialPackArgs;
     else if (IsExpanded && FixedNumExpansions)
       PackElements += *FixedNumExpansions;
@@ -1037,12 +1041,12 @@ public:
   /// Determine whether this pack has already been deduced from a previous
   /// argument.
   bool isDeducedFromEarlierParameter() const {
-    return DeducedFromEarlierParameter;
+    return getDeducedFromEarlierParameter();
   }
 
   /// Determine whether this pack has already been partially expanded into a
   /// sequence of (prior) function parameters / template arguments.
-  bool isPartiallyExpanded() { return IsPartiallyExpanded; }
+  bool isPartiallyExpanded() { return getIsPartiallyExpanded(); }
 
   /// Determine whether this pack expansion scope has a known, fixed arity.
   /// This happens if it involves a pack from an outer template that has
@@ -1061,7 +1065,7 @@ public:
     // Capture the deduced template arguments for each parameter pack expanded
     // by this pack expansion, add them to the list of arguments we've deduced
     // for that pack, then clear out the deduced argument.
-    if (!FinishingDeduction) {
+    if (!getFinishingDeduction()) {
       for (auto &Pack : Packs) {
         DeducedTemplateArgument &DeducedArg = Deduced[Pack.Index];
         if (!Pack.New.empty() || !DeducedArg.isNull()) {
@@ -1084,13 +1088,13 @@ public:
   /// producing the argument packs and checking for consistency with prior
   /// deductions.
   TemplateDeductionResult finish() {
-    if (FinishingDeduction)
+    if (getFinishingDeduction())
       return TemplateDeductionResult::Success;
     // Build argument packs for each of the parameter packs expanded by this
     // pack expansion.
     for (auto &Pack : Packs) {
       // Put back the old value for this pack.
-      if (!FinishingDeduction)
+      if (!getFinishingDeduction())
         Deduced[Pack.Index] = Pack.Saved;
 
       // Always make sure the size of this pack is correct, even if we didn't
@@ -1144,7 +1148,7 @@ public:
       // Check the new pack matches any previous value.
       DeducedTemplateArgument OldPack = *Loc;
       DeducedTemplateArgument Result = checkDeducedTemplateArguments(
-          S.Context, OldPack, NewPack, DeducePackIfNotAlreadyDeduced);
+          S.Context, OldPack, NewPack, getDeducePackIfNotAlreadyDeduced());
 
       Info.AggregateDeductionCandidateHasMismatchedArity =
           OldPack.getKind() == TemplateArgument::Pack &&
@@ -1188,14 +1192,18 @@ private:
   SmallVectorImpl<DeducedTemplateArgument> &Deduced;
   TemplateDeductionInfo &Info;
   unsigned PackElements = 0;
-  bool IsPartiallyExpanded = false;
-  bool DeducePackIfNotAlreadyDeduced = false;
-  bool DeducedFromEarlierParameter = false;
-  bool FinishingDeduction = false;
+  bool getIsPartiallyExpanded() const { return Packs.getFlag(0); }
+  void setIsPartiallyExpanded(bool Value) { Packs.setFlag(0, Value); }
+  bool getDeducePackIfNotAlreadyDeduced() const { return Packs.getFlag(1); }
+  void setDeducePackIfNotAlreadyDeduced(bool Value) { Packs.setFlag(1, Value); }
+  bool getDeducedFromEarlierParameter() const { return Packs.getFlag(2); }
+  void setDeducedFromEarlierParameter(bool Value) { Packs.setFlag(2, Value); }
+  bool getFinishingDeduction() const { return Packs.getFlag(3); }
+  void setFinishingDeduction(bool Value) { Packs.setFlag(3, Value); }
   /// The number of expansions, if we have a fully-expanded pack in this scope.
   UnsignedOrNone FixedNumExpansions = std::nullopt;
 
-  SmallVector<DeducedPack, 2> Packs;
+  llvm::SmallVectorWithFlags<DeducedPack, 2, 4> Packs;
 };
 
 } // namespace
@@ -1496,8 +1504,13 @@ DeduceTemplateBases(Sema &S, const CXXRecordDecl *RD,
   // We iterate over this later, so we have to use MapVector to ensure
   // determinism.
   struct MatchValue {
-    SmallVector<DeducedTemplateArgument, 8> Deduced;
-    bool HasDeducedAnyParam;
+    llvm::SmallVectorWithFlags<DeducedTemplateArgument, 8> Deduced;
+    bool getHasDeducedAnyParam() const { return Deduced.getFlag(0); }
+    void setHasDeducedAnyParam(bool Value) { Deduced.setFlag(0, Value); }
+
+    MatchValue(SmallVector<DeducedTemplateArgument, 8> Deduced,
+               bool HasDeducedAnyParam)
+        : Deduced(unsigned(HasDeducedAnyParam), std::move(Deduced)) {}
   };
   llvm::MapVector<const CXXRecordDecl *, MatchValue> Matches;
 
@@ -1563,8 +1576,11 @@ DeduceTemplateBases(Sema &S, const CXXRecordDecl *RD,
   if (Matches.size() > 1)
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
-  std::swap(Matches.front().second.Deduced, Deduced);
-  if (bool HasDeducedAnyParamCopy = Matches.front().second.HasDeducedAnyParam;
+  Deduced.assign(
+      std::make_move_iterator(Matches.front().second.Deduced.begin()),
+      std::make_move_iterator(Matches.front().second.Deduced.end()));
+  if (bool HasDeducedAnyParamCopy =
+          Matches.front().second.getHasDeducedAnyParam();
       HasDeducedAnyParamCopy && HasDeducedAnyParam)
     *HasDeducedAnyParam = HasDeducedAnyParamCopy;
   return TemplateDeductionResult::Success;
@@ -2959,8 +2975,20 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
     TemplateArgumentLoc ArgLoc =
         S.getTrivialTemplateArgumentLoc(Arg, QualType(), Info.getLocation());
 
-    SaveAndRestore _1(CTAI.MatchingTTP, false);
-    SaveAndRestore _2(CTAI.StrictPackMatch, false);
+    auto _1 = [PackedFlagOwner = std::addressof(CTAI)] {
+      const bool PackedFlagOld = PackedFlagOwner->getMatchingTTP();
+      PackedFlagOwner->setMatchingTTP(false);
+      return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+        PackedFlagOwner->setMatchingTTP(PackedFlagOld);
+      });
+    }();
+    auto _2 = [PackedFlagOwner = std::addressof(CTAI)] {
+      const bool PackedFlagOld = PackedFlagOwner->getStrictPackMatch();
+      PackedFlagOwner->setStrictPackMatch(false);
+      return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+        PackedFlagOwner->setStrictPackMatch(PackedFlagOld);
+      });
+    }();
     // Check the template argument, converting it as necessary.
     auto Res = S.CheckTemplateArgument(
         Param, ArgLoc, Template, Template->getLocation(),
@@ -2969,7 +2997,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
             ? (Arg.wasDeducedFromArrayBound() ? Sema::CTAK_DeducedFromArrayBound
                                               : Sema::CTAK_Deduced)
             : Sema::CTAK_Specified);
-    if (CTAI.StrictPackMatch)
+    if (CTAI.getStrictPackMatch())
       Info.setStrictPackMatch();
     return Res;
   };
@@ -3160,9 +3188,27 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
                            : TemplateDeductionResult::Incomplete;
     }
 
-    SaveAndRestore _1(CTAI.PartialOrdering, false);
-    SaveAndRestore _2(CTAI.MatchingTTP, false);
-    SaveAndRestore _3(CTAI.StrictPackMatch, false);
+    auto _1 = [PackedFlagOwner = std::addressof(CTAI)] {
+      const bool PackedFlagOld = PackedFlagOwner->getPartialOrdering();
+      PackedFlagOwner->setPartialOrdering(false);
+      return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+        PackedFlagOwner->setPartialOrdering(PackedFlagOld);
+      });
+    }();
+    auto _2 = [PackedFlagOwner = std::addressof(CTAI)] {
+      const bool PackedFlagOld = PackedFlagOwner->getMatchingTTP();
+      PackedFlagOwner->setMatchingTTP(false);
+      return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+        PackedFlagOwner->setMatchingTTP(PackedFlagOld);
+      });
+    }();
+    auto _3 = [PackedFlagOwner = std::addressof(CTAI)] {
+      const bool PackedFlagOld = PackedFlagOwner->getStrictPackMatch();
+      PackedFlagOwner->setStrictPackMatch(false);
+      return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+        PackedFlagOwner->setStrictPackMatch(PackedFlagOld);
+      });
+    }();
     // Check whether we can actually use the default argument.
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
@@ -3239,7 +3285,7 @@ CheckDeducedArgumentConstraints(Sema &S, NamedDecl *Template,
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
                                     Info.AssociatedConstraintsSatisfaction) ||
-      !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+      !Info.AssociatedConstraintsSatisfaction.isSatisfied()) {
     Info.reset(
         TemplateArgumentList::CreateCopy(S.Context, SugaredDeducedArgs),
         TemplateArgumentList::CreateCopy(S.Context, CanonicalDeducedArgs));
@@ -4010,7 +4056,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
             Info.getLocation(),
             FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
             CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction) ||
-        !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+        !Info.AssociatedConstraintsSatisfaction.isSatisfied()) {
       Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
                                          Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
@@ -4057,7 +4103,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     if (CheckFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CTAI.CanonicalConverted,
             Info.AssociatedConstraintsSatisfaction) ||
-        !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+        !Info.AssociatedConstraintsSatisfaction.isSatisfied()) {
       Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
                                          Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
@@ -4263,7 +4309,7 @@ bool Sema::DeduceTemplateArguments(
     if (CheckConstraintSatisfaction(PatternCTD, Constraints, DeducedArgs,
                                     SourceRange(Loc),
                                     Info.AssociatedConstraintsSatisfaction) ||
-        !Info.AssociatedConstraintsSatisfaction.IsSatisfied ||
+        !Info.AssociatedConstraintsSatisfaction.isSatisfied() ||
         Trap.hasErrorOccurred()) {
       SmallVector<TemplateArgument, 4> CanonicalCandidateArgs;
       CanonicalCandidateArgs.reserve(CandidateArgs.size());
@@ -5396,7 +5442,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
           Concept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
           TypeLoc.getLocalSourceRange(), Satisfaction))
     return true;
-  if (!Satisfaction.IsSatisfied) {
+  if (!Satisfaction.isSatisfied()) {
     std::string Buf;
     llvm::raw_string_ostream OS(Buf);
     OS << "'" << Concept->getName();
@@ -6763,7 +6809,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
       return false;
     PArgs = std::move(CTAI.SugaredConverted);
     if (StrictPackMatch)
-      *StrictPackMatch |= CTAI.StrictPackMatch;
+      *StrictPackMatch |= CTAI.getStrictPackMatch();
   }
 
   // Determine whether P1 is at least as specialized as P2.

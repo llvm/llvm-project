@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 
 #include "UnwrappedLineParser.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 namespace format {
@@ -51,8 +52,10 @@ enum ScopeType {
 class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
-      : First(Line.Tokens.front().Tok), Type(LT_Other), Level(Line.Level),
-        PPLevel(Line.PPLevel),
+      : First(Line.Tokens.front().Tok),
+        Children(decltype(this->Children)::withFlags(
+            unsigned(bool(Line.IsContinuation)) << 1)),
+        Type(LT_Other), Level(Line.Level), PPLevel(Line.PPLevel),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
         InPPDirective(Line.InPPDirective),
@@ -62,7 +65,6 @@ public:
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
-        ReturnTypeWrapped(false), IsContinuation(Line.IsContinuation),
         FirstStartColumn(Line.FirstStartColumn) {
     assert(!Line.Tokens.empty());
 
@@ -73,7 +75,7 @@ public:
     FormatToken *Current = First;
     addChildren(Line.Tokens.front(), Current);
     for (const UnwrappedLineNode &Node : llvm::drop_begin(Line.Tokens)) {
-      if (Node.Tok->MacroParent)
+      if (Node.Tok->getMacroParent())
         ContainsMacroCall = true;
       Current->Next = Node.Tok;
       Node.Tok->Previous = Current;
@@ -170,7 +172,7 @@ public:
   FormatToken *First;
   FormatToken *Last;
 
-  SmallVector<AnnotatedLine *, 0> Children;
+  llvm::SmallVectorWithFlags<AnnotatedLine *, 0, 2> Children;
 
   LineType Type;
   unsigned Level;
@@ -203,11 +205,19 @@ public:
   bool ChildrenAffected;
 
   /// \c True if breaking after last attribute group in function return type.
-  bool ReturnTypeWrapped;
+  bool getReturnTypeWrapped() const { return Children.getFlag(0); }
+  bool setReturnTypeWrapped(bool Value) {
+    Children.setFlag(0, Value);
+    return Value;
+  }
 
   /// \c True if this line should be indented by ContinuationIndent in addition
   /// to the normal indention level.
-  bool IsContinuation;
+  bool getIsContinuation() const { return Children.getFlag(1); }
+  bool setIsContinuation(bool Value) {
+    Children.setFlag(1, Value);
+    return Value;
+  }
 
   unsigned FirstStartColumn;
 
@@ -222,13 +232,14 @@ private:
 class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
-      : Style(Style), IsCpp(Style.isCpp()),
-        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {}
+      : Style(Style), LangOpts(getFormattingLangOpts(Style)),
+        Keywords(Keywords), Scopes(decltype(Scopes)::withFlags(Style.isCpp())) {
+  }
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
   // FIXME: Can/should this be done in the UnwrappedLineParser?
-  void setCommentLineLevels(SmallVectorImpl<AnnotatedLine *> &Lines) const;
+  void setCommentLineLevels(ArrayRef<AnnotatedLine *> Lines) const;
 
   void annotate(AnnotatedLine &Line);
   void calculateFormattingInformation(AnnotatedLine &Line) const;
@@ -272,12 +283,13 @@ private:
 
   const FormatStyle &Style;
 
-  bool IsCpp;
+  bool getIsCpp() const { return Scopes.getFlag(0); }
   LangOptions LangOpts;
 
   const AdditionalKeywords &Keywords;
 
-  SmallVector<ScopeType> Scopes, MacroBodyScopes;
+  llvm::SmallVectorWithFlags<ScopeType> Scopes;
+  llvm::SmallVectorWithFlags<ScopeType> MacroBodyScopes;
 };
 
 } // end namespace format

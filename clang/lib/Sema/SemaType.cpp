@@ -43,6 +43,7 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -200,7 +201,7 @@ namespace {
 
     /// A list of attributes to diagnose the uselessness of when the
     /// processing is complete.
-    SmallVector<ParsedAttr *, 2> ignoredTypeAttrs;
+    llvm::SmallVectorWithFlags<ParsedAttr *, 2, 3> ignoredTypeAttrs;
 
     /// Attributes corresponding to AttributedTypeLocs that we have not yet
     /// populated.
@@ -210,7 +211,10 @@ namespace {
     // properly.
     using TypeAttrPair = std::pair<const AttributedType*, const Attr*>;
     SmallVector<TypeAttrPair, 8> AttrsForTypes;
-    bool AttrsForTypesSorted = true;
+    bool getAttrsForTypesSorted() const { return !ignoredTypeAttrs.getFlag(0); }
+    void setAttrsForTypesSorted(bool Value) {
+      ignoredTypeAttrs.setFlag(0, !Value);
+    }
 
     /// MacroQualifiedTypes mapping to macro expansion locations that will be
     /// stored in a MacroQualifiedTypeLoc.
@@ -218,17 +222,24 @@ namespace {
 
     /// Flag to indicate we parsed a noderef attribute. This is used for
     /// validating that noderef was used on a pointer or array.
-    bool parsedNoDeref;
+    bool getParsedNoDerefFlag() const { return ignoredTypeAttrs.getFlag(1); }
+    void setParsedNoDerefFlag(bool Value) {
+      ignoredTypeAttrs.setFlag(1, Value);
+    }
 
     // Flag to indicate that we already parsed a HLSL parameter modifier
     // attribute. This prevents double-mutating the type.
-    bool ParsedHLSLParamMod;
+    bool getParsedHLSLParamModFlag() const {
+      return ignoredTypeAttrs.getFlag(2);
+    }
+    void setParsedHLSLParamModFlag(bool Value) {
+      ignoredTypeAttrs.setFlag(2, Value);
+    }
 
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
-          ParsedHLSLParamMod(false) {}
+          chunkIndex(declarator.getNumTypeObjects()) {}
 
     Sema &getSema() const {
       return sema;
@@ -288,7 +299,7 @@ namespace {
       QualType T =
           sema.Context.getAttributedType(A, ModifiedType, EquivType);
       AttrsForTypes.push_back({cast<AttributedType>(T.getTypePtr()), A});
-      AttrsForTypesSorted = false;
+      setAttrsForTypesSorted(false);
       return T;
     }
 
@@ -318,16 +329,16 @@ namespace {
           if (A.first == AttrTy)
             A.first = NewAttrTy;
         }
-        AttrsForTypesSorted = false;
+        setAttrsForTypesSorted(false);
       }
       return T;
     }
 
     /// Extract and remove the Attr* for a given attributed type.
     const Attr *takeAttrForAttributedType(const AttributedType *AT) {
-      if (!AttrsForTypesSorted) {
+      if (!getAttrsForTypesSorted()) {
         llvm::stable_sort(AttrsForTypes, llvm::less_first());
-        AttrsForTypesSorted = true;
+        setAttrsForTypesSorted(true);
       }
 
       // FIXME: This is quadratic if we have lots of reuses of the same
@@ -363,13 +374,15 @@ namespace {
       LocsForMacros[MQT] = Loc;
     }
 
-    void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
+    void setParsedNoDeref(bool parsed) { setParsedNoDerefFlag(parsed); }
 
-    bool didParseNoDeref() const { return parsedNoDeref; }
+    bool didParseNoDeref() const { return getParsedNoDerefFlag(); }
 
-    void setParsedHLSLParamMod(bool Parsed) { ParsedHLSLParamMod = Parsed; }
+    void setParsedHLSLParamMod(bool Parsed) {
+      setParsedHLSLParamModFlag(Parsed);
+    }
 
-    bool didParseHLSLParamMod() const { return ParsedHLSLParamMod; }
+    bool didParseHLSLParamMod() const { return getParsedHLSLParamModFlag(); }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())

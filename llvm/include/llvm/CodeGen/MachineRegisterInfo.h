@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -80,7 +81,6 @@ private:
   SmallPtrSet<Delegate *, 1> TheDelegates;
 
   /// True if subregister liveness is tracked.
-  const bool TracksSubRegLiveness;
 
   /// VRegInfo - Information we keep for each virtual register.
   ///
@@ -99,12 +99,12 @@ private:
 
   /// The flag is true upon \p UpdatedCSRs initialization
   /// and false otherwise.
-  bool IsUpdatedCSRsInitialized = false;
 
   /// Contains the updated callee saved register list.
   /// As opposed to the static list defined in register info,
   /// all registers that were disabled are removed from the list.
-  SmallVector<MCPhysReg, 16> UpdatedCSRs;
+  // Flag bits 0 and 1 track subregister liveness and CSR initialization.
+  SmallVectorWithFlags<MCPhysReg, 16, 2> UpdatedCSRs;
 
   /// RegAllocHints - This vector records register allocation hints for
   /// virtual registers. For each virtual register, it keeps a pair of hint
@@ -247,16 +247,14 @@ public:
     const TargetRegisterClass *RC = getRegClassOrNull(VReg);
     return LLVM_LIKELY(RC) ? shouldTrackSubRegLiveness(*RC) : false;
   }
-  bool subRegLivenessEnabled() const {
-    return TracksSubRegLiveness;
-  }
+  bool subRegLivenessEnabled() const { return UpdatedCSRs.getFlag(0); }
 
   //===--------------------------------------------------------------------===//
   // Register Info
   //===--------------------------------------------------------------------===//
 
   /// Returns true if the updated CSR list was initialized and false otherwise.
-  bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
+  bool isUpdatedCSRsInitialized() const { return UpdatedCSRs.getFlag(1); }
 
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.

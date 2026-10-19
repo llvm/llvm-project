@@ -511,9 +511,9 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   // directory index.  We don't track file size/timestamp so don't emit them
   // in the v5 table.  Emit MD5 checksums and source if we have them.
   uint64_t Entries = 2;
-  if (HasAllMD5)
+  if (!MCDwarfDirs.getFlag(1))
     Entries += 1;
-  if (HasAnySource)
+  if (hasAnySource())
     Entries += 1;
   MCOS->emitInt8(Entries);
   MCOS->emitULEB128IntValue(dwarf::DW_LNCT_path);
@@ -521,11 +521,11 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
   MCOS->emitULEB128IntValue(dwarf::DW_FORM_udata);
-  if (HasAllMD5) {
+  if (!MCDwarfDirs.getFlag(1)) {
     MCOS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
     MCOS->emitULEB128IntValue(dwarf::DW_FORM_data16);
   }
-  if (HasAnySource) {
+  if (hasAnySource()) {
     MCOS->emitULEB128IntValue(dwarf::DW_LNCT_LLVM_source);
     MCOS->emitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
                                       : dwarf::DW_FORM_string);
@@ -540,9 +540,10 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   assert((!RootFile.Name.empty() || MCDwarfFiles.size() >= 1) &&
          "No root file and no .file directives");
   emitOneV5FileEntry(MCOS, RootFile.Name.empty() ? MCDwarfFiles[1] : RootFile,
-                     HasAllMD5, HasAnySource, LineStr);
+                     !MCDwarfDirs.getFlag(1), hasAnySource(), LineStr);
   for (unsigned i = 1; i < MCDwarfFiles.size(); ++i)
-    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasAllMD5, HasAnySource, LineStr);
+    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], !MCDwarfDirs.getFlag(1),
+                       hasAnySource(), LineStr);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -659,7 +660,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
     trackMD5Usage(Checksum.has_value());
-    HasAnySource |= Source.has_value();
+    trackSource(Source.has_value());
   }
   if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
     return 0;
@@ -719,7 +720,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   trackMD5Usage(Checksum.has_value());
   File.Source = Source;
   if (Source.has_value())
-    HasAnySource = true;
+    trackSource(true);
 
   // return the allocated FileNumber.
   return FileNumber;
@@ -1059,7 +1060,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
 
   // AT_name, the name of the source file.  Reconstruct from the first directory
   // and file table entries.
-  const SmallVectorImpl<std::string> &MCDwarfDirs = context.getMCDwarfDirs();
+  ArrayRef<std::string> MCDwarfDirs = context.getMCDwarfDirs();
   if (MCDwarfDirs.size() > 0) {
     MCOS->emitBytes(MCDwarfDirs[0]);
     MCOS->emitBytes(sys::path::get_separator());

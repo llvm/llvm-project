@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -197,7 +198,7 @@ public:
   };
 
   SmallVector<SectionInfo, 16> FunctionMemory;
-  SmallVector<SectionInfo, 16> DataMemory;
+  llvm::SmallVectorWithFlags<SectionInfo, 16> DataMemory;
 
   uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
                                unsigned SectionID,
@@ -258,7 +259,7 @@ public:
                          EC.message());
 
     PreallocSlab = MB;
-    UsePreallocation = true;
+    setUsePreallocation(true);
     SlabSize = Size;
   }
 
@@ -281,7 +282,8 @@ public:
 private:
   std::map<std::string, uint64_t> DummyExterns;
   sys::MemoryBlock PreallocSlab;
-  bool UsePreallocation = false;
+  bool getUsePreallocation() const { return DataMemory.getFlag(0); }
+  void setUsePreallocation(bool Value) { DataMemory.setFlag(0, Value); }
   uintptr_t SlabSize = 0;
   uintptr_t CurrentSlabOffset = 0;
   SectionIDMap *SecIDMap = nullptr;
@@ -301,7 +303,7 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
   if (SecIDMap)
     (*SecIDMap)[SectionName] = SectionID;
 
-  if (UsePreallocation)
+  if (getUsePreallocation())
     return allocateFromSlab(Size, Alignment, true /* isCode */,
                             SectionName, SectionID);
 
@@ -330,7 +332,7 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
   if (SecIDMap)
     (*SecIDMap)[SectionName] = SectionID;
 
-  if (UsePreallocation)
+  if (getUsePreallocation())
     return allocateFromSlab(Size, Alignment, false /* isCode */, SectionName,
                             SectionID);
 

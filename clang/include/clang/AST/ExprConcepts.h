@@ -454,7 +454,7 @@ public:
                     const ConstraintSatisfaction &Satisfaction)
       : Requirement(RK_Nested, Constraint->isInstantiationDependent(),
                     Constraint->containsUnexpandedParameterPack(),
-                    Satisfaction.IsSatisfied),
+                    Satisfaction.isSatisfied()),
         Constraint(Constraint),
         Satisfaction(ASTConstraintSatisfaction::Create(C, Satisfaction)) {}
 

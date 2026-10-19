@@ -234,7 +234,7 @@ public:
   /// associated preprocessor object.  Return true if the 'next character to
   /// read' pointer points at the end of the lexer buffer, false otherwise.
   bool LexFromRawLexer(Token &Result) {
-    assert(LexingRawMode && "Not already in raw mode!");
+    assert(getLexingRawMode() && "Not already in raw mode!");
     Lex(Result);
     // Note that lexing to the end of the buffer doesn't implicitly delete the
     // lexer when in raw mode.
@@ -252,7 +252,7 @@ public:
   /// SetKeepWhitespaceMode - This method lets clients enable or disable
   /// whitespace retention mode.
   void SetKeepWhitespaceMode(bool Val) {
-    assert((!Val || LexingRawMode || LangOpts.TraditionalCPP) &&
+    assert((!Val || getLexingRawMode() || LangOpts.TraditionalCPP) &&
            "Can only retain whitespace in raw mode or -traditional-cpp");
     ExtendedTokenMode = Val ? 2 : 0;
   }

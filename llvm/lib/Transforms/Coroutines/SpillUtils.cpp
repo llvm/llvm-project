@@ -409,7 +409,7 @@ private:
     if (DT.dominates(CoroShape.CoroBegin, &I) || !usedAfterCoroBegin(I))
       return;
 
-    if (!IsOffsetKnown) {
+    if (!isOffsetKnown()) {
       AliasOffetMap[&I].reset();
     } else {
       auto [Itr, Inserted] = AliasOffetMap.try_emplace(&I, Offset);

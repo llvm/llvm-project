@@ -199,7 +199,7 @@ template <typename VecT> static void clearAndReserve(VecT &Vec, size_t N) {
 }
 
 void SourceInfoBuilder::computeEntries() {
-  IsFilled = true;
+  setIsFilled(true);
   clearAndReserve(BaseData.Names.Entries, FileNamesAndContents.size());
   clearAndReserve(BaseData.Contents.Entries, FileNamesAndContents.size());
   for (const auto &NameContent : FileNamesAndContents) {
@@ -226,11 +226,11 @@ void SourceInfoBuilder::recomputeAfterCompression(uint32_t CompressedSize) {
 }
 
 void SourceInfoBuilder::finalize() {
-  assert(IsFilled && "SourceInfo::computeEntries() must be called before "
-                     "SourceInfo::computeUncompressed()");
+  assert(getIsFilled() && "SourceInfo::computeEntries() must be called before "
+                          "SourceInfo::computeUncompressed()");
   assert(CompressionType && "Compression type must be set.");
 
-  IsFinalized = true;
+  setIsFinalized(true);
 
   BaseData.Contents.computeUncompressed(*CompressionType);
   BaseData.Names.compute();
@@ -279,7 +279,7 @@ void SourceInfoBuilder::finalize() {
 }
 
 void SourceInfoBuilder::write(raw_ostream &OS) const {
-  assert(IsFinalized &&
+  assert(getIsFinalized() &&
          "SourceInfo::finalize() must be called before SourceInfo::write()");
 
   writeStruct(OS, BaseData.Parameters);

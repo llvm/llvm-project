@@ -93,9 +93,9 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
       TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
       AsmOutStream(std::move(OS)), FS(VFS), Action(Action),
       Gen(CreateLLVMCodeGen(CI, InFile, C, CoverageInfo)),
-      LinkModules(std::move(LinkModules)), DiagConsumer(Diags, CodeGenOpts) {
+      LinkModules(0, std::move(LinkModules)), DiagConsumer(Diags, CodeGenOpts) {
   DiagConsumer.setCurLinkModule(CurLinkModule);
-  TimerIsEnabled = CodeGenOpts.TimePasses;
+  setTimerIsEnabled(CodeGenOpts.TimePasses);
   {
     llvm::sys::SmartScopedLock<true> Lock(*TimePassesMutex);
     llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
@@ -127,12 +127,12 @@ void BackendConsumer::Initialize(ASTContext &Ctx) {
   Context = &Ctx;
   DiagConsumer.setSourceManager(&Ctx.getSourceManager());
 
-  if (TimerIsEnabled)
+  if (getTimerIsEnabled())
     LLVMIRGeneration.startTimer();
 
   Gen->Initialize(Ctx);
 
-  if (TimerIsEnabled)
+  if (getTimerIsEnabled())
     LLVMIRGeneration.stopTimer();
 }
 
@@ -142,12 +142,12 @@ bool BackendConsumer::HandleTopLevelDecl(DeclGroupRef D) {
                                  "LLVM IR generation of declaration");
 
   // Recurse.
-  if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+  if (getTimerIsEnabled() && !LLVMIRGenerationRefCount++)
     CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleTopLevelDecl(D);
 
-  if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+  if (getTimerIsEnabled() && !--LLVMIRGenerationRefCount)
     LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
   return true;
@@ -157,12 +157,12 @@ void BackendConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
   PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                  Context->getSourceManager(),
                                  "LLVM IR generation of inline function");
-  if (TimerIsEnabled)
+  if (getTimerIsEnabled())
     CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleInlineFunctionDefinition(D);
 
-  if (TimerIsEnabled)
+  if (getTimerIsEnabled())
     LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 }
 
@@ -172,20 +172,24 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 
 // Links each entry in LinkModules into our module. Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M) {
-  return linkInModules(*M, LinkModules, CodeGenOpts, LangOpts, TargetOpts,
-                       DiagConsumer);
+  SmallVector<LinkModule, 4> Modules;
+  Modules = std::move(LinkModules);
+  bool Failed = linkInModules(*M, Modules, CodeGenOpts, LangOpts, TargetOpts,
+                              DiagConsumer);
+  LinkModules.assign(std::move(Modules));
+  return Failed;
 }
 
 void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-    if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+    if (getTimerIsEnabled() && !LLVMIRGenerationRefCount++)
       CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
     Gen->HandleTranslationUnit(C);
 
-    if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+    if (getTimerIsEnabled() && !--LLVMIRGenerationRefCount)
       LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
   }
 
@@ -298,12 +302,13 @@ BackendConsumer::createDiagnosticHandler() {
 }
 
 CodeGenAction::CodeGenAction(unsigned _Act, LLVMContext *_VMContext)
-    : Act(_Act), VMContext(_VMContext ? _VMContext : new LLVMContext),
-      OwnsVMContext(!_VMContext) {}
+    : Act(_Act), LinkModules(decltype(this->LinkModules)::withFlags(
+                     unsigned(bool(!_VMContext)))),
+      VMContext(_VMContext ? _VMContext : new LLVMContext) {}
 
 CodeGenAction::~CodeGenAction() {
   TheModule.reset();
-  if (OwnsVMContext)
+  if (getOwnsVMContext())
     delete VMContext;
 }
 
@@ -325,7 +330,7 @@ std::unique_ptr<llvm::Module> CodeGenAction::takeModule() {
 }
 
 llvm::LLVMContext *CodeGenAction::takeLLVMContext() {
-  OwnsVMContext = false;
+  setOwnsVMContext(false);
   return VMContext;
 }
 
@@ -371,7 +376,12 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  SmallVector<LinkModule, 4> ModulesToLink;
+  ModulesToLink = std::move(LinkModules);
+  bool FailedToLoadModules =
+      clang::loadLinkModules(CI, *VMContext, ModulesToLink);
+  LinkModules.assign(std::move(ModulesToLink));
+  if (FailedToLoadModules)
     return nullptr;
 
   CoverageSourceInfo *CoverageInfo = nullptr;
@@ -380,9 +390,10 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     CoverageInfo = CodeGen::CoverageMappingModuleGen::setUpCoverageCallbacks(
         CI.getPreprocessor());
 
-  std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      CI, BA, CI.getVirtualFileSystemPtr(), *VMContext, std::move(LinkModules),
-      InFile, std::move(OS), CoverageInfo));
+  std::unique_ptr<BackendConsumer> Result(
+      new BackendConsumer(CI, BA, CI.getVirtualFileSystemPtr(), *VMContext,
+                          SmallVector<LinkModule, 4>(std::move(LinkModules)),
+                          InFile, std::move(OS), CoverageInfo));
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
@@ -449,7 +460,12 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   }
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  SmallVector<LinkModule, 4> ModulesToLink;
+  ModulesToLink = std::move(LinkModules);
+  bool FailedToLoadModules =
+      clang::loadLinkModules(CI, *VMContext, ModulesToLink);
+  LinkModules.assign(std::move(ModulesToLink));
+  if (FailedToLoadModules)
     return nullptr;
 
   // Handle textual IR and bitcode file with one single module.
@@ -579,8 +595,8 @@ void CodeGenAction::ExecuteAction() {
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
   BackendConsumer Result(CI, BA, CI.getVirtualFileSystemPtr(), *VMContext,
-                         std::move(LinkModules), "", nullptr, nullptr,
-                         TheModule.get());
+                         SmallVector<LinkModule, 4>(std::move(LinkModules)), "",
+                         nullptr, nullptr, TheModule.get());
 
   // Link in each pending link module.
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))

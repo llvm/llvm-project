@@ -491,7 +491,7 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
       }
 
       if (!EnclosingStmtExpr) {
-        CSI->ContainsUnexpandedParameterPack = true;
+        CSI->setContainsUnexpandedParameterPack(true);
         return false;
       }
     } else {

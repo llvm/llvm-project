@@ -12,6 +12,7 @@
 #include "DIERef.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/RangeMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Chrono.h"
 #include <bitset>
 #include <map>
@@ -178,7 +179,7 @@ protected:
     Status oso_load_error;
     OSOInfoSP oso_sp;
     /// The compile units that an object file contains.
-    llvm::SmallVector<lldb::CompUnitSP, 2> compile_units_sps;
+    llvm::SmallVectorWithFlags<lldb::CompUnitSP, 2> compile_units_sps;
     /// A map from the compile unit ID to its index in the vector.
     llvm::SmallDenseMap<uint64_t, uint64_t, 2> id_to_index_map;
     uint32_t first_symbol_index = UINT32_MAX;
@@ -186,7 +187,12 @@ protected:
     uint32_t first_symbol_id = UINT32_MAX;
     uint32_t last_symbol_id = UINT32_MAX;
     FileRangeMap file_range_map;
-    bool file_range_map_valid = false;
+    bool getFile_range_map_valid() const {
+      return compile_units_sps.getFlag(0);
+    }
+    void setFile_range_map_valid(bool Value) {
+      compile_units_sps.setFlag(0, Value);
+    }
 
     CompileUnitInfo() = default;
 

@@ -13,6 +13,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -187,7 +188,7 @@ struct Entry {
     fmt = lldb::eFormatDefault;
     number = 0;
     level = 0;
-    deref = false;
+    setDeref(false);
   }
 
   static const char *TypeToCString(Type t);
@@ -199,13 +200,16 @@ struct Entry {
       return false;
     if (printf_format != rhs.printf_format)
       return false;
-    if (children_stack != rhs.children_stack)
+    if ((llvm::ArrayRef<std::vector<lldb_private::FormatEntity::Entry>>(
+             children_stack) !=
+         llvm::ArrayRef<std::vector<lldb_private::FormatEntity::Entry>>(
+             rhs.children_stack)))
       return false;
     if (type != rhs.type)
       return false;
     if (fmt != rhs.fmt)
       return false;
-    if (deref != rhs.deref)
+    if (getDeref() != rhs.getDeref())
       return false;
     return true;
   }
@@ -220,14 +224,15 @@ struct Entry {
   /// A stack of children entries, used by Scope entries to provide alterantive
   /// children. All other entries have a stack of size 1.
   /// @{
-  llvm::SmallVector<std::vector<Entry>, 1> children_stack;
+  llvm::SmallVectorWithFlags<std::vector<Entry>, 1> children_stack;
   size_t level = 0;
   /// @}
 
   Type type = Type::Invalid;
   lldb::Format fmt = lldb::eFormatDefault;
   lldb::addr_t number = 0;
-  bool deref = false;
+  bool getDeref() const { return children_stack.getFlag(0); }
+  void setDeref(bool Value) { children_stack.setFlag(0, Value); }
 };
 
 class Formatter {
@@ -235,8 +240,8 @@ public:
   Formatter(const SymbolContext *sc, const ExecutionContext *exe_ctx,
             const Address *addr, bool function_changed, bool initial_function)
       : m_sc(sc), m_exe_ctx(exe_ctx), m_addr(addr),
-        m_function_changed(function_changed),
-        m_initial_function(initial_function) {}
+        m_entry_type_stack(decltype(this->m_entry_type_stack)::withFlags(
+            unsigned(function_changed) | (unsigned(initial_function) << 1))) {}
 
   bool Format(const Entry &entry, Stream &s, ValueObject *valobj = nullptr);
 
@@ -269,10 +274,10 @@ private:
   const SymbolContext *const m_sc = nullptr;
   const ExecutionContext *const m_exe_ctx = nullptr;
   const Address *const m_addr = nullptr;
-  const bool m_function_changed = false;
-  const bool m_initial_function = false;
+  bool getM_function_changed() const { return m_entry_type_stack.getFlag(0); }
+  bool getM_initial_function() const { return m_entry_type_stack.getFlag(1); }
 
-  llvm::SmallVector<Entry::Type, 1> m_entry_type_stack;
+  llvm::SmallVectorWithFlags<Entry::Type, 1, 2> m_entry_type_stack;
 };
 
 Status Parse(const llvm::StringRef &format, Entry &entry);

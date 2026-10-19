@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFEXPRESSION_H
 #define LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFEXPRESSION_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -89,10 +90,14 @@ public:
 
     uint8_t Opcode; ///< The Op Opcode, DW_OP_<something>.
     Description Desc;
-    bool Error = false;
+    bool getError() const { return OperandEndOffsets.getFlag(0); }
+    bool setError(bool Value) {
+      OperandEndOffsets.setFlag(0, Value);
+      return Value;
+    }
     uint64_t EndOffset;
     SmallVector<uint64_t> Operands;
-    SmallVector<uint64_t> OperandEndOffsets;
+    llvm::SmallVectorWithFlags<uint64_t> OperandEndOffsets;
 
   public:
     const Description &getDescription() const { return Desc; }
@@ -108,7 +113,7 @@ public:
       return OperandEndOffsets[Idx];
     }
     uint64_t getEndOffset() const { return EndOffset; }
-    bool isError() const { return Error; }
+    bool isError() const { return getError(); }
 
   private:
     LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize,
@@ -126,9 +131,9 @@ public:
     Operation Op;
     iterator(const DWARFExpression *Expr, uint64_t Offset)
         : Expr(Expr), Offset(Offset) {
-      Op.Error =
+      Op.setError(
           Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format));
     }
 
   public:
@@ -137,9 +142,9 @@ public:
 
     iterator &operator++() {
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
-      Op.Error =
+      Op.setError(
           Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format));
       return *this;
     }
 

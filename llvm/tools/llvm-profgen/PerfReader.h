@@ -11,6 +11,7 @@
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -335,17 +336,20 @@ struct ContextKey {
 
 // String based context id
 struct StringBasedCtxKey : public ContextKey {
-  SampleContextFrameVector Context;
+  llvm::SmallVectorWithFlagsFor<SampleContextFrameVector, 1> Context;
 
-  bool WasLeafInlined;
-  StringBasedCtxKey() : ContextKey(CK_StringBased), WasLeafInlined(false){};
+  bool getWasLeafInlined() const { return Context.getFlag(0); }
+  void setWasLeafInlined(bool Value) { Context.setFlag(0, Value); }
+  StringBasedCtxKey() : ContextKey(CK_StringBased) {};
   static bool classof(const ContextKey *K) {
     return K->getKind() == CK_StringBased;
   }
 
   bool isEqual(const ContextKey *K) const override {
     const StringBasedCtxKey *Other = dyn_cast<StringBasedCtxKey>(K);
-    return Context == Other->Context;
+    return (
+        llvm::ArrayRef<llvm::sampleprof::SampleContextFrame>(Context) ==
+        llvm::ArrayRef<llvm::sampleprof::SampleContextFrame>(Other->Context));
   }
 
   void genHashCode() override {
@@ -357,8 +361,7 @@ struct StringBasedCtxKey : public ContextKey {
 struct AddrBasedCtxKey : public ContextKey {
   SmallVector<uint64_t, 16> Context;
 
-  bool WasLeafInlined;
-  AddrBasedCtxKey() : ContextKey(CK_AddrBased), WasLeafInlined(false){};
+  AddrBasedCtxKey() : ContextKey(CK_AddrBased) {}
   static bool classof(const ContextKey *K) {
     return K->getKind() == CK_AddrBased;
   }

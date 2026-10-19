@@ -1861,7 +1861,7 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   // Do not print the numeric target address when symbolizing.
-  if (SymbolizeOperands)
+  if (getSymbolizeOperands())
     return;
 
   const MCOperand &Op = MI->getOperand(OpNum);
@@ -1870,7 +1870,7 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
     int64_t Offset = Op.getImm() * 4;
-    if (PrintBranchImmAsAddress)
+    if (getPrintBranchImmAsAddress())
       markup(O, Markup::Target) << formatHex(Address + Offset);
     else
       markup(O, Markup::Immediate) << "#" << formatImm(Offset);
@@ -1896,7 +1896,7 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
   // Do not print the numeric target address when symbolizing.
   // However, do print for ADRP, as this is typically used together with an ADD
   // or an immediate-offset ldr/str and the label is likely at the wrong point.
-  if (SymbolizeOperands && MI->getOpcode() != AArch64::ADRP)
+  if (getSymbolizeOperands() && MI->getOpcode() != AArch64::ADRP)
     return;
 
   const MCOperand &Op = MI->getOperand(OpNum);
@@ -1910,7 +1910,7 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
       Address = Address & -4096;
     }
     WithMarkup M = markup(O, Markup::Immediate);
-    if (PrintBranchImmAsAddress)
+    if (getPrintBranchImmAsAddress())
       markup(O, Markup::Target) << formatHex(Address + Offset);
     else
       markup(O, Markup::Immediate) << "#" << Offset;

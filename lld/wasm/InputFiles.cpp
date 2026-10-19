@@ -360,7 +360,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 
   // We assume that this compilation unit has unrelocatable references to
   // this table.
-  ctx.legacyFunctionTable = true;
+  ctx.setLegacyFunctionTable(true);
 }
 
 static bool shouldMerge(const WasmSection &sec) {

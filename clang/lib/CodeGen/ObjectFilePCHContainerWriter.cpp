@@ -278,7 +278,7 @@ public:
       llvm::report_fatal_error(llvm::Twine(Error));
 
     // Emit the serialized Clang AST into its own section.
-    assert(Buffer->IsComplete && "serialization did not complete");
+    assert(Buffer->getIsComplete() && "serialization did not complete");
     auto &SerializedAST = Buffer->Data;
     auto Size = SerializedAST.size();
 
@@ -333,7 +333,7 @@ public:
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;
-    SerializedAST = std::move(Empty);
+    SerializedAST.assign(std::move(Empty));
   }
 };
 

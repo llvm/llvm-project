@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -79,12 +80,13 @@ public:
   explicit LoongArchMCSymbolizerTest(MCContext &Ctx)
       : MCSymbolizer(Ctx, nullptr) {}
 
-  SmallVector<Call, 1> Calls;
-  bool AddSymbolicOperand = false;
+  llvm::SmallVectorWithFlags<Call, 1> Calls;
+  bool getAddSymbolicOperand() const { return Calls.getFlag(0); }
+  void setAddSymbolicOperand(bool Value) { Calls.setFlag(0, Value); }
 
   void reset(bool AddSymbol = false) {
     Calls.clear();
-    AddSymbolicOperand = AddSymbol;
+    setAddSymbolicOperand(AddSymbol);
   }
 
   bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &CommentStream,
@@ -93,7 +95,7 @@ public:
                                 uint64_t InstSize) override {
     Calls.push_back(
         {&CommentStream, Value, Address, IsBranch, Offset, OpSize, InstSize});
-    if (!AddSymbolicOperand)
+    if (!getAddSymbolicOperand())
       return false;
 
     Inst.addOperand(MCOperand::createExpr(

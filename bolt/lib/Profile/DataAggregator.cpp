@@ -184,7 +184,7 @@ void DataAggregator::mergeFrom(const DataAggregator &Other) {
   NumInvalidTraces += Other.NumInvalidTraces;
   NumLongRangeTraces += Other.NumLongRangeTraces;
   NumTotalSamples += Other.NumTotalSamples;
-  Parsed = true;
+  setParsed(true);
 }
 
 void DataAggregator::markFunctionsWithProfile() {
@@ -328,14 +328,20 @@ Error DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   Argv.push_back("-i");
   Argv.push_back(Filename.c_str());
 
-  for (auto [Ext, Path] : {std::make_pair("out", &PPI.StdoutPath),
-                           std::make_pair("err", &PPI.StderrPath)}) {
+  auto CreateTempFile = [&](StringRef Ext, auto &Path) -> Error {
+    SmallVector<char, 256> TemporaryPath;
     if (std::error_code Errc =
-            sys::fs::createTemporaryFile("perf.script", Ext, *Path))
+            sys::fs::createTemporaryFile("perf.script", Ext, TemporaryPath))
       return createStringError(Errc, "failed to create temporary file %s",
-                               Path->data());
-    TempFiles.push_back(Path->data());
-  }
+                               TemporaryPath.data());
+    Path.assign(TemporaryPath.begin(), TemporaryPath.end());
+    TempFiles.push_back(Path.data());
+    return Error::success();
+  };
+  if (Error E = CreateTempFile("out", PPI.StdoutPath))
+    return E;
+  if (Error E = CreateTempFile("err", PPI.StderrPath))
+    return E;
 
   std::optional<StringRef> Redirects[] = {
       std::nullopt,                      // Stdin
@@ -893,19 +899,19 @@ Error DataAggregator::parseAllInputs(BinaryContext &BC) {
               inconvertibleErrorCode(), "%s: %s%s", Job->DA->Filename.c_str(),
               Job->DiagBuffer.c_str(), toString(std::move(E)).c_str());
         }
-        Job->DA->Parsed = true;
+        Job->DA->setParsed(true);
         return Error::success();
       });
   parallel::strategy = SavedStrategy;
 
   for (AggregatorJob *Job : Jobs) {
-    if (Job->DA->Parsed)
+    if (Job->DA->getParsed())
       mergeFrom(*Job->DA);
     delete Job->DA;
     delete Job;
   }
 
-  if (!Parsed)
+  if (!getParsed())
     return ParseErrors;
   handleAllErrors(std::move(ParseErrors), [](const ErrorInfoBase &EI) {
     errs() << "PERF2BOLT-WARNING: " << EI.message() << "\n";

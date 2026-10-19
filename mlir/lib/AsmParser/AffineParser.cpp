@@ -19,6 +19,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -64,8 +65,9 @@ public:
           nullptr,
       function_ref<void(bool, OpAsmParser::UnresolvedOperand)> addOperand =
           nullptr)
-      : Parser(state), allowParsingSSAIds(allowParsingSSAIds),
-        parseElement(parseElement), addOperand(addOperand) {}
+      : Parser(state), parseElement(parseElement), addOperand(addOperand),
+        dimsAndSymbols(decltype(this->dimsAndSymbols)::withFlags(
+            unsigned(allowParsingSSAIds))) {}
 
   ParseResult parseAffineMapRange(unsigned numDims, unsigned numSymbols,
                                   AffineMap &result);
@@ -110,12 +112,14 @@ private:
   AffineExpr parseAffineConstraint(bool *isEq);
 
 private:
-  bool allowParsingSSAIds;
+  bool getAllowParsingSSAIds() const { return dimsAndSymbols.getFlag(0); }
+  void setAllowParsingSSAIds(bool Value) { dimsAndSymbols.setFlag(0, Value); }
   function_ref<FailureOr<OpAsmParser::UnresolvedOperand>()> parseElement;
   function_ref<void(bool, OpAsmParser::UnresolvedOperand)> addOperand;
   unsigned numDimOperands = 0;
   unsigned numSymbolOperands = 0;
-  SmallVector<std::pair<std::pair<StringRef, unsigned>, AffineExpr>, 4>
+  llvm::SmallVectorWithFlags<
+      std::pair<std::pair<StringRef, unsigned>, AffineExpr>, 4>
       dimsAndSymbols;
 };
 } // namespace
@@ -313,7 +317,7 @@ AffineExpr AffineParser::parseBareIdExpr() {
 
 /// Parse an SSA id which may appear in an affine expression.
 AffineExpr AffineParser::parseSSAIdExpr(bool isSymbol) {
-  if (!allowParsingSSAIds)
+  if (!getAllowParsingSSAIds())
     return emitWrongTokenError("unexpected ssa identifier"), nullptr;
   if (getToken().isNot(Token::percent_identifier))
     return emitWrongTokenError("expected ssa identifier"), nullptr;

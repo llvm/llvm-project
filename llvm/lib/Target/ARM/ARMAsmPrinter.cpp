@@ -52,7 +52,7 @@ using namespace llvm;
 ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer), ID), AFI(nullptr), MCP(nullptr),
-      InConstantPool(false), OptimizationGoals(-1) {}
+      OptimizationGoals(-1) {}
 
 const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
   return static_cast<const ARMBaseTargetMachine &>(TM);
@@ -61,9 +61,9 @@ const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
 void ARMAsmPrinter::emitFunctionBodyEnd() {
   // Make sure to terminate any constant pools that were at the end
   // of the function.
-  if (!InConstantPool)
+  if (!getInConstantPool())
     return;
-  InConstantPool = false;
+  setInConstantPool(false);
   OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
@@ -1987,9 +1987,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
 
   // If we just ended a constant pool, mark it as such.
-  if (InConstantPool && MI->getOpcode() != ARM::CONSTPOOL_ENTRY) {
+  if (getInConstantPool() && MI->getOpcode() != ARM::CONSTPOOL_ENTRY) {
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
-    InConstantPool = false;
+    setInConstantPool(false);
   }
 
   // Emit unwinding stuff for frame-related instructions
@@ -2367,9 +2367,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned CPIdx   = (unsigned)MI->getOperand(1).getIndex();
 
     // If this is the first entry of the pool, mark it.
-    if (!InConstantPool) {
+    if (!getInConstantPool()) {
       OutStreamer->emitDataRegion(MCDR_DataRegion);
-      InConstantPool = true;
+      setInConstantPool(true);
     }
 
     OutStreamer->emitLabel(GetCPISymbol(LabelId));

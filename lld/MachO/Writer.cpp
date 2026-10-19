@@ -862,7 +862,7 @@ template <class LP> void Writer::createLoadCommands() {
     llvm_unreachable("unhandled output file type");
   }
 
-  if (config->generateUuid) {
+  if (config->getGenerateUuid()) {
     uuidCommand = make<LCUuid>();
     in.header->addLoadCommand(uuidCommand);
   }
@@ -896,11 +896,11 @@ template <class LP> void Writer::createLoadCommands() {
                       dylibFiles[i]->extraDylibs.end());
 
   for (DylibFile *dylibFile : dylibFiles) {
-    if (dylibFile->isBundleLoader) {
+    if (dylibFile->getIsBundleLoader()) {
       dylibFile->ordinal = BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
       // Shortcut since bundle-loader does not re-export the symbols.
 
-      dylibFile->reexport = false;
+      dylibFile->setReexport(false);
       continue;
     }
 
@@ -912,8 +912,8 @@ template <class LP> void Writer::createLoadCommands() {
     // FIXME: `isReferenced()` is currently computed before dead code
     // stripping, so references from dead code keep a dylib alive. This
     // matches ld64, but it's something we should do better.
-    if (!dylibFile->isReferenced() && !dylibFile->forceNeeded &&
-        (!dylibFile->isExplicitlyLinked() || dylibFile->deadStrippable ||
+    if (!dylibFile->isReferenced() && !dylibFile->getForceNeeded() &&
+        (!dylibFile->isExplicitlyLinked() || dylibFile->getDeadStrippable() ||
          config->deadStripDylibs))
       continue;
 
@@ -945,13 +945,13 @@ template <class LP> void Writer::createLoadCommands() {
 
     ordinal = dylibFile->ordinal = dylibOrdinal++;
     LoadCommandType lcType = LC_LOAD_DYLIB;
-    if (dylibFile->reexport) {
-      if (dylibFile->forceWeakImport)
+    if (dylibFile->getReexport()) {
+      if (dylibFile->getForceWeakImport())
         warn(path::filename(dylibFile->getName()) +
              " is re-exported so cannot be weak-linked");
 
       lcType = LC_REEXPORT_DYLIB;
-    } else if (dylibFile->forceWeakImport ||
+    } else if (dylibFile->getForceWeakImport() ||
                dylibFile->refState == RefState::Weak) {
       lcType = LC_LOAD_WEAK_DYLIB;
     }
@@ -1358,7 +1358,7 @@ void Writer::writeOutputFile() {
   writeSections();
   applyOptimizationHints();
   buildFixupChains();
-  if (config->generateUuid)
+  if (config->getGenerateUuid())
     writeUuid();
   writeCodeSignature();
 

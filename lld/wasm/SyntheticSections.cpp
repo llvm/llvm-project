@@ -53,7 +53,7 @@ public:
 };
 
 void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.arg.libcallThreadContext) {
+  if (ctx.arg.getLibcallThreadContext()) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.getTLSBase->getFunctionIndex(), "function index");
   } else {
@@ -65,7 +65,7 @@ void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
 } // namespace
 
 bool DylinkSection::isNeeded() const {
-  return ctx.isPic ||
+  return ctx.getIsPic() ||
          ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic ||
          !ctx.sharedFiles.empty();
 }
@@ -199,7 +199,7 @@ void ImportSection::addGOTEntry(Symbol *sym) {
     return;
   LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   sym->setGOTIndex(numImportedGlobals++);
-  if (ctx.isPic) {
+  if (ctx.getIsPic()) {
     // Any symbol that is assigned an normal GOT entry must be exported
     // otherwise the dynamic linker won't be able create the entry that contains
     // it.
@@ -380,7 +380,7 @@ void TableSection::addTable(InputTable *table) {
     return;
   // Some inputs require that the indirect function table be assigned to table
   // number 0.
-  if (ctx.legacyFunctionTable &&
+  if (ctx.getLegacyFunctionTable() &&
       isa<DefinedTable>(ctx.sym.indirectFunctionTable) &&
       cast<DefinedTable>(ctx.sym.indirectFunctionTable)->table == table) {
     if (out.importSec->getNumImportedTables()) {
@@ -481,7 +481,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 }
 
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
-  assert(!ctx.arg.extendedConst || TLS);
+  assert(!ctx.arg.getExtendedConst() || TLS);
   bool is64 = ctx.arg.is64.value_or(false);
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
@@ -535,7 +535,7 @@ void GlobalSection::writeBody() {
       // In the case of dynamic linking, unless we have 'extended-const'
       // available, these global must to be mutable since they get updated to
       // the correct runtime value during `__wasm_apply_global_relocs`.
-      if (!ctx.arg.extendedConst && ctx.isPic && !sym->isTLS())
+      if (!ctx.arg.getExtendedConst() && ctx.getIsPic() && !sym->isTLS())
         mutable_ = true;
       // With multi-threading any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
@@ -548,7 +548,7 @@ void GlobalSection::writeBody() {
     bool useExtendedConst = false;
     uint32_t globalIdx;
     int64_t offset;
-    if (ctx.arg.extendedConst && ctx.isPic) {
+    if (ctx.arg.getExtendedConst() && ctx.getIsPic()) {
       if (auto *d = dyn_cast<DefinedData>(sym)) {
         if (!sym->isTLS()) {
           globalIdx = ctx.sym.memoryBase->getGlobalIndex();
@@ -644,7 +644,7 @@ void ElemSection::writeBody() {
 
   WasmInitExpr initExpr;
   initExpr.Extended = false;
-  if (ctx.isPic) {
+  if (ctx.getIsPic()) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
     initExpr.Inst.Value.Global = ctx.sym.tableBase->getGlobalIndex();
   } else {

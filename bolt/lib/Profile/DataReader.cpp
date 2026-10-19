@@ -314,7 +314,7 @@ Error DataReader::readProfilePreCFG(BinaryContext &BC) {
       else
         MemAccessProfile.NextInstrOffset = II->first;
     }
-    Function.HasMemoryProfile = true;
+    Function.setHasMemoryProfileFlag(true);
   }
 
   return Error::success();

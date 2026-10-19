@@ -1304,21 +1304,21 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     fail(DL, DAG,
          "WebAssembly doesn't support language-specific or target-specific "
          "calling conventions yet");
-  if (CLI.IsPatchPoint)
+  if (CLI.getIsPatchPointFlag())
     fail(DL, DAG, "WebAssembly doesn't support patch point yet");
 
-  if (CLI.IsTailCall) {
+  if (CLI.getIsTailCall()) {
     auto NoTail = [&](const char *Msg) {
       if (CLI.CB && CLI.CB->isMustTailCall())
         fail(DL, DAG, Msg);
-      CLI.IsTailCall = false;
+      CLI.setIsTailCall(false);
     };
 
     if (!Subtarget->hasTailCall())
       NoTail("WebAssembly 'tail-call' feature not enabled");
 
     // Varargs calls cannot be tail calls because the buffer is on the stack
-    if (CLI.IsVarArg)
+    if (CLI.getIsVarArg())
       NoTail("WebAssembly does not support varargs tail calls");
 
     // Do not tail call unless caller and callee return types match
@@ -1365,8 +1365,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       NoTail("WebAssembly does not support tail calling with byval arguments");
   }
 
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Ins = CLI.Ins;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
 
   // The generic code may have added an sret argument. If we're lowering an
@@ -1416,7 +1416,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     NumFixedArgs += !Out.Flags.isVarArg();
   }
 
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   auto PtrVT = getPointerTy(Layout);
 
   // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
@@ -1571,7 +1571,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops[0] = TableSet; // The new chain is the TableSet itself
   }
 
-  if (CLI.IsTailCall) {
+  if (CLI.getIsTailCall()) {
     // ret_calls do not return values to the current frame
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
     return DAG.getNode(WebAssemblyISD::RET_CALL, DL, NodeTys, Ops);
@@ -1590,7 +1590,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool WebAssemblyTargetLowering::CanLowerReturn(
     CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext & /*Context*/,
+    llvm::ArrayRef<ISD::OutputArg> Outs, LLVMContext & /*Context*/,
     const Type *RetTy) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
   return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
@@ -1598,7 +1598,7 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
     SDValue Chain, CallingConv::ID CallConv, bool /*IsVarArg*/,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    llvm::ArrayRef<ISD::OutputArg> Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
   assert(WebAssembly::canLowerReturn(Outs.size(), Subtarget) &&
@@ -1628,8 +1628,8 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
 
 SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
 

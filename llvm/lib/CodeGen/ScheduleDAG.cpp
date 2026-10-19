@@ -473,7 +473,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   // immediately after X in Index2Node.
 
   // Cancel pending updates, mark as valid.
-  Dirty = false;
+  setDirty(false);
   Updates.clear();
   Reachable.clear();
 
@@ -533,7 +533,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
 
 void ScheduleDAGTopologicalSort::FixOrder() {
   // Recompute from scratch after new nodes have been added.
-  if (Dirty) {
+  if (getDirty()) {
     InitDAGTopologicalSorting();
     return;
   }
@@ -548,9 +548,9 @@ void ScheduleDAGTopologicalSort::AddPredQueued(SUnit *Y, SUnit *X) {
   // Recomputing the order from scratch is likely more efficient than applying
   // updates one-by-one for too many updates. The current cut-off is arbitrarily
   // chosen.
-  Dirty = Dirty || Updates.size() > 10;
+  setDirty(getDirty() || Updates.size() > 10);
 
-  if (Dirty)
+  if (getDirty())
     return;
 
   Updates.emplace_back(Y, X);

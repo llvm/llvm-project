@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -108,8 +109,15 @@ struct ARMLoadStoreOpt {
   LiveRegUnits LiveRegs;
   const RegisterClassInfo *RCI = nullptr;
   MachineBasicBlock::const_iterator LiveRegPos;
-  bool LiveRegsValid;
-  bool isThumb1, isThumb2;
+  bool getLiveRegsValid() const { return MergeBaseCandidates.getFlag(0); }
+  bool setLiveRegsValid(bool Value) {
+    MergeBaseCandidates.setFlag(0, Value);
+    return Value;
+  }
+  bool getIsThumb1() const { return MergeBaseCandidates.getFlag(1); }
+  void setIsThumb1(bool Value) { MergeBaseCandidates.setFlag(1, Value); }
+  bool getIsThumb2() const { return MergeBaseCandidates.getFlag(2); }
+  void setIsThumb2(bool Value) { MergeBaseCandidates.setFlag(2, Value); }
 
   bool runOnMachineFunction(MachineFunction &Fn,
                             const RegisterClassInfo &RegClassInfo);
@@ -151,7 +159,7 @@ private:
   };
   SpecificBumpPtrAllocator<MergeCandidate> Allocator;
   SmallVector<const MergeCandidate *, 4> Candidates;
-  SmallVector<MachineInstr *, 4> MergeBaseCandidates;
+  llvm::SmallVectorWithFlags<MachineInstr *, 4, 3> MergeBaseCandidates;
 
   MachineBasicBlock::iterator eraseInstr(MachineBasicBlock::iterator MI);
 
@@ -502,7 +510,7 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
                                         unsigned WordOffset,
                                         ARMCC::CondCodes Pred,
                                         unsigned PredReg) {
-  assert(isThumb1 && "Can only update base register uses for Thumb1!");
+  assert(getIsThumb1() && "Can only update base register uses for Thumb1!");
   // Start updating any instructions with immediate offsets. Insert a SUB before
   // the first non-updateable instruction (if any).
   for (; MBBI != MBB.end(); ++MBBI) {
@@ -598,8 +606,8 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
 
 MachineBasicBlock::iterator
 ARMLoadStoreOpt::eraseInstr(MachineBasicBlock::iterator MI) {
-  if (LiveRegsValid && LiveRegPos == MI)
-    LiveRegsValid = false;
+  if (getLiveRegsValid() && LiveRegPos == MI)
+    setLiveRegsValid(false);
   return MI->eraseFromParent();
 }
 
@@ -617,11 +625,11 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
 void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
     MachineBasicBlock::const_iterator Before) {
   // Initialize if we never queried in this block.
-  if (!LiveRegsValid) {
+  if (!getLiveRegsValid()) {
     LiveRegs.init(*TRI);
     LiveRegs.addLiveOuts(MBB);
     LiveRegPos = MBB.end();
-    LiveRegsValid = true;
+    setLiveRegsValid(true);
   }
   // Move backward just before the "Before" position.
   while (LiveRegPos != Before) {
@@ -653,16 +661,17 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
 
   // For Thumb1 targets, it might be necessary to clobber the CPSR to merge.
   // Compute liveness information for that register to make the decision.
-  bool SafeToClobberCPSR = !isThumb1 ||
-    (MBB.computeRegisterLiveness(TRI, ARM::CPSR, InsertBefore, 20) ==
-     MachineBasicBlock::LQR_Dead);
+  bool SafeToClobberCPSR =
+      !getIsThumb1() ||
+      (MBB.computeRegisterLiveness(TRI, ARM::CPSR, InsertBefore, 20) ==
+       MachineBasicBlock::LQR_Dead);
 
-  bool Writeback = isThumb1; // Thumb1 LDM/STM have base reg writeback.
+  bool Writeback = getIsThumb1(); // Thumb1 LDM/STM have base reg writeback.
 
   // Exception: If the base register is in the input reglist, Thumb1 LDM is
   // non-writeback.
   // It's also not possible to merge an STR of the base register in Thumb1.
-  if (isThumb1 && ContainsReg(Regs, Base)) {
+  if (getIsThumb1() && ContainsReg(Regs, Base)) {
     assert(Base != ARM::SP && "Thumb1 does not allow SP in register list");
     if (Opcode == ARM::tLDRi)
       Writeback = false;
@@ -673,13 +682,13 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
   ARM_AM::AMSubMode Mode = ARM_AM::ia;
   // VFP and Thumb2 do not support IB or DA modes. Thumb1 only supports IA.
   bool isNotVFP = isi32Load(Opcode) || isi32Store(Opcode);
-  bool haveIBAndDA = isNotVFP && !isThumb2 && !isThumb1;
+  bool haveIBAndDA = isNotVFP && !getIsThumb2() && !getIsThumb1();
 
   if (Offset == 4 && haveIBAndDA) {
     Mode = ARM_AM::ib;
   } else if (Offset == -4 * (int)NumRegs + 4 && haveIBAndDA) {
     Mode = ARM_AM::da;
-  } else if (Offset == -4 * (int)NumRegs && isNotVFP && !isThumb1) {
+  } else if (Offset == -4 * (int)NumRegs && isNotVFP && !getIsThumb1()) {
     // VLDM/VSTM do not support DB mode without also updating the base reg.
     Mode = ARM_AM::db;
   } else if (Offset != 0 || Opcode == ARM::tLDRspi || Opcode == ARM::tSTRspi) {
@@ -713,28 +722,28 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
         for (const std::pair<unsigned, bool> &R : Regs)
           LiveRegs.addReg(R.first);
 
-      NewBase = findFreeReg(isThumb1 ? ARM::tGPRRegClass : ARM::GPRRegClass);
+      NewBase =
+          findFreeReg(getIsThumb1() ? ARM::tGPRRegClass : ARM::GPRRegClass);
       if (NewBase == 0)
         return nullptr;
     }
 
-    int BaseOpc = isThumb2 ? (BaseKill && Base == ARM::SP ? ARM::t2ADDspImm
-                                                          : ARM::t2ADDri)
-                           : (isThumb1 && Base == ARM::SP)
-                                 ? ARM::tADDrSPi
-                                 : (isThumb1 && Offset < 8)
-                                       ? ARM::tADDi3
-                                       : isThumb1 ? ARM::tADDi8 : ARM::ADDri;
+    int BaseOpc = getIsThumb2() ? (BaseKill && Base == ARM::SP ? ARM::t2ADDspImm
+                                                               : ARM::t2ADDri)
+                  : (getIsThumb1() && Base == ARM::SP) ? ARM::tADDrSPi
+                  : (getIsThumb1() && Offset < 8)      ? ARM::tADDi3
+                  : getIsThumb1()                      ? ARM::tADDi8
+                                                       : ARM::ADDri;
 
     if (Offset < 0) {
       // FIXME: There are no Thumb1 load/store instructions with negative
       // offsets. So the Base != ARM::SP might be unnecessary.
       Offset = -Offset;
-      BaseOpc = isThumb2 ? (BaseKill && Base == ARM::SP ? ARM::t2SUBspImm
-                                                        : ARM::t2SUBri)
-                         : (isThumb1 && Offset < 8 && Base != ARM::SP)
-                               ? ARM::tSUBi3
-                               : isThumb1 ? ARM::tSUBi8 : ARM::SUBri;
+      BaseOpc = getIsThumb2() ? (BaseKill && Base == ARM::SP ? ARM::t2SUBspImm
+                                                             : ARM::t2SUBri)
+                : (getIsThumb1() && Offset < 8 && Base != ARM::SP) ? ARM::tSUBi3
+                : getIsThumb1()                                    ? ARM::tSUBi8
+                                                                   : ARM::SUBri;
     }
 
     if (!TL->isLegalAddImmediate(Offset))
@@ -746,7 +755,7 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
     bool KillOldBase = BaseKill &&
       (!isi32Store(Opcode) || !ContainsReg(Regs, Base));
 
-    if (isThumb1) {
+    if (getIsThumb1()) {
       // Thumb1: depending on immediate size, use either
       //   ADDS NewBase, Base, #imm3
       // or
@@ -810,13 +819,13 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
   // Otherwise, don't merge.
   // It's safe to return here since the code to materialize a new base register
   // above is also conditional on SafeToClobberCPSR.
-  if (isThumb1 && !SafeToClobberCPSR && Writeback && !BaseKill)
+  if (getIsThumb1() && !SafeToClobberCPSR && Writeback && !BaseKill)
     return nullptr;
 
   MachineInstrBuilder MIB;
 
   if (Writeback) {
-    assert(isThumb1 && "expected Writeback only inThumb1");
+    assert(getIsThumb1() && "expected Writeback only inThumb1");
     if (Opcode == ARM::tLDMIA) {
       assert(!(ContainsReg(Regs, Base)) && "Thumb1 can't LDM ! with Base in Regs");
       // Update tLDMIA with writeback if necessary.
@@ -1305,7 +1314,8 @@ findIncDecAfter(MachineBasicBlock::iterator MBBI, Register Reg,
 /// ldmdb rn!, <ra, rb, rc>
 bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   // Thumb1 is already using updating loads/stores.
-  if (isThumb1) return false;
+  if (getIsThumb1())
+    return false;
   LLVM_DEBUG(dbgs() << "Attempting to merge update of: " << *MI);
 
   const MachineOperand &BaseOP = MI->getOperand(0);
@@ -1486,7 +1496,8 @@ static unsigned getPostIndexedLoadStoreOpcode(unsigned Opc,
 bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   // Thumb1 doesn't have updating LDR/STR.
   // FIXME: Use LDM/STM with single register instead.
-  if (isThumb1) return false;
+  if (getIsThumb1())
+    return false;
   LLVM_DEBUG(dbgs() << "Attempting to merge update of: " << *MI);
 
   Register Base = getLoadStoreBaseOp(*MI).getReg();
@@ -1902,7 +1913,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
   unsigned Position = 0;
   assert(Candidates.size() == 0);
   assert(MergeBaseCandidates.size() == 0);
-  LiveRegsValid = false;
+  setLiveRegsValid(false);
 
   for (MachineBasicBlock::iterator I = MBB.end(), MBBI; I != MBB.begin();
        I = MBBI) {
@@ -2055,7 +2066,8 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
 ///   ldmfd sp!, {..., pc}
 bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
   // Thumb1 LDM doesn't allow high registers.
-  if (isThumb1) return false;
+  if (getIsThumb1())
+    return false;
   if (MBB.empty()) return false;
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -2075,9 +2087,10 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       MachineOperand &MO = PrevMI.getOperand(PrevMI.getNumOperands() - 1);
       if (MO.getReg() != ARM::LR)
         return false;
-      unsigned NewOpc = (isThumb2 ? ARM::t2LDMIA_RET : ARM::LDMIA_RET);
-      assert(((isThumb2 && Opcode == ARM::t2LDMIA_UPD) ||
-              Opcode == ARM::LDMIA_UPD) && "Unsupported multiple load-return!");
+      unsigned NewOpc = (getIsThumb2() ? ARM::t2LDMIA_RET : ARM::LDMIA_RET);
+      assert(((getIsThumb2() && Opcode == ARM::t2LDMIA_UPD) ||
+              Opcode == ARM::LDMIA_UPD) &&
+             "Unsupported multiple load-return!");
       PrevMI.setDesc(TII->get(NewOpc));
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
@@ -2125,15 +2138,15 @@ bool ARMLoadStoreOpt::runOnMachineFunction(
   TRI = STI->getRegisterInfo();
   RCI = &RegClassInfo;
 
-  isThumb2 = AFI->isThumb2Function();
-  isThumb1 = AFI->isThumbFunction() && !isThumb2;
+  setIsThumb2(AFI->isThumb2Function());
+  setIsThumb1(AFI->isThumbFunction() && !getIsThumb2());
 
   bool Modified = false, ModifiedLDMReturn = false;
   for (MachineBasicBlock &MBB : Fn) {
     Modified |= LoadStoreMultipleOpti(MBB);
     if (STI->hasV5TOps() && !AFI->shouldSignReturnAddress())
       ModifiedLDMReturn |= MergeReturnIntoLDM(MBB);
-    if (isThumb1)
+    if (getIsThumb1())
       Modified |= CombineMovBx(MBB);
   }
   Modified |= ModifiedLDMReturn;

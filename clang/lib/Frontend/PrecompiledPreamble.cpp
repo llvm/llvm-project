@@ -258,7 +258,7 @@ public:
 
   void setEmittedPreamblePCH(ASTWriter &Writer) {
     if (FileOS) {
-      *FileOS << Buffer->Data;
+      *FileOS << StringRef(Buffer->Data.data(), Buffer->Data.size());
       // Make sure it hits disk now.
       FileOS.reset();
     }

@@ -14,6 +14,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_VARLENCODEEMITTERGEN_H
 #define LLVM_UTILS_TABLEGEN_COMMON_VARLENCODEEMITTERGEN_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/TableGen/Record.h"
 
 namespace llvm {
@@ -30,14 +31,15 @@ class VarLenInst {
   size_t NumBits;
 
   // Set if any of the segment is not fixed value.
-  bool HasDynamicSegment;
+  bool getHasDynamicSegment() const { return Segments.getFlag(0); }
+  void setHasDynamicSegment(bool Value) { Segments.setFlag(0, Value); }
 
-  SmallVector<EncodingSegment, 4> Segments;
+  llvm::SmallVectorWithFlags<EncodingSegment, 4> Segments;
 
   void buildRec(const DagInit *DI);
 
 public:
-  VarLenInst() : TheDef(nullptr), NumBits(0U), HasDynamicSegment(false) {}
+  VarLenInst() : TheDef(nullptr), NumBits(0U) {}
 
   explicit VarLenInst(const DagInit *DI, const RecordVal *TheDef);
 
@@ -50,7 +52,7 @@ public:
   const_iterator end() const { return Segments.end(); }
   size_t getNumSegments() const { return Segments.size(); }
 
-  bool isFixedValueOnly() const { return !HasDynamicSegment; }
+  bool isFixedValueOnly() const { return !getHasDynamicSegment(); }
 };
 
 void emitVarLenCodeEmitter(const RecordKeeper &R, raw_ostream &OS);

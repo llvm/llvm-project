@@ -122,13 +122,13 @@ struct ModuleMapFileParser {
 
   SourceLocation consumeToken();
   void skipUntil(MMToken::TokenKind K);
-  bool parseModuleId(ModuleId &Id);
+  template <typename ModuleIdT> bool parseModuleId(ModuleIdT &Id);
   bool parseOptionalAttributes(ModuleAttributes &Attrs);
 
   SourceLocation getLocation() const { return Tok.getLocation(); };
 };
 
-std::string formatModuleId(const ModuleId &Id) {
+std::string formatModuleId(llvm::ArrayRef<ModuleId::value_type> Id) {
   std::string result;
   {
     llvm::raw_string_ostream OS(result);
@@ -253,13 +253,13 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
   ModuleDecl MDecl;
 
   SourceLocation ExplicitLoc;
-  MDecl.Explicit = false;
-  MDecl.Framework = false;
+  MDecl.setExplicit(false);
+  MDecl.setFramework(false);
 
   // Parse 'explicit' keyword, if present.
   if (Tok.is(MMToken::ExplicitKeyword)) {
     MDecl.Location = ExplicitLoc = consumeToken();
-    MDecl.Explicit = true;
+    MDecl.setExplicit(true);
   }
 
   // Parse 'framework' keyword, if present.
@@ -267,7 +267,7 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
     SourceLocation FrameworkLoc = consumeToken();
     if (!MDecl.Location.isValid())
       MDecl.Location = FrameworkLoc;
-    MDecl.Framework = true;
+    MDecl.setFramework(true);
   }
 
   // Parse 'module' keyword.
@@ -286,7 +286,7 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
   if (Tok.is(MMToken::Star)) {
     SourceLocation StarLoc = consumeToken();
     MDecl.Id.push_back({"*", StarLoc});
-    if (TopLevel && !MDecl.Framework) {
+    if (TopLevel && !MDecl.getFramework()) {
       Diags.Report(StarLoc, diag::err_mmap_top_level_inferred_submodule);
       HadError = true;
       return std::nullopt;
@@ -305,10 +305,10 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
 
         HadError = true;
       }
-    } else if (MDecl.Id.size() == 1 && MDecl.Explicit) {
+    } else if (MDecl.Id.size() == 1 && MDecl.getExplicit()) {
       // Top-level modules can't be explicit.
       Diags.Report(ExplicitLoc, diag::err_mmap_explicit_top_level);
-      MDecl.Explicit = false;
+      MDecl.setExplicit(false);
       HadError = true;
     }
   }
@@ -1032,7 +1032,8 @@ void ModuleMapFileParser::skipUntil(MMToken::TokenKind K) {
 ///     identifier '.' module-id
 ///
 /// \returns true if an error occurred, false otherwise.
-bool ModuleMapFileParser::parseModuleId(ModuleId &Id) {
+template <typename ModuleIdT>
+bool ModuleMapFileParser::parseModuleId(ModuleIdT &Id) {
   Id.clear();
   do {
     if (Tok.is(MMToken::Identifier) || Tok.is(MMToken::StringLiteral)) {

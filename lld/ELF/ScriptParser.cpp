@@ -306,7 +306,7 @@ void ScriptParser::readDefsym() {
 
 void ScriptParser::readNoCrossRefs(bool to) {
   expect("(");
-  NoCrossRefCommand cmd{{}, to};
+  NoCrossRefCommand cmd(to);
   while (auto tok = till(")"))
     cmd.outputSections.push_back(unquote(tok));
   if (cmd.outputSections.size() < 2)
@@ -502,11 +502,11 @@ void ScriptParser::readOutputFormat() {
   if (!consume(")")) {
     expect(",");
     StringRef tmp = readName();
-    if (ctx.arg.optEB)
+    if (ctx.arg.getOptEB())
       s = tmp;
     expect(",");
     tmp = readName();
-    if (ctx.arg.optEL)
+    if (ctx.arg.getOptEL())
       s = tmp;
     consume(")");
   }
@@ -516,7 +516,7 @@ void ScriptParser::readOutputFormat() {
   ctx.arg.bfdname = s;
 
   if (s == "binary") {
-    ctx.arg.oFormatBinary = true;
+    ctx.arg.setOFormatBinary(true);
     return;
   }
 
@@ -573,7 +573,7 @@ void ScriptParser::readRegionAlias() {
 void ScriptParser::readSearchDir() {
   expect("(");
   StringRef name = readName();
-  if (!ctx.arg.nostdlib)
+  if (!ctx.arg.getNostdlib())
     ctx.arg.searchPaths.push_back(name);
   expect(")");
 }
@@ -605,14 +605,14 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
       osd->osec.lmaExpr = lmaExpr;
       // Use first section address for subsequent sections. Ensure the first
       // section, even if empty, is not discarded.
-      osd->osec.usedInExpression = true;
+      osd->osec.setUsedInExpression(true);
       addrExpr = [=]() -> ExprValue { return {&osd->osec, false, 0, ""}; };
     }
     v.push_back(osd);
     prev = &osd->osec;
   }
   if (!v.empty())
-    static_cast<OutputDesc *>(v.front())->osec.firstInOverlay = true;
+    static_cast<OutputDesc *>(v.front())->osec.setFirstInOverlay(true);
   if (consume(">")) {
     StringRef regionName = readName();
     for (SectionCommand *od : v)
@@ -682,16 +682,16 @@ void ScriptParser::readSections() {
 
   // If DATA_SEGMENT_RELRO_END is absent, for sections after DATA_SEGMENT_ALIGN,
   // the relro fields should be cleared.
-  if (!ctx.script->seenRelroEnd)
+  if (!ctx.script->getSeenRelroEnd())
     for (SectionCommand *cmd : v)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.relro = false;
+        osd->osec.setRelro(false);
 
   ctx.script->sectionCommands.insert(ctx.script->sectionCommands.end(),
                                      v.begin(), v.end());
 
   if (atEOF() || !consume("INSERT")) {
-    ctx.script->hasSectionsCommand = true;
+    ctx.script->setHasSectionsCommand(true);
     return;
   }
 
@@ -955,7 +955,7 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
 
   if (consume("NOLOAD")) {
     cmd->type = SHT_NOBITS;
-    cmd->typeIsSet = true;
+    cmd->setTypeIsSet(true);
   } else if (consume("TYPE")) {
     expect("=");
     StringRef value = peek();
@@ -970,10 +970,10 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok) {
       // Otherwise, read an expression.
       cmd->type = readExpr()().getValue();
     }
-    cmd->typeIsSet = true;
+    cmd->setTypeIsSet(true);
   } else {
     skip(); // This is "COPY", "INFO" or "OVERLAY".
-    cmd->nonAlloc = true;
+    cmd->setNonAlloc(true);
   }
   expect(")");
   return true;
@@ -1024,7 +1024,7 @@ static Expr checkAlignment(Ctx &ctx, Expr e, std::string &loc) {
 OutputDesc *ScriptParser::readOverlaySectionDescription() {
   OutputDesc *osd =
       ctx.script->createOutputSection(readName(), getCurrentLocation());
-  osd->osec.inOverlay = true;
+  osd->osec.setInOverlay(true);
   expect("{");
   while (auto tok = till("}"))
     readOutputSectionStmt(osd->osec, tok);
@@ -1037,7 +1037,8 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       ctx.script->createOutputSection(unquote(outSec), getCurrentLocation());
   OutputSection *osec = &cmd->osec;
   // Maybe relro. Will reset to false if DATA_SEGMENT_RELRO_END is absent.
-  osec->relro = ctx.script->seenDataAlign && !ctx.script->seenRelroEnd;
+  osec->setRelro(ctx.script->getSeenDataAlign() &&
+                 !ctx.script->getSeenRelroEnd());
 
   size_t symbolsReferenced = ctx.script->referencedSymbols.size();
 
@@ -1087,7 +1088,7 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   consume(",");
 
   if (ctx.script->referencedSymbols.size() > symbolsReferenced)
-    osec->expressionsUseSymbols = true;
+    osec->setExpressionsUseSymbols(true);
   return cmd;
 }
 
@@ -1190,7 +1191,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 
   const char *oldS = prevTok.data();
   SymbolAssignment *cmd = nullptr;
-  bool savedSeenRelroEnd = ctx.script->seenRelroEnd;
+  bool savedSeenRelroEnd = ctx.script->getSeenRelroEnd();
   const StringRef op = peek();
   {
     SaveAndRestore saved(lexState, State::Expr);
@@ -1210,7 +1211,8 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   }
 
   if (cmd) {
-    cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && ctx.script->seenRelroEnd;
+    cmd->dataSegmentRelroEnd =
+        !savedSeenRelroEnd && ctx.script->getSeenRelroEnd();
     cmd->commandString = StringRef(oldS, curTok.data() - oldS).str();
     squeezeSpaces(cmd->commandString);
     expect(";");
@@ -1495,7 +1497,7 @@ StringRef ScriptParser::readParenName() {
 
 static void checkIfExists(LinkerScript &script, const OutputSection &osec,
                           StringRef location) {
-  if (osec.location.empty() && script.errorOnMissingSection)
+  if (osec.location.empty() && script.getErrorOnMissingSection())
     script.recordError(location + ": undefined section " + osec.name);
 }
 
@@ -1541,7 +1543,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "ADDR") {
     StringRef name = readParenName();
     OutputSection *osec = &ctx.script->getOrCreateOutputSection(name)->osec;
-    osec->usedInExpression = true;
+    osec->setUsedInExpression(true);
     return [=, s = ctx.script]() -> ExprValue {
       checkIfExists(*s, *osec, location);
       return {osec, false, 0, location};
@@ -1583,7 +1585,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    ctx.script->seenDataAlign = true;
+    ctx.script->setSeenDataAlign(true);
     return [=, s = ctx.script] {
       uint64_t align = std::max(uint64_t(1), e().getValue());
       return (s->getDot() + align - 1) & -align;
@@ -1604,7 +1606,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    ctx.script->seenRelroEnd = true;
+    ctx.script->setSeenRelroEnd(true);
     return [&ctx = this->ctx] {
       return alignToPowerOf2(ctx.script->getDot(), ctx.arg.maxPageSize);
     };
@@ -1631,7 +1633,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "LOADADDR") {
     StringRef name = readParenName();
     OutputSection *osec = &ctx.script->getOrCreateOutputSection(name)->osec;
-    osec->usedInExpression = true;
+    osec->setUsedInExpression(true);
     return [=, s = ctx.script] {
       checkIfExists(*s, *osec, location);
       return osec->getLMA();

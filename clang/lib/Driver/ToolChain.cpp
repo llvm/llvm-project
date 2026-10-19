@@ -536,6 +536,7 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 SanitizerArgs
 ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs, BoundArch BA,
                             Action::OffloadKind DeviceOffloadKind) const {
+  const bool DiagnoseErrors = BoundArchSanitizerArgsChecked.empty();
   // When -fno-gpu-sanitize is specified for GPU targets, don't emit
   // diagnostics about unsupported sanitizers for specific GPU arches,
   // since sanitizers are disabled for the GPU anyway.
@@ -547,11 +548,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs, BoundArch BA,
     DiagnoseBoundArchErrors = false;
   }
 
-  SanitizerArgs SanArgs(*this, JobArgs,
-                        /*DiagnoseErrors=*/!SanitizerArgsChecked,
-                        DiagnoseBoundArchErrors, BA, DeviceOffloadKind);
+  SanitizerArgs SanArgs(*this, JobArgs, DiagnoseErrors, DiagnoseBoundArchErrors,
+                        BA, DeviceOffloadKind);
 
-  SanitizerArgsChecked = true;
   return SanArgs;
 }
 

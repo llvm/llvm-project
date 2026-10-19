@@ -161,7 +161,7 @@ LogicalResult PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
     }
     if (itype == PTXRegisterMod::ReadWrite)
       ptxOperands.push_back(v);
-    hasResult = true;
+    setHasResult(true);
   };
 
   llvm::raw_string_ostream ss(registerConstraints);
@@ -198,10 +198,9 @@ LogicalResult PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
 }
 
 /// Check if the operation needs to pack and unpack results.
-static bool
-needsPackUnpack(BasicPtxBuilderInterface interfaceOp,
-                bool needsManualRegisterMapping,
-                SmallVectorImpl<PTXRegisterMod> &registerModifiers) {
+static bool needsPackUnpack(BasicPtxBuilderInterface interfaceOp,
+                            bool needsManualRegisterMapping,
+                            ArrayRef<PTXRegisterMod> registerModifiers) {
   if (needsManualRegisterMapping)
     return false;
   const unsigned writeOnlyVals = interfaceOp->getNumResults();
@@ -215,11 +214,9 @@ needsPackUnpack(BasicPtxBuilderInterface interfaceOp,
 /// Pack the result types of the interface operation.
 /// If the operation has multiple results, it packs them into a struct
 /// type. Otherwise, it returns the original result types.
-static SmallVector<Type>
-packResultTypes(BasicPtxBuilderInterface interfaceOp,
-                bool needsManualRegisterMapping,
-                SmallVectorImpl<PTXRegisterMod> &registerModifiers,
-                SmallVectorImpl<Value> &ptxOperands) {
+static SmallVector<Type> packResultTypes(
+    BasicPtxBuilderInterface interfaceOp, bool needsManualRegisterMapping,
+    ArrayRef<PTXRegisterMod> registerModifiers, ArrayRef<Value> ptxOperands) {
   MLIRContext *ctx = interfaceOp->getContext();
   TypeRange resultRange = interfaceOp->getResultTypes();
 
@@ -452,8 +449,9 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(interfaceOp->getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
 
-  SmallVector<Type> resultTypes = packResultTypes(
-      interfaceOp, needsManualRegisterMapping, registerModifiers, ptxOperands);
+  SmallVector<Type> resultTypes =
+      packResultTypes(interfaceOp, getNeedsManualRegisterMapping(),
+                      registerModifiers, ptxOperands);
 
   // Remove the last comma from the constraints string.
   if (!registerConstraints.empty() &&
@@ -462,7 +460,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   registerConstraints = canonicalizeRegisterConstraints(registerConstraints);
 
   std::string ptxInstruction = interfaceOp.getPtx();
-  if (!needsManualRegisterMapping)
+  if (!getNeedsManualRegisterMapping())
     ptxInstruction = rewriteAsmPlaceholders(ptxInstruction);
 
   // Add the predicate to the asm string.
@@ -515,18 +513,18 @@ void PtxBuilder::buildAndReplaceOp() {
   LDBG() << "\n Generated PTX \n\t" << inlineAsmOp;
 
   // Case 0: no result at all → just erase wrapper op.
-  if (!hasResult) {
+  if (!getHasResult()) {
     rewriter.eraseOp(interfaceOp);
     return;
   }
 
-  if (needsManualRegisterMapping) {
+  if (getNeedsManualRegisterMapping()) {
     rewriter.replaceOp(interfaceOp, inlineAsmOp->getResults());
     return;
   }
 
   // Case 1: Simple path, single scalar inline asm result.
-  if (!needsPackUnpack(interfaceOp, needsManualRegisterMapping,
+  if (!needsPackUnpack(interfaceOp, getNeedsManualRegisterMapping(),
                        registerModifiers)) {
     // Sub-case 1a: the wrapper op has a declared result -- replace it
     // directly with the inline asm result.

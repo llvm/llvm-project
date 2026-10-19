@@ -13,6 +13,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
@@ -232,8 +233,9 @@ struct CommonConfig {
   SmallVector<NewSectionInfo, 0> AddSection;
   SmallVector<StringRef, 0> DumpSection;
   SmallVector<NewSectionInfo, 0> UpdateSection;
-  SmallVector<SectionPatternAddressUpdate, 0> ChangeSectionAddress;
-  SmallVector<StringRef, 0> ExtractSection;
+  llvm::SmallVectorWithFlags<SectionPatternAddressUpdate, 0, 3>
+      ChangeSectionAddress;
+  llvm::SmallVectorWithFlags<StringRef, 0, 4> ExtractSection;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -258,31 +260,58 @@ struct CommonConfig {
   StringMap<StringRef> SymbolsToRename;
 
   // Symbol info specified by --add-symbol option.
-  SmallVector<NewSymbolInfo, 0> SymbolsToAdd;
+  llvm::SmallVectorWithFlags<NewSymbolInfo, 0, 4> SymbolsToAdd;
 
   // Integer options
   int64_t ChangeSectionLMAValAll = 0;
 
   // Boolean options
-  bool DeterministicArchives = true;
-  bool ExtractDWO = false;
-  bool ExtractMainPartition = false;
-  bool OnlyKeepDebug = false;
-  bool PreserveDates = false;
-  bool StripAll = false;
-  bool StripAllGNU = false;
-  bool StripDWO = false;
-  bool StripDebug = false;
-  bool StripNonAlloc = false;
-  bool StripSections = false;
-  bool StripUnneeded = false;
-  bool Verbose = false;
-  bool Weaken = false;
-  bool DecompressDebugSections = false;
+  bool getDeterministicArchives() const { return !compressSections.getFlag(0); }
+  void setDeterministicArchives(bool Value) {
+    compressSections.setFlag(0, !Value);
+  }
+  bool getExtractDWO() const { return compressSections.getFlag(1); }
+  void setExtractDWO(bool Value) { compressSections.setFlag(1, Value); }
+  bool getExtractMainPartition() const { return compressSections.getFlag(2); }
+  void setExtractMainPartition(bool Value) {
+    compressSections.setFlag(2, Value);
+  }
+  bool getOnlyKeepDebug() const { return compressSections.getFlag(3); }
+  void setOnlyKeepDebug(bool Value) { compressSections.setFlag(3, Value); }
+  bool getPreserveDates() const { return SymbolsToAdd.getFlag(0); }
+  void setPreserveDates(bool Value) { SymbolsToAdd.setFlag(0, Value); }
+  bool getStripAll() const { return SymbolsToAdd.getFlag(1); }
+  bool setStripAll(bool Value) {
+    SymbolsToAdd.setFlag(1, Value);
+    return Value;
+  }
+  bool getStripAllGNU() const { return SymbolsToAdd.getFlag(2); }
+  void setStripAllGNU(bool Value) { SymbolsToAdd.setFlag(2, Value); }
+  bool getStripDWO() const { return SymbolsToAdd.getFlag(3); }
+  void setStripDWO(bool Value) { SymbolsToAdd.setFlag(3, Value); }
+  bool getStripDebug() const { return ExtractSection.getFlag(0); }
+  void setStripDebug(bool Value) { ExtractSection.setFlag(0, Value); }
+  bool getStripNonAlloc() const { return ExtractSection.getFlag(1); }
+  void setStripNonAlloc(bool Value) { ExtractSection.setFlag(1, Value); }
+  bool getStripSections() const { return ExtractSection.getFlag(2); }
+  void setStripSections(bool Value) { ExtractSection.setFlag(2, Value); }
+  bool getStripUnneeded() const { return ExtractSection.getFlag(3); }
+  void setStripUnneeded(bool Value) { ExtractSection.setFlag(3, Value); }
+  bool getVerbose() const { return ChangeSectionAddress.getFlag(0); }
+  void setVerbose(bool Value) { ChangeSectionAddress.setFlag(0, Value); }
+  bool getWeaken() const { return ChangeSectionAddress.getFlag(1); }
+  void setWeaken(bool Value) { ChangeSectionAddress.setFlag(1, Value); }
+  bool getDecompressDebugSections() const {
+    return ChangeSectionAddress.getFlag(2);
+  }
+  void setDecompressDebugSections(bool Value) {
+    ChangeSectionAddress.setFlag(2, Value);
+  }
 
   DebugCompressionType CompressionType = DebugCompressionType::None;
 
-  SmallVector<std::pair<NameMatcher, llvm::DebugCompressionType>, 0>
+  llvm::SmallVectorWithFlags<std::pair<NameMatcher, llvm::DebugCompressionType>,
+                             0, 4>
       compressSections;
 
   // ErrorCallback is used to handle recoverable errors. An Error returned

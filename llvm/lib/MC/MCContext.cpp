@@ -70,8 +70,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
       SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
       MAI(mai), MRI(&mri), MSTI(&msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
-      CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset) {
+      CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0) {
+  DebugPrefixMap.setFlag(2, DoAutoReset);
   const MCTargetOptions &TO = getTargetOptions();
   SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
@@ -123,7 +123,7 @@ const MCTargetOptions &MCContext::getTargetOptions() const {
 }
 
 MCContext::~MCContext() {
-  if (AutoReset)
+  if (DebugPrefixMap.getFlag(2))
     reset();
 
   // NOTE: The symbols are all allocated out of a bump pointer allocator,
@@ -190,7 +190,7 @@ void MCContext::reset() {
   GenDwarfForAssembly = false;
   GenDwarfFileNumber = 0;
 
-  HadError = false;
+  DebugPrefixMap.setFlag(3, false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -363,7 +363,7 @@ MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
 }
 
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
-  if (!UseNamesOnTempLabels)
+  if (!DebugPrefixMap.getFlag(1))
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
   return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name,
                                AlwaysAddSuffix, /*IsTemporary=*/true);
@@ -379,7 +379,7 @@ MCSymbol *MCContext::createBlockSymbol(const Twine &Name, bool AlwaysEmit) {
     return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + Name);
 
   bool IsTemporary = !SaveTempLabels;
-  if (IsTemporary && !UseNamesOnTempLabels)
+  if (IsTemporary && !DebugPrefixMap.getFlag(1))
     return createSymbolImpl(nullptr, IsTemporary);
   return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name,
                                /*AlwaysAddSuffix=*/false, IsTemporary);
@@ -1082,7 +1082,7 @@ CodeViewContext &MCContext::getCVContext() {
 void MCContext::diagnose(const SMDiagnostic &SMD) {
   assert(DiagHandler && "MCContext::DiagHandler is not set");
   if (SMD.getKind() == SourceMgr::DK_Error)
-    HadError = true;
+    DebugPrefixMap.setFlag(3, true);
   bool UseInlineSrcMgr = false;
   const SourceMgr *SMP = nullptr;
   if (SrcMgr) {
@@ -1127,7 +1127,7 @@ void MCContext::reportCommon(
 }
 
 void MCContext::reportError(SMLoc Loc, const Twine &Msg) {
-  HadError = true;
+  DebugPrefixMap.setFlag(3, true);
   reportCommon(Loc, [&](SMDiagnostic &D, const SourceMgr *SMP) {
     D = SMP->GetMessage(Loc, SourceMgr::DK_Error, Msg);
   });

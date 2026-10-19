@@ -20,5 +20,6 @@ Operation::Operation(StringRef name, StringRef summary, StringRef desc,
                      llvm::SMLoc loc)
     : name(name.str()), summary(summary.str()), description(desc.str()),
       nativeClassName(nativeClassName.str()),
-      supportsTypeInferrence(supportsTypeInferrence),
-      location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)) {}
+      location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)),
+      attributes(decltype(this->attributes)::withFlags(
+          unsigned(supportsTypeInferrence))) {}

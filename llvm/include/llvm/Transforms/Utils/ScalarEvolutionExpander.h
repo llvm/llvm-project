@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
@@ -72,7 +73,8 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   const char *IVName;
 
   /// Indicates whether LCSSA phis should be created for inserted values.
-  bool PreserveLCSSA;
+  bool getPreserveLCSSA() const { return InsertPointGuards.getFlag(0); }
+  void setPreserveLCSSA(bool Value) { InsertPointGuards.setFlag(0, Value); }
 
   // InsertedExpressions caches Values for reuse, so must track RAUW.
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
@@ -129,17 +131,20 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   /// canonical induction variable. Note that CanonicalMode doesn't guarantee
   /// that all expressions are expanded in "canonical" form. For some
   /// expressions literal mode can be preferred.
-  bool CanonicalMode;
+  bool getCanonicalMode() const { return InsertPointGuards.getFlag(1); }
+  void setCanonicalMode(bool Value) { InsertPointGuards.setFlag(1, Value); }
 
   /// When invoked from LSR, the expander is in "strength reduction" mode. The
   /// only difference is that phi's are only reused if they are already in
   /// "expanded" form.
-  bool LSRMode;
+  bool getLSRMode() const { return InsertPointGuards.getFlag(2); }
+  void setLSRMode(bool Value) { InsertPointGuards.setFlag(2, Value); }
 
   /// When true, rewrite any divisors of UDiv expressions that may be 0 to
   /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
   /// freeze it first.
-  bool SafeUDivMode = false;
+  bool getSafeUDivMode() const { return InsertPointGuards.getFlag(3); }
+  void setSafeUDivMode(bool Value) { InsertPointGuards.setFlag(3, Value); }
 
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
@@ -181,7 +186,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
   /// Stack of pointers to saved insert points, used to keep insert points
   /// consistent when instructions are moved.
-  SmallVector<SCEVInsertPointGuard *, 8> InsertPointGuards;
+  llvm::SmallVectorWithFlags<SCEVInsertPointGuard *, 8, 4> InsertPointGuards;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   const char *DebugType;
@@ -193,12 +198,13 @@ public:
   /// Construct a SCEVExpander in "canonical" mode.
   explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
                         bool PreserveLCSSA = true)
-      : SE(SE), DL(SE.getDataLayout()), IVName(Name),
-        PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
-        IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
+      : SE(SE), DL(SE.getDataLayout()), IVName(Name), IVIncInsertLoop(nullptr),
+        IVIncInsertPos(nullptr),
         Builder(SE.getModule(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
-                    [this](Instruction *I) { rememberInstruction(I); })) {
+                    [this](Instruction *I) { rememberInstruction(I); })),
+        InsertPointGuards(decltype(this->InsertPointGuards)::withFlags(
+            unsigned(PreserveLCSSA) | 2)) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     DebugType = "";
 #endif
@@ -380,7 +386,7 @@ public:
 
   /// Set the current IV increment loop and position.
   void setIVIncInsertPos(const Loop *L, Instruction *Pos) {
-    assert(!CanonicalMode &&
+    assert(!getCanonicalMode() &&
            "IV increment positions are not supported in CanonicalMode");
     IVIncInsertLoop = L;
     IVIncInsertPos = Pos;
@@ -389,7 +395,7 @@ public:
   /// Enable post-inc expansion for addrecs referring to the given
   /// loops. Post-inc expansion is only supported in non-canonical mode.
   void setPostInc(const PostIncLoopSet &L) {
-    assert(!CanonicalMode &&
+    assert(!getCanonicalMode() &&
            "Post-inc expansion is not supported in CanonicalMode");
     PostIncLoops = L;
   }
@@ -406,9 +412,9 @@ public:
   /// Disable the behavior of expanding expressions in canonical form rather
   /// than in a more literal form. Non-canonical mode is useful for late
   /// optimization passes.
-  void disableCanonicalMode() { CanonicalMode = false; }
+  void disableCanonicalMode() { setCanonicalMode(false); }
 
-  void enableLSRMode() { LSRMode = true; }
+  void enableLSRMode() { setLSRMode(true); }
 
   /// Set the current insertion point. This is useful if multiple calls to
   /// expandCodeFor() are going to be made with the same insert point and the

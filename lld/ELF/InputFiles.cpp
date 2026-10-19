@@ -193,7 +193,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
     return;
   if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
       profile == ARMBuildAttrs::MicroControllerProfile)
-    ctx.arg.armCMSESupport = true;
+    ctx.arg.setArmCMSESupport(true);
 
   // The thumb PLT entries require Thumb2 which can be used on multiple archs.
   // For now, let's limit it to ones where ARM isn't available and we know have
@@ -300,7 +300,7 @@ template <class ELFT> static void doParseFile(Ctx &ctx, InputFile *file) {
     return;
 
   // Lazy object file
-  if (file->lazy) {
+  if (file->getLazy()) {
     if (auto *f = dyn_cast<BitcodeFile>(file)) {
       ctx.lazyBitcodeFiles.push_back(f);
       f->parseLazy();
@@ -310,7 +310,7 @@ template <class ELFT> static void doParseFile(Ctx &ctx, InputFile *file) {
     return;
   }
 
-  if (ctx.arg.trace)
+  if (ctx.arg.getTrace())
     Msg(ctx) << file;
 
   if (file->kind() == InputFile::ObjKind) {
@@ -574,7 +574,7 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
-  if (this->justSymbols) {
+  if (this->getJustSymbols()) {
     initializeJustSymbols();
     initializeSymbols(obj);
     return;
@@ -608,7 +608,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .second;
       if (keepGroup) {
         keptGroups.push_back(i);
-        if (!ctx.arg.resolveGroups)
+        if (!ctx.arg.getResolveGroups())
           sections[i] = createInputSection(
               i, sec, check(obj.getSectionName(sec, shstrtab)));
       } else {
@@ -623,7 +623,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       continue;
     }
 
-    if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !ctx.arg.relocatable) {
+    if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES &&
+        !ctx.arg.getRelocatable()) {
       StringRef name = check(obj.getSectionName(sec, shstrtab));
       ArrayRef<char> data = CHECK2(
           this->getObj().template getSectionContentsAsArray<char>(sec), this);
@@ -647,7 +648,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (check(obj.getSectionName(sec, shstrtab)) == dynDbgSecName) {
         sections[i] = &InputSection::discarded;
         dynDbgSec = std::make_unique<InputSection>(*this, sec, dynDbgSecName);
-        ctx.hasDynDbg = true;
+        ctx.setHasDynDbg(true);
       }
       continue;
     }
@@ -724,7 +725,7 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   // SHF_MERGE sections based both on their name and sh_entsize, but that seems
   // to be more trouble than it is worth. Instead, we just use the regular (-O1)
   // logic for -r.
-  if (ctx.arg.optimize == 0 && !ctx.arg.relocatable)
+  if (ctx.arg.optimize == 0 && !ctx.arg.getRelocatable())
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -795,7 +796,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
-    if ((sec.sh_flags & SHF_EXCLUDE) && !ctx.arg.relocatable) {
+    if ((sec.sh_flags & SHF_EXCLUDE) && !ctx.arg.getRelocatable()) {
       if (type == SHT_LLVM_CALL_GRAPH_PROFILE)
         cgProfileSectionIndex = i;
       if (type == SHT_LLVM_ADDRSIG) {
@@ -839,7 +840,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     }
     switch (type) {
     case SHT_GROUP: {
-      if (!ctx.arg.relocatable)
+      if (!ctx.arg.getRelocatable())
         sections[i] = &InputSection::discarded;
       // Use the verdict parse() recorded for this group instead of repeating
       // the signature hashing and comdatGroups lookup.
@@ -874,7 +875,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // The concatenated output does not properly reflect the linking
       // semantics. In addition, since we do not use the bitcode wrapper format,
       // the concatenated raw bitcode would be invalid.
-      if (ctx.arg.relocatable && !ctx.arg.fatLTOObjects) {
+      if (ctx.arg.getRelocatable() && !ctx.arg.fatLTOObjects) {
         sections[i] = &InputSection::discarded;
         break;
       }
@@ -882,7 +883,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
-      if (ctx.arg.rejectMismatch &&
+      if (ctx.arg.getRejectMismatch() &&
           !isKnownSpecificSectionType(type, sec.sh_flags))
         Err(ctx) << this->sections[i] << ": unknown section type 0x"
                  << Twine::utohexstr(type);
@@ -935,7 +936,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // `nullptr` for the normal case. However, if -r or --emit-relocs is
       // specified, we need to copy them to the output. (Some post link analysis
       // tools specify --emit-relocs to obtain the information.)
-      if (ctx.arg.copyRelocs) {
+      if (ctx.arg.getCopyRelocs()) {
         auto *isec = makeThreadLocal<InputSection>(
             *this, sec, check(obj.getSectionName(sec, shstrtab)));
         // If the relocated section is discarded (due to /DISCARD/ or
@@ -978,7 +979,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
 
   for (ArrayRef<Elf_Word> entries : selectedGroups)
-    handleSectionGroup<ELFT>(this->sections, entries);
+    handleSectionGroup<ELFT>(ArrayRef<InputSectionBase *>(this->sections),
+                             entries);
 }
 
 template <typename ELFT>
@@ -1133,7 +1135,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // an error if we encounter an executable .note.GNU-stack to force the
     // user to explicitly request an executable stack.
     if (name == ".note.GNU-stack") {
-      if ((sec.sh_flags & SHF_EXECINSTR) && !ctx.arg.relocatable &&
+      if ((sec.sh_flags & SHF_EXECINSTR) && !ctx.arg.getRelocatable() &&
           ctx.arg.zGnustack != GnuStackKind::Exec) {
         Err(ctx) << this
                  << ": requires an executable stack, but -z execstack is not "
@@ -1160,12 +1162,12 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // see https://gcc.gnu.org/wiki/SplitStacks. An object file compiled
     // for split stack will include a .note.GNU-split-stack section.
     if (name == ".note.GNU-split-stack") {
-      if (ctx.arg.relocatable) {
+      if (ctx.arg.getRelocatable()) {
         ErrAlways(ctx) << "cannot mix split-stack and non-split-stack in a "
                           "relocatable link";
         return &InputSection::discarded;
       }
-      this->splitStack = true;
+      this->setSplitStack(true);
       return &InputSection::discarded;
     }
 
@@ -1173,7 +1175,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // functions were compiled with the no_split_stack_attribute will
     // include a .note.GNU-no-split-stack section.
     if (name == ".note.GNU-no-split-stack") {
-      this->someNoSplitStack = true;
+      this->setSomeNoSplitStack(true);
       return &InputSection::discarded;
     }
 
@@ -1189,7 +1191,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
-  if (name == ".eh_frame" && !ctx.arg.relocatable)
+  if (name == ".eh_frame" && !ctx.arg.getRelocatable())
     return makeThreadLocal<EhInputSection>(*this, sec, name);
 
   if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
@@ -1301,10 +1303,10 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
         setSymUsed(r.getSymbol(false));
     } else if (sh.sh_type == SHT_RELA) {
       for (const Elf_Rela &r : CHECK2(obj.relas(sh), &dbgObj))
-        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+        setSymUsed(r.getSymbol(ctx.arg.getIsMips64EL()));
     } else {
       for (const Elf_Rel &r : CHECK2(obj.rels(sh), &dbgObj))
-        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+        setSymUsed(r.getSymbol(ctx.arg.getIsMips64EL()));
     }
   }
 
@@ -1327,7 +1329,7 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
 
 template <class ELFT>
 void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
-  if (!justSymbols)
+  if (!getJustSymbols())
     initializeSections(ignoreComdats, getObj());
 
   if (!firstGlobal)
@@ -1822,10 +1824,10 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
   this->archiveName = archiveName;
-  this->lazy = lazy;
+  this->setLazy(lazy);
 
   std::string path = mb.getBufferIdentifier().str();
-  if (ctx.arg.thinLTOIndexOnly)
+  if (ctx.arg.getThinLTOIndexOnly())
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
@@ -2017,7 +2019,10 @@ std::unique_ptr<ELFFileBase> elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
     llvm_unreachable("getELFKind");
   }
   f->init();
-  f->lazy = lazy;
+  [&] {
+    auto PackedFlagValue_ = lazy;
+    return f->setLazy(PackedFlagValue_);
+  }();
   return f;
 }
 
@@ -2035,7 +2040,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
       continue;
     symbols[i] = symtab->insert(CHECK2(eSyms[i].getName(stringTable), this));
     symbols[i]->resolve(ctx, LazySymbol{*this});
-    if (!lazy)
+    if (!getLazy())
       break;
   }
 }

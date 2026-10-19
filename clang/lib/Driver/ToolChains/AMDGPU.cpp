@@ -184,7 +184,7 @@ bool RocmInstallationDetector::parseHIPVersionFile(llvm::StringRef V) {
 
 /// \returns a list of candidate directories for ROCm installation, which is
 /// cached and populated only once.
-const SmallVectorImpl<RocmInstallationDetector::Candidate> &
+ArrayRef<RocmInstallationDetector::Candidate>
 RocmInstallationDetector::getInstallationPathCandidates() {
 
   // Return the cached candidate list if it has already been populated.
@@ -192,7 +192,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     return ROCmSearchDirs;
 
   auto DoPrintROCmSearchDirs = [&]() {
-    if (PrintROCmSearchDirs)
+    if (getPrintROCmSearchDirs())
       for (auto Cand : ROCmSearchDirs) {
         llvm::errs() << "ROCm installation search path: " << Cand.Path << '\n';
       }
@@ -318,9 +318,9 @@ RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args, bool DetectHIPRuntime)
     : D(D) {
-  Verbose = Args.hasArg(options::OPT_v);
+  setVerbose(Args.hasArg(options::OPT_v));
   RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
-  PrintROCmSearchDirs = Args.hasArg(options::OPT_print_rocm_search_dirs);
+  setPrintROCmSearchDirs(Args.hasArg(options::OPT_print_rocm_search_dirs));
   RocmDeviceLibPathArg =
       Args.getAllArgValues(options::OPT_rocm_device_lib_path_EQ);
   HIPPathArg = Args.getLastArgValue(options::OPT_hip_path_EQ);
@@ -396,13 +396,13 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 
   // Check device library exists at the given path.
   auto CheckDeviceLib = [&](StringRef Path, bool StrictChecking) {
-    bool CheckLibDevice = (!NoBuiltinLibs || StrictChecking);
+    bool CheckLibDevice = (!getNoBuiltinLibs() || StrictChecking);
     if (CheckLibDevice && !FS.exists(Path))
       return false;
 
     scanLibDevicePath(Path);
 
-    if (!NoBuiltinLibs) {
+    if (!getNoBuiltinLibs()) {
       // Check that the required non-target libraries are all available.
       if (!allGenericLibsValid())
         return false;
@@ -425,7 +425,7 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 
   // Find device libraries in a legacy ROCm directory structure
   // ${ROCM_ROOT}/amdgcn/bitcode/*
-  auto &ROCmDirs = getInstallationPathCandidates();
+  auto ROCmDirs = getInstallationPathCandidates();
   for (const auto &Candidate : ROCmDirs) {
     LibDevicePath = Candidate.Path;
     llvm::sys::path::append(LibDevicePath, "amdgcn", "bitcode");
@@ -446,7 +446,7 @@ void RocmInstallationDetector::detectHIPRuntime(
       HIPSearchDirs.emplace_back(std::move(*HIPPathEnv));
   }
   if (HIPSearchDirs.empty())
-    HIPSearchDirs.append(getInstallationPathCandidates());
+    llvm::append_range(HIPSearchDirs, getInstallationPathCandidates());
   auto &FS = D.getVFS();
 
   for (const auto &Candidate : HIPSearchDirs) {

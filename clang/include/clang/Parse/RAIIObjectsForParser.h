@@ -275,15 +275,13 @@ namespace clang {
     bool OldVal;
   public:
     ColonProtectionRAIIObject(Parser &p, bool Value = true)
-      : P(p), OldVal(P.ColonIsSacred) {
-      P.ColonIsSacred = Value;
+        : P(p), OldVal(P.getColonIsSacred()) {
+      P.setColonIsSacred(Value);
     }
 
     /// restore - This can be used to restore the state early, before the dtor
     /// is run.
-    void restore() {
-      P.ColonIsSacred = OldVal;
-    }
+    void restore() { P.setColonIsSacred(OldVal); }
 
     ~ColonProtectionRAIIObject() {
       restore();
@@ -296,8 +294,8 @@ namespace clang {
 
   public:
     GenericAssociationTypeRAIIObject(Parser &P, bool Value = true)
-        : P(P), OldVal(P.ParsingGenericAssociationType) {
-      P.ParsingGenericAssociationType = Value;
+        : P(P), OldVal(P.getParsingGenericAssociationType()) {
+      P.setParsingGenericAssociationType(Value);
     }
 
     GenericAssociationTypeRAIIObject(const GenericAssociationTypeRAIIObject &) =
@@ -305,7 +303,7 @@ namespace clang {
     GenericAssociationTypeRAIIObject &
     operator=(const GenericAssociationTypeRAIIObject &) = delete;
 
-    void restore() { P.ParsingGenericAssociationType = OldVal; }
+    void restore() { P.setParsingGenericAssociationType(OldVal); }
 
     ~GenericAssociationTypeRAIIObject() { restore(); }
   };

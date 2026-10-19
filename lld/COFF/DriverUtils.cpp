@@ -328,7 +328,7 @@ void LinkerDriver::parseManifest(StringRef arg) {
 // Results are directly written to Config.
 void LinkerDriver::parseManifestUAC(StringRef arg) {
   if (arg.equals_insensitive("no")) {
-    ctx.config.manifestUAC = false;
+    ctx.config.setManifestUAC(false);
     return;
   }
   for (;;) {
@@ -441,7 +441,7 @@ std::string LinkerDriver::createDefaultXml() {
   os << "<?xml version=\"1.0\" standalone=\"yes\"?>\n"
      << "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\"\n"
      << "          manifestVersion=\"1.0\">\n";
-  if (ctx.config.manifestUAC) {
+  if (ctx.config.getManifestUAC()) {
     os << "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\n"
        << "    <security>\n"
        << "      <requestedPrivileges>\n"

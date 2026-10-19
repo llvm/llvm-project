@@ -64,6 +64,7 @@
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -71,6 +72,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <limits>
+#include <memory>
 #include <optional>
 
 using namespace clang;
@@ -301,7 +303,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         // A diagnostic will have already been generated (non-constant
         // constraint expression, for example)
         return true;
-      if (!Satisfaction.IsSatisfied) {
+      if (!Satisfaction.isSatisfied()) {
         Diag(Loc,
              diag::err_reference_to_function_with_unsatisfied_constraints)
             << D;
@@ -2130,7 +2132,7 @@ static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
       while (LSI != E && !isa<LambdaScopeInfo>(*LSI))
         ++LSI;
       assert(LSI != E && "Should be in a lambda scope info");
-      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
+      if (dyn_cast<LambdaScopeInfo>(*LSI)->getBeforeCompoundStatement())
         DC = DC->getParent();
       ++LSI;
     }
@@ -4903,7 +4905,7 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   // Adds overload of TransformToPotentiallyEvaluated for TypeSourceInfo to
   // properly deal with VLAs in nested calls of sizeof and typeof.
   if (currentEvaluationContext().isUnevaluated() &&
-      currentEvaluationContext().InConditionallyConstantEvaluateContext &&
+      currentEvaluationContext().getInConditionallyConstantEvaluateContext() &&
       (ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
       TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
@@ -5737,8 +5739,11 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
           ? ExpressionEvaluationContext::ImmediateFunctionContext
           : ExpressionEvaluationContext::PotentiallyEvaluated,
       Param);
-  ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
-      SkipImmediateInvocations;
+  [&] {
+    auto PackedFlagValue_ = SkipImmediateInvocations;
+    return ExprEvalContexts.back()
+        .setIsCurrentlyCheckingDefaultArgumentOrInitializer(PackedFlagValue_);
+  }();
   runWithSufficientStackSpace(CallLoc, [&] {
     MarkDeclarationsReferencedInExpr(Init, /*SkipLocalVariables=*/true);
   });
@@ -5884,8 +5889,12 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
             CallLoc, Param, CurContext};
       // Pass down lifetime extending flag, and collect temporaries in
       // CreateMaterializeTemporaryExpr when we rewrite the call argument.
-      currentEvaluationContext().InLifetimeExtendingContext =
-          parentEvaluationContext().InLifetimeExtendingContext;
+      [&] {
+        auto PackedFlagValue_ =
+            parentEvaluationContext().getInLifetimeExtendingContext();
+        return currentEvaluationContext().setInLifetimeExtendingContext(
+            PackedFlagValue_);
+      }();
       EnsureImmediateInvocationInDefaultArgs Immediate(*this);
       ExprResult Res;
       runWithSufficientStackSpace(CallLoc, [&] {
@@ -5998,12 +6007,19 @@ ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
       (V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries))) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
-    ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
-        NestedDefaultChecking;
+    [&] {
+      auto PackedFlagValue_ = NestedDefaultChecking;
+      return ExprEvalContexts.back()
+          .setIsCurrentlyCheckingDefaultArgumentOrInitializer(PackedFlagValue_);
+    }();
     // Pass down lifetime extending flag, and collect temporaries in
     // CreateMaterializeTemporaryExpr when we rewrite the initializer.
-    currentEvaluationContext().InLifetimeExtendingContext =
-        parentEvaluationContext().InLifetimeExtendingContext;
+    [&] {
+      auto PackedFlagValue_ =
+          parentEvaluationContext().getInLifetimeExtendingContext();
+      return currentEvaluationContext().setInLifetimeExtendingContext(
+          PackedFlagValue_);
+    }();
 
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
@@ -17188,7 +17204,7 @@ void Sema::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
   else
     CurContext = Block;
 
-  getCurBlock()->HasImplicitReturnType = true;
+  getCurBlock()->setHasImplicitReturnType(true);
 
   // Enter a new evaluation context to insulate the block from any
   // cleanups from the enclosing full-expression.
@@ -17252,7 +17268,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
   if (RetTy != Context.DependentTy) {
     CurBlock->ReturnType = RetTy;
     CurBlock->TheDecl->setBlockMissingReturnType(false);
-    CurBlock->HasImplicitReturnType = false;
+    CurBlock->setHasImplicitReturnType(false);
   }
 
   // Push block parameters from the declarator if we had them.
@@ -17333,7 +17349,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   maybeAddDeclWithEffects(BD);
 
-  if (BSI->HasImplicitReturnType)
+  if (BSI->getHasImplicitReturnType())
     deduceClosureReturnType(*BSI);
 
   QualType RetTy = Context.VoidTy;
@@ -17479,7 +17495,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
 
   BlockExpr *Result = new (Context)
-      BlockExpr(BD, BlockTy, BSI->ContainsUnexpandedParameterPack);
+      BlockExpr(BD, BlockTy, BSI->getContainsUnexpandedParameterPack());
 
   // If the block isn't obviously global, i.e. it captures anything at
   // all, then we need to do a few things in the surrounding context:
@@ -18490,19 +18506,29 @@ Sema::PushExpressionEvaluationContext(
   // Discarded statements and immediate contexts nested in other
   // discarded statements or immediate context are themselves
   // a discarded statement or an immediate context, respectively.
-  ExprEvalContexts.back().InDiscardedStatement =
-      parentEvaluationContext().isDiscardedStatementContext();
+  [&] {
+    auto PackedFlagValue_ =
+        parentEvaluationContext().isDiscardedStatementContext();
+    return ExprEvalContexts.back().setInDiscardedStatement(PackedFlagValue_);
+  }();
 
   // C++23 [expr.const]/p15
   // An expression or conversion is in an immediate function context if [...]
   // it is a subexpression of a manifestly constant-evaluated expression or
   // conversion.
   const auto &Prev = parentEvaluationContext();
-  ExprEvalContexts.back().InImmediateFunctionContext =
-      Prev.isImmediateFunctionContext() || Prev.isConstantEvaluated();
+  [&] {
+    auto PackedFlagValue_ =
+        Prev.isImmediateFunctionContext() || Prev.isConstantEvaluated();
+    return ExprEvalContexts.back().setInImmediateFunctionContext(
+        PackedFlagValue_);
+  }();
 
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      Prev.InImmediateEscalatingFunctionContext;
+  [&] {
+    auto PackedFlagValue_ = Prev.getInImmediateEscalatingFunctionContext();
+    return ExprEvalContexts.back().setInImmediateEscalatingFunctionContext(
+        PackedFlagValue_);
+  }();
 
   Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
@@ -18531,7 +18557,7 @@ void Sema::PushExpressionEvaluationContextForFunction(
       parentEvaluationContext();
   Sema::ExpressionEvaluationContextRecord &Current = currentEvaluationContext();
 
-  Current.InDiscardedStatement = false;
+  Current.setInDiscardedStatement(false);
 
   if (FD) {
 
@@ -18543,16 +18569,16 @@ void Sema::PushExpressionEvaluationContextForFunction(
     // function is entered, we need to reset this tracking, since the entered
     // function might be not an immediate function.
 
-    Current.InImmediateEscalatingFunctionContext =
-        getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
+    Current.setInImmediateEscalatingFunctionContext(
+        getLangOpts().CPlusPlus20 && FD->isImmediateEscalating());
 
     if (isLambdaMethod(FD))
-      Current.InImmediateFunctionContext =
+      Current.setInImmediateFunctionContext(
           FD->isConsteval() ||
           (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                  Parent.isImmediateFunctionContext()));
+                                  Parent.isImmediateFunctionContext())));
     else
-      Current.InImmediateFunctionContext = FD->isConsteval();
+      Current.setInImmediateFunctionContext(FD->isConsteval());
   }
 }
 
@@ -18628,7 +18654,7 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
 
 void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
   assert(getLangOpts().CPlusPlus20 &&
-         ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
+         ExprEvalContexts.back().getInImmediateEscalatingFunctionContext() &&
          "Cannot mark an immediate escalating expression outside of an "
          "immediate escalating context");
   if (auto *Call = dyn_cast<CallExpr>(E->IgnoreImplicit());
@@ -18651,7 +18677,7 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   if (isUnevaluatedContext() || !E.isUsable() || !Decl ||
       !Decl->isImmediateFunction() || isAlwaysConstantEvaluatedContext() ||
       isCheckingDefaultArgumentOrInitializer() ||
-      RebuildingImmediateInvocation || isImmediateFunctionContext())
+      getRebuildingImmediateInvocation() || isImmediateFunctionContext())
     return E;
 
   /// Opportunistically remove the callee from ReferencesToConsteval if we can.
@@ -18681,7 +18707,7 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   };
 
   if (!E.get()->isValueDependent() &&
-      ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
+      ExprEvalContexts.back().getInImmediateEscalatingFunctionContext() &&
       !CheckConstantExpressionAndKeepResult()) {
     MarkExpressionAsImmediateEscalating(E.get());
     return E;
@@ -18880,7 +18906,8 @@ HandleImmediateInvocations(Sema &SemaRef,
                            Sema::ExpressionEvaluationContextRecord &Rec) {
   if ((Rec.ImmediateInvocationCandidates.size() == 0 &&
        Rec.ReferenceToConsteval.size() == 0) ||
-      Rec.isImmediateFunctionContext() || SemaRef.RebuildingImmediateInvocation)
+      Rec.isImmediateFunctionContext() ||
+      SemaRef.getRebuildingImmediateInvocation())
     return;
 
   // An expression or conversion is 'manifestly constant-evaluated' if it is:
@@ -18912,8 +18939,14 @@ HandleImmediateInvocations(Sema &SemaRef,
 
     /// Prevent sema calls during the tree transform from adding pointers that
     /// are already in the sets.
-    llvm::SaveAndRestore DisableIITracking(
-        SemaRef.RebuildingImmediateInvocation, true);
+    auto DisableIITracking = [PackedFlagOwner_ = std::addressof(SemaRef)] {
+      const bool PackedFlagOld_ =
+          PackedFlagOwner_->getRebuildingImmediateInvocation();
+      PackedFlagOwner_->setRebuildingImmediateInvocation(true);
+      return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+        PackedFlagOwner_->setRebuildingImmediateInvocation(PackedFlagOld_);
+      });
+    }();
 
     /// Prevent diagnostic during tree transfrom as they are duplicates
     Sema::TentativeAnalysisScope DisableDiag(SemaRef);
@@ -18962,9 +18995,9 @@ HandleImmediateInvocations(Sema &SemaRef,
         Rec.Context ==
             Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed;
     if (SemaRef.inTemplateInstantiation() && IsPotentiallyEvaluated)
-      ImmediateEscalating = Rec.InImmediateEscalatingFunctionContext;
+      ImmediateEscalating = Rec.getInImmediateEscalatingFunctionContext();
 
-    if (!Rec.InImmediateEscalatingFunctionContext ||
+    if (!Rec.getInImmediateEscalatingFunctionContext() ||
         (SemaRef.inTemplateInstantiation() && !ImmediateEscalating)) {
       SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
           << ND << isa<CXXRecordDecl>(ND) << FD->isConsteval();
@@ -19019,8 +19052,8 @@ void Sema::PopExpressionEvaluationContext() {
 
   // Append the collected materialized temporaries into previous context before
   // exit if the previous also is a lifetime extending context.
-  if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
-      parentEvaluationContext().InLifetimeExtendingContext &&
+  if (getLangOpts().CPlusPlus23 && Rec.getInLifetimeExtendingContext() &&
+      parentEvaluationContext().getInLifetimeExtendingContext() &&
       !Rec.ForRangeLifetimeExtendTemps.empty()) {
     parentEvaluationContext().ForRangeLifetimeExtendTemps.append(
         Rec.ForRangeLifetimeExtendTemps);
@@ -20188,7 +20221,7 @@ bool Sema::tryCaptureVariable(
     // NOT the lambda but its parent. So move away the current LSI before
     // aligning DC and FunctionScopeIndexToStopAt.
     if (auto *LSI = dyn_cast<LambdaScopeInfo>(FunctionScopes[FSIndex]);
-        FSIndex && LSI && !LSI->AfterParameterList)
+        FSIndex && LSI && !LSI->getAfterParameterList())
       --FSIndex;
     assert(MaxFunctionScopesIndex <= FSIndex &&
            "FunctionScopeIndexToStopAt should be no greater than FSIndex into "
@@ -20231,9 +20264,9 @@ bool Sema::tryCaptureVariable(
           FunctionScopes[FunctionScopesIndex]);
 
     bool IsInScopeDeclarationContext =
-        !LSI || LSI->AfterParameterList || CurContext == LSI->CallOperator;
+        !LSI || LSI->getAfterParameterList() || CurContext == LSI->CallOperator;
 
-    if (LSI && !LSI->AfterParameterList) {
+    if (LSI && !LSI->getAfterParameterList()) {
       // This allows capturing parameters from a default value which does not
       // seems correct
       if (isa<ParmVarDecl>(Var) && !Var->getDeclContext()->isFunctionOrMethod())
@@ -21170,7 +21203,7 @@ static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
         continue;
 
       if (LSI->Lambda && !LSI->Lambda->Encloses(SemaRef.CurContext) &&
-          LSI->AfterParameterList)
+          LSI->getAfterParameterList())
         return false;
 
       const auto *MD = LSI->CallOperator;
@@ -21263,7 +21296,7 @@ void Sema::MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base) {
     if (!isUnevaluatedContext() && !isConstantEvaluatedContext() &&
         !isImmediateFunctionContext() &&
         !isCheckingDefaultArgumentOrInitializer() &&
-        FD->isImmediateFunction() && !RebuildingImmediateInvocation &&
+        FD->isImmediateFunction() && !getRebuildingImmediateInvocation() &&
         !FD->isDependentContext())
       ExprEvalContexts.back().ReferenceToConsteval.insert(E);
   }

@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -264,7 +265,10 @@ public:
       BlockFrequencyInfo *CallerBFI = nullptr,
       BlockFrequencyInfo *CalleeBFI = nullptr, bool UpdateProfile = true)
       : GetAssumptionCache(GetAssumptionCache), PSI(PSI), CallerBFI(CallerBFI),
-        CalleeBFI(CalleeBFI), UpdateProfile(UpdateProfile) {}
+        CalleeBFI(CalleeBFI),
+        StaticAllocas(
+            decltype(this->StaticAllocas)::withFlags(unsigned(UpdateProfile))) {
+  }
 
   /// If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
@@ -274,7 +278,7 @@ public:
 
   /// InlineFunction fills this in with all static allocas that get copied into
   /// the caller.
-  SmallVector<AllocaInst *, 4> StaticAllocas;
+  llvm::SmallVectorWithFlags<AllocaInst *, 4> StaticAllocas;
 
   /// All of the new call sites inlined into the caller.
   ///
@@ -286,7 +290,8 @@ public:
 
   /// Update profile for callee as well as cloned version. We need to do this
   /// for regular inlining, but not for inlining from sample profile loader.
-  bool UpdateProfile;
+  bool getUpdateProfile() const { return StaticAllocas.getFlag(0); }
+  void setUpdateProfile(bool Value) { StaticAllocas.setFlag(0, Value); }
 
   void reset() {
     StaticAllocas.clear();

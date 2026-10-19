@@ -26,6 +26,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Endian.h"
@@ -208,16 +209,24 @@ public:
   std::vector<std::string> DirectoryDependencies;
 
   /// Whether this precompiled header is a relocatable PCH file.
-  bool RelocatablePCH = false;
+  bool getRelocatablePCH() const { return TransitiveImports.getFlag(0); }
+  void setRelocatablePCH(bool Value) { TransitiveImports.setFlag(0, Value); }
 
   /// Whether this module file is a standard C++ module.
-  bool StandardCXXModule = false;
+  bool getStandardCXXModule() const { return TransitiveImports.getFlag(1); }
+  void setStandardCXXModule(bool Value) { TransitiveImports.setFlag(1, Value); }
 
   /// Whether timestamps are included in this module file.
-  bool HasTimestamps = false;
+  bool getHasTimestamps() const { return TransitiveImports.getFlag(2); }
+  void setHasTimestamps(bool Value) { TransitiveImports.setFlag(2, Value); }
 
   /// Whether the top-level module has been read from the AST file.
-  bool DidReadTopLevelSubmodule = false;
+  bool getDidReadTopLevelSubmodule() const {
+    return TransitiveImports.getFlag(3);
+  }
+  void setDidReadTopLevelSubmodule(bool Value) {
+    TransitiveImports.setFlag(3, Value);
+  }
 
   /// Size of the module file.
   off_t Size = 0;
@@ -563,7 +572,7 @@ public:
   /// the same order with that module file manager when we write
   /// the current module file. The value of the member will be initialized
   /// in `ASTReader::ReadModuleOffsetMap`.
-  llvm::SmallVector<ModuleFile *, 16> TransitiveImports;
+  llvm::SmallVectorWithFlags<ModuleFile *, 16, 4> TransitiveImports;
 
   /// Determine whether this module was directly imported at
   /// any point during translation.

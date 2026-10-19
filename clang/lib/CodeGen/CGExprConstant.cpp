@@ -29,6 +29,7 @@
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -96,7 +97,7 @@ class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
   /// natural layout), but need not. Gaps between elements are implicitly
   /// considered to be filled with undef.
   llvm::SmallVector<llvm::Constant*, 32> Elems;
-  llvm::SmallVector<CharUnits, 32> Offsets;
+  llvm::SmallVectorWithFlags<CharUnits, 32> Offsets;
 
   /// The size of the constant (the maximum end offset of any added element).
   /// May be larger than the end of Elems.back() if we split the last element
@@ -105,7 +106,11 @@ class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
 
   /// This is true only if laying out Elems in order as the elements of a
   /// non-packed LLVM struct will give the correct layout.
-  bool NaturalLayout = true;
+  bool getNaturalLayout() const { return !Offsets.getFlag(0); }
+  bool setNaturalLayout(bool Value) {
+    Offsets.setFlag(0, !Value);
+    return Value;
+  }
 
   bool split(size_t Index, CharUnits Hint);
   std::optional<size_t> splitAt(CharUnits Pos);
@@ -142,7 +147,7 @@ public:
   /// even if we can't represent it as that type.
   llvm::Constant *build(llvm::Type *DesiredTy, bool AllowOversized) const {
     return buildFrom(CGM, Elems, Offsets, CharUnits::Zero(), Size,
-                     NaturalLayout, DesiredTy, AllowOversized);
+                     getNaturalLayout(), DesiredTy, AllowOversized);
   }
 };
 
@@ -160,7 +165,7 @@ bool ConstantAggregateBuilder::add(llvm::Constant *C, CharUnits Offset,
     CharUnits Align = getAlignment(C);
     CharUnits AlignedSize = Size.alignTo(Align);
     if (AlignedSize > Offset || Offset.alignTo(Align) != Offset)
-      NaturalLayout = false;
+      setNaturalLayout(false);
     else if (AlignedSize < Offset) {
       Elems.push_back(getPadding(Offset - Size));
       Offsets.push_back(Size);
@@ -187,7 +192,7 @@ bool ConstantAggregateBuilder::add(llvm::Constant *C, CharUnits Offset,
   replace(Elems, *FirstElemToReplace, *LastElemToReplace, {C});
   replace(Offsets, *FirstElemToReplace, *LastElemToReplace, {Offset});
   Size = std::max(Size, Offset + CSize);
-  NaturalLayout = false;
+  setNaturalLayout(false);
   return true;
 }
 
@@ -327,7 +332,7 @@ std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
 /// Hint indicates the location at which we'd like to split, but may be
 /// ignored.
 bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
-  NaturalLayout = false;
+  setNaturalLayout(false);
   llvm::Constant *C = Elems[Index];
   CharUnits Offset = Offsets[Index];
 
@@ -1939,7 +1944,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
           return CGM.EmitNullConstant(D.getType());
       }
   }
-  InConstantContext = D.hasConstantInitialization();
+  setInConstantContext(D.hasConstantInitialization());
 
   QualType destType = D.getType();
   const Expr *E = D.getInit();
@@ -2126,7 +2131,8 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
   if (destType->isReferenceType())
     Success = E->EvaluateAsLValue(Result, CGM.getContext());
   else
-    Success = E->EvaluateAsRValue(Result, CGM.getContext(), InConstantContext);
+    Success =
+        E->EvaluateAsRValue(Result, CGM.getContext(), isInConstantContext());
 
   if (Success && !Result.HasSideEffects)
     return tryEmitPrivate(Result.Val, destType);

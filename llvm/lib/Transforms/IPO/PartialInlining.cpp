@@ -17,6 +17,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -244,11 +245,14 @@ struct PartialInlinerImpl {
 
     typedef std::pair<Function *, BasicBlock *> FuncBodyCallerPair;
     // Keep track of Outlined Functions and the basic block they're called from.
-    SmallVector<FuncBodyCallerPair, 4> OutlinedFunctions;
+    llvm::SmallVectorWithFlags<FuncBodyCallerPair, 4> OutlinedFunctions;
 
     // ClonedFunc is inlined in one of its callers after function
     // outlining.
-    bool IsFunctionInlined = false;
+    bool getIsFunctionInlined() const { return OutlinedFunctions.getFlag(0); }
+    void setIsFunctionInlined(bool Value) {
+      OutlinedFunctions.setFlag(0, Value);
+    }
     // The cost of the region to be outlined.
     InstructionCost OutlinedRegionCost = 0;
     // ClonedOI is specific to outlining non-early return blocks.
@@ -1220,7 +1224,7 @@ PartialInlinerImpl::FunctionCloner::~FunctionCloner() {
   // users (function pointers, etc.) back to the original function.
   ClonedFunc->replaceAllUsesWith(OrigFunc);
   ClonedFunc->eraseFromParent();
-  if (!IsFunctionInlined) {
+  if (!getIsFunctionInlined()) {
     // Remove each function that was speculatively created if there is no
     // reference.
     for (auto FuncBBPair : OutlinedFunctions) {
@@ -1410,7 +1414,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   }
 
   if (AnyInline) {
-    Cloner.IsFunctionInlined = true;
+    Cloner.setIsFunctionInlined(true);
     if (CalleeEntryCount)
       Cloner.OrigFunc->setEntryCount(CalleeEntryCountV);
     OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);

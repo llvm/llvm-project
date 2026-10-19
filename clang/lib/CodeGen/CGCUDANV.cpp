@@ -20,6 +20,7 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/BasicBlock.h"
@@ -85,9 +86,15 @@ private:
     llvm::GlobalVariable *Shadow;
     std::string DeviceName;
   };
-  llvm::SmallVector<OffloadProfSectionShadowInfo, 16> OffloadProfSectionShadows;
+  llvm::SmallVectorWithFlags<OffloadProfSectionShadowInfo, 16>
+      OffloadProfSectionShadows;
   /// Whether we generate relocatable device code.
-  bool RelocatableDeviceCode;
+  bool getRelocatableDeviceCode() const {
+    return OffloadProfSectionShadows.getFlag(0);
+  }
+  void setRelocatableDeviceCode(bool Value) {
+    OffloadProfSectionShadows.setFlag(0, Value);
+  }
   /// Mangle context for device.
   std::unique_ptr<MangleContext> DeviceMC;
 
@@ -247,7 +254,9 @@ static std::unique_ptr<MangleContext> InitDeviceMC(CodeGenModule &CGM) {
 CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
     : CGCUDARuntime(CGM), Context(CGM.getLLVMContext()),
       TheModule(CGM.getModule()),
-      RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode),
+      OffloadProfSectionShadows(
+          decltype(this->OffloadProfSectionShadows)::withFlags(
+              unsigned(bool(CGM.getLangOpts().GPURelocatableDeviceCode)))),
       DeviceMC(InitDeviceMC(CGM)) {
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
@@ -849,15 +858,15 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       CGM.getCodeGenOpts().OffloadBinaryToEmbedFile;
   if (CudaGpuBinaryFileName.empty() && !IsHIP)
     return nullptr;
-  if ((IsHIP || (IsCUDA && !RelocatableDeviceCode)) && EmittedKernels.empty() &&
-      DeviceVars.empty())
+  if ((IsHIP || (IsCUDA && !getRelocatableDeviceCode())) &&
+      EmittedKernels.empty() && DeviceVars.empty())
     return nullptr;
 
   // void __{cuda|hip}_register_globals(void* handle);
   llvm::Function *RegisterGlobalsFunc = makeRegisterGlobalsFn();
   // We always need a function to pass in as callback. Create a dummy
   // implementation if we don't need to register anything.
-  if (RelocatableDeviceCode && !RegisterGlobalsFunc)
+  if (getRelocatableDeviceCode() && !RegisterGlobalsFunc)
     RegisterGlobalsFunc = makeDummyFunction(getRegisterGlobalsFnTy());
 
   // void ** __{cuda|hip}RegisterFatBinary(void *);
@@ -935,7 +944,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
 
     FatMagic = HIPFatMagic;
   } else {
-    if (RelocatableDeviceCode)
+    if (getRelocatableDeviceCode())
       FatbinConstantName = CGM.getTriple().isMacOSX()
                                ? "__NV_CUDA,__nv_relfatbin"
                                : "__nv_relfatbin";
@@ -983,8 +992,9 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // thread safety of the loaded program. Therefore we can assume sequential
   // execution of constructor functions here.
   if (IsHIP) {
-    auto Linkage = RelocatableDeviceCode ? llvm::GlobalValue::ExternalLinkage
-                                         : llvm::GlobalValue::InternalLinkage;
+    auto Linkage = getRelocatableDeviceCode()
+                       ? llvm::GlobalValue::ExternalLinkage
+                       : llvm::GlobalValue::InternalLinkage;
     llvm::BasicBlock *IfBlock =
         llvm::BasicBlock::Create(Context, "if", ModuleCtorFunc);
     llvm::BasicBlock *ExitBlock =
@@ -994,8 +1004,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     GpuBinaryHandle = new llvm::GlobalVariable(
         TheModule, PtrTy, /*isConstant=*/false, Linkage,
         /*Initializer=*/
-        !RelocatableDeviceCode ? llvm::ConstantPointerNull::get(PtrTy)
-                               : nullptr,
+        !getRelocatableDeviceCode() ? llvm::ConstantPointerNull::get(PtrTy)
+                                    : nullptr,
         "__hip_gpubin_handle" + (CGM.getLangOpts().CUID.empty()
                                      ? ""
                                      : "_" + CGM.getContext().getCUIDHash()));
@@ -1029,7 +1039,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
         CtorBuilder.CreateCall(RegisterGlobalsFunc, HandleValue);
       }
     }
-  } else if (!RelocatableDeviceCode) {
+  } else if (!getRelocatableDeviceCode()) {
     // Register binary with CUDA runtime. This is substantially different in
     // default mode vs. separate compilation!
     // GpuBinaryHandle = __cudaRegisterFatBinary(&FatbinWrapper);
@@ -1492,7 +1502,7 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (!CGM.getLangOpts().CUDANVCCABI &&
-      (CGM.getLangOpts().OffloadViaLLVM || RelocatableDeviceCode))
+      (CGM.getLangOpts().OffloadViaLLVM || getRelocatableDeviceCode()))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

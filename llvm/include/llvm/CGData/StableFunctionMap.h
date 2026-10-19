@@ -17,6 +17,7 @@
 #define LLVM_CGDATA_STABLEFUNCTIONMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/Support/Compiler.h"
@@ -160,7 +161,7 @@ private:
   /// method assumes that string names have already been uniqued and the
   /// `StableFunctionEntry` is ready for insertion.
   void insert(std::unique_ptr<StableFunctionEntry> FuncEntry) {
-    assert(!Finalized && "Cannot insert after finalization");
+    assert(!isFinalized() && "Cannot insert after finalization");
     HashToFuncs[FuncEntry->Hash].Entries.emplace_back(std::move(FuncEntry));
   }
 
@@ -174,18 +175,23 @@ private:
   /// A map from a stable_hash to a vector of functions with that hash.
   mutable HashFuncsMapType HashToFuncs;
   /// A vector of strings to hold names.
-  SmallVector<std::string> IdToName;
+  // Flag bits 0 and 1 record finalization and disabled name loading.
+  SmallVectorWithFlags<
+      std::string,
+      CalculateSmallVectorDefaultInlinedElements<std::string>::value, 2>
+      IdToName;
   /// A map from StringRef (name) to an ID.
   StringMap<unsigned> NameToId;
   /// True if the function map is finalized with minimal content.
-  bool Finalized = false;
+  bool isFinalized() const { return IdToName.getFlag(0); }
   /// The memory buffer that contains the serialized stable function map for
   /// lazy loading.
   /// Non-empty only if this StableFunctionMap is created from a MemoryBuffer
   /// (i.e. by IndexedCodeGenDataReader::read()) and lazily deserialized.
   std::shared_ptr<MemoryBuffer> Buffer;
   /// Whether to read stable function names from the buffer.
-  bool ReadStableFunctionMapNames = true;
+  bool readStableFunctionMapNames() const { return !IdToName.getFlag(1); }
+  void setReadStableFunctionMapNames(bool Read) { IdToName.setFlag(1, !Read); }
 
   friend struct StableFunctionMapRecord;
 };

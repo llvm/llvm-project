@@ -15,6 +15,7 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <map>
@@ -59,7 +60,7 @@ private:
 // declarations.
 struct MoveDefinitionSpec {
   // The list of fully qualified names, e.g. Foo, a::Foo, b::Foo.
-  SmallVector<std::string, 4> Names;
+  llvm::SmallVectorWithFlags<std::string, 4, 2> Names;
   // The file path of old header, can be relative path and absolute path.
   std::string OldHeader;
   // The file path of old cc, can be relative path and absolute path.
@@ -70,10 +71,12 @@ struct MoveDefinitionSpec {
   std::string NewCC;
   // Whether old.h depends on new.h. If true, #include "new.h" will be added
   // in old.h.
-  bool OldDependOnNew = false;
+  bool getOldDependOnNew() const { return Names.getFlag(0); }
+  void setOldDependOnNew(bool Value) { Names.setFlag(0, Value); }
   // Whether new.h depends on old.h. If true, #include "old.h" will be added
   // in new.h.
-  bool NewDependOnOld = false;
+  bool getNewDependOnOld() const { return Names.getFlag(1); }
+  void setNewDependOnOld(bool Value) { Names.setFlag(1, Value); }
 };
 
 // A Context which contains extra options which are used in ClangMoveTool.

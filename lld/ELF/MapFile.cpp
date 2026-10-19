@@ -45,7 +45,7 @@ static constexpr char indent16[] = "                "; // 16 spaces
 // Print out the first three columns of a line.
 static void writeHeader(Ctx &ctx, raw_ostream &os, uint64_t vma, uint64_t lma,
                         uint64_t size, uint64_t align) {
-  if (ctx.arg.is64)
+  if (ctx.arg.getIs64())
     os << format("%16llx %16llx %8llx %5lld ", vma, lma, size, align);
   else
     os << format("%8llx %8llx %8llx %5lld ", vma, lma, size, align);
@@ -154,7 +154,7 @@ static void writeMapFile(Ctx &ctx, raw_fd_ostream &os) {
   DenseMap<Symbol *, std::string> symStr = getSymbolStrings(ctx, syms);
 
   // Print out the header line.
-  int w = ctx.arg.is64 ? 16 : 8;
+  int w = ctx.arg.getIs64() ? 16 : 8;
   os << right_justify("VMA", w) << ' ' << right_justify("LMA", w)
      << "     Size Align Out     In      Symbol\n";
 
@@ -259,7 +259,7 @@ static void writeCref(Ctx &ctx, raw_fd_ostream &os) {
 }
 
 void elf::writeMapAndCref(Ctx &ctx) {
-  if (ctx.arg.mapFile.empty() && !ctx.arg.cref)
+  if (ctx.arg.mapFile.empty() && !ctx.arg.getCref())
     return;
 
   llvm::TimeTraceScope timeScope("Write map file");
@@ -275,6 +275,6 @@ void elf::writeMapAndCref(Ctx &ctx) {
 
   if (!ctx.arg.mapFile.empty())
     writeMapFile(ctx, os);
-  if (ctx.arg.cref)
+  if (ctx.arg.getCref())
     writeCref(ctx, os);
 }

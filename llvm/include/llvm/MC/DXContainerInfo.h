@@ -10,6 +10,7 @@
 #define LLVM_MC_DXCONTAINERINFO_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 
 namespace llvm {
@@ -128,8 +129,10 @@ struct SourceInfo {
 /// modifiable format, and can be used to serialize the data back into valid
 /// SourceInfo.
 struct SourceInfoBuilder {
-  bool IsFilled = false;
-  bool IsFinalized = false;
+  bool getIsFilled() const { return Args.getFlag(0); }
+  void setIsFilled(bool Value) { Args.setFlag(0, Value); }
+  bool getIsFinalized() const { return Args.getFlag(1); }
+  void setIsFinalized(bool Value) { Args.setFlag(1, Value); }
   SourceInfo BaseData;
   SmallString<128> CompressedContents;
 
@@ -151,7 +154,11 @@ struct SourceInfoBuilder {
 private:
   std::optional<dxbc::SourceInfo::Contents::CompressionType> CompressionType;
   SmallVector<std::pair<StringRef, StringRef>> FileNamesAndContents;
-  SmallVector<std::pair<StringRef, StringRef>> Args;
+  llvm::SmallVectorWithFlags<std::pair<StringRef, StringRef>,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 std::pair<StringRef, StringRef>>::value,
+                             2>
+      Args;
 
   void recomputeAfterCompression(uint32_t CompressedSize);
 };

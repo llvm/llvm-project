@@ -52,7 +52,7 @@ static void checkModuleImportContext(Sema &S, Module *M,
     S.Diag(cast<Decl>(DC)->getBeginLoc(),
            diag::note_module_import_not_at_top_level)
         << DC;
-  } else if (!M->IsExternC && ExternCLoc.isValid()) {
+  } else if (!M->getIsExternC() && ExternCLoc.isValid()) {
     S.Diag(ImportLoc, diag::ext_module_import_in_extern_c)
       << M->getFullModuleName();
     S.Diag(ExternCLoc, diag::note_extern_c_begins_here);
@@ -481,7 +481,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // implementation unit importing its interface).  Make this module visible
   // and return the import decl to be added to the current TU.
   if (Interface) {
-    HadImportedNamedModules = true;
+    setHadImportedNamedModules(true);
 
     makeTransitiveImportsVisible(getASTContext(), VisibleModules, Interface,
                                  Mod, ModuleLoc,
@@ -726,7 +726,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       getCurrentModule()->Imports.push_back(Mod);
   }
 
-  HadImportedNamedModules = true;
+  setHadImportedNamedModules(true);
 
   return Import;
 }
@@ -1617,7 +1617,7 @@ void Sema::checkReferenceToTULocalFromOtherTU(
     FunctionDecl *FD, SourceLocation PointOfInstantiation) {
   // Checking if a declaration have any reference to TU-local entities in other
   // TU is expensive. Try to avoid it as much as possible.
-  if (!FD || !HadImportedNamedModules)
+  if (!FD || !getHadImportedNamedModules())
     return;
 
   PendingCheckReferenceForTULocal.push_back(

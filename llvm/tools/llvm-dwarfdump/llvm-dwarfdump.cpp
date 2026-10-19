@@ -402,7 +402,9 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
-  DumpOpts.FilterChildTag = makeTagVector(FilterChildTag);
+  auto ChildTags = makeTagVector(FilterChildTag);
+  DumpOpts.FilterChildTag = decltype(DumpOpts.FilterChildTag)(
+      DumpOpts.FilterChildTag.getFlags(), std::move(ChildTags));
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
@@ -415,8 +417,8 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   if (Verify) {
     DumpOpts.Verbose = ErrorDetails != NoDetailsOnlySummary &&
                        ErrorDetails != NoDetailsOrSummary;
-    DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
-                                   ErrorDetails != NoDetailsOnlySummary;
+    DumpOpts.setShowAggregateErrors(ErrorDetails != OnlyDetailsNoSummary &&
+                                    ErrorDetails != NoDetailsOnlySummary);
     DumpOpts.JsonErrSummaryFile = JsonErrSummaryFile;
     return DumpOpts.noImplicitRecursion();
   }

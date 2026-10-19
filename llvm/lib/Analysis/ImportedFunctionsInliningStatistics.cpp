@@ -39,7 +39,10 @@ ImportedFunctionsInliningStatistics::createInlineGraphNode(const Function &F) {
   auto &ValueLookup = NodesMap[F.getName()];
   if (!ValueLookup) {
     ValueLookup = std::make_unique<InlineGraphNode>();
-    ValueLookup->Imported = F.hasMetadata("thinlto_src_module");
+    [&] {
+      auto PackedFlagValue = F.hasMetadata("thinlto_src_module");
+      return ValueLookup->setImported(PackedFlagValue);
+    }();
   }
   return *ValueLookup;
 }
@@ -51,7 +54,7 @@ void ImportedFunctionsInliningStatistics::recordInline(const Function &Caller,
   InlineGraphNode &CalleeNode = createInlineGraphNode(Callee);
   CalleeNode.NumberOfInlines++;
 
-  if (!CallerNode.Imported && !CalleeNode.Imported) {
+  if (!CallerNode.getImported() && !CalleeNode.getImported()) {
     // Direct inline from not imported callee to not imported caller, so we
     // don't have to add this to graph. It might be very helpful if you wanna
     // get the inliner statistics in compile step where there are no imported
@@ -61,7 +64,7 @@ void ImportedFunctionsInliningStatistics::recordInline(const Function &Caller,
   }
 
   CallerNode.InlinedCallees.push_back(&CalleeNode);
-  if (!CallerNode.Imported) {
+  if (!CallerNode.getImported()) {
     // We could avoid second lookup, but it would make the code ultra ugly.
     auto It = NodesMap.find(Caller.getName());
     assert(It != NodesMap.end() && "The node should be already there.");
@@ -121,7 +124,7 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
     if (Node->second->NumberOfInlines == 0)
       continue;
 
-    if (Node->second->Imported) {
+    if (Node->second->getImported()) {
       InlinedImportedFunctionsCount++;
       InlinedImportedFunctionsToImportingModuleCount +=
           int(Node->second->NumberOfRealInlines > 0);
@@ -133,7 +136,7 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
 
     if (Verbose)
       Ostream << "Inlined "
-              << (Node->second->Imported ? "imported " : "not imported ")
+              << (Node->second->getImported() ? "imported " : "not imported ")
               << "function [" << Node->first() << "]"
               << ": #inlines = " << Node->second->NumberOfInlines
               << ", #inlines_to_importing_module = "
@@ -178,17 +181,17 @@ void ImportedFunctionsInliningStatistics::calculateRealInlines() {
 
   for (const auto &Name : NonImportedCallers) {
     auto &Node = *NodesMap[Name];
-    if (!Node.Visited)
+    if (!Node.getVisited())
       dfs(Node);
   }
 }
 
 void ImportedFunctionsInliningStatistics::dfs(InlineGraphNode &GraphNode) {
-  assert(!GraphNode.Visited);
-  GraphNode.Visited = true;
+  assert(!GraphNode.getVisited());
+  GraphNode.setVisited(true);
   for (auto *const InlinedFunctionNode : GraphNode.InlinedCallees) {
     InlinedFunctionNode->NumberOfRealInlines++;
-    if (!InlinedFunctionNode->Visited)
+    if (!InlinedFunctionNode->getVisited())
       dfs(*InlinedFunctionNode);
   }
 }

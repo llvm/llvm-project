@@ -177,19 +177,19 @@ public:
       return;
     lower::pft::FunctionLikeUnit *proc =
         evaluationListStack.back()->back().getOwningProcedure();
-    proc->hasIeeeAccess = true;
+    proc->setHasIeeeAccess(true);
     if (!procName.starts_with("ieee_set_"))
       return;
     if (procName.starts_with("ieee_set_modes_") ||
         procName.starts_with("ieee_set_status_"))
-      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode =
-          proc->mayModifyUnderflowMode = true;
+      proc->setMayModifyHaltingMode(proc->setMayModifyRoundingMode(
+          proc->setMayModifyUnderflowMode(true)));
     else if (procName.starts_with("ieee_set_halting_mode_"))
-      proc->mayModifyHaltingMode = true;
+      proc->setMayModifyHaltingMode(true);
     else if (procName.starts_with("ieee_set_rounding_mode_"))
-      proc->mayModifyRoundingMode = true;
+      proc->setMayModifyRoundingMode(true);
     else if (procName.starts_with("ieee_set_underflow_mode_"))
-      proc->mayModifyUnderflowMode = true;
+      proc->setMayModifyUnderflowMode(true);
   }
 
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
@@ -860,7 +860,7 @@ private:
                    "expected goto or cycle statement");
             ifBodyList.erase(branchStmtIt);
             lower::pft::Evaluation &ifStmt = *ifBodyList.begin();
-            ifStmt.negateCondition = true;
+            ifStmt.setNegateCondition(true);
             ifStmt.lexicalSuccessor = firstStmt(&*successorIt);
             lower::pft::EvaluationList::iterator endIfStmtIt =
                 std::prev(ifBodyList.end());
@@ -962,7 +962,7 @@ private:
       sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
     // Record the reverse edge beside the forward one.
     (*incomingBranches)[&targetEvaluation].insert(&sourceEvaluation);
-    targetEvaluation.isNewBlock = true;
+    targetEvaluation.setIsNewBlock(true);
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
     // ancestors must be marked as unstructured.
@@ -985,7 +985,7 @@ private:
           // this to be done when the construct is analyzed.
           if (eval->constructExit && (eval->isA<parser::DoConstruct>() ||
                                       eval->isA<parser::IfConstruct>()))
-            eval->constructExit->isNewBlock = true;
+            eval->constructExit->setIsNewBlock(true);
         }
     }
   }
@@ -1000,7 +1000,7 @@ private:
 
   /// Mark the successor of an Evaluation as a new block.
   void markSuccessorAsNewBlock(lower::pft::Evaluation &eval) {
-    eval.nonNopSuccessor().isNewBlock = true;
+    eval.nonNopSuccessor().setIsNewBlock(true);
   }
 
   template <typename A>
@@ -1093,7 +1093,7 @@ private:
           },
           [&](const parser::GotoStmt &s) { markBranchTarget(eval, s.v); },
           [&](const parser::IfStmt &) {
-            eval.lexicalSuccessor->isNewBlock = true;
+            eval.lexicalSuccessor->setIsNewBlock(true);
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::ReturnStmt &) {
@@ -1127,7 +1127,7 @@ private:
             // Consult the same classification the assigned GO TO uses, so the
             // two agree on which statements may be branched to.
             if (semanticsContext.IsRecordedBranchTarget(target->position)) {
-              target->isNewBlock = true;
+              target->setIsNewBlock(true);
               for (lower::pft::Evaluation *parent = target->parentConstruct;
                    parent; parent = parent->parentConstruct) {
                 parent->markUnstructured();
@@ -1135,7 +1135,7 @@ private:
                 if (parent->constructExit &&
                     (parent->isA<parser::DoConstruct>() ||
                      parent->isA<parser::IfConstruct>()))
-                  parent->constructExit->isNewBlock = true;
+                  parent->constructExit->setIsNewBlock(true);
               }
             }
           },
@@ -1174,7 +1174,7 @@ private:
 
           // The first executable statement after an EntryStmt is a new block.
           [&](const parser::EntryStmt &) {
-            eval.lexicalSuccessor->isNewBlock = true;
+            eval.lexicalSuccessor->setIsNewBlock(true);
           },
 
           // Construct statements
@@ -1189,12 +1189,12 @@ private:
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::CaseStmt &) {
-            eval.isNewBlock = true;
+            eval.setIsNewBlock(true);
             lastConstructStmtEvaluation->controlSuccessor = &eval;
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::EndSelectStmt &) {
-            eval.isNewBlock = true;
+            eval.setIsNewBlock(true);
             lastConstructStmtEvaluation = nullptr;
           },
           [&](const parser::ChangeTeamStmt &s) {
@@ -1212,7 +1212,7 @@ private:
               eval.markUnstructured(); // infinite loop
               return;
             }
-            eval.nonNopSuccessor().isNewBlock = true;
+            eval.nonNopSuccessor().setIsNewBlock(true);
             eval.controlSuccessor = &evaluationList.back();
             if (const auto *bounds =
                     std::get_if<parser::LoopControl::Bounds>(&loopControl->u)) {
@@ -1235,7 +1235,7 @@ private:
               return;
             // The loop is unstructured, which wasn't known for all cases when
             // visiting the NonLabelDoStmt.
-            parentConstruct->constructExit->isNewBlock = true;
+            parentConstruct->constructExit->setIsNewBlock(true);
             const auto &doStmt = *doEval.getIf<parser::NonLabelDoStmt>();
             const auto &loopControl =
                 std::get<std::optional<parser::LoopControl>>(doStmt.t);
@@ -1247,30 +1247,34 @@ private:
               // If there is a mask, the EndDoStmt starts a new block.
               const auto &header =
                   std::get<parser::ConcurrentHeader>(concurrent->t);
-              eval.isNewBlock |=
-                  std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)
-                      .has_value();
+              [&] {
+                auto PackedFlagValue =
+                    std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)
+                        .has_value();
+                return eval.setIsNewBlock(eval.getIsNewBlock() |
+                                          PackedFlagValue);
+              }();
             }
           },
           [&](const parser::IfThenStmt &s) {
             insertConstructName(s, parentConstruct);
-            eval.lexicalSuccessor->isNewBlock = true;
+            eval.lexicalSuccessor->setIsNewBlock(true);
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::ElseIfStmt &) {
-            eval.isNewBlock = true;
-            eval.lexicalSuccessor->isNewBlock = true;
+            eval.setIsNewBlock(true);
+            eval.lexicalSuccessor->setIsNewBlock(true);
             lastConstructStmtEvaluation->controlSuccessor = &eval;
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::ElseStmt &) {
-            eval.isNewBlock = true;
+            eval.setIsNewBlock(true);
             lastConstructStmtEvaluation->controlSuccessor = &eval;
             lastConstructStmtEvaluation = nullptr;
           },
           [&](const parser::EndIfStmt &) {
             if (parentConstruct->lowerAsUnstructured())
-              parentConstruct->constructExit->isNewBlock = true;
+              parentConstruct->constructExit->setIsNewBlock(true);
             if (lastConstructStmtEvaluation) {
               lastConstructStmtEvaluation->controlSuccessor =
                   parentConstruct->constructExit;
@@ -1282,7 +1286,7 @@ private:
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::SelectRankCaseStmt &) {
-            eval.isNewBlock = true;
+            eval.setIsNewBlock(true);
             lastConstructStmtEvaluation->controlSuccessor = &eval;
             lastConstructStmtEvaluation = &eval;
           },
@@ -1291,7 +1295,7 @@ private:
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::TypeGuardStmt &) {
-            eval.isNewBlock = true;
+            eval.setIsNewBlock(true);
             lastConstructStmtEvaluation->controlSuccessor = &eval;
             lastConstructStmtEvaluation = &eval;
           },
@@ -1373,7 +1377,7 @@ private:
       initialEval = &initialEval->getFirstNestedEvaluation();
     else if (initialEval->isA<Fortran::parser::EntryStmt>())
       initialEval = initialEval->lexicalSuccessor;
-    initialEval->isNewBlock = true;
+    initialEval->setIsNewBlock(true);
 
     // All function entry points share a single result container.
     // Find one of the largest results.
@@ -1499,7 +1503,7 @@ public:
                       const lower::pft::Evaluation &eval,
                       const std::string &indentString, int indent = 1) {
     llvm::StringRef name = evaluationName(eval);
-    llvm::StringRef newBlock = eval.isNewBlock ? "^" : "";
+    llvm::StringRef newBlock = eval.getIsNewBlock() ? "^" : "";
     // "!" marks an unstructured evaluation. "~" marks one that is structured
     // on the outside but has unstructured internals.
     llvm::StringRef bang = eval.hasUnstructuredInternals()
@@ -1512,7 +1516,7 @@ public:
       outputStream << "<<" << newBlock << name << bang << ">>";
     else
       outputStream << newBlock << name << bang;
-    if (eval.negateCondition)
+    if (eval.getNegateCondition())
       outputStream << " [negate]";
     if (eval.constructExit) {
       outputStream << " -> " << eval.constructExit->printIndex;

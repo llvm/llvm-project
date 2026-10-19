@@ -328,8 +328,9 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // covering a composite location description. In the future we may want to
   // emit entry value operations for each register location in the composite
   // location, but until that is supported do not emit anything.
-  if ((HasComplexExpression || IsEmittingEntryValue) && DwarfRegs.size() > 1) {
-    if (IsEmittingEntryValue)
+  if ((HasComplexExpression || getIsEmittingEntryValue()) &&
+      DwarfRegs.size() > 1) {
+    if (getIsEmittingEntryValue())
       cancelEntryValue();
     DwarfRegs.clear();
     LocationKind = Unknown;
@@ -468,19 +469,19 @@ void DwarfExpression::beginEntryValueExpression(
   auto Op = ExprCursor.take();
   (void)Op;
   assert(Op && isa<DIExpression::EntryValueOp>(*Op));
-  assert(!IsEmittingEntryValue && "Already emitting entry value?");
+  assert(!getIsEmittingEntryValue() && "Already emitting entry value?");
   assert(cast<DIExpression::EntryValueOp>(*Op).getNumOperations() == 1 &&
          "Can currently only emit entry values covering a single operation");
 
   SavedLocationKind = LocationKind;
   LocationKind = Register;
   LocationFlags |= EntryValue;
-  IsEmittingEntryValue = true;
+  setIsEmittingEntryValue(true);
   enableTemporaryBuffer();
 }
 
 void DwarfExpression::finalizeEntryValue() {
-  assert(IsEmittingEntryValue && "Entry value not open?");
+  assert(getIsEmittingEntryValue() && "Entry value not open?");
   disableTemporaryBuffer();
 
   emitOp(CU.getDwarf5OrGNULocationAtom(dwarf::DW_OP_entry_value));
@@ -494,11 +495,11 @@ void DwarfExpression::finalizeEntryValue() {
 
   LocationFlags &= ~EntryValue;
   LocationKind = SavedLocationKind;
-  IsEmittingEntryValue = false;
+  setIsEmittingEntryValue(false);
 }
 
 void DwarfExpression::cancelEntryValue() {
-  assert(IsEmittingEntryValue && "Entry value not open?");
+  assert(getIsEmittingEntryValue() && "Entry value not open?");
   disableTemporaryBuffer();
 
   // The temporary buffer can't be emptied, so for now just assert that nothing
@@ -507,7 +508,7 @@ void DwarfExpression::cancelEntryValue() {
          "Began emitting entry value block before cancelling entry value");
 
   LocationKind = SavedLocationKind;
-  IsEmittingEntryValue = false;
+  setIsEmittingEntryValue(false);
 }
 
 unsigned DwarfExpression::getOrCreateBaseType(unsigned BitSize,
@@ -554,7 +555,8 @@ bool DwarfExpression::addExpression(
     llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg) {
   // Entry values can currently only cover the initial register location,
   // and not any other parts of the following DWARF expression.
-  assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
+  assert(!getIsEmittingEntryValue() &&
+         "Can't emit entry value around expression");
 
   std::optional<DIExpression::ConvertOp> PrevConvertOp;
 

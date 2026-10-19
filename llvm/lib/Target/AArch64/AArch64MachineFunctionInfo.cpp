@@ -122,8 +122,8 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   if (F.hasFnAttribute(Attribute::NoRedZone))
     HasRedZone = false;
   SignCondition = GetSignReturnAddress(F);
-  SignWithBKey = ShouldSignWithBKey(F, *STI);
-  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
+  setSignWithBKey(ShouldSignWithBKey(F, *STI));
+  setHasELFSignedGOT(hasELFSignedGOTHelper(F, STI));
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
@@ -140,8 +140,8 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   }
 
   // BTI/PAuthLR are set on the function attribute.
-  BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
-  BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
+  setBranchTargetEnforcement(F.hasFnAttribute("branch-target-enforcement"));
+  setBranchProtectionPAuthLR(F.hasFnAttribute("branch-protection-pauth-lr"));
 
   // Parse the SME function attributes.
   SMEFnAttrs = SMEAttrs(F);

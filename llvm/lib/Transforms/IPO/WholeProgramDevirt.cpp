@@ -67,6 +67,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -587,7 +588,9 @@ struct DevirtModule {
   /// when multiple unique return values occur in the same vtable.
   ArrayType *const Int8Arr0Ty;
 
-  const bool RemarksEnabled;
+  bool getRemarksEnabled() const {
+    return CallsWithPtrAuthBundleRemoved.getFlag(0);
+  }
   std::function<OptimizationRemarkEmitter &(Function &)> OREGetter;
   MapVector<VTableSlot, VTableSlotInfo> CallSlots;
 
@@ -598,7 +601,7 @@ struct DevirtModule {
 
   // Store calls that had their ptrauth bundle removed. They are to be deleted
   // at the end of the optimization.
-  SmallVector<CallBase *, 8> CallsWithPtrAuthBundleRemoved;
+  llvm::SmallVectorWithFlags<CallBase *, 8, 2> CallsWithPtrAuthBundleRemoved;
 
   // This map keeps track of the number of "unsafe" uses of a loaded function
   // pointer. The key is the associated llvm.type.test intrinsic call generated
@@ -611,7 +614,9 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
   PatternList FunctionsToSkip;
 
-  const bool DevirtSpeculatively;
+  bool getDevirtSpeculatively() const {
+    return CallsWithPtrAuthBundleRemoved.getFlag(1);
+  }
   DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
                const ModuleSummaryIndex *ImportSummary,
@@ -625,11 +630,13 @@ struct DevirtModule {
         Int64Ty(Type::getInt64Ty(M.getContext())),
         IntPtrTy(M.getDataLayout().getIntPtrType(M.getContext(), 0)),
         Int8Arr0Ty(ArrayType::get(Type::getInt8Ty(M.getContext()), 0)),
-        RemarksEnabled(areRemarksEnabled()),
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
         }),
-        DevirtSpeculatively(DevirtSpeculatively) {
+        CallsWithPtrAuthBundleRemoved(
+            decltype(this->CallsWithPtrAuthBundleRemoved)::withFlags(
+                unsigned(bool(areRemarksEnabled())) |
+                (unsigned(DevirtSpeculatively) << 1))) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -1111,8 +1118,8 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // Without DevirtSpeculatively, we cannot perform whole program
     // devirtualization analysis on a vtable with public LTO visibility.
-    if (!DevirtSpeculatively && TM.Bits->GV->getVCallVisibility() ==
-                                    GlobalObject::VCallVisibilityPublic)
+    if (!getDevirtSpeculatively() && TM.Bits->GV->getVCallVisibility() ==
+                                         GlobalObject::VCallVisibilityPublic)
       return false;
 
     Function *Fn = nullptr;
@@ -1133,7 +1140,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // In most cases empty functions will be overridden by the
     // implementation of the derived class, so we can skip them.
-    if (DevirtSpeculatively && Fn->getReturnType()->isVoidTy() &&
+    if (getDevirtSpeculatively() && Fn->getReturnType()->isVoidTy() &&
         Fn->getInstructionCount() <= 1)
       continue;
 
@@ -1228,7 +1235,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (!DebugCounter::shouldExecute(CallsToDevirt))
         continue;
 
-      if (RemarksEnabled)
+      if (getRemarksEnabled())
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       NumSingleImpl++;
@@ -1257,7 +1264,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // add support to compare the virtual function pointer to the
       // devirtualized target. In case of a mismatch, fall back to indirect
       // call.
-      if (DevirtCheckMode == WPDCheckMode::Fallback || DevirtSpeculatively) {
+      if (DevirtCheckMode == WPDCheckMode::Fallback ||
+          getDevirtSpeculatively()) {
         MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
@@ -1347,7 +1355,7 @@ bool DevirtModule::trySingleImplDevirt(
       return false;
 
   // If so, update each call site to call that implementation directly.
-  if (RemarksEnabled || AreStatisticsEnabled())
+  if (getRemarksEnabled() || AreStatisticsEnabled())
     TargetsForSlot[0].WasDevirt = true;
 
   bool IsExported = false;
@@ -1559,7 +1567,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
         continue;
 
       NumBranchFunnel++;
-      if (RemarksEnabled)
+      if (getRemarksEnabled())
         VCallSite.emitRemark("branch-funnel", JT.getName(), OREGetter);
 
       // Pass the address of the vtable in the nest register, which is r10 on
@@ -1682,7 +1690,7 @@ void DevirtModule::applyUniformRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
       continue;
     NumUniformRetVal++;
     Call.replaceAndErase(
-        "uniform-ret-val", FnName, RemarksEnabled, OREGetter,
+        "uniform-ret-val", FnName, getRemarksEnabled(), OREGetter,
         ConstantInt::get(cast<IntegerType>(Call.CB.getType()), TheRetVal));
   }
   CSInfo.markDevirt();
@@ -1704,7 +1712,7 @@ bool DevirtModule::tryUniformRetValOpt(
   }
 
   applyUniformRetValOpt(CSInfo, TargetsForSlot[0].Fn->getName(), TheRetVal);
-  if (RemarksEnabled || AreStatisticsEnabled())
+  if (getRemarksEnabled() || AreStatisticsEnabled())
     for (auto &&Target : TargetsForSlot)
       Target.WasDevirt = true;
   return true;
@@ -1798,8 +1806,8 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
                      B.CreateBitCast(UniqueMemberAddr, Call.VTable->getType()));
     Cmp = B.CreateZExt(Cmp, Call.CB.getType());
     NumUniqueRetVal++;
-    Call.replaceAndErase("unique-ret-val", FnName, RemarksEnabled, OREGetter,
-                         Cmp);
+    Call.replaceAndErase("unique-ret-val", FnName, getRemarksEnabled(),
+                         OREGetter, Cmp);
   }
   CSInfo.markDevirt();
 }
@@ -1841,7 +1849,7 @@ bool DevirtModule::tryUniqueRetValOpt(
                          UniqueMemberAddr);
 
     // Update devirtualization statistics for targets.
-    if (RemarksEnabled || AreStatisticsEnabled())
+    if (getRemarksEnabled() || AreStatisticsEnabled())
       for (auto &&Target : TargetsForSlot)
         Target.WasDevirt = true;
 
@@ -1870,12 +1878,12 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
       auto IsBitSet = B.CreateICmpNE(BitsAndBit, ConstantInt::get(Int8Ty, 0));
       NumVirtConstProp1Bit++;
-      Call.replaceAndErase("virtual-const-prop-1-bit", FnName, RemarksEnabled,
-                           OREGetter, IsBitSet);
+      Call.replaceAndErase("virtual-const-prop-1-bit", FnName,
+                           getRemarksEnabled(), OREGetter, IsBitSet);
     } else {
       Value *Val = B.CreateLoad(RetType, Addr);
       NumVirtConstProp++;
-      Call.replaceAndErase("virtual-const-prop", FnName, RemarksEnabled,
+      Call.replaceAndErase("virtual-const-prop", FnName, getRemarksEnabled(),
                            OREGetter, Val);
     }
   }
@@ -2006,7 +2014,7 @@ bool DevirtModule::tryVirtualConstProp(
     // have an aligned load.
     assert(OffsetByte % TypeAlignment.value() == 0);
 
-    if (RemarksEnabled || AreStatisticsEnabled())
+    if (getRemarksEnabled() || AreStatisticsEnabled())
       for (auto &&Target : TargetsForSlot)
         Target.WasDevirt = true;
 
@@ -2445,7 +2453,7 @@ bool DevirtModule::run() {
   Function *PublicTypeTestFunc = nullptr;
   // If we are in speculative devirtualization mode, we can work on the public
   // type test intrinsics.
-  if (DevirtSpeculatively)
+  if (getDevirtSpeculatively())
     PublicTypeTestFunc =
         Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeTestFunc =
@@ -2581,7 +2589,7 @@ bool DevirtModule::run() {
       // Out of speculative devirtualization mode, Try to apply virtual constant
       // propagation or branch funneling.
       // TODO: This should eventually be enabled for non-public type tests.
-      if (!SingleImplDevirt && !DevirtSpeculatively) {
+      if (!SingleImplDevirt && !getDevirtSpeculatively()) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
@@ -2589,7 +2597,7 @@ bool DevirtModule::run() {
       }
 
       // Collect functions devirtualized at least for one call site for stats.
-      if (RemarksEnabled || AreStatisticsEnabled())
+      if (getRemarksEnabled() || AreStatisticsEnabled())
         for (const auto &T : TargetsForSlot)
           if (T.WasDevirt)
             DevirtTargets[std::string(T.Fn->getName())] = T.Fn;
@@ -2613,7 +2621,7 @@ bool DevirtModule::run() {
     }
   }
 
-  if (RemarksEnabled) {
+  if (getRemarksEnabled()) {
     // Generate remarks for each devirtualized function.
     for (const auto &DT : DevirtTargets) {
       GlobalValue *GV = DT.second;

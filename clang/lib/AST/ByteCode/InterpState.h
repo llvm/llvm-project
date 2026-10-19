@@ -21,6 +21,7 @@
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <limits>
 
 namespace clang {
@@ -157,7 +158,7 @@ public:
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
   bool noteStep(CodePtr OpPC) {
-    if (InfiniteSteps)
+    if (getInfiniteSteps())
       return true;
 
     --StepsLeft;
@@ -259,7 +260,7 @@ public:
   unsigned StepsLeft = 1;
   /// Whether infinite evaluation steps have been requested. If this is false,
   /// we use the StepsLeft value above.
-  const bool InfiniteSteps = false;
+  bool getInfiniteSteps() const { return InitializingPtrs.getFlag(0); }
   /// ID identifying this evaluation.
   const unsigned EvalID;
 
@@ -269,7 +270,8 @@ public:
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
-  bool PrevDiagsEmitted = false;
+  bool getPrevDiagsEmitted() const { return InitializingPtrs.getFlag(1); }
+  void setPrevDiagsEmitted(bool Value) { InitializingPtrs.setFlag(1, Value); }
 #ifndef NDEBUG
   unsigned SpeculationDepth = 0;
 #endif
@@ -282,7 +284,10 @@ public:
 
   /// List of blocks we're currently running either constructors or destructors
   /// for.
-  llvm::SmallVector<PtrView> InitializingPtrs;
+  llvm::SmallVectorWithFlags<
+      PtrView, llvm::CalculateSmallVectorDefaultInlinedElements<PtrView>::value,
+      2>
+      InitializingPtrs;
 };
 
 class InterpStateCCOverride final {

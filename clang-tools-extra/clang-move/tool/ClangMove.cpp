@@ -117,13 +117,13 @@ int main(int argc, const char **argv) {
   Tool.appendArgumentsAdjuster(tooling::getInsertArgumentAdjuster(
       "-fparse-all-comments", tooling::ArgumentInsertPosition::BEGIN));
   move::MoveDefinitionSpec Spec;
-  Spec.Names = {Names.begin(), Names.end()};
+  Spec.Names.assign(Names.begin(), Names.end());
   Spec.OldHeader = OldHeader;
   Spec.NewHeader = NewHeader;
   Spec.OldCC = OldCC;
   Spec.NewCC = NewCC;
-  Spec.OldDependOnNew = OldDependOnNew;
-  Spec.NewDependOnOld = NewDependOnOld;
+  Spec.setOldDependOnNew(OldDependOnNew);
+  Spec.setNewDependOnOld(NewDependOnOld);
 
   llvm::SmallString<128> InitialDirectory;
   if (std::error_code EC = llvm::sys::fs::current_path(InitialDirectory))

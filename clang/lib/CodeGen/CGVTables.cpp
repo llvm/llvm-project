@@ -271,7 +271,7 @@ void CodeGenFunction::StartThunk(llvm::Function *Fn, GlobalDecl GD,
                                  bool IsUnprototyped) {
   assert(!CurGD.getDecl() && "CurGD was already set!");
   CurGD = GD;
-  CurFuncIsThunk = true;
+  setCurFuncIsThunk(true);
 
   // Build FunctionArgs.
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
@@ -424,7 +424,7 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
     CGM.getCXXABI().EmitReturnFromThunk(*this, RV, ResultType);
 
   // Disable the final ARC autorelease.
-  AutoreleaseResult = false;
+  setAutoreleaseResult(false);
 
   FinishThunk();
 }

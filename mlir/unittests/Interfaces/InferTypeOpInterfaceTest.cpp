@@ -22,6 +22,38 @@
 
 using namespace mlir;
 
+TEST(ShapedTypeComponentsTest, RankedScalarAndUnrankedCopies) {
+  ShapedTypeComponents unranked;
+  ShapedTypeComponents scalar(ArrayRef<int64_t>{});
+  EXPECT_FALSE(unranked.hasRank());
+  EXPECT_TRUE(scalar.hasRank());
+  EXPECT_TRUE(scalar.getDims().empty());
+
+  unranked = scalar;
+  EXPECT_TRUE(unranked.hasRank());
+  unranked = ShapedTypeComponents();
+  EXPECT_FALSE(unranked.hasRank());
+}
+
+TEST(ShapedTypeComponentsTest, HeapBackedMovesAndShapeAdaptor) {
+  SmallVector<int64_t> dimensions(16, 7);
+  SmallVector<int64_t> input = dimensions;
+  int64_t *data = input.data();
+  ShapedTypeComponents shape(std::move(input));
+  EXPECT_EQ(shape.getDims().data(), data);
+  ShapedTypeComponents moved(std::move(shape));
+  EXPECT_TRUE(moved.hasRank());
+  EXPECT_EQ(moved.getDims(), ArrayRef<int64_t>(dimensions));
+
+  ShapedTypeComponents result;
+  ShapeAdaptor(moved).getDims(result);
+  EXPECT_TRUE(result.hasRank());
+  EXPECT_EQ(result.getDims(), ArrayRef<int64_t>(dimensions));
+  SmallVector<int64_t> output;
+  ShapeAdaptor(result).getDims(output);
+  EXPECT_EQ(output, dimensions);
+}
+
 class ValueShapeRangeTest : public testing::Test {
 protected:
   void SetUp() override {

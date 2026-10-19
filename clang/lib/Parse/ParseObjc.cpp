@@ -2026,7 +2026,7 @@ Parser::ParseObjCAtEndDeclaration(SourceRange atEnd) {
 }
 
 Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
-  if (!Finished) {
+  if (!getFinished()) {
     finish(P.Tok.getLocation());
     if (P.isEofOrEom()) {
       P.Diag(P.Tok, diag::err_objc_missing_end)
@@ -2039,7 +2039,7 @@ Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
 }
 
 void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
-  assert(!Finished);
+  assert(!getFinished());
   P.Actions.ObjC().DefaultSynthesizeProperties(P.getCurScope(), Dcl,
                                                AtEnd.getBegin());
   for (size_t i = 0; i < LateParsedObjCMethods.size(); ++i)
@@ -2048,7 +2048,7 @@ void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
 
   P.Actions.ObjC().ActOnAtEnd(P.getCurScope(), AtEnd);
 
-  if (HasCFunction)
+  if (getHasCFunction())
     for (size_t i = 0; i < LateParsedObjCMethods.size(); ++i)
       P.ParseLexedObjCMethodDefs(*LateParsedObjCMethods[i],
                                  false/*c-functions*/);
@@ -2064,7 +2064,7 @@ void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
   // (e.g. a nested @interface ended the @implementation early), so stop being
   // the current @implementation now rather than in the destructor.
   P.CurParsedObjCImpl = PrevParsedObjCImpl;
-  Finished = true;
+  setFinished(true);
 }
 
 Decl *Parser::ParseObjCAtAliasDeclaration(SourceLocation atLoc) {
@@ -2393,7 +2393,8 @@ Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
 }
 
 void Parser::StashAwayMethodOrFunctionBodyTokens(Decl *MDecl) {
-  if (SkipFunctionBodies && (!MDecl || Actions.canSkipFunctionBody(MDecl)) &&
+  if (getSkipFunctionBodies() &&
+      (!MDecl || Actions.canSkipFunctionBody(MDecl)) &&
       trySkippingFunctionBody()) {
     Actions.ActOnSkippedFunctionBody(MDecl);
     return;

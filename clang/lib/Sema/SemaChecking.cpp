@@ -88,6 +88,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -114,6 +115,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -13112,8 +13114,14 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
 
   // Set context flag for overflow behavior type assignment analysis, use RAII
   // pattern to handle nested assignments.
-  llvm::SaveAndRestore OBTAssignmentContext(
-      S.InOverflowBehaviorAssignmentContext, true);
+  auto OBTAssignmentContext = [PackedFlagOwner_ = std::addressof(S)] {
+    const bool PackedFlagOld_ =
+        PackedFlagOwner_->getInOverflowBehaviorAssignmentContext();
+    PackedFlagOwner_->setInOverflowBehaviorAssignmentContext(true);
+    return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+      PackedFlagOwner_->setInOverflowBehaviorAssignmentContext(PackedFlagOld_);
+    });
+  }();
 
   AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
 
@@ -14674,12 +14682,12 @@ bool Sema::CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
           Target->isUnsignedIntegerType()) {
         // For unsigned wrap to unsigned conversions, use pedantic version
         unsigned DiagId =
-            InOverflowBehaviorAssignmentContext
+            getInOverflowBehaviorAssignmentContext()
                 ? diag::warn_impcast_overflow_behavior_assignment_pedantic
                 : diag::warn_impcast_overflow_behavior_pedantic;
         DiagnoseImpCast(*this, E, T, CC, DiagId);
       } else {
-        unsigned DiagId = InOverflowBehaviorAssignmentContext
+        unsigned DiagId = getInOverflowBehaviorAssignmentContext()
                               ? diag::warn_impcast_overflow_behavior_assignment
                               : diag::warn_impcast_overflow_behavior;
         DiagnoseImpCast(*this, E, T, CC, DiagId);

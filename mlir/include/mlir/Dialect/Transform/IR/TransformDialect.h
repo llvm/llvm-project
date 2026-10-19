@@ -14,6 +14,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include <optional>
 
@@ -129,7 +130,7 @@ public:
 
     // Only load generated dialects if the user intends to apply
     // transformations specified by the extension.
-    if (!buildOnly)
+    if (!isBuildOnly())
       for (const DialectLoader &loader : generatedDialectLoaders)
         loader(context);
 
@@ -143,7 +144,8 @@ protected:
   /// Extension constructor. The argument indicates whether to skip generated
   /// dialects when applying the extension.
   explicit TransformDialectExtension(bool buildOnly = false)
-      : buildOnly(buildOnly) {
+      : generatedDialectLoaders(
+            decltype(generatedDialectLoaders)::withFlags(unsigned(buildOnly))) {
     static_cast<DerivedTy *>(this)->init();
   }
 
@@ -254,10 +256,10 @@ private:
 
   /// Callbacks loading the generated dialects, i.e. the dialects produced when
   /// applying the transformations.
-  SmallVector<DialectLoader> generatedDialectLoaders;
+  llvm::SmallVectorWithFlags<DialectLoader> generatedDialectLoaders;
 
   /// Indicates that the extension is in build-only mode.
-  bool buildOnly;
+  bool isBuildOnly() const { return generatedDialectLoaders.getFlag(0); }
 };
 
 template <typename OpTy>

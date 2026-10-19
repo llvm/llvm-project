@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/Affine/Utils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -303,7 +304,7 @@ private:
   /// Holds the value sizes of the iteration space to vectorize. Static
   /// dimensions are represented by 'arith.constant' and dynamic
   /// dimensions by 'tensor/memref.dim'.
-  SmallVector<Value> iterSpaceValueSizes;
+  llvm::SmallVectorWithFlags<Value> iterSpaceValueSizes;
 
   /// Holds the canonical vector shape used to vectorize the iteration space.
   SmallVector<int64_t> canonicalVecShape;
@@ -326,7 +327,12 @@ private:
   /// dimension, masking can be safely skipped, despite the presence of dynamic
   /// shapes. Use this flag with care and only for cases where you are
   /// confident the assumption holds.
-  bool assumeDynamicDimsMatchVecSizes = false;
+  bool getAssumeDynamicDimsMatchVecSizes() const {
+    return iterSpaceValueSizes.getFlag(0);
+  }
+  void setAssumeDynamicDimsMatchVecSizes(bool Value) {
+    iterSpaceValueSizes.setFlag(0, Value);
+  }
 };
 
 LogicalResult
@@ -369,7 +375,7 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
                                             ArrayRef<int64_t> inputVectorSizes,
                                             ArrayRef<bool> inputScalableVecDims,
                                             bool assumeDimsMatchVec) {
-  assumeDynamicDimsMatchVecSizes = assumeDimsMatchVec;
+  setAssumeDynamicDimsMatchVecSizes(assumeDimsMatchVec);
   // Initialize the insertion point.
   rewriter.setInsertionPoint(linalgOp);
 
@@ -463,7 +469,7 @@ Value VectorizationState::getOrCreateMaskFor(
     return Value();
   }
 
-  if (assumeDynamicDimsMatchVecSizes) {
+  if (getAssumeDynamicDimsMatchVecSizes()) {
     // While for _dynamic_ dim sizes we can _assume_ that the corresponding
     // vector sizes match, we still need to check the _static_ dim sizes. Only
     // then we can be 100% sure that masking is not required.
@@ -511,7 +517,7 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
 
   if (!mask) {
     LDBG() << "No mask required";
-    if (assumeDynamicDimsMatchVecSizes) {
+    if (getAssumeDynamicDimsMatchVecSizes()) {
       llvm::TypeSwitch<Operation *>(opToMask)
           .Case<vector::TransferReadOp, vector::TransferWriteOp>(
               [&](auto xferOp) {

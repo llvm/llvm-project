@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 #include <tuple>
 
@@ -48,14 +49,17 @@ public:
   DroppedVariableStats(const DroppedVariableStats &) = delete;
   void operator=(const DroppedVariableStats &) = delete;
 
-  bool getPassDroppedVariables() { return PassDroppedVariables; }
+  bool getPassDroppedVariables() { return getPassDroppedVariablesFlag(); }
 
 protected:
   LLVM_ABI void setup();
 
   LLVM_ABI void cleanup();
 
-  bool DroppedVariableStatsEnabled = false;
+  bool getDroppedVariableStatsEnabled() const { return InlinedAts.getFlag(0); }
+  void setDroppedVariableStatsEnabled(bool Value) {
+    InlinedAts.setFlag(0, Value);
+  }
   struct DebugVariables {
     /// DenseSet of VarIDs before an optimization pass has run.
     DenseSet<VarID> DebugVariablesBefore;
@@ -73,7 +77,9 @@ protected:
   /// A stack of DenseMaps, which map the name of an llvm::Function to a
   /// DenseMap of VarIDs and their inlinedAt locations before an optimization
   /// pass has run.
-  SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>> InlinedAts;
+  SmallVectorWithFlagsFor<
+      SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>>, 2>
+      InlinedAts;
   /// Calculate the number of dropped variables in an llvm::Function or
   /// llvm::MachineFunction and print the relevant information to stdout.
   LLVM_ABI void calculateDroppedStatsAndPrint(
@@ -129,7 +135,8 @@ private:
   bool isInlinedAtChildOfOrEqualTo(const DILocation *InlinedAt,
                                    const DILocation *DbgValInlinedAt);
 
-  bool PassDroppedVariables = false;
+  bool getPassDroppedVariablesFlag() const { return InlinedAts.getFlag(1); }
+  void setPassDroppedVariablesFlag(bool Value) { InlinedAts.setFlag(1, Value); }
 };
 
 } // namespace llvm

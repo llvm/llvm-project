@@ -411,7 +411,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
-    HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
+    setHasCompleteDecoder(EncodingDef->getValueAsBit("hasCompleteDecoder"));
 
   const RecordVal *InstField = EncodingDef->getValue("Inst");
   if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
@@ -431,10 +431,10 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   if (DecoderMethod.empty()) {
     // A generated decoder is always successful if none of the operand
     // decoders can fail (all are always successful).
-    HasCompleteDecoder = all_of(Operands, [](const OperandInfo &Op) {
+    setHasCompleteDecoder(all_of(Operands, [](const OperandInfo &Op) {
       // By default, a generated operand decoder is assumed to always succeed.
       // This can be overridden by the user.
       return Op.Decoder.empty() || Op.HasCompleteDecoder;
-    });
+    }));
   }
 }

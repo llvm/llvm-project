@@ -63,7 +63,7 @@ static Error removeSections(const CommonConfig &Config, Object &Obj) {
     };
   }
 
-  if (Config.StripAll || Config.StripDebug) {
+  if (Config.getStripAll() || Config.getStripDebug()) {
     // Remove all debug sections.
     RemovePred = [RemovePred](const std::unique_ptr<Section> &Sec) {
       if (Sec->Segname == "__DWARF")
@@ -90,7 +90,7 @@ static void markSymbols(const CommonConfig &Config, Object &Obj) {
       (*ISE.Symbol)->Referenced = true;
 
   // --strip-all removes relocations, so their symbols need not be preserved.
-  if (Config.StripAll)
+  if (Config.getStripAll())
     return;
 
   for (const LoadCommand &LC : Obj.LoadCommands)
@@ -128,7 +128,7 @@ static void updateAndRemoveSymbols(const CommonConfig &Config,
       Sym.n_type |= MachO::N_EXT;
 
     if (Sym.isExternalSymbol() && !Sym.isUndefinedSymbol() &&
-        (Config.Weaken || Config.SymbolsToWeaken.matches(Sym.Name)))
+        (Config.getWeaken() || Config.SymbolsToWeaken.matches(Sym.Name)))
       Sym.n_desc |= MachO::N_WEAK_DEF;
 
     auto I = Config.SymbolsToRename.find(Sym.Name);
@@ -144,12 +144,12 @@ static void updateAndRemoveSymbols(const CommonConfig &Config,
       return false;
     if (N->n_desc & MachO::REFERENCED_DYNAMICALLY)
       return false;
-    if (Config.StripAll)
+    if (Config.getStripAll())
       return true;
     if (Config.DiscardMode == DiscardType::All && !(N->n_type & MachO::N_EXT))
       return true;
     // This behavior is consistent with cctools' strip.
-    if (Config.StripDebug && (N->n_type & MachO::N_STAB))
+    if (Config.getStripDebug() && (N->n_type & MachO::N_STAB))
       return true;
     // This behavior is consistent with cctools' strip.
     if (MachOConfig.StripSwiftSymbols &&
@@ -468,7 +468,7 @@ static Error handleArgs(const CommonConfig &Config,
 
   updateAndRemoveSymbols(Config, MachOConfig, Obj);
 
-  if (Config.StripAll)
+  if (Config.getStripAll())
     for (LoadCommand &LC : Obj.LoadCommands)
       for (std::unique_ptr<Section> &Sec : LC.Sections)
         Sec->Relocations.clear();
@@ -550,7 +550,7 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
               *NewArchiveMembersOrErr,
               (*ArOrErr)->hasSymbolTable() ? SymtabWritingMode::NormalSymtab
                                            : SymtabWritingMode::NoSymtab,
-              Kind, Config.getCommonConfig().DeterministicArchives,
+              Kind, Config.getCommonConfig().getDeterministicArchives(),
               (*ArOrErr)->isThin());
       if (!OutputBufferOrErr)
         return OutputBufferOrErr.takeError();

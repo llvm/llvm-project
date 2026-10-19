@@ -620,7 +620,7 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
 void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
                                          SmallVector<RangeSpan, 2> Range) {
 
-  HasRangeLists = true;
+  setHasRangeLists(true);
 
   // Add the range list to the set of ranges to be emitted.
   auto IndexAndList =

@@ -13,6 +13,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
@@ -33,10 +34,11 @@ class TextTokenRetokenizer {
   Parser &P;
 
   /// This flag is set when there are no more tokens we can fetch from lexer.
-  bool NoMoreInterestingTokens;
+  bool getNoMoreInterestingTokens() const { return Toks.getFlag(0); }
+  void setNoMoreInterestingTokens(bool Value) { Toks.setFlag(0, Value); }
 
   /// Token buffer: tokens we have processed and lookahead.
-  SmallVector<Token, 16> Toks;
+  llvm::SmallVectorWithFlags<Token, 16> Toks;
 
   /// A position in \c Toks.
   struct Position {
@@ -119,7 +121,7 @@ class TextTokenRetokenizer {
   /// Returns true on success, false if there are no interesting tokens to
   /// fetch from lexer.
   bool addToken() {
-    if (NoMoreInterestingTokens)
+    if (getNoMoreInterestingTokens())
       return false;
 
     if (P.Tok.is(tok::newline)) {
@@ -128,12 +130,12 @@ class TextTokenRetokenizer {
       P.consumeToken();
       if (P.Tok.isNot(tok::text)) {
         P.putBack(Newline);
-        NoMoreInterestingTokens = true;
+        setNoMoreInterestingTokens(true);
         return false;
       }
     }
     if (P.Tok.isNot(tok::text)) {
-      NoMoreInterestingTokens = true;
+      setNoMoreInterestingTokens(true);
       return false;
     }
 
@@ -169,8 +171,8 @@ class TextTokenRetokenizer {
   }
 
 public:
-  TextTokenRetokenizer(llvm::BumpPtrAllocator &Allocator, Parser &P):
-      Allocator(Allocator), P(P), NoMoreInterestingTokens(false) {
+  TextTokenRetokenizer(llvm::BumpPtrAllocator &Allocator, Parser &P)
+      : Allocator(Allocator), P(P) {
     Pos.CurToken = 0;
     addToken();
   }

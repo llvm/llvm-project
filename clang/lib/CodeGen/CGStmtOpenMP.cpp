@@ -1829,8 +1829,8 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
   }
   if (!Data.ReductionVars.empty()) {
     OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(D);
-    Data.IsReductionWithTaskMod = true;
-    Data.IsWorksharingReduction = isOpenMPWorksharingDirective(EKind);
+    Data.setIsReductionWithTaskMod(true);
+    Data.setIsWorksharingReduction(isOpenMPWorksharingDirective(EKind));
     llvm::Value *ReductionDesc = CGM.getOpenMPRuntime().emitTaskReductionInit(
         *this, D.getBeginLoc(), TaskLHSs, TaskRHSs, Data);
     const Expr *TaskRedRef = nullptr;
@@ -3417,7 +3417,7 @@ static void emitOMPSimdDirective(const OMPLoopDirective &S,
   }
 
   CodeGenFunction::ParentLoopDirectiveForScanRegion ScanRegion(CGF, S);
-  CGF.OMPFirstScanLoop = true;
+  CGF.setOMPFirstScanLoop(true);
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     emitOMPSimdRegion(CGF, S, Action);
   };
@@ -4439,7 +4439,7 @@ static void emitScanBasedDirective(
     //   <input phase>;
     //   buffer[i] = red;
     // }
-    CGF.OMPFirstScanLoop = true;
+    CGF.setOMPFirstScanLoop(true);
     CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
     FirstGen(CGF);
   }
@@ -4548,7 +4548,7 @@ static void emitScanBasedDirective(
     RCG(CGF);
   }
 
-  CGF.OMPFirstScanLoop = false;
+  CGF.setOMPFirstScanLoop(false);
   SecondGen(CGF);
 }
 
@@ -5529,7 +5529,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
   // Build list of dependences.
   buildDependences(S, Data);
   // Get list of local vars for untied tasks.
-  if (!Data.Tied) {
+  if (!Data.getTied()) {
     CheckVarsEscapingUntiedTaskDeclContext Checker;
     Checker.Visit(S.getInnermostCapturedStmt()->getCapturedStmt());
     Data.PrivateLocals.append(Checker.getPrivateDecls().begin(),
@@ -5833,7 +5833,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
   };
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
   llvm::Function *OutlinedFn = CGM.getOpenMPRuntime().emitTaskOutlinedFunction(
-      S, *I, *PartId, *TaskT, EKind, CodeGen, Data.Tied, Data.NumberOfParts);
+      S, *I, *PartId, *TaskT, EKind, CodeGen, Data.getTied(),
+      Data.NumberOfParts);
   OMPLexicalScope Scope(*this, S, std::nullopt,
                         !isOpenMPParallelDirective(EKind) &&
                             !isOpenMPSimdDirective(EKind));
@@ -6124,7 +6125,7 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
 
   OMPTaskDataTy Data;
   // Check if we should emit tied or untied task.
-  Data.Tied = !S.getSingleClause<OMPUntiedClause>();
+  Data.setTied(!S.getSingleClause<OMPUntiedClause>());
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitStmt(CS->getCapturedStmt());
   };
@@ -6163,7 +6164,7 @@ void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   OMPTaskDataTy Data;
   // Build list of dependences
   buildDependences(S, Data);
-  Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
+  Data.setHasNowaitClause(S.hasClausesOfKind<OMPNowaitClause>());
   CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
 }
 
@@ -6389,7 +6390,7 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
     EmitBranch(BreakContinueStack.back().ContinueBlock.getBlock());
     EmitBlock(OMPScanExitBlock);
   }
-  if (OMPFirstScanLoop) {
+  if (getOMPFirstScanLoop()) {
     // Emit buffer[i] = red; at the end of the input phase.
     const auto *IVExpr = cast<OMPLoopDirective>(ParentDir)
                              .getIterationVariable()
@@ -6420,7 +6421,7 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
     EmitBranch(BreakContinueStack.back().ContinueBlock.getBlock());
   }
   EmitBlock(OMPScanDispatch);
-  if (!OMPFirstScanLoop) {
+  if (!getOMPFirstScanLoop()) {
     // Emit red = buffer[i]; at the entrance to the scan phase.
     const auto *IVExpr = cast<OMPLoopDirective>(ParentDir)
                              .getIterationVariable()
@@ -6458,8 +6459,8 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
       EmitBlock(ExclusiveExitBB);
     }
   }
-  EmitBranch((OMPFirstScanLoop == IsInclusive) ? OMPBeforeScanBlock
-                                               : OMPAfterScanBlock);
+  EmitBranch((getOMPFirstScanLoop() == IsInclusive) ? OMPBeforeScanBlock
+                                                    : OMPAfterScanBlock);
   EmitBlock(OMPAfterScanBlock);
 }
 
@@ -7941,12 +7942,13 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
                                                 S.getBeginLoc());
     DependenceList = DependenciesArray.emitRawPointer(*this);
   }
-  Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
+  Data.setHasNowaitClause(S.hasClausesOfKind<OMPNowaitClause>());
 
-  assert(!(Data.HasNowaitClause && !(S.getSingleClause<OMPInitClause>() ||
-                                     S.getSingleClause<OMPDestroyClause>() ||
-                                     S.getSingleClause<OMPUseClause>())) &&
-         "OMPNowaitClause clause is used separately in OMPInteropDirective.");
+  assert(
+      !(Data.getHasNowaitClause() && !(S.getSingleClause<OMPInitClause>() ||
+                                       S.getSingleClause<OMPDestroyClause>() ||
+                                       S.getSingleClause<OMPUseClause>())) &&
+      "OMPNowaitClause clause is used separately in OMPInteropDirective.");
 
   auto ItOMPInitClause = S.getClausesOfKind<OMPInitClause>();
   if (!ItOMPInitClause.empty()) {
@@ -7965,7 +7967,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
       }
       OMPBuilder.createOMPInteropInit(Builder, InteropvarPtr, InteropType,
                                       Device, NumDependences, DependenceList,
-                                      Data.HasNowaitClause);
+                                      Data.getHasNowaitClause());
     }
   }
   auto ItOMPDestroyClause = S.getClausesOfKind<OMPDestroyClause>();
@@ -7976,7 +7978,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
           EmitLValue(C->getInteropVar()).getPointer(*this);
       OMPBuilder.createOMPInteropDestroy(Builder, InteropvarPtr, Device,
                                          NumDependences, DependenceList,
-                                         Data.HasNowaitClause);
+                                         Data.getHasNowaitClause());
     }
   }
   auto ItOMPUseClause = S.getClausesOfKind<OMPUseClause>();
@@ -7987,7 +7989,7 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
           EmitLValue(C->getInteropVar()).getPointer(*this);
       OMPBuilder.createOMPInteropUse(Builder, InteropvarPtr, Device,
                                      NumDependences, DependenceList,
-                                     Data.HasNowaitClause);
+                                     Data.getHasNowaitClause());
     }
   }
 }
@@ -8560,22 +8562,22 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
 
   OMPTaskDataTy Data;
   // Check if taskloop must be emitted without taskgroup.
-  Data.Nogroup = S.getSingleClause<OMPNogroupClause>();
+  Data.setNogroup(S.getSingleClause<OMPNogroupClause>());
   // TODO: Check if we should emit tied or untied task.
-  Data.Tied = true;
+  Data.setTied(true);
   // Set scheduling for taskloop
   if (const auto *Clause = S.getSingleClause<OMPGrainsizeClause>()) {
     // grainsize clause
     Data.Schedule.setInt(/*IntVal=*/false);
     Data.Schedule.setPointer(EmitScalarExpr(Clause->getGrainsize()));
-    Data.HasModifier =
-        (Clause->getModifier() == OMPC_GRAINSIZE_strict) ? true : false;
+    Data.setHasModifier(
+        (Clause->getModifier() == OMPC_GRAINSIZE_strict) ? true : false);
   } else if (const auto *Clause = S.getSingleClause<OMPNumTasksClause>()) {
     // num_tasks clause
     Data.Schedule.setInt(/*IntVal=*/true);
     Data.Schedule.setPointer(EmitScalarExpr(Clause->getNumTasks()));
-    Data.HasModifier =
-        (Clause->getModifier() == OMPC_NUMTASKS_strict) ? true : false;
+    Data.setHasModifier(
+        (Clause->getModifier() == OMPC_NUMTASKS_strict) ? true : false);
   }
 
   auto &&BodyGen = [CS, &S](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -8690,7 +8692,7 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_taskloop,
                                                     CodeGen);
   };
-  if (Data.Nogroup) {
+  if (Data.getNogroup()) {
     EmitOMPTaskBasedDirective(S, OMPD_taskloop, BodyGen, TaskGen, Data);
   } else {
     CGM.getOpenMPRuntime().emitTaskgroupRegion(

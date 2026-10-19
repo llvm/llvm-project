@@ -918,7 +918,7 @@ void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint64_t Address,
          "Cannot update address map since debug_str_offsets was already "
          "finalized for this CU.");
   IndexToAddressMap[Index] = Address;
-  StrOffsetSectionWasModified = true;
+  setStrOffsetSectionWasModified(true);
 }
 
 void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
@@ -941,7 +941,8 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
       Die.findAttribute(dwarf::DW_AT_str_offsets_base);
   auto RetVal = ProcessedBaseOffsets.find(*Val);
   // Handling reuse of str-offsets section.
-  if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
+  if (RetVal == ProcessedBaseOffsets.end() ||
+      getStrOffsetSectionWasModified()) {
     initialize(Unit);
     // Update String Offsets that were modified.
     for (const auto &Entry : IndexToAddressMap)
@@ -974,7 +975,7 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
                          DIEInteger(RetVal->second));
   }
 
-  StrOffsetSectionWasModified = false;
+  setStrOffsetSectionWasModified(false);
   assert(DebugStrOffsetFinalized.insert(Unit.getOffset()).second &&
          "debug_str_offsets was already finalized for this CU.");
   clear();

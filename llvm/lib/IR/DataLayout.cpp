@@ -207,8 +207,6 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   delete static_cast<StructLayoutMap *>(LayoutMap);
   LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;
-  BigEndian = Other.BigEndian;
-  VectorsAreElementAligned = Other.VectorsAreElementAligned;
   AllocaAddrSpace = Other.AllocaAddrSpace;
   ProgramAddrSpace = Other.ProgramAddrSpace;
   DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
@@ -228,9 +226,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
 
 bool DataLayout::operator==(const DataLayout &Other) const {
   // NOTE: StringRepresentation might differ, it is not canonicalized.
-  return BigEndian == Other.BigEndian &&
-         VectorsAreElementAligned == Other.VectorsAreElementAligned &&
-         AllocaAddrSpace == Other.AllocaAddrSpace &&
+  return AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
          DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
          StackNaturalAlign == Other.StackNaturalAlign &&
@@ -551,7 +547,7 @@ Error DataLayout::parseSpecification(
   }
 
   if (Spec == "ve") {
-    VectorsAreElementAligned = true;
+    LegalIntWidths.setFlag(1, true);
     return Error::success();
   }
 
@@ -579,7 +575,7 @@ Error DataLayout::parseSpecification(
     if (!Rest.empty())
       return createStringError(
           "malformed specification, must be just 'e' or 'E'");
-    BigEndian = Specifier == 'E';
+    LegalIntWidths.setFlag(0, Specifier == 'E');
     break;
   case 'n': // Native integer types.
     // n<size>[:<size>]...

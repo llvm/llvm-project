@@ -185,7 +185,7 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   PtrInfo visitArgPtr(Argument &A) {
     assert(A.getType()->isPointerTy());
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(A.getType()));
-    IsOffsetKnown = false;
+    setIsOffsetKnown(false);
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
     PI.reset();
 

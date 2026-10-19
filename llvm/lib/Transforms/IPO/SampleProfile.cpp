@@ -1243,7 +1243,7 @@ bool SampleProfileLoader::tryInlineCandidate(
     return false;
 
   InlineFunctionInfo IFI(GetAC);
-  IFI.UpdateProfile = false;
+  IFI.setUpdateProfile(false);
   InlineResult IR = InlineFunction(CB, IFI,
                                    /*MergeAttributes=*/true);
   if (!IR.isSuccess())

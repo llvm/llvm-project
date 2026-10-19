@@ -13,8 +13,9 @@
 #ifndef LLVM_COV_SOURCECOVERAGEVIEW_H
 #define LLVM_COV_SOURCECOVERAGEVIEW_H
 
-#include "CoverageViewOptions.h"
 #include "CoverageSummaryInfo.h"
+#include "CoverageViewOptions.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
@@ -167,13 +168,14 @@ class SourceCoverageView {
   SmallVector<BranchView, 0> BranchSubViews;
 
   /// A container for all MCDC records in the source on display.
-  SmallVector<MCDCView, 0> MCDCSubViews;
+  llvm::SmallVectorWithFlags<MCDCView, 0> MCDCSubViews;
 
   /// A container for all instantiations (e.g template functions) in the source
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
-  bool BinaryCounters;
+  bool getBinaryCounters() const { return MCDCSubViews.getFlag(0); }
+  void setBinaryCounters(bool Value) { MCDCSubViews.setFlag(0, Value); }
 
   /// Get the first uncovered line number for the source file.
   unsigned getFirstUncoveredLineNo();
@@ -262,7 +264,7 @@ protected:
   static std::string formatCount(uint64_t N);
 
   uint64_t BinaryCount(uint64_t N) const {
-    return (N && BinaryCounters ? 1 : N);
+    return (N && getBinaryCounters() ? 1 : N);
   }
 
   std::string formatBinaryCount(uint64_t N) const {
@@ -280,8 +282,9 @@ protected:
                      CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
         CoverageInfo(std::move(CoverageInfo)),
-        BinaryCounters(Options.BinaryCounters ||
-                       CoverageInfo.getSingleByteCoverage()) {}
+        MCDCSubViews(decltype(this->MCDCSubViews)::withFlags(unsigned(bool(
+            Options.BinaryCounters || CoverageInfo.getSingleByteCoverage())))) {
+  }
 
 public:
   static std::unique_ptr<SourceCoverageView>

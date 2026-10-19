@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMASMPRINTER_H
 #define LLVM_LIB_TARGET_ARM_ARMASMPRINTER_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -43,11 +44,13 @@ private:
 
   /// InConstantPool - Maintain state when emitting a sequence of constant
   /// pool entries so we can properly mark them as data regions.
-  bool InConstantPool;
+  bool getInConstantPool() const { return ThumbIndirectPads.getFlag(0); }
+  void setInConstantPool(bool Value) { ThumbIndirectPads.setFlag(0, Value); }
 
   /// ThumbIndirectPads - These maintain a per-function list of jump pad
   /// labels used for ARMv4t thumb code to make register indirect calls.
-  SmallVector<std::pair<unsigned, MCSymbol*>, 4> ThumbIndirectPads;
+  llvm::SmallVectorWithFlags<std::pair<unsigned, MCSymbol *>, 4>
+      ThumbIndirectPads;
 
   /// OptimizationGoals - Maintain a combined optimization goal for all
   /// functions in a module: one of Tag_ABI_optimization_goals values,

@@ -712,7 +712,7 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   };
 
   FunctionClassification fc;
-  fc.returnsVoid = voidRet;
+  fc.setReturnsVoid(voidRet);
   mlir::Type origRet = voidRet ? mlir::Type() : retCIR;
   std::optional<ArgClassification> retAc =
       convertABIArgInfo(fi->getReturnInfo(), ctx, origRet);
@@ -880,7 +880,7 @@ static std::optional<FunctionClassification>
 withReturnVoidness(std::optional<FunctionClassification> fc,
                    mlir::Type returnType) {
   if (fc)
-    fc->returnsVoid = mlir::isa<cir::VoidType>(returnType);
+    fc->setReturnsVoid(mlir::isa<cir::VoidType>(returnType));
   return fc;
 }
 

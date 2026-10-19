@@ -19,6 +19,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace clang {
 
@@ -90,20 +91,19 @@ class TypoCorrectionConsumer : public VisibleDeclConsumer {
   typedef std::map<unsigned, TypoResultsMap> TypoEditDistanceMap;
 
 public:
-  TypoCorrectionConsumer(Sema &SemaRef,
-                         const DeclarationNameInfo &TypoName,
-                         Sema::LookupNameKind LookupKind,
-                         Scope *S, CXXScopeSpec *SS,
+  TypoCorrectionConsumer(Sema &SemaRef, const DeclarationNameInfo &TypoName,
+                         Sema::LookupNameKind LookupKind, Scope *S,
+                         CXXScopeSpec *SS,
                          std::unique_ptr<CorrectionCandidateCallback> CCC,
-                         DeclContext *MemberContext,
-                         bool EnteringContext)
+                         DeclContext *MemberContext, bool EnteringContext)
       : Typo(TypoName.getName().getAsIdentifierInfo()), CurrentTCIndex(0),
         SavedTCIndex(0), SemaRef(SemaRef), S(S),
         SS(SS ? std::make_unique<CXXScopeSpec>(*SS) : nullptr),
         CorrectionValidator(std::move(CCC)), MemberContext(MemberContext),
         Result(SemaRef, TypoName, LookupKind),
         Namespaces(SemaRef.Context, SemaRef.CurContext, SS),
-        EnteringContext(EnteringContext), SearchNamespaces(false) {
+        QualifiedResults(decltype(this->QualifiedResults)::withFlags(
+            unsigned(EnteringContext))) {
     Result.suppressDiagnostics();
     // Arrange for ValidatedCorrections[0] to always be an empty correction.
     ValidatedCorrections.push_back(TypoCorrection());
@@ -315,9 +315,11 @@ private:
   DeclContext *MemberContext;
   LookupResult Result;
   NamespaceSpecifierSet Namespaces;
-  SmallVector<TypoCorrection, 2> QualifiedResults;
-  bool EnteringContext;
-  bool SearchNamespaces;
+  llvm::SmallVectorWithFlags<TypoCorrection, 2, 2> QualifiedResults;
+  bool getEnteringContext() const { return QualifiedResults.getFlag(0); }
+  void setEnteringContext(bool Value) { QualifiedResults.setFlag(0, Value); }
+  bool getSearchNamespaces() const { return QualifiedResults.getFlag(1); }
+  void setSearchNamespaces(bool Value) { QualifiedResults.setFlag(1, Value); }
 };
 
 } // end namespace clang

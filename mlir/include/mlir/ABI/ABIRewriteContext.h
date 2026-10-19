@@ -25,6 +25,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Alignment.h"
 
 #include <cassert>
@@ -148,7 +149,8 @@ struct ArgClassification {
 /// all arguments.
 struct FunctionClassification {
   ArgClassification returnInfo;
-  SmallVector<ArgClassification> argInfos;
+  // Flag bit 0 marks a source-language void return.
+  llvm::SmallVectorWithFlags<ArgClassification> argInfos;
 
   /// Whether the classified return type was the source language's void.
   ///
@@ -163,12 +165,13 @@ struct FunctionClassification {
   ///
   /// Left false when unknown, which costs a needless rewrite rather than a
   /// skipped one.
-  bool returnsVoid = false;
+  bool returnsVoid() const { return argInfos.getFlag(0); }
+  void setReturnsVoid(bool IsVoid) { argInfos.setFlag(0, IsVoid); }
 
   /// Whether any value in the signature is passed differently from how it is
   /// written, so a rewriter has work to do.
   bool needsRewrite() const {
-    if (!returnsVoid && !returnInfo.isPassThrough())
+    if (!returnsVoid() && !returnInfo.isPassThrough())
       return true;
     return !llvm::all_of(argInfos, [](const ArgClassification &ac) {
       return ac.isPassThrough();

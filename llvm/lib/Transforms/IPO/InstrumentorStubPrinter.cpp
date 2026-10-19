@@ -310,7 +310,7 @@ void printRuntimeStub(const InstrumentationConfig &IConf,
 
   for (auto &ChoiceMap : IConf.IChoices) {
     for (auto &[_, IO] : ChoiceMap) {
-      if (!IO->Enabled)
+      if (!IO->getEnabled())
         continue;
       IRTCallDescription IRTCallDesc(*IO, IO->getRetTy(Ctx));
       const auto Signatures = IRTCallDesc.createCSignature(IConf);

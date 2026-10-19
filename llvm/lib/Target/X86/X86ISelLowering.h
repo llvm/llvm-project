@@ -768,12 +768,11 @@ namespace llvm {
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
-                            const SmallVectorImpl<ISD::InputArg> &Ins,
-                            const SDLoc &dl, SelectionDAG &DAG,
-                            SmallVectorImpl<SDValue> &InVals,
+                            llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                            SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
                             uint32_t *RegMask) const;
     SDValue LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
-                             const SmallVectorImpl<ISD::InputArg> &ArgInfo,
+                             llvm::ArrayRef<ISD::InputArg> ArgInfo,
                              const SDLoc &dl, SelectionDAG &DAG,
                              const CCValAssign &VA, MachineFrameInfo &MFI,
                              unsigned i) const;
@@ -866,14 +865,14 @@ namespace llvm {
 
     SDValue
     LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                         const SmallVectorImpl<ISD::InputArg> &Ins,
-                         const SDLoc &dl, SelectionDAG &DAG,
+                         llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                         SelectionDAG &DAG,
                          SmallVectorImpl<SDValue> &InVals) const override;
     SDValue LowerCall(CallLoweringInfo &CLI,
                       SmallVectorImpl<SDValue> &InVals) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        llvm::ArrayRef<ISD::OutputArg> Outs,
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
@@ -894,10 +893,8 @@ namespace llvm {
                             ISD::NodeType ExtendKind) const override;
 
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                        bool isVarArg,
-                        const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context,
-                        const Type *RetTy) const override;
+                        bool isVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;

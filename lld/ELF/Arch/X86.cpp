@@ -130,7 +130,7 @@ RelType X86::getDynRel(RelType type) const {
 }
 
 void X86::writePltHeader(uint8_t *buf) const {
-  if (ctx.arg.isPic) {
+  if (ctx.arg.getIsPic()) {
     const uint8_t v[] = {
         0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
         0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *8(%ebx)
@@ -154,7 +154,7 @@ void X86::writePltHeader(uint8_t *buf) const {
 void X86::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
   unsigned relOff = ctx.in.relaPlt->entsize * sym.getPltIdx(ctx);
-  if (ctx.arg.isPic) {
+  if (ctx.arg.getIsPic()) {
     const uint8_t inst[] = {
         0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
         0x68, 0,    0, 0, 0,    // pushl $reloc_offset
@@ -269,8 +269,8 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         ++it;
       continue;
     case R_386_TLS_LDO_32:
-      sec.addReloc(
-          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
+      sec.addReloc({ctx.arg.getShared() ? R_DTPREL : R_TPREL, type, offset,
+                    addend, &sym});
       continue;
     case R_386_TLS_GOTDESC:
       ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
@@ -279,7 +279,7 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_386_TLS_DESC_CALL:
       // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
       // rewrites for this relocation are identical.
-      if (!ctx.arg.shared)
+      if (!ctx.arg.getShared())
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 
@@ -607,7 +607,7 @@ void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
                         uint64_t /*pltEntryAddr*/) const {
-  if (ctx.arg.isPic) {
+  if (ctx.arg.getIsPic()) {
     const uint8_t inst[] = {
         0xf3, 0x0f, 0x1e, 0xfb,       // endbr32
         0xff, 0xa3, 0,    0,    0, 0, // jmp *name@GOT(%ebx)
@@ -780,8 +780,8 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 void elf::setX86TargetInfo(Ctx &ctx) {
-  if (ctx.arg.zRetpolineplt) {
-    if (ctx.arg.isPic)
+  if (ctx.arg.getZRetpolineplt()) {
+    if (ctx.arg.getIsPic())
       ctx.target.reset(new RetpolinePic(ctx));
     else
       ctx.target.reset(new RetpolineNoPic(ctx));

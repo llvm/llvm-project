@@ -319,7 +319,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
     os << staticSymStr[sym] << '\n';
 
   // Print out the exported functions
-  if (ctx.config.mapInfo) {
+  if (ctx.config.getMapInfo()) {
     os << "\n";
     os << " Exports\n";
     os << "\n";

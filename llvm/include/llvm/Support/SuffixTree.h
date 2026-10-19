@@ -33,6 +33,7 @@
 #define LLVM_SUPPORT_SUFFIXTREE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SuffixTreeNode.h"
@@ -166,7 +167,7 @@ public:
     RepeatedSubstring RS;
 
     /// The nodes left to visit.
-    SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
+    llvm::SmallVectorWithFlags<SuffixTreeInternalNode *> InternalNodesToVisit;
 
     /// The minimum length of a repeated substring to find.
     /// Since we're outlining, we want at least two instructions in the range.
@@ -178,7 +179,12 @@ public:
     const std::vector<SuffixTreeLeafNode *> &LeafNodes;
 
     /// Whether to consider leaf descendants or only leaf children.
-    bool OutlinerLeafDescendants = !LeafNodes.empty();
+    bool getOutlinerLeafDescendants() const {
+      return InternalNodesToVisit.getFlag(0);
+    }
+    void setOutlinerLeafDescendants(bool Value) {
+      InternalNodesToVisit.setFlag(0, Value);
+    }
 
     /// Move the iterator to the next repeated substring.
     LLVM_ABI void advance();
@@ -208,7 +214,10 @@ public:
     RepeatedSubstringIterator(
         SuffixTreeInternalNode *N,
         const std::vector<SuffixTreeLeafNode *> &LeafNodes = {})
-        : N(N), LeafNodes(LeafNodes) {
+        : N(N),
+          InternalNodesToVisit(decltype(this->InternalNodesToVisit)::withFlags(
+              unsigned(bool(!LeafNodes.empty())))),
+          LeafNodes(LeafNodes) {
       // Do we have a non-null node?
       if (!N)
         return;

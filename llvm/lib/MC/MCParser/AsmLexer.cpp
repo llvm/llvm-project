@@ -495,7 +495,7 @@ AsmToken AsmLexer::LexDigit() {
 
   // MASM default-radix integers: [0-9a-fA-F]+
   // (All other integer literals have a radix specifier.)
-  if (LexMasmIntegers && UseMasmDefaultRadix) {
+  if (LexMasmIntegers && CurTok.getFlag(0)) {
     CurPtr = findLastDigit(CurPtr, 16);
     StringRef Result(TokStart, CurPtr - TokStart);
 

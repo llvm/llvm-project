@@ -100,9 +100,9 @@ static lto::Config createConfig(Ctx &ctx) {
 
   if (auto relocModel = getRelocModelFromCMModel())
     c.RelocModel = *relocModel;
-  else if (ctx.arg.relocatable)
+  else if (ctx.arg.getRelocatable())
     c.RelocModel = std::nullopt;
-  else if (ctx.arg.isPic)
+  else if (ctx.arg.getIsPic())
     c.RelocModel = Reloc::PIC_;
   else
     c.RelocModel = Reloc::Static;
@@ -125,7 +125,7 @@ static lto::Config createConfig(Ctx &ctx) {
   // Set up optimization remarks if we've been asked to.
   c.RemarksFilename = std::string(ctx.arg.optRemarksFilename);
   c.RemarksPasses = std::string(ctx.arg.optRemarksPasses);
-  c.RemarksWithHotness = ctx.arg.optRemarksWithHotness;
+  c.RemarksWithHotness = ctx.arg.getOptRemarksWithHotness();
   c.RemarksHotnessThreshold = ctx.arg.optRemarksHotnessThreshold;
   c.RemarksFormat = std::string(ctx.arg.optRemarksFormat);
 
@@ -141,14 +141,14 @@ static lto::Config createConfig(Ctx &ctx) {
   c.HasWholeProgramVisibility = ctx.arg.ltoWholeProgramVisibility;
   c.ValidateAllVtablesHaveTypeInfos =
       ctx.arg.ltoValidateAllVtablesHaveTypeInfos;
-  c.AllVtablesHaveTypeInfos = ctx.ltoAllVtablesHaveTypeInfos;
+  c.AllVtablesHaveTypeInfos = ctx.getLtoAllVtablesHaveTypeInfos();
   c.AlwaysEmitRegularLTOObj = !ctx.arg.ltoObjPath.empty();
   c.KeepSymbolNameCopies = false;
 
   for (const llvm::StringRef &name : ctx.arg.thinLTOModulesToCompile)
     c.ThinLTOModulesToCompile.emplace_back(name);
 
-  c.TimeTraceEnabled = ctx.arg.timeTraceEnabled;
+  c.TimeTraceEnabled = ctx.arg.getTimeTraceEnabled();
   c.TimeTraceGranularity = ctx.arg.timeTraceGranularity;
 
   c.CSIRProfile = std::string(ctx.arg.ltoCSProfileFile);
@@ -184,7 +184,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   // Initialize ltoObj.
   lto::ThinBackend backend;
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
-  if (ctx.arg.thinLTOIndexOnly) {
+  if (ctx.arg.getThinLTOIndexOnly()) {
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.arg.thinLTOJobs),
         std::string(ctx.arg.thinLTOPrefixReplaceOld),
@@ -212,10 +212,12 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         createConfig(ctx), ctx.arg.ltoPartitions, ltoModes[ctx.arg.ltoKind],
         onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
-        ctx.arg.dtltoDistributor, ctx.arg.dtltoDistributorArgs,
-        ctx.arg.dtltoCompiler, ctx.arg.dtltoCompilerPrependArgs,
-        ctx.arg.dtltoCompilerArgs, createAddBufferFn(files, filenames),
-        !ctx.arg.saveTempsArgs.empty());
+        ctx.arg.dtltoDistributor,
+        ArrayRef<StringRef>(ctx.arg.dtltoDistributorArgs),
+        ctx.arg.dtltoCompiler,
+        ArrayRef<StringRef>(ctx.arg.dtltoCompilerPrependArgs),
+        ArrayRef<StringRef>(ctx.arg.dtltoCompilerArgs),
+        createAddBufferFn(files, filenames), !ctx.arg.saveTempsArgs.empty());
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;
@@ -238,7 +240,7 @@ void BitcodeCompiler::waitForLTOCleanup() {
 
 void BitcodeCompiler::add(BitcodeFile &f) {
   lto::InputFile &obj = *f.obj;
-  bool isExec = !ctx.arg.shared && !ctx.arg.relocatable;
+  bool isExec = !ctx.arg.getShared() && !ctx.arg.getRelocatable();
 
   if (ctx.arg.thinLTOEmitIndexFiles)
     thinIndices.insert(obj.getName());
@@ -268,10 +270,10 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // 4) Symbols that are defined in bitcode files and used for dynamic
     //    linking.
     // 5) Symbols that will be referenced after linker wrapping is performed.
-    r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
-                            sym->referencedAfterWrap ||
-                            (r.Prevailing && sym->isExported) ||
-                            usedStartStop.contains(objSym.getSectionName());
+    r.VisibleToRegularObj =
+        ctx.arg.getRelocatable() || sym->isUsedInRegularObj ||
+        sym->referencedAfterWrap || (r.Prevailing && sym->isExported) ||
+        usedStartStop.contains(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
     r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&
@@ -309,7 +311,7 @@ static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
     linkedBitCodeFiles.insert(f->getName());
 
   for (BitcodeFile *f : ctx.lazyBitcodeFiles) {
-    if (!f->lazy)
+    if (!f->getLazy())
       continue;
     if (linkedBitCodeFiles.contains(f->getName()))
       continue;
@@ -367,7 +369,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   if (ctx.arg.thinLTOEmitIndexFiles)
     thinLTOCreateEmptyIndexFiles(ctx);
 
-  if (ctx.arg.thinLTOIndexOnly) {
+  if (ctx.arg.getThinLTOIndexOnly()) {
     if (!ctx.arg.ltoObjPath.empty())
       saveBuffer(buf[0].second, ctx.arg.ltoObjPath);
 

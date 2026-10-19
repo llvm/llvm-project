@@ -46,6 +46,7 @@
 #include "llvm/ADT/PagedVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -678,16 +679,31 @@ class SourceManager : public RefCountedBase<SourceManager> {
 
   /// True if the ContentCache for files that are overridden by other
   /// files, should report the original file name. Defaults to true.
-  bool OverridenFilesKeepOriginalName = true;
+  bool getOverridenFilesKeepOriginalNameFlag() const {
+    return !StoredModuleBuildStack.getFlag(0);
+  }
+  void setOverridenFilesKeepOriginalNameFlag(bool Value) {
+    StoredModuleBuildStack.setFlag(0, !Value);
+  }
 
   /// True if non-system source files should be treated as volatile
   /// (likely to change while trying to use them). Defaults to false.
-  bool UserFilesAreVolatile;
+  bool getUserFilesAreVolatile() const {
+    return StoredModuleBuildStack.getFlag(1);
+  }
+  void setUserFilesAreVolatile(bool Value) {
+    StoredModuleBuildStack.setFlag(1, Value);
+  }
 
   /// True if all files read during this compilation should be treated
   /// as transient (may not be present in later compilations using a module
   /// file created from this compilation). Defaults to false.
-  bool FilesAreTransient = false;
+  bool getFilesAreTransient() const {
+    return StoredModuleBuildStack.getFlag(2);
+  }
+  void setFilesAreTransient(bool Value) {
+    StoredModuleBuildStack.setFlag(2, Value);
+  }
 
   struct OverriddenFilesInfoTy {
     /// Files that have been overridden with the contents from another
@@ -844,7 +860,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// There is no way to set this value from the command line. If we ever need
   /// to do so (e.g., if on-demand module construction moves out-of-process),
   /// we can add a cc1-level option to do so.
-  SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
+  llvm::SmallVectorWithFlags<std::pair<std::string, FullSourceLoc>, 2, 3>
+      StoredModuleBuildStack;
 
 public:
   SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
@@ -867,12 +884,12 @@ public:
   /// for contents of files that were overridden by other files. Defaults to
   /// true.
   void setOverridenFilesKeepOriginalName(bool value) {
-    OverridenFilesKeepOriginalName = value;
+    setOverridenFilesKeepOriginalNameFlag(value);
   }
 
   /// True if non-system source files should be treated as volatile
   /// (likely to change while trying to use them).
-  bool userFilesAreVolatile() const { return UserFilesAreVolatile; }
+  bool userFilesAreVolatile() const { return getUserFilesAreVolatile(); }
 
   /// Retrieve the module build stack.
   ModuleBuildStack getModuleBuildStack() const {
@@ -1046,7 +1063,7 @@ public:
   /// Specify that all files that are read during this compilation are
   /// transient.
   void setAllFilesAreTransient(bool Transient) {
-    FilesAreTransient = Transient;
+    setFilesAreTransient(Transient);
   }
 
   //===--------------------------------------------------------------------===//

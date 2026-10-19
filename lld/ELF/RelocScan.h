@@ -78,7 +78,7 @@ public:
   void processR_PC(RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
     if (LLVM_UNLIKELY(sym.isGnuIFunc()))
       sym.setFlags(HAS_DIRECT_RELOC);
-    if (sym.isPreemptible || (isAbsolute(sym) && ctx.arg.isPic))
+    if (sym.isPreemptible || (isAbsolute(sym) && ctx.arg.getIsPic()))
       processAux(R_PC, type, offset, sym, addend);
     else
       sec->addReloc({R_PC, type, offset, addend, &sym});
@@ -96,7 +96,7 @@ public:
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_PLT);
       sec->addReloc({R_PLT_PC, type, offset, addend, &sym});
-    } else if (!(isAbsolute(sym) && ctx.arg.isPic)) {
+    } else if (!(isAbsolute(sym) && ctx.arg.getIsPic())) {
       sec->addReloc({R_PC, type, offset, addend, &sym});
     } else {
       processAux(R_PC, type, offset, sym, addend);
@@ -107,14 +107,14 @@ public:
   template <bool enableIeToLe = true>
   void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
-    if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
+    if (enableIeToLe && !ctx.arg.getShared() && !sym.isPreemptible) {
       // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     } else {
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
       // PIC when the relocation uses the full address (not just low page bits).
-      if (ieExpr == R_GOT && ctx.arg.isPic &&
+      if (ieExpr == R_GOT && ctx.arg.getIsPic() &&
           !ctx.target->usesOnlyLowPageBits(type))
         ctx.in.relaDyn->addRelativeReloc<true>(ctx.target->relativeRel, *sec,
                                                offset, sym, addend, type,
@@ -128,7 +128,7 @@ public:
   // call should be skipped (i.e., caller should ++it).
   bool handleTlsLd(RelExpr sharedExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
-    if (ctx.arg.shared) {
+    if (ctx.arg.getShared()) {
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
       return false;
@@ -143,7 +143,7 @@ public:
   // ieExpr/leExpr to disable GD-to-IE/LE optimization (e.g. ARM, RISC-V).
   bool handleTlsGd(RelExpr sharedExpr, RelExpr ieExpr, RelExpr leExpr,
                    RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
-    if (!ctx.arg.shared && ieExpr != R_NONE) {
+    if (!ctx.arg.getShared() && ieExpr != R_NONE) {
       if (sym.isPreemptible) {
         // Optimize to Initial Exec.
         sym.setFlags(NEEDS_TLSIE);
@@ -162,7 +162,7 @@ public:
   // Handle TLSDESC relocation.
   void handleTlsDesc(RelExpr sharedExpr, RelExpr ieExpr, RelType type,
                      uint64_t offset, int64_t addend, Symbol &sym) {
-    if (ctx.arg.shared) {
+    if (ctx.arg.getShared()) {
       sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
     } else if (sym.isPreemptible) {

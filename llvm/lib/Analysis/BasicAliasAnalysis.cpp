@@ -1437,7 +1437,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // on corresponding edges. Don't do this if we are analyzing across
   // iterations, as we may pick a different phi entry in different iterations.
   if (const PHINode *PN2 = dyn_cast<PHINode>(V2))
-    if (PN2->getParent() == PN->getParent() && !AAQI.MayBeCrossIteration) {
+    if (PN2->getParent() == PN->getParent() && !AAQI.mayBeCrossIteration()) {
       std::optional<AliasResult> Alias;
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         AliasResult ThisAlias = AAQI.AAR.alias(
@@ -1515,7 +1515,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
 
   // In the recursive alias queries below, we may compare values from two
   // different loop iterations.
-  SaveAndRestore SavedMayBeCrossIteration(AAQI.MayBeCrossIteration, true);
+  bool WasCrossIteration = AAQI.mayBeCrossIteration();
+  auto RestoreCrossIteration =
+      scope_exit([&] { AAQI.setMayBeCrossIteration(WasCrossIteration); });
+  AAQI.setMayBeCrossIteration(true);
 
   AliasResult Alias = AAQI.AAR.alias(MemoryLocation(V1Srcs[0], PNSize),
                                      MemoryLocation(V2, V2Size), AAQI);
@@ -1701,8 +1704,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // otherwise infinitely recursive queries. Include MayBeCrossIteration in the
   // cache key, because some cases where MayBeCrossIteration==false returns
   // MustAlias or NoAlias may become MayAlias under MayBeCrossIteration==true.
-  AAQueryInfo::LocPair Locs({V1, V1Size, AAQI.MayBeCrossIteration},
-                            {V2, V2Size, AAQI.MayBeCrossIteration});
+  AAQueryInfo::LocPair Locs({V1, V1Size, AAQI.mayBeCrossIteration()},
+                            {V2, V2Size, AAQI.mayBeCrossIteration()});
   const bool Swapped = V1 > V2;
   if (Swapped)
     std::swap(Locs.first, Locs.second);
@@ -1874,7 +1877,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (V != V2)
     return false;
 
-  if (!AAQI.MayBeCrossIteration)
+  if (!AAQI.mayBeCrossIteration())
     return true;
 
   // Non-instructions and instructions in the entry block cannot be part of
@@ -2048,7 +2051,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const VariableGEPIndex &Var1 = VarIndices[1];
     bool Preconditions =
         Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
-        !AAQI.MayBeCrossIteration && MultiplyByScaleNoWrap(Var0) &&
+        !AAQI.mayBeCrossIteration() && MultiplyByScaleNoWrap(Var0) &&
         MultiplyByScaleNoWrap(Var1);
 
     if (!Preconditions)

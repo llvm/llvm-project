@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCOBJECTWRITER_H
 #define LLVM_MC_MCOBJECTWRITER_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -35,12 +36,11 @@ class LLVM_ABI MCObjectWriter {
 protected:
   MCAssembler *Asm = nullptr;
   /// List of declared file names
-  SmallVector<std::pair<std::string, size_t>, 0> FileNames;
+  // Flag bits 0 and 1 record addrsig and subsections-via-symbols emission.
+  SmallVectorWithFlags<std::pair<std::string, size_t>, 0, 2> FileNames;
   // XCOFF specific: Optional compiler version.
   std::string CompilerVersion;
   std::vector<const MCSymbol *> AddrsigSyms;
-  bool EmitAddrsigSection = false;
-  bool SubsectionsViaSymbols = false;
 
   struct CGProfileEntry {
     const MCSymbolRefExpr *From;
@@ -106,9 +106,9 @@ public:
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
   /// address-significant.
-  void emitAddrsigSection() { EmitAddrsigSection = true; }
+  void emitAddrsigSection() { FileNames.setFlag(0, true); }
 
-  bool getEmitAddrsigSection() { return EmitAddrsigSection; }
+  bool getEmitAddrsigSection() { return FileNames.getFlag(0); }
 
   /// Record the given symbol in the address-significance table to be written
   /// diring writeObject().
@@ -118,8 +118,8 @@ public:
   SmallVector<CGProfileEntry, 0> &getCGProfile() { return CGProfile; }
 
   // Mach-O specific: Whether .subsections_via_symbols is enabled.
-  bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
-  void setSubsectionsViaSymbols(bool Value) { SubsectionsViaSymbols = Value; }
+  bool getSubsectionsViaSymbols() const { return FileNames.getFlag(1); }
+  void setSubsectionsViaSymbols(bool Value) { FileNames.setFlag(1, Value); }
 
   /// Write the object file and returns the number of bytes written.
   ///

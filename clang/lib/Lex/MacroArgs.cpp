@@ -14,8 +14,10 @@
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
+#include <memory>
 
 using namespace clang;
 
@@ -168,7 +170,13 @@ const std::vector<Token> &MacroArgs::getPreExpArgument(unsigned Arg,
   std::vector<Token> &Result = PreExpArgTokens[Arg];
   if (!Result.empty()) return Result;
 
-  SaveAndRestore PreExpandingMacroArgs(PP.InMacroArgPreExpansion, true);
+  auto PreExpandingMacroArgs = [PackedFlagOwner = std::addressof(PP)] {
+    const bool PackedFlagOld = PackedFlagOwner->getInMacroArgPreExpansion();
+    PackedFlagOwner->setInMacroArgPreExpansion(true);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setInMacroArgPreExpansion(PackedFlagOld);
+    });
+  }();
 
   const Token *AT = getUnexpArgument(Arg);
   unsigned NumToks = getArgLength(AT)+1;  // Include the EOF.

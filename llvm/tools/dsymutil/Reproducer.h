@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_REPRODUCER_H
 #define LLVM_TOOLS_DSYMUTIL_REPRODUCER_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -63,13 +64,15 @@ private:
   std::shared_ptr<FileCollector> FC;
 
   /// The input arguments to build the reproducer invocation.
-  llvm::SmallVector<llvm::StringRef, 0> Args;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 2> Args;
 
   /// Whether to generate the reproducer on destruction.
-  bool GenerateOnExit = false;
+  bool getGenerateOnExit() const { return Args.getFlag(0); }
+  void setGenerateOnExit(bool Value) { Args.setFlag(0, Value); }
 
   /// Whether we already generated the reproducer.
-  bool Generated = false;
+  bool getGenerated() const { return Args.getFlag(1); }
+  void setGenerated(bool Value) { Args.setFlag(1, Value); }
 };
 
 /// Reproducer instance used to use an existing reproducer. The VFS returned by

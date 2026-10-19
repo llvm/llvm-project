@@ -446,7 +446,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Unknown CF  : true";
   if (getPersonalityFunction())
     OS << "\n  Personality : " << getPersonalityFunction()->getName();
-  if (IsFragment)
+  if (getIsFragmentFlag())
     OS << "\n  IsFragment  : true";
   if (isFolded())
     OS << "\n  FoldedInto  : " << *getFoldedIntoFunction();
@@ -4605,7 +4605,7 @@ DebugAddressRangesVector BinaryFunction::getOutputAddressRanges() const {
   if (isFolded())
     return OutputRanges;
 
-  if (IsFragment)
+  if (getIsFragmentFlag())
     return OutputRanges;
 
   OutputRanges.emplace_back(getOutputAddress(),

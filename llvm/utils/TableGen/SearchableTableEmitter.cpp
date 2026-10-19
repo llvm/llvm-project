@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -80,9 +81,11 @@ struct GenericField {
 struct SearchIndex {
   std::string Name;
   SMLoc Loc; // Source location of PrimaryKey or Key field definition.
-  SmallVector<GenericField, 1> Fields;
-  bool EarlyOut = false;
-  bool ReturnRange = false;
+  llvm::SmallVectorWithFlags<GenericField, 1, 2> Fields;
+  bool getEarlyOut() const { return Fields.getFlag(0); }
+  void setEarlyOut(bool Value) { Fields.setFlag(0, Value); }
+  bool getReturnRange() const { return Fields.getFlag(1); }
+  void setReturnRange(bool Value) { Fields.setFlag(1, Value); }
 };
 
 struct GenericTable {
@@ -94,9 +97,10 @@ struct GenericTable {
   std::vector<const Record *> Entries;
 
   std::unique_ptr<SearchIndex> PrimaryKey;
-  SmallVector<std::unique_ptr<SearchIndex>, 2> Indices;
+  llvm::SmallVectorWithFlags<std::unique_ptr<SearchIndex>, 2> Indices;
 
-  bool AllowSparseTable;
+  bool getAllowSparseTable() const { return Indices.getFlag(0); }
+  void setAllowSparseTable(bool Value) { Indices.setFlag(0, Value); }
 
   const GenericField *getFieldByName(StringRef Name) const {
     for (const auto &Field : Fields) {
@@ -442,7 +446,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     }
   }
 
-  if (Index.EarlyOut || IsContiguous) {
+  if (Index.getEarlyOut() || IsContiguous) {
     const GenericField &Field = Index.Fields[0];
     std::string FirstRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
@@ -454,7 +458,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
        << ">(" << Field.Name << ", " << FirstRepr << ", " << LastRepr << "))\n";
     OS << "    return nullptr;\n\n";
 
-    if (IsContiguous && !Index.EarlyOut) {
+    if (IsContiguous && !Index.getEarlyOut()) {
       OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
       OS << "  size_t Idx = " << Field.Name << " - " << FirstRepr << ";\n";
       OS << "  return ";
@@ -538,7 +542,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     OS << "    }\n";
   };
   emitComparator(false, true);
-  bool ShouldReturnRange = Index.ReturnRange;
+  bool ShouldReturnRange = Index.getReturnRange();
   if (ShouldReturnRange) {
     OS << "    bool operator()(const KeyType &LHS, const " << IndexTypeName
        << " &RHS) const {\n";
@@ -580,7 +584,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
 void SearchableTableEmitter::emitLookupDeclaration(const GenericTable &Table,
                                                    const SearchIndex &Index,
                                                    raw_ostream &OS) {
-  if (Index.ReturnRange)
+  if (Index.getReturnRange())
     OS << "llvm::iterator_range<const " << Table.CppTypeName << " *> ";
   else
     OS << "const " << Table.CppTypeName << " *";
@@ -621,7 +625,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   SmallVector<const Record *, 0> SparseEntries;
   ArrayRef<const Record *> Entries;
   unsigned DirectLookupSlots = 0;
-  if (Table.AllowSparseTable) {
+  if (Table.getAllowSparseTable()) {
     const auto *KeyBits = cast<BitsRecTy>(Table.PrimaryKey->Fields[0].RecType);
     DirectLookupSlots = 1u << KeyBits->getNumBits();
     SparseEntries.resize(DirectLookupSlots);
@@ -658,7 +662,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
           OS << primaryRepresentation(Table.Locs[0], Field, Value);
         }
       }
-    } else if (Table.AllowSparseTable) {
+    } else if (Table.getAllowSparseTable()) {
       // For empty rows emit a sentinel value as a key, so we can return null
       // during lookup. Value is constructed such that LookupKey != KeyField.
       for (const auto &Field : Table.Fields) {
@@ -677,7 +681,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   // The lookup function might add more strings.
   std::string LookupFunction;
   raw_string_ostream LFOS(LookupFunction);
-  if (Table.AllowSparseTable) {
+  if (Table.getAllowSparseTable()) {
     LFOS << "\n";
     emitLookupDeclaration(Table, *Table.PrimaryKey, LFOS);
     LFOS << " {\n";
@@ -741,8 +745,8 @@ std::unique_ptr<SearchIndex> SearchableTableEmitter::parseSearchIndex(
   auto Index = std::make_unique<SearchIndex>();
   Index->Name = Name.str();
   Index->Loc = KeyRecVal->getLoc();
-  Index->EarlyOut = EarlyOut;
-  Index->ReturnRange = ReturnRange;
+  Index->setEarlyOut(EarlyOut);
+  Index->setReturnRange(ReturnRange);
 
   for (const auto &FieldName : Key) {
     const GenericField *Field = Table.getFieldByName(FieldName);
@@ -979,7 +983,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
                           return compareBy(LHS, RHS, *Table->PrimaryKey);
                         });
 
-      Table->AllowSparseTable = canUseSparseTable(TableRec, Table);
+      Table->setAllowSparseTable(canUseSparseTable(TableRec, Table));
     }
 
     TableMap.try_emplace(TableRec, Table.get());
@@ -1003,7 +1007,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
         IndexRec->getValueAsBit("EarlyOut"), /*ReturnRange*/ false));
 
     // Sparse tables with secondary search indices are not supported.
-    Table.AllowSparseTable = false;
+    Table.setAllowSparseTable(false);
   }
 
   // Translate legacy tables.

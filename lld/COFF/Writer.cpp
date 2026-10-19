@@ -1113,7 +1113,7 @@ void Writer::createSections() {
   for (Chunk *c : ctx.driver.getChunks()) {
     auto *sc = dyn_cast<SectionChunk>(c);
     if (sc && !sc->live) {
-      if (ctx.config.verbose)
+      if (ctx.config.getVerbose())
         sc->printDiscardedMessage();
       continue;
     }
@@ -1888,7 +1888,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     coff->Characteristics |= IMAGE_FILE_LARGE_ADDRESS_AWARE;
   if (!config->is64())
     coff->Characteristics |= IMAGE_FILE_32BIT_MACHINE;
-  if (config->dll)
+  if (config->getDll())
     coff->Characteristics |= IMAGE_FILE_DLL;
   if (config->driverUponly)
     coff->Characteristics |= IMAGE_FILE_UP_SYSTEM_ONLY;
@@ -2797,7 +2797,7 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &chunks) {
   };
   llvm::stable_sort(chunks, sectionChunkOrder);
 
-  if (ctx.config.verbose) {
+  if (ctx.config.getVerbose()) {
     for (auto &c : chunks) {
       auto sc = dyn_cast<SectionChunk>(c);
       Log(ctx) << "  " << sc->file->mb.getBufferIdentifier().str()

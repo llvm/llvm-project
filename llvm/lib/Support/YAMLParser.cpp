@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -259,7 +260,8 @@ public:
 
   void printError(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Message,
                   ArrayRef<SMRange> Ranges = {}) {
-    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ {}, ShowColors);
+    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ {},
+                    getShowColors());
   }
 
   void setError(const Twine &Message, StringRef::iterator Position) {
@@ -272,15 +274,13 @@ public:
 
     // Don't print out more errors after the first one we encounter. The rest
     // are just the result of the first, and have no meaning.
-    if (!Failed)
+    if (!getFailed())
       printError(SMLoc::getFromPointer(Position), SourceMgr::DK_Error, Message);
-    Failed = true;
+    setFailed(true);
   }
 
   /// Returns true if an error occurred while parsing.
-  bool failed() {
-    return Failed;
-  }
+  bool failed() { return getFailed(); }
 
 private:
   void init(MemoryBufferRef Buffer);
@@ -543,20 +543,27 @@ private:
   unsigned FlowLevel;
 
   /// Are we at the start of the stream?
-  bool IsStartOfStream;
+  bool getIsStartOfStream() const { return SimpleKeys.getFlag(0); }
+  void setIsStartOfStream(bool Value) { SimpleKeys.setFlag(0, Value); }
 
   /// Can the next token be the start of a simple key?
-  bool IsSimpleKeyAllowed;
+  bool getIsSimpleKeyAllowed() const { return SimpleKeys.getFlag(1); }
+  void setIsSimpleKeyAllowed(bool Value) { SimpleKeys.setFlag(1, Value); }
 
   /// Can the next token be a value indicator even if it does not have a
   /// trailing space?
-  bool IsAdjacentValueAllowedInFlow;
+  bool getIsAdjacentValueAllowedInFlow() const { return SimpleKeys.getFlag(2); }
+  void setIsAdjacentValueAllowedInFlow(bool Value) {
+    SimpleKeys.setFlag(2, Value);
+  }
 
   /// True if an error has occurred.
-  bool Failed;
+  bool getFailed() const { return SimpleKeys.getFlag(3); }
+  void setFailed(bool Value) { SimpleKeys.setFlag(3, Value); }
 
   /// Should colors be used when printing out the diagnostic messages?
-  bool ShowColors;
+  bool getShowColors() const { return Indents.getFlag(0); }
+  void setShowColors(bool Value) { Indents.setFlag(0, Value); }
 
   /// Queue of tokens. This is required to queue up tokens while looking
   ///        for the end of a simple key. And for cases where a single character
@@ -564,10 +571,10 @@ private:
   TokenQueueT TokenQueue;
 
   /// Indentation levels.
-  SmallVector<int, 4> Indents;
+  llvm::SmallVectorWithFlags<int, 4> Indents;
 
   /// Potential simple keys.
-  SmallVector<SimpleKey, 4> SimpleKeys;
+  llvm::SmallVectorWithFlags<SimpleKey, 4, 4> SimpleKeys;
 
   std::error_code *EC;
 };
@@ -856,13 +863,16 @@ std::optional<bool> yaml::parseBool(StringRef S) {
 
 Scanner::Scanner(StringRef Input, SourceMgr &sm, bool ShowColors,
                  std::error_code *EC)
-    : SM(sm), ShowColors(ShowColors), EC(EC) {
+    : SM(sm), Indents(decltype(this->Indents)::withFlags(unsigned(ShowColors))),
+      EC(EC) {
   init(MemoryBufferRef(Input, "YAML"));
 }
 
 Scanner::Scanner(MemoryBufferRef Buffer, SourceMgr &SM_, bool ShowColors,
                  std::error_code *EC)
-    : SM(SM_), ShowColors(ShowColors), EC(EC) {
+    : SM(SM_),
+      Indents(decltype(this->Indents)::withFlags(unsigned(ShowColors))),
+      EC(EC) {
   init(Buffer);
 }
 
@@ -874,10 +884,10 @@ void Scanner::init(MemoryBufferRef Buffer) {
   Column = 0;
   Line = 0;
   FlowLevel = 0;
-  IsStartOfStream = true;
-  IsSimpleKeyAllowed = true;
-  IsAdjacentValueAllowedInFlow = false;
-  Failed = false;
+  setIsStartOfStream(true);
+  setIsSimpleKeyAllowed(true);
+  setIsAdjacentValueAllowedInFlow(false);
+  setFailed(false);
   std::unique_ptr<MemoryBuffer> InputBufferOwner =
       MemoryBuffer::getMemBuffer(Buffer, /*RequiresNullTerminator=*/false);
   SM.AddNewSourceBuffer(std::move(InputBufferOwner), SMLoc());
@@ -1086,7 +1096,7 @@ bool Scanner::consumeLineBreakIfPresent() {
 void Scanner::saveSimpleKeyCandidate( TokenQueueT::iterator Tok
                                     , unsigned AtColumn
                                     , bool IsRequired) {
-  if (IsSimpleKeyAllowed) {
+  if (getIsSimpleKeyAllowed()) {
     SimpleKey SK;
     SK.Tok = Tok;
     SK.Line = Line;
@@ -1180,12 +1190,12 @@ void Scanner::scanToNextToken() {
     Column = 0;
     // New lines may start a simple key.
     if (!FlowLevel)
-      IsSimpleKeyAllowed = true;
+      setIsSimpleKeyAllowed(true);
   }
 }
 
 bool Scanner::scanStreamStart() {
-  IsStartOfStream = false;
+  setIsStartOfStream(false);
 
   EncodingInfo EI = getUnicodeEncoding(currentInput());
 
@@ -1206,8 +1216,8 @@ bool Scanner::scanStreamEnd() {
 
   unrollIndent(-1);
   SimpleKeys.clear();
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(false);
 
   Token T;
   T.Kind = Token::TK_StreamEnd;
@@ -1220,8 +1230,8 @@ bool Scanner::scanDirective() {
   // Reset the indentation level.
   unrollIndent(-1);
   SimpleKeys.clear();
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(false);
 
   StringRef::iterator Start = Current;
   consume('%');
@@ -1252,8 +1262,8 @@ bool Scanner::scanDirective() {
 bool Scanner::scanDocumentIndicator(bool IsStart) {
   unrollIndent(-1);
   SimpleKeys.clear();
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(false);
 
   Token T;
   T.Kind = IsStart ? Token::TK_DocumentStart : Token::TK_DocumentEnd;
@@ -1275,17 +1285,17 @@ bool Scanner::scanFlowCollectionStart(bool IsSequence) {
   saveSimpleKeyCandidate(--TokenQueue.end(), Column - 1, false);
 
   // And may also be followed by a simple key.
-  IsSimpleKeyAllowed = true;
+  setIsSimpleKeyAllowed(true);
   // Adjacent values are allowed in flows only after JSON-style keys.
-  IsAdjacentValueAllowedInFlow = false;
+  setIsAdjacentValueAllowedInFlow(false);
   ++FlowLevel;
   return true;
 }
 
 bool Scanner::scanFlowCollectionEnd(bool IsSequence) {
   removeSimpleKeyCandidatesOnFlowLevel(FlowLevel);
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = true;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(true);
   Token T;
   T.Kind = IsSequence ? Token::TK_FlowSequenceEnd
                       : Token::TK_FlowMappingEnd;
@@ -1299,8 +1309,8 @@ bool Scanner::scanFlowCollectionEnd(bool IsSequence) {
 
 bool Scanner::scanFlowEntry() {
   removeSimpleKeyCandidatesOnFlowLevel(FlowLevel);
-  IsSimpleKeyAllowed = true;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(true);
+  setIsAdjacentValueAllowedInFlow(false);
   Token T;
   T.Kind = Token::TK_FlowEntry;
   T.Range = StringRef(Current, 1);
@@ -1312,8 +1322,8 @@ bool Scanner::scanFlowEntry() {
 bool Scanner::scanBlockEntry() {
   rollIndent(Column, Token::TK_BlockSequenceStart, TokenQueue.end());
   removeSimpleKeyCandidatesOnFlowLevel(FlowLevel);
-  IsSimpleKeyAllowed = true;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(true);
+  setIsAdjacentValueAllowedInFlow(false);
   Token T;
   T.Kind = Token::TK_BlockEntry;
   T.Range = StringRef(Current, 1);
@@ -1327,8 +1337,8 @@ bool Scanner::scanKey() {
     rollIndent(Column, Token::TK_BlockMappingStart, TokenQueue.end());
 
   removeSimpleKeyCandidatesOnFlowLevel(FlowLevel);
-  IsSimpleKeyAllowed = !FlowLevel;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(!FlowLevel);
+  setIsAdjacentValueAllowedInFlow(false);
 
   Token T;
   T.Kind = Token::TK_Key;
@@ -1352,7 +1362,7 @@ bool Scanner::scanValue() {
         break;
     }
     if (i == e) {
-      Failed = true;
+      setFailed(true);
       return false;
     }
     i = TokenQueue.insert(i, T);
@@ -1360,13 +1370,13 @@ bool Scanner::scanValue() {
     // We may also need to add a Block-Mapping-Start token.
     rollIndent(SK.Column, Token::TK_BlockMappingStart, i);
 
-    IsSimpleKeyAllowed = false;
+    setIsSimpleKeyAllowed(false);
   } else {
     if (!FlowLevel)
       rollIndent(Column, Token::TK_BlockMappingStart, TokenQueue.end());
-    IsSimpleKeyAllowed = !FlowLevel;
+    setIsSimpleKeyAllowed(!FlowLevel);
   }
-  IsAdjacentValueAllowedInFlow = false;
+  setIsAdjacentValueAllowedInFlow(false);
 
   Token T;
   T.Kind = Token::TK_Value;
@@ -1447,8 +1457,8 @@ bool Scanner::scanFlowScalar(bool IsDoubleQuoted) {
 
   saveSimpleKeyCandidate(--TokenQueue.end(), ColStart, false);
 
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = true;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(true);
 
   return true;
 }
@@ -1515,8 +1525,8 @@ bool Scanner::scanPlainScalar() {
   // Plain scalars can be simple keys.
   saveSimpleKeyCandidate(--TokenQueue.end(), ColStart, false);
 
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(false);
 
   return true;
 }
@@ -1551,8 +1561,8 @@ bool Scanner::scanAliasOrAnchor(bool IsAlias) {
   // Alias and anchors can be simple keys.
   saveSimpleKeyCandidate(--TokenQueue.end(), ColStart, false);
 
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(false);
 
   return true;
 }
@@ -1784,8 +1794,8 @@ bool Scanner::scanBlockScalar(bool IsLiteral) {
 
   // New lines may start a simple key.
   if (!FlowLevel)
-    IsSimpleKeyAllowed = true;
-  IsAdjacentValueAllowedInFlow = false;
+    setIsSimpleKeyAllowed(true);
+  setIsAdjacentValueAllowedInFlow(false);
 
   Token T;
   T.Kind = Token::TK_BlockScalar;
@@ -1818,14 +1828,14 @@ bool Scanner::scanTag() {
   // Tags can be simple keys.
   saveSimpleKeyCandidate(--TokenQueue.end(), ColStart, false);
 
-  IsSimpleKeyAllowed = false;
-  IsAdjacentValueAllowedInFlow = false;
+  setIsSimpleKeyAllowed(false);
+  setIsAdjacentValueAllowedInFlow(false);
 
   return true;
 }
 
 bool Scanner::fetchMoreTokens() {
-  if (IsStartOfStream)
+  if (getIsStartOfStream())
     return scanStreamStart();
 
   scanToNextToken();
@@ -1876,7 +1886,7 @@ bool Scanner::fetchMoreTokens() {
     return scanKey();
 
   if (*Current == ':' &&
-      (!isPlainSafeNonBlank(Current + 1) || IsAdjacentValueAllowedInFlow))
+      (!isPlainSafeNonBlank(Current + 1) || getIsAdjacentValueAllowedInFlow()))
     return scanValue();
 
   if (*Current == '*')

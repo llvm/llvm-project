@@ -17,6 +17,7 @@
 #include "ARM.h"
 #include "ARMSubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -64,9 +65,15 @@ namespace {
     Instruction   *Root;
     Value*        LHS;
     Value*        RHS;
-    bool          Exchange = false;
-    bool          Paired = false;
-    SmallVector<LoadInst*, 2> VecLd;    // Container for loads to widen.
+    bool getExchange() const { return VecLd.getFlag(0); }
+    bool setExchange(bool Value) {
+      VecLd.setFlag(0, Value);
+      return Value;
+    }
+    bool getPaired() const { return VecLd.getFlag(1); }
+    void setPaired(bool Value) { VecLd.setFlag(1, Value); }
+    llvm::SmallVectorWithFlags<LoadInst *, 2, 2>
+        VecLd; // Container for loads to widen.
 
     MulCandidate(Instruction *I, Value *lhs, Value *rhs) :
       Root(I), LHS(lhs), RHS(rhs) { }
@@ -145,10 +152,10 @@ namespace {
       LLVM_DEBUG(dbgs() << "Pairing:\n"
                  << *Mul0->Root << "\n"
                  << *Mul1->Root << "\n");
-      Mul0->Paired = true;
-      Mul1->Paired = true;
+      Mul0->setPaired(true);
+      Mul1->setPaired(true);
       if (Exchange)
-        Mul1->Exchange = true;
+        Mul1->setExchange(true);
       MulPairs.push_back(std::make_pair(Mul0, Mul1));
     }
 
@@ -196,8 +203,7 @@ namespace {
     SmallVector<LoadInst*, 4> Loads;
 
   public:
-    WidenedLoad(SmallVectorImpl<LoadInst*> &Lds, LoadInst *Wide)
-      : NewLd(Wide) {
+    WidenedLoad(ArrayRef<LoadInst *> Lds, LoadInst *Wide) : NewLd(Wide) {
       append_range(Loads, Lds);
     }
     LoadInst *getLoad() {
@@ -221,8 +227,9 @@ namespace {
     bool Search(Value *V, BasicBlock *BB, Reduction &R);
     bool RecordMemoryOps(BasicBlock *BB);
     void InsertParallelMACs(Reduction &Reduction);
-    bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, MemInstList &VecMem);
-    LoadInst* CreateWideLoad(MemInstList &Loads, IntegerType *LoadTy);
+    template <typename LoadVectorT>
+    bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, LoadVectorT &VecMem);
+    LoadInst *CreateWideLoad(ArrayRef<LoadInst *> Loads, IntegerType *LoadTy);
     bool CreateParallelPairs(Reduction &R);
 
     /// Try to match and generate: SMLAD, SMLADX - Signed Multiply Accumulate
@@ -294,8 +301,9 @@ namespace {
   };
 }
 
+template <typename LoadVectorT>
 bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
-                                        MemInstList &VecMem) {
+                                        LoadVectorT &VecMem) {
   if (!Ld0 || !Ld1)
     return false;
 
@@ -594,7 +602,7 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
   const unsigned Elems = Muls.size();
   for (unsigned i = 0; i < Elems; ++i) {
     MulCandidate *PMul0 = static_cast<MulCandidate*>(Muls[i].get());
-    if (PMul0->Paired)
+    if (PMul0->getPaired())
       continue;
 
     for (unsigned j = 0; j < Elems; ++j) {
@@ -602,7 +610,7 @@ bool ARMParallelDSP::CreateParallelPairs(Reduction &R) {
         continue;
 
       MulCandidate *PMul1 = static_cast<MulCandidate*>(Muls[j].get());
-      if (PMul1->Paired)
+      if (PMul1->getPaired())
         continue;
 
       const Instruction *Mul0 = PMul0->Root;
@@ -667,7 +675,7 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
   IRBuilder<NoFolder> Builder(R.getRoot()->getParent());
   MulCandList &MulCands = R.getMuls();
   for (auto &MulCand : MulCands) {
-    if (MulCand->Paired)
+    if (MulCand->getPaired())
       continue;
 
     Instruction *Mul = cast<Instruction>(MulCand->Root);
@@ -724,12 +732,13 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
 
     Instruction *InsertAfter = GetInsertPoint(WideLHS, WideRHS);
     InsertAfter = GetInsertPoint(InsertAfter, Acc);
-    Acc = CreateSMLAD(WideLHS, WideRHS, Acc, RHSMul->Exchange, InsertAfter);
+    Acc =
+        CreateSMLAD(WideLHS, WideRHS, Acc, RHSMul->getExchange(), InsertAfter);
   }
   R.UpdateRoot(cast<Instruction>(Acc));
 }
 
-LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
+LoadInst *ARMParallelDSP::CreateWideLoad(ArrayRef<LoadInst *> Loads,
                                          IntegerType *LoadTy) {
   assert(Loads.size() == 2 && "currently only support widening two loads");
 

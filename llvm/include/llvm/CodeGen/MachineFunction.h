@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -402,9 +403,20 @@ class LLVM_ABI MachineFunction {
   bool CallsUnwindInit = false;
   bool HasEHContTarget = false;
   bool HasEHScopes = false;
-  bool HasEHFunclets = false;
-  bool HasFakeUses = false;
-  bool IsOutlined = false;
+  bool getHasEHFuncletsFlag() const {
+    return DebugValueSubstitutions.getFlag(0);
+  }
+  void setHasEHFuncletsFlag(bool Value) {
+    DebugValueSubstitutions.setFlag(0, Value);
+  }
+  bool getHasFakeUsesFlag() const { return DebugValueSubstitutions.getFlag(1); }
+  void setHasFakeUsesFlag(bool Value) {
+    DebugValueSubstitutions.setFlag(1, Value);
+  }
+  bool getIsOutlinedFlag() const { return DebugValueSubstitutions.getFlag(2); }
+  void setIsOutlinedFlag(bool Value) {
+    DebugValueSubstitutions.setFlag(2, Value);
+  }
 
   /// BBID to assign to the next basic block of this function.
   unsigned NextBBID = 0;
@@ -609,7 +621,7 @@ public:
   /// recording changes in where a value is defined. For example, when one
   /// instruction is substituted for another. Keeping a record allows recovery
   /// of variable locations after compilation finishes.
-  SmallVector<DebugSubstitution, 8> DebugValueSubstitutions;
+  llvm::SmallVectorWithFlags<DebugSubstitution, 8, 4> DebugValueSubstitutions;
 
   /// Location of a PHI instruction that is also a debug-info variable value,
   /// for the duration of register allocation. Loaded by the PHI-elimination
@@ -631,7 +643,12 @@ public:
 
   /// Flag for whether this function contains DBG_VALUEs (false) or
   /// DBG_INSTR_REF (true).
-  bool UseDebugInstrRef = false;
+  bool getUseDebugInstrRefFlag() const {
+    return DebugValueSubstitutions.getFlag(3);
+  }
+  void setUseDebugInstrRefFlag(bool Value) {
+    DebugValueSubstitutions.setFlag(3, Value);
+  }
 
   /// Create a substitution between one <instr,operand> value to a different,
   /// new value.
@@ -1323,14 +1340,14 @@ public:
   bool hasEHScopes() const { return HasEHScopes; }
   void setHasEHScopes(bool V) { HasEHScopes = V; }
 
-  bool hasEHFunclets() const { return HasEHFunclets; }
-  void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+  bool hasEHFunclets() const { return getHasEHFuncletsFlag(); }
+  void setHasEHFunclets(bool V) { setHasEHFuncletsFlag(V); }
 
-  bool hasFakeUses() const { return HasFakeUses; }
-  void setHasFakeUses(bool V) { HasFakeUses = V; }
+  bool hasFakeUses() const { return getHasFakeUsesFlag(); }
+  void setHasFakeUses(bool V) { setHasFakeUsesFlag(V); }
 
-  bool isOutlined() const { return IsOutlined; }
-  void setIsOutlined(bool V) { IsOutlined = V; }
+  bool isOutlined() const { return getIsOutlinedFlag(); }
+  void setIsOutlined(bool V) { setIsOutlinedFlag(V); }
 
   /// Find or create an LandingPadInfo for the specified MachineBasicBlock.
   LandingPadInfo &getOrCreateLandingPadInfo(MachineBasicBlock *LandingPad);

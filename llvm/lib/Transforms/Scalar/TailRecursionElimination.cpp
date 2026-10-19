@@ -53,6 +53,7 @@
 #include "ScalarOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -482,7 +483,7 @@ class TailRecursionEliminator {
   DomTreeUpdater &DTU;
   BlockFrequencyInfo *const BFI;
   ProfileSummaryInfo *const PSI;
-  const bool UpdateFunctionEntryCount;
+  bool getUpdateFunctionEntryCount() const { return RetSelects.getFlag(0); }
   const uint64_t OrigEntryBBFreq;
   const uint64_t OrigEntryCount;
 
@@ -500,7 +501,7 @@ class TailRecursionEliminator {
 
   // Vector of select instructions we insereted. These selects use RetKnownPN
   // to either propagate RetPN or select a new return value.
-  SmallVector<SelectInst *, 8> RetSelects;
+  llvm::SmallVectorWithFlags<SelectInst *, 8> RetSelects;
 
   // Keep track of the sum of frequencies of blocks that have calls eliminated
   // so we can synthesize branch weights later that require information on
@@ -525,10 +526,12 @@ class TailRecursionEliminator {
                           BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
                           bool UpdateFunctionEntryCount)
       : Opts(Opts), F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
-        PSI(PSI), UpdateFunctionEntryCount(UpdateFunctionEntryCount),
+        PSI(PSI),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
-        OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
+        OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0),
+        RetSelects(decltype(this->RetSelects)::withFlags(
+            unsigned(UpdateFunctionEntryCount))) {
     if (BFI) {
       // The assert is meant as API documentation for the caller.
       assert(OrigEntryBBFreq != 0 &&
@@ -966,7 +969,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
-  if (!Opts.tre_disable_entrycount_recompute && UpdateFunctionEntryCount &&
+  if (!Opts.tre_disable_entrycount_recompute && getUpdateFunctionEntryCount() &&
       OrigEntryBBFreq) {
     assert(F.getEntryCount().has_value());
     // This pass is not expected to remove BBs, only add an entry BB. For that

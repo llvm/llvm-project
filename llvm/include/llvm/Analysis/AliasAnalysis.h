@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Function.h"
@@ -284,7 +285,8 @@ public:
   /// Location pairs for which an assumption based result is currently stored.
   /// Used to remove all potentially incorrect results from the cache if an
   /// assumption is disproven.
-  SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
+  // Flag bits 0 and 1 record cross-iteration queries and disabled DT queries.
+  SmallVectorWithFlags<AAQueryInfo::LocPair, 4, 2> AssumptionBasedResults;
 
   /// Tracks whether the accesses may be on different cycle iterations.
   ///
@@ -300,11 +302,17 @@ public:
   ///   %addr2 = gep  %alloca2, 0, (%l + 1)
   ///      alias(%p, %addr1) -> MayAlias !
   ///   store %l, ...
-  bool MayBeCrossIteration = false;
+  bool mayBeCrossIteration() const { return AssumptionBasedResults.getFlag(0); }
+  void setMayBeCrossIteration(bool Value) {
+    AssumptionBasedResults.setFlag(0, Value);
+  }
 
   /// Whether alias analysis is allowed to use the dominator tree, for use by
   /// passes that lazily update the DT while performing AA queries.
-  bool UseDominatorTree = true;
+  bool usesDominatorTree() const { return !AssumptionBasedResults.getFlag(1); }
+  void setUseDominatorTree(bool Value) {
+    AssumptionBasedResults.setFlag(1, !Value);
+  }
 
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
@@ -661,12 +669,10 @@ public:
   }
 
   /// Assume that values may come from different cycle iterations.
-  void enableCrossIterationMode() {
-    AAQI.MayBeCrossIteration = true;
-  }
+  void enableCrossIterationMode() { AAQI.setMayBeCrossIteration(true); }
 
   /// Disable the use of the dominator tree during alias analysis queries.
-  void disableDominatorTree() { AAQI.UseDominatorTree = false; }
+  void disableDominatorTree() { AAQI.setUseDominatorTree(false); }
 };
 
 /// Temporarily set the cross iteration mode on a BatchAA instance.
@@ -676,11 +682,11 @@ class BatchAACrossIterationScope {
 
 public:
   BatchAACrossIterationScope(BatchAAResults &BAA, bool CrossIteration)
-      : BAA(BAA), OrigCrossIteration(BAA.AAQI.MayBeCrossIteration) {
-    BAA.AAQI.MayBeCrossIteration = CrossIteration;
+      : BAA(BAA), OrigCrossIteration(BAA.AAQI.mayBeCrossIteration()) {
+    BAA.AAQI.setMayBeCrossIteration(CrossIteration);
   }
   ~BatchAACrossIterationScope() {
-    BAA.AAQI.MayBeCrossIteration = OrigCrossIteration;
+    BAA.AAQI.setMayBeCrossIteration(OrigCrossIteration);
   }
 };
 

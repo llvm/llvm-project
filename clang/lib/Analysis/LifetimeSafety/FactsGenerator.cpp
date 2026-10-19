@@ -364,7 +364,7 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
       return;
     // Skip address-of on void expressions: GNU C permits them, but void itself
     // has no origins to track.
-    if (IsCMode && SubExpr->getType()->isVoidType())
+    if (getIsCMode() && SubExpr->getType()->isVoidType())
       return;
     assert(!SubExpr->getType()->isVoidType() &&
            "Taking address of void is not valid in C++");
@@ -456,7 +456,7 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
 
   // In C, assignment expressions are not GLValues, so the assignment result has
   // the assigned value origins, not the LHS storage origin.
-  if (IsCMode)
+  if (getIsCMode())
     LHSList = LHSList->peelOuterOrigin();
   flow(getOriginsList(*TargetExpr), LHSList, /*Kill=*/true);
 }
@@ -503,7 +503,8 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     // (storage) origin.
     if (BO->getType()->isPointerType()) {
       OriginList *LHSList = getOriginsList(*BO->getLHS());
-      flow(getOriginsList(*BO), IsCMode ? LHSList->peelOuterOrigin() : LHSList,
+      flow(getOriginsList(*BO),
+           getIsCMode() ? LHSList->peelOuterOrigin() : LHSList,
            /*Kill=*/true);
     }
     return;
@@ -683,7 +684,7 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
 void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
   // Some C subscripts do not refer to addressable storage with origins, such as
   // GNU void-pointer subscripts and vector element extraction from rvalues.
-  if (IsCMode && !ASE->isGLValue())
+  if (getIsCMode() && !ASE->isGLValue())
     return;
   assert(ASE->isGLValue() && "Array subscript should be a GL value");
   OriginList *Dst = getOriginsList(*ASE);

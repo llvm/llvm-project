@@ -129,7 +129,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   // Compute the knowledge based on the inferred type.
   auto inferredKnowledge = ValueKnowledge::getPessimisticValueState();
   inferredKnowledge.dtype = mlir::cast<ShapedType>(resultTy).getElementType();
-  inferredKnowledge.hasRank = predictedShape.hasRank();
+  inferredKnowledge.setHasRank(predictedShape.hasRank());
   if (predictedShape.hasRank()) {
     for (auto dim : predictedShape.getDims()) {
       inferredKnowledge.sizes.push_back(dim);
@@ -139,7 +139,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   // Compute the new type based on the joined version.
   auto newKnowledge = ValueKnowledge::join(currentKnowledge, inferredKnowledge);
   Type newTy =
-      newKnowledge.hasRank
+      newKnowledge.hasRank()
           ? Type{mlir::RankedTensorType::get(llvm::ArrayRef(newKnowledge.sizes),
                                              newKnowledge.dtype)}
           : Type{mlir::UnrankedTensorType::get(newKnowledge.dtype)};

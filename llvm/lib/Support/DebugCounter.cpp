@@ -138,8 +138,8 @@ void DebugCounter::push_back(const std::string &Val) {
     });
     exit(1);
   }
-  Counter->Chunks = std::move(*ExpectedChunks);
-  Counter->Active = Counter->IsSet = true;
+  Counter->Chunks.assign(std::move(*ExpectedChunks));
+  Counter->setActive(Counter->setIsSet(true));
 }
 
 void DebugCounter::print(raw_ostream &OS) const {
@@ -183,7 +183,7 @@ bool DebugCounter::handleCounterIncrement(CounterInfo &Info) {
 bool DebugCounter::shouldExecuteImpl(CounterInfo &Counter) {
   auto &Us = instance();
   bool Res = Us.handleCounterIncrement(Counter);
-  if (Us.ShouldPrintCounterQueries && Counter.IsSet) {
+  if (Us.ShouldPrintCounterQueries && Counter.getIsSet()) {
     dbgs() << "DebugCounter " << Counter.Name << "=" << (Counter.Count - 1)
            << (Res ? " execute" : " skip") << "\n";
   }

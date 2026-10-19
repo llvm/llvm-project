@@ -72,18 +72,33 @@ const char DefaultIgnoredFloatingPointValues[] = "1.0;100.0;";
 
 MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreAllFloatingPointValues(
-          Options.get("IgnoreAllFloatingPointValues", false)),
-      IgnoreBitFieldsWidths(Options.get("IgnoreBitFieldsWidths", true)),
-      IgnorePowersOf2IntegerValues(
-          Options.get("IgnorePowersOf2IntegerValues", false)),
-      IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)),
-      IgnoreUserDefinedLiterals(
-          Options.get("IgnoreUserDefinedLiterals", false)),
       RawIgnoredIntegerValues(
           Options.get("IgnoredIntegerValues", DefaultIgnoredIntegerValues)),
       RawIgnoredFloatingPointValues(Options.get(
-          "IgnoredFloatingPointValues", DefaultIgnoredFloatingPointValues)) {
+          "IgnoredFloatingPointValues", DefaultIgnoredFloatingPointValues)),
+      IgnoredFloatingPointValues(
+          decltype(this->IgnoredFloatingPointValues)::withFlags([&] {
+            unsigned PackedFlags = 0;
+            PackedFlags |= unsigned(
+                bool(Options.get("IgnoreAllFloatingPointValues", false)));
+            PackedFlags |=
+                (unsigned(bool(Options.get("IgnoreBitFieldsWidths", true)))
+                 << 1);
+            PackedFlags |=
+                (unsigned(
+                     bool(Options.get("IgnorePowersOf2IntegerValues", false)))
+                 << 2);
+            PackedFlags |=
+                (unsigned(bool(Options.get("IgnoreTypeAliases", false))) << 3);
+            return PackedFlags;
+          }())),
+      IgnoredDoublePointValues(
+          decltype(this->IgnoredDoublePointValues)::withFlags([&] {
+            unsigned PackedFlags = 0;
+            PackedFlags |=
+                unsigned(bool(Options.get("IgnoreUserDefinedLiterals", false)));
+            return PackedFlags;
+          }())) {
   // Process the set of ignored integer values.
   const std::vector<StringRef> IgnoredIntegerValuesInput =
       utils::options::parseStringList(RawIgnoredIntegerValues);
@@ -96,7 +111,7 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
                   });
   llvm::sort(IgnoredIntegerValues);
 
-  if (!IgnoreAllFloatingPointValues) {
+  if (!getIgnoreAllFloatingPointValues()) {
     // Process the set of ignored floating point values.
     const std::vector<StringRef> IgnoredFloatingPointValuesInput =
         utils::options::parseStringList(RawIgnoredFloatingPointValues);
@@ -124,12 +139,13 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
 
 void MagicNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreAllFloatingPointValues",
-                IgnoreAllFloatingPointValues);
-  Options.store(Opts, "IgnoreBitFieldsWidths", IgnoreBitFieldsWidths);
+                getIgnoreAllFloatingPointValues());
+  Options.store(Opts, "IgnoreBitFieldsWidths", getIgnoreBitFieldsWidths());
   Options.store(Opts, "IgnorePowersOf2IntegerValues",
-                IgnorePowersOf2IntegerValues);
-  Options.store(Opts, "IgnoreTypeAliases", IgnoreTypeAliases);
-  Options.store(Opts, "IgnoreUserDefinedLiterals", IgnoreUserDefinedLiterals);
+                getIgnorePowersOf2IntegerValues());
+  Options.store(Opts, "IgnoreTypeAliases", getIgnoreTypeAliases());
+  Options.store(Opts, "IgnoreUserDefinedLiterals",
+                getIgnoreUserDefinedLiterals());
   Options.store(Opts, "IgnoredIntegerValues", RawIgnoredIntegerValues);
   Options.store(Opts, "IgnoredFloatingPointValues",
                 RawIgnoredFloatingPointValues);
@@ -137,7 +153,7 @@ void MagicNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void MagicNumbersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(integerLiteral().bind("integer"), this);
-  if (!IgnoreAllFloatingPointValues)
+  if (!getIgnoreAllFloatingPointValues())
     Finder->addMatcher(floatLiteral().bind("float"), this);
 }
 
@@ -156,7 +172,7 @@ bool MagicNumbersCheck::isConstant(const MatchFinder::MatchResult &Result,
         if (isUsedToInitializeAConstant(Result, Parent))
           return true;
 
-        if (IgnoreTypeAliases && isUsedToDefineATypeAlias(Result, Parent))
+        if (getIgnoreTypeAliases() && isUsedToDefineATypeAlias(Result, Parent))
           return true;
 
         // Ignore this instance, because this matches an
@@ -195,7 +211,7 @@ bool MagicNumbersCheck::isIgnoredValue(const IntegerLiteral *Literal) const {
   if (Value == 0)
     return true;
 
-  if (IgnorePowersOf2IntegerValues && IntValue.isPowerOf2())
+  if (getIgnorePowersOf2IntegerValues() && IntValue.isPowerOf2())
     return true;
 
   return llvm::binary_search(IgnoredIntegerValues, Value);
@@ -235,7 +251,7 @@ bool MagicNumbersCheck::isSyntheticValue(const SourceManager *SourceManager,
 bool MagicNumbersCheck::isBitFieldWidth(
     const ast_matchers::MatchFinder::MatchResult &Result,
     const IntegerLiteral &Literal) const {
-  return IgnoreBitFieldsWidths &&
+  return getIgnoreBitFieldsWidths() &&
          llvm::any_of(Result.Context->getParents(Literal),
                       [&Result](const DynTypedNode &Parent) {
                         return isUsedToDefineABitField(Result, Parent);

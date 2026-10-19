@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 
@@ -45,8 +46,8 @@ private:
   using Base = std::conditional_t<EarlyFailure, NoActiveBlocksOption,
                                   ActiveBlocksOption>;
   ArrayRef<BasicBlock *> Blocks;
-  SmallVector<Instruction *, 4> Insts;
-  bool Fail;
+  SmallVectorWithFlags<Instruction *, 4> Insts;
+  bool failed() const { return Insts.getFlag(0); }
 
 public:
   LockstepReverseIterator(ArrayRef<BasicBlock *> Blocks) : Blocks(Blocks) {
@@ -54,7 +55,7 @@ public:
   }
 
   void reset() {
-    Fail = false;
+    Insts.setFlag(0, false);
     if constexpr (!EarlyFailure) {
       this->ActiveBlocks.clear();
       this->ActiveBlocks.insert_range(Blocks);
@@ -65,7 +66,7 @@ public:
       if (!Prev) {
         // Block wasn't big enough - only contained a terminator.
         if constexpr (EarlyFailure) {
-          Fail = true;
+          Insts.setFlag(0, true);
           return;
         } else {
           this->ActiveBlocks.remove(BB);
@@ -75,10 +76,10 @@ public:
       Insts.push_back(Prev);
     }
     if (Insts.empty())
-      Fail = true;
+      Insts.setFlag(0, true);
   }
 
-  bool isValid() const { return !Fail; }
+  bool isValid() const { return !failed(); }
   ArrayRef<Instruction *> operator*() const { return Insts; }
 
   // Note: This needs to return a SmallSetVector as the elements of
@@ -104,7 +105,7 @@ public:
   }
 
   LockstepReverseIterator &operator--() {
-    if (Fail)
+    if (failed())
       return *this;
     SmallVector<Instruction *, 4> NewInsts;
     for (Instruction *Inst : Insts) {
@@ -113,7 +114,7 @@ public:
         if constexpr (!EarlyFailure) {
           this->ActiveBlocks.remove(Inst->getParent());
         } else {
-          Fail = true;
+          Insts.setFlag(0, true);
           return *this;
         }
       } else {
@@ -121,30 +122,30 @@ public:
       }
     }
     if (NewInsts.empty())
-      Fail = true;
+      Insts.setFlag(0, true);
     else
-      Insts = NewInsts;
+      Insts.assign(NewInsts.begin(), NewInsts.end());
     return *this;
   }
 
   LockstepReverseIterator &operator++() {
     static_assert(EarlyFailure, "Unknown method");
-    if (Fail)
+    if (failed())
       return *this;
     SmallVector<Instruction *, 4> NewInsts;
     for (Instruction *Inst : Insts) {
       Instruction *Next = Inst->getNextNode();
       // Already at end of block.
       if (!Next) {
-        Fail = true;
+        Insts.setFlag(0, true);
         return *this;
       }
       NewInsts.push_back(Next);
     }
     if (NewInsts.empty())
-      Fail = true;
+      Insts.setFlag(0, true);
     else
-      Insts = NewInsts;
+      Insts.assign(NewInsts.begin(), NewInsts.end());
     return *this;
   }
 };

@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1069,9 +1070,13 @@ class WidenIV {
 
   // Does the module have any calls to the llvm.experimental.guard intrinsic
   // at all? If not we can avoid scanning instructions looking for guards.
-  bool HasGuards;
+  bool getHasGuards() const { return NarrowIVUsers.getFlag(0); }
+  void setHasGuards(bool Value) { NarrowIVUsers.setFlag(0, Value); }
 
-  bool UsePostIncrementRanges;
+  bool getUsePostIncrementRanges() const { return NarrowIVUsers.getFlag(1); }
+  void setUsePostIncrementRanges(bool Value) {
+    NarrowIVUsers.setFlag(1, Value);
+  }
 
   // Statistics
   unsigned NumElimExt = 0;
@@ -1179,7 +1184,7 @@ protected:
   void pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef);
 
 private:
-  SmallVector<NarrowIVDefUse, 8> NarrowIVUsers;
+  llvm::SmallVectorWithFlags<NarrowIVDefUse, 8, 2> NarrowIVUsers;
 };
 } // namespace
 
@@ -1235,14 +1240,15 @@ static Instruction *getInsertPointForUses(Instruction *User, Value *Def,
 }
 
 WidenIV::WidenIV(const WideIVInfo &WI, LoopInfo *LInfo, ScalarEvolution *SEv,
-          DominatorTree *DTree, SmallVectorImpl<WeakTrackingVH> &DI,
-          bool HasGuards, bool UsePostIncrementRanges)
-      : OrigPhi(WI.NarrowIV), WideType(WI.WidestNativeType), LI(LInfo),
-        L(LI->getLoopFor(OrigPhi->getParent())), SE(SEv), DT(DTree),
-        HasGuards(HasGuards), UsePostIncrementRanges(UsePostIncrementRanges),
-        DeadInsts(DI) {
-    assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
-    ExtendKindMap[OrigPhi] = WI.IsSigned ? ExtendKind::Sign : ExtendKind::Zero;
+                 DominatorTree *DTree, SmallVectorImpl<WeakTrackingVH> &DI,
+                 bool HasGuards, bool UsePostIncrementRanges)
+    : OrigPhi(WI.NarrowIV), WideType(WI.WidestNativeType), LI(LInfo),
+      L(LI->getLoopFor(OrigPhi->getParent())), SE(SEv), DT(DTree),
+      DeadInsts(DI),
+      NarrowIVUsers(decltype(this->NarrowIVUsers)::withFlags(
+          unsigned(HasGuards) | (unsigned(UsePostIncrementRanges) << 1))) {
+  assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
+  ExtendKindMap[OrigPhi] = WI.IsSigned ? ExtendKind::Sign : ExtendKind::Zero;
 }
 
 Value *WidenIV::createExtendInst(Value *NarrowOper, Type *WideType,
@@ -2086,7 +2092,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   // definition is not negative (see pushNarrowIVUsers). It's difficult to do
   // this on demand because when pushNarrowIVUsers needs this information some
   // of the dominating conditions might be already widened.
-  if (UsePostIncrementRanges)
+  if (getUsePostIncrementRanges())
     calculatePostIncRanges(OrigPhi);
 
   // The rewriter provides a value for the desired IV expression. This may
@@ -2204,7 +2210,7 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
   };
 
   auto UpdateRangeFromGuards = [&](Instruction *Ctx) {
-    if (!HasGuards)
+    if (!getHasGuards())
       return;
 
     for (Instruction &I : make_range(Ctx->getIterator().getReverse(),

@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
@@ -613,7 +614,7 @@ public:
   template <typename EVENT>
   void _registerDispatcherForEvent() {
     EventInfo &info = Events[&EVENT::Tag];
-    info.HasDispatcher = true;
+    info.setHasDispatcher(true);
   }
 
   template <typename EVENT>
@@ -706,8 +707,9 @@ private:
   std::vector<CheckEndOfTranslationUnit> EndOfTranslationUnitCheckers;
 
   struct EventInfo {
-    SmallVector<CheckEventFunc, 4> Checkers;
-    bool HasDispatcher = false;
+    llvm::SmallVectorWithFlags<CheckEventFunc, 4> Checkers;
+    bool getHasDispatcher() const { return Checkers.getFlag(0); }
+    void setHasDispatcher(bool Value) { Checkers.setFlag(0, Value); }
 
     EventInfo() = default;
   };

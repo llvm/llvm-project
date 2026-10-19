@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -127,8 +128,10 @@ namespace {
     MachineRegisterInfo *MRI = nullptr;
     const RegisterClassInfo *RegClassInfo = nullptr;
     TargetSchedModel SchedModel;
-    bool PreRegAlloc = false;
-    bool HasProfileData = false;
+    bool getPreRegAlloc() const { return BackTrace.getFlag(0); }
+    void setPreRegAlloc(bool Value) { BackTrace.setFlag(0, Value); }
+    bool getHasProfileData() const { return BackTrace.getFlag(1); }
+    void setHasProfileData(bool Value) { BackTrace.setFlag(1, Value); }
     Pass *LegacyPass;
     MachineFunctionAnalysisManager *MFAM;
 
@@ -139,8 +142,16 @@ namespace {
     MachineDomTreeUpdater *MDTU = nullptr;     // Wraps current dominator tree
 
     // State that is updated as we process loops
-    bool Changed = false;           // True if a loop is changed.
-    bool FirstInLoop = false;       // True if it's the first LICM in the loop.
+    bool getChanged() const { return BackTrace.getFlag(2); }
+    bool setChanged(bool Value) {
+      BackTrace.setFlag(2, Value);
+      return Value;
+    } // True if a loop is changed.
+    bool getFirstInLoop() const { return BackTrace.getFlag(3); }
+    bool setFirstInLoop(bool Value) {
+      BackTrace.setFlag(3, Value);
+      return Value;
+    } // True if it's the first LICM in the loop.
 
     // Holds information about whether it is allowed to move load instructions
     // out of the loop
@@ -168,7 +179,7 @@ namespace {
     SmallVector<unsigned, 8> RegLimit;
 
     // Register pressure on path leading from loop preheader to current BB.
-    SmallVector<SmallVector<unsigned, 8>, 16> BackTrace;
+    llvm::SmallVectorWithFlags<SmallVector<unsigned, 8>, 16, 4> BackTrace;
 
     // For each opcode per preheader, keep a list of potential CSE instructions.
     DenseMap<MachineBasicBlock *,
@@ -189,7 +200,9 @@ namespace {
   public:
     MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
                     MachineFunctionAnalysisManager *MFAM)
-        : PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass), MFAM(MFAM) {
+        : LegacyPass(LegacyPass), MFAM(MFAM),
+          BackTrace(
+              decltype(this->BackTrace)::withFlags(unsigned(PreRegAlloc))) {
       assert((LegacyPass || MFAM) && "LegacyPass or MFAM must be provided");
       assert(!(LegacyPass && MFAM) &&
              "LegacyPass and MFAM cannot be provided at the same time");
@@ -387,7 +400,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
              ? GET_RESULT(MachineBlockFrequency, getMBFI, Info)
              : nullptr;
 
-  Changed = FirstInLoop = false;
+  setChanged(setFirstInLoop(false));
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   TII = ST.getInstrInfo();
   TLI = ST.getTargetLowering();
@@ -396,15 +409,15 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
-  HasProfileData = MF.getFunction().hasProfileData();
+  setHasProfileData(MF.getFunction().hasProfileData());
 
-  if (PreRegAlloc)
+  if (getPreRegAlloc())
     LLVM_DEBUG(dbgs() << "******** Pre-regalloc Machine LICM: ");
   else
     LLVM_DEBUG(dbgs() << "******** Post-regalloc Machine LICM: ");
   LLVM_DEBUG(dbgs() << MF.getName() << " ********\n");
 
-  if (PreRegAlloc) {
+  if (getPreRegAlloc()) {
     // Estimate register pressure during pre-regalloc pass.
     unsigned NumRPS = TRI->getNumRegPressureSets();
     RegPressure.resize(NumRPS);
@@ -421,19 +434,19 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   while (!Worklist.empty()) {
     MachineLoop *CurLoop = Worklist.pop_back_val();
 
-    if (!PreRegAlloc) {
+    if (!getPreRegAlloc()) {
       HoistRegionPostRA(CurLoop);
     } else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
       MachineDomTreeNode *N = MDTU->getDomTree().getNode(CurLoop->getHeader());
-      FirstInLoop = true;
+      setFirstInLoop(true);
       HoistOutOfLoop(N, CurLoop);
       CSEMap.clear();
     }
   }
   releaseMemory();
-  return Changed;
+  return getChanged();
 }
 
 /// Return true if instruction stores to the specified frame.
@@ -763,7 +776,7 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
   AddToLiveIns(Def, CurLoop);
 
   ++NumPostRAHoisted;
-  Changed = true;
+  setChanged(true);
 }
 
 /// Check if this mbb is guaranteed to execute. If not then a load from this mbb
@@ -1508,7 +1521,7 @@ MachineInstr *
 MachineLICMImpl::LookForDuplicate(const MachineInstr *MI,
                                   std::vector<MachineInstr *> &PrevMIs) {
   for (MachineInstr *PrevMI : PrevMIs)
-    if (TII->produceSameValue(*MI, *PrevMI, (PreRegAlloc ? MRI : nullptr)))
+    if (TII->produceSameValue(*MI, *PrevMI, (getPreRegAlloc() ? MRI : nullptr)))
       return PrevMI;
 
   return nullptr;
@@ -1614,7 +1627,7 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   // Disable the instruction hoisting due to block hotness
   if ((DisableHoistingToHotterBlocks == UseBFI::All ||
-      (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData)) &&
+       (DisableHoistingToHotterBlocks == UseBFI::PGO && getHasProfileData())) &&
       isTgtHotterThanSrc(SrcBlock, Preheader)) {
     ++NumNotHoistedDueToHotness;
     return HoistResult::NotHoisted;
@@ -1648,9 +1661,9 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   // If this is the first instruction being hoisted to the preheader,
   // initialize the CSE map with potential common expressions.
-  if (FirstInLoop) {
+  if (getFirstInLoop()) {
     InitCSEMap(Preheader);
-    FirstInLoop = false;
+    setFirstInLoop(false);
   }
 
   // Look for opportunity to CSE the hoisted instruction.
@@ -1694,7 +1707,7 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
   }
 
   ++NumHoisted;
-  Changed = true;
+  setChanged(true);
 
   if (HasCSEDone || HasExtractHoistableLoad)
     return HoistResult::Hoisted | HoistResult::ErasedMI;
@@ -1714,7 +1727,7 @@ MachineBasicBlock *MachineLICMImpl::getOrCreatePreheader(MachineLoop *CurLoop) {
     MachineBasicBlock *NewPreheader =
         Pred->SplitCriticalEdge(CurLoop->getHeader(), LegacyPass, MFAM, MDTU);
     if (NewPreheader)
-      Changed = true;
+      setChanged(true);
     return NewPreheader;
   }
 

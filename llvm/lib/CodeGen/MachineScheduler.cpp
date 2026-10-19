@@ -19,6 +19,7 @@
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -1603,7 +1604,7 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
       continue;
     if (!MO.readsReg())
       continue;
-    if (TrackLaneMasks && !MO.isUse())
+    if (getTrackLaneMasks() && !MO.isUse())
       continue;
 
     Register Reg = MO.getReg();
@@ -1611,7 +1612,7 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
       continue;
 
     // Ignore re-defs.
-    if (TrackLaneMasks) {
+    if (getTrackLaneMasks()) {
       bool FoundDef = false;
       for (const MachineOperand &MO2 : MI.all_defs()) {
         if (MO2.getReg() == Reg && !MO2.isDead()) {
@@ -2150,15 +2151,17 @@ namespace {
 class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   struct MemOpInfo {
     SUnit *SU;
-    SmallVector<const MachineOperand *, 4> BaseOps;
+    llvm::SmallVectorWithFlags<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     LocationSize Width;
-    bool OffsetIsScalable;
+    bool getOffsetIsScalable() const { return BaseOps.getFlag(0); }
+    void setOffsetIsScalable(bool Value) { BaseOps.setFlag(0, Value); }
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
               int64_t Offset, bool OffsetIsScalable, LocationSize Width)
-        : SU(SU), BaseOps(BaseOps), Offset(Offset), Width(Width),
-          OffsetIsScalable(OffsetIsScalable) {}
+        : SU(SU), BaseOps(decltype(this->BaseOps)::withFlags(
+                      unsigned(OffsetIsScalable), BaseOps)),
+          Offset(Offset), Width(Width) {}
 
     static bool Compare(const MachineOperand *const &A,
                         const MachineOperand *const &B) {
@@ -2307,8 +2310,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
-                                  MemOpa.OffsetIsScalable, MemOpb.BaseOps,
-                                  MemOpb.Offset, MemOpb.OffsetIsScalable,
+                                  MemOpa.getOffsetIsScalable(), MemOpb.BaseOps,
+                                  MemOpb.Offset, MemOpb.getOffsetIsScalable(),
                                   ClusterLength, CurrentClusterBytes))
       continue;
 
@@ -2688,7 +2691,7 @@ void SchedBoundary::reset() {
     HazardRec.reset();
   Available.clear();
   Pending.clear();
-  CheckPending = false;
+  setCheckPending(false);
   CurrCycle = 0;
   CurrMOps = 0;
   MinReadyCycle = std::numeric_limits<unsigned>::max();
@@ -2697,7 +2700,7 @@ void SchedBoundary::reset() {
   RetiredMOps = 0;
   MaxExecutedResCount = 0;
   ZoneCritResIdx = 0;
-  IsResourceLimited = false;
+  setIsResourceLimited(false);
   ReservedCycles.clear();
   ReservedResourceSegments.clear();
   ReservedCyclesIndex.clear();
@@ -3067,10 +3070,10 @@ void SchedBoundary::bumpCycle(unsigned NextCycle) {
         HazardRec->RecedeCycle();
     }
   }
-  CheckPending = true;
-  IsResourceLimited =
-      checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
-                         getScheduledLatency(), true);
+  setCheckPending(true);
+  setIsResourceLimited(checkResourceLimit(SchedModel->getLatencyFactor(),
+                                          getCriticalCount(),
+                                          getScheduledLatency(), true));
 
   LLVM_DEBUG(dbgs() << "Cycle: " << CurrCycle << ' ' << Available.getName()
                     << '\n');
@@ -3252,9 +3255,9 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   else
     // After updating ZoneCritResIdx and ExpectedLatency, check if we're
     // resource limited. If a stall occurred, bumpCycle does this.
-    IsResourceLimited =
-        checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
-                           getScheduledLatency(), true);
+    setIsResourceLimited(checkResourceLimit(SchedModel->getLatencyFactor(),
+                                            getCriticalCount(),
+                                            getScheduledLatency(), true));
 
   // Update the reservation table.
   if (HazardRec->isEnabled()) {
@@ -3265,7 +3268,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     }
     HazardRec->EmitInstruction(SU);
     // Scheduling an instruction may have made pending instructions available.
-    CheckPending = true;
+    setCheckPending(true);
   }
 
   // Update CurrMOps after calling bumpCycle to handle stalls, since bumpCycle
@@ -3320,7 +3323,7 @@ void SchedBoundary::releasePending() {
       --E;
     }
   }
-  CheckPending = false;
+  setCheckPending(false);
 }
 
 /// Remove SU from the ready set for this boundary.
@@ -3337,7 +3340,7 @@ void SchedBoundary::removeReady(SUnit *SU) {
 /// defer any nodes that now hit a hazard, and advance the cycle until at least
 /// one node is ready. If multiple instructions are ready, return NULL.
 SUnit *SchedBoundary::pickOnlyChoice() {
-  if (CheckPending)
+  if (getCheckPending())
     releasePending();
 
   // Defer any ready instrs that now have a hazard.
@@ -3415,7 +3418,7 @@ LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
          << ResCount / ResFactor << " "
          << SchedModel->getResourceName(ZoneCritResIdx)
          << "\n  ExpectedLatency: " << ExpectedLatency << "c\n"
-         << (IsResourceLimited ? "  - Resource" : "  - Latency")
+         << (getIsResourceLimited() ? "  - Resource" : "  - Latency")
          << " limited.\n";
   if (MISchedDumpReservedCycles)
     dumpReservedCycles();

@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -609,9 +610,9 @@ public:
 private:
   CalledOnceChecker(AnalysisDeclContext &AC, CalledOnceCheckHandler &Handler,
                     bool CheckConventionalParameters)
-      : FunctionCFG(*AC.getCFG()), AC(AC), Handler(Handler),
-        CheckConventionalParameters(CheckConventionalParameters),
-        CurrentState(0) {
+      : FunctionCFG(*AC.getCFG()), AC(AC), Handler(Handler), CurrentState(0),
+        TrackedParams(decltype(TrackedParams)::withFlags(
+            unsigned(CheckConventionalParameters))) {
     initDataStructures();
     assert((size() == 0 || !States.empty()) &&
            "Data structures are inconsistent");
@@ -815,7 +816,7 @@ private:
         // ... or if we've seen variables with cleanup functions.
         // We can't reason that we've seen every path in this case,
         // and thus abandon reporting any warnings that imply that.
-        !FunctionHasCleanupVars)
+        !getFunctionHasCleanupVars())
       return;
 
     // We are looking for a pair of blocks A, B so that the following is true:
@@ -1034,7 +1035,7 @@ private:
 
   bool shouldBeCalledOnce(const ParmVarDecl *Parameter) const {
     return isExplicitlyMarked(Parameter) ||
-           (CheckConventionalParameters &&
+           (getCheckConventionalParameters() &&
             (isConventional(Parameter->getName()) ||
              hasConventionalSuffix(Parameter->getName())) &&
             isConventional(Parameter->getType()));
@@ -1068,7 +1069,7 @@ private:
     }
 
     return shouldBeCalledOnce(Function->getParamDecl(ParamIndex)) ||
-           (CheckConventionalParameters &&
+           (getCheckConventionalParameters() &&
             isOnlyParameterConventional(Function));
   }
 
@@ -1086,7 +1087,7 @@ private:
 
     const ParmVarDecl *Parameter = Method->getParamDecl(ParamIndex);
     return shouldBeCalledOnce(Parameter) ||
-           (CheckConventionalParameters &&
+           (getCheckConventionalParameters() &&
             isConventionalSelectorPiece(MethodSelector, ParamIndex,
                                         Parameter->getType()));
   }
@@ -1343,7 +1344,7 @@ private:
   void handleConditional(const CFGBlock *BB, const Expr *Condition,
                          State &ToAlter) const {
     handleParameterCheck(BB, Condition, ToAlter);
-    if (SuppressOnConventionalErrorPaths) {
+    if (getSuppressOnConventionalErrorPaths()) {
       handleConventionalCheck(BB, Condition, ToAlter);
     }
   }
@@ -1611,7 +1612,7 @@ public:
         }
 
         if (Var->hasAttr<CleanupAttr>()) {
-          FunctionHasCleanupVars = true;
+          setFunctionHasCleanupVars(true);
         }
       }
     }
@@ -1672,24 +1673,38 @@ private:
   const CFG &FunctionCFG;
   AnalysisDeclContext &AC;
   CalledOnceCheckHandler &Handler;
-  bool CheckConventionalParameters;
+  bool getCheckConventionalParameters() const {
+    return TrackedParams.getFlag(0);
+  }
+  void setCheckConventionalParameters(bool Value) {
+    TrackedParams.setFlag(0, Value);
+  }
   // As of now, we turn this behavior off.  So, we still are going to report
   // missing calls on paths that look like it was intentional.
   // Technically such reports are true positives, but they can make some users
   // grumpy because of the sheer number of warnings.
   // It can be turned back on if we decide that we want to have the other way
   // around.
-  bool SuppressOnConventionalErrorPaths = false;
+  bool getSuppressOnConventionalErrorPaths() const {
+    return TrackedParams.getFlag(1);
+  }
+  void setSuppressOnConventionalErrorPaths(bool Value) {
+    TrackedParams.setFlag(1, Value);
+  }
 
   // The user can annotate variable declarations with cleanup functions, which
   // essentially imposes a custom destructor logic on that variable.
   // It is possible to use it, however, to call tracked parameters on all exits
   // from the function.  For this reason, we track the fact that the function
   // actually has these.
-  bool FunctionHasCleanupVars = false;
+  bool getFunctionHasCleanupVars() const { return TrackedParams.getFlag(2); }
+  void setFunctionHasCleanupVars(bool Value) {
+    TrackedParams.setFlag(2, Value);
+  }
 
   State CurrentState;
-  ParamSizedVector<const ParmVarDecl *> TrackedParams;
+  llvm::SmallVectorWithFlagsFor<ParamSizedVector<const ParmVarDecl *>, 3>
+      TrackedParams;
   CFGSizedVector<State> States;
 };
 

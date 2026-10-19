@@ -27,6 +27,7 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Remarks.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
@@ -146,10 +147,20 @@ public:
   /// In most cases, creating operation in unregistered dialect is not desired
   /// and indicate a misconfiguration of the compiler. This option enables to
   /// detect such use cases
-  bool allowUnregisteredDialects = false;
+  bool getAllowUnregisteredDialects() const {
+    return sortedRegisteredOperations.getFlag(0);
+  }
+  void setAllowUnregisteredDialects(bool Value) {
+    sortedRegisteredOperations.setFlag(0, Value);
+  }
 
   /// Enable support for multi-threading within MLIR.
-  bool threadingIsEnabled = true;
+  bool getThreadingIsEnabled() const {
+    return !sortedRegisteredOperations.getFlag(1);
+  }
+  void setThreadingIsEnabled(bool Value) {
+    sortedRegisteredOperations.setFlag(1, !Value);
+  }
 
   /// Track if we are currently executing in a threaded execution environment
   /// (like the pass-manager): this is only a debugging feature to help reducing
@@ -160,10 +171,20 @@ public:
 
   /// If the operation should be attached to diagnostics printed via the
   /// Operation::emit methods.
-  bool printOpOnDiagnostic = true;
+  bool getPrintOpOnDiagnostic() const {
+    return !sortedRegisteredOperations.getFlag(2);
+  }
+  void setPrintOpOnDiagnostic(bool Value) {
+    sortedRegisteredOperations.setFlag(2, !Value);
+  }
 
   /// If the current stack trace should be attached when emitting diagnostics.
-  bool printStackTraceOnDiagnostic = false;
+  bool getPrintStackTraceOnDiagnostic() const {
+    return sortedRegisteredOperations.getFlag(3);
+  }
+  void setPrintStackTraceOnDiagnostic(bool Value) {
+    sortedRegisteredOperations.setFlag(3, Value);
+  }
 
   //===--------------------------------------------------------------------===//
   // Other
@@ -191,7 +212,8 @@ public:
 
   /// This is a sorted container of registered operations for a deterministic
   /// and efficient `getRegisteredOperations` implementation.
-  SmallVector<RegisteredOperationName, 0> sortedRegisteredOperations;
+  llvm::SmallVectorWithFlags<RegisteredOperationName, 0, 4>
+      sortedRegisteredOperations;
 
   /// This is a list of dialects that are created referring to this context.
   /// The MLIRContext owns the objects. These need to be declared after the
@@ -282,7 +304,9 @@ public:
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)
-      : threadingIsEnabled(threadingIsEnabled) {
+      : sortedRegisteredOperations(
+            decltype(this->sortedRegisteredOperations)::withFlags(
+                (unsigned(!(threadingIsEnabled)) << 1))) {
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
@@ -597,19 +621,21 @@ llvm::hash_code MLIRContext::getRegistryHash() {
 }
 
 bool MLIRContext::allowsUnregisteredDialects() {
-  return impl->allowUnregisteredDialects;
+  return impl->getAllowUnregisteredDialects();
 }
 
 void MLIRContext::allowUnregisteredDialects(bool allowing) {
   assert(impl->multiThreadedExecutionContext == 0 &&
          "changing MLIRContext `allow-unregistered-dialects` configuration "
          "while in a multi-threaded execution context");
-  impl->allowUnregisteredDialects = allowing;
+  impl->setAllowUnregisteredDialects(allowing);
 }
 
 /// Return true if multi-threading is enabled by the context.
 #if LLVM_ENABLE_THREADS
-bool MLIRContext::isMultithreadingEnabled() { return impl->threadingIsEnabled; }
+bool MLIRContext::isMultithreadingEnabled() {
+  return impl->getThreadingIsEnabled();
+}
 #endif
 
 /// Set the flag specifying if multi-threading is disabled by the context.
@@ -622,7 +648,7 @@ void MLIRContext::disableMultithreading(bool disable) {
          "changing MLIRContext `disable-threading` configuration while "
          "in a multi-threaded execution context");
 
-  impl->threadingIsEnabled = !disable;
+  impl->setThreadingIsEnabled(!disable);
 
   // Update the threading mode for each of the uniquers.
   impl->affineUniquer.disableMultithreading(disable);
@@ -779,7 +805,7 @@ bool MLIRContext::isInTransientScope() const {
 /// Return true if we should attach the operation to diagnostics emitted via
 /// Operation::emit.
 bool MLIRContext::shouldPrintOpOnDiagnostic() {
-  return impl->printOpOnDiagnostic;
+  return impl->getPrintOpOnDiagnostic();
 }
 
 /// Set the flag specifying if we should attach the operation to diagnostics
@@ -788,13 +814,13 @@ void MLIRContext::printOpOnDiagnostic(bool enable) {
   assert(impl->multiThreadedExecutionContext == 0 &&
          "changing MLIRContext `print-op-on-diagnostic` configuration while in "
          "a multi-threaded execution context");
-  impl->printOpOnDiagnostic = enable;
+  impl->setPrintOpOnDiagnostic(enable);
 }
 
 /// Return true if we should attach the current stacktrace to diagnostics when
 /// emitted.
 bool MLIRContext::shouldPrintStackTraceOnDiagnostic() {
-  return impl->printStackTraceOnDiagnostic;
+  return impl->getPrintStackTraceOnDiagnostic();
 }
 
 /// Set the flag specifying if we should attach the current stacktrace when
@@ -803,7 +829,7 @@ void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
   assert(impl->multiThreadedExecutionContext == 0 &&
          "changing MLIRContext `print-stacktrace-on-diagnostic` configuration "
          "while in a multi-threaded execution context");
-  impl->printStackTraceOnDiagnostic = enable;
+  impl->setPrintStackTraceOnDiagnostic(enable);
 }
 
 /// Return information about all registered operations.

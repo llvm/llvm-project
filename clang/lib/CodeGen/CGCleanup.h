@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGCLEANUP_H
 
 #include "EHScopeStack.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "Address.h"
 #include "clang/CodeGenUtils/EHPersonality.h"
@@ -284,20 +285,21 @@ class alignas(8) EHCleanupScope : public EHScope {
   /// Cleanups should mark these allocas as 'used' if the cleanup is
   /// emitted, otherwise these instructions would be erased.
   struct AuxillaryAllocas {
-    SmallVector<llvm::Instruction *, 1> AuxAllocas;
-    bool used = false;
+    llvm::SmallVectorWithFlags<llvm::Instruction *, 1> AuxAllocas;
+    bool getUsed() const { return AuxAllocas.getFlag(0); }
+    void setUsed(bool Value) { AuxAllocas.setFlag(0, Value); }
 
     // Records a potentially unused instruction to be erased later.
     void Add(llvm::AllocaInst *Alloca) { AuxAllocas.push_back(Alloca); }
 
     // Mark all recorded instructions as used. These will not be erased later.
     void MarkUsed() {
-      used = true;
+      setUsed(true);
       AuxAllocas.clear();
     }
 
     ~AuxillaryAllocas() {
-      if (used)
+      if (getUsed())
         return;
       llvm::SetVector<llvm::Instruction *> Uses;
       for (auto *Inst : llvm::reverse(AuxAllocas))

@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
 #include <tuple>
@@ -94,32 +95,70 @@ struct CodeGenIntrinsic {
   bool isNoSync = false;
 
   /// True if the intrinsic is no-free.
-  bool isNoFree = false;
+  bool getIsNoFree() const { return ParamDefaultValues.getFlag(0); }
+  bool setIsNoFree(bool Value) {
+    ParamDefaultValues.setFlag(0, Value);
+    return Value;
+  }
 
   /// True if the intrinsic is will-return.
-  bool isWillReturn = false;
+  bool getIsWillReturn() const { return ParamDefaultValues.getFlag(1); }
+  bool setIsWillReturn(bool Value) {
+    ParamDefaultValues.setFlag(1, Value);
+    return Value;
+  }
 
   /// True if the intrinsic is cold.
-  bool isCold = false;
+  bool getIsCold() const { return ParamDefaultValues.getFlag(2); }
+  bool setIsCold(bool Value) {
+    ParamDefaultValues.setFlag(2, Value);
+    return Value;
+  }
 
   /// True if the intrinsic is marked as convergent.
-  bool isConvergent = false;
+  bool getIsConvergent() const { return ParamDefaultValues.getFlag(3); }
+  bool setIsConvergent(bool Value) {
+    ParamDefaultValues.setFlag(3, Value);
+    return Value;
+  }
 
   /// True if the intrinsic has side effects that aren't captured by any
   /// of the other flags.
-  bool hasSideEffects = false;
+  bool getHasSideEffects() const { return PrettyPrintFunctions.getFlag(0); }
+  bool setHasSideEffects(bool Value) {
+    PrettyPrintFunctions.setFlag(0, Value);
+    return Value;
+  }
 
   // True if the intrinsic is marked as speculatable.
-  bool isSpeculatable = false;
+  bool getIsSpeculatable() const { return PrettyPrintFunctions.getFlag(1); }
+  bool setIsSpeculatable(bool Value) {
+    PrettyPrintFunctions.setFlag(1, Value);
+    return Value;
+  }
 
   // True if the intrinsic is marked as strictfp.
-  bool isStrictFP = false;
+  bool getIsStrictFP() const { return PrettyPrintFunctions.getFlag(2); }
+  bool setIsStrictFP(bool Value) {
+    PrettyPrintFunctions.setFlag(2, Value);
+    return Value;
+  }
 
   // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
-  bool isNoCreateUndefOrPoison = false;
+  bool getIsNoCreateUndefOrPoison() const {
+    return PrettyPrintFunctions.getFlag(3);
+  }
+  bool setIsNoCreateUndefOrPoison(bool Value) {
+    PrettyPrintFunctions.setFlag(3, Value);
+    return Value;
+  }
 
   // True if the intrinsic is marked as IntrTriviallyScalarizable.
-  bool isTriviallyScalarizable = false;
+  bool getIsTriviallyScalarizable() const { return ImmArgRangeSets.getFlag(0); }
+  bool setIsTriviallyScalarizable(bool Value) {
+    ImmArgRangeSets.setFlag(0, Value);
+    return Value;
+  }
 
   enum ArgAttrKind {
     NoCapture,
@@ -163,7 +202,7 @@ struct CodeGenIntrinsic {
   SmallVector<SmallVector<ArgAttribute, 0>> ArgumentAttributes;
 
   /// Range-set constraints for immediate arguments, indexed by argument number.
-  SmallVector<ImmArgRangeSet> ImmArgRangeSets;
+  llvm::SmallVectorWithFlags<ImmArgRangeSet> ImmArgRangeSets;
 
   void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
                        uint64_t V2 = 0);
@@ -180,10 +219,18 @@ struct CodeGenIntrinsic {
   };
 
   /// Vector that stores ArgInfo (ArgIndex, ArgName, FunctionName).
-  SmallVector<PrettyPrintArgInfo> PrettyPrintFunctions;
+  llvm::SmallVectorWithFlags<PrettyPrintArgInfo,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 PrettyPrintArgInfo>::value,
+                             4>
+      PrettyPrintFunctions;
 
   /// Default values for parameters. Index = param index.
-  SmallVector<std::optional<uint64_t>> ParamDefaultValues;
+  llvm::SmallVectorWithFlags<std::optional<uint64_t>,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 std::optional<uint64_t>>::value,
+                             4>
+      ParamDefaultValues;
 
   void addPrettyPrintFunction(unsigned ArgIdx, StringRef ArgName,
                               StringRef FuncName);

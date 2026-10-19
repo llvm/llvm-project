@@ -33,6 +33,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -172,8 +173,8 @@ class SROA {
   LLVMContext *const C;
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
-  const bool PreserveCFG;
-  const bool AggregateToVector;
+  bool getPreserveCFG() const { return DeadInsts.getFlag(0); }
+  bool getAggregateToVector() const { return DeadInsts.getFlag(1); }
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -187,7 +188,7 @@ class SROA {
   /// A collection of instructions to delete.
   /// We try to batch deletions to simplify code and make things a bit more
   /// efficient. We also make sure there is no dangling pointers.
-  SmallVector<WeakVH, 8> DeadInsts;
+  llvm::SmallVectorWithFlags<WeakVH, 8, 2> DeadInsts;
 
   /// Post-promotion worklist.
   ///
@@ -243,8 +244,9 @@ public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
        SROAOptions Options)
       : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
-        AggregateToVector(Options.AggregateToVector) {}
+        DeadInsts(decltype(this->DeadInsts)::withFlags(
+            unsigned(bool(Options.CFG == SROAOptions::PreserveCFG)) |
+            (unsigned(bool(Options.AggregateToVector)) << 1))) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -1116,7 +1118,7 @@ private:
 
     // If there is a load with an unknown offset, we can still perform store
     // to load forwarding for other known-offset loads.
-    if (!IsOffsetKnown)
+    if (!isOffsetKnown())
       return PI.setEscapedReadOnly(&LI);
 
     TypeSize Size = DL.getTypeStoreSize(LI.getType());
@@ -1136,7 +1138,7 @@ private:
     Value *ValOp = SI.getValueOperand();
     if (ValOp == *U)
       return PI.setEscapedAndAborted(&SI);
-    if (!IsOffsetKnown)
+    if (!isOffsetKnown())
       return PI.setAborted(&SI);
 
     TypeSize StoreSize = DL.getTypeStoreSize(ValOp->getType());
@@ -1175,11 +1177,11 @@ private:
     assert(II.getRawDest() == *U && "Pointer use is not the destination?");
     ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
     if ((Length && Length->getValue() == 0) ||
-        (IsOffsetKnown && Offset.uge(AllocSize)))
+        (isOffsetKnown() && Offset.uge(AllocSize)))
       // Zero-length mem transfer intrinsics can be ignored entirely.
       return markAsDead(II);
 
-    if (!IsOffsetKnown)
+    if (!isOffsetKnown())
       return PI.setAborted(&II);
 
     insertUse(II, Offset,
@@ -1199,7 +1201,7 @@ private:
     if (VisitedDeadInsts.count(&II))
       return;
 
-    if (!IsOffsetKnown)
+    if (!isOffsetKnown())
       return PI.setAborted(&II);
 
     // This side of the transfer is completely out-of-bounds, and so we can
@@ -1266,7 +1268,7 @@ private:
       return;
     }
 
-    if (!IsOffsetKnown)
+    if (!isOffsetKnown())
       return PI.setAborted(&II);
 
     if (II.isLifetimeStartOrEnd()) {
@@ -1364,7 +1366,7 @@ private:
       return;
     }
 
-    if (!IsOffsetKnown)
+    if (!isOffsetKnown())
       return PI.setAborted(&I);
 
     // See if we already have computed info on this node.
@@ -5721,7 +5723,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C, AggregateToVector);
+      selectPartitionType(P, DL, AI, *C, getAggregateToVector());
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -5791,7 +5793,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
       NewSpeculatablePHIs.push_back(PHI);
       continue;
     }
-    if (getPHIStoreToRewrite(*PHI, PreserveCFG, DTU->getDomTree())) {
+    if (getPHIStoreToRewrite(*PHI, getPreserveCFG(), DTU->getDomTree())) {
       NewPHIsWithStoreToRewrite.push_back(PHI);
       continue;
     }
@@ -5806,7 +5808,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   NewSelectsToRewrite.reserve(SelectUsers.size());
   for (SelectInst *Sel : SelectUsers) {
     std::optional<RewriteableMemOps> Ops =
-        isSafeSelectToSpeculate(*Sel, PreserveCFG);
+        isSafeSelectToSpeculate(*Sel, getPreserveCFG());
     if (!Ops) {
       Promotable = false;
       break;
@@ -6410,7 +6412,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   while (!RemainingSelectsToRewrite.empty()) {
     const auto [K, V] = RemainingSelectsToRewrite.pop_back_val();
     CFGChanged |=
-        rewriteSelectInstMemOps(*K, V, IRB, PreserveCFG ? nullptr : DTU);
+        rewriteSelectInstMemOps(*K, V, IRB, getPreserveCFG() ? nullptr : DTU);
   }
 
   return {Changed, CFGChanged};
@@ -6529,7 +6531,7 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
   } while (!Worklist.empty());
 
   assert((!CFGChanged || Changed) && "Can not only modify the CFG.");
-  assert((!CFGChanged || !PreserveCFG) &&
+  assert((!CFGChanged || !getPreserveCFG()) &&
          "Should not have modified the CFG when told to preserve it.");
 
   if (Changed && isAssignmentTrackingEnabled(*F.getParent())) {

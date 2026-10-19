@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Compiler.h"
@@ -191,7 +192,7 @@ public:
     /// Print the dependence.  \p Instr is used to map the instruction
     /// indices to instructions.
     LLVM_ABI void print(raw_ostream &OS, unsigned Depth,
-                        const SmallVectorImpl<Instruction *> &Instrs) const;
+                        ArrayRef<Instruction *> Instrs) const;
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
@@ -286,7 +287,7 @@ public:
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
   bool shouldRetryWithRuntimeChecks() const {
-    return ShouldRetryWithRuntimeChecks &&
+    return InstMap.getFlag(0) &&
            Status == VectorizationSafetyStatus::PossiblySafeWithRtChecks;
   }
 
@@ -294,16 +295,14 @@ public:
   /// the MaxDependences threshold and this information is not
   /// available.
   const SmallVectorImpl<Dependence> *getDependences() const {
-    return RecordDependences ? &Dependences : nullptr;
+    return recordDependences() ? &Dependences : nullptr;
   }
 
   void clearDependences() { Dependences.clear(); }
 
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
-  const SmallVectorImpl<Instruction *> &getMemoryInstructions() const {
-    return InstMap;
-  }
+  ArrayRef<Instruction *> getMemoryInstructions() const { return InstMap; }
 
   /// Generate a mapping between the memory instructions and their
   /// indices according to program order.
@@ -370,7 +369,9 @@ private:
   DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
 
   /// Memory access instructions in program order.
-  SmallVector<Instruction *, 16> InstMap;
+  // Flag bits 0 and 1 record retrying with runtime checks and invalid
+  // dependences.
+  SmallVectorWithFlags<Instruction *, 16, 2> InstMap;
 
   /// The program order index to be used for the next instruction.
   unsigned AccessIdx = 0;
@@ -393,7 +394,6 @@ private:
 
   /// Whether we should try to vectorize the loop with runtime checks, if the
   /// dependencies are not safe.
-  bool ShouldRetryWithRuntimeChecks = false;
 
   /// Result of the dependence checks, indicating whether the checked
   /// dependences are safe for vectorization, require RT checks or are known to
@@ -403,7 +403,7 @@ private:
   //// True if Dependences reflects the dependences in the
   //// loop.  If false we exceeded MaxDependences and
   //// Dependences is invalid.
-  bool RecordDependences = true;
+  bool recordDependences() const { return !InstMap.getFlag(1); }
 
   /// Memory dependences collected during the analysis.  Only valid if
   /// RecordDependences is true.
@@ -588,8 +588,7 @@ public:
 
   /// Reset the state of the pointer runtime information.
   void reset() {
-    Need = false;
-    CanUseDiffCheck = true;
+    DiffChecks.setFlags(0);
     Pointers.clear();
     Checks.clear();
     DiffChecks.clear();
@@ -623,7 +622,7 @@ public:
   // if any pointer-difference is <u VF * InterleaveCount * access size. Returns
   // std::nullopt if pointer-difference checks cannot be used.
   std::optional<ArrayRef<PointerDiffInfo>> getDiffChecks() const {
-    if (!CanUseDiffCheck)
+    if (DiffChecks.getFlag(1))
       return std::nullopt;
     return {DiffChecks};
   }
@@ -646,7 +645,8 @@ public:
                             unsigned Depth = 0) const;
 
   /// This flag indicates if we need to add the runtime check.
-  bool Need = false;
+  bool needsChecking() const { return DiffChecks.getFlag(0); }
+  void setNeedsChecking(bool Need) { DiffChecks.setFlag(0, Need); }
 
   /// Information about the pointers that may require checking.
   SmallVector<PointerInfo, 2> Pointers;
@@ -706,11 +706,14 @@ private:
   SmallVector<RuntimePointerCheck, 4> Checks;
 
   /// Flag indicating if pointer-difference checks can be used
-  bool CanUseDiffCheck = true;
 
   /// A list of (pointer-difference, access size) pairs that can be used to
   /// prove that there are no vectorization-preventing dependencies.
-  SmallVector<PointerDiffInfo> DiffChecks;
+  // Flag bits 0 and 1 record required checks and unavailable diff checks.
+  SmallVectorWithFlags<
+      PointerDiffInfo,
+      CalculateSmallVectorDefaultInlinedElements<PointerDiffInfo>::value, 2>
+      DiffChecks;
 };
 
 /// Drive the analysis of memory accesses in the loop

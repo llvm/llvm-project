@@ -38,6 +38,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -933,15 +934,26 @@ struct DSEState {
   // Check if there are root nodes that are terminated by UnreachableInst.
   // Those roots pessimize post-dominance queries. If there are such roots,
   // fall back to CFG scan starting from all non-unreachable roots.
-  bool AnyUnreachableExit;
+  bool getAnyUnreachableExit() const { return ToRemove.getFlag(0); }
+  bool setAnyUnreachableExit(bool Value) {
+    ToRemove.setFlag(0, Value);
+    return Value;
+  }
 
   // Whether or not we should iterate on removing dead stores at the end of the
   // function due to removing a store causing a previously captured pointer to
   // no longer be captured.
-  bool ShouldIterateEndOfFunctionDSE;
+  bool getShouldIterateEndOfFunctionDSE() const { return ToRemove.getFlag(1); }
+  bool setShouldIterateEndOfFunctionDSE(bool Value) {
+    ToRemove.setFlag(1, Value);
+    return Value;
+  }
 
   /// Dead instructions to be removed at the end of DSE.
-  SmallVector<Instruction *> ToRemove;
+  llvm::SmallVectorWithFlags<
+      Instruction *,
+      llvm::CalculateSmallVectorDefaultInlinedElements<Instruction *>::value, 2>
+      ToRemove;
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
@@ -1163,9 +1175,9 @@ DSEState::DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
       InvisibleToCallerAfterRetBounded.insert({&AI, DeadBytes});
   }
 
-  AnyUnreachableExit = any_of(PDT.roots(), [](const BasicBlock *E) {
+  setAnyUnreachableExit(any_of(PDT.roots(), [](const BasicBlock *E) {
     return isa<UnreachableInst>(E->getTerminator());
-  });
+  }));
 }
 
 LocationSize DSEState::strengthenLocationSize(const Instruction *I,
@@ -1902,7 +1914,7 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
     // there is a path from MaybeDeadAccess to an exit not going through a
     // killing block.
     if (!PDT.dominates(CommonPred, MaybeDeadAccess->getBlock())) {
-      if (!AnyUnreachableExit)
+      if (!getAnyUnreachableExit())
         return std::nullopt;
 
       // Fall back to CFG scan starting at all non-unreachable roots if not
@@ -1982,7 +1994,7 @@ void DSEState::deleteDeadInstruction(Instruction *SI,
           if (SI->getValueOperand()->getType()->isPointerTy()) {
             const Value *UO = getUnderlyingObject(SI->getValueOperand());
             if (CapturedBeforeReturn.erase(UO))
-              ShouldIterateEndOfFunctionDSE = true;
+              setShouldIterateEndOfFunctionDSE(true);
             InvisibleToCallerAfterRet.erase(UO);
             InvisibleToCallerAfterRetBounded.erase(UO);
           }
@@ -2057,7 +2069,7 @@ bool DSEState::eliminateDeadWritesAtEndOfFunction() {
   LLVM_DEBUG(
       dbgs() << "Trying to eliminate MemoryDefs at the end of the function\n");
   do {
-    ShouldIterateEndOfFunctionDSE = false;
+    setShouldIterateEndOfFunctionDSE(false);
     for (MemoryDef *Def : llvm::reverse(MemDefs)) {
       if (SkipStores.contains(Def))
         continue;
@@ -2088,7 +2100,7 @@ bool DSEState::eliminateDeadWritesAtEndOfFunction() {
         MadeChange = true;
       }
     }
-  } while (ShouldIterateEndOfFunctionDSE);
+  } while (getShouldIterateEndOfFunctionDSE());
   return MadeChange;
 }
 

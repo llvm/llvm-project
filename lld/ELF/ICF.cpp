@@ -243,7 +243,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
   for (; rai != rae; ++rai, ++rbi) {
     if (rai->r_offset != rbi->r_offset ||
-        rai->getType(ctx.arg.isMips64EL) != rbi->getType(ctx.arg.isMips64EL))
+        rai->getType(ctx.arg.getIsMips64EL()) !=
+            rbi->getType(ctx.arg.getIsMips64EL()))
       return false;
 
     uint64_t addA = getAddend<ELFT>(*rai);
@@ -540,7 +541,8 @@ template <class ELFT> void ICF<ELFT>::run() {
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
   auto print = [&ctx = ctx]() -> ELFSyncStream {
-    return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
+    return {ctx,
+            ctx.arg.getPrintIcfSections() ? DiagLevel::Msg : DiagLevel::None};
   };
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {

@@ -4191,8 +4191,8 @@ static unsigned EnsureStackAlignment(const PPCFrameLowering *Lowering,
 
 SDValue PPCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   if (Subtarget.isAIXABI())
     return LowerFormalArguments_AIX(Chain, CallConv, isVarArg, Ins, dl, DAG,
                                     InVals);
@@ -4206,8 +4206,8 @@ SDValue PPCTargetLowering::LowerFormalArguments(
 
 SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   // 32-bit SVR4 ABI Stack Frame Layout:
   //              +-----------------------------------+
@@ -4464,8 +4464,8 @@ SDValue PPCTargetLowering::extendArgForPPC64(ISD::ArgFlagsTy Flags,
 
 SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   // TODO: add description of PPC stack frame format, or at least some docs.
   //
   bool isELFv2ABI = Subtarget.isELFv2ABI();
@@ -4934,9 +4934,8 @@ static bool callsShareTOCBase(const Function *Caller,
   return true;
 }
 
-static bool
-needStackSlotPassParameters(const PPCSubtarget &Subtarget,
-                            const SmallVectorImpl<ISD::OutputArg> &Outs) {
+static bool needStackSlotPassParameters(const PPCSubtarget &Subtarget,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs) {
   assert(Subtarget.is64BitELFABI());
 
   const unsigned PtrByteSize = 8;
@@ -5021,9 +5020,8 @@ areCallingConvEligibleForTCO_64SVR4(CallingConv::ID CallerCC,
 bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const Function *CallerFunc,
-    bool isCalleeExternalSymbol) const {
+    llvm::ArrayRef<ISD::OutputArg> Outs, llvm::ArrayRef<ISD::InputArg> Ins,
+    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
 
   if (!EnableSCO && !TailCallOpt)
@@ -5110,7 +5108,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
 bool PPCTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins) const {
+    llvm::ArrayRef<ISD::InputArg> Ins) const {
   if (!getTargetMachine().Options.GuaranteedTailCallOpt)
     return false;
 
@@ -5319,8 +5317,8 @@ static bool isFunctionGlobalAddress(const GlobalValue *GV) {
 
 SDValue PPCTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCRetInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                     *DAG.getContext());
@@ -5785,7 +5783,7 @@ SDValue PPCTargetLowering::FinishCall(
     CallFlags CFlags, const SDLoc &dl, SelectionDAG &DAG,
     SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass, SDValue Glue,
     SDValue Chain, SDValue CallSeqStart, SDValue &Callee, int SPDiff,
-    unsigned NumBytes, const SmallVectorImpl<ISD::InputArg> &Ins,
+    unsigned NumBytes, llvm::ArrayRef<ISD::InputArg> Ins,
     SmallVectorImpl<SDValue> &InVals, const CallBase *CB) const {
 
   if ((Subtarget.is64BitELFABI() && !Subtarget.isUsingPCRelativeCalls()) ||
@@ -5884,9 +5882,8 @@ bool PPCTargetLowering::supportsTailCallFor(const CallBase *CB) const {
 bool PPCTargetLowering::isEligibleForTCO(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const Function *CallerFunc,
-    bool isCalleeExternalSymbol) const {
+    llvm::ArrayRef<ISD::OutputArg> Outs, llvm::ArrayRef<ISD::InputArg> Ins,
+    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
   if (Subtarget.useLongCalls() && !(CB && CB->isMustTailCall()))
     return false;
 
@@ -5904,28 +5901,27 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain                         = CLI.Chain;
-  SDValue Callee                        = CLI.Callee;
-  bool &isTailCall                      = CLI.IsTailCall;
+  SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv              = CLI.CallConv;
-  bool isVarArg                         = CLI.IsVarArg;
-  bool isPatchPoint                     = CLI.IsPatchPoint;
+  bool isVarArg = CLI.getIsVarArg();
+  bool isPatchPoint = CLI.getIsPatchPointFlag();
   const CallBase *CB                    = CLI.CB;
 
-  if (isTailCall) {
+  if (CLI.getIsTailCall()) {
     MachineFunction &MF = DAG.getMachineFunction();
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     auto *G = dyn_cast<GlobalAddressSDNode>(Callee);
     const GlobalValue *GV = G ? G->getGlobal() : nullptr;
     bool IsCalleeExternalSymbol = isa<ExternalSymbolSDNode>(Callee);
 
-    isTailCall =
-        isEligibleForTCO(GV, CallConv, CallerCC, CB, isVarArg, Outs, Ins,
-                         &(MF.getFunction()), IsCalleeExternalSymbol);
-    if (isTailCall) {
+    CLI.setIsTailCall(isEligibleForTCO(GV, CallConv, CallerCC, CB, isVarArg,
+                                       Outs, Ins, &(MF.getFunction()),
+                                       IsCalleeExternalSymbol));
+    if (CLI.getIsTailCall()) {
       ++NumTailCalls;
       if (!getTargetMachine().Options.GuaranteedTailCallOpt)
         ++NumSiblingCalls;
@@ -5946,7 +5942,7 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  if (!isTailCall && CB && CB->isMustTailCall())
+  if (!CLI.getIsTailCall() && CB && CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
@@ -5954,16 +5950,16 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // made via function pointer. If we have a function name, first translate it
   // into a pointer.
   if (Subtarget.useLongCalls() && isa<GlobalAddressSDNode>(Callee) &&
-      !isTailCall)
+      !CLI.getIsTailCall())
     Callee = LowerGlobalAddress(Callee, DAG);
 
   CallFlags CFlags(
-      CallConv, isTailCall, isVarArg, isPatchPoint,
+      CallConv, CLI.getIsTailCall(), isVarArg, isPatchPoint,
       isIndirectCall(Callee, DAG, Subtarget, isPatchPoint),
       // hasNest
       Subtarget.is64BitELFABI() &&
           any_of(Outs, [](ISD::OutputArg Arg) { return Arg.Flags.isNest(); }),
-      CLI.NoMerge);
+      CLI.getNoMerge());
 
   if (Subtarget.isAIXABI())
     return LowerCall_AIX(Chain, Callee, CFlags, Outs, OutVals, Ins, dl, DAG,
@@ -5979,10 +5975,9 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
 SDValue PPCTargetLowering::LowerCall_32SVR4(
     SDValue Chain, SDValue Callee, CallFlags CFlags,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+    llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &dl, SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
     const CallBase *CB) const {
   // See PPCTargetLowering::LowerFormalArguments_32SVR4() for a description
   // of the 32-bit SVR4 ABI stack frame layout.
@@ -6229,10 +6224,9 @@ SDValue PPCTargetLowering::createMemcpyOutsideCallSeq(
 
 SDValue PPCTargetLowering::LowerCall_64SVR4(
     SDValue Chain, SDValue Callee, CallFlags CFlags,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+    llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &dl, SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
     const CallBase *CB) const {
   bool isELFv2ABI = Subtarget.isELFv2ABI();
   bool isLittleEndian = Subtarget.isLittleEndian();
@@ -7195,8 +7189,8 @@ static unsigned mapArgRegToOffsetAIX(unsigned Reg, const PPCFrameLowering *FL) {
 
 SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   assert((CallConv == CallingConv::C || CallConv == CallingConv::Cold ||
           CallConv == CallingConv::Fast) &&
@@ -7565,10 +7559,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
 SDValue PPCTargetLowering::LowerCall_AIX(
     SDValue Chain, SDValue Callee, CallFlags CFlags,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
+    llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &dl, SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
     const CallBase *CB) const {
   // See PPCTargetLowering::LowerFormalArguments_AIX() for a description of the
   // AIX ABI stack frame layout.
@@ -7886,12 +7879,11 @@ SDValue PPCTargetLowering::LowerCall_AIX(
                     Callee, SPDiff, NumBytes, Ins, InVals, CB);
 }
 
-bool
-PPCTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
-                                  MachineFunction &MF, bool isVarArg,
-                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                  LLVMContext &Context,
-                                  const Type *RetTy) const {
+bool PPCTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                       MachineFunction &MF, bool isVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       LLVMContext &Context,
+                                       const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(
@@ -7900,12 +7892,12 @@ PPCTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                 : RetCC_PPC);
 }
 
-SDValue
-PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               const SmallVectorImpl<SDValue> &OutVals,
-                               const SDLoc &dl, SelectionDAG &DAG) const {
+SDValue PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                       bool isVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       const SmallVectorImpl<SDValue> &OutVals,
+                                       const SDLoc &dl,
+                                       SelectionDAG &DAG) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());

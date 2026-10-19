@@ -73,8 +73,7 @@ public:
                                StringRef Constraint, MVT VT) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
@@ -86,7 +85,7 @@ public:
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
                       SelectionDAG &DAG) const override;
 

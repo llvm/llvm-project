@@ -17,6 +17,7 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -50,8 +51,9 @@ class SwiftAggLowering {
       return End - Begin;
     }
   };
-  SmallVector<StorageEntry, 4> Entries;
-  bool Finished = false;
+  llvm::SmallVectorWithFlags<StorageEntry, 4> Entries;
+  bool getFinished() const { return Entries.getFlag(0); }
+  void setFinished(bool Value) { Entries.setFlag(0, Value); }
 
 public:
   SwiftAggLowering(CodeGenModule &CGM) : CGM(CGM) {}
@@ -71,7 +73,7 @@ public:
 
   /// Does this lowering require passing any data?
   bool empty() const {
-    assert(Finished && "didn't finish lowering before calling empty()");
+    assert(getFinished() && "didn't finish lowering before calling empty()");
     return Entries.empty();
   }
 

@@ -64,7 +64,7 @@ void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
       OnCUDieLoaded(*CU);
 
       // Register mofule reference.
-      if (!GlobalData.getOptions().UpdateIndexTablesOnly)
+      if (!GlobalData.getOptions().getUpdateIndexTablesOnly())
         ObjectContexts.back()->registerModuleReference(CUDie, Loader,
                                                        OnCUDieLoaded);
     }
@@ -117,7 +117,7 @@ Error DWARFLinkerImpl::link() {
     }
 
     // Verify input DWARF if requested.
-    if (GlobalData.getOptions().VerifyInputDWARF)
+    if (GlobalData.getOptions().getVerifyInputDWARF())
       verifyInput(Context->InputDWARFFile);
 
     if (!GlobalData.getTargetTriple())
@@ -165,7 +165,7 @@ Error DWARFLinkerImpl::link() {
 
   CommonSections.setOutputFormat(GlobalFormat, GlobalEndianness);
 
-  if (!GlobalData.Options.NoODR && Language.has_value()) {
+  if (!GlobalData.Options.getNoODR() && Language.has_value()) {
     llvm::parallel::TaskGroup TGroup;
     TGroup.spawn([&]() {
       ArtificialTypeUnit = std::make_unique<TypeUnit>(
@@ -222,7 +222,7 @@ Error DWARFLinkerImpl::link() {
 
   // Build the linker-wide CIE registry, then emit each context's
   // .debug_frame in parallel. See CIERegistry for the ownership rules.
-  if (!GlobalData.getOptions().UpdateIndexTablesOnly) {
+  if (!GlobalData.getOptions().getUpdateIndexTablesOnly()) {
     LinkContext::CIERegistry CIEs;
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
       if (Context->FrameScan)
@@ -282,9 +282,9 @@ Error DWARFLinkerImpl::validateAndUpdateOptions() {
   }
 
   // Do not do types deduplication in case --update.
-  if (GlobalData.getOptions().UpdateIndexTablesOnly &&
-      !GlobalData.Options.NoODR)
-    GlobalData.Options.NoODR = true;
+  if (GlobalData.getOptions().getUpdateIndexTablesOnly() &&
+      !GlobalData.Options.getNoODR())
+    GlobalData.Options.setNoODR(true);
 
   return Error::success();
 }
@@ -487,7 +487,7 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
 }
 
 Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
-  InterCUProcessingStarted = false;
+  setInterCUProcessingStarted(false);
   if (!InputDWARFFile.Dwarf)
     return Error::success();
 
@@ -506,7 +506,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
   // Check for live relocations. If there is no any live relocation then we
   // can skip entire object file.
-  if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+  if (!GlobalData.getOptions().getUpdateIndexTablesOnly() &&
       !InputDWARFFile.Addresses->hasValidRelocs()) {
     if (GlobalData.getOptions().Verbose)
       outs() << "No valid relocations found. Skipping.\n";
@@ -526,7 +526,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
     // The !isClangModuleRef condition effectively skips over fully resolved
     // skeleton units.
-    if (!CUDie || GlobalData.getOptions().UpdateIndexTablesOnly ||
+    if (!CUDie || GlobalData.getOptions().getUpdateIndexTablesOnly() ||
         !isClangModuleRef(CUDie, PCMFile, 0, true).first) {
       CompileUnits.emplace_back(std::make_unique<CompileUnit>(
           GlobalData, *OrigCU, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
@@ -550,7 +550,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
   // Link all inter-connected units.
   if (HasNewInterconnectedCUs) {
-    InterCUProcessingStarted = true;
+    setInterCUProcessingStarted(true);
 
     if (Error Err = finiteLoop([&]() -> Expected<bool> {
           HasNewInterconnectedCUs = false;
@@ -616,7 +616,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     });
   }
 
-  if (GlobalData.getOptions().UpdateIndexTablesOnly) {
+  if (GlobalData.getOptions().getUpdateIndexTablesOnly()) {
     // Emit Invariant sections.
 
     if (Error Err = emitInvariantSections())
@@ -629,7 +629,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
     CompileUnit &CU, TypeUnit *ArtificialTypeUnit,
     enum CompileUnit::Stage DoUntilStage) {
-  if (InterCUProcessingStarted != CU.isInterconnectedCU())
+  if (getInterCUProcessingStarted() != CU.isInterconnectedCU())
     return;
 
   if (Error Err = finiteLoop([&]() -> Expected<bool> {
@@ -656,7 +656,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
             // Runs concurrently, so it must stay a no-op: it may only be
             // entered when the serial pass in addObjectFile() has already
             // populated the module map.
-            if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+            if (!GlobalData.getOptions().getUpdateIndexTablesOnly() &&
                 registerModuleReference(
                     CU.getOrigUnit().getUnitDIE(), nullptr,
                     [](const DWARFUnit &) {}, 0))
@@ -669,8 +669,8 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
         case CompileUnit::Stage::Loaded: {
           // Mark all the DIEs that need to be present in the generated output.
           // If ODR requested, build type names.
-          if (!CU.resolveDependenciesAndMarkLiveness(InterCUProcessingStarted,
-                                                     HasNewInterconnectedCUs)) {
+          if (!CU.resolveDependenciesAndMarkLiveness(
+                  getInterCUProcessingStarted(), HasNewInterconnectedCUs)) {
             assert(HasNewInterconnectedCUs &&
                    "Flag indicating new inter-connections is not set");
             return false;
@@ -680,7 +680,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
         } break;
 
         case CompileUnit::Stage::LivenessAnalysisDone: {
-          if (InterCUProcessingStarted) {
+          if (getInterCUProcessingStarted()) {
             if (CU.updateDependenciesCompleteness())
               HasNewGlobalDependency = true;
             return false;
@@ -710,7 +710,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
         case CompileUnit::Stage::TypeNamesAssigned:
           // Clone input compile unit.
           if (CU.isClangModule() ||
-              GlobalData.getOptions().UpdateIndexTablesOnly ||
+              GlobalData.getOptions().getUpdateIndexTablesOnly() ||
               CU.getContainingFile().Addresses->hasValidRelocs()) {
             if (Error Err = CU.cloneAndEmit(GlobalData.getTargetTriple(),
                                             ArtificialTypeUnit))
@@ -779,7 +779,7 @@ Error DWARFLinkerImpl::LinkContext::emitInvariantSections() {
 }
 
 Error DWARFLinkerImpl::LinkContext::scanFrameData() {
-  if (GlobalData.getOptions().UpdateIndexTablesOnly)
+  if (GlobalData.getOptions().getUpdateIndexTablesOnly())
     return Error::success();
   if (!GlobalData.getTargetTriple().has_value())
     return Error::success();

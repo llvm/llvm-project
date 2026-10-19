@@ -327,8 +327,8 @@ static SDValue unpack64(SelectionDAG &DAG, SDValue Chain, const CCValAssign &VA,
 // Transform physical registers into virtual registers.
 SDValue CSKYTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   switch (CallConv) {
   default:
@@ -425,21 +425,22 @@ SDValue CSKYTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-bool CSKYTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool CSKYTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                        MachineFunction &MF, bool IsVarArg,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs,
+                                        LLVMContext &Context,
+                                        const Type *RetTy) const {
   SmallVector<CCValAssign, 16> CSKYLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, CSKYLocs, Context);
   return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg));
 }
 
-SDValue
-CSKYTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                                bool IsVarArg,
-                                const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                const SmallVectorImpl<SDValue> &OutVals,
-                                const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue CSKYTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                        bool IsVarArg,
+                                        llvm::ArrayRef<ISD::OutputArg> Outs,
+                                        const SmallVectorImpl<SDValue> &OutVals,
+                                        const SDLoc &DL,
+                                        SelectionDAG &DAG) const {
   // Stores the assignment of the return value to a location.
   SmallVector<CCValAssign, 16> CSKYLocs;
 
@@ -508,14 +509,13 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                       SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   MVT XLenVT = MVT::i32;
 
@@ -528,10 +528,10 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
   ArgCCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CallConv, IsVarArg));
 
   // Check if it's really possible to do a tail call.
-  if (IsTailCall)
-    IsTailCall = false; // TODO: TailCallOptimization;
+  if (CLI.getIsTailCall())
+    CLI.setIsTailCall(false); // TODO: TailCallOptimization;
 
-  if (IsTailCall)
+  if (CLI.getIsTailCall())
     ++NumTailCalls;
   else if (CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
@@ -558,12 +558,13 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, /*CI=*/nullptr, IsTailCall,
-                          MachinePointerInfo(), MachinePointerInfo());
+                          /*AlwaysInline=*/false, /*CI=*/nullptr,
+                          CLI.getIsTailCall(), MachinePointerInfo(),
+                          MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
 
-  if (!IsTailCall)
+  if (!CLI.getIsTailCall())
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
   // Copy argument values to their designated locations.
@@ -615,8 +616,8 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      assert(!IsTailCall && "Tail call not allowed if stack is used "
-                            "for passing parameters");
+      assert(!CLI.getIsTailCall() && "Tail call not allowed if stack is used "
+                                     "for passing parameters");
 
       // Work out the address of the stack slot.
       if (!StackPtr.getNode())
@@ -684,7 +685,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
 
-  if (!IsTailCall) {
+  if (!CLI.getIsTailCall()) {
     // Add a register mask operand representing the call-preserved registers.
     const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
     const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
@@ -699,7 +700,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  if (IsTailCall) {
+  if (CLI.getIsTailCall()) {
     MF.getFrameInfo().setHasTailCall();
     return DAG.getNode(IsRegCall ? CSKYISD::TAILReg : CSKYISD::TAIL, DL,
                        NodeTys, Ops);
@@ -707,7 +708,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   Chain = DAG.getNode(IsRegCall ? CSKYISD::CALLReg : CSKYISD::CALL, DL, NodeTys,
                       Ops);
-  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.getNoMerge());
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.

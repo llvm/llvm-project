@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_ASMPARSER_TYPECHECK_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_ASMPARSER_TYPECHECK_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -40,9 +41,10 @@ class WebAssemblyAsmTypeCheck final {
     bool IsLoop;
   };
   SmallVector<BlockInfo, 8> BlockInfoStack;
-  SmallVector<wasm::ValType, 16> LocalTypes;
+  llvm::SmallVectorWithFlags<wasm::ValType, 16> LocalTypes;
   wasm::WasmSignature LastSig;
-  bool Is64;
+  bool getIs64() const { return LocalTypes.getFlag(0); }
+  void setIs64(bool Value) { LocalTypes.setFlag(0, Value); }
 
   // checkTypes checks 'Types' against the value stack. popTypes checks 'Types'
   // against the value stack and also pops them.

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -137,9 +138,11 @@ class PPCBranchCoalescing : public MachineFunctionPass {
     MachineBasicBlock *BranchBlock;       // Block containing the branch
     MachineBasicBlock *BranchTargetBlock; // Block branched to
     MachineBasicBlock *FallThroughBlock;  // Fall-through if branch not taken
-    SmallVector<MachineOperand, 4> Cond;
-    bool MustMoveDown;
-    bool MustMoveUp;
+    llvm::SmallVectorWithFlags<MachineOperand, 4, 2> Cond;
+    bool getMustMoveDown() const { return Cond.getFlag(0); }
+    void setMustMoveDown(bool Value) { Cond.setFlag(0, Value); }
+    bool getMustMoveUp() const { return Cond.getFlag(1); }
+    void setMustMoveUp(bool Value) { Cond.setFlag(1, Value); }
 
     CoalescingCandidateInfo();
     void clear();
@@ -200,15 +203,15 @@ INITIALIZE_PASS_END(PPCBranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
 
 PPCBranchCoalescing::CoalescingCandidateInfo::CoalescingCandidateInfo()
     : BranchBlock(nullptr), BranchTargetBlock(nullptr),
-      FallThroughBlock(nullptr), MustMoveDown(false), MustMoveUp(false) {}
+      FallThroughBlock(nullptr) {}
 
 void PPCBranchCoalescing::CoalescingCandidateInfo::clear() {
   BranchBlock = nullptr;
   BranchTargetBlock = nullptr;
   FallThroughBlock = nullptr;
   Cond.clear();
-  MustMoveDown = false;
-  MustMoveUp = false;
+  setMustMoveDown(false);
+  setMustMoveUp(false);
 }
 
 void PPCBranchCoalescing::initialize(MachineFunction &MF) {
@@ -233,8 +236,12 @@ bool PPCBranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
                     << Cand.BranchBlock->getNumber() << " can be coalesced:");
   MachineBasicBlock *FalseMBB = nullptr;
 
-  if (TII->analyzeBranch(*Cand.BranchBlock, Cand.BranchTargetBlock, FalseMBB,
-                         Cand.Cond)) {
+  SmallVector<MachineOperand, 4> Condition;
+  Condition = std::move(Cand.Cond);
+  bool CannotAnalyze = TII->analyzeBranch(
+      *Cand.BranchBlock, Cand.BranchTargetBlock, FalseMBB, Condition);
+  Cand.Cond.assign(std::move(Condition));
+  if (CannotAnalyze) {
     LLVM_DEBUG(dbgs() << "TII unable to Analyze Branch - skip\n");
     return false;
   }
@@ -551,7 +558,7 @@ bool PPCBranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
           LLVM_DEBUG(dbgs() << "PHI " << *I
                             << " defines register used in this "
                                "block -- all must move down\n");
-          SourceRegion.MustMoveDown = true;
+          SourceRegion.setMustMoveDown(true);
         }
       }
   }
@@ -565,16 +572,18 @@ bool PPCBranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
     if (!canMoveToBeginning(*I, *SourceRegion.BranchTargetBlock)) {
       LLVM_DEBUG(dbgs() << "Instruction " << *I
                         << " cannot move down - must move up!\n");
-      SourceRegion.MustMoveUp = true;
+      SourceRegion.setMustMoveUp(true);
     }
     if (!canMoveToEnd(*I, *TargetRegion.BranchBlock)) {
       LLVM_DEBUG(dbgs() << "Instruction " << *I
                         << " cannot move up - must move down!\n");
-      SourceRegion.MustMoveDown = true;
+      SourceRegion.setMustMoveDown(true);
     }
   }
 
-  return (SourceRegion.MustMoveUp && SourceRegion.MustMoveDown) ? false : true;
+  return (SourceRegion.getMustMoveUp() && SourceRegion.getMustMoveDown())
+             ? false
+             : true;
 }
 
 /// Merge the instructions from SourceRegion.BranchBlock,
@@ -636,7 +645,7 @@ bool PPCBranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
 bool PPCBranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
                                        CoalescingCandidateInfo &TargetRegion) {
 
-  if (SourceRegion.MustMoveUp && SourceRegion.MustMoveDown) {
+  if (SourceRegion.getMustMoveUp() && SourceRegion.getMustMoveDown()) {
     llvm_unreachable("Cannot have both MustMoveDown and MustMoveUp set!");
     return false;
   }
@@ -655,12 +664,12 @@ bool PPCBranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
   MachineBasicBlock::iterator lastInstr =
       SourceRegion.BranchBlock->getFirstTerminator();
 
-  MachineBasicBlock *Source = SourceRegion.MustMoveDown
+  MachineBasicBlock *Source = SourceRegion.getMustMoveDown()
                                   ? SourceRegion.BranchTargetBlock
                                   : TargetRegion.BranchBlock;
 
   MachineBasicBlock::iterator Target =
-      SourceRegion.MustMoveDown
+      SourceRegion.getMustMoveDown()
           ? SourceRegion.BranchTargetBlock->getFirstNonPHI()
           : TargetRegion.BranchBlock->getFirstTerminator();
 

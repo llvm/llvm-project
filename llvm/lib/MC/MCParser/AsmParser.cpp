@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -159,10 +160,12 @@ private:
   CppHashInfoTy CppHashInfo;
 
   /// Have we seen any file line comment.
-  bool HadCppHashFilename = false;
+  bool getHadCppHashFilename() const { return DirLabels.getFlag(0); }
+  void setHadCppHashFilename(bool Value) { DirLabels.setFlag(0, Value); }
 
   /// List of forward directional labels for diagnosis at the end.
-  SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
+  llvm::SmallVectorWithFlags<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4>
+      DirLabels;
 
   SmallSet<StringRef, 2> LTODiscardSymbols;
 
@@ -767,7 +770,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
     : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
       MacrosEnabledFlag(true) {
-  HadError = false;
+  setHadError(false);
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
   SavedDiagContext = SrcMgr.getDiagContext();
@@ -817,7 +820,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 }
 
 AsmParser::~AsmParser() {
-  assert((HadError || ActiveMacros.empty()) &&
+  assert((getHadError() || ActiveMacros.empty()) &&
          "Unexpected active macro instantiation!");
 
   // Remove MCStreamer's reference to the parser SMLoc.
@@ -851,7 +854,7 @@ bool AsmParser::Warning(SMLoc L, const Twine &Msg, SMRange Range) {
 }
 
 bool AsmParser::printError(SMLoc L, const Twine &Msg, SMRange Range) {
-  HadError = true;
+  setHadError(true);
   printMessage(L, SourceMgr::DK_Error, Msg, Range);
   printMacroInstantiations();
   return true;
@@ -875,7 +878,7 @@ bool AsmParser::enterIncludeFile(const std::string &Filename) {
 bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
                                   const MCExpr *Count, SMLoc Loc) {
   // The .incbin file cannot introduce new symbols.
-  if (SymbolScanningMode)
+  if (getSymbolScanningModeFlag())
     return false;
 
   // The buffer is consumed only by emitBytes. Skip the NUL termination to
@@ -969,7 +972,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Prime the lexer.
   Lex();
 
-  HadError = false;
+  setHadError(false);
   AsmCond StartingCondState = TheCondState;
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
 
@@ -1066,14 +1069,14 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   }
   // Finalize the output stream if there are no errors and if the client wants
   // us to.
-  if (!HadError && !NoFinalize) {
+  if (!getHadError() && !NoFinalize) {
     if (auto *TS = Out.getTargetStreamer())
       TS->emitConstantPools();
 
     Out.finish(Lexer.getLoc());
   }
 
-  return HadError || getContext().hadError();
+  return getHadError() || getContext().hadError();
 }
 
 bool AsmParser::checkForValidSection() {
@@ -2393,8 +2396,8 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
   CppHashInfo.Filename = Filename;
   CppHashInfo.LineNumber = LineNumber;
   CppHashInfo.Buf = CurBuffer;
-  if (!HadCppHashFilename) {
-    HadCppHashFilename = true;
+  if (!getHadCppHashFilename()) {
+    setHadCppHashFilename(true);
     // If we haven't encountered any .file directives, then the first #line
     // directive describes the "root" file and directory of the compilation
     // unit.

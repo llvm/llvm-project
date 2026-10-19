@@ -46,8 +46,7 @@ public:
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      bool IsVarArg, llvm::ArrayRef<ISD::OutputArg> Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
 
   Register getRegisterByName(const char *RegName, LLT VT,
@@ -72,36 +71,33 @@ public:
 private:
   SDValue LowerCCCCallTo(SDValue Chain, SDValue Callee,
                          CallingConv::ID CallConv, bool IsVarArg,
-                         bool IsTailCall,
-                         const SmallVectorImpl<ISD::OutputArg> &Outs,
+                         bool IsTailCall, llvm::ArrayRef<ISD::OutputArg> Outs,
                          const SmallVectorImpl<SDValue> &OutVals,
-                         const SmallVectorImpl<ISD::InputArg> &Ins,
-                         const SDLoc &dl, SelectionDAG &DAG,
+                         llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl,
+                         SelectionDAG &DAG,
                          SmallVectorImpl<SDValue> &InVals) const;
 
   SDValue LowerCCCArguments(SDValue Chain, CallingConv::ID CallConv,
-                            bool IsVarArg,
-                            const SmallVectorImpl<ISD::InputArg> &Ins,
+                            bool IsVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                             const SDLoc &DL, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals) const;
 
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool IsVarArg,
-                          const SmallVectorImpl<ISD::InputArg> &Ins,
-                          const SDLoc &DL, SelectionDAG &DAG,
+                          llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL,
+                          SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
 
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool IsVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool IsVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      llvm::ArrayRef<ISD::OutputArg> Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 

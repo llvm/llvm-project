@@ -320,7 +320,9 @@ LineTableInfo &SourceManager::getLineTable() {
 
 SourceManager::SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
                              bool UserFilesAreVolatile)
-  : Diag(Diag), FileMgr(FileMgr), UserFilesAreVolatile(UserFilesAreVolatile) {
+    : Diag(Diag), FileMgr(FileMgr),
+      StoredModuleBuildStack(decltype(this->StoredModuleBuildStack)::withFlags(
+          (unsigned(UserFilesAreVolatile) << 1))) {
   clearIDTables();
   Diag.setSourceManager(this);
 }
@@ -423,15 +425,15 @@ ContentCache &SourceManager::getOrCreateContentCache(FileEntryRef FileEnt,
     if (overI == OverriddenFilesInfo->OverriddenFiles.end())
       new (Entry) ContentCache(FileEnt);
     else
-      new (Entry) ContentCache(OverridenFilesKeepOriginalName ? FileEnt
-                                                              : overI->second,
-                               overI->second);
+      new (Entry) ContentCache(
+          getOverridenFilesKeepOriginalNameFlag() ? FileEnt : overI->second,
+          overI->second);
   } else {
     new (Entry) ContentCache(FileEnt);
   }
 
-  Entry->IsFileVolatile = UserFilesAreVolatile && !isSystemFile;
-  Entry->IsTransient = FilesAreTransient;
+  Entry->IsFileVolatile = getUserFilesAreVolatile() && !isSystemFile;
+  Entry->IsTransient = getFilesAreTransient();
   Entry->BufferOverridden |= FileEnt.isNamedPipe();
 
   return *Entry;

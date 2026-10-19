@@ -567,8 +567,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
-    bool StandardLifetime =
-        !SInfo.CallsReturnTwice && memtag::isSupportedLifetime(Info, DT, LI);
+    bool StandardLifetime = !SInfo.getCallsReturnTwice() &&
+                            memtag::isSupportedLifetime(Info, DT, LI);
     if (StandardLifetime) {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);

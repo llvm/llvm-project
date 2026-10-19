@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -150,7 +151,10 @@ struct Configuration {
   bool stripSwiftForceLoad = false;
   bool warnDylibInstallName = false;
   bool ignoreOptimizationHints = false;
-  bool forceExactCpuSubtypeMatch = false;
+  bool getForceExactCpuSubtypeMatch() const { return passPlugins.getFlag(0); }
+  void setForceExactCpuSubtypeMatch(bool Value) {
+    passPlugins.setFlag(0, Value);
+  }
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
@@ -186,30 +190,35 @@ struct Configuration {
   bool demangle = false;
   bool deadStrip = false;
   bool interposable = false;
-  bool errorForArchMismatch = false;
-  bool ignoreAutoLink = false;
+  bool getErrorForArchMismatch() const { return passPlugins.getFlag(1); }
+  void setErrorForArchMismatch(bool Value) { passPlugins.setFlag(1, Value); }
+  bool getIgnoreAutoLink() const { return passPlugins.getFlag(2); }
+  void setIgnoreAutoLink(bool Value) { passPlugins.setFlag(2, Value); }
   int readWorkers = 0;
   // ld64 allows invalid auto link options as long as the link succeeds. LLD
   // does not, but there are cases in the wild where the invalid linker options
   // exist. This allows users to ignore the specific invalid options in the case
   // they can't easily fix them.
   llvm::StringSet<> ignoreAutoLinkOptions;
-  bool strictAutoLink = false;
+  bool getStrictAutoLink() const { return passPlugins.getFlag(3); }
+  void setStrictAutoLink(bool Value) { passPlugins.setFlag(3, Value); }
   PlatformInfo platformInfo;
   std::optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
   ICFLevel icfLevel = ICFLevel::none;
-  bool keepICFStabs = false;
+  bool getKeepICFStabs() const { return mllvmOpts.getFlag(0); }
+  void setKeepICFStabs(bool Value) { mllvmOpts.setFlag(0, Value); }
   ObjCStubsMode objcStubsMode = ObjCStubsMode::fast;
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> systemLibraryRoots;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
-  bool warnDuplicateRpath = true;
-  llvm::SmallVector<llvm::StringRef, 0> runtimePaths;
-  llvm::SmallVector<llvm::StringRef, 0> allowableClients;
+  bool getWarnDuplicateRpath() const { return !mllvmOpts.getFlag(1); }
+  void setWarnDuplicateRpath(bool Value) { mllvmOpts.setFlag(1, !Value); }
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> runtimePaths;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> allowableClients;
   std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
   llvm::StringSet<> explicitDynamicLookups;
@@ -217,34 +226,80 @@ struct Configuration {
   // so use a vector instead of a map.
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
-  bool ltoDebugPassManager = false;
-  bool emitLLVM = false;
+  bool getLtoDebugPassManager() const { return mllvmOpts.getFlag(2); }
+  void setLtoDebugPassManager(bool Value) { mllvmOpts.setFlag(2, Value); }
+  bool getEmitLLVM() const { return mllvmOpts.getFlag(3); }
+  void setEmitLLVM(bool Value) { mllvmOpts.setFlag(3, Value); }
   llvm::StringRef codegenDataGeneratePath;
-  bool csProfileGenerate = false;
+  bool getCsProfileGenerate() const {
+    return bpCompressionSortSpecs.getFlag(0);
+  }
+  void setCsProfileGenerate(bool Value) {
+    bpCompressionSortSpecs.setFlag(0, Value);
+  }
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
   bool warnMissingSubsectionsViaSymbols = false;
   bool disableVerify;
-  bool separateCstringLiteralSections;
-  bool tailMergeStrings;
+  bool getSeparateCstringLiteralSections() const {
+    return bpCompressionSortSpecs.getFlag(1);
+  }
+  void setSeparateCstringLiteralSections(bool Value) {
+    bpCompressionSortSpecs.setFlag(1, Value);
+  }
+  bool getTailMergeStrings() const { return bpCompressionSortSpecs.getFlag(2); }
+  void setTailMergeStrings(bool Value) {
+    bpCompressionSortSpecs.setFlag(2, Value);
+  }
   unsigned slopScale = 256;
 
-  bool callGraphProfileSort = false;
+  bool getCallGraphProfileSort() const {
+    return bpCompressionSortSpecs.getFlag(3);
+  }
+  void setCallGraphProfileSort(bool Value) {
+    bpCompressionSortSpecs.setFlag(3, Value);
+  }
   llvm::StringRef printSymbolOrder;
 
   llvm::StringRef irpgoProfilePath;
-  bool bpStartupFunctionSort = false;
-  bool bpCompressionSortStartupFunctions = false;
-  bool bpFunctionOrderForCompression = false;
-  bool bpDataOrderForCompression = false;
-  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
-  bool bpVerboseSectionOrderer = false;
+  bool getBpStartupFunctionSort() const { return allowableClients.getFlag(0); }
+  void setBpStartupFunctionSort(bool Value) {
+    allowableClients.setFlag(0, Value);
+  }
+  bool getBpCompressionSortStartupFunctions() const {
+    return allowableClients.getFlag(1);
+  }
+  void setBpCompressionSortStartupFunctions(bool Value) {
+    allowableClients.setFlag(1, Value);
+  }
+  bool getBpFunctionOrderForCompression() const {
+    return allowableClients.getFlag(2);
+  }
+  void setBpFunctionOrderForCompression(bool Value) {
+    allowableClients.setFlag(2, Value);
+  }
+  bool getBpDataOrderForCompression() const {
+    return allowableClients.getFlag(3);
+  }
+  void setBpDataOrderForCompression(bool Value) {
+    allowableClients.setFlag(3, Value);
+  }
+  llvm::SmallVectorWithFlags<BPCompressionSortSpec,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 BPCompressionSortSpec>::value,
+                             4>
+      bpCompressionSortSpecs;
+  bool getBpVerboseSectionOrderer() const { return runtimePaths.getFlag(0); }
+  void setBpVerboseSectionOrderer(bool Value) {
+    runtimePaths.setFlag(0, Value);
+  }
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;
 
-  bool hasExplicitExports = false;
+  bool getHasExplicitExports() const { return runtimePaths.getFlag(1); }
+  void setHasExplicitExports(bool Value) { runtimePaths.setFlag(1, Value); }
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
   SymbolPatterns whyLive;
@@ -253,11 +308,16 @@ struct Configuration {
 
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
-  llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
-  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> mllvmOpts;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> passPlugins;
 
-  bool zeroModTime = true;
-  bool generateUuid = true;
+  bool getZeroModTime() const { return !runtimePaths.getFlag(2); }
+  bool setZeroModTime(bool Value) {
+    runtimePaths.setFlag(2, !Value);
+    return Value;
+  }
+  bool getGenerateUuid() const { return !runtimePaths.getFlag(3); }
+  void setGenerateUuid(bool Value) { runtimePaths.setFlag(3, !Value); }
 
   llvm::StringRef osoPrefix;
 

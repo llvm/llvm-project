@@ -18,6 +18,25 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
+TEST(AliasAnalysisAccessPathTest, ApproximationParticipatesInPathEquality) {
+  using Path = fir::AliasAnalysis::Source::AccessPath;
+  using Step = fir::AliasAnalysis::Source::PathStep;
+  Path exact;
+  exact.steps.assign(8, Step{Step::Kind::PointerDeref, {}});
+  Path approximate = exact;
+  approximate.setIsApproximate(true);
+  EXPECT_NE(exact, approximate);
+  // Comparing just the steps must continue to ignore approximation.
+  EXPECT_EQ(llvm::ArrayRef(exact.steps), llvm::ArrayRef(approximate.steps));
+
+  Path moved = std::move(approximate);
+  EXPECT_TRUE(moved.isApproximate());
+  moved.steps.clear();
+  EXPECT_TRUE(moved.isApproximate());
+  moved.setIsApproximate(false);
+  EXPECT_FALSE(moved.isApproximate());
+}
+
 struct AliasAnalysisCacheTest : public testing::Test {
 public:
   void SetUp() override {

@@ -39,6 +39,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -327,10 +328,11 @@ public:
   /// loop nest goes out of scope) or a second loop in the same level in which
   /// case it would be ambiguous into which of the two (or more) loops the loop
   /// nest would extend.
-  SmallVector<llvm::CanonicalLoopInfo *, 4> OMPLoopNestStack;
+  llvm::SmallVectorWithFlags<llvm::CanonicalLoopInfo *, 4, 2> OMPLoopNestStack;
 
   /// Stack to track the controlled convergence tokens.
-  SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
+  llvm::SmallVectorWithFlags<llvm::ConvergenceControlInst *, 4, 4>
+      ConvergenceTokenStack;
 
   /// Number of nested loop to be consumed by the last surrounding
   /// loop-associated directive.
@@ -374,7 +376,7 @@ public:
   const CastExpr *CurCast = nullptr;
 
   /// Save Parameter Decl for coroutine.
-  llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
+  llvm::SmallVectorWithFlags<const ParmVarDecl *, 4, 4> FnArgs;
 
   // Holds coroutine data if the current function is a coroutine. We use a
   // wrapper to manage its lifetime, so that we don't have to define CGCoroData
@@ -594,7 +596,8 @@ public:
   SanitizerSet SanOpts;
 
   /// True if CodeGen currently emits code implementing sanitizer checks.
-  bool IsSanitizerScope = false;
+  bool getIsSanitizerScope() const { return FnArgs.getFlag(0); }
+  void setIsSanitizerScope(bool Value) { FnArgs.setFlag(0, Value); }
 
   /// RAII object to set/unset CodeGenFunction::IsSanitizerScope.
   class SanitizerScope {
@@ -607,24 +610,40 @@ public:
 
   /// In C++, whether we are code generating a thunk.  This controls whether we
   /// should emit cleanups.
-  bool CurFuncIsThunk = false;
+  bool getCurFuncIsThunk() const { return FnArgs.getFlag(1); }
+  void setCurFuncIsThunk(bool Value) { FnArgs.setFlag(1, Value); }
 
   /// In ARC, whether we should autorelease the return value.
-  bool AutoreleaseResult = false;
+  bool getAutoreleaseResult() const { return FnArgs.getFlag(2); }
+  bool setAutoreleaseResult(bool Value) {
+    FnArgs.setFlag(2, Value);
+    return Value;
+  }
 
   /// Whether we processed a Microsoft-style asm block during CodeGen. These can
   /// potentially set the return value.
-  bool SawAsmBlock = false;
+  bool getSawAsmBlock() const { return FnArgs.getFlag(3); }
+  void setSawAsmBlock(bool Value) { FnArgs.setFlag(3, Value); }
 
   GlobalDecl CurSEHParent;
 
   /// True if the current function is an outlined SEH helper. This can be a
   /// finally block or filter expression.
-  bool IsOutlinedSEHHelper = false;
+  bool getIsOutlinedSEHHelper() const {
+    return ConvergenceTokenStack.getFlag(0);
+  }
+  void setIsOutlinedSEHHelper(bool Value) {
+    ConvergenceTokenStack.setFlag(0, Value);
+  }
 
   /// True if CodeGen currently emits code inside presereved access index
   /// region.
-  bool IsInPreservedAIRegion = false;
+  bool getIsInPreservedAIRegion() const {
+    return ConvergenceTokenStack.getFlag(1);
+  }
+  void setIsInPreservedAIRegion(bool Value) {
+    ConvergenceTokenStack.setFlag(1, Value);
+  }
 
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
@@ -810,7 +829,10 @@ public:
   llvm::BasicBlock *OMPAfterScanBlock = nullptr;
   llvm::BasicBlock *OMPScanExitBlock = nullptr;
   llvm::BasicBlock *OMPScanDispatch = nullptr;
-  bool OMPFirstScanLoop = false;
+  bool getOMPFirstScanLoop() const { return ConvergenceTokenStack.getFlag(2); }
+  void setOMPFirstScanLoop(bool Value) {
+    ConvergenceTokenStack.setFlag(2, Value);
+  }
 
   /// Manages parent directive for scan directives.
   class ParentLoopDirectiveForScanRegion {
@@ -1077,8 +1099,8 @@ public:
       CleanupStackDepth = CGF.EHStack.stable_begin();
       LifetimeExtendedCleanupStackSize =
           CGF.LifetimeExtendedCleanupStack.size();
-      OldDidCallStackSave = CGF.DidCallStackSave;
-      CGF.DidCallStackSave = false;
+      OldDidCallStackSave = CGF.getDidCallStackSave();
+      CGF.setDidCallStackSave(false);
       OldCleanupScopeDepth = CGF.CurrentCleanupScopeDepth;
       CGF.CurrentCleanupScopeDepth = CleanupStackDepth;
     }
@@ -1103,7 +1125,7 @@ public:
     void
     ForceCleanup(std::initializer_list<llvm::Value **> ValuesToReload = {}) {
       assert(PerformCleanup && "Already forced cleanup");
-      CGF.DidCallStackSave = OldDidCallStackSave;
+      CGF.setDidCallStackSave(OldDidCallStackSave);
       DeactivateCleanups.ForceDeactivate();
       CGF.PopCleanupBlocks(CleanupStackDepth, LifetimeExtendedCleanupStackSize,
                            ValuesToReload);
@@ -1579,11 +1601,15 @@ private:
   CGDebugInfo *DebugInfo;
   /// Used to create unique names for artificial VLA size debug info variables.
   unsigned VLAExprCounter = 0;
-  bool DisableDebugInfo = false;
+  bool getDisableDebugInfo() const { return ConvergenceTokenStack.getFlag(3); }
+  void setDisableDebugInfo(bool Value) {
+    ConvergenceTokenStack.setFlag(3, Value);
+  }
 
   /// DidCallStackSave - Whether llvm.stacksave has been called. Used to avoid
   /// calling llvm.stacksave for multiple VLAs in the same scope.
-  bool DidCallStackSave = false;
+  bool getDidCallStackSave() const { return OMPLoopNestStack.getFlag(0); }
+  void setDidCallStackSave(bool Value) { OMPLoopNestStack.setFlag(0, Value); }
 
   /// IndirectBranch - The first time an indirect goto is seen we create a block
   /// with an indirect branch.  Every time we see the address of a label taken,
@@ -2227,7 +2253,13 @@ private:
 
   /// True if we need emit the life-time markers. This is initially set in
   /// the constructor, but could be overwritten to true if this is a coroutine.
-  bool ShouldEmitLifetimeMarkers;
+  bool getShouldEmitLifetimeMarkers() const {
+    return OMPLoopNestStack.getFlag(1);
+  }
+  bool setShouldEmitLifetimeMarkers(bool Value) {
+    OMPLoopNestStack.setFlag(1, Value);
+    return Value;
+  }
 
   /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
   /// the function metadata.
@@ -2240,12 +2272,12 @@ public:
   CodeGenTypes &getTypes() const { return CGM.getTypes(); }
   ASTContext &getContext() const { return CGM.getContext(); }
   CGDebugInfo *getDebugInfo() {
-    if (DisableDebugInfo)
+    if (getDisableDebugInfo())
       return nullptr;
     return DebugInfo;
   }
-  void disableDebugInfo() { DisableDebugInfo = true; }
-  void enableDebugInfo() { DisableDebugInfo = false; }
+  void disableDebugInfo() { setDisableDebugInfo(true); }
+  void enableDebugInfo() { setDisableDebugInfo(false); }
 
   bool shouldUseFusedARCCalls() {
     return CGM.getCodeGenOpts().OptimizationLevel == 0;

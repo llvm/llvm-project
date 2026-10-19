@@ -27,6 +27,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
@@ -1661,8 +1662,12 @@ public:
   std::unique_ptr<remarks::RemarkStreamer> MainRemarkStreamer;
 
   std::unique_ptr<DiagnosticHandler> DiagHandler;
-  bool RespectDiagnosticFilters = false;
-  bool DiagnosticsHotnessRequested = false;
+  bool getRespectDiagnosticFilters() const { return Metadatas.getFlag(0); }
+  void setRespectDiagnosticFilters(bool Value) { Metadatas.setFlag(0, Value); }
+  bool getDiagnosticsHotnessRequested() const { return Metadatas.getFlag(1); }
+  void setDiagnosticsHotnessRequested(bool Value) {
+    Metadatas.setFlag(1, Value);
+  }
   /// The minimum hotness value a diagnostic needs in order to be included in
   /// optimization diagnostics.
   ///
@@ -1686,7 +1691,8 @@ public:
   /// The percentage of difference between profiling branch weights and
   /// llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
   std::optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
-  bool MisExpectWarningRequested = false;
+  bool getMisExpectWarningRequested() const { return Metadatas.getFlag(2); }
+  void setMisExpectWarningRequested(bool Value) { Metadatas.setFlag(2, Value); }
 
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
   std::unique_ptr<LLVMRemarkStreamer> LLVMRS;
@@ -1845,7 +1851,7 @@ public:
   StringMap<unsigned> CustomMDKindNames;
 
   /// Collection of metadata attachments in this context.
-  SmallVector<MDAttachment, 0> Metadatas;
+  llvm::SmallVectorWithFlags<MDAttachment, 0, 4> Metadatas;
   /// Index of first free Metadatas entry, linked list via MDAttachment::Next.
   unsigned MetadataRecycleHead = 0;
   /// Number of currently unused metadata entries. Only used/updated in debug
@@ -1903,7 +1909,8 @@ public:
 
   /// Flag to indicate if Value (other than GlobalValue) retains their name or
   /// not.
-  bool DiscardValueNames = false;
+  bool getDiscardValueNames() const { return Metadatas.getFlag(3); }
+  void setDiscardValueNames(bool Value) { Metadatas.setFlag(3, Value); }
 
   LLVMContextImpl(LLVMContext &C);
   ~LLVMContextImpl();

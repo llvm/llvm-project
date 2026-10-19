@@ -19,6 +19,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -501,13 +502,17 @@ struct InstrumentationOpportunity {
   /// The list of possible arguments for the instrumentation runtime function.
   /// The order within the array determines the order of arguments. Arguments
   /// may be disabled and will not be passed to the function call.
-  SmallVector<IRTArg> IRTArgs;
+  llvm::SmallVectorWithFlags<IRTArg> IRTArgs;
 
   /// Flag names and their integer bitmask values.
   StringMap<int32_t> FlagNames;
 
   /// Whether the opportunity is enabled.
-  bool Enabled = true;
+  bool getEnabled() const { return !IRTArgs.getFlag(0); }
+  bool setEnabled(bool Value) {
+    IRTArgs.setFlag(0, !Value);
+    return Value;
+  }
 
   /// A filter expression to be matched against runtime property values. If the
   /// filter is non-empty, only instrumentations matching the filter will be

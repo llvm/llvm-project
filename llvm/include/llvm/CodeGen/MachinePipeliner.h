@@ -42,6 +42,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -625,7 +626,7 @@ private:
   const TargetSubtargetInfo *ST;
   const TargetInstrInfo *TII;
   ScheduleDAGInstrs *DAG;
-  const bool UseDFA;
+  bool getUseDFA() const { return NumScheduledMops.getFlag(0); }
   /// DFA resources for each slot
   llvm::SmallVector<std::unique_ptr<DFAPacketizer>> DFAResources;
   /// Modulo Reservation Table. When a resource with ID R is consumed in cycle
@@ -634,7 +635,7 @@ private:
   /// The number of scheduled micro operations for each slot. Micro operations
   /// are assumed to be scheduled one per cycle, starting with the cycle in
   /// which the instruction is scheduled.
-  llvm::SmallVector<int> NumScheduledMops;
+  llvm::SmallVectorWithFlags<int> NumScheduledMops;
   /// Each processor resource is associated with a so-called processor resource
   /// mask. This vector allows to correlate processor resource IDs with
   /// processor resource masks. There is exactly one element per each processor

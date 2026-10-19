@@ -12,6 +12,7 @@
 
 #include "ClauseProcessor.h"
 #include "Utils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -1230,34 +1231,39 @@ public:
   llvm::ArrayRef<int64_t> getShape() const { return shape; }
 
   // Is the type inside a box?
-  bool isBox() const { return inBox; }
+  bool isBox() const { return getInBox(); }
 
-  bool isBoxChar() const { return inBoxChar; }
+  bool isBoxChar() const { return getInBoxChar(); }
 
 private:
   void typeScan(mlir::Type type);
 
   std::optional<fir::CharacterType::LenType> charLen;
-  llvm::SmallVector<int64_t> shape;
-  bool inBox = false;
-  bool inBoxChar = false;
+  llvm::SmallVectorWithFlags<
+      int64_t, llvm::CalculateSmallVectorDefaultInlinedElements<int64_t>::value,
+      2>
+      shape;
+  bool getInBox() const { return shape.getFlag(0); }
+  void setInBox(bool Value) { shape.setFlag(0, Value); }
+  bool getInBoxChar() const { return shape.getFlag(1); }
+  void setInBoxChar(bool Value) { shape.setFlag(1, Value); }
 };
 
 void TypeInfo::typeScan(mlir::Type ty) {
   if (auto sty = mlir::dyn_cast<fir::SequenceType>(ty)) {
     assert(shape.empty() && !sty.getShape().empty());
-    shape = llvm::SmallVector<int64_t>(sty.getShape());
+    shape.assign(llvm::SmallVector<int64_t>(sty.getShape()));
     typeScan(sty.getEleTy());
   } else if (auto bty = mlir::dyn_cast<fir::BoxType>(ty)) {
-    inBox = true;
+    setInBox(true);
     typeScan(bty.getEleTy());
   } else if (auto cty = mlir::dyn_cast<fir::ClassType>(ty)) {
-    inBox = true;
+    setInBox(true);
     typeScan(cty.getEleTy());
   } else if (auto cty = mlir::dyn_cast<fir::CharacterType>(ty)) {
     charLen = cty.getLen();
   } else if (auto cty = mlir::dyn_cast<fir::BoxCharType>(ty)) {
-    inBoxChar = true;
+    setInBoxChar(true);
     typeScan(cty.getEleTy());
   } else if (auto hty = mlir::dyn_cast<fir::HeapType>(ty)) {
     typeScan(hty.getEleTy());
@@ -1271,7 +1277,7 @@ void TypeInfo::typeScan(mlir::Type ty) {
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
            mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
            mlir::isa<fir::BoxProcType>(ty) ||
-           (inBox && mlir::isa<mlir::NoneType>(ty)));
+           (getInBox() && mlir::isa<mlir::NoneType>(ty)));
   }
 }
 

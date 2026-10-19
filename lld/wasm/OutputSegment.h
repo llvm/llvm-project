@@ -28,7 +28,7 @@ public:
   // to the output binary.  However if the memory is imported, and
   // we can't use memory.fill during startup (due to lack of bulk
   // memory feature) then we include BSS segments verbatim.
-  bool requiredInBinary() const { return !isBss || ctx.emitBssSegments; }
+  bool requiredInBinary() const { return !isBss || ctx.getEmitBssSegments(); }
 
   bool isTLS() const { return name == ".tdata"; }
 

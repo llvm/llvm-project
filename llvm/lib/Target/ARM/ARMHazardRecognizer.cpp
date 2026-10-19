@@ -164,12 +164,12 @@ static bool getBaseOffset(const MachineInstr &MI, const MachineOperand *&BaseOp,
 
 ARMBankConflictHazardRecognizer::ARMBankConflictHazardRecognizer(
     const ScheduleDAG *DAG, int64_t CPUBankMask, bool CPUAssumeITCMConflict)
-    : MF(DAG->MF), DL(DAG->MF.getDataLayout()),
+    : Accesses(decltype(this->Accesses)::withFlags(unsigned(bool(
+          AssumeITCMConflict.getNumOccurrences() ? AssumeITCMConflict
+                                                 : CPUAssumeITCMConflict)))),
+      MF(DAG->MF), DL(DAG->MF.getDataLayout()),
       DataMask(DataBankMask.getNumOccurrences() ? int64_t(DataBankMask)
-                                                : CPUBankMask),
-      AssumeITCMBankConflict(AssumeITCMConflict.getNumOccurrences()
-                                 ? AssumeITCMConflict
-                                 : CPUAssumeITCMConflict) {
+                                                : CPUBankMask) {
   MaxLookAhead = 1;
 }
 
@@ -225,7 +225,7 @@ ARMBankConflictHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
     // Constant pools (likely in ITCM)
     if (BasePseudoVal0 && BasePseudoVal1 &&
         BasePseudoVal0->kind() == BasePseudoVal1->kind() &&
-        BasePseudoVal0->isConstantPool() && AssumeITCMBankConflict)
+        BasePseudoVal0->isConstantPool() && getAssumeITCMBankConflict())
       return Hazard;
 
     // Is this a stack pointer-relative access?  We could in general try to

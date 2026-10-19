@@ -372,17 +372,19 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 DenseMap<const InputSection *, int>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, int> sectionPriorities;
-  if (config->bpStartupFunctionSort || config->bpFunctionOrderForCompression ||
-      config->bpDataOrderForCompression ||
+  if (config->getBpStartupFunctionSort() ||
+      config->getBpFunctionOrderForCompression() ||
+      config->getBpDataOrderForCompression() ||
       !config->bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionPriorities = runBalancedPartitioning(
-        config->bpStartupFunctionSort ? config->irpgoProfilePath : "",
-        config->bpCompressionSortSpecs, config->bpFunctionOrderForCompression,
-        config->bpDataOrderForCompression,
-        config->bpCompressionSortStartupFunctions,
-        config->bpVerboseSectionOrderer);
-  } else if (config->callGraphProfileSort) {
+        config->getBpStartupFunctionSort() ? config->irpgoProfilePath : "",
+        config->bpCompressionSortSpecs,
+        config->getBpFunctionOrderForCompression(),
+        config->getBpDataOrderForCompression(),
+        config->getBpCompressionSortStartupFunctions(),
+        config->getBpVerboseSectionOrderer());
+  } else if (config->getCallGraphProfileSort()) {
     // Sort sections by the profile data provided by __LLVM,__cg_profile
     // sections.
     //

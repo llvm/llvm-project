@@ -30,6 +30,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
@@ -144,9 +145,16 @@ struct MachineVerifier {
   const RegisterBankInfo *RBI = nullptr;
 
   // Avoid querying the MachineFunctionProperties for each operand.
-  bool isFunctionRegBankSelected = false;
-  bool isFunctionSelected = false;
-  bool isFunctionTracksDebugUserValues = false;
+  bool getIsFunctionRegBankSelected() const { return regMasks.getFlag(0); }
+  void setIsFunctionRegBankSelected(bool Value) { regMasks.setFlag(0, Value); }
+  bool getIsFunctionSelected() const { return regMasks.getFlag(1); }
+  void setIsFunctionSelected(bool Value) { regMasks.setFlag(1, Value); }
+  bool getIsFunctionTracksDebugUserValues() const {
+    return regMasks.getFlag(2);
+  }
+  void setIsFunctionTracksDebugUserValues(bool Value) {
+    regMasks.setFlag(2, Value);
+  }
 
   using RegVector = SmallVector<Register, 16>;
   using RegMaskVector = SmallVector<const uint32_t *, 4>;
@@ -161,7 +169,7 @@ struct MachineVerifier {
   BitVector regsReserved;
   RegSet regsLive;
   RegVector regsDefined, regsDead, regsKilled;
-  RegMaskVector regMasks;
+  llvm::SmallVectorWithFlagsFor<RegMaskVector, 3> regMasks;
 
   SlotIndex lastIndex;
 
@@ -486,9 +494,9 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   if (isFunctionFailedISel)
     return true;
 
-  isFunctionRegBankSelected = Props.hasRegBankSelected();
-  isFunctionSelected = Props.hasSelected();
-  isFunctionTracksDebugUserValues = Props.hasTracksDebugUserValues();
+  setIsFunctionRegBankSelected(Props.hasRegBankSelected());
+  setIsFunctionSelected(Props.hasSelected());
+  setIsFunctionTracksDebugUserValues(Props.hasTracksDebugUserValues());
 
   if (PASS) {
     auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
@@ -1107,7 +1115,7 @@ bool MachineVerifier::verifyGIntrinsicConvergence(const MachineInstr *MI) {
 }
 
 void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
-  if (isFunctionSelected)
+  if (getIsFunctionSelected())
     report("Unexpected generic instruction in a Selected function", MI);
 
   const MCInstrDesc &MCID = MI->getDesc();
@@ -2783,10 +2791,10 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         // pruning unused debug operands. The final undef substitution occurs
         // when debug values are allocated in LDVImpl::handleDebugValue, so
         // these verifications always apply after this pass.
-        if (isFunctionTracksDebugUserValues || !MO->isUse() ||
+        if (getIsFunctionTracksDebugUserValues() || !MO->isUse() ||
             !MI->isDebugValue() || !MRI->def_empty(Reg)) {
           // If we're post-Select, we can't have gvregs anymore.
-          if (isFunctionSelected) {
+          if (getIsFunctionSelected()) {
             report("Generic virtual register invalid in a Selected function",
                    MO, MONum);
             return;
@@ -2804,7 +2812,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           const RegisterBankInfo *RBI = MF->getSubtarget().getRegBankInfo();
 
           // If we're post-RegBankSelect, the gvreg must have a bank.
-          if (!RegBank && isFunctionRegBankSelected) {
+          if (!RegBank && getIsFunctionRegBankSelected()) {
             report("Generic virtual register must have a bank in a "
                    "RegBankSelected function",
                    MO, MONum);

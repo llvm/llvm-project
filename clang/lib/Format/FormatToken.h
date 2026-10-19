@@ -19,6 +19,7 @@
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <unordered_set>
 
 namespace clang {
@@ -583,7 +584,7 @@ public:
   ///
   /// If multiple fake parentheses start at a token, this vector stores them in
   /// reverse order, i.e. inner fake parenthesis first.
-  SmallVector<prec::Level, 4> FakeLParens;
+  llvm::SmallVectorWithFlags<prec::Level, 4> FakeLParens;
   /// Insert this many fake ) after this token for correct indentation.
   unsigned FakeRParens = 0;
 
@@ -646,7 +647,8 @@ public:
   /// This is deeply baked into the code and disentangling this will require
   /// signficant refactorings. \c MacroParent allows us to special-case the
   /// cases in which we treat parents as block-openers for now.
-  bool MacroParent = false;
+  bool getMacroParent() const { return FakeLParens.getFlag(0); }
+  void setMacroParent(bool Value) { FakeLParens.setFlag(0, Value); }
 
   bool is(tok::TokenKind Kind) const { return Tok.is(Kind); }
   bool is(tok::ObjCKeywordKind Kind) const {
@@ -1050,8 +1052,7 @@ protected:
 
 class CommaSeparatedList : public TokenRole {
 public:
-  CommaSeparatedList(const FormatStyle &Style)
-      : TokenRole(Style), HasNestedBracedList(false) {}
+  CommaSeparatedList(const FormatStyle &Style) : TokenRole(Style) {}
 
   void precomputeFormattingInfos(const FormatToken *Token) override;
 
@@ -1101,9 +1102,10 @@ private:
   SmallVector<unsigned, 8> ItemLengths;
 
   /// Precomputed formats that can be used for this list.
-  SmallVector<ColumnFormat, 4> Formats;
+  llvm::SmallVectorWithFlags<ColumnFormat, 4> Formats;
 
-  bool HasNestedBracedList;
+  bool getHasNestedBracedList() const { return Formats.getFlag(0); }
+  void setHasNestedBracedList(bool Value) { Formats.setFlag(0, Value); }
 };
 
 /// Encapsulates keywords that are context sensitive or for languages not

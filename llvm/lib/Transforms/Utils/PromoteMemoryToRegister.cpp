@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -204,11 +205,12 @@ struct AllocaInfo {
   using DPUserVec = SmallVector<DbgVariableRecord *, 1>;
 
   SmallVector<BasicBlock *, 32> DefiningBlocks;
-  SmallVector<BasicBlock *, 32> UsingBlocks;
+  llvm::SmallVectorWithFlags<BasicBlock *, 32> UsingBlocks;
 
   StoreInst *OnlyStore;
   BasicBlock *OnlyBlock;
-  bool OnlyUsedInOneBlock;
+  bool getOnlyUsedInOneBlock() const { return UsingBlocks.getFlag(0); }
+  void setOnlyUsedInOneBlock(bool Value) { UsingBlocks.setFlag(0, Value); }
 
   /// The type used by all loads/stores of this alloca. This may differ from
   /// the alloca's declared type if all accesses use a different type.
@@ -224,7 +226,7 @@ struct AllocaInfo {
     UsingBlocks.clear();
     OnlyStore = nullptr;
     OnlyBlock = nullptr;
-    OnlyUsedInOneBlock = true;
+    setOnlyUsedInOneBlock(true);
     ValueType = nullptr;
     DPUsers.clear();
     AssignmentTracking.clear();
@@ -262,11 +264,11 @@ struct AllocaInfo {
                  "All loads where checked to have used the same type");
       }
 
-      if (OnlyUsedInOneBlock) {
+      if (getOnlyUsedInOneBlock()) {
         if (!OnlyBlock)
           OnlyBlock = User->getParent();
         else if (OnlyBlock != User->getParent())
-          OnlyUsedInOneBlock = false;
+          setOnlyUsedInOneBlock(false);
       }
     }
     SmallVector<DbgVariableRecord *> AllDPUsers;
@@ -426,10 +428,11 @@ struct PromoteMem2Reg {
   VectorWithUndo<DebugLoc> IncomingLocs;
 
   // DFS work stack.
-  SmallVector<RenamePassData, 8> Worklist;
+  llvm::SmallVectorWithFlags<RenamePassData, 8> Worklist;
 
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
-  bool NoSignedZeros = false;
+  bool getNoSignedZeros() const { return Worklist.getFlag(0); }
+  void setNoSignedZeros(bool Value) { Worklist.setFlag(0, Value); }
 
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
@@ -808,7 +811,8 @@ void PromoteMem2Reg::run() {
   LargeBlockInfo LBI;
   ForwardIDFCalculator IDF(DT);
 
-  NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
+  setNoSignedZeros(
+      F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
 
   // removeIntrinsicUsers inserts StoreInst(undef). A cache miss on
   // LBI.getInstructionIndex lookup causes a full O(|BB|) basic block rescan.
@@ -852,7 +856,7 @@ void PromoteMem2Reg::run() {
 
     // If the alloca is only read and written in one basic block, just perform a
     // linear sweep over the block to eliminate it.
-    if (Info.OnlyUsedInOneBlock &&
+    if (Info.getOnlyUsedInOneBlock() &&
         promoteSingleBlockAlloca(AI, Info, LBI, SQ.DL, DT, AC,
                                  &DVRAssignsToDelete)) {
       // The alloca has been processed, move on.
@@ -1180,7 +1184,7 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
         // on the phi node generated at this stage, fabs folding does not
         // happen. So, we try to infer nsz flag from the function attributes to
         // enable this fabs folding.
-        if (isa<FPMathOperator>(APN) && NoSignedZeros)
+        if (isa<FPMathOperator>(APN) && getNoSignedZeros())
           APN->setHasNoSignedZeros(true);
 
         // The currently active variable for this block is now the PHI.

@@ -60,14 +60,14 @@ void JITEventListener::anchor() {}
 void ObjectCache::anchor() {}
 
 void ExecutionEngine::Init(std::unique_ptr<Module> M) {
-  CompilingLazily         = false;
-  GVCompilationDisabled   = false;
-  SymbolSearchingDisabled = false;
+  setCompilingLazily(false);
+  setGVCompilationDisabled(false);
+  setSymbolSearchingDisabled(false);
 
   // IR module verification is enabled by default in debug builds, and disabled
   // by default in release builds.
 #ifndef NDEBUG
-  VerifyModules = true;
+  setVerifyModulesFlag(true);
 #else
   VerifyModules = false;
 #endif
@@ -474,7 +474,7 @@ EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
-  VerifyModules = true;
+  setVerifyModulesFlag(true);
 #else
   VerifyModules = false;
 #endif
@@ -538,7 +538,7 @@ ExecutionEngine *EngineBuilder::create(TargetMachine *TM) {
                                       std::move(Resolver), std::move(TheTM));
 
     if (EE) {
-      EE->setVerifyModules(VerifyModules);
+      EE->setVerifyModules(getVerifyModulesFlag());
       return EE;
     }
   }

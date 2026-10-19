@@ -16,6 +16,7 @@
 #include "ByteStreamer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include <cassert>
 #include <cstdint>
@@ -64,12 +65,13 @@ protected:
   };
 
   /// Whether we are currently emitting an entry value operation.
-  bool IsEmittingEntryValue = false;
+  bool getIsEmittingEntryValue() const { return DwarfRegs.getFlag(0); }
+  void setIsEmittingEntryValue(bool Value) { DwarfRegs.setFlag(0, Value); }
 
   DwarfCompileUnit &CU;
 
   /// The register location, if any.
-  SmallVector<Register, 2> DwarfRegs;
+  llvm::SmallVectorWithFlags<Register, 2> DwarfRegs;
 
   /// Current Fragment Offset in Bits.
   uint64_t OffsetInBits = 0;

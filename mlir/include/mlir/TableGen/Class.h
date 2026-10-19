@@ -28,6 +28,7 @@
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
@@ -675,7 +676,8 @@ public:
   template <typename NameT,
             typename = std::enable_if_t<!std::is_same<NameT, Class>::value>>
   Class(NameT &&name, bool isStruct = false)
-      : className(stringify(std::forward<NameT>(name))), isStruct(isStruct) {}
+      : className(stringify(std::forward<NameT>(name))),
+        fields(decltype(fields)::withFlags(unsigned(isStruct))) {}
 
   /// Add a new constructor to this class and prune and constructors made
   /// redundant by it. Returns null if the constructor was not added. Else,
@@ -886,9 +888,10 @@ protected:
   /// The pending list of methods and constructors.
   std::vector<std::unique_ptr<Method>> methods;
   /// The pending list of private class fields.
-  SmallVector<Field> fields;
+  // Flag bit 0 selects a struct declaration.
+  llvm::SmallVectorWithFlags<Field> fields;
   /// Whether this is a `class` or a `struct`.
-  bool isStruct;
+  bool isStructDeclaration() const { return fields.getFlag(0); }
 
   /// A list of declarations in the class, emitted in order.
   std::vector<std::unique_ptr<ClassDeclaration>> declarations;

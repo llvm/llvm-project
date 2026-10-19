@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <cassert>
 #include <optional>
 #include <utility>
@@ -409,7 +410,7 @@ enum class TemplateSubstitutionKind : char {
     LocalDeclsMap LocalDecls;
 
     /// The set of argument packs we've allocated.
-    SmallVector<DeclArgumentPack *, 1> ArgumentPacks;
+    llvm::SmallVectorWithFlags<DeclArgumentPack *, 1, 3> ArgumentPacks;
 
     /// The outer scope, which contains local variable
     /// definitions from some other instantiation (that may not be
@@ -417,16 +418,25 @@ enum class TemplateSubstitutionKind : char {
     LocalInstantiationScope *Outer;
 
     /// Whether we have already exited this scope.
-    bool Exited = false;
+    bool getExited() const { return ArgumentPacks.getFlag(0); }
+    void setExited(bool Value) { ArgumentPacks.setFlag(0, Value); }
 
     /// Whether to combine this scope with the outer scope, such that
     /// lookup will search our outer scope.
-    bool CombineWithOuterScope;
+    bool getCombineWithOuterScope() const { return ArgumentPacks.getFlag(1); }
+    void setCombineWithOuterScope(bool Value) {
+      ArgumentPacks.setFlag(1, Value);
+    }
 
     /// Whether this scope is being used to instantiate a lambda or block
     /// expression, in which case it should be reused for instantiating the
     /// lambda's FunctionProtoType.
-    bool InstantiatingLambdaOrBlock = false;
+    bool getInstantiatingLambdaOrBlock() const {
+      return ArgumentPacks.getFlag(2);
+    }
+    void setInstantiatingLambdaOrBlock(bool Value) {
+      ArgumentPacks.setFlag(2, Value);
+    }
 
     /// If non-NULL, the template parameter pack that has been
     /// partially substituted per C++0x [temp.arg.explicit]p9.
@@ -444,9 +454,10 @@ enum class TemplateSubstitutionKind : char {
   public:
     LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false,
                             bool InstantiatingLambdaOrBlock = false)
-        : SemaRef(SemaRef), Outer(SemaRef.CurrentInstantiationScope),
-          CombineWithOuterScope(CombineWithOuterScope),
-          InstantiatingLambdaOrBlock(InstantiatingLambdaOrBlock) {
+        : SemaRef(SemaRef), ArgumentPacks(decltype(ArgumentPacks)::withFlags(
+                                (unsigned(CombineWithOuterScope) << 1) |
+                                (unsigned(InstantiatingLambdaOrBlock) << 2))),
+          Outer(SemaRef.CurrentInstantiationScope) {
       SemaRef.CurrentInstantiationScope = this;
     }
 
@@ -462,14 +473,14 @@ enum class TemplateSubstitutionKind : char {
 
     /// Exit this local instantiation scope early.
     void Exit() {
-      if (Exited)
+      if (getExited())
         return;
 
       for (unsigned I = 0, N = ArgumentPacks.size(); I != N; ++I)
         delete ArgumentPacks[I];
 
       SemaRef.CurrentInstantiationScope = Outer;
-      Exited = true;
+      setExited(true);
     }
 
     /// Clone this scope, and all outer scopes, down to the given
@@ -482,7 +493,7 @@ enum class TemplateSubstitutionKind : char {
       LocalInstantiationScope *oldScope = SemaRef.CurrentInstantiationScope;
 
       LocalInstantiationScope *newScope =
-        new LocalInstantiationScope(SemaRef, CombineWithOuterScope);
+          new LocalInstantiationScope(SemaRef, getCombineWithOuterScope());
 
       newScope->Outer = nullptr;
       if (Outer)
@@ -580,7 +591,7 @@ enum class TemplateSubstitutionKind : char {
     bool isLocalPackExpansion(const Decl *D);
 
     /// Determine whether this scope is for instantiating a lambda or block.
-    bool isLambdaOrBlock() const { return InstantiatingLambdaOrBlock; }
+    bool isLambdaOrBlock() const { return getInstantiatingLambdaOrBlock(); }
   };
 
   class TemplateDeclInstantiator
@@ -593,7 +604,12 @@ enum class TemplateSubstitutionKind : char {
     Sema::LateInstantiatedAttrVec* LateAttrs = nullptr;
     LocalInstantiationScope *StartingScope = nullptr;
     // Whether to evaluate the C++20 constraints or simply substitute into them.
-    bool EvaluateConstraints = true;
+    bool getEvaluateConstraintsFlag() const {
+      return !OutOfLineVarPartialSpecs.getFlag(0);
+    }
+    void setEvaluateConstraintsFlag(bool Value) {
+      OutOfLineVarPartialSpecs.setFlag(0, !Value);
+    }
 
     /// A list of out-of-line class template partial
     /// specializations that will need to be instantiated after the
@@ -607,7 +623,7 @@ enum class TemplateSubstitutionKind : char {
     /// specializations that will need to be instantiated after the
     /// enclosing variable's instantiation is complete.
     /// FIXME: Verify that this is needed.
-    SmallVector<
+    llvm::SmallVectorWithFlags<
         std::pair<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>, 1>
         OutOfLineVarPartialSpecs;
 
@@ -617,12 +633,8 @@ enum class TemplateSubstitutionKind : char {
         : SemaRef(SemaRef), SubstIndex(SemaRef, SemaRef.ArgPackSubstIndex),
           Owner(Owner), TemplateArgs(TemplateArgs) {}
 
-    void setEvaluateConstraints(bool B) {
-      EvaluateConstraints = B;
-    }
-    bool getEvaluateConstraints() {
-      return EvaluateConstraints;
-    }
+    void setEvaluateConstraints(bool B) { setEvaluateConstraintsFlag(B); }
+    bool getEvaluateConstraints() { return getEvaluateConstraintsFlag(); }
 
 // Define all the decl visitors using DeclNodes.inc
 #define DECL(DERIVED, BASE) \

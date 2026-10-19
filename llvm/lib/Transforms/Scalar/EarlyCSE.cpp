@@ -681,9 +681,9 @@ private:
           case Intrinsic::masked_load:
             Info.PtrVal = Inst->getOperand(0);
             Info.MatchingId = Intrinsic::masked_load;
-            Info.ReadMem = true;
-            Info.WriteMem = false;
-            Info.IsVolatile = false;
+            Info.setReadMem(true);
+            Info.setWriteMem(false);
+            Info.setIsVolatile(false);
             break;
           case Intrinsic::masked_store:
             Info.PtrVal = Inst->getOperand(1);
@@ -694,17 +694,17 @@ private:
             // so keep the MatchingIds specific to masked instructions
             // for now (TODO).
             Info.MatchingId = Intrinsic::masked_load;
-            Info.ReadMem = false;
-            Info.WriteMem = true;
-            Info.IsVolatile = false;
+            Info.setReadMem(false);
+            Info.setWriteMem(true);
+            Info.setIsVolatile(false);
             break;
           }
         } else if (auto *MI = dyn_cast<MemSetInst>(Inst)) {
           Info.PtrVal = MI->getDest();
           Info.MatchingId = 0;
-          Info.ReadMem = false;
-          Info.WriteMem = true;
-          Info.IsVolatile = MI->isVolatile();
+          Info.setReadMem(false);
+          Info.setWriteMem(true);
+          Info.setIsVolatile(MI->isVolatile());
         }
       }
     }
@@ -714,13 +714,13 @@ private:
 
     bool isLoad() const {
       if (IntrID != 0)
-        return Info.ReadMem;
+        return Info.getReadMem();
       return isa<LoadInst>(Inst);
     }
 
     bool isStore() const {
       if (IntrID != 0)
-        return Info.WriteMem;
+        return Info.getWriteMem();
       return isa<StoreInst>(Inst);
     }
 
@@ -745,7 +745,7 @@ private:
 
     bool isVolatile() const {
       if (IntrID != 0)
-        return Info.IsVolatile;
+        return Info.getIsVolatile();
 
       if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
         return LI->isVolatile();
@@ -787,13 +787,13 @@ private:
 
     bool mayReadFromMemory() const {
       if (IntrID != 0)
-        return Info.ReadMem;
+        return Info.getReadMem();
       return Inst->mayReadFromMemory();
     }
 
     bool mayWriteToMemory() const {
       if (IntrID != 0)
-        return Info.WriteMem;
+        return Info.getWriteMem();
       return Inst->mayWriteToMemory();
     }
 

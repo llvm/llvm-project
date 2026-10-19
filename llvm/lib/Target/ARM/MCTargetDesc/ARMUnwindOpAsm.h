@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -26,8 +27,9 @@ class MCSymbol;
 class UnwindOpcodeAssembler {
 private:
   SmallVector<uint8_t, 32> Ops;
-  SmallVector<unsigned, 8> OpBegins;
-  bool HasPersonality = false;
+  llvm::SmallVectorWithFlags<unsigned, 8> OpBegins;
+  bool getHasPersonality() const { return OpBegins.getFlag(0); }
+  void setHasPersonality(bool Value) { OpBegins.setFlag(0, Value); }
 
 public:
   UnwindOpcodeAssembler() {
@@ -39,13 +41,11 @@ public:
     Ops.clear();
     OpBegins.clear();
     OpBegins.push_back(0);
-    HasPersonality = false;
+    setHasPersonality(false);
   }
 
   /// Set the personality
-  void setPersonality(const MCSymbol *Per) {
-    HasPersonality = true;
-  }
+  void setPersonality(const MCSymbol *Per) { setHasPersonality(true); }
 
   /// Emit unwind opcodes for .save directives
   void EmitRegSave(uint32_t RegSave);

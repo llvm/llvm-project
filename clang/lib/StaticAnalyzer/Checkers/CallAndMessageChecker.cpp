@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -216,20 +217,25 @@ static void describeUninitializedArgumentInCall(const CallEvent &Call,
 namespace {
 class FindUninitializedField {
 public:
-  using FieldChainTy = SmallVector<const FieldDecl *, 10>;
-  FieldChainTy FieldChain;
+  struct FieldChainTy : ArrayRef<const FieldDecl *> {
+    explicit FieldChainTy(ArrayRef<const FieldDecl *> Fields)
+        : ArrayRef(Fields) {}
+  };
+  llvm::SmallVectorWithFlags<const FieldDecl *, 10> FieldChain;
 
 private:
   StoreManager &StoreMgr;
   MemRegionManager &MrMgr;
   Store store;
-  bool FindNotUninitialized;
+  bool getFindNotUninitialized() const { return FieldChain.getFlag(0); }
+  void setFindNotUninitialized(bool Value) { FieldChain.setFlag(0, Value); }
 
 public:
   FindUninitializedField(StoreManager &storeMgr, MemRegionManager &mrMgr,
                          Store s, bool FindNotUninitialized = false)
-      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s),
-        FindNotUninitialized(FindNotUninitialized) {}
+      : FieldChain(decltype(this->FieldChain)::withFlags(
+            unsigned(FindNotUninitialized))),
+        StoreMgr(storeMgr), MrMgr(mrMgr), store(s) {}
 
   bool Find(const TypedValueRegion *R) {
     QualType T = R->getValueType();
@@ -243,18 +249,18 @@ public:
         FieldChain.push_back(I);
         T = I->getType();
         if (T->isStructureType()) {
-          if (FindNotUninitialized ? !Find(FR) : Find(FR))
-            return !FindNotUninitialized;
+          if (getFindNotUninitialized() ? !Find(FR) : Find(FR))
+            return !getFindNotUninitialized();
         } else {
           SVal V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
-          if (FindNotUninitialized ? !V.isUndef() : V.isUndef())
-            return !FindNotUninitialized;
+          if (getFindNotUninitialized() ? !V.isUndef() : V.isUndef())
+            return !getFindNotUninitialized();
         }
         FieldChain.pop_back();
       }
     }
 
-    return FindNotUninitialized;
+    return getFindNotUninitialized();
   }
 };
 } // namespace
@@ -363,7 +369,8 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
         std::string Msg = llvm::formatv(
             "{0}{1} function call argument {2} an uninitialized value{3}; {4}",
             (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
-            ParamT->isPointerType() ? "points to" : "is", F.FieldChain,
+            ParamT->isPointerType() ? "points to" : "is",
+            FindUninitializedField::FieldChainTy(F.FieldChain),
             DescribeArgument(/*ArgIsStruct=*/true));
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
         R->addRange(Call.getArgSourceRange(ArgumentNumber));
@@ -423,7 +430,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
       if (ExplodedNode *N = C.generateErrorNode()) {
         std::string Msg = llvm::formatv(
             "Passed-by-value struct argument contains uninitialized data{0}",
-            F.FieldChain);
+            FindUninitializedField::FieldChainTy(F.FieldChain));
 
         // Generate a report for this bug.
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);

@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <algorithm>
 
 using namespace clang;
@@ -225,14 +226,18 @@ private:
   struct CoerceBuilder {
     llvm::LLVMContext &Context;
     const llvm::DataLayout &DL;
-    SmallVector<llvm::Type*, 8> Elems;
+    llvm::SmallVectorWithFlags<llvm::Type *, 8, 2> Elems;
     uint64_t Size;
-    bool InReg;
-    bool IsVarArg;
+    bool getInReg() const { return Elems.getFlag(0); }
+    void setInReg(bool Value) { Elems.setFlag(0, Value); }
+    bool getIsVarArg() const { return Elems.getFlag(1); }
+    void setIsVarArg(bool Value) { Elems.setFlag(1, Value); }
 
     CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl,
                   bool IsVarArg)
-        : Context(c), DL(dl), Size(0), InReg(false), IsVarArg(IsVarArg) {}
+        : Context(c), DL(dl),
+          Elems(decltype(Elems)::withFlags((unsigned(IsVarArg) << 1))),
+          Size(0) {}
 
     // Pad Elems with integers until Size is ToSize.
     void pad(uint64_t ToSize) {
@@ -263,14 +268,14 @@ private:
     // Add a floating point element at Offset.
     void addFloat(uint64_t Offset, llvm::Type *Ty, unsigned Bits) {
       // Varargs are treated as integers.
-      if (IsVarArg)
+      if (getIsVarArg())
         return;
       // Unaligned floats are treated as integers.
       if (Offset % Bits)
         return;
       // The InReg flag is only required if there are any floats < 64 bits.
       if (Bits < 64)
-        InReg = true;
+        setInReg(true);
       pad(Offset);
       Elems.push_back(Ty);
       Size = Offset + Bits;
@@ -431,7 +436,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
 
   ABIArgInfo AAI = ABIArgInfo::getDirect(CoerceTy, 0, Padding);
-  AAI.setInReg(CB.InReg);
+  AAI.setInReg(CB.getInReg());
   return AAI;
 }
 

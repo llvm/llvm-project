@@ -15,6 +15,7 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_SCHEDCLASSRESOLUTION_H
 
 #include "BenchmarkResult.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -50,8 +51,11 @@ struct ResolvedSchedClass {
 
   const unsigned SchedClassId;
   const MCSchedClassDesc *const SCDesc;
-  const bool WasVariant; // Whether the original class was variant.
-  const SmallVector<MCWriteProcResEntry, 8> NonRedundantWriteProcRes;
+  bool getWasVariant() const {
+    return NonRedundantWriteProcRes.getFlag(0);
+  } // Whether the original class was variant.
+  const llvm::SmallVectorWithFlags<MCWriteProcResEntry, 8>
+      NonRedundantWriteProcRes;
   const std::vector<std::pair<uint16_t, float>> IdealizedProcResPressure;
 };
 

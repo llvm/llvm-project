@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
@@ -66,7 +67,8 @@ private:
 
   /// Vector of weak value handles to calls of the \@llvm.assume
   /// intrinsic.
-  SmallVector<WeakVH, 4> AssumeHandles;
+  // Flag bit 0 records whether the function has been scanned.
+  SmallVectorWithFlags<WeakVH, 4> AssumeHandles;
 
   class LLVM_ABI AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
@@ -103,7 +105,7 @@ private:
   ///
   /// We want to be as lazy about this as possible, and so we scan the function
   /// at the last moment.
-  bool Scanned = false;
+  bool isScanned() const { return AssumeHandles.getFlag(0); }
 
   /// Scan the function for assumptions and add them to the cache.
   LLVM_ABI void scanFunction();
@@ -145,7 +147,7 @@ public:
   void clear() {
     AssumeHandles.clear();
     AffectedValues.clear();
-    Scanned = false;
+    AssumeHandles.setFlag(0, false);
   }
 
   /// Access the list of assumption handles currently tracked for this
@@ -157,7 +159,7 @@ public:
   /// when we can write that to filter out the null values. Then caller code
   /// will become simpler.
   MutableArrayRef<WeakVH> assumptions() {
-    if (!Scanned)
+    if (!isScanned())
       scanFunction();
     return AssumeHandles;
   }
@@ -166,7 +168,7 @@ public:
   ///
   /// No more than -max-assumes-per-value of them are cached.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
-    if (!Scanned)
+    if (!isScanned())
       scanFunction();
 
     auto AVI = AffectedValues.find_as(const_cast<Value *>(V));

@@ -97,9 +97,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // initializer function of their own only under the Itanium mangler, since
   // no Microsoft mangling for it has been settled on yet; otherwise they fall
   // back to `_GLOBAL__sub_I_` as in classic CodeGen.
-  cxx20ModuleInits =
-      langOpts.CPlusPlusModules &&
-      getCXXABI().getMangleContext().getKind() == MangleContext::MK_Itanium;
+  setCxx20ModuleInits(langOpts.CPlusPlusModules &&
+                      getCXXABI().getMangleContext().getKind() ==
+                          MangleContext::MK_Itanium);
 
   // Initialize cached types
   voidTy = cir::VoidType::get(&getMLIRContext());
@@ -2556,7 +2556,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     // initializers are not emitted here. The global init function of this
     // translation unit calls that initializer, which in turn covers the
     // modules it imports itself; release() records the modules to call.
-    if (cxx20ModuleInits && mod->isNamedModule())
+    if (getCxx20ModuleInits() && mod->isNamedModule())
       break;
 
     // For clang C++ module map modules the initializers for sub-modules are
@@ -2580,7 +2580,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       for (clang::Module *submodule : cur->submodules()) {
         // Skip explicit children; they need to be explicitly imported to emit
         // the initializers.
-        if (submodule->IsExplicit)
+        if (submodule->getIsExplicit())
           continue;
 
         if (visited.insert(submodule).second)
@@ -4065,7 +4065,7 @@ void CIRGenModule::release() {
   // and that the function needs external linkage, and its absence selects the
   // `_GLOBAL__sub_I_` form.  Lowering therefore never has to rediscover the
   // module from the AST.
-  if (cxx20ModuleInits) {
+  if (getCxx20ModuleInits()) {
     clang::Module *primary = astContext.getCurrentNamedModule();
     bool isInterfaceUnit = primary && !primary->isModuleImplementation();
     if (isInterfaceUnit)

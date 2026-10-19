@@ -32,6 +32,7 @@
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -51,25 +52,29 @@ class ItaniumCXXABI : public CodeGen::CGCXXABI {
   llvm::DenseMap<const CXXRecordDecl *, llvm::GlobalVariable *> VTables;
 
   /// All the thread wrapper functions that have been used.
-  llvm::SmallVector<std::pair<const VarDecl *, llvm::Function *>, 8>
+  llvm::SmallVectorWithFlags<std::pair<const VarDecl *, llvm::Function *>, 8, 3>
       ThreadWrappers;
 
 protected:
-  bool UseARMMethodPtrABI;
-  bool UseARMGuardVarABI;
-  bool Use32BitVTableOffsetABI;
+  bool getUseARMMethodPtrABI() const { return ThreadWrappers.getFlag(0); }
+  void setUseARMMethodPtrABI(bool Value) { ThreadWrappers.setFlag(0, Value); }
+  bool getUseARMGuardVarABI() const { return ThreadWrappers.getFlag(1); }
+  void setUseARMGuardVarABI(bool Value) { ThreadWrappers.setFlag(1, Value); }
+  bool getUse32BitVTableOffsetABI() const { return ThreadWrappers.getFlag(2); }
+  void setUse32BitVTableOffsetABI(bool Value) {
+    ThreadWrappers.setFlag(2, Value);
+  }
 
   ItaniumMangleContext &getMangleContext() {
     return cast<ItaniumMangleContext>(CodeGen::CGCXXABI::getMangleContext());
   }
 
 public:
-  ItaniumCXXABI(CodeGen::CodeGenModule &CGM,
-                bool UseARMMethodPtrABI = false,
-                bool UseARMGuardVarABI = false) :
-    CGCXXABI(CGM), UseARMMethodPtrABI(UseARMMethodPtrABI),
-    UseARMGuardVarABI(UseARMGuardVarABI),
-    Use32BitVTableOffsetABI(false) { }
+  ItaniumCXXABI(CodeGen::CodeGenModule &CGM, bool UseARMMethodPtrABI = false,
+                bool UseARMGuardVarABI = false)
+      : CGCXXABI(CGM), ThreadWrappers(decltype(ThreadWrappers)::withFlags(
+                           unsigned(UseARMMethodPtrABI) |
+                           (unsigned(UseARMGuardVarABI) << 1))) {}
 
   bool classifyReturnType(CGFunctionInfo &FI) const override;
 
@@ -525,7 +530,7 @@ public:
 class AppleARM64CXXABI : public ARMCXXABI {
 public:
   AppleARM64CXXABI(CodeGen::CodeGenModule &CGM) : ARMCXXABI(CGM) {
-    Use32BitVTableOffsetABI = true;
+    setUse32BitVTableOffsetABI(true);
   }
 
   // ARM64 libraries are prepared for non-unique RTTI.
@@ -661,7 +666,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   // Compute the true adjustment.
   llvm::Value *Adj = RawAdj;
-  if (UseARMMethodPtrABI)
+  if (getUseARMMethodPtrABI())
     Adj = Builder.CreateAShr(Adj, ptrdiff_1, "memptr.adj.shifted");
 
   // Apply the adjustment and cast back to the original struct type
@@ -676,7 +681,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   // If the LSB in the function pointer is 1, the function pointer points to
   // a virtual function.
   llvm::Value *IsVirtual;
-  if (UseARMMethodPtrABI)
+  if (getUseARMMethodPtrABI())
     IsVirtual = Builder.CreateAnd(RawAdj, ptrdiff_1);
   else
     IsVirtual = Builder.CreateAnd(FnAsInt, ptrdiff_1);
@@ -700,9 +705,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   // On ARM64, to reserve extra space in virtual member function pointers,
   // we only pay attention to the low 32 bits of the offset.
   llvm::Value *VTableOffset = FnAsInt;
-  if (!UseARMMethodPtrABI)
+  if (!getUseARMMethodPtrABI())
     VTableOffset = Builder.CreateSub(VTableOffset, ptrdiff_1);
-  if (Use32BitVTableOffsetABI) {
+  if (getUse32BitVTableOffsetABI()) {
     VTableOffset = Builder.CreateTrunc(VTableOffset, CGF.Int32Ty);
     VTableOffset = Builder.CreateZExt(VTableOffset, CGM.PtrDiffTy);
   }
@@ -983,7 +988,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
       llvm::BasicBlock *MergeBB = CGF.createBasicBlock("merge");
 
       // Check whether we have a virtual offset or a pointer to a function.
-      assert(UseARMMethodPtrABI && "ARM ABI expected");
+      assert(getUseARMMethodPtrABI() && "ARM ABI expected");
       llvm::Value *Adj = Builder.CreateExtractValue(src, 1, "memptr.adj");
       llvm::Constant *Ptrdiff_1 = llvm::ConstantInt::get(CGM.PtrDiffTy, 1);
       llvm::Value *AndVal = Builder.CreateAnd(Adj, Ptrdiff_1);
@@ -1036,7 +1041,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
   }
 
   // The this-adjustment is left-shifted by 1 on ARM.
-  if (UseARMMethodPtrABI) {
+  if (getUseARMMethodPtrABI()) {
     uint64_t offset = cast<llvm::ConstantInt>(adj)->getZExtValue();
     offset <<= 1;
     adj = llvm::ConstantInt::get(adj->getType(), offset);
@@ -1118,7 +1123,7 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
   }
 
   // The this-adjustment is left-shifted by 1 on ARM.
-  if (UseARMMethodPtrABI) {
+  if (getUseARMMethodPtrABI()) {
     uint64_t offset = cast<llvm::ConstantInt>(adj)->getZExtValue();
     offset <<= 1;
     adj = llvm::ConstantInt::get(adj->getType(), offset);
@@ -1183,7 +1188,7 @@ llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
       VTableOffset = Index * PointerWidth.getQuantity();
     }
 
-    if (UseARMMethodPtrABI) {
+    if (getUseARMMethodPtrABI()) {
       // ARM C++ ABI 3.2.1:
       //   This ABI specifies that adj contains twice the this
       //   adjustment, plus 1 if the member function is virtual. The
@@ -1241,8 +1246,8 @@ llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
 
     MemPtr[0] = llvm::ConstantExpr::getPtrToInt(addr, CGM.PtrDiffTy);
     MemPtr[1] = llvm::ConstantInt::get(CGM.PtrDiffTy,
-                                       (UseARMMethodPtrABI ? 2 : 1) *
-                                       ThisAdjustment.getQuantity());
+                                       (getUseARMMethodPtrABI() ? 2 : 1) *
+                                           ThisAdjustment.getQuantity());
   }
 
   return llvm::ConstantStruct::getAnon(MemPtr);
@@ -1330,7 +1335,7 @@ ItaniumCXXABI::EmitMemberPointerComparison(CodeGenFunction &CGF,
 
   // Null member function pointers on ARM clear the low bit of Adj,
   // so the zero condition has to check that neither low bit is set.
-  if (UseARMMethodPtrABI) {
+  if (getUseARMMethodPtrABI()) {
     llvm::Value *One = llvm::ConstantInt::get(LPtr->getType(), 1);
 
     // Compute (l.adj | r.adj) & 1 and test it against zero.
@@ -1370,7 +1375,7 @@ ItaniumCXXABI::EmitMemberPointerIsNotNull(CodeGenFunction &CGF,
 
   // On ARM, a member function pointer is also non-null if the low bit of 'adj'
   // (the virtual bit) is set.
-  if (UseARMMethodPtrABI) {
+  if (getUseARMMethodPtrABI()) {
     llvm::Constant *One = llvm::ConstantInt::get(Ptr->getType(), 1);
     llvm::Value *Adj = Builder.CreateExtractValue(MemPtr, 1, "memptr.adj");
     llvm::Value *VirtualBit = Builder.CreateAnd(Adj, One, "memptr.virtualbit");
@@ -2711,7 +2716,7 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
   } else {
     // Guard variables are 64 bits in the generic ABI and size width on ARM
     // (i.e. 32-bit on AArch32, 64-bit on AArch64).
-    if (UseARMGuardVarABI) {
+    if (getUseARMGuardVarABI()) {
       guardTy = CGF.SizeTy;
       guardAlignment = CGF.getSizeAlign();
     } else {
@@ -2824,7 +2829,7 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
     //   variable; all other bits are platform defined. Bit 0 shall be 0 when the
     //   variable is not initialized and 1 when it is.
     llvm::Value *V =
-        (UseARMGuardVarABI && !useInt8GuardVariable)
+        (getUseARMGuardVarABI() && !useInt8GuardVariable)
             ? Builder.CreateAnd(LI, llvm::ConstantInt::get(CGM.Int8Ty, 1))
             : LI;
     llvm::Value *NeedsInit = Builder.CreateIsNull(V, "guard.uninitialized");
@@ -3458,7 +3463,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
   // Start codegen.
   CodeGenFunction CGF(CGM);
   CGF.CurGD = GlobalDecl(MD);
-  CGF.CurFuncIsThunk = true;
+  CGF.setCurFuncIsThunk(true);
 
   // Build FunctionArgs.
   FunctionArgList FunctionArgs;

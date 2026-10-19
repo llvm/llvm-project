@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
@@ -276,19 +277,27 @@ struct ByteCommand : SectionCommand {
 };
 
 struct InsertCommand {
-  SmallVector<StringRef, 0> names;
-  bool isAfter;
+  InsertCommand(SmallVector<StringRef, 0> names, bool isAfter, StringRef where)
+      : names(unsigned(isAfter), std::move(names)), where(where) {}
+  llvm::SmallVectorWithFlags<StringRef, 0> names;
+  bool getIsAfter() const { return names.getFlag(0); }
+  void setIsAfter(bool Value) { names.setFlag(0, Value); }
   StringRef where;
 };
 
 // A NOCROSSREFS/NOCROSSREFS_TO command that prohibits references between
 // certain output sections.
 struct NoCrossRefCommand {
-  SmallVector<StringRef, 0> outputSections;
+  llvm::SmallVectorWithFlags<StringRef, 0> outputSections;
+
+  NoCrossRefCommand() = default;
+  explicit NoCrossRefCommand(bool toFirst) {
+    outputSections.setFlag(0, toFirst);
+  }
 
   // When true, this describes a NOCROSSREFS_TO command that probits references
   // to the first output section from any of the other sections.
-  bool toFirst = false;
+  bool toFirst() const { return outputSections.getFlag(0); }
 };
 
 struct PhdrsCommand {
@@ -417,10 +426,16 @@ public:
   // PHDRS command list.
   SmallVector<PhdrsCommand, 0> phdrsCommands;
 
-  bool hasSectionsCommand = false;
-  bool seenDataAlign = false;
-  bool seenRelroEnd = false;
-  bool errorOnMissingSection = false;
+  bool getHasSectionsCommand() const { return orphanSections.getFlag(0); }
+  void setHasSectionsCommand(bool Value) { orphanSections.setFlag(0, Value); }
+  bool getSeenDataAlign() const { return orphanSections.getFlag(1); }
+  void setSeenDataAlign(bool Value) { orphanSections.setFlag(1, Value); }
+  bool getSeenRelroEnd() const { return orphanSections.getFlag(2); }
+  void setSeenRelroEnd(bool Value) { orphanSections.setFlag(2, Value); }
+  bool getErrorOnMissingSection() const { return orphanSections.getFlag(3); }
+  void setErrorOnMissingSection(bool Value) {
+    orphanSections.setFlag(3, Value);
+  }
   SmallVector<SmallString<0>, 0> recordedErrors;
 
   // List of section patterns specified with KEEP commands. They will
@@ -444,7 +459,7 @@ public:
   SmallVector<NoCrossRefCommand, 0> noCrossRefs;
 
   // Sections that will be warned/errored by --orphan-handling.
-  SmallVector<const InputSectionBase *, 0> orphanSections;
+  llvm::SmallVectorWithFlags<const InputSectionBase *, 0, 4> orphanSections;
 
   // Stores the mapping: PROVIDE symbol -> symbols referred in the PROVIDE
   // expression. For example, if the PROVIDE command is:

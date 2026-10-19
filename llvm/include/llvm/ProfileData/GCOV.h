@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -203,11 +204,12 @@ public:
   StringMap<unsigned> filenameToIdx;
 
 public:
-  bool GCNOInitialized = false;
+  bool getGCNOInitialized() const { return functions.getFlag(0); }
+  void setGCNOInitialized(bool Value) { functions.setFlag(0, Value); }
   GCOV::GCOVVersion version{};
   uint32_t checksum = 0;
   StringRef cwd;
-  SmallVector<std::unique_ptr<GCOVFunction>, 16> functions;
+  llvm::SmallVectorWithFlags<std::unique_ptr<GCOVFunction>, 16> functions;
   std::map<uint32_t, GCOVFunction *> identToFunction;
   uint32_t runCount = 0;
   uint32_t programCount = 0;
@@ -316,7 +318,7 @@ public:
   LLVM_ABI static uint64_t
   augmentOneCycle(GCOVBlock *src,
                   std::vector<std::pair<GCOVBlock *, size_t>> &stack);
-  LLVM_ABI static uint64_t getCyclesCount(const BlockVector &blocks);
+  LLVM_ABI static uint64_t getCyclesCount(ArrayRef<const GCOVBlock *> blocks);
 
 public:
   uint32_t number;

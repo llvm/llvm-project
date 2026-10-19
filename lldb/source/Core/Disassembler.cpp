@@ -379,7 +379,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
   llvm::DIDumpOptions opts;
   opts.ShowAddresses = false;
   // Prefer "register-only" output when we have an ABI.
-  opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
+  opts.setPrintRegisterOnly(static_cast<bool>(abi_sp));
 
   llvm::DenseMap<lldb::user_id_t, VariableAnnotation> current_vars;
 

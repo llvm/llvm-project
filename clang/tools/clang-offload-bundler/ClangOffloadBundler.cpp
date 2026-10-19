@@ -162,18 +162,18 @@ int main(int argc, const char **argv) {
   /// Class to store bundler options in standard (non-cl::opt) data structures
   // Avoid using cl::opt variables after these assignments when possible
   OffloadBundlerConfig BundlerConfig;
-  BundlerConfig.AllowMissingBundles = AllowMissingBundles;
-  BundlerConfig.CheckInputArchive = CheckInputArchive;
-  BundlerConfig.PrintExternalCommands = PrintExternalCommands;
-  BundlerConfig.HipOpenmpCompatible = HipOpenmpCompatible;
+  BundlerConfig.setAllowMissingBundles(AllowMissingBundles);
+  BundlerConfig.setCheckInputArchive(CheckInputArchive);
+  BundlerConfig.setPrintExternalCommands(PrintExternalCommands);
+  BundlerConfig.setHipOpenmpCompatible(HipOpenmpCompatible);
   BundlerConfig.BundleAlignment = BundleAlignment;
   BundlerConfig.FilesType = FilesType;
   BundlerConfig.ObjcopyPath = "";
   // Do not override the default value Compress and Verbose in BundlerConfig.
   if (Compress.getNumOccurrences() > 0)
-    BundlerConfig.Compress = Compress;
+    BundlerConfig.setCompress(Compress);
   if (Verbose.getNumOccurrences() > 0)
-    BundlerConfig.Verbose = Verbose;
+    BundlerConfig.setVerbose(Verbose);
   if (CompressionLevel.getNumOccurrences() > 0)
     BundlerConfig.CompressionLevel = CompressionLevel;
 
@@ -187,7 +187,7 @@ int main(int argc, const char **argv) {
   BundlerConfig.HostInputIndex = ~0u;
 
   /// Whether not having host target is allowed.
-  BundlerConfig.AllowNoHost = false;
+  BundlerConfig.setAllowNoHost(false);
 
   auto reportError = [argv](Error E) {
     logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));
@@ -283,7 +283,7 @@ int main(int argc, const char **argv) {
     });
   }
 
-  if (BundlerConfig.CheckInputArchive) {
+  if (BundlerConfig.getCheckInputArchive()) {
     if (!Unbundle) {
       return reportError(createStringError(
           errc::invalid_argument, "-check-input-archive cannot be used while "
@@ -415,12 +415,12 @@ int main(int argc, const char **argv) {
   // HIP uses clang-offload-bundler to bundle device-only compilation results
   // for multiple GPU archs, therefore allow no host target if all entries
   // are for HIP.
-  BundlerConfig.AllowNoHost = HIPOnly;
+  BundlerConfig.setAllowNoHost(HIPOnly);
 
   // Host triple is not really needed for unbundling operation, so do not
   // treat missing host triple as error if we do unbundling.
   if ((Unbundle && HostTargetNum > 1) ||
-      (!Unbundle && HostTargetNum != 1 && !BundlerConfig.AllowNoHost)) {
+      (!Unbundle && HostTargetNum != 1 && !BundlerConfig.getAllowNoHost())) {
     return reportError(createStringError(
         errc::invalid_argument,
         "expecting exactly one host target but got " + Twine(HostTargetNum)));

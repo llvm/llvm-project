@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/BuildID.h"
@@ -42,7 +43,8 @@ public:
   using ProfilingData = SmallDenseMap<uint64_t, InstrProfRecord>;
 
 private:
-  bool Sparse;
+  bool getSparse() const { return TemporalProfTraces.getFlag(0); }
+  void setSparse(bool Value) { TemporalProfTraces.setFlag(0, Value); }
   StringMap<ProfilingData> FunctionData;
   /// The maximum length of a single temporal profile trace.
   uint64_t MaxTemporalProfTraceLength;
@@ -51,7 +53,11 @@ private:
   /// The total number of temporal profile traces seen.
   uint64_t TemporalProfTraceStreamSize = 0;
   /// The list of temporal profile traces.
-  SmallVector<TemporalProfTraceTy> TemporalProfTraces;
+  llvm::SmallVectorWithFlags<TemporalProfTraceTy,
+                             llvm::CalculateSmallVectorDefaultInlinedElements<
+                                 TemporalProfTraceTy>::value,
+                             4>
+      TemporalProfTraces;
   std::mt19937 RNG;
 
   // The MemProf data.
@@ -73,22 +79,37 @@ private:
   // new vtable names section and header fields.
   // TODO: Consider enabling this with future version changes as well, to ease
   // deployment of newer versions of llvm-profdata.
-  bool WritePrevVersion = false;
+  bool getWritePrevVersion() const { return TemporalProfTraces.getFlag(1); }
+  void setWritePrevVersion(bool Value) { TemporalProfTraces.setFlag(1, Value); }
 
   // The MemProf version we should write.
   memprof::IndexedVersion MemProfVersionRequested;
 
   // Whether to serialize the full schema.
-  bool MemProfFullSchema;
+  bool getMemProfFullSchemaFlag() const {
+    return TemporalProfTraces.getFlag(2);
+  }
+  void setMemProfFullSchemaFlag(bool Value) {
+    TemporalProfTraces.setFlag(2, Value);
+  }
 
   // Whether to generated random memprof hotness for testing.
-  bool MemprofGenerateRandomHotness;
+  bool getMemprofGenerateRandomHotness() const {
+    return TemporalProfTraces.getFlag(3);
+  }
+  void setMemprofGenerateRandomHotness(bool Value) {
+    TemporalProfTraces.setFlag(3, Value);
+  }
 
   std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
   // MemProf summary builder to which records are added as MemProf data is added
   // to the writer.
   memprof::MemProfSummaryBuilder MemProfSumBuilder;
+
+  template <typename TraceVectorT>
+  void addTemporalProfileTracesImpl(TraceVectorT &SrcTraces,
+                                    uint64_t SrcStreamSize);
 
 public:
   // For memprof testing, random hotness can be assigned to the contexts if
@@ -219,7 +240,7 @@ public:
   void setMemProfVersionRequested(memprof::IndexedVersion Version) {
     MemProfVersionRequested = Version;
   }
-  void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
+  void setMemProfFullSchema(bool Full) { setMemProfFullSchemaFlag(Full); }
 
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.

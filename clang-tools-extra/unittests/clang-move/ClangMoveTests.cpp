@@ -527,7 +527,7 @@ TEST(ClangMove, AddDependentNewHeader) {
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";
   Spec.NewCC = "new_foo.cc";
-  Spec.OldDependOnNew = true;
+  Spec.setOldDependOnNew(true);
   auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
   EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);
   EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
@@ -552,7 +552,7 @@ TEST(ClangMove, AddDependentOldHeader) {
   Spec.OldCC = "foo.cc";
   Spec.NewHeader = "new_foo.h";
   Spec.NewCC = "new_foo.cc";
-  Spec.NewDependOnOld = true;
+  Spec.setNewDependOnOld(true);
   auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
   EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
   EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);

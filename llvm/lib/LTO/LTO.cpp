@@ -652,7 +652,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   }
 
   File->Mods = FOrErr->Mods;
-  File->Strtab = std::move(FOrErr->Strtab);
+  File->Strtab.assign(std::move(FOrErr->Strtab));
   return std::move(File);
 }
 
@@ -826,7 +826,7 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
 Error LTO::add(std::unique_ptr<InputFile> InputPtr,
                ArrayRef<SymbolResolution> Res) {
   llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
-  assert(!CalledGetMaxTasks);
+  assert(!getCalledGetMaxTasks());
 
   Expected<std::shared_ptr<InputFile>> InputOrErr =
       addInput(std::move(InputPtr));
@@ -893,7 +893,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
   // If any of the modules inside of a input bitcode file was compiled with
   // ThinLTO, we assume that the whole input file also was compiled with
   // ThinLTO.
-  Input.IsThinLTO |= IsThinLTO;
+  Input.setIsThinLTO(Input.getIsThinLTO() | (IsThinLTO));
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
@@ -1267,7 +1267,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 }
 
 unsigned LTO::getMaxTasks() const {
-  CalledGetMaxTasks = true;
+  setCalledGetMaxTasks(true);
   auto ModuleCount = ThinLTO.ModulesToCompile ? ThinLTO.ModulesToCompile->size()
                                               : ThinLTO.ModuleMap.size();
   return RegularLTO.ParallelCodeGenParallelismLevel + ModuleCount;
@@ -2322,7 +2322,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the first round of codegen\n");
   auto FirstRoundLTO = std::make_unique<FirstRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-      CG.AddStream, CG.Cache, BitcodeLibFuncs, IR.AddStream, IR.Cache);
+      CG.AddStream, CG.Cache, ArrayRef<StringRef>(BitcodeLibFuncs),
+      IR.AddStream, IR.Cache);
   if (Error E = RunBackends(FirstRoundLTO.get()))
     return E;
 
@@ -2338,7 +2339,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the second round of codegen\n");
   auto SecondRoundLTO = std::make_unique<SecondRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-      AddStream, Cache, BitcodeLibFuncs, IR.getResult(), CombinedHash);
+      AddStream, Cache, ArrayRef<StringRef>(BitcodeLibFuncs), IR.getResult(),
+      CombinedHash);
   return RunBackends(SecondRoundLTO.get());
 }
 

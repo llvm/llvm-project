@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -56,15 +57,20 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefIterative(
     explicit StackFrame(BasicBlock *BB) : BB(BB), PredIt(pred_begin(BB)) {}
     ResumePoint Resume = ResumePoint::EnterBlock;
     // Multi-predecessor loop state.
-    SmallVector<TrackingVH<MemoryAccess>, 4> PhiOps;
+    llvm::SmallVectorWithFlags<TrackingVH<MemoryAccess>, 4, 2> PhiOps;
     // Cursor over BB's predecessors for the resumable RunPredLoop walk. This
     // stays valid across suspend/resume because the walk only modifies
     // MemorySSA, never terminators or CFG edges, so BB's predecessor list does
     // not change.
     pred_iterator PredIt;
     // When set, `Returned` holds the result for the predecessor at PredIt.
-    bool PendingIncoming = false;
-    bool UniqueIncomingAccess = true;
+    bool getPendingIncoming() const { return PhiOps.getFlag(0); }
+    void setPendingIncoming(bool Value) { PhiOps.setFlag(0, Value); }
+    bool getUniqueIncomingAccess() const { return !PhiOps.getFlag(1); }
+    bool setUniqueIncomingAccess(bool Value) {
+      PhiOps.setFlag(1, !Value);
+      return Value;
+    }
     MemoryAccess *SingleAccess = nullptr;
 
     // Fold an incoming predecessor access into this frame's phi operands,
@@ -74,7 +80,7 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefIterative(
       if (!SingleAccess)
         SingleAccess = Incoming;
       else if (Incoming != SingleAccess)
-        UniqueIncomingAccess = false;
+        setUniqueIncomingAccess(false);
       PhiOps.push_back(Incoming);
     }
   };
@@ -166,10 +172,10 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefIterative(
       // Get the values in our predecessors for placement of a potential phi
       // node. This will insert phi nodes if we cycle in order to break the
       // cycle and have an operand.
-      if (F.PendingIncoming) {
+      if (F.getPendingIncoming()) {
         // Returned holds the result for the predecessor at PredIt.
         F.incorporate(Returned);
-        F.PendingIncoming = false;
+        F.setPendingIncoming(false);
         ++F.PredIt;
       }
 
@@ -181,7 +187,7 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefIterative(
           if (MemoryAccess *IncomingAccess = GetLocalDefFromEnd(Pred)) {
             F.incorporate(IncomingAccess);
           } else {
-            F.PendingIncoming = true;
+            F.setPendingIncoming(true);
             WorkStack.emplace_back(Pred);
             Suspended = true;
             break;
@@ -200,7 +206,7 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefIterative(
       // See if we can avoid the phi by simplifying it.
       auto *Result = tryRemoveTrivialPhi(Phi, F.PhiOps);
       // If we couldn't simplify, we may have to create a phi
-      if (Result == Phi && F.UniqueIncomingAccess && F.SingleAccess) {
+      if (Result == Phi && F.getUniqueIncomingAccess() && F.SingleAccess) {
         // A concrete Phi only exists if we created an empty one to break a
         // cycle.
         if (Phi) {
@@ -209,7 +215,8 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefIterative(
           removeMemoryAccess(Phi);
         }
         Result = F.SingleAccess;
-      } else if (Result == Phi && !(F.UniqueIncomingAccess && F.SingleAccess)) {
+      } else if (Result == Phi &&
+                 !(F.getUniqueIncomingAccess() && F.SingleAccess)) {
         if (!Phi)
           Phi = MSSA->createMemoryPhi(CurBB);
 

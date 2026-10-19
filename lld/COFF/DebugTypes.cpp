@@ -236,7 +236,7 @@ void TpiSource::remapRecord(MutableArrayRef<uint8_t> rec,
         reinterpret_cast<TypeIndex *>(contents.data() + ref.Offset), ref.Count);
     for (TypeIndex &ti : indices) {
       if (!remapTypeIndex(ti, ref.Kind)) {
-        if (ctx.config.verbose) {
+        if (ctx.config.getVerbose()) {
           uint16_t kind =
               reinterpret_cast<const RecordPrefix *>(rec.data())->RecordKind;
           StringRef fname = file ? file->getName() : "<unknown PDB>";

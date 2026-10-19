@@ -329,7 +329,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
       continue;
 
     // Collect leaf children or leaf descendants by OutlinerLeafDescendants.
-    if (OutlinerLeafDescendants) {
+    if (getOutlinerLeafDescendants()) {
       for (unsigned I = Curr->getLeftLeafIdx(); I <= Curr->getRightLeafIdx();
            ++I)
         RepeatedSubstringStarts.push_back(LeafNodes[I]->getSuffixIdx());

@@ -249,6 +249,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -769,10 +770,10 @@ ConditionalExpansionMapIter;
 class PreprocessorTrackerImpl : public PreprocessorTracker {
 public:
   PreprocessorTrackerImpl(llvm::SmallVector<std::string, 32> &Headers,
-        bool DoBlockCheckHeaderListOnly)
-      : BlockCheckHeaderListOnly(DoBlockCheckHeaderListOnly),
-        CurrentInclusionPathHandle(InclusionPathHandleInvalid),
-        InNestedHeader(false) {
+                          bool DoBlockCheckHeaderListOnly)
+      : HeaderList(decltype(HeaderList)::withFlags(
+            unsigned(DoBlockCheckHeaderListOnly))),
+        CurrentInclusionPathHandle(InclusionPathHandleInvalid) {
     // Use canonical header path representation.
     for (llvm::ArrayRef<std::string>::iterator I = Headers.begin(),
       E = Headers.end();
@@ -804,7 +805,7 @@ public:
                               llvm::StringRef TargetPath) override {
     // If it's not a header in the header list, ignore it with respect to
     // the check.
-    if (BlockCheckHeaderListOnly && !isHeaderListHeader(TargetPath))
+    if (getBlockCheckHeaderListOnly() && !isHeaderListHeader(TargetPath))
       return;
     HeaderHandle CurrentHeaderHandle = findHeaderHandle(DirectivePath);
     StringHandle IncludeHeaderHandle = addString(TargetPath);
@@ -876,8 +877,8 @@ public:
     if (H != getCurrentHeaderHandle())
       pushHeaderHandle(H);
     // Check for nested header.
-    if (!InNestedHeader)
-      InNestedHeader = !HeadersInThisCompile.insert(H).second;
+    if (!getInNestedHeader())
+      setInNestedHeader(!HeadersInThisCompile.insert(H).second);
   }
 
   // Handle exiting a header source file.
@@ -893,7 +894,7 @@ public:
         popHeaderHandle();
       } while ((TH != H) && (HeaderStack.size() != 0));
     }
-    InNestedHeader = false;
+    setInNestedHeader(false);
   }
 
   // Lookup/add string.
@@ -1022,7 +1023,7 @@ public:
                                  llvm::StringRef MacroUnexpanded,
                                  llvm::StringRef MacroExpanded,
                                  InclusionPathHandle InclusionPathHandle) {
-    if (InNestedHeader)
+    if (getInNestedHeader())
       return;
     StringHandle MacroName = addString(II->getName());
     PPItemKey InstanceKey(PP, MacroName, H, InstanceLoc);
@@ -1071,7 +1072,7 @@ public:
                                   llvm::StringRef ConditionUnexpanded,
                                   InclusionPathHandle InclusionPathHandle) {
     // Ignore header guards, assuming the header guard is the only conditional.
-    if (InNestedHeader)
+    if (getInNestedHeader())
       return;
     StringHandle ConditionUnexpandedHandle(addString(ConditionUnexpanded));
     PPItemKey InstanceKey(PP, ConditionUnexpandedHandle, H, InstanceLoc);
@@ -1222,9 +1223,10 @@ public:
   }
 
 private:
-  llvm::SmallVector<std::string, 32> HeaderList;
+  llvm::SmallVectorWithFlags<std::string, 32, 2> HeaderList;
   // Only do extern, namespace check for headers in HeaderList.
-  bool BlockCheckHeaderListOnly;
+  bool getBlockCheckHeaderListOnly() const { return HeaderList.getFlag(0); }
+  void setBlockCheckHeaderListOnly(bool Value) { HeaderList.setFlag(0, Value); }
   llvm::StringSet<> Strings;
   std::vector<StringHandle> HeaderPaths;
   std::vector<HeaderHandle> HeaderStack;
@@ -1234,7 +1236,8 @@ private:
   std::vector<PPItemKey> IncludeDirectives;
   MacroExpansionMap MacroExpansions;
   ConditionalExpansionMap ConditionalExpansions;
-  bool InNestedHeader;
+  bool getInNestedHeader() const { return HeaderList.getFlag(1); }
+  void setInNestedHeader(bool Value) { HeaderList.setFlag(1, Value); }
 };
 
 } // namespace

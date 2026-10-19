@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -110,8 +111,9 @@ struct RegInfo {
   RegInfo() = default;
   RegInfo(Region *RegionIn) : R(RegionIn) {}
   Region *R = nullptr;
-  bool HasBranch = false;
-  SmallVector<SelectInst *, 8> Selects;
+  bool getHasBranch() const { return Selects.getFlag(0); }
+  void setHasBranch(bool Value) { Selects.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<SelectInst *, 8> Selects;
 };
 
 typedef DenseMap<Region *, DenseSet<Instruction *>> HoistStopMapTy;
@@ -424,7 +426,7 @@ void CHRScope::print(raw_ostream &OS) const {
   OS << RegInfos.size() << ", Regions[";
   for (const RegInfo &RI : RegInfos) {
     OS << RI.R->getNameStr();
-    if (RI.HasBranch)
+    if (RI.getHasBranch())
       OS << " B";
     if (RI.Selects.size() > 0)
       OS << " S" << RI.Selects.size();
@@ -760,14 +762,14 @@ CHRScope * CHR::findScope(Region *R) {
       CHR_DEBUG(dbgs() << "S1 " << S1->getName() << "\n");
       if (S0 != S1 && (S0 == Exit || S1 == Exit)) {
         RegInfo RI(R);
-        RI.HasBranch =
-            checkBiasedBranch(Opts, BI, R, TrueBiasedRegionsGlobal,
-                              FalseBiasedRegionsGlobal, BranchBiasMap);
+        RI.setHasBranch(checkBiasedBranch(Opts, BI, R, TrueBiasedRegionsGlobal,
+                                          FalseBiasedRegionsGlobal,
+                                          BranchBiasMap));
         Result = new CHRScope(RI);
         Scopes.insert(Result);
         CHR_DEBUG(dbgs() << "Found a region with a branch\n");
         ++Stats.NumBranches;
-        if (!RI.HasBranch) {
+        if (!RI.getHasBranch()) {
           ORE.emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "BranchNotBiased", BI)
                 << "Branch not biased";
@@ -863,9 +865,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
   Region *R = RI.R;
   BasicBlock *EntryBB = R->getEntry();
   auto *Branch =
-      RI.HasBranch ? cast<CondBrInst>(EntryBB->getTerminator()) : nullptr;
-  SmallVector<SelectInst *, 8> &Selects = RI.Selects;
-  if (RI.HasBranch || !Selects.empty()) {
+      RI.getHasBranch() ? cast<CondBrInst>(EntryBB->getTerminator()) : nullptr;
+  auto &Selects = RI.Selects;
+  if (RI.getHasBranch() || !Selects.empty()) {
     Instruction *InsertPoint = getBranchInsertPoint(RI);
     CHR_DEBUG(dbgs() << "InsertPoint " << *InsertPoint << "\n");
     // Avoid a data dependence from a select or a branch to a(nother)
@@ -900,7 +902,7 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     // Update InsertPoint after potentially removing selects.
     InsertPoint = getBranchInsertPoint(RI);
     CHR_DEBUG(dbgs() << "InsertPoint " << *InsertPoint << "\n");
-    if (RI.HasBranch && InsertPoint != Branch) {
+    if (RI.getHasBranch() && InsertPoint != Branch) {
       DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(Branch->getCondition(), InsertPoint,
                                          DT, Unhoistables, nullptr, Visited);
@@ -930,7 +932,7 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     }
     CHR_DEBUG(dbgs() << "InsertPoint " << *InsertPoint << "\n");
 #ifndef NDEBUG
-    if (RI.HasBranch) {
+    if (RI.getHasBranch()) {
       assert(!DT.dominates(Branch, InsertPoint) &&
              "Branch can't be already above the hoist point");
       DenseMap<Instruction *, bool> Visited;
@@ -947,7 +949,7 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
              "checkHoistValue for selects");
     }
     CHR_DEBUG(dbgs() << "Result\n");
-    if (RI.HasBranch) {
+    if (RI.getHasBranch()) {
       CHR_DEBUG(dbgs() << "BI " << *Branch << "\n");
     }
     for (auto *SI : Selects) {
@@ -1009,7 +1011,7 @@ CHRScope * CHR::findScopes(Region *R, Region *NextRegion, Region *ParentRegion,
 
 static DenseSet<Value *> getCHRConditionValuesForRegion(RegInfo &RI) {
   DenseSet<Value *> ConditionValues;
-  if (RI.HasBranch) {
+  if (RI.getHasBranch()) {
     auto *BI = cast<CondBrInst>(RI.R->getEntry()->getTerminator());
     ConditionValues.insert(BI->getCondition());
   }
@@ -1272,7 +1274,7 @@ void CHR::classifyBiasedScopes(SmallVectorImpl<CHRScope *> &Scopes) {
 
 void CHR::classifyBiasedScopes(CHRScope *Scope, CHRScope *OutermostScope) {
   for (RegInfo &RI : Scope->RegInfos) {
-    if (RI.HasBranch) {
+    if (RI.getHasBranch()) {
       Region *R = RI.R;
       if (TrueBiasedRegionsGlobal.contains(R))
         OutermostScope->TrueBiasedRegions.insert(R);
@@ -1363,7 +1365,7 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
     Region *R = RI.R;
     DenseSet<Instruction *> HoistStops;
     bool IsHoisted = false;
-    if (RI.HasBranch) {
+    if (RI.getHasBranch()) {
       assert((OutermostScope->TrueBiasedRegions.contains(R) ||
               OutermostScope->FalseBiasedRegions.contains(R)) &&
              "Must be truthy or falsy");
@@ -1466,7 +1468,7 @@ static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
     Region *R = RI.R;
     bool IsTrueBiased = Scope->TrueBiasedRegions.count(R);
     bool IsFalseBiased = Scope->FalseBiasedRegions.count(R);
-    if (RI.HasBranch && (IsTrueBiased || IsFalseBiased)) {
+    if (RI.getHasBranch() && (IsTrueBiased || IsFalseBiased)) {
       auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
       hoistValue(BI->getCondition(), HoistPoint, R, Scope->HoistStopMap,
                  HoistedSet, TrivialPHIs, DT);
@@ -1641,7 +1643,7 @@ assertBranchOrSelectConditionHoisted(CHRScope *Scope,
     Region *R = RI.R;
     bool IsTrueBiased = Scope->TrueBiasedRegions.count(R);
     bool IsFalseBiased = Scope->FalseBiasedRegions.count(R);
-    if (RI.HasBranch && (IsTrueBiased || IsFalseBiased)) {
+    if (RI.getHasBranch() && (IsTrueBiased || IsFalseBiased)) {
       auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
       Value *V = BI->getCondition();
       CHR_DEBUG(dbgs() << *V << "\n");
@@ -1862,7 +1864,7 @@ void CHR::fixupBranchesAndSelects(CHRScope *Scope, BasicBlock *PreEntryBlock,
   IRBuilder<> IRB(PreEntryBlock->getTerminator());
   for (RegInfo &RI : Scope->CHRRegions) {
     Region *R = RI.R;
-    if (RI.HasBranch) {
+    if (RI.getHasBranch()) {
       fixupBranch(R, Scope, IRB, MergedCondition, CHRBranchBias);
       ++NumCHRedBranches;
     }

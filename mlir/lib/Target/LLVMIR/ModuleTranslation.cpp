@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include "AttrKindDetail.h"
 #include "DebugTranslation.h"
@@ -92,7 +93,7 @@ public:
   /// Constructs the inserter.
   InstructionCapturingInserter()
       : llvm::IRBuilderCallbackInserter([this](llvm::Instruction *instruction) {
-          if (LLVM_LIKELY(enabled))
+          if (LLVM_LIKELY(getEnabledFlag()))
             capturedInstructions.push_back(instruction);
         }) {}
 
@@ -124,21 +125,28 @@ public:
     InstructionCapturingInserter *inserter = nullptr;
 
     /// List of instructions in the inserter prior to this scope.
-    SmallVector<llvm::Instruction *> previouslyCollectedInstructions;
+    llvm::SmallVectorWithFlags<llvm::Instruction *>
+        previouslyCollectedInstructions;
 
     /// Whether the inserter was enabled prior to this scope.
-    bool wasEnabled;
+    bool getWasEnabled() const {
+      return previouslyCollectedInstructions.getFlag(0);
+    }
+    void setWasEnabled(bool Value) {
+      previouslyCollectedInstructions.setFlag(0, Value);
+    }
   };
 
   /// Enable or disable the capturing mechanism.
-  void setEnabled(bool enabled = true) { this->enabled = enabled; }
+  void setEnabled(bool enabled = true) { this->setEnabledFlag(enabled); }
 
 private:
   /// List of captured instructions.
-  SmallVector<llvm::Instruction *> capturedInstructions;
+  llvm::SmallVectorWithFlags<llvm::Instruction *> capturedInstructions;
 
   /// Whether the collection is enabled.
-  bool enabled = false;
+  bool getEnabledFlag() const { return capturedInstructions.getFlag(0); }
+  void setEnabledFlag(bool Value) { capturedInstructions.setFlag(0, Value); }
 };
 
 using CapturingIRBuilder =
@@ -153,8 +161,8 @@ InstructionCapturingInserter::CollectionScope::CollectionScope(
 
   auto &capturingIRBuilder = static_cast<CapturingIRBuilder &>(irBuilder);
   inserter = &capturingIRBuilder.getInserter();
-  wasEnabled = inserter->enabled;
-  if (wasEnabled)
+  setWasEnabled(inserter->getEnabledFlag());
+  if (getWasEnabled())
     previouslyCollectedInstructions.swap(inserter->capturedInstructions);
   inserter->setEnabled(true);
 }
@@ -163,14 +171,17 @@ InstructionCapturingInserter::CollectionScope::~CollectionScope() {
   if (!inserter)
     return;
 
+  const bool savedWasEnabled = getWasEnabled();
+  // Preserve this scope's saved state when swapping the flagged vectors.
   previouslyCollectedInstructions.swap(inserter->capturedInstructions);
+  setWasEnabled(savedWasEnabled);
   // If collection was enabled (likely in another, surrounding scope), keep
   // the instructions collected in this scope.
-  if (wasEnabled) {
+  if (getWasEnabled()) {
     llvm::append_range(inserter->capturedInstructions,
                        previouslyCollectedInstructions);
   }
-  inserter->setEnabled(wasEnabled);
+  inserter->setEnabled(getWasEnabled());
 }
 
 /// Translates the given data layout spec attribute to the LLVM IR data layout.

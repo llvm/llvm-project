@@ -256,7 +256,7 @@ private:
       // TODO: We could consider sorting the dependency arrays within the
       // AnalysisUsage (since they are conceptually unordered).
       ID.AddBoolean(AU.getPreservesAll());
-      auto ProfileVec = [&](const SmallVectorImpl<AnalysisID>& Vec) {
+      auto ProfileVec = [&](ArrayRef<AnalysisID> Vec) {
         ID.AddInteger(Vec.size());
         for(AnalysisID AID : Vec)
           ID.AddPointer(AID);
@@ -432,7 +432,7 @@ protected:
 
 private:
   void dumpAnalysisUsage(StringRef Msg, const Pass *P,
-                         const AnalysisUsage::VectorType &Set) const;
+                         ArrayRef<AnalysisID> Set) const;
 
   // Set of available Analysis. This information is used while scheduling
   // pass. If a pass requires an analysis which is not available then

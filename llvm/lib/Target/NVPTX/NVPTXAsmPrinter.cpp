@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -162,15 +163,18 @@ class NVPTXAsmPrinter : public AsmPrinter {
     // We need to keep these values because AggBuffer::print decides whether to
     // emit a "generic()" cast for Symbols[i] depending on the address space of
     // SymbolsBeforeStripping[i].
-    SmallVector<const Value *, 4> SymbolsBeforeStripping;
+    llvm::SmallVectorWithFlags<const Value *, 4> SymbolsBeforeStripping;
     unsigned curpos;
     const NVPTXAsmPrinter &AP;
-    const bool EmitGeneric;
+    bool getEmitGeneric() const { return SymbolsBeforeStripping.getFlag(0); }
 
   public:
     AggBuffer(unsigned Size, const NVPTXAsmPrinter &AP)
-        : Size(Size), buffer(Size), curpos(0), AP(AP),
-          EmitGeneric(AP.EmitGeneric) {}
+        : Size(Size), buffer(Size),
+          SymbolsBeforeStripping(
+              decltype(this->SymbolsBeforeStripping)::withFlags(
+                  unsigned(bool(AP.EmitGeneric)))),
+          curpos(0), AP(AP) {}
 
     unsigned getBufferSize() const { return Size; }
 
@@ -1593,7 +1597,7 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
     PointerType *PTy = dyn_cast<PointerType>(v0->getType());
     // Is v0 a generic pointer?
     bool isGenericPointer = PTy && PTy->getAddressSpace() == 0;
-    if (EmitGeneric && isGenericPointer && !isa<Function>(v)) {
+    if (getEmitGeneric() && isGenericPointer && !isa<Function>(v)) {
       os << "generic(";
       Name->print(os, AP.MAI);
       os << ")";

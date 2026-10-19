@@ -50,6 +50,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -566,9 +567,16 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // SkipExcludedConditionalBlock() recursively, SkippingRangeStateTy should
   // change to do a second lookup in endLexPass function instead of reusing the
   // lookup pointer.
-  assert(!SkippingExcludedConditionalBlock &&
+  assert(!getSkippingExcludedConditionalBlock() &&
          "calling SkipExcludedConditionalBlock recursively");
-  llvm::SaveAndRestore SARSkipping(SkippingExcludedConditionalBlock, true);
+  auto SARSkipping = [PackedFlagOwner = this] {
+    const bool PackedFlagOld =
+        PackedFlagOwner->getSkippingExcludedConditionalBlock();
+    PackedFlagOwner->setSkippingExcludedConditionalBlock(true);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setSkippingExcludedConditionalBlock(PackedFlagOld);
+    });
+  }();
 
   ++NumSkipped;
   assert(!CurTokenLexer && "Conditional PP block cannot appear in a macro!");
@@ -583,7 +591,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
   // Enter raw mode to disable identifier lookup (and thus macro expansion),
   // disabling warnings, etc.
-  CurPPLexer->LexingRawMode = true;
+  CurPPLexer->setLexingRawMode(true);
   Token Tok;
   SourceLocation endLoc;
 
@@ -672,19 +680,24 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           if (II->getName()[0] == 'm') { // module
             // HandleModuleContextualKeyword changes the lexer state, so we need
             // to save RawLexingMode
-            llvm::SaveAndRestore RestoreLexingRawMode(CurPPLexer->LexingRawMode,
-                                                      false);
+            auto RestoreLexingRawMode = [PackedFlagOwner_ = CurPPLexer] {
+              const bool PackedFlagOld_ = PackedFlagOwner_->getLexingRawMode();
+              PackedFlagOwner_->setLexingRawMode(false);
+              return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+                PackedFlagOwner_->setLexingRawMode(PackedFlagOld_);
+              });
+            }();
             if (HandleModuleContextualKeyword(Tok)) {
               // We just parsed a # character at the start of a line, so we're
               // in directive mode.  Tell the lexer this so any newlines we see
               // will be converted into an EOD token (this terminates the
               // macro).
-              CurPPLexer->ParsingPreprocessorDirective = true;
+              CurPPLexer->setParsingPreprocessorDirectiveFlag(true);
               SourceLocation StartLoc = Tok.getLocation();
               SourceLocation End = DiscardUntilEndOfDirective().getEnd();
               Diag(StartLoc, diag::err_pp_cond_span_module_decl)
                   << SourceRange(StartLoc, End);
-              CurPPLexer->ParsingPreprocessorDirective = false;
+              CurPPLexer->setParsingPreprocessorDirectiveFlag(false);
               // Restore comment saving mode.
               if (CurLexer)
                 CurLexer->resetExtendedTokenMode();
@@ -718,7 +731,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     // We just parsed a # character at the start of a line, so we're in
     // directive mode.  Tell the lexer this so any newlines we see will be
     // converted into an EOD token (this terminates the macro).
-    CurPPLexer->ParsingPreprocessorDirective = true;
+    CurPPLexer->setParsingPreprocessorDirectiveFlag(true);
     if (CurLexer) CurLexer->SetKeepWhitespaceMode(false);
 
     assert(Tok.is(tok::hash));
@@ -731,7 +744,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     // If this isn't an identifier directive (e.g. is "# 1\n" or "#\n", or
     // something bogus), skip it.
     if (Tok.isNot(tok::raw_identifier)) {
-      CurPPLexer->ParsingPreprocessorDirective = false;
+      CurPPLexer->setParsingPreprocessorDirectiveFlag(false);
       // Restore comment saving mode.
       if (CurLexer) CurLexer->resetExtendedTokenMode();
       continue;
@@ -747,7 +760,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     char FirstChar = RI[0];
     if (FirstChar >= 'a' && FirstChar <= 'z' &&
         FirstChar != 'i' && FirstChar != 'e') {
-      CurPPLexer->ParsingPreprocessorDirective = false;
+      CurPPLexer->setParsingPreprocessorDirectiveFlag(false);
       // Restore comment saving mode.
       if (CurLexer) CurLexer->resetExtendedTokenMode();
       continue;
@@ -764,7 +777,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
       std::string DirectiveStr = getSpelling(Tok);
       size_t IdLen = DirectiveStr.size();
       if (IdLen >= 20) {
-        CurPPLexer->ParsingPreprocessorDirective = false;
+        CurPPLexer->setParsingPreprocessorDirectiveFlag(false);
         // Restore comment saving mode.
         if (CurLexer) CurLexer->resetExtendedTokenMode();
         continue;
@@ -801,9 +814,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           SkippingRangeState.endLexPass(Hashptr);
           // Restore the value of LexingRawMode so that trailing comments
           // are handled correctly, if we've reached the outermost block.
-          CurPPLexer->LexingRawMode = false;
+          CurPPLexer->setLexingRawMode(false);
           endLoc = CheckEndOfDirective("endif");
-          CurPPLexer->LexingRawMode = true;
+          CurPPLexer->setLexingRawMode(true);
           if (Callbacks)
             Callbacks->Endif(Tok.getLocation(), CondInfo.IfLoc);
           break;
@@ -832,9 +845,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           CondInfo.FoundNonSkip = true;
           // Restore the value of LexingRawMode so that trailing comments
           // are handled correctly.
-          CurPPLexer->LexingRawMode = false;
+          CurPPLexer->setLexingRawMode(false);
           endLoc = CheckEndOfDirective("else");
-          CurPPLexer->LexingRawMode = true;
+          CurPPLexer->setLexingRawMode(true);
           if (Callbacks)
             Callbacks->Else(Tok.getLocation(), CondInfo.IfLoc);
           break;
@@ -862,15 +875,16 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         } else {
           // Restore the value of LexingRawMode so that identifiers are
           // looked up, etc, inside the #elif expression.
-          assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
-          CurPPLexer->LexingRawMode = false;
+          assert(CurPPLexer->getLexingRawMode() &&
+                 "We have to be skipping here!");
+          CurPPLexer->setLexingRawMode(false);
           IdentifierInfo *IfNDefMacro = nullptr;
           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
           // Stop if Lexer became invalid after hitting code completion token.
           if (!CurPPLexer)
             return;
           const bool CondValue = DER.Conditional;
-          CurPPLexer->LexingRawMode = true;
+          CurPPLexer->setLexingRawMode(true);
           if (Callbacks) {
             Callbacks->Elif(
                 Tok.getLocation(), DER.ExprRange,
@@ -914,11 +928,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         } else {
           // Restore the value of LexingRawMode so that identifiers are
           // looked up, etc, inside the #elif[n]def expression.
-          assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
-          CurPPLexer->LexingRawMode = false;
+          assert(CurPPLexer->getLexingRawMode() &&
+                 "We have to be skipping here!");
+          CurPPLexer->setLexingRawMode(false);
           Token MacroNameTok;
           ReadMacroName(MacroNameTok);
-          CurPPLexer->LexingRawMode = true;
+          CurPPLexer->setLexingRawMode(true);
 
           // If the macro name token is tok::eod, there was an error that was
           // already reported.
@@ -958,7 +973,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
       SuggestTypoedDirective(Tok, Directive);
     }
 
-    CurPPLexer->ParsingPreprocessorDirective = false;
+    CurPPLexer->setParsingPreprocessorDirectiveFlag(false);
     // Restore comment saving mode.
     if (CurLexer) CurLexer->resetExtendedTokenMode();
   }
@@ -966,7 +981,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // Finally, if we are out of the conditional (saw an #endif or ran off the end
   // of the file, just stop skipping and return to lexing whatever came after
   // the #if block.
-  CurPPLexer->LexingRawMode = false;
+  CurPPLexer->setLexingRawMode(false);
 
   // The last skipped range isn't actually skipped yet if it's truncated
   // by the end of the preamble; we'll resume parsing after the preamble.
@@ -1111,7 +1126,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
                 ? HeaderInfo.getModuleMap().getBuiltinDir()
                 : MainFileDir;
         Includers.push_back(std::make_pair(std::nullopt, *IncludeDir));
-        BuildSystemModule = getCurrentModule()->IsSystem;
+        BuildSystemModule = getCurrentModule()->getIsSystem();
       } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
                       SourceMgr.getMainFileID()))) {
         auto CWD = FileMgr.getOptionalDirectoryRef(".");
@@ -1297,11 +1312,12 @@ void Preprocessor::HandleSkippedDirectiveWhileUsingPCH(Token &Result,
       return HandleDefineDirective(Result,
                                    /*ImmediatelyAfterHeaderGuard=*/false);
     }
-    if (SkippingUntilPCHThroughHeader &&
+    if (getSkippingUntilPCHThroughHeader() &&
         II->getPPKeywordID() == tok::pp_include) {
       return HandleIncludeDirective(HashLoc, Result);
     }
-    if (SkippingUntilPragmaHdrStop && II->getPPKeywordID() == tok::pp_pragma) {
+    if (getSkippingUntilPragmaHdrStop() &&
+        II->getPPKeywordID() == tok::pp_pragma) {
       Lex(Result);
       auto *II = Result.getIdentifierInfo();
       if (II && II->getName() == "hdrstop")
@@ -1321,7 +1337,7 @@ void Preprocessor::HandleDirective(Token &Result) {
   // We just parsed a # or @ character at the start of a line, so we're in
   // directive mode.  Tell the lexer this so any newlines we see will be
   // converted into an EOD token (which terminates the directive).
-  CurPPLexer->ParsingPreprocessorDirective = true;
+  CurPPLexer->setParsingPreprocessorDirectiveFlag(true);
   if (CurLexer) CurLexer->SetKeepWhitespaceMode(false);
 
   bool ImmediatelyAfterTopLevelIfndef =
@@ -1381,7 +1397,7 @@ void Preprocessor::HandleDirective(Token &Result) {
   // and reset to previous state when returning from this function.
   ResetMacroExpansionHelper helper(this);
 
-  if (SkippingUntilPCHThroughHeader || SkippingUntilPragmaHdrStop)
+  if (getSkippingUntilPCHThroughHeader() || getSkippingUntilPragmaHdrStop())
     return HandleSkippedDirectiveWhileUsingPCH(Result,
                                                Introducer.getLocation());
 
@@ -2432,9 +2448,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
       LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
 
-  if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
+  if (usingPCHWithThroughHeader() && getSkippingUntilPCHThroughHeader()) {
     if (File && isPCHThroughHeader(&File->getFileEntry()))
-      SkippingUntilPCHThroughHeader = false;
+      setSkippingUntilPCHThroughHeader(false);
     return {ImportAction::None};
   }
 
@@ -2462,7 +2478,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // If we've reached the max allowed include depth, it is usually due to an
   // include cycle. Don't enter already processed files again as it can lead to
   // reaching the max allowed include depth again.
-  if (Action == Enter && HasReachedMaxIncludeDepth && File &&
+  if (Action == Enter && getHasReachedMaxIncludeDepth() && File &&
       alreadyIncluded(*File))
     Action = IncludeLimitReached;
 
@@ -2783,7 +2799,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Check that we don't have infinite #include recursion.
   if (IncludeMacroStack.size() == MaxAllowedIncludeStackDepth-1) {
     Diag(FilenameTok, diag::err_pp_include_too_deep);
-    HasReachedMaxIncludeDepth = true;
+    setHasReachedMaxIncludeDepth(true);
     return {ImportAction::None};
   }
 
@@ -3080,7 +3096,7 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   // Ensure we consume the rest of the macro body if errors occur.
   llvm::scope_exit _([&]() {
     // The flag indicates if we are still waiting for 'eod'.
-    if (CurLexer->ParsingPreprocessorDirective)
+    if (CurLexer->getParsingPreprocessorDirectiveFlag())
       DiscardUntilEndOfDirective();
   });
 
@@ -3351,7 +3367,7 @@ void Preprocessor::HandleDefineDirective(
   }
 
   // When skipping just warn about macros that do not match.
-  if (SkippingUntilPCHThroughHeader) {
+  if (getSkippingUntilPCHThroughHeader()) {
     const MacroInfo *OtherMI = getMacroInfo(MacroNameTok.getIdentifierInfo());
     if (!OtherMI || !MI->isIdenticalTo(*OtherMI, *this,
                              /*Syntactic=*/LangOpts.MicrosoftExt))
@@ -3653,7 +3669,7 @@ void Preprocessor::HandleEndifDirective(Token &EndifToken) {
   if (CurPPLexer->getConditionalStackDepth() == 0)
     CurPPLexer->MIOpt.ExitTopLevelConditional();
 
-  assert(!CondInfo.WasSkipping && !CurPPLexer->LexingRawMode &&
+  assert(!CondInfo.WasSkipping && !CurPPLexer->getLexingRawMode() &&
          "This code should only be reachable in the non-skipping case!");
 
   if (Callbacks)
@@ -4204,8 +4220,13 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
 /// lexed module name are replaced by annot_module_name token.
 void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   assert(getLangOpts().CPlusPlusModules && ImportTok.is(tok::kw_import));
-  llvm::SaveAndRestore<bool> SaveImportingCXXModules(
-      this->ImportingCXXNamedModules, true);
+  auto SaveImportingCXXModules = [PackedFlagOwner = this] {
+    const bool PackedFlagOld = PackedFlagOwner->getImportingCXXNamedModules();
+    PackedFlagOwner->setImportingCXXNamedModules(true);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setImportingCXXNamedModules(PackedFlagOld);
+    });
+  }();
 
   Token Tok;
   if (LexHeaderName(Tok)) {
@@ -4423,7 +4444,7 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
   bool IsGMFIntroducer = DirToks.size() == 2 && DirToks[0].is(tok::kw_module) &&
                          DirToks[1].is(tok::semi);
-  bool IsSynthesizedGMF = IsGMFIntroducer && HasSynthesizedGMF &&
+  bool IsSynthesizedGMF = IsGMFIntroducer && getHasSynthesizedGMF() &&
                           CurPPLexer->getFileID() == getPredefinesFileID();
 
   if (!IncludeMacroStack.empty() && !IsSynthesizedGMF) {

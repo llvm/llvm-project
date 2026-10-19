@@ -1278,10 +1278,10 @@ static_assert(std::size(RegList8Tiny) == std::size(RegList16Tiny),
 /// to handle special constraints in the ABI.
 /// In addition, all pieces of a certain argument have to be passed either
 /// using registers or the stack but never mixing both.
-template <typename ArgT>
+template <typename ArgRangeT>
 static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
                              const Function *F, const DataLayout *TD,
-                             const SmallVectorImpl<ArgT> &Args,
+                             const ArgRangeT &Args,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              CCState &CCInfo, bool Tiny) {
   // Choose the proper register list for argument passing according to the ABI.
@@ -1357,12 +1357,11 @@ static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
 }
 
 /// Count the total number of bytes needed to pass or return these arguments.
-template <typename ArgT>
-static unsigned
-getTotalArgumentsSizeInBytes(const SmallVectorImpl<ArgT> &Args) {
+template <typename ArgRangeT>
+static unsigned getTotalArgumentsSizeInBytes(const ArgRangeT &Args) {
   unsigned TotalBytes = 0;
 
-  for (const ArgT &Arg : Args) {
+  for (const auto &Arg : Args) {
     TotalBytes += Arg.VT.getStoreSize();
   }
   return TotalBytes;
@@ -1371,9 +1370,9 @@ getTotalArgumentsSizeInBytes(const SmallVectorImpl<ArgT> &Args) {
 /// Analyze incoming and outgoing value of returning from a function.
 /// The algorithm is similar to analyzeArguments, but there can only be
 /// one value, possibly an aggregate, and it is limited to 8 bytes.
-template <typename ArgT>
-static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
-                                CCState &CCInfo, bool Tiny) {
+template <typename ArgRangeT>
+static void analyzeReturnValues(const ArgRangeT &Args, CCState &CCInfo,
+                                bool Tiny) {
   unsigned NumArgs = Args.size();
   unsigned TotalBytes = getTotalArgumentsSizeInBytes(Args);
   // CanLowerReturn() guarantees this assertion.
@@ -1424,8 +1423,8 @@ static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
 
 SDValue AVRTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto DL = DAG.getDataLayout();
@@ -1526,19 +1525,18 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &isTailCall = CLI.IsTailCall;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool isVarArg = CLI.IsVarArg;
+  bool isVarArg = CLI.getIsVarArg();
 
   MachineFunction &MF = DAG.getMachineFunction();
 
   // AVR does not yet support tail call optimization.
-  isTailCall = false;
+  CLI.setIsTailCall(false);
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1702,8 +1700,8 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 ///
 SDValue AVRTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &dl, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -1733,10 +1731,11 @@ SDValue AVRTargetLowering::LowerCallResult(
 //               Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-bool AVRTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool AVRTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                       MachineFunction &MF, bool isVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       LLVMContext &Context,
+                                       const Type *RetTy) const {
   if (CallConv == CallingConv::AVR_BUILTIN) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
@@ -1747,12 +1746,12 @@ bool AVRTargetLowering::CanLowerReturn(
   return TotalBytes <= (unsigned)(Subtarget.hasTinyEncoding() ? 4 : 8);
 }
 
-SDValue
-AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               const SmallVectorImpl<SDValue> &OutVals,
-                               const SDLoc &dl, SelectionDAG &DAG) const {
+SDValue AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                       bool isVarArg,
+                                       llvm::ArrayRef<ISD::OutputArg> Outs,
+                                       const SmallVectorImpl<SDValue> &OutVals,
+                                       const SDLoc &dl,
+                                       SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of the return value to locations.
   SmallVector<CCValAssign, 16> RVLocs;
 

@@ -22,6 +22,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -462,22 +463,26 @@ namespace {
 /// required funclet OpBundle.
 class RuntimeCallInserter {
   Function *OwnerFn = nullptr;
-  bool TrackInsertedCalls = false;
-  SmallVector<CallInst *> InsertedCalls;
+  bool getTrackInsertedCalls() const { return InsertedCalls.getFlag(0); }
+  bool setTrackInsertedCalls(bool Value) {
+    InsertedCalls.setFlag(0, Value);
+    return Value;
+  }
+  llvm::SmallVectorWithFlags<CallInst *> InsertedCalls;
 
 public:
   RuntimeCallInserter(Function &Fn) : OwnerFn(&Fn) {
     if (Fn.hasPersonalityFn()) {
       auto Personality = classifyEHPersonality(Fn.getPersonalityFn());
       if (isScopedEHPersonality(Personality))
-        TrackInsertedCalls = true;
+        setTrackInsertedCalls(true);
     }
   }
 
   ~RuntimeCallInserter() {
     if (InsertedCalls.empty())
       return;
-    assert(TrackInsertedCalls && "Calls were wrongly tracked");
+    assert(getTrackInsertedCalls() && "Calls were wrongly tracked");
 
     DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(*OwnerFn);
     for (CallInst *CI : InsertedCalls) {
@@ -519,7 +524,7 @@ public:
     assert(IRB.GetInsertBlock()->getParent() == OwnerFn);
 
     CallInst *Inst = IRB.CreateCall(Callee, Args, Name, nullptr);
-    if (TrackInsertedCalls)
+    if (getTrackInsertedCalls())
       InsertedCalls.push_back(Inst);
     return Inst;
   }
@@ -833,13 +838,16 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   SmallVector<AllocaPoisonCall, 8> StaticAllocaPoisonCallVec;
 
   SmallVector<AllocaInst *, 1> DynamicAllocaVec;
-  SmallVector<IntrinsicInst *, 1> StackRestoreVec;
+  llvm::SmallVectorWithFlags<IntrinsicInst *, 1, 3> StackRestoreVec;
   AllocaInst *DynamicAllocaLayout = nullptr;
   IntrinsicInst *LocalEscapeCall = nullptr;
 
-  bool HasInlineAsm = false;
-  bool HasReturnsTwiceCall = false;
-  bool PoisonStack;
+  bool getHasInlineAsm() const { return StackRestoreVec.getFlag(0); }
+  void setHasInlineAsm(bool Value) { StackRestoreVec.setFlag(0, Value); }
+  bool getHasReturnsTwiceCall() const { return StackRestoreVec.getFlag(1); }
+  void setHasReturnsTwiceCall(bool Value) { StackRestoreVec.setFlag(1, Value); }
+  bool getPoisonStack() const { return StackRestoreVec.getFlag(2); }
+  void setPoisonStack(bool Value) { StackRestoreVec.setFlag(2, Value); }
 
   FunctionStackPoisoner(Function &F, AddressSanitizer &ASan,
                         RuntimeCallInserter &RTCI)
@@ -848,11 +856,13 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
         IntptrTy(ASan.IntptrTy),
         IntptrPtrTy(PointerType::get(IntptrTy->getContext(), 0)),
         Mapping(ASan.Mapping),
-        PoisonStack(Opts.asan_stack &&
-                    !F.getParent()->getTargetTriple().isAMDGPU()) {}
+        StackRestoreVec(decltype(this->StackRestoreVec)::withFlags(
+            (unsigned(bool(Opts.asan_stack &&
+                           !F.getParent()->getTargetTriple().isAMDGPU()))
+             << 2))) {}
 
   bool runOnFunction() {
-    if (!PoisonStack)
+    if (!getPoisonStack())
       return false;
 
     if (Opts.asan_redzone_byval_args)
@@ -1000,8 +1010,16 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   void visitCallBase(CallBase &CB) {
     if (CallInst *CI = dyn_cast<CallInst>(&CB)) {
-      HasInlineAsm |= CI->isInlineAsm() && &CB != ASan.LocalDynamicShadow;
-      HasReturnsTwiceCall |= CI->canReturnTwice();
+      [&] {
+        auto PackedFlagValue =
+            CI->isInlineAsm() && &CB != ASan.LocalDynamicShadow;
+        return setHasInlineAsm(getHasInlineAsm() | PackedFlagValue);
+      }();
+      [&] {
+        auto PackedFlagValue = CI->canReturnTwice();
+        return setHasReturnsTwiceCall(getHasReturnsTwiceCall() |
+                                      PackedFlagValue);
+      }();
     }
   }
 
@@ -1362,7 +1380,8 @@ void AddressSanitizer::getInterestingMemoryOperands(
       if (auto *II = dyn_cast<IntrinsicInst>(I)) {
         MemIntrinsicInfo IntrInfo;
         if (TTI->getTgtMemIntrinsic(II, IntrInfo))
-          Interesting = IntrInfo.InterestingOperands;
+          Interesting.assign(IntrInfo.InterestingOperands.begin(),
+                             IntrInfo.InterestingOperands.end());
         return;
       }
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
@@ -3456,8 +3475,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
   // 2) There is a returns_twice call (typically setjmp), which is
   //    optimization-hostile, and doesn't play well with introduced indirect
   //    register-relative calculation of local variable addresses.
-  DoDynamicAlloca &= !HasInlineAsm && !HasReturnsTwiceCall;
-  DoStackMalloc &= !HasInlineAsm && !HasReturnsTwiceCall;
+  DoDynamicAlloca &= !getHasInlineAsm() && !getHasReturnsTwiceCall();
+  DoStackMalloc &= !getHasInlineAsm() && !getHasReturnsTwiceCall();
 
   Type *PtrTy = F.getDataLayout().getAllocaPtrType(F.getContext());
   Value *StaticAlloca =

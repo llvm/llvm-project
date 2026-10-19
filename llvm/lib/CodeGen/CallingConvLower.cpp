@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -22,15 +23,17 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 using namespace llvm;
 
 CCState::CCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
                  SmallVectorImpl<CCValAssign> &Locs, LLVMContext &Context,
                  bool NegativeOffsets)
-    : CallingConv(CC), IsVarArg(IsVarArg), MF(MF),
-      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(Locs), Context(Context),
-      NegativeOffsets(NegativeOffsets) {
+    : CallingConv(CC), MF(MF), TRI(*MF.getSubtarget().getRegisterInfo()),
+      Locs(Locs), Context(Context),
+      ByValRegs(decltype(this->ByValRegs)::withFlags(
+          unsigned(IsVarArg) | (unsigned(NegativeOffsets) << 2))) {
 
   // No stack is used.
   StackSize = 0;
@@ -81,9 +84,8 @@ bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
 
 /// Analyze an array of argument values,
 /// incorporating info about the formals into this state.
-void
-CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                                CCAssignFn Fn) {
+void CCState::AnalyzeFormalArguments(llvm::ArrayRef<ISD::InputArg> Ins,
+                                     CCAssignFn Fn) {
   unsigned NumArgs = Ins.size();
 
   for (unsigned i = 0; i != NumArgs; ++i) {
@@ -96,8 +98,7 @@ CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
 
 /// Analyze the return values of a function, returning true if the return can
 /// be performed without sret-demotion and false otherwise.
-bool CCState::CheckReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                          CCAssignFn Fn) {
+bool CCState::CheckReturn(llvm::ArrayRef<ISD::OutputArg> Outs, CCAssignFn Fn) {
   // Determine which register each value should be copied into.
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
@@ -110,7 +111,7 @@ bool CCState::CheckReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
 
 /// Analyze the returned values of a return,
 /// incorporating info about the result values into this state.
-void CCState::AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
+void CCState::AnalyzeReturn(llvm::ArrayRef<ISD::OutputArg> Outs,
                             CCAssignFn Fn) {
   // Determine which register each value should be copied into.
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
@@ -123,7 +124,7 @@ void CCState::AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
 
 /// Analyze the outgoing arguments to a call,
 /// incorporating info about the passed values into this state.
-void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
+void CCState::AnalyzeCallOperands(llvm::ArrayRef<ISD::OutputArg> Outs,
                                   CCAssignFn Fn) {
   unsigned NumOps = Outs.size();
   for (unsigned i = 0; i != NumOps; ++i) {
@@ -161,7 +162,7 @@ void CCState::AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
 
 /// Analyze the return values of a call, incorporating info about the passed
 /// values into this state.
-void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
+void CCState::AnalyzeCallResult(llvm::ArrayRef<ISD::InputArg> Ins,
                                 CCAssignFn Fn) {
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     MVT VT = Ins[i].VT;
@@ -188,7 +189,7 @@ void CCState::AnalyzeCallResult(MVT VT, Type *OrigTy, CCAssignFn Fn) {
 }
 
 void CCState::ensureMaxAlignment(Align Alignment) {
-  if (!AnalyzingMustTailForwardedRegs)
+  if (!getAnalyzingMustTailForwardedRegs())
     MF.getFrameInfo().ensureMaxAlignment(Alignment);
 }
 
@@ -246,8 +247,21 @@ void CCState::analyzeMustTailForwardedRegisters(
   // Oftentimes calling conventions will not user register parameters for
   // variadic functions, so we need to assume we're not variadic so that we get
   // all the registers that might be used in a non-variadic call.
-  SaveAndRestore SavedVarArg(IsVarArg, false);
-  SaveAndRestore SavedMustTail(AnalyzingMustTailForwardedRegs, true);
+  auto SavedVarArg = [PackedFlagOwner = this] {
+    const bool PackedFlagOld = PackedFlagOwner->getIsVarArg();
+    PackedFlagOwner->setIsVarArg(false);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setIsVarArg(PackedFlagOld);
+    });
+  }();
+  auto SavedMustTail = [PackedFlagOwner = this] {
+    const bool PackedFlagOld =
+        PackedFlagOwner->getAnalyzingMustTailForwardedRegs();
+    PackedFlagOwner->setAnalyzingMustTailForwardedRegs(true);
+    return llvm::scope_exit([PackedFlagOwner, PackedFlagOld] {
+      PackedFlagOwner->setAnalyzingMustTailForwardedRegs(PackedFlagOld);
+    });
+  }();
 
   for (MVT RegVT : RegParmTypes) {
     SmallVector<MCRegister, 8> RemainingRegs;
@@ -264,7 +278,7 @@ void CCState::analyzeMustTailForwardedRegisters(
 bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
                                 CallingConv::ID CallerCC, MachineFunction &MF,
                                 LLVMContext &C,
-                                const SmallVectorImpl<ISD::InputArg> &Ins,
+                                llvm::ArrayRef<ISD::InputArg> Ins,
                                 CCAssignFn CalleeFn, CCAssignFn CallerFn) {
   if (CalleeCC == CallerCC)
     return true;

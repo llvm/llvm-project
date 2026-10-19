@@ -46,7 +46,7 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
   unsigned IndLevel = 0;
   for (const auto &Macros : MacroLists) {
     OS << formatv("{0:x8}:\n", Macros.Offset);
-    if (Macros.IsDebugMacro)
+    if (Macros.getIsDebugMacro())
       Macros.Header.dumpMacroHeader(OS);
     for (const Entry &E : Macros.Macros) {
       // There should not be DW_MACINFO_end_file when IndLevel is Zero. However,
@@ -58,7 +58,7 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
         OS << "  ";
       IndLevel += (E.Type == DW_MACINFO_start_file);
       // Based on which version we are handling choose appropriate macro forms.
-      if (Macros.IsDebugMacro)
+      if (Macros.getIsDebugMacro())
         WithColor(OS, HighlightColor::Macro).get()
             << (Macros.Header.Version < 5 ? GnuMacroString(E.Type)
                                           : MacroString(E.Type));
@@ -130,7 +130,7 @@ Error DWARFDebugMacro::parseImpl(
       MacroLists.emplace_back();
       M = &MacroLists.back();
       M->Offset = Offset;
-      M->IsDebugMacro = IsMacro;
+      M->setIsDebugMacro(IsMacro);
       if (IsMacro) {
         auto Err = M->Header.parseMacroHeader(Data, &Offset);
         if (Err)

@@ -482,8 +482,8 @@ void BufferizationOptions::setFunctionBoundaryTypeConversion(
     // If not builtin, fallback to unknown type conversion.
     return options.unknownTypeConverterFn(type, memorySpace, options);
   };
-  inferFunctionResultLayout =
-      layoutMapOption == LayoutMapOption::InferLayoutMap;
+  setInferFunctionResultLayout(layoutMapOption ==
+                               LayoutMapOption::InferLayoutMap);
 }
 
 //===----------------------------------------------------------------------===//

@@ -10,6 +10,7 @@
 #define LLVM_MC_MCELFSTREAMER_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
 
@@ -38,7 +39,7 @@ public:
 
   /// state management
   void reset() override {
-    SeenIdent = false;
+    setSeenIdent(false);
     MCObjectStreamer::reset();
   }
 
@@ -97,11 +98,12 @@ public:
 
   /// ELF object attributes subsection support
   struct AttributeSubSection {
-    bool IsActive;
+    bool getIsActive() const { return Content.getFlag(0); }
+    void setIsActive(bool Value) { Content.setFlag(0, Value); }
     StringRef VendorName;
     unsigned IsOptional;
     unsigned ParameterType;
-    SmallVector<AttributeItem, 64> Content;
+    llvm::SmallVectorWithFlags<AttributeItem, 64> Content;
   };
 
   // Attributes that are added and managed entirely by target.
@@ -115,6 +117,7 @@ public:
   void emitAttributesSection(StringRef Vendor, const Twine &Section,
                              unsigned Type, MCSection *&AttributeSection) {
     createAttributesSection(Vendor, Section, Type, AttributeSection, Contents);
+    Contents.clear();
   }
   void
   emitAttributesSection(MCSection *&AttributeSection, const Twine &Section,
@@ -126,16 +129,16 @@ public:
 
 private:
   AttributeItem *getAttributeItem(unsigned Attribute);
-  size_t calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) const;
+  size_t calculateContentSize(ArrayRef<AttributeItem> AttrsVec) const;
   void createAttributesSection(StringRef Vendor, const Twine &Section,
                                unsigned Type, MCSection *&AttributeSection,
-                               SmallVector<AttributeItem, 64> &AttrsVec);
+                               ArrayRef<AttributeItem> AttrsVec);
   void createAttributesWithSubsection(
       MCSection *&AttributeSection, const Twine &Section, unsigned Type,
       SmallVector<AttributeSubSection, 64> &SubSectionVec);
 
   // GNU attributes that will get emitted at the end of the asm file.
-  SmallVector<AttributeItem, 64> GNUAttributes;
+  llvm::SmallVectorWithFlags<AttributeItem, 64> GNUAttributes;
   MCBoundaryAlignFragment *BundleBA = nullptr;
 
 public:
@@ -150,7 +153,8 @@ private:
                               const MCSymbolRefExpr *&S);
   void finalizeCGProfile();
 
-  bool SeenIdent = false;
+  bool getSeenIdent() const { return GNUAttributes.getFlag(0); }
+  void setSeenIdent(bool Value) { GNUAttributes.setFlag(0, Value); }
 };
 
 LLVM_ABI MCELFStreamer *

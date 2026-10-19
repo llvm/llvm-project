@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
@@ -69,18 +70,29 @@ class PtxBuilder {
   // Register constraints (read, write, readwrite) and register data types
   std::string registerConstraints;
   // Modifiers
-  SmallVector<PTXRegisterMod> registerModifiers;
+  llvm::SmallVectorWithFlags<
+      PTXRegisterMod,
+      llvm::CalculateSmallVectorDefaultInlinedElements<PTXRegisterMod>::value,
+      2>
+      registerModifiers;
   // Has return value as write-only or read-write
-  bool hasResult = false;
+  bool getHasResult() const { return registerModifiers.getFlag(0); }
+  void setHasResult(bool Value) { registerModifiers.setFlag(0, Value); }
   // Indicates if the Op will handle the register mapping manually.
-  bool needsManualRegisterMapping = false;
+  bool getNeedsManualRegisterMapping() const {
+    return registerModifiers.getFlag(1);
+  }
+  void setNeedsManualRegisterMapping(bool Value) {
+    registerModifiers.setFlag(1, Value);
+  }
 
 public:
   /// Single constructor that only initializes members.
   PtxBuilder(Operation *op, PatternRewriter &rewriter,
              bool needsManualRegisterMapping = false)
       : interfaceOp(op), rewriter(rewriter),
-        needsManualRegisterMapping(needsManualRegisterMapping) {}
+        registerModifiers(decltype(this->registerModifiers)::withFlags(
+            (unsigned(needsManualRegisterMapping) << 1))) {}
 
   /// Add an operand with the read/write input type.
   LogicalResult insertValue(Value v,

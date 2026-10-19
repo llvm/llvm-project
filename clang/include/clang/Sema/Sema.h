@@ -86,6 +86,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -1141,7 +1142,12 @@ private:
   /// Flushed whenever a diagnostic pragma changes severities.
   /// Level one is keyed on the diagnostic state alone.
   const void *DocDiagsStateKey = nullptr;
-  bool DocDiagsEnabledIgnoringSystem = false;
+  bool getDocDiagsEnabledIgnoringSystem() const {
+    return SavedPendingInstantiations.getFlag(0);
+  }
+  void setDocDiagsEnabledIgnoringSystem(bool Value) {
+    SavedPendingInstantiations.setFlag(0, Value);
+  }
 
   /// Level two, for when the location does matter. Bit i of each mask is a
   /// DiagStateSystemClass value; bit 0 is unused.
@@ -1392,11 +1398,22 @@ public:
 
   /// Is the last error level diagnostic immediate. This is used to determined
   /// whether the next info diagnostic should be immediate.
-  bool IsLastErrorImmediate = true;
+  bool getIsLastErrorImmediate() const {
+    return !SavedPendingInstantiations.getFlag(1);
+  }
+  bool setIsLastErrorImmediate(bool Value) {
+    SavedPendingInstantiations.setFlag(1, !Value);
+    return Value;
+  }
 
   /// Track if we're currently analyzing overflow behavior types in assignment
   /// context.
-  bool InOverflowBehaviorAssignmentContext = false;
+  bool getInOverflowBehaviorAssignmentContext() const {
+    return SavedPendingInstantiations.getFlag(2);
+  }
+  void setInOverflowBehaviorAssignmentContext(bool Value) {
+    SavedPendingInstantiations.setFlag(2, Value);
+  }
 
   class DelayedDiagnostics;
 
@@ -1618,7 +1635,12 @@ protected:
 
 private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
-  bool WarnedDarwinSDKInfoMissing = false;
+  bool getWarnedDarwinSDKInfoMissing() const {
+    return SavedPendingInstantiations.getFlag(3);
+  }
+  void setWarnedDarwinSDKInfoMissing(bool Value) {
+    SavedPendingInstantiations.setFlag(3, Value);
+  }
 
   StackExhaustionHandler StackHandler;
 
@@ -1859,7 +1881,10 @@ public:
   LangOptions::PragmaMSPointersToMembersKind
       MSPointerToMemberRepresentationMethod;
 
-  bool MSStructPragmaOn; // True when \#pragma ms_struct on
+  bool getMSStructPragmaOn() const { return SavedVTableUses.getFlag(0); }
+  void setMSStructPragmaOn(bool Value) {
+    SavedVTableUses.setFlag(0, Value);
+  } // True when \#pragma ms_struct on
 
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
@@ -2149,10 +2174,17 @@ public:
 
   /// This an attribute introduced by \#pragma clang attribute.
   struct PragmaAttributeEntry {
+    PragmaAttributeEntry(SourceLocation Loc, ParsedAttr *Attribute,
+                         SmallVector<attr::SubjectMatchRule, 4> MatchRules,
+                         bool IsUsed)
+        : Loc(Loc), Attribute(Attribute),
+          MatchRules(unsigned(IsUsed), std::move(MatchRules)) {}
+
     SourceLocation Loc;
     ParsedAttr *Attribute;
-    SmallVector<attr::SubjectMatchRule, 4> MatchRules;
-    bool IsUsed;
+    llvm::SmallVectorWithFlags<attr::SubjectMatchRule, 4> MatchRules;
+    bool getIsUsed() const { return MatchRules.getFlag(0); }
+    void setIsUsed(bool Value) { MatchRules.setFlag(0, Value); }
   };
 
   /// A push'd group of PragmaAttributeEntries.
@@ -2186,7 +2218,10 @@ public:
   /// turned off or on. This boolean is true by default because command line
   /// options are honored when `#pragma optimize("", on)`.
   /// (i.e. `ModifyFnAttributeMSPragmaOptimze()` does nothing)
-  bool MSPragmaOptimizeIsOn = true;
+  bool getMSPragmaOptimizeIsOn() const { return !SavedVTableUses.getFlag(1); }
+  void setMSPragmaOptimizeIsOn(bool Value) {
+    SavedVTableUses.setFlag(1, !Value);
+  }
 
   /// Set of no-builtin functions listed by \#pragma function.
   llvm::SmallSetVector<StringRef, 4> MSFunctionNoBuiltins;
@@ -6889,11 +6924,12 @@ public:
 
     /// If we are processing a decltype type, a set of call expressions
     /// for which we have deferred checking the completeness of the return type.
-    SmallVector<CallExpr *, 8> DelayedDecltypeCalls;
+    llvm::SmallVectorWithFlags<CallExpr *, 8, 4> DelayedDecltypeCalls;
 
     /// If we are processing a decltype type, a set of temporary binding
     /// expressions for which we have deferred checking the destructor.
-    SmallVector<CXXBindTemporaryExpr *, 8> DelayedDecltypeBinds;
+    llvm::SmallVectorWithFlags<CXXBindTemporaryExpr *, 8, 4>
+        DelayedDecltypeBinds;
 
     llvm::SmallPtrSet<const Expr *, 8> PossibleDerefs;
 
@@ -6932,27 +6968,64 @@ public:
 
     // A context can be nested in both a discarded statement context and
     // an immediate function context, so they need to be tracked independently.
-    bool InDiscardedStatement;
-    bool InImmediateFunctionContext;
-    bool InImmediateEscalatingFunctionContext;
+    bool getInDiscardedStatement() const {
+      return DelayedDecltypeBinds.getFlag(0);
+    }
+    void setInDiscardedStatement(bool Value) {
+      DelayedDecltypeBinds.setFlag(0, Value);
+    }
+    bool getInImmediateFunctionContext() const {
+      return DelayedDecltypeBinds.getFlag(1);
+    }
+    bool setInImmediateFunctionContext(bool Value) {
+      DelayedDecltypeBinds.setFlag(1, Value);
+      return Value;
+    }
+    bool getInImmediateEscalatingFunctionContext() const {
+      return DelayedDecltypeBinds.getFlag(2);
+    }
+    void setInImmediateEscalatingFunctionContext(bool Value) {
+      DelayedDecltypeBinds.setFlag(2, Value);
+    }
 
-    bool IsCurrentlyCheckingDefaultArgumentOrInitializer = false;
+    bool getIsCurrentlyCheckingDefaultArgumentOrInitializer() const {
+      return DelayedDecltypeBinds.getFlag(3);
+    }
+    void setIsCurrentlyCheckingDefaultArgumentOrInitializer(bool Value) {
+      DelayedDecltypeBinds.setFlag(3, Value);
+    }
 
     // We are in a constant context, but we also allow
     // non constant expressions, for example for array bounds (which may be
     // VLAs).
-    bool InConditionallyConstantEvaluateContext = false;
+    bool getInConditionallyConstantEvaluateContext() const {
+      return DelayedDecltypeCalls.getFlag(0);
+    }
+    void setInConditionallyConstantEvaluateContext(bool Value) {
+      DelayedDecltypeCalls.setFlag(0, Value);
+    }
 
     /// Whether we are currently in a context in which all temporaries must be
     /// lifetime-extended, even if they're not bound to a reference (for
     /// example, in a for-range initializer).
-    bool InLifetimeExtendingContext = false;
+    bool getInLifetimeExtendingContext() const {
+      return DelayedDecltypeCalls.getFlag(1);
+    }
+    void setInLifetimeExtendingContext(bool Value) {
+      DelayedDecltypeCalls.setFlag(1, Value);
+    }
 
     /// Whether evaluating an expression for a switch case label.
-    bool IsCaseExpr = false;
+    bool getIsCaseExpr() const { return DelayedDecltypeCalls.getFlag(2); }
+    void setIsCaseExpr(bool Value) { DelayedDecltypeCalls.setFlag(2, Value); }
 
     /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
-    bool RebuildDefaultArgOrDefaultInit = false;
+    bool getRebuildDefaultArgOrDefaultInit() const {
+      return DelayedDecltypeCalls.getFlag(3);
+    }
+    void setRebuildDefaultArgOrDefaultInit(bool Value) {
+      DelayedDecltypeCalls.setFlag(3, Value);
+    }
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -6978,9 +7051,7 @@ public:
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
           NumCleanupObjects(NumCleanupObjects),
-          ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext),
-          InDiscardedStatement(false), InImmediateFunctionContext(false),
-          InImmediateEscalatingFunctionContext(false) {}
+          ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext) {}
 
     bool isUnevaluated() const {
       return Context == ExpressionEvaluationContext::Unevaluated ||
@@ -7003,7 +7074,7 @@ public:
     bool isImmediateFunctionContext() const {
       return Context == ExpressionEvaluationContext::ImmediateFunctionContext ||
              (Context == ExpressionEvaluationContext::DiscardedStatement &&
-              InImmediateFunctionContext) ||
+              getInImmediateFunctionContext()) ||
              // C++23 [expr.const]p14:
              // An expression or conversion is in an immediate function
              // context if it is potentially evaluated and either:
@@ -7012,7 +7083,7 @@ public:
              //   * its enclosing statement is enclosed by the compound-
              //     statement of a consteval if statement.
              (Context == ExpressionEvaluationContext::PotentiallyEvaluated &&
-              InImmediateFunctionContext);
+              getInImmediateFunctionContext());
     }
 
     bool isDiscardedStatementContext() const {
@@ -7020,7 +7091,7 @@ public:
              ((Context ==
                    ExpressionEvaluationContext::ImmediateFunctionContext ||
                isPotentiallyEvaluated()) &&
-              InDiscardedStatement);
+              getInDiscardedStatement());
     }
   };
 
@@ -8275,12 +8346,17 @@ public:
   /// Whether the AST is currently being rebuilt to correct immediate
   /// invocations. Immediate invocation candidates and references to consteval
   /// functions aren't tracked when this is set.
-  bool RebuildingImmediateInvocation = false;
+  bool getRebuildingImmediateInvocation() const {
+    return SavedVTableUses.getFlag(2);
+  }
+  void setRebuildingImmediateInvocation(bool Value) {
+    SavedVTableUses.setFlag(2, Value);
+  }
 
   bool isAlwaysConstantEvaluatedContext() const {
     const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
     return (Ctx.isConstantEvaluated() || isConstantEvaluatedOverride) &&
-           !Ctx.InConditionallyConstantEvaluateContext;
+           !Ctx.getInConditionallyConstantEvaluateContext();
   }
 
   /// Determines whether we are currently in a context that
@@ -8294,18 +8370,18 @@ public:
   }
 
   bool isInLifetimeExtendingContext() const {
-    return currentEvaluationContext().InLifetimeExtendingContext;
+    return currentEvaluationContext().getInLifetimeExtendingContext();
   }
 
   bool needsRebuildOfDefaultArgOrInit() const {
-    return currentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+    return currentEvaluationContext().getRebuildDefaultArgOrDefaultInit();
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
     const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
     return (Ctx.Context ==
             ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed) ||
-           Ctx.IsCurrentlyCheckingDefaultArgumentOrInitializer;
+           Ctx.getIsCurrentlyCheckingDefaultArgumentOrInitializer();
   }
 
   std::optional<ExpressionEvaluationContextRecord::InitializationContext>
@@ -8477,7 +8553,10 @@ public:
 
   /// A flag to remember whether the implicit forms of operator new and delete
   /// have been declared.
-  bool GlobalNewDeleteDeclared;
+  bool getGlobalNewDeleteDeclared() const { return SavedVTableUses.getFlag(3); }
+  void setGlobalNewDeleteDeclared(bool Value) {
+    SavedVTableUses.setFlag(3, Value);
+  }
 
   /// Delete-expressions to be analyzed at the end of translation unit
   ///
@@ -9391,7 +9470,12 @@ public:
 public:
   /// Tracks whether we are in a context where typo correction is
   /// disabled.
-  bool DisableTypoCorrection;
+  bool getDisableTypoCorrection() const {
+    return LateParsedInstantiations.getFlag(0);
+  }
+  void setDisableTypoCorrection(bool Value) {
+    LateParsedInstantiations.setFlag(0, Value);
+  }
 
   /// The number of typos corrected by CorrectTypo.
   unsigned TyposCorrected;
@@ -9914,7 +9998,12 @@ private:
 
   /// Whether we have already loaded known namespaces from an extenal
   /// source.
-  bool LoadedExternalKnownNamespaces;
+  bool getLoadedExternalKnownNamespaces() const {
+    return LateParsedInstantiations.getFlag(1);
+  }
+  void setLoadedExternalKnownNamespaces(bool Value) {
+    LateParsedInstantiations.setFlag(1, Value);
+  }
 
   bool CppLookupName(LookupResult &R, Scope *S);
 
@@ -10131,7 +10220,12 @@ private:
   VisibleModuleSet VisibleModules;
 
   /// Whether we had imported any named modules.
-  bool HadImportedNamedModules = false;
+  bool getHadImportedNamedModules() const {
+    return LateParsedInstantiations.getFlag(2);
+  }
+  void setHadImportedNamedModules(bool Value) {
+    LateParsedInstantiations.setFlag(2, Value);
+  }
   /// The set of instantiations we need to check if they references TU-local
   /// entity from TUs. This only makes sense if we imported any named modules.
   llvm::SmallVector<std::pair<FunctionDecl *, SourceLocation>>
@@ -10158,7 +10252,8 @@ private:
 
 public:
   /// Whether deferrable diagnostics should be deferred.
-  bool DeferDiags = false;
+  bool getDeferDiags() const { return LateParsedInstantiations.getFlag(3); }
+  void setDeferDiags(bool Value) { LateParsedInstantiations.setFlag(3, Value); }
 
   /// RAII class to control scope of DeferDiags.
   class DeferDiagsRAII {
@@ -10167,10 +10262,10 @@ public:
 
   public:
     DeferDiagsRAII(Sema &S, bool DeferDiags)
-        : S(S), SavedDeferDiags(S.DeferDiags) {
-      S.DeferDiags = SavedDeferDiags || DeferDiags;
+        : S(S), SavedDeferDiags(S.getDeferDiags()) {
+      S.setDeferDiags(SavedDeferDiags || DeferDiags);
     }
-    ~DeferDiagsRAII() { S.DeferDiags = SavedDeferDiags; }
+    ~DeferDiagsRAII() { S.setDeferDiags(SavedDeferDiags); }
     DeferDiagsRAII(const DeferDiagsRAII &) = delete;
     DeferDiagsRAII &operator=(const DeferDiagsRAII &) = delete;
   };
@@ -10179,7 +10274,12 @@ public:
   ///
   /// This flag is used to avoid building recovery call expressions
   /// if Sema is already doing so, which would cause infinite recursions.
-  bool IsBuildingRecoveryCallExpr;
+  bool getIsBuildingRecoveryCallExpr() const {
+    return CodeSynthesisContextLookupModules.getFlag(0);
+  }
+  void setIsBuildingRecoveryCallExpr(bool Value) {
+    CodeSynthesisContextLookupModules.setFlag(0, Value);
+  }
 
   /// Determine whether the given New declaration is an overload of the
   /// declarations in Old. This routine returns OverloadKind::Match or
@@ -12154,28 +12254,37 @@ public:
   struct CheckTemplateArgumentInfo {
     explicit CheckTemplateArgumentInfo(bool PartialOrdering = false,
                                        bool MatchingTTP = false)
-        : PartialOrdering(PartialOrdering), MatchingTTP(MatchingTTP) {}
+        : CanonicalConverted(decltype(this->CanonicalConverted)::withFlags(
+              unsigned(PartialOrdering) | (unsigned(MatchingTTP) << 1))) {}
     CheckTemplateArgumentInfo(const CheckTemplateArgumentInfo &) = delete;
     CheckTemplateArgumentInfo &
     operator=(const CheckTemplateArgumentInfo &) = delete;
 
     /// The checked, converted argument will be added to the
     /// end of these vectors.
-    SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
+    SmallVector<TemplateArgument, 4> SugaredConverted;
+    llvm::SmallVectorWithFlags<TemplateArgument, 4, 3> CanonicalConverted;
 
     /// The check is being performed in the context of partial ordering.
-    bool PartialOrdering;
+    bool getPartialOrdering() const { return CanonicalConverted.getFlag(0); }
+    void setPartialOrdering(bool Value) {
+      CanonicalConverted.setFlag(0, Value);
+    }
 
     /// If true, assume these template arguments are
     /// the injected template arguments for a template template parameter.
     /// This will relax the requirement that all its possible uses are valid:
     /// TTP checking is loose, and assumes that invalid uses will be diagnosed
     /// during instantiation.
-    bool MatchingTTP;
+    bool getMatchingTTP() const { return CanonicalConverted.getFlag(1); }
+    void setMatchingTTP(bool Value) { CanonicalConverted.setFlag(1, Value); }
 
     /// Is set to true when, in the context of TTP matching, a pack parameter
     /// matches non-pack arguments.
-    bool StrictPackMatch = false;
+    bool getStrictPackMatch() const { return CanonicalConverted.getFlag(2); }
+    void setStrictPackMatch(bool Value) {
+      CanonicalConverted.setFlag(2, Value);
+    }
   };
 
   /// Check that the given template argument corresponds to the given
@@ -12256,10 +12365,9 @@ public:
       CheckTemplateArgumentInfo &CTAI, bool UpdateArgsWithConversions = true,
       bool *ConstraintsNotSatisfied = nullptr);
 
-  bool CheckTemplateTypeArgument(
-      TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
-      SmallVectorImpl<TemplateArgument> &SugaredConverted,
-      SmallVectorImpl<TemplateArgument> &CanonicalConverted);
+  bool CheckTemplateTypeArgument(TemplateTypeParmDecl *Param,
+                                 TemplateArgumentLoc &Arg,
+                                 CheckTemplateArgumentInfo &CTAI);
 
   /// Check a template argument against its corresponding
   /// template type parameter.
@@ -12679,11 +12787,11 @@ public:
   public:
     explicit TentativeAnalysisScope(Sema &SemaRef)
         : SemaRef(SemaRef), Trap(SemaRef, /*ForValidityCheck=*/true),
-          PrevDisableTypoCorrection(SemaRef.DisableTypoCorrection) {
-      SemaRef.DisableTypoCorrection = true;
+          PrevDisableTypoCorrection(SemaRef.getDisableTypoCorrection()) {
+      SemaRef.setDisableTypoCorrection(true);
     }
     ~TentativeAnalysisScope() {
-      SemaRef.DisableTypoCorrection = PrevDisableTypoCorrection;
+      SemaRef.setDisableTypoCorrection(PrevDisableTypoCorrection);
     }
 
     TentativeAnalysisScope(const TentativeAnalysisScope &) = delete;
@@ -13212,8 +13320,9 @@ public:
 public:
   /// A helper class for building up ExtParameterInfos.
   class ExtParameterInfoBuilder {
-    SmallVector<FunctionProtoType::ExtParameterInfo, 16> Infos;
-    bool HasInteresting = false;
+    llvm::SmallVectorWithFlags<FunctionProtoType::ExtParameterInfo, 16> Infos;
+    bool getHasInteresting() const { return Infos.getFlag(0); }
+    void setHasInteresting(bool Value) { Infos.setFlag(0, Value); }
 
   public:
     /// Set the ExtParameterInfo for the parameter at the given index,
@@ -13223,15 +13332,15 @@ public:
       Infos.resize(index);
       Infos.push_back(info);
 
-      if (!HasInteresting)
-        HasInteresting = (info != FunctionProtoType::ExtParameterInfo());
+      if (!getHasInteresting())
+        setHasInteresting((info != FunctionProtoType::ExtParameterInfo()));
     }
 
     /// Return a pointer (suitable for setting in an ExtProtoInfo) to the
     /// ExtParameterInfo array we've built up.
     const FunctionProtoType::ExtParameterInfo *
     getPointerOrNull(unsigned numParams) {
-      if (!HasInteresting)
+      if (!getHasInteresting())
         return nullptr;
       Infos.resize(numParams);
       return Infos.data();
@@ -13800,7 +13909,7 @@ public:
 
   /// Extra modules inspected when performing a lookup during a template
   /// instantiation. Computed lazily.
-  SmallVector<Module *, 16> CodeSynthesisContextLookupModules;
+  llvm::SmallVectorWithFlags<Module *, 16> CodeSynthesisContextLookupModules;
 
   /// Cache of additional modules that should be used for name lookup
   /// within the current template instantiation. Computed lazily; use
@@ -14189,10 +14298,11 @@ public:
 
   /// Queue of implicit template instantiations that cannot be performed
   /// eagerly.
-  SmallVector<PendingImplicitInstantiation, 1> LateParsedInstantiations;
+  llvm::SmallVectorWithFlags<PendingImplicitInstantiation, 1, 4>
+      LateParsedInstantiations;
 
-  SmallVector<SmallVector<VTableUse, 16>, 8> SavedVTableUses;
-  SmallVector<std::deque<PendingImplicitInstantiation>, 8>
+  llvm::SmallVectorWithFlags<SmallVector<VTableUse, 16>, 8, 4> SavedVTableUses;
+  llvm::SmallVectorWithFlags<std::deque<PendingImplicitInstantiation>, 8, 4>
       SavedPendingInstantiations;
 
   /// The queue of implicit template instantiations that are required
@@ -14395,8 +14505,7 @@ public:
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList *PartialSpecArgs,
-      SmallVectorImpl<TemplateArgument> &Converted,
-      SourceLocation PointOfInstantiation,
+      ArrayRef<TemplateArgument> Converted, SourceLocation PointOfInstantiation,
       LateInstantiatedAttrVec *LateAttrs = nullptr,
       LocalInstantiationScope *StartingScope = nullptr);
 

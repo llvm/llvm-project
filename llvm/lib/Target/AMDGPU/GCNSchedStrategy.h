@@ -15,6 +15,7 @@
 
 #include "GCNRegPressure.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -732,9 +733,10 @@ private:
   };
   /// After re-scheduling, contains pre-re-scheduling data for all re-scheduled
   /// regions.
-  SmallVector<RegionSchedRevert> RegionReverts;
+  llvm::SmallVectorWithFlags<RegionSchedRevert> RegionReverts;
   /// Whether we should revert all re-scheduled regions.
-  bool RevertAllRegions = false;
+  bool getRevertAllRegions() const { return RegionReverts.getFlag(0); }
+  void setRevertAllRegions(bool Value) { RegionReverts.setFlag(0, Value); }
 
   /// Returns the occupancy the stage is trying to achieve.
   unsigned getStageTargetOccupancy() const;

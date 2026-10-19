@@ -269,7 +269,7 @@ public:
   // transform a `global.get` to an `i32.const`.
   void addInternalGOTEntry(Symbol *sym);
   bool needsRelocations() {
-    if (ctx.arg.extendedConst)
+    if (ctx.arg.getExtendedConst())
       return false;
     return llvm::any_of(internalGotSymbols,
                         [=](Symbol *sym) { return !sym->isTLS(); });

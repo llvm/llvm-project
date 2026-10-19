@@ -680,7 +680,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                  .addDef(ResVReg)
                  .addUse(GR->getSPIRVTypeID(RetType))
                  .add(Info.Callee);
-  if (Info.NoMerge)
+  if (Info.getNoMerge())
     MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   for (const auto &Arg : Info.OrigArgs) {

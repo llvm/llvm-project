@@ -336,9 +336,11 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
 }
 
 DwarfDebug::DwarfDebug(AsmPrinter *A)
-    : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
+    : DebugHandlerBase(A),
+      ConcreteEntities(decltype(this->ConcreteEntities)::withFlags(
+          (unsigned(bool(A->TM.getTargetTriple().isOSDarwin())) << 1))),
+      DebugLocs(A->OutStreamer->isVerboseAsm()),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
-      IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
       InfoHolder(A, "info_string", DIEValueAllocator) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
@@ -346,7 +348,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // precedence; fall back to triple-based defaults.
   if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
     DebuggerTuning = Asm->TM.Options.DebuggerTuning;
-  else if (IsDarwin)
+  else if (getIsDarwin())
     DebuggerTuning = DebuggerKind::LLDB;
   else if (TT.isPS())
     DebuggerTuning = DebuggerKind::SCE;
@@ -363,10 +365,10 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // Always emit .debug_aranges for SCE tuning.
   UseARangesSection = GenerateARangeSection || tuneForSCE();
 
-  HasAppleExtensionAttributes = tuneForLLDB();
+  setHasAppleExtensionAttributes(tuneForLLDB());
 
   // Handle split DWARF.
-  HasSplitDwarf = !Asm->TM.Options.MCOptions.SplitDwarfFile.empty();
+  setHasSplitDwarf(!Asm->TM.Options.MCOptions.SplitDwarfFile.empty());
 
   // SCE defaults to linkage names only for abstract subprograms.
   if (DwarfLinkageNames == DefaultLinkageNames)
@@ -422,11 +424,11 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // from each compile and type unit each preceded by a header. The string
   // offsets table used by the pre-DWARF v5 split-DWARF implementation uses
   // a monolithic string offsets table without any header.
-  UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
+  setUseSegmentedStringOffsetsTable(DwarfVersion >= 5);
 
   // Emit call-site-param debug info for GDB and LLDB, if the target supports
   // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
+  setEmitDebugEntryValues(Asm->TM.shouldEmitDebugEntryValues());
 
   // It is unclear if the GCC .debug_macro extension is well-specified
   // for split DWARF. For now, do not allow LLVM to emit it.
@@ -1234,7 +1236,7 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
   // To avoid the compilation directory being ambiguous, let the line table
   // explicitly describe the directory of all files, never relying on the
   // compilation directory.
-  if (!Asm->OutStreamer->hasRawTextSupport() || SingleCU)
+  if (!Asm->OutStreamer->hasRawTextSupport() || getSingleCU())
     Asm->OutStreamer->emitDwarfFile0Directive(
         CompilationDir, DIUnit->getFilename(), getMD5AsBytes(DIUnit->getFile()),
         DIUnit->getSource(), NewCU.getUniqueID());
@@ -1294,7 +1296,7 @@ void DwarfDebug::beginModule(Module *M) {
     return;
 
   assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
-  SingleCU = NumDebugCUs == 1;
+  setSingleCU(NumDebugCUs == 1);
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -2924,7 +2926,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   // is still needed as we need its source location.
   if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
-      LScopes.getAbstractScopesList().empty() && !IsDarwin) {
+      LScopes.getAbstractScopesList().empty() && !getIsDarwin()) {
     for (const auto &R : Asm->MBBSectionRanges)
       addArangeLabel(SymbolCU(&TheCU, R.second.BeginLabel));
 
@@ -4195,7 +4197,9 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   NewTU.setType(NewTU.createTypeDIE(CTy));
 
   if (TopLevelType) {
-    auto TypeUnitsToAdd = std::move(TypeUnitsUnderConstruction);
+    auto TypeUnitsToAdd = SmallVector<
+        std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>(
+        std::move(TypeUnitsUnderConstruction));
     TypeUnitsUnderConstruction.clear();
 
     // Types referencing entries in the address table cannot be placed in type

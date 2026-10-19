@@ -127,7 +127,7 @@ private:
 };
 
 void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.arg.libcallThreadContext) {
+  if (ctx.arg.getLibcallThreadContext()) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(), "function index");
   } else {
@@ -351,7 +351,7 @@ void Writer::layoutMemory() {
   uint64_t memoryPtr = 0;
 
   auto placeStack = [&]() {
-    if (ctx.arg.relocatable || ctx.isPic)
+    if (ctx.arg.relocatable || ctx.getIsPic())
       return;
     memoryPtr = alignTo(memoryPtr, stackAlignment);
     if (ctx.sym.stackLow)
@@ -447,7 +447,7 @@ void Writer::layoutMemory() {
 
   uint64_t staticDataSize = memoryPtr - dataStart;
   log("mem: static data = " + Twine(staticDataSize));
-  if (ctx.isPic)
+  if (ctx.getIsPic())
     out.dylinkSec->memSize = staticDataSize;
 
   if (!ctx.arg.stackFirst)
@@ -513,14 +513,14 @@ void Writer::layoutMemory() {
             Twine(maxMemorySetting));
 
     maxMemory = ctx.arg.maxMemory;
-  } else if (ctx.arg.noGrowableMemory) {
+  } else if (ctx.arg.getNoGrowableMemory()) {
     maxMemory = memoryPtr;
   }
 
   // If no maxMemory config was supplied but we are building with
   // shared memory, we need to pick a sensible upper limit.
   if (ctx.arg.sharedMemory && maxMemory == 0) {
-    if (ctx.isPic)
+    if (ctx.getIsPic())
       maxMemory = maxMemorySetting;
     else
       maxMemory = memoryPtr;
@@ -600,7 +600,7 @@ void Writer::populateTargetFeatures() {
   SmallSet<std::string, 8> &allowed = out.targetFeaturesSec->features;
   bool tlsUsed = false;
 
-  if (ctx.isPic) {
+  if (ctx.getIsPic()) {
     // This should not be necessary because all PIC objects should
     // contain the `mutable-globals` feature.
     // TODO (https://github.com/llvm/llvm-project/issues/51681)
@@ -646,7 +646,7 @@ void Writer::populateTargetFeatures() {
     tlsUsed = tlsUsed || llvm::any_of(file->segments, isTLS);
 
     // Ensure that we're not mixing incompatible thread context models
-    if (ctx.arg.libcallThreadContext &&
+    if (ctx.arg.getLibcallThreadContext() &&
         llvm::any_of(file->getSymbols(), [](const auto &sym) {
           return sym && sym->getName() == "__stack_pointer" &&
                  sym->kind() == Symbol::UndefinedGlobalKind &&
@@ -679,7 +679,7 @@ void Writer::populateTargetFeatures() {
     if (!allowed.contains("bulk-memory"))
       error("'bulk-memory' feature must be used in order to use thread-local "
             "storage");
-    if (!allowed.contains("atomics") && !ctx.arg.cooperativeThreading)
+    if (!allowed.contains("atomics") && !ctx.arg.getCooperativeThreading())
       error("'atomics' feature must be used in order to use thread-local "
             "storage");
   }
@@ -717,10 +717,10 @@ done:
   // the bss segments, so these segments need to exist in the binary.
   if (ctx.arg.emitRelocs ||
       (ctx.arg.memoryImport.has_value() && !allowed.contains("bulk-memory")))
-    ctx.emitBssSegments = true;
+    ctx.setEmitBssSegments(true);
 
   if (allowed.contains("extended-const"))
-    ctx.arg.extendedConst = true;
+    ctx.arg.setExtendedConst(true);
 
   for (auto &feature : allowed)
     log("Allowed feature: " + feature);
@@ -772,18 +772,18 @@ static bool shouldImport(Symbol *sym) {
     return true;
   if (!sym->isUndefined())
     return false;
-  if (sym->isWeak() && !ctx.arg.relocatable && !ctx.isPic)
+  if (sym->isWeak() && !ctx.arg.relocatable && !ctx.getIsPic())
     return false;
 
   // In PIC mode we only need to import functions when they are called directly.
   // Indirect usage all goes via GOT imports.
-  if (ctx.isPic) {
+  if (ctx.getIsPic()) {
     if (auto *f = dyn_cast<UndefinedFunction>(sym))
       if (!f->isCalledDirectly)
         return false;
   }
 
-  if (ctx.isPic || ctx.arg.relocatable || ctx.arg.importUndefined ||
+  if (ctx.getIsPic() || ctx.arg.relocatable || ctx.arg.importUndefined ||
       ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     return true;
   if (ctx.arg.allowUndefinedSymbols.contains(sym->getName()))
@@ -917,7 +917,7 @@ void Writer::calculateTypes() {
 // which calls the constructors and destructors.
 void Writer::createCommandExportWrappers() {
   // This logic doesn't currently support Emscripten-style PIC mode.
-  assert(!ctx.isPic);
+  assert(!ctx.getIsPic());
 
   // If there are no ctors and there's no libc `__wasm_call_dtors` to
   // call, don't wrap the exports.
@@ -975,7 +975,8 @@ static void finalizeIndirectFunctionTable() {
 
   uint32_t tableSize = ctx.arg.tableBase + out.elemSec->numEntries();
   WasmLimits limits = {0, tableSize, 0, 0};
-  if (ctx.sym.indirectFunctionTable->isDefined() && !ctx.arg.growableTable) {
+  if (ctx.sym.indirectFunctionTable->isDefined() &&
+      !ctx.arg.getGrowableTable()) {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
     limits.Maximum = limits.Minimum;
   }
@@ -1065,7 +1066,7 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // be able to run TLS initialization on spawned threads, so that's managed
   // here by flagging TLS as passive as well.
   bool needsPassiveInit =
-      ctx.arg.sharedMemory || (ctx.arg.cooperativeThreading && s->isTLS());
+      ctx.arg.sharedMemory || (ctx.arg.getCooperativeThreading() && s->isTLS());
   if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
@@ -1198,8 +1199,8 @@ void Writer::combineActiveOutputSegments() {
   // combines all active data segments into a single .data segment.
   // This restriction does not apply when the extended const extension is
   // available: https://github.com/WebAssembly/extended-const
-  assert(!ctx.arg.extendedConst);
-  assert(ctx.isPic);
+  assert(!ctx.arg.getExtendedConst());
+  assert(ctx.getIsPic());
   auto isActive = [](const OutputSegment *s) {
     return s->requiredInBinary() && s->isActive();
   };
@@ -1318,7 +1319,7 @@ void Writer::createSyntheticInitFunctions() {
     }
   }
 
-  if (ctx.isPic && out.globalSec->needsRelocations()) {
+  if (ctx.getIsPic() && out.globalSec->needsRelocations()) {
     ctx.sym.applyGlobalRelocs = symtab->addSyntheticFunction(
         "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
@@ -1409,10 +1410,10 @@ void Writer::createInitMemoryFunction() {
     unsigned numAddressLocals = 0;
     unsigned tlsAddressLocal = -1;
     unsigned flagAddressLocal = -1;
-    if (ctx.isPic && ctx.arg.sharedMemory)
+    if (ctx.getIsPic() && ctx.arg.sharedMemory)
       flagAddressLocal = numAddressLocals++;
     bool needsTLSAddressLocal =
-        ctx.isPic && ctx.arg.isMultithreaded() &&
+        ctx.getIsPic() && ctx.arg.isMultithreaded() &&
         llvm::any_of(segments, [this](const OutputSegment *s) {
           return s->isTLS() && needsPassiveInitialization(s);
         });
@@ -1425,7 +1426,7 @@ void Writer::createInitMemoryFunction() {
     }
 
     auto writeGetFlagAddress = [&]() {
-      if (ctx.isPic) {
+      if (ctx.getIsPic()) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
         writeUleb128(os, flagAddressLocal, "flag address local index");
       } else {
@@ -1435,7 +1436,7 @@ void Writer::createInitMemoryFunction() {
 
     if (ctx.arg.sharedMemory) {
       // With PIC code we cache the flag address in a local.
-      if (ctx.isPic) {
+      if (ctx.getIsPic()) {
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "memory_base");
         writePtrConst(os, flagAddress, is64, "flag address");
@@ -1478,7 +1479,7 @@ void Writer::createInitMemoryFunction() {
         // instructions take as their first argument the destination
         // address.
         writePtrConst(os, s->startVA, is64, "destination address");
-        if (ctx.isPic) {
+        if (ctx.getIsPic()) {
           writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
           writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(),
                        "__memory_base");
@@ -1497,11 +1498,11 @@ void Writer::createInitMemoryFunction() {
         // here. For PIC builds the result of the address computation above is
         // what's stored into the global.
         if (ctx.arg.isMultithreaded() && s->isTLS()) {
-          if (ctx.isPic) {
+          if (ctx.getIsPic()) {
             // Cache the result of the addition in the TLS address local
             writeU8(os, WASM_OPCODE_LOCAL_TEE, "local.tee");
             writeUleb128(os, tlsAddressLocal, "tls address local");
-            if (ctx.arg.libcallThreadContext) {
+            if (ctx.arg.getLibcallThreadContext()) {
               writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
               writeUleb128(os, tlsAddressLocal, "tls address local");
               writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
@@ -1510,11 +1511,11 @@ void Writer::createInitMemoryFunction() {
             }
           } else {
             writePtrConst(os, s->startVA, is64, "destination address");
-            if (ctx.arg.libcallThreadContext)
+            if (ctx.arg.getLibcallThreadContext())
               ctx.sym.tlsBase->global->setPointerValue(s->startVA);
           }
           writeSetTLSBase(ctx, os);
-          if (ctx.isPic) {
+          if (ctx.getIsPic()) {
             writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
             writeUleb128(os, tlsAddressLocal, "tls address local");
           }
@@ -1874,7 +1875,7 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic && ctx.sym.tableBase)
+  if (!ctx.getIsPic() && ctx.sym.tableBase)
     setGlobalPtr(cast<DefinedGlobal>(ctx.sym.tableBase), ctx.arg.tableBase);
 
   log("-- allocateCommonSymbols");
@@ -1919,7 +1920,7 @@ void Writer::run() {
   // `__memory_base` import.  Unless we support the extended const expression we
   // can't do addition inside the constant expression, so we much combine the
   // segments into a single one that can live at `__memory_base`.
-  if (ctx.isPic && !ctx.arg.extendedConst) {
+  if (ctx.getIsPic() && !ctx.arg.getExtendedConst()) {
     log("-- combineActiveOutputSegments");
     combineActiveOutputSegments();
   }
@@ -1964,7 +1965,7 @@ void Writer::run() {
     // If the input contains a call to `__wasm_call_ctors`, either in one of
     // the input objects or an explicit export from the command-line, we
     // assume ctors and dtors are taken care of already.
-    if (!ctx.arg.relocatable && !ctx.isPic &&
+    if (!ctx.arg.relocatable && !ctx.getIsPic() &&
         !ctx.sym.callCtors->isUsedInRegularObj &&
         !ctx.sym.callCtors->isExported()) {
       log("-- createCommandExportWrappers");

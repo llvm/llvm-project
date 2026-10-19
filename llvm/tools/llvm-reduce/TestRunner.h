@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_REDUCE_TESTRUNNER_H
 
 #include "ReducerWorkItem.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -47,19 +48,27 @@ public:
 
   void writeOutput(StringRef Message);
 
-  bool inputIsBitcode() const {
-    return InputIsBitcode;
-  }
+  bool inputIsBitcode() const { return getInputIsBitcode(); }
 
 private:
   StringRef TestName;
   StringRef ToolName;
-  SmallVector<StringRef> TestArgs;
+  llvm::SmallVectorWithFlags<
+      StringRef,
+      llvm::CalculateSmallVectorDefaultInlinedElements<StringRef>::value, 2>
+      TestArgs;
   std::unique_ptr<ReducerWorkItem> Program;
   std::unique_ptr<TargetMachine> TM;
   StringRef OutputFilename;
-  const bool InputIsBitcode;
-  bool EmitBitcode;
+  bool getInputIsBitcode() const { return TestArgs.getFlag(0); }
+  bool getEmitBitcode() const { return TestArgs.getFlag(1); }
+  void setEmitBitcode(bool Value) { TestArgs.setFlag(1, Value); }
+
+public:
+  TestRunner(const TestRunner &) = default;
+  TestRunner(TestRunner &&) = default;
+  TestRunner &operator=(const TestRunner &) = delete;
+  TestRunner &operator=(TestRunner &&) = delete;
 };
 
 } // namespace llvm

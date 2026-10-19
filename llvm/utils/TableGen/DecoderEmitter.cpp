@@ -28,6 +28,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -289,7 +290,7 @@ class FilterChooser {
 
   /// Encoding IDs for this filter chooser to work on.
   /// Sorted by non-decreasing encoding width.
-  SmallVector<unsigned, 0> EncodingIDs;
+  llvm::SmallVectorWithFlags<unsigned, 0> EncodingIDs;
 
   // Array of bit values passed down from our parent.
   // Set to all unknown for Parent == nullptr.
@@ -323,7 +324,8 @@ class FilterChooser {
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
   /// Set to true if decoding conflict was encountered.
-  bool HasConflict = false;
+  bool getHasConflict() const { return EncodingIDs.getFlag(0); }
+  void setHasConflict(bool Value) { EncodingIDs.setFlag(0, Value); }
 
 public:
   /// Constructs a top-level filter chooser.
@@ -362,7 +364,7 @@ public:
   }
 
   /// Returns true if any decoding conflicts were encountered.
-  bool hasConflict() const { return HasConflict; }
+  bool hasConflict() const { return getHasConflict(); }
 
 private:
   /// Applies the given filter to the set of encodings this FilterChooser
@@ -438,7 +440,10 @@ void FilterChooser::applyFilter(const Filter &F) {
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
                                                  FilterBits, *this);
-    HasConflict |= VariableFC->HasConflict;
+    [&] {
+      auto PackedFlagValue = VariableFC->getHasConflict();
+      return setHasConflict(getHasConflict() | PackedFlagValue);
+    }();
   }
 
   // Otherwise, create sub choosers.
@@ -454,7 +459,7 @@ void FilterChooser::applyFilter(const Filter &F) {
         FilterVal,
         std::make_unique<FilterChooser>(Encodings, InferiorEncodingIDs,
                                         InferiorFilterBits, *this));
-    HasConflict |= It->second->HasConflict;
+    setHasConflict(int(getHasConflict()) | It->second->getHasConflict());
   }
 }
 
@@ -802,7 +807,8 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
       if (!Islands.empty()) {
         // Found an instruction with island(s).  Now just assign a filter.
         return std::make_unique<Filter>(
-            Encodings, EncodingIDs, Islands[0].StartBit, Islands[0].NumBits);
+            Encodings, ArrayRef<unsigned>(EncodingIDs), Islands[0].StartBit,
+            Islands[0].NumBits);
       }
     }
   }
@@ -833,8 +839,9 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
   std::vector<std::unique_ptr<Filter>> Filters;
 
   auto addCandidateFilter = [&](unsigned StartBit, unsigned EndBit) {
-    Filters.push_back(std::make_unique<Filter>(Encodings, EncodingIDs, StartBit,
-                                               EndBit - StartBit));
+    Filters.push_back(std::make_unique<Filter>(Encodings,
+                                               ArrayRef<unsigned>(EncodingIDs),
+                                               StartBit, EndBit - StartBit));
   };
 
   unsigned FilterWidth = FilterBits.getBitWidth();
@@ -1038,7 +1045,7 @@ void FilterChooser::doFilter() {
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
   dump();
-  HasConflict = true;
+  setHasConflict(true);
 }
 
 void FilterChooser::dump() const {

@@ -18,6 +18,7 @@
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
@@ -30,13 +31,28 @@ class OffloadBundlerConfig {
 public:
   OffloadBundlerConfig();
 
-  bool AllowNoHost = false;
-  bool AllowMissingBundles = false;
-  bool CheckInputArchive = false;
-  bool PrintExternalCommands = false;
-  bool HipOpenmpCompatible = false;
-  bool Compress = false;
-  bool Verbose = false;
+  bool getAllowNoHost() const { return OutputFileNames.getFlag(0); }
+  void setAllowNoHost(bool Value) { OutputFileNames.setFlag(0, Value); }
+  bool getAllowMissingBundles() const { return OutputFileNames.getFlag(1); }
+  void setAllowMissingBundles(bool Value) { OutputFileNames.setFlag(1, Value); }
+  bool getCheckInputArchive() const { return OutputFileNames.getFlag(2); }
+  void setCheckInputArchive(bool Value) { OutputFileNames.setFlag(2, Value); }
+  bool getPrintExternalCommands() const { return OutputFileNames.getFlag(3); }
+  void setPrintExternalCommands(bool Value) {
+    OutputFileNames.setFlag(3, Value);
+  }
+  bool getHipOpenmpCompatible() const { return InputFileNames.getFlag(0); }
+  void setHipOpenmpCompatible(bool Value) { InputFileNames.setFlag(0, Value); }
+  bool getCompress() const { return InputFileNames.getFlag(1); }
+  bool setCompress(bool Value) {
+    InputFileNames.setFlag(1, Value);
+    return Value;
+  }
+  bool getVerbose() const { return InputFileNames.getFlag(2); }
+  bool setVerbose(bool Value) {
+    InputFileNames.setFlag(2, Value);
+    return Value;
+  }
   llvm::compression::Format CompressionFormat;
   int CompressionLevel;
   uint16_t CompressedBundleVersion;
@@ -48,8 +64,8 @@ public:
   std::string ObjcopyPath;
 
   llvm::SmallVector<std::string, 4> TargetNames;
-  llvm::SmallVector<std::string, 4> InputFileNames;
-  llvm::SmallVector<std::string, 4> OutputFileNames;
+  llvm::SmallVectorWithFlags<std::string, 4, 3> InputFileNames;
+  llvm::SmallVectorWithFlags<std::string, 4, 4> OutputFileNames;
 };
 
 class OffloadBundler {

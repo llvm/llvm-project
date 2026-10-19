@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 #include <optional>
 
@@ -466,7 +467,7 @@ public:
   }
 
   /// Sets whether the output tensor is sparse or not.
-  void setHasSparseOut(bool s) { hasSparseOut = s; }
+  void setHasSparseOut(bool s) { latSets.setFlag(0, s); }
 
   /// Establishes the two-way map that i <-> <t, lvl, lt>.
   void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
@@ -627,7 +628,6 @@ private:
   const TensorId syntheticTensor;
   const unsigned numTensors;
   const unsigned numLoops;
-  bool hasSparseOut;
 
   // Below we use `std::vector` for things which have a priori fixed
   // sizes, whereas we use `llvm::SmallVector` for things with variable
@@ -662,7 +662,8 @@ private:
 
   llvm::SmallVector<TensorExp> tensorExps;
   llvm::SmallVector<LatPoint> latPoints;
-  llvm::SmallVector<SmallVector<LatPointId>> latSets;
+  // Flag bit 0 marks a sparse output tensor.
+  llvm::SmallVectorWithFlags<SmallVector<LatPointId>> latSets;
 };
 
 } // namespace sparse_tensor

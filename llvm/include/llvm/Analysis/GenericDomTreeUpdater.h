@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -229,15 +230,15 @@ protected:
     DomTreeUpdate(CriticalEdge E) : IsCriticalEdgeSplit(true), EdgeSplit(E) {}
   };
 
-  SmallVector<DomTreeUpdate, 16> PendUpdates;
+  SmallVectorWithFlags<DomTreeUpdate, 16, 2> PendUpdates;
   size_t PendDTUpdateIndex = 0;
   size_t PendPDTUpdateIndex = 0;
   DomTreeT *DT = nullptr;
   PostDomTreeT *PDT = nullptr;
   const UpdateStrategy Strategy;
   SmallPtrSet<BasicBlockT *, 8> DeletedBBs;
-  bool IsRecalculatingDomTree = false;
-  bool IsRecalculatingPostDomTree = false;
+  bool isRecalculatingDomTree() const { return PendUpdates.getFlag(0); }
+  bool isRecalculatingPostDomTree() const { return PendUpdates.getFlag(1); }
 
   /// Returns true if the update is self dominance.
   bool isSelfDominance(UpdateT Update) const {

@@ -14,6 +14,7 @@
 #define LLVM_LIB_TABLEGEN_TGPARSER_H
 
 #include "TGLexer.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
@@ -164,7 +165,7 @@ class TGParser {
   ///
   std::vector<std::unique_ptr<ForeachLoop>> Loops;
 
-  SmallVector<DefsetRecord *, 2> Defsets;
+  llvm::SmallVectorWithFlags<DefsetRecord *, 2, 2> Defsets;
 
   /// CurMultiClass - If we are parsing a 'multiclass' definition, this is the
   /// current value.
@@ -187,16 +188,19 @@ class TGParser {
                     // exist.
   };
 
-  bool NoWarnOnUnusedTemplateArgs = false;
-  bool TrackReferenceLocs = false;
+  bool getNoWarnOnUnusedTemplateArgs() const { return Defsets.getFlag(0); }
+  void setNoWarnOnUnusedTemplateArgs(bool Value) { Defsets.setFlag(0, Value); }
+  bool getTrackReferenceLocs() const { return Defsets.getFlag(1); }
+  void setTrackReferenceLocs(bool Value) { Defsets.setFlag(1, Value); }
 
 public:
   TGParser(SourceMgr &SM, ArrayRef<std::string> Macros, RecordKeeper &records,
            const bool NoWarnOnUnusedTemplateArgs = false,
            const bool TrackReferenceLocs = false)
-      : Lex(SM, Macros), CurMultiClass(nullptr), Records(records),
-        NoWarnOnUnusedTemplateArgs(NoWarnOnUnusedTemplateArgs),
-        TrackReferenceLocs(TrackReferenceLocs) {}
+      : Lex(SM, Macros), Defsets(decltype(Defsets)::withFlags(
+                             unsigned(NoWarnOnUnusedTemplateArgs) |
+                             (unsigned(TrackReferenceLocs) << 1))),
+        CurMultiClass(nullptr), Records(records) {}
 
   /// ParseFile - Main entrypoint for parsing a tblgen file. These parser
   /// routines return true on error, or false on success.

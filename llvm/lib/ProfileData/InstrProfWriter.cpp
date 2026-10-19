@@ -154,13 +154,14 @@ InstrProfWriter::InstrProfWriter(
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
     bool MemprofGenerateRandomHotness, unsigned RandomSeed)
-    : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
+    : MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
+      TemporalProfTraces(decltype(this->TemporalProfTraces)::withFlags(
+          unsigned(Sparse) | (unsigned(WritePrevVersion) << 1) |
+          (unsigned(MemProfFullSchema) << 2) |
+          (unsigned(MemprofGenerateRandomHotness) << 3))),
       InfoObj(new InstrProfRecordWriterTrait()),
-      WritePrevVersion(WritePrevVersion),
-      MemProfVersionRequested(MemProfVersionRequested),
-      MemProfFullSchema(MemProfFullSchema),
-      MemprofGenerateRandomHotness(MemprofGenerateRandomHotness) {
+      MemProfVersionRequested(MemProfVersionRequested) {
   if (RandomSeed)
     RNG.seed(RandomSeed);
 }
@@ -172,7 +173,7 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
+void InstrProfWriter::setOutputSparse(bool Sparse) { this->setSparse(Sparse); }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
@@ -245,7 +246,7 @@ void InstrProfWriter::addMemProfRecord(
   // Provoke random hotness values if requested. We specify the lifetime access
   // density and lifetime length that will result in a cold or not cold hotness.
   // See the logic in getAllocType() in Analysis/MemoryProfileInfo.cpp.
-  if (MemprofGenerateRandomHotness) {
+  if (getMemprofGenerateRandomHotness()) {
     for (auto &Alloc : NewRecord.AllocSites) {
       // To get a not cold context, set the lifetime access density to the
       // maximum value and the lifetime to 0.
@@ -331,7 +332,7 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
         return false;
 
   // Add one record at a time if randomization is requested.
-  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness) {
+  if (MemProfData.Records.empty() && !getMemprofGenerateRandomHotness()) {
     // Need to manually add each record to the builder, which is otherwise done
     // in addMemProfRecord.
     for (const auto &[GUID, Record] : Incoming.Records)
@@ -356,6 +357,12 @@ void InstrProfWriter::addDataAccessProfData(
 
 void InstrProfWriter::addTemporalProfileTraces(
     SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
+  addTemporalProfileTracesImpl(SrcTraces, SrcStreamSize);
+}
+
+template <typename TraceVectorT>
+void InstrProfWriter::addTemporalProfileTracesImpl(TraceVectorT &SrcTraces,
+                                                   uint64_t SrcStreamSize) {
   if (TemporalProfTraces.size() > TemporalProfTraceReservoirSize)
     TemporalProfTraces.truncate(TemporalProfTraceReservoirSize);
   for (auto &Trace : SrcTraces)
@@ -394,8 +401,8 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   for (auto &I : IPW.BinaryIds)
     addBinaryIds(I);
 
-  addTemporalProfileTraces(IPW.TemporalProfTraces,
-                           IPW.TemporalProfTraceStreamSize);
+  addTemporalProfileTracesImpl(IPW.TemporalProfTraces,
+                               IPW.TemporalProfTraceStreamSize);
 
   MemProfData.Frames.reserve(IPW.MemProfData.Frames.size());
   for (auto &[FrameId, Frame] : IPW.MemProfData.Frames) {
@@ -418,7 +425,7 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
 }
 
 bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
-  if (!Sparse)
+  if (!getSparse())
     return true;
   for (const auto &Func : PD) {
     const InstrProfRecord &IPR = Func.second;
@@ -548,7 +555,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->SummaryBuilder = &ISB;
   InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
   InfoObj->CSSummaryBuilder = &CSISB;
-  InfoObj->WritePrevVersion = WritePrevVersion;
+  InfoObj->WritePrevVersion = getWritePrevVersion();
 
   // Populate the hash table generator.
   SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
@@ -561,7 +568,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the header.
   IndexedInstrProf::Header Header;
-  Header.Version = WritePrevVersion
+  Header.Version = getWritePrevVersion()
                        ? IndexedInstrProf::ProfVersion::Version11
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
   // The WritePrevVersion handling will either need to be removed or updated
@@ -588,7 +595,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     Header.Version |= VARIANT_MASK_TEMPORAL_PROF;
 
   const uint64_t BackPatchStartOffset =
-      writeHeader(Header, WritePrevVersion, OS);
+      writeHeader(Header, getWritePrevVersion(), OS);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -614,9 +621,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
 
-    if (auto E = writeMemProf(
-            OS, MemProfData, MemProfVersionRequested, MemProfFullSchema,
-            std::move(DataAccessProfileData), MemProfSumBuilder.getSummary()))
+    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
+                              getMemProfFullSchemaFlag(),
+                              std::move(DataAccessProfileData),
+                              MemProfSumBuilder.getSummary()))
       return E;
   }
 
@@ -626,7 +634,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   uint64_t VTableNamesSectionStart = OS.tell();
 
-  if (!WritePrevVersion)
+  if (!getWritePrevVersion())
     if (Error E = writeVTableNames(OS))
       return E;
 
@@ -664,7 +672,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   SmallVector<uint64_t, 8> HeaderOffsets = {HashTableStart, MemProfSectionStart,
                                             BinaryIdSectionStart,
                                             TemporalProfTracesSectionStart};
-  if (!WritePrevVersion)
+  if (!getWritePrevVersion())
     HeaderOffsets.push_back(VTableNamesSectionStart);
 
   PatchItem PatchItems[] = {

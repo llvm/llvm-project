@@ -919,7 +919,8 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
     : Kind(Kind), AccType(AccType), Statement(Stmt), InvalidDomain(),
       BaseAddr(BaseAddress), ElementType(ElementType),
       Sizes(Sizes.begin(), Sizes.end()), AccessInstruction(AccessInst),
-      AccessValue(AccessValue), IsAffine(Affine),
+      Incoming(decltype(this->Incoming)::withFlags(unsigned(!(Affine)))),
+      AccessValue(AccessValue),
       Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(),
       NewAccessRelation() {
   static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
@@ -1651,8 +1652,10 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            DominatorTree &DT, ScopDetection::DetectionContext &DC,
            OptimizationRemarkEmitter &ORE, int ID)
     : IslCtx(isl_ctx_alloc(), isl_ctx_free), SE(&ScalarEvolution), DT(&DT),
-      R(R), name(std::nullopt), HasSingleExitEdge(R.getExitingBlock()), DC(DC),
-      ORE(ORE), Affinator(this, LI), ID(ID) {
+      R(R), name(std::nullopt), DC(DC), ORE(ORE), Affinator(this, LI),
+      InvariantEquivClasses(decltype(this->InvariantEquivClasses)::withFlags(
+          (unsigned(bool(R.getExitingBlock())) << 1))),
+      ID(ID) {
 
   // Options defaults that are different from ISL's.
   isl_options_set_schedule_serialize_sccs(IslCtx.get(), true);
@@ -2361,12 +2364,12 @@ void Scop::setSchedule(isl::union_map NewSchedule) {
   auto S = isl::schedule::from_domain(getDomains());
   Schedule = S.insert_partial_schedule(
       isl::multi_union_pw_aff::from_union_map(NewSchedule));
-  ScheduleModified = true;
+  setScheduleModified(true);
 }
 
 void Scop::setScheduleTree(isl::schedule NewSchedule) {
   Schedule = NewSchedule;
-  ScheduleModified = true;
+  setScheduleModified(true);
 }
 
 bool Scop::restrictDomains(isl::union_set Domain) {

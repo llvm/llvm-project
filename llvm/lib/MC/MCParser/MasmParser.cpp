@@ -975,7 +975,7 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                        const MCAsmInfo &MAI, struct tm TM, unsigned CB)
     : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
       TM(TM) {
-  HadError = false;
+  setHadError(false);
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
   SavedDiagContext = SrcMgr.getDiagContext();
@@ -1002,7 +1002,7 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 }
 
 MasmParser::~MasmParser() {
-  assert((HadError || ActiveMacros.empty()) &&
+  assert((getHadError() || ActiveMacros.empty()) &&
          "Unexpected active macro instantiation!");
 
   // Restore the saved diagnostics handler and context for use during
@@ -1037,7 +1037,7 @@ bool MasmParser::Warning(SMLoc L, const Twine &Msg, SMRange Range) {
 }
 
 bool MasmParser::printError(SMLoc L, const Twine &Msg, SMRange Range) {
-  HadError = true;
+  setHadError(true);
   printMessage(L, SourceMgr::DK_Error, Msg, Range);
   printMacroInstantiations();
   return true;
@@ -1212,7 +1212,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Prime the lexer.
   Lex();
 
-  HadError = false;
+  setHadError(false);
   AsmCond StartingCondState = TheCondState;
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
 
@@ -1268,10 +1268,10 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // Finalize the output stream if there are no errors and if the client wants
   // us to.
-  if (!HadError && !NoFinalize)
+  if (!getHadError() && !NoFinalize)
     Out.finish(Lexer.getLoc());
 
-  return HadError || getContext().hadError();
+  return getHadError() || getContext().hadError();
 }
 
 bool MasmParser::checkForValidSection() {

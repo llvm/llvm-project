@@ -48,8 +48,8 @@ scaleAndAddForAssert(ArrayRef<DynamicAPInt> a, const DynamicAPInt &scale,
 }
 
 SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM)
-    : usingBigM(mustUseBigM), nRedundant(0), nSymbol(0),
-      tableau(0, getNumFixedCols() + nVar), empty(false) {
+    : nRedundant(0), nSymbol(0), tableau(0, (mustUseBigM ? 3u : 2u) + nVar),
+      var(decltype(this->var)::withFlags(unsigned(mustUseBigM))) {
   var.reserve(nVar);
   colUnknown.reserve(nVar + 1);
   colUnknown.insert(colUnknown.begin(), getNumFixedCols(), nullIndex);
@@ -127,7 +127,7 @@ unsigned SimplexBase::addRow(ArrayRef<DynamicAPInt> coeffs,
 
   unsigned newRow = addZeroRow(makeRestricted);
   tableau(newRow, 1) = coeffs.back();
-  if (usingBigM) {
+  if (getUsingBigM()) {
     // When the lexicographic pivot rule is used, instead of the variables
     //
     // x, y, z ...
@@ -564,7 +564,7 @@ SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
   while (level > 0) {
     assert(level >= stack.size());
     if (level > stack.size()) {
-      if (empty || domainSimplex.findIntegerLexMin().isEmpty()) {
+      if (getEmpty() || domainSimplex.findIntegerLexMin().isEmpty()) {
         // No integer points; return.
         --level;
         continue;
@@ -703,7 +703,7 @@ std::optional<unsigned> LexSimplex::maybeGetViolatedRow() const {
 /// orientation, which always succeeds unless the constraints have no solution
 /// in which case we just give up and return.
 LogicalResult LexSimplex::restoreRationalConsistency() {
-  if (empty)
+  if (getEmpty())
     return failure();
   while (std::optional<unsigned> maybeViolatedRow = maybeGetViolatedRow())
     if (moveRowUnknownToColumn(*maybeViolatedRow).failed())
@@ -1066,7 +1066,7 @@ std::optional<unsigned> Simplex::findPivotRow(std::optional<unsigned> skipRow,
   return retRow;
 }
 
-bool SimplexBase::isEmpty() const { return empty; }
+bool SimplexBase::isEmpty() const { return getEmpty(); }
 
 void SimplexBase::swapRows(unsigned i, unsigned j) {
   if (i == j)
@@ -1093,10 +1093,10 @@ void SimplexBase::markEmpty() {
   // If the set is already empty, then we shouldn't add another UnmarkEmpty log
   // entry, since in that case the Simplex will be erroneously marked as
   // non-empty when rolling back past this point.
-  if (empty)
+  if (getEmpty())
     return;
   undoLog.emplace_back(UndoLogEntry::UnmarkEmpty);
-  empty = true;
+  setEmpty(true);
 }
 
 /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
@@ -1253,7 +1253,7 @@ void SimplexBase::undo(UndoLogEntry entry) {
     var.pop_back();
     colUnknown.pop_back();
   } else if (entry == UndoLogEntry::UnmarkEmpty) {
-    empty = false;
+    setEmpty(false);
   } else if (entry == UndoLogEntry::UnmarkLastRedundant) {
     nRedundant--;
   } else if (entry == UndoLogEntry::RestoreBasis) {
@@ -1362,7 +1362,7 @@ MaybeOptimum<Fraction> Simplex::computeRowOptimum(Direction direction,
 /// or std::nullopt if it is unbounded.
 MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
                                                ArrayRef<DynamicAPInt> coeffs) {
-  if (empty)
+  if (getEmpty())
     return OptimumKind::Empty;
 
   SimplexRollbackScopeExit scopeExit(*this);
@@ -1373,7 +1373,7 @@ MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
 
 MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
                                                Unknown &u) {
-  if (empty)
+  if (getEmpty())
     return OptimumKind::Empty;
   if (u.orientation == Orientation::Column) {
     unsigned column = u.pos;
@@ -1396,8 +1396,9 @@ MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
 }
 
 bool Simplex::isBoundedAlongConstraint(unsigned constraintIndex) {
-  assert(!empty && "It is not meaningful to ask whether a direction is bounded "
-                   "in an empty set.");
+  assert(!getEmpty() &&
+         "It is not meaningful to ask whether a direction is bounded "
+         "in an empty set.");
   // The constraint's perpendicular is already bounded below, since it is a
   // constraint. If it is also bounded above, we can return true.
   return computeOptimum(Direction::Up, con[constraintIndex]).isBounded();
@@ -1428,7 +1429,7 @@ void Simplex::markRowRedundant(Unknown &u) {
 void Simplex::detectRedundant(unsigned offset, unsigned count) {
   assert(offset + count <= con.size() && "invalid range!");
   // It is not meaningful to talk about redundancy for empty sets.
-  if (empty)
+  if (getEmpty())
     return;
 
   // Iterate through the constraints and check for each one if it can attain
@@ -1468,7 +1469,7 @@ void Simplex::detectRedundant(unsigned offset, unsigned count) {
 }
 
 bool Simplex::isUnbounded() {
-  if (empty)
+  if (getEmpty())
     return false;
 
   SmallVector<DynamicAPInt, 8> dir(var.size() + 1);
@@ -1501,7 +1502,7 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   Simplex result(numVar);
 
   result.tableau.reserveRows(numCon);
-  result.empty = a.empty || b.empty;
+  result.setEmpty(a.getEmpty() || b.getEmpty());
 
   auto concat = [](ArrayRef<Unknown> v, ArrayRef<Unknown> w) {
     SmallVector<Unknown, 8> result;
@@ -1511,7 +1512,7 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
     return result;
   };
   result.con = concat(a.con, b.con);
-  result.var = concat(a.var, b.var);
+  result.var.assign(concat(a.var, b.var));
 
   auto indexFromBIndex = [&](int index) {
     return index >= 0 ? a.getNumVariables() + index
@@ -1568,7 +1569,7 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
 }
 
 std::optional<SmallVector<Fraction, 8>> Simplex::getRationalSample() const {
-  if (empty)
+  if (getEmpty())
     return {};
 
   SmallVector<Fraction, 8> sample;
@@ -1593,7 +1594,7 @@ void LexSimplexBase::addInequality(ArrayRef<DynamicAPInt> coeffs) {
 }
 
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalSample() const {
-  if (empty)
+  if (getEmpty())
     return OptimumKind::Empty;
 
   SmallVector<Fraction, 8> sample;
@@ -1614,7 +1615,7 @@ MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalSample() const {
     // If the variable is in row position, its sample value is the
     // entry in the constant column divided by the denominator.
     DynamicAPInt denom = tableau(u.pos, 0);
-    if (usingBigM)
+    if (getUsingBigM())
       if (tableau(u.pos, 2) != denom)
         return OptimumKind::Unbounded;
     sample.emplace_back(tableau(u.pos, 1), denom);
@@ -1625,7 +1626,7 @@ MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::getRationalSample() const {
 std::optional<SmallVector<DynamicAPInt, 8>>
 Simplex::getSamplePointIfIntegral() const {
   // If the tableau is empty, no sample point exists.
-  if (empty)
+  if (getEmpty())
     return {};
 
   // The value will always exist since the Simplex is non-empty.
@@ -1994,7 +1995,7 @@ void Simplex::reduceBasis(IntMatrix &basis, unsigned level) {
 /// To avoid potentially arbitrarily large recursion depths leading to stack
 /// overflows, this algorithm is implemented iteratively.
 std::optional<SmallVector<DynamicAPInt, 8>> Simplex::findIntegerSample() {
-  if (empty)
+  if (getEmpty())
     return {};
 
   unsigned nDims = var.size();
@@ -2127,7 +2128,7 @@ bool Simplex::isFlatAlong(ArrayRef<DynamicAPInt> coeffs) {
 
 void SimplexBase::print(raw_ostream &os) const {
   os << "rows = " << getNumRows() << ", columns = " << getNumColumns() << "\n";
-  if (empty)
+  if (getEmpty())
     os << "Simplex marked empty!\n";
   os << "var: ";
   for (unsigned i = 0; i < var.size(); ++i) {
@@ -2214,7 +2215,7 @@ Simplex::IneqType Simplex::findIneqType(ArrayRef<DynamicAPInt> coeffs) {
 /// Checks whether the type of the inequality with coefficients `coeffs`
 /// is Redundant.
 bool Simplex::isRedundantInequality(ArrayRef<DynamicAPInt> coeffs) {
-  assert(!empty &&
+  assert(!getEmpty() &&
          "It is not meaningful to ask about redundancy in an empty set!");
   return findIneqType(coeffs) == IneqType::Redundant;
 }
@@ -2224,7 +2225,7 @@ bool Simplex::isRedundantInequality(ArrayRef<DynamicAPInt> coeffs) {
 /// always zero under the existing constraints. `coeffs` is always zero
 /// when the minimum and maximum value that `coeffs` can take are both zero.
 bool Simplex::isRedundantEquality(ArrayRef<DynamicAPInt> coeffs) {
-  assert(!empty &&
+  assert(!getEmpty() &&
          "It is not meaningful to ask about redundancy in an empty set!");
   MaybeOptimum<Fraction> minimum = computeOptimum(Direction::Down, coeffs);
   MaybeOptimum<Fraction> maximum = computeOptimum(Direction::Up, coeffs);

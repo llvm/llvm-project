@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIProgramInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
@@ -94,7 +95,7 @@ private:
 
   SetVector<std::pair<MCSymbol *, MCSymbol *>> DirectCallEdges;
 
-  SmallVector<AMDGPU::FuncInfo, 8> FunctionInfos;
+  llvm::SmallVectorWithFlags<AMDGPU::FuncInfo, 8> FunctionInfos;
 
   SmallString<128> getMCExprStr(const MCExpr *Value);
 
@@ -161,7 +162,12 @@ protected:
 
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;
-  bool IsTargetStreamerInitialized;
+  bool getIsTargetStreamerInitialized() const {
+    return FunctionInfos.getFlag(0);
+  }
+  void setIsTargetStreamerInitialized(bool Value) {
+    FunctionInfos.setFlag(0, Value);
+  }
 };
 
 class AMDGPUAsmPrinterBeginPass

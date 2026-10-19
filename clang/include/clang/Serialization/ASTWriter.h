@@ -32,6 +32,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include <cassert>
@@ -157,27 +158,45 @@ private:
   /// module file. This is the case for files implicitly written to the
   /// module cache, where we need the timestamps to determine if the module
   /// file is up to date, but not otherwise.
-  bool IncludeTimestamps;
+  bool getIncludeTimestamps() const {
+    return PendingEmittingVTables.getFlag(0);
+  }
+  void setIncludeTimestamps(bool Value) {
+    PendingEmittingVTables.setFlag(0, Value);
+  }
 
   /// Indicates whether the AST file being written is an implicit module.
   /// If that's the case, we may be able to skip writing some information that
   /// are guaranteed to be the same in the importer by the context hash.
-  bool BuildingImplicitModule = false;
+  bool getBuildingImplicitModule() const {
+    return PendingEmittingVTables.getFlag(1);
+  }
+  void setBuildingImplicitModule(bool Value) {
+    PendingEmittingVTables.setFlag(1, Value);
+  }
 
   /// Indicates when the AST writing is actively performing
   /// serialization, rather than just queueing updates.
-  bool WritingAST = false;
+  bool getWritingAST() const { return PendingEmittingVTables.getFlag(2); }
+  void setWritingAST(bool Value) { PendingEmittingVTables.setFlag(2, Value); }
 
   /// Indicates that we are done serializing the collection of decls
   /// and types to emit.
-  bool DoneWritingDeclsAndTypes = false;
+  bool getDoneWritingDeclsAndTypesFlag() const {
+    return PendingEmittingVTables.getFlag(3);
+  }
+  void setDoneWritingDeclsAndTypesFlag(bool Value) {
+    PendingEmittingVTables.setFlag(3, Value);
+  }
 
   /// Indicates that the AST contained compiler errors.
-  bool ASTHasCompilerErrors = false;
+  bool getASTHasCompilerErrors() const { return Redeclarations.getFlag(0); }
+  void setASTHasCompilerErrors(bool Value) { Redeclarations.setFlag(0, Value); }
 
   /// Indicates that we're going to generate the reduced BMI for C++20
   /// named modules.
-  bool GeneratingReducedBMI = false;
+  bool getGeneratingReducedBMI() const { return Redeclarations.getFlag(1); }
+  void setGeneratingReducedBMI(bool Value) { Redeclarations.setFlag(1, Value); }
 
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
@@ -491,7 +510,7 @@ private:
 
   /// The set of declarations that may have redeclaration chains that
   /// need to be serialized.
-  llvm::SmallVector<const Decl *, 16> Redeclarations;
+  llvm::SmallVectorWithFlags<const Decl *, 16, 2> Redeclarations;
 
   /// A cache of the first local declaration for "interesting"
   /// redeclaration chains.
@@ -545,7 +564,11 @@ private:
 
   /// A list of classes in named modules which need to emit the VTable in
   /// the corresponding object file.
-  llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
+  llvm::SmallVectorWithFlags<
+      CXXRecordDecl *,
+      llvm::CalculateSmallVectorDefaultInlinedElements<CXXRecordDecl *>::value,
+      4>
+      PendingEmittingVTables;
 
   /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
@@ -949,9 +972,11 @@ public:
     return WritingModule && WritingModule->isHeaderUnit();
   }
 
-  bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
+  bool isGeneratingReducedBMI() const { return getGeneratingReducedBMI(); }
 
-  bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
+  bool getDoneWritingDeclsAndTypes() const {
+    return getDoneWritingDeclsAndTypesFlag();
+  }
 
   bool isDeclPredefined(const Decl *D) const {
     return PredefinedDecls.count(D);
@@ -1036,9 +1061,9 @@ class PCHGenerator : public SemaConsumer {
 protected:
   ASTWriter &getWriter() { return Writer; }
   const ASTWriter &getWriter() const { return Writer; }
-  SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
+  llvm::SmallVectorWithFlagsImpl<char> &getPCH() const { return Buffer->Data; }
 
-  bool isComplete() const { return Buffer->IsComplete; }
+  bool isComplete() const { return Buffer->getIsComplete(); }
   PCHBuffer *getBufferPtr() { return Buffer.get(); }
   StringRef getOutputFile() const { return OutputFile; }
   DiagnosticsEngine &getDiagnostics() const;
@@ -1061,7 +1086,7 @@ public:
   void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
-  bool hasEmittedPCH() const { return Buffer->IsComplete; }
+  bool hasEmittedPCH() const { return Buffer->getIsComplete(); }
 };
 
 class CXX20ModulesGenerator : public PCHGenerator {

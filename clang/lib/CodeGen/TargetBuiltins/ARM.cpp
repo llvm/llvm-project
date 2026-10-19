@@ -7315,11 +7315,11 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     }
 
     // Enable underlying preserve_*_access_index() generation.
-    bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
-    IsInPreservedAIRegion = true;
+    bool OldIsInPreservedAIRegion = getIsInPreservedAIRegion();
+    setIsInPreservedAIRegion(true);
     Value *FieldAddr = IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
                                   : EmitLValue(Arg).emitRawPointer(*this);
-    IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+    setIsInPreservedAIRegion(OldIsInPreservedAIRegion);
 
     ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());

@@ -23,6 +23,8 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
+
 namespace mlir {
 
 class ShapedTypeComponents;
@@ -95,6 +97,9 @@ public:
   void dump() const;
 
 private:
+  template <typename ShapeStorageT>
+  void getDimsImpl(ShapeStorageT &res) const;
+
   // Union storing either ShapedTypeComponents, ShapedType (stored as Type and
   // casted), or DenseIntElementsAttribute (stored as Atrtribute).
   PointerUnion<ShapedTypeComponents *, Type, Attribute> val = nullptr;
@@ -110,45 +115,51 @@ private:
 /// Used by ShapedType type inferences.
 class ShapedTypeComponents {
   /// Internal storage type for shape.
-  using ShapeStorageT = SmallVector<int64_t, 3>;
+  using ShapeStorageT = llvm::SmallVectorWithFlags<int64_t, 3>;
 
 public:
   /// Default construction is an unranked shape.
   ShapedTypeComponents() : elementType(nullptr), attr(nullptr) {};
   ShapedTypeComponents(Type elementType)
-      : elementType(elementType), attr(nullptr), ranked(false) {}
+      : elementType(elementType), attr(nullptr) {}
   ShapedTypeComponents(ShapedType shapedType) : attr(nullptr) {
-    ranked = shapedType.hasRank();
+    dims.setFlag(0, shapedType.hasRank());
     elementType = shapedType.getElementType();
-    if (ranked)
-      dims = llvm::to_vector<4>(shapedType.getShape());
+    if (hasRank()) {
+      ArrayRef<int64_t> shape = shapedType.getShape();
+      dims.assign(shape.begin(), shape.end());
+    }
   }
   ShapedTypeComponents(ShapeAdaptor adaptor) : attr(nullptr) {
-    ranked = adaptor.hasRank();
+    dims.setFlag(0, adaptor.hasRank());
     elementType = adaptor.getElementType();
-    if (ranked)
+    if (hasRank())
       adaptor.getDims(*this);
   }
   template <typename Arg, typename = std::enable_if_t<
                               std::is_constructible<ShapeStorageT, Arg>::value>>
   ShapedTypeComponents(Arg &&arg, Type elementType = nullptr,
                        Attribute attr = nullptr)
-      : dims(std::forward<Arg>(arg)), elementType(elementType), attr(attr),
-        ranked(true) {}
+      : dims(std::forward<Arg>(arg)), elementType(elementType), attr(attr) {
+    dims.setFlag(0, true);
+  }
   ShapedTypeComponents(ArrayRef<int64_t> vec, Type elementType = nullptr,
                        Attribute attr = nullptr)
-      : dims(vec.begin(), vec.end()), elementType(elementType), attr(attr),
-        ranked(true) {}
+      : dims(1, vec.begin(), vec.end()), elementType(elementType), attr(attr) {}
+
+  ShapedTypeComponents(SmallVectorImpl<int64_t> &&vec,
+                       Type elementType = nullptr, Attribute attr = nullptr)
+      : dims(1, std::move(vec)), elementType(elementType), attr(attr) {}
 
   /// Return the dimensions of the shape.
   /// Requires: shape is ranked.
   ArrayRef<int64_t> getDims() const {
-    assert(ranked && "requires ranked shape");
+    assert(hasRank() && "requires ranked shape");
     return dims;
   }
 
   /// Return whether the shape has a rank.
-  bool hasRank() const { return ranked; };
+  bool hasRank() const { return dims.getFlag(0); };
 
   /// Return the element type component.
   Type getElementType() const { return elementType; };
@@ -162,7 +173,6 @@ private:
   ShapeStorageT dims;
   Type elementType;
   Attribute attr;
-  bool ranked{false};
 };
 
 /// Range of values and shapes (corresponding effectively to Shapes dialect's

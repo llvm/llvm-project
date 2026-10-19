@@ -1005,8 +1005,8 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::ppc_vsx_lxvll:
   case Intrinsic::ppc_vsx_lxvp: {
     Info.PtrVal = Inst->getArgOperand(0);
-    Info.ReadMem = true;
-    Info.WriteMem = false;
+    Info.setReadMem(true);
+    Info.setWriteMem(false);
     return true;
   }
   case Intrinsic::ppc_altivec_stvx:
@@ -1022,8 +1022,8 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::ppc_vsx_stxvll:
   case Intrinsic::ppc_vsx_stxvp: {
     Info.PtrVal = Inst->getArgOperand(1);
-    Info.ReadMem = false;
-    Info.WriteMem = true;
+    Info.setReadMem(false);
+    Info.setWriteMem(true);
     return true;
   }
   case Intrinsic::ppc_stbcx:
@@ -1031,8 +1031,8 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::ppc_stdcx:
   case Intrinsic::ppc_stwcx: {
     Info.PtrVal = Inst->getArgOperand(0);
-    Info.ReadMem = false;
-    Info.WriteMem = true;
+    Info.setReadMem(false);
+    Info.setWriteMem(true);
     return true;
   }
   default:

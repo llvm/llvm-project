@@ -236,10 +236,12 @@ ResolvedSchedClass::ResolvedSchedClass(const MCSubtargetInfo &STI,
                                        bool WasVariant)
     : SchedClassId(ResolvedSchedClassId),
       SCDesc(STI.getSchedModel().getSchedClassDesc(ResolvedSchedClassId)),
-      WasVariant(WasVariant),
-      NonRedundantWriteProcRes(getNonRedundantWriteProcRes(*SCDesc, STI)),
+      NonRedundantWriteProcRes(unsigned(WasVariant),
+                               getNonRedundantWriteProcRes(*SCDesc, STI)),
       IdealizedProcResPressure(computeIdealizedProcResPressure(
-          STI.getSchedModel(), NonRedundantWriteProcRes)) {
+          STI.getSchedModel(), SmallVector<MCWriteProcResEntry, 8>(
+                                   NonRedundantWriteProcRes.begin(),
+                                   NonRedundantWriteProcRes.end()))) {
   assert((SCDesc == nullptr || !SCDesc->isVariant()) &&
          "ResolvedSchedClass should never be variant");
 }

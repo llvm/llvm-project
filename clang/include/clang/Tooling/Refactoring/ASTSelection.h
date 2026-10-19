@@ -13,6 +13,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <vector>
@@ -103,13 +104,13 @@ public:
 
   /// Returns the number of selected statements.
   size_t size() const {
-    if (!AreChildrenSelected)
+    if (!getAreChildrenSelected())
       return 1;
     return SelectedNode.get().Children.size();
   }
 
   const Stmt *operator[](size_t I) const {
-    if (!AreChildrenSelected) {
+    if (!getAreChildrenSelected()) {
       assert(I == 0 && "Invalid index");
       return SelectedNode.get().Node.get<Stmt>();
     }
@@ -138,16 +139,18 @@ private:
   CodeRangeASTSelection(SelectedASTNode::ReferenceType SelectedNode,
                         ArrayRef<SelectedASTNode::ReferenceType> Parents,
                         bool AreChildrenSelected)
-      : SelectedNode(SelectedNode), Parents(Parents),
-        AreChildrenSelected(AreChildrenSelected) {}
+      : SelectedNode(SelectedNode),
+        Parents(decltype(this->Parents)::withFlags(
+            unsigned(AreChildrenSelected), Parents)) {}
 
   /// The reference to the selected node (or reference to the selected
   /// child nodes).
   SelectedASTNode::ReferenceType SelectedNode;
   /// The parent hierarchy (top to bottom) for the selected noe.
-  llvm::SmallVector<SelectedASTNode::ReferenceType, 8> Parents;
+  llvm::SmallVectorWithFlags<SelectedASTNode::ReferenceType, 8> Parents;
   /// True only when the children of the selected node are actually selected.
-  bool AreChildrenSelected;
+  bool getAreChildrenSelected() const { return Parents.getFlag(0); }
+  void setAreChildrenSelected(bool Value) { Parents.setFlag(0, Value); }
 };
 
 } // end namespace tooling

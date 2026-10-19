@@ -20,6 +20,7 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <cassert>
 
 namespace clang {
@@ -47,10 +48,17 @@ protected:
   //===--------------------------------------------------------------------===//
 
   /// True when parsing \#XXX; turns '\\n' into a tok::eod token.
-  bool ParsingPreprocessorDirective = false;
+  bool getParsingPreprocessorDirectiveFlag() const {
+    return ConditionalStack.getFlag(0);
+  }
+  bool setParsingPreprocessorDirectiveFlag(bool Value) {
+    ConditionalStack.setFlag(0, Value);
+    return Value;
+  }
 
   /// True after \#include; turns \<xx> or "xxx" into a tok::header_name token.
-  bool ParsingFilename = false;
+  bool getParsingFilename() const { return ConditionalStack.getFlag(1); }
+  void setParsingFilename(bool Value) { ConditionalStack.setFlag(1, Value); }
 
   /// True if in raw mode.
   ///
@@ -65,7 +73,11 @@ protected:
   ///  5. No callbacks are made into the preprocessor.
   ///
   /// Note that in raw mode that the PP pointer may be null.
-  bool LexingRawMode = false;
+  bool getLexingRawMode() const { return ConditionalStack.getFlag(2); }
+  bool setLexingRawMode(bool Value) {
+    ConditionalStack.setFlag(2, Value);
+    return Value;
+  }
 
   /// A state machine that detects the \#ifndef-wrapping a file
   /// idiom for the multiple-include optimization.
@@ -73,7 +85,7 @@ protected:
 
   /// Information about the set of \#if/\#ifdef/\#ifndef blocks
   /// we are currently in.
-  SmallVector<PPConditionalInfo, 4> ConditionalStack;
+  llvm::SmallVectorWithFlags<PPConditionalInfo, 4, 3> ConditionalStack;
 
   PreprocessorLexer() : FID() {}
   PreprocessorLexer(Preprocessor *pp, FileID fid);
@@ -135,11 +147,11 @@ public:
   /// Inform the lexer whether or not we are currently lexing a
   /// preprocessor directive.
   void setParsingPreprocessorDirective(bool f) {
-    ParsingPreprocessorDirective = f;
+    setParsingPreprocessorDirectiveFlag(f);
   }
 
   /// Return true if this lexer is in raw mode or not.
-  bool isLexingRawMode() const { return LexingRawMode; }
+  bool isLexingRawMode() const { return getLexingRawMode(); }
 
   /// Return the preprocessor object for this lexer.
   Preprocessor *getPP() const { return PP; }

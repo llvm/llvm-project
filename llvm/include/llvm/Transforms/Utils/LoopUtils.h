@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -673,14 +674,18 @@ LLVM_ABI Value *addDiffRuntimeChecks(Instruction *Loc,
 struct IVConditionInfo {
   /// Instructions that need to be duplicated and checked for the unswitching
   /// condition.
-  SmallVector<Instruction *> InstToDuplicate;
+  llvm::SmallVectorWithFlags<Instruction *> InstToDuplicate;
 
   /// Constant to indicate for which value the condition is invariant.
   Constant *KnownValue = nullptr;
 
   /// True if the partially invariant path is no-op (=does not have any
   /// side-effects and no loop value is used outside the loop).
-  bool PathIsNoop = true;
+  bool getPathIsNoop() const { return !InstToDuplicate.getFlag(0); }
+  bool setPathIsNoop(bool Value) {
+    InstToDuplicate.setFlag(0, !Value);
+    return Value;
+  }
 
   /// If the partially invariant path reaches a single exit block, ExitForPath
   /// is set to that block. Otherwise it is nullptr.

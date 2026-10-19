@@ -3189,7 +3189,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // chain.
     if (Int.IS.RetTys.empty())
       Operator = getDAGPatterns().get_intrinsic_void_sdnode();
-    else if (!Int.ME.doesNotAccessMemory() || Int.hasSideEffects)
+    else if (!Int.ME.doesNotAccessMemory() || Int.getHasSideEffects())
       // Has side-effects, requires chain.
       Operator = getDAGPatterns().get_intrinsic_w_chain_sdnode();
     else // Otherwise, no chain.
@@ -3829,7 +3829,8 @@ public:
 
       // Consider intrinsics that don't specify any restrictions on memory
       // effects as having a side-effect.
-      if (IntInfo->ME == MemoryEffects::unknown() || IntInfo->hasSideEffects)
+      if (IntInfo->ME == MemoryEffects::unknown() ||
+          IntInfo->getHasSideEffects())
         hasSideEffects = true;
     }
   }

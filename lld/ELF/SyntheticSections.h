@@ -28,6 +28,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -105,8 +106,11 @@ public:
 
   // Cached FDE data computed by updateAllocSize, used by
   // EhFrameSection::writeTo.
-  SmallVector<EhFrameSection::FdeData, 0> fdes;
-  bool large = false; // Whether to use sdata8 encoding.
+  llvm::SmallVectorWithFlags<EhFrameSection::FdeData, 0> fdes;
+  bool getLarge() const { return fdes.getFlag(0); }
+  void setLarge(bool Value) {
+    fdes.setFlag(0, Value);
+  } // Whether to use sdata8 encoding.
   size_t size = 0;
 };
 
@@ -415,13 +419,19 @@ public:
   unsigned addString(StringRef s, bool hashIt = true);
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override { return size; }
-  bool isDynamic() const { return dynamic; }
+  bool isDynamic() const { return getDynamic(); }
 
 private:
-  const bool dynamic;
+  bool getDynamic() const { return strings.getFlag(0); }
 
   llvm::DenseMap<llvm::CachedHashStringRef, unsigned> stringMap;
-  SmallVector<StringRef, 0> strings;
+  llvm::SmallVectorWithFlags<StringRef, 0> strings;
+
+public:
+  StringTableSection(const StringTableSection &) = default;
+  StringTableSection(StringTableSection &&) = default;
+  StringTableSection &operator=(const StringTableSection &) = delete;
+  StringTableSection &operator=(StringTableSection &&) = delete;
 };
 
 class DynamicReloc {
@@ -1247,10 +1257,14 @@ public:
 
   // When true, round up reported size of section to 4 KiB. See comment
   // in addThunkSection() for more details.
-  bool roundUpSizeForErrata = false;
+  bool getRoundUpSizeForErrata() const { return thunks.getFlag(0); }
+  bool setRoundUpSizeForErrata(bool Value) {
+    thunks.setFlag(0, Value);
+    return Value;
+  }
 
 private:
-  SmallVector<Thunk *, 0> thunks;
+  llvm::SmallVectorWithFlags<Thunk *, 0> thunks;
   size_t size = 0;
 };
 
@@ -1267,12 +1281,13 @@ public:
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
   bool isNeeded() const override;
-  void finalizeContents() override { finalized = true; }
+  void finalizeContents() override { setFinalized(true); }
 
 private:
-  SmallVector<std::pair<const Symbol *, int64_t>, 0> entries;
+  llvm::SmallVectorWithFlags<std::pair<const Symbol *, int64_t>, 0> entries;
   llvm::DenseMap<std::pair<const Symbol *, int64_t>, uint32_t> entry_index;
-  bool finalized = false;
+  bool getFinalized() const { return entries.getFlag(0); }
+  void setFinalized(bool Value) { entries.setFlag(0, Value); }
 };
 
 // See the following link for the Android-specific loader code that operates on

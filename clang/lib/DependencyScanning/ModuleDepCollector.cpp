@@ -316,7 +316,7 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   CowCompilerInvocation CI = CommonInvocation;
 
   CI.getMutLangOpts().ModuleName = Deps.ID.ModuleName;
-  CI.getMutFrontendOpts().IsSystemModule = Deps.IsSystem;
+  CI.getMutFrontendOpts().IsSystemModule = Deps.getIsSystem();
 
   // Inputs
   InputKind ModuleMapInputKind(CI.getFrontendOpts().DashX.getLanguage(),
@@ -490,7 +490,7 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
-  if (CWD && !MD.IgnoreCWD)
+  if (CWD && !MD.getIgnoreCWD())
     HashBuilder.add(*CWD);
 
   // Hash the BuildInvocation without any input files.
@@ -735,17 +735,17 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
   ModuleDeps &MD = *OwnedMD;
 
   MD.ID.ModuleName = MF->ModuleName;
-  MD.IsSystem = M->IsSystem;
+  MD.setIsSystem(M->getIsSystem());
 
   // Start off with the assumption that this module is shareable when there
   // are stable directories. As more dependencies are discovered, check if those
   // come from the provided directories.
-  MD.IsInStableDirectories = !MDC.StableDirs.empty();
+  MD.setIsInStableDirectories(!MDC.StableDirs.empty());
 
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
-  if (!M->UseExportAsModuleLinkName)
-    MD.LinkLibraries = M->LinkLibraries;
+  if (!M->getUseExportAsModuleLinkName())
+    MD.LinkLibraries.assign(M->LinkLibraries.begin(), M->LinkLibraries.end());
 
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
@@ -786,11 +786,11 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        if (MD.IsInStableDirectories) {
+        if (MD.getIsInStableDirectories()) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
-          MD.IsInStableDirectories =
-              isPathInStableDir(MDC.StableDirs, *FullFilePath);
+          MD.setIsInStableDirectories(
+              isPathInStableDir(MDC.StableDirs, *FullFilePath));
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
@@ -860,11 +860,11 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
 
   // Check provided input paths from the invocation for determining
   // IsInStableDirectories.
-  if (MD.IsInStableDirectories)
-    MD.IsInStableDirectories =
-        areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts());
+  if (MD.getIsInStableDirectories())
+    MD.setIsInStableDirectories(
+        areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts()));
 
-  MD.IgnoreCWD = IgnoreCWD;
+  MD.setIgnoreCWD(IgnoreCWD);
   MDC.associateWithContextHash(CI, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
@@ -885,18 +885,18 @@ void ModuleDepCollector::addAllModuleDeps(serialization::ModuleFile &MF,
   for (serialization::ModuleFile *Import : MF.Imports) {
     if (MDC.isPrebuiltModule(Import)) {
       MD.PrebuiltModuleDeps.push_back(createPrebuiltModuleDep(Import));
-      if (MD.IsInStableDirectories) {
+      if (MD.getIsInStableDirectories()) {
         auto It = MDC.PrebuiltModulesASTMap.find(
             MD.PrebuiltModuleDeps.back().PCMFile);
-        MD.IsInStableDirectories =
-            It != MDC.PrebuiltModulesASTMap.end() && It->second.isInStableDir();
+        MD.setIsInStableDirectories(It != MDC.PrebuiltModulesASTMap.end() &&
+                                    It->second.isInStableDir());
       }
     } else {
       if (auto ID = handleTopLevelModule(Import)) {
         MD.ClangModuleDeps.push_back(std::move(*ID));
-        if (MD.IsInStableDirectories)
-          MD.IsInStableDirectories =
-              MDC.ModularDeps[Import]->IsInStableDirectories;
+        if (MD.getIsInStableDirectories())
+          MD.setIsInStableDirectories(
+              MDC.ModularDeps[Import]->getIsInStableDirectories());
       }
     }
   }

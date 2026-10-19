@@ -15,6 +15,7 @@
 #include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -238,19 +239,23 @@ struct OverloadContext {
   TypeInfo RetType;
 
   /// Per-argument metadata describing type and variation behavior.
-  SmallVector<TypeInfo, 4> Args;
+  llvm::SmallVectorWithFlags<TypeInfo, 4, 4> Args;
 
   /// Whether to emit the function as constexpr.
-  bool IsConstexpr = false;
+  bool getIsConstexpr() const { return Args.getFlag(0); }
+  void setIsConstexpr(bool Value) { Args.setFlag(0, Value); }
 
   /// Whether to emit the __attribute__((convergent)) annotation.
-  bool IsConvergent = false;
+  bool getIsConvergent() const { return Args.getFlag(1); }
+  void setIsConvergent(bool Value) { Args.setFlag(1, Value); }
 
   /// Whether any fixed arg has a 16-bit integer type (e.g. int16_t).
-  bool Uses16BitType = false;
+  bool getUses16BitType() const { return Args.getFlag(2); }
+  void setUses16BitType(bool Value) { Args.setFlag(2, Value); }
 
   /// Whether any fixed arg has a conditionally-16-bit type (half).
-  bool UsesConditionally16BitType = false;
+  bool getUsesConditionally16BitType() const { return Args.getFlag(3); }
+  void setUsesConditionally16BitType(bool Value) { Args.setFlag(3, Value); }
 
   explicit OverloadContext(raw_ostream &OS) : OS(OS) {}
 };
@@ -277,10 +282,10 @@ static void emitDeclaration(const OverloadContext &Ctx, StringRef RetType,
 
   if (!HasBody)
     OS << "_HLSL_BUILTIN_ALIAS(" << Ctx.Builtin << ")\n";
-  if (Ctx.IsConvergent)
+  if (Ctx.getIsConvergent())
     OS << "__attribute__((convergent)) ";
   if (HasBody)
-    OS << (Ctx.IsConstexpr ? "constexpr " : "inline ");
+    OS << (Ctx.getIsConstexpr() ? "constexpr " : "inline ");
   OS << RetType << " " << Ctx.FuncName << "(";
 
   {
@@ -355,15 +360,17 @@ static void buildOverloadContext(const Record *R, OverloadContext &Ctx) {
   Ctx.DetailFunc = R->getValueAsString("DetailFunc");
   Ctx.Body = R->getValueAsString("Body");
   Ctx.FuncName = R->getValueAsString("Name");
-  Ctx.IsConstexpr = R->getValueAsBit("IsConstexpr");
-  Ctx.IsConvergent = R->getValueAsBit("IsConvergent");
+  Ctx.setIsConstexpr(R->getValueAsBit("IsConstexpr"));
+  Ctx.setIsConvergent(R->getValueAsBit("IsConvergent"));
 
   // Note use of 16-bit fixed types in the overload context.
   auto Update16BitFlags = [&Ctx](const Record *Rec) {
     const Record *ElemTy = getElementTypeRecord(Rec);
-    Ctx.Uses16BitType |= ElemTy->getValueAsBit("Is16Bit");
-    Ctx.UsesConditionally16BitType |=
-        ElemTy->getValueAsBit("IsConditionally16Bit");
+    Ctx.setUses16BitType(int(Ctx.getUses16BitType()) |
+                         (ElemTy->getValueAsBit("Is16Bit")));
+    Ctx.setUsesConditionally16BitType(
+        int(Ctx.getUsesConditionally16BitType()) |
+        (ElemTy->getValueAsBit("IsConditionally16Bit")));
   };
 
   // Resolve return and argument types.
@@ -423,7 +430,8 @@ static void buildWorklist(const Record *R,
   // This is for HLSLBuiltin records that don't use Varying types.
   if (VaryingTypeRecords.empty()) {
     TypeWorkItem Item;
-    SetAvailability(Item, Ctx.Uses16BitType, Ctx.UsesConditionally16BitType);
+    SetAvailability(Item, Ctx.getUses16BitType(),
+                    Ctx.getUsesConditionally16BitType());
     Worklist.push_back(Item);
     return;
   }
@@ -437,8 +445,8 @@ static void buildWorklist(const Record *R,
   for (const Record *ElemTy : VaryingTypeRecords) {
     TypeWorkItem Item;
     Item.ElemType = ElemTy->getValueAsString("Name");
-    bool Is16Bit = Ctx.Uses16BitType || ElemTy->getValueAsBit("Is16Bit");
-    bool IsCond16Bit = Ctx.UsesConditionally16BitType ||
+    bool Is16Bit = Ctx.getUses16BitType() || ElemTy->getValueAsBit("Is16Bit");
+    bool IsCond16Bit = Ctx.getUsesConditionally16BitType() ||
                        ElemTy->getValueAsBit("IsConditionally16Bit");
     SetAvailability(Item, Is16Bit, IsCond16Bit);
     Worklist.push_back(Item);

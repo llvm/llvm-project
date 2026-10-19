@@ -14,6 +14,7 @@
 #include "Index_Internal.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <optional>
 
 namespace clang {
@@ -97,11 +98,13 @@ private:
 
   /// Whether we should visit the preprocessing record entries last,
   /// after visiting other declarations.
-  bool VisitPreprocessorLast;
+  bool getVisitPreprocessorLast() const { return WorkListCache.getFlag(0); }
+  void setVisitPreprocessorLast(bool Value) { WorkListCache.setFlag(0, Value); }
 
   /// Whether we should visit declarations or preprocessing record
   /// entries that are #included inside the \arg RegionOfInterest.
-  bool VisitIncludedEntities;
+  bool getVisitIncludedEntities() const { return WorkListCache.getFlag(1); }
+  void setVisitIncludedEntities(bool Value) { WorkListCache.setFlag(1, Value); }
 
   /// When valid, a source range to which the cursor should restrict
   /// its search.
@@ -109,7 +112,8 @@ private:
 
   /// Whether we should only visit declarations and not preprocessing
   /// record entries.
-  bool VisitDeclsOnly;
+  bool getVisitDeclsOnly() const { return WorkListCache.getFlag(2); }
+  void setVisitDeclsOnly(bool Value) { WorkListCache.setFlag(2, Value); }
 
   // FIXME: Eventually remove.  This part of a hack to support proper
   // iteration over all Decls contained lexically within an ObjC container.
@@ -120,7 +124,7 @@ private:
 
   // Cache of pre-allocated worklists for data-recursion walk of Stmts.
   SmallVector<VisitorWorkList *, 5> WorkListFreeList;
-  SmallVector<VisitorWorkList *, 5> WorkListCache;
+  llvm::SmallVectorWithFlags<VisitorWorkList *, 5, 3> WorkListCache;
 
   using DeclVisitor<CursorVisitor, bool>::Visit;
   using TypeLocVisitor<CursorVisitor, bool>::Visit;
@@ -162,10 +166,12 @@ public:
                 PostChildrenVisitorTy PostChildrenVisitor = nullptr)
       : TU(TU), AU(cxtu::getASTUnit(TU)), Visitor(Visitor),
         PostChildrenVisitor(PostChildrenVisitor), ClientData(ClientData),
-        VisitPreprocessorLast(VisitPreprocessorLast),
-        VisitIncludedEntities(VisitIncludedPreprocessingEntries),
-        RegionOfInterest(RegionOfInterest), VisitDeclsOnly(VisitDeclsOnly),
-        DI_current(nullptr), FileDI_current(nullptr) {
+        RegionOfInterest(RegionOfInterest), DI_current(nullptr),
+        FileDI_current(nullptr),
+        WorkListCache(decltype(WorkListCache)::withFlags(
+            unsigned(VisitPreprocessorLast) |
+            (unsigned(VisitIncludedPreprocessingEntries) << 1) |
+            (unsigned(VisitDeclsOnly) << 2))) {
     Parent.kind = CXCursor_NoDeclFound;
     Parent.data[0] = nullptr;
     Parent.data[1] = nullptr;
@@ -193,7 +199,9 @@ public:
 
   bool visitPreprocessedEntitiesInRegion();
 
-  bool shouldVisitIncludedEntities() const { return VisitIncludedEntities; }
+  bool shouldVisitIncludedEntities() const {
+    return getVisitIncludedEntities();
+  }
 
   template <typename InputIterator>
   bool visitPreprocessedEntities(InputIterator First, InputIterator Last,

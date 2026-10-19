@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -213,14 +214,20 @@ namespace {
     /// ReduceMBB - Reduce width of instructions in the specified basic block.
     bool ReduceMBB(MachineBasicBlock &MBB, bool SkipPrologueEpilogue);
 
-    bool OptimizeSize;
-    bool MinimizeSize;
+    bool getOptimizeSize() const { return BlockInfo.getFlag(0); }
+    void setOptimizeSize(bool Value) { BlockInfo.setFlag(0, Value); }
+    bool getMinimizeSize() const { return BlockInfo.getFlag(1); }
+    bool setMinimizeSize(bool Value) {
+      BlockInfo.setFlag(1, Value);
+      return Value;
+    }
 
     // Last instruction to define CPSR in the current block.
     MachineInstr *CPSRDef;
     // Was CPSR last defined by a high latency instruction?
     // When CPSRDef is null, this refers to CPSR defs in predecessors.
-    bool HighLatencyCPSR;
+    bool getHighLatencyCPSR() const { return BlockInfo.getFlag(2); }
+    void setHighLatencyCPSR(bool Value) { BlockInfo.setFlag(2, Value); }
 
     struct MBBInfo {
       // The flags leaving this block have high latency.
@@ -231,7 +238,7 @@ namespace {
       MBBInfo() = default;
     };
 
-    SmallVector<MBBInfo, 8> BlockInfo;
+    llvm::SmallVectorWithFlags<MBBInfo, 8, 3> BlockInfo;
 
     std::function<bool(const Function &)> PredicateFtor;
   };
@@ -245,7 +252,7 @@ INITIALIZE_PASS(Thumb2SizeReduce, DEBUG_TYPE, THUMB2_SIZE_REDUCE_NAME, false,
 
 Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
     : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-  OptimizeSize = MinimizeSize = false;
+  setOptimizeSize(setMinimizeSize(false));
   for (unsigned i = 0, e = std::size(ReduceTable); i != e; ++i) {
     unsigned FromOpc = ReduceTable[i].WideOpc;
     if (!ReduceOpcodeMap.insert(std::make_pair(FromOpc, i)).second)
@@ -287,13 +294,13 @@ static bool isHighLatencyCPSR(const MachineInstr *Def) {
 bool Thumb2SizeReduce::canAddPseudoFlagDep(const MachineInstr *Use,
                                            bool FirstInSelfLoop) {
   // Disable the check for -Oz (aka OptimizeForSizeHarder).
-  if (MinimizeSize || !STI->avoidCPSRPartialUpdate())
+  if (getMinimizeSize() || !STI->avoidCPSRPartialUpdate())
     return false;
 
   if (!CPSRDef)
     // If this BB loops back to itself, conservatively avoid narrowing the
     // first instruction that does partial flag update.
-    return HighLatencyCPSR || FirstInSelfLoop;
+    return getHighLatencyCPSR() || FirstInSelfLoop;
 
   SmallSet<unsigned, 2> Defs;
   for (const MachineOperand &MO : CPSRDef->operands()) {
@@ -314,7 +321,7 @@ bool Thumb2SizeReduce::canAddPseudoFlagDep(const MachineInstr *Use,
   }
 
   // If the current CPSR has high latency, try to avoid the false dependency.
-  if (HighLatencyCPSR)
+  if (getHighLatencyCPSR())
     return true;
 
   // tMOVi8 usually doesn't start long dependency chains, and there are a lot
@@ -452,7 +459,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     break;
   case ARM::t2LDR_POST:
   case ARM::t2STR_POST: {
-    if (!MinimizeSize)
+    if (!getMinimizeSize())
       return false;
 
     if (!MI->hasOneMemOperand() ||
@@ -747,7 +754,7 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
   if (ReduceLimit2Addr != -1 && ((int)Num2Addrs >= ReduceLimit2Addr))
     return false;
 
-  if (!OptimizeSize && Entry.AvoidMovs && STI->avoidMOVsShifterOperand())
+  if (!getOptimizeSize() && Entry.AvoidMovs && STI->avoidMOVsShifterOperand())
     // Don't issue movs with shifter operand for some CPUs unless we
     // are optimizing for size.
     return false;
@@ -757,7 +764,7 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
   // t2MUL is "special". The tied source operand is second, not first.
   if (MI->getOpcode() == ARM::t2MUL) {
     // MULS can be slower than MUL
-    if (!MinimizeSize && STI->avoidMULS())
+    if (!getMinimizeSize() && STI->avoidMULS())
       return false;
     Register Reg2 = MI->getOperand(2).getReg();
     // Early exit if the regs aren't all low regs.
@@ -865,7 +872,7 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   if (ReduceLimit != -1 && ((int)NumNarrows >= ReduceLimit))
     return false;
 
-  if (!OptimizeSize && Entry.AvoidMovs && STI->avoidMOVsShifterOperand())
+  if (!getOptimizeSize() && Entry.AvoidMovs && STI->avoidMOVsShifterOperand())
     // Don't issue movs with shifter operand for some CPUs unless we
     // are optimizing for size.
     return false;
@@ -1031,7 +1038,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
   }
 
   CPSRDef = nullptr;
-  HighLatencyCPSR = false;
+  setHighLatencyCPSR(false);
 
   // Check predecessors for the latest CPSRDef.
   for (auto *Pred : MBB.predecessors()) {
@@ -1042,7 +1049,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
     }
 
     if (PInfo.HighLatencyCPSR) {
-      HighLatencyCPSR = true;
+      setHighLatencyCPSR(true);
       break;
     }
   }
@@ -1080,18 +1087,18 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
     if (MI->isCall()) {
       // Calls don't really set CPSR.
       CPSRDef = nullptr;
-      HighLatencyCPSR = false;
+      setHighLatencyCPSR(false);
       IsSelfLoop = false;
     } else if (MI->definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // This is the last CPSR defining instruction.
       CPSRDef = MI;
-      HighLatencyCPSR = isHighLatencyCPSR(CPSRDef);
+      setHighLatencyCPSR(isHighLatencyCPSR(CPSRDef));
       IsSelfLoop = false;
     }
   }
 
   MBBInfo &Info = BlockInfo[MBB.getNumber()];
-  Info.HighLatencyCPSR = HighLatencyCPSR;
+  Info.HighLatencyCPSR = getHighLatencyCPSR();
   Info.Visited = true;
   return Modified;
 }
@@ -1107,8 +1114,8 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const Thumb2InstrInfo *>(STI->getInstrInfo());
 
   // Optimizing / minimizing size? Minimizing size implies optimizing for size.
-  OptimizeSize = MF.getFunction().hasOptSize();
-  MinimizeSize = STI->hasMinSize();
+  setOptimizeSize(MF.getFunction().hasOptSize());
+  setMinimizeSize(STI->hasMinSize());
 
   BlockInfo.clear();
   BlockInfo.resize(MF.getNumBlockIDs());

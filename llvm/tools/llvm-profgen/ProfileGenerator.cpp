@@ -991,7 +991,7 @@ void CSProfileGenerator::generateLineNumBasedProfile() {
     if (!CtxKey->Context.empty()) {
       // Get or create function profile for the range
       ContextNode =
-          getOrCreateContextNode(CtxKey->Context, CtxKey->WasLeafInlined);
+          getOrCreateContextNode(CtxKey->Context, CtxKey->getWasLeafInlined());
       // Fill in function body samples
       populateBodySamplesForFunction(*ContextNode->getFunctionSamples(),
                                      CI.second.RangeCounter);

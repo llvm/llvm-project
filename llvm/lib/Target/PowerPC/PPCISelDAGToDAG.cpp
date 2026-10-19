@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -1856,7 +1857,7 @@ class BitPermutationSelector {
   // For each value (except the constant ones), compute the left-rotate amount
   // to get it from its original to final position.
   void computeRotationAmounts() {
-    NeedMask = false;
+    setNeedMask(false);
     RLAmt.resize(Bits.size());
     for (unsigned i = 0; i < Bits.size(); ++i)
       if (Bits[i].hasValue()) {
@@ -1866,7 +1867,7 @@ class BitPermutationSelector {
         else
           RLAmt[i] = Bits.size() - (VBI - i);
       } else if (Bits[i].isZero()) {
-        NeedMask = true;
+        setNeedMask(true);
         RLAmt[i] = UINT32_MAX;
       } else {
         llvm_unreachable("Unknown value bit type");
@@ -2276,7 +2277,7 @@ class BitPermutationSelector {
     // If we've not yet selected a 'starting' instruction, and we have no zeros
     // to fill in, select the (Value, RLAmt) with the highest priority (largest
     // number of groups), and start with this rotated value.
-    if ((!NeedMask || LateMask) && !Res) {
+    if ((!getNeedMask() || LateMask) && !Res) {
       ValueRotInfo &VRI = ValueRotsVec[0];
       if (VRI.RLAmt) {
         if (InstCnt) *InstCnt += 1;
@@ -2662,7 +2663,7 @@ class BitPermutationSelector {
     // If we've not yet selected a 'starting' instruction, and we have no zeros
     // to fill in, select the (Value, RLAmt) with the highest priority (largest
     // number of groups), and start with this rotated value.
-    if ((!NeedMask || LateMask) && !Res) {
+    if ((!getNeedMask() || LateMask) && !Res) {
       // If we have both Repl32 groups and non-Repl32 groups, the non-Repl32
       // groups will come first, and so the VRI representing the largest number
       // of groups might not be first (it might be the first Repl32 groups).
@@ -2822,13 +2823,14 @@ class BitPermutationSelector {
 
   SmallVector<ValueBit, 64> Bits;
 
-  bool NeedMask = false;
+  bool getNeedMask() const { return ValueRotsVec.getFlag(0); }
+  void setNeedMask(bool Value) { ValueRotsVec.setFlag(0, Value); }
   SmallVector<unsigned, 64> RLAmt;
 
   SmallVector<BitGroup, 16> BitGroups;
 
   DenseMap<std::pair<SDValue, unsigned>, ValueRotInfo> ValueRots;
-  SmallVector<ValueRotInfo, 16> ValueRotsVec;
+  llvm::SmallVectorWithFlags<ValueRotInfo, 16> ValueRotsVec;
 
   SelectionDAG *CurDAG = nullptr;
 
@@ -2854,7 +2856,7 @@ public:
     // Fill it RLAmt and set NeedMask.
     computeRotationAmounts();
 
-    if (!NeedMask)
+    if (!getNeedMask())
       return Select(N, false);
 
     // We currently have two techniques for handling results with zeros: early

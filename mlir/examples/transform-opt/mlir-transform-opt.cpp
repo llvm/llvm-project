@@ -20,6 +20,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -175,8 +176,9 @@ public:
   /// Deconstructs the source manager. Note that `checkResults` must have been
   /// called on this instance before deconstructing it.
   ~TransformSourceMgr() {
-    assert(resultChecked && "must check the result of diagnostic handlers by "
-                            "running TransformSourceMgr::checkResult");
+    assert(getResultChecked() &&
+           "must check the result of diagnostic handlers by "
+           "running TransformSourceMgr::checkResult");
   }
 
   /// Parses the given buffer and creates the top-level operation of the kind
@@ -213,7 +215,7 @@ public:
   /// this source manager, performs the verification, reports errors and returns
   /// the result of the verification. Otherwise passes through the given value.
   llvm::LogicalResult checkResult(llvm::LogicalResult result) {
-    resultChecked = true;
+    setResultChecked(true);
     if (!verifyDiagnostics)
       return result;
 
@@ -229,7 +231,8 @@ private:
 
   /// Indicates that diagnostic message verification has taken place, and the
   /// deconstruction is therefore safe.
-  bool resultChecked = false;
+  bool getResultChecked() const { return diagHandlers.getFlag(0); }
+  void setResultChecked(bool Value) { diagHandlers.setFlag(0, Value); }
 
   /// Storage for per-buffer source managers and diagnostic handlers. These are
   /// wrapped into unique pointers in order to make it safe to capture
@@ -237,7 +240,7 @@ private:
   /// pointer objects are moved by the pointer addresses won't change. Also, for
   /// handlers, this allows to store the pointer to the base class.
   SmallVector<std::unique_ptr<llvm::SourceMgr>> sourceMgrs;
-  SmallVector<DiagnosticHandlerWrapper> diagHandlers;
+  llvm::SmallVectorWithFlags<DiagnosticHandlerWrapper> diagHandlers;
 };
 } // namespace
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -43,7 +44,8 @@ class MDNode;
 enum class UnitKind { Skeleton, Full };
 
 class DwarfCompileUnit final : public DwarfUnit {
-  bool HasRangeLists = false;
+  bool getHasRangeLists() const { return CURanges.getFlag(0); }
+  void setHasRangeLists(bool Value) { CURanges.setFlag(0, Value); }
 
   /// The start of the unit line section, this is also
   /// reused in appyStmtList.
@@ -62,7 +64,7 @@ class DwarfCompileUnit final : public DwarfUnit {
   StringMap<const DIE *> GlobalTypes;
 
   // List of ranges for a given compile unit.
-  SmallVector<RangeSpan, 2> CURanges;
+  llvm::SmallVectorWithFlags<RangeSpan, 2> CURanges;
 
   // The base address of this unit, if any. Used for relative references in
   // ranges/locs.
@@ -190,7 +192,7 @@ public:
                    DwarfDebug *DW, DwarfFile *DWU,
                    UnitKind Kind = UnitKind::Full);
 
-  bool hasRangeLists() const { return HasRangeLists; }
+  bool hasRangeLists() const { return getHasRangeLists(); }
 
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
@@ -441,8 +443,12 @@ public:
   void applyLabelAttributes(const DbgLabel &Label, DIE &LabelDie);
 
   /// getRanges - Get the list of ranges for this unit.
-  const SmallVectorImpl<RangeSpan> &getRanges() const { return CURanges; }
-  SmallVector<RangeSpan, 2> takeRanges() { return std::move(CURanges); }
+  const SmallVectorWithFlagsImpl<RangeSpan> &getRanges() const {
+    return CURanges;
+  }
+  SmallVector<RangeSpan, 2> takeRanges() {
+    return SmallVector<RangeSpan, 2>(std::move(CURanges));
+  }
 
   void setBaseAddress(const MCSymbol *Base) { BaseAddress = Base; }
   const MCSymbol *getBaseAddress() const { return BaseAddress; }

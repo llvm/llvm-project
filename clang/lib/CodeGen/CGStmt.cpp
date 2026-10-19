@@ -30,6 +30,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/DataLayout.h"
@@ -1586,7 +1587,7 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   }
 
   // Returning from an outlined SEH helper is UB, and we already warn on it.
-  if (IsOutlinedSEHHelper) {
+  if (getIsOutlinedSEHHelper()) {
     Builder.CreateUnreachable();
     Builder.ClearInsertionPoint();
   }
@@ -2675,7 +2676,7 @@ class AsmConstraintsInfo {
 
   // Destination blocks for 'asm gotos'.
   llvm::BasicBlock *DefaultDest = nullptr;
-  SmallVector<llvm::BasicBlock *, 3> IndirectDests;
+  llvm::SmallVectorWithFlags<llvm::BasicBlock *, 3, 2> IndirectDests;
 
   std::vector<std::optional<std::pair<unsigned, unsigned>>> ResultBounds;
 
@@ -2688,8 +2689,10 @@ class AsmConstraintsInfo {
   //
   // It can be marked readnone if it doesn't have any input memory
   // constraints in addition to meeting the conditions listed above.
-  bool ReadOnly = true;
-  bool ReadNone = true;
+  bool getReadOnly() const { return !IndirectDests.getFlag(0); }
+  void setReadOnly(bool Value) { IndirectDests.setFlag(0, !Value); }
+  bool getReadNone() const { return !IndirectDests.getFlag(1); }
+  void setReadNone(bool Value) { IndirectDests.setFlag(1, !Value); }
 
   bool GetOutputAndInputConstraints();
   void HandleOutputConstraints();
@@ -3023,8 +3026,8 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
       Args.push_back(DestAddr.emitRawPointer(CGF));
 
       Constraints += "=*" + OutputConstraint;
-      ReadOnly = false;
-      ReadNone = false;
+      setReadOnly(false);
+      setReadNone(false);
     }
 
     if (!Info.isReadWrite())
@@ -3078,7 +3081,7 @@ void AsmConstraintsInfo::HandleMSStyleAsmBlob() {
   CGM.getTargetCodeGenInfo().addReturnRegisterOutputs(
       CGF, ReturnSlot, Constraints, ResultRegTypes, ResultTruncRegTypes,
       ResultRegDests, AsmString, S.getNumOutputs());
-  CGF.SawAsmBlock = true;
+  CGF.setSawAsmBlock(true);
 }
 
 /// Process the input constraints of an inline assembly statement. It handles
@@ -3092,7 +3095,7 @@ void AsmConstraintsInfo::HandleInputConstraints() {
     const Expr *InputExpr = S.getInputExpr(I);
 
     if (Info.allowsMemory())
-      ReadNone = false;
+      setReadNone(false);
 
     if (!Constraints.empty())
       Constraints += ',';
@@ -3209,8 +3212,8 @@ bool AsmConstraintsInfo::HandleClobbers() {
     }
 
     if (Clobber == "memory") {
-      ReadOnly = false;
-      ReadNone = false;
+      setReadOnly(false);
+      setReadNone(false);
     } else if (Clobber != "cc") {
       Clobber = getTarget().getNormalizedGCCRegisterName(Clobber);
       if (CGM.getCodeGenOpts().StackClashProtector &&
@@ -3260,9 +3263,9 @@ void AsmConstraintsInfo::UpdateAsmCallInst(
 
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {
-    if (ReadNone)
+    if (getReadNone())
       Result.setDoesNotAccessMemory();
-    else if (ReadOnly)
+    else if (getReadOnly())
       Result.setOnlyReadsMemory();
   }
 

@@ -126,30 +126,30 @@ void LLVMContext::setDiagnosticHandlerCallBack(
     void *DiagnosticContext, bool RespectFilters) {
   pImpl->DiagHandler->DiagHandlerCallback = DiagnosticHandler;
   pImpl->DiagHandler->DiagnosticContext = DiagnosticContext;
-  pImpl->RespectDiagnosticFilters = RespectFilters;
+  pImpl->setRespectDiagnosticFilters(RespectFilters);
 }
 
 void LLVMContext::setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
                                       bool RespectFilters) {
   pImpl->DiagHandler = std::move(DH);
-  pImpl->RespectDiagnosticFilters = RespectFilters;
+  pImpl->setRespectDiagnosticFilters(RespectFilters);
 }
 
 void LLVMContext::setDiagnosticsHotnessRequested(bool Requested) {
-  pImpl->DiagnosticsHotnessRequested = Requested;
+  pImpl->setDiagnosticsHotnessRequested(Requested);
 }
 bool LLVMContext::getDiagnosticsHotnessRequested() const {
-  return pImpl->DiagnosticsHotnessRequested;
+  return pImpl->getDiagnosticsHotnessRequested();
 }
 
 void LLVMContext::setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold) {
   pImpl->DiagnosticsHotnessThreshold = Threshold;
 }
 void LLVMContext::setMisExpectWarningRequested(bool Requested) {
-  pImpl->MisExpectWarningRequested = Requested;
+  pImpl->setMisExpectWarningRequested(Requested);
 }
 bool LLVMContext::getMisExpectWarningRequested() const {
-  return pImpl->MisExpectWarningRequested;
+  return pImpl->getMisExpectWarningRequested();
 }
 uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
   return pImpl->DiagnosticsHotnessThreshold.value_or(UINT64_MAX);
@@ -256,7 +256,7 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   if (pImpl->DiagHandler) {
     if (DI.getSeverity() == DS_Error)
       pImpl->DiagHandler->HasErrors = true;
-    if ((!pImpl->RespectDiagnosticFilters || isDiagnosticEnabled(DI)) &&
+    if ((!pImpl->getRespectDiagnosticFilters() || isDiagnosticEnabled(DI)) &&
         pImpl->DiagHandler->handleDiagnostics(DI))
       return;
   }
@@ -331,7 +331,7 @@ void LLVMContext::deleteGC(const Function &Fn) {
 }
 
 bool LLVMContext::shouldDiscardValueNames() const {
-  return pImpl->DiscardValueNames;
+  return pImpl->getDiscardValueNames();
 }
 
 bool LLVMContext::isODRUniquingDebugTypes() const { return !!pImpl->DITypeMap; }
@@ -346,7 +346,7 @@ void LLVMContext::enableDebugTypeODRUniquing() {
 void LLVMContext::disableDebugTypeODRUniquing() { pImpl->DITypeMap.reset(); }
 
 void LLVMContext::setDiscardValueNames(bool Discard) {
-  pImpl->DiscardValueNames = Discard;
+  pImpl->setDiscardValueNames(Discard);
 }
 
 OptPassGate &LLVMContext::getOptPassGate() const {

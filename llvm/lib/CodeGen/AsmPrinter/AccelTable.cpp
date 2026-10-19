@@ -15,6 +15,7 @@
 #include "DwarfUnit.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -204,7 +205,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   /// FoldingSet that uniques the abbreviations.
   FoldingSet<DebugNamesAbbrev> AbbreviationsSet;
   /// Vector containing DebugNames abbreviations for iteration in order.
-  SmallVector<DebugNamesAbbrev *, 5> AbbreviationsVector;
+  llvm::SmallVectorWithFlags<DebugNamesAbbrev *, 5> AbbreviationsVector;
   /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
   /// storage container.
   BumpPtrAllocator Alloc;
@@ -218,7 +219,8 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   MCSymbol *AbbrevEnd = Asm->createTempSymbol("names_abbrev_end");
   MCSymbol *EntryPool = Asm->createTempSymbol("names_entries");
   // Indicates if this module is built with Split Dwarf enabled.
-  bool IsSplitDwarf = false;
+  bool getIsSplitDwarf() const { return AbbreviationsVector.getFlag(0); }
+  void setIsSplitDwarf(bool Value) { AbbreviationsVector.setFlag(0, Value); }
   /// Stores the DIE offsets which are indexed by this table.
   DenseSet<OffsetAndUnitID> IndexedOffsets;
 
@@ -479,7 +481,7 @@ void Dwarf5AccelTableWriter::emitTUList() const {
     Asm->OutStreamer->AddComment("Type unit " + Twine(TU.index()));
     if (std::holds_alternative<MCSymbol *>(TU.value()))
       Asm->emitDwarfSymbolReference(std::get<MCSymbol *>(TU.value()));
-    else if (IsSplitDwarf)
+    else if (getIsSplitDwarf())
       Asm->emitInt64(std::get<uint64_t>(TU.value()));
     else
       Asm->emitDwarfLengthOrOffset(std::get<uint64_t>(TU.value()));
@@ -637,9 +639,10 @@ Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
       Header(CompUnits.size(), IsSplitDwarf ? 0 : TypeUnits.size(),
              IsSplitDwarf ? TypeUnits.size() : 0, Contents.getBucketCount(),
              Contents.getUniqueNameCount()),
+      AbbreviationsVector(decltype(this->AbbreviationsVector)::withFlags(
+          unsigned(IsSplitDwarf))),
       CompUnits(CompUnits), TypeUnits(TypeUnits),
-      getIndexForEntry(std::move(getIndexForEntry)),
-      IsSplitDwarf(IsSplitDwarf) {
+      getIndexForEntry(std::move(getIndexForEntry)) {
 
   for (auto &Bucket : Contents.getBuckets())
     for (auto *Hash : Bucket)

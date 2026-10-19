@@ -134,7 +134,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
     return FnD;
   }
 
-  if (SkipFunctionBodies && (!FnD || Actions.canSkipFunctionBody(FnD)) &&
+  if (getSkipFunctionBodies() && (!FnD || Actions.canSkipFunctionBody(FnD)) &&
       trySkippingFunctionBody()) {
     Actions.ActOnSkippedFunctionBody(FnD);
     return FnD;
@@ -335,10 +335,10 @@ struct Parser::ReenterClassScopeRAII : ReenterTemplateScopeRAII {
 
   ReenterClassScopeRAII(Parser &P, ParsingClass &Class)
       : ReenterTemplateScopeRAII(P, Class.TagOrTemplate,
-                                 /*Enter=*/!Class.TopLevelClass),
+                                 /*Enter=*/!Class.isTopLevelClass()),
         Class(Class) {
     // If this is the top-level class, we're still within its scope.
-    if (Class.TopLevelClass)
+    if (Class.isTopLevelClass())
       return;
 
     // Re-enter the class scope itself.
@@ -347,7 +347,7 @@ struct Parser::ReenterClassScopeRAII : ReenterTemplateScopeRAII {
                                                   Class.TagOrTemplate);
   }
   ~ReenterClassScopeRAII() {
-    if (Class.TopLevelClass)
+    if (Class.isTopLevelClass())
       return;
 
     P.Actions.ActOnFinishDelayedMemberDeclarations(P.getCurScope(),

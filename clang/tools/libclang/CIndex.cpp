@@ -47,6 +47,7 @@
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
@@ -291,14 +292,14 @@ bool CursorVisitor::visitFileRegion() {
   unsigned Offset = Begin.second;
   unsigned Length = End.second - Begin.second;
 
-  if (!VisitDeclsOnly && !VisitPreprocessorLast)
+  if (!getVisitDeclsOnly() && !getVisitPreprocessorLast())
     if (visitPreprocessedEntitiesInRegion())
       return true; // visitation break.
 
   if (visitDeclsFromFileRegion(File, Offset, Length))
     return true; // visitation break.
 
-  if (!VisitDeclsOnly && VisitPreprocessorLast)
+  if (!getVisitDeclsOnly() && getVisitPreprocessorLast())
     return visitPreprocessedEntitiesInRegion();
 
   return false;
@@ -535,7 +536,8 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
     CXTranslationUnit TU = getCursorTU(Cursor);
     ASTUnit *CXXUnit = cxtu::getASTUnit(TU);
 
-    int VisitOrder[2] = {VisitPreprocessorLast, !VisitPreprocessorLast};
+    int VisitOrder[2] = {getVisitPreprocessorLast(),
+                         !getVisitPreprocessorLast()};
     for (unsigned I = 0; I != 2; ++I) {
       if (VisitOrder[I]) {
         if (!CXXUnit->isMainFileAST() && CXXUnit->getOnlyLocalDecls() &&
@@ -7906,7 +7908,12 @@ class AnnotateTokensWorker {
   unsigned PreprocessingTokIdx;
   CursorVisitor AnnotateVis;
   SourceManager &SrcMgr;
-  bool HasContextSensitiveKeywords;
+  bool getHasContextSensitiveKeywords() const {
+    return PostChildrenInfos.getFlag(0);
+  }
+  void setHasContextSensitiveKeywords(bool Value) {
+    PostChildrenInfos.setFlag(0, Value);
+  }
 
   struct PostChildrenAction {
     CXCursor cursor;
@@ -7921,7 +7928,7 @@ class AnnotateTokensWorker {
     unsigned BeforeChildrenTokenIdx;
     PostChildrenActions ChildActions;
   };
-  SmallVector<PostChildrenInfo, 8> PostChildrenInfos;
+  llvm::SmallVectorWithFlags<PostChildrenInfo, 8> PostChildrenInfos;
 
   CXToken &getTok(unsigned Idx) {
     assert(Idx < NumTokens);
@@ -7958,8 +7965,7 @@ public:
                     /*VisitIncludedEntities=*/false, RegionOfInterest,
                     /*VisitDeclsOnly=*/false,
                     AnnotateTokensPostChildrenVisitor),
-        SrcMgr(cxtu::getASTUnit(TU)->getSourceManager()),
-        HasContextSensitiveKeywords(false) {}
+        SrcMgr(cxtu::getASTUnit(TU)->getSourceManager()) {}
 
   void VisitChildren(CXCursor C) { AnnotateVis.VisitChildren(C); }
   enum CXChildVisitResult Visit(CXCursor cursor, CXCursor parent);
@@ -7975,7 +7981,7 @@ public:
   /// Determine whether the annotator saw any cursors that have
   /// context-sensitive keywords.
   bool hasContextSensitiveKeywords() const {
-    return HasContextSensitiveKeywords;
+    return getHasContextSensitiveKeywords();
   }
 
   ~AnnotateTokensWorker() { assert(PostChildrenInfos.empty()); }
@@ -8126,13 +8132,13 @@ enum CXChildVisitResult AnnotateTokensWorker::Visit(CXCursor cursor,
   if (IsIgnoredChildCursor(cursor))
     return CXChildVisit_Continue;
 
-  if (!HasContextSensitiveKeywords) {
+  if (!getHasContextSensitiveKeywords()) {
     // Objective-C properties can have context-sensitive keywords.
     if (cursor.kind == CXCursor_ObjCPropertyDecl) {
       if (const ObjCPropertyDecl *Property =
               dyn_cast_or_null<ObjCPropertyDecl>(getCursorDecl(cursor)))
-        HasContextSensitiveKeywords =
-            Property->getPropertyAttributesAsWritten() != 0;
+        setHasContextSensitiveKeywords(
+            Property->getPropertyAttributesAsWritten() != 0);
     }
     // Objective-C methods can have context-sensitive keywords.
     else if (cursor.kind == CXCursor_ObjCInstanceMethodDecl ||
@@ -8140,11 +8146,11 @@ enum CXChildVisitResult AnnotateTokensWorker::Visit(CXCursor cursor,
       if (const ObjCMethodDecl *Method =
               dyn_cast_or_null<ObjCMethodDecl>(getCursorDecl(cursor))) {
         if (Method->getObjCDeclQualifier())
-          HasContextSensitiveKeywords = true;
+          setHasContextSensitiveKeywords(true);
         else {
           for (const auto *P : Method->parameters()) {
             if (P->getObjCDeclQualifier()) {
-              HasContextSensitiveKeywords = true;
+              setHasContextSensitiveKeywords(true);
               break;
             }
           }
@@ -8156,7 +8162,7 @@ enum CXChildVisitResult AnnotateTokensWorker::Visit(CXCursor cursor,
       if (const CXXMethodDecl *Method =
               dyn_cast_or_null<CXXMethodDecl>(getCursorDecl(cursor))) {
         if (Method->hasAttr<FinalAttr>() || Method->hasAttr<OverrideAttr>())
-          HasContextSensitiveKeywords = true;
+          setHasContextSensitiveKeywords(true);
       }
     }
     // C++ classes can have context-sensitive keywords.
@@ -8166,7 +8172,7 @@ enum CXChildVisitResult AnnotateTokensWorker::Visit(CXCursor cursor,
              cursor.kind == CXCursor_ClassTemplatePartialSpecialization) {
       if (const Decl *D = getCursorDecl(cursor))
         if (D->hasAttr<FinalAttr>())
-          HasContextSensitiveKeywords = true;
+          setHasContextSensitiveKeywords(true);
     }
   }
 
@@ -9501,7 +9507,7 @@ int clang_Module_isSystem(CXModule CXMod) {
   if (!CXMod)
     return 0;
   Module *Mod = static_cast<Module *>(CXMod);
-  return Mod->IsSystem;
+  return Mod->getIsSystem();
 }
 
 unsigned clang_Module_getNumTopLevelHeaders(CXTranslationUnit TU,

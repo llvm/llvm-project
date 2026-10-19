@@ -10,6 +10,7 @@
 #define LLVM_LIB_DWARFLINKER_PARALLEL_DWARFLINKERCOMPILEUNIT_H
 
 #include "DWARFLinkerUnit.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
 #include <limits>
 #include <optional>
@@ -821,7 +822,11 @@ private:
   uint64_t HighPc = 0;
 
   /// Flag indicating whether type de-duplication is forbidden.
-  bool NoODR = true;
+  bool getNoODR() const { return !TypeEntries.getFlag(0); }
+  bool setNoODR(bool Value) {
+    TypeEntries.setFlag(0, !Value);
+    return Value;
+  }
 
   /// Deterministic priority for type DIE allocation (lower wins).
   uint64_t Priority = std::numeric_limits<uint64_t>::max();
@@ -855,7 +860,7 @@ private:
   /// DIE info indexed by DIE index.
   SmallVector<DIEInfo> DieInfoArray;
   SmallVector<uint64_t> OutDieOffsetArray;
-  SmallVector<TypeEntry *> TypeEntries;
+  llvm::SmallVectorWithFlags<TypeEntry *> TypeEntries;
 
   /// The list of accelerator records for this unit.
   ArrayList<AccelInfo> AcceleratorRecords;

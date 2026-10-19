@@ -614,7 +614,7 @@ unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
   MyInfo.InDebugMap = true;
 
   if (((Flags & TF_InFunctionScope) &&
-       !LLVM_UNLIKELY(Options.KeepFunctionForStatic)))
+       !LLVM_UNLIKELY(Options.getKeepFunctionForStatic())))
     return Flags;
 
   if (Options.Verbose) {
@@ -1312,7 +1312,8 @@ void DWARFLinker::DIECloner::cloneExpression(
       assert(RealSize == ULEBsize && "padding failed");
       ArrayRef<uint8_t> ULEBbytes(ULEB, ULEBsize);
       OutputBuffer.append(ULEBbytes.begin(), ULEBbytes.end());
-    } else if (!Linker.Options.Update && Op.getCode() == dwarf::DW_OP_addrx) {
+    } else if (!Linker.Options.getUpdate() &&
+               Op.getCode() == dwarf::DW_OP_addrx) {
       if (std::optional<object::SectionedAddress> SA =
               Unit.getOrigUnit().getAddrOffsetSectionItem(
                   Op.getRawOperand(0))) {
@@ -1335,7 +1336,8 @@ void DWARFLinker::DIECloner::cloneExpression(
         OutputBuffer.append(AddressBytes.begin(), AddressBytes.end());
       } else
         Linker.reportWarning("cannot read DW_OP_addrx operand.", File);
-    } else if (!Linker.Options.Update && Op.getCode() == dwarf::DW_OP_constx) {
+    } else if (!Linker.Options.getUpdate() &&
+               Op.getCode() == dwarf::DW_OP_constx) {
       if (std::optional<object::SectionedAddress> SA =
               Unit.getOrigUnit().getAddrOffsetSectionItem(
                   Op.getRawOperand(0))) {
@@ -1475,7 +1477,7 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc)
     Info.HasLowPc = true;
 
-  if (LLVM_UNLIKELY(Linker.Options.Update)) {
+  if (LLVM_UNLIKELY(Linker.Options.getUpdate())) {
     Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                  dwarf::Form(AttrSpec.Form), DIEInteger(Val.getRawUValue()));
     return AttrSize;
@@ -1589,7 +1591,7 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     return Unit.getOrigUnit().getFormParams().getDwarfOffsetByteSize();
   }
 
-  if (LLVM_UNLIKELY(Linker.Options.Update)) {
+  if (LLVM_UNLIKELY(Linker.Options.getUpdate())) {
     if (auto OptionalValue = Val.getAsUnsignedConstant())
       Value = *OptionalValue;
     else if (auto OptionalValue = Val.getAsSignedConstant())
@@ -2085,7 +2087,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 /// to point at the new entries.
 Error DWARFLinker::generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
                                       DebugDieValuePool &AddrPool) const {
-  if (LLVM_UNLIKELY(Options.Update))
+  if (LLVM_UNLIKELY(Options.getUpdate()))
     return Error::success();
 
   const auto &FunctionRanges = Unit.getFunctionRanges();
@@ -2158,7 +2160,7 @@ Error DWARFLinker::generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
 Error DWARFLinker::DIECloner::generateUnitLocations(
     CompileUnit &Unit, const DWARFFile &File,
     ExpressionHandlerRef ExprHandler) {
-  if (LLVM_UNLIKELY(Linker.Options.Update))
+  if (LLVM_UNLIKELY(Linker.Options.getUpdate()))
     return Error::success();
 
   const LocListAttributesTy &AllLocListAttributes =
@@ -2226,7 +2228,7 @@ static void patchAddrBase(DIE &Die, DIEInteger Offset) {
 Error DWARFLinker::DIECloner::emitDebugAddrSection(
     CompileUnit &Unit, const uint16_t DwarfVersion) const {
 
-  if (LLVM_UNLIKELY(Linker.Options.Update))
+  if (LLVM_UNLIKELY(Linker.Options.getUpdate()))
     return Error::success();
 
   if (DwarfVersion < 5)
@@ -2353,7 +2355,7 @@ Error DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
     LineTable.Prologue = LT->Prologue;
 
     // Set Line Table Rows.
-    if (Linker.Options.Update) {
+    if (Linker.Options.getUpdate()) {
       LineTable.Rows = LT->Rows;
       // If all the line table contains is a DW_LNE_end_sequence, clear the line
       // table rows, it will be inserted again in the DWARFStreamer.
@@ -2899,8 +2901,8 @@ Error DWARFLinker::loadClangModule(
       }
 
       // Add this module.
-      Unit = std::make_unique<CompileUnit>(*CU, UniqueUnitID++, !Options.NoODR,
-                                           ModuleName);
+      Unit = std::make_unique<CompileUnit>(*CU, UniqueUnitID++,
+                                           !Options.getNoODR(), ModuleName);
     }
   }
 
@@ -2943,7 +2945,7 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
 
       Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
 
-      if (LLVM_UNLIKELY(Linker.Options.Update))
+      if (LLVM_UNLIKELY(Linker.Options.getUpdate()))
         continue;
 
       if (Error E = Linker.generateUnitRanges(*CurrentUnit, File, AddrPool))
@@ -3028,7 +3030,7 @@ void DWARFLinker::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
 
       OnCUDieLoaded(*CU);
 
-      if (!LLVM_UNLIKELY(Options.Update))
+      if (!LLVM_UNLIKELY(Options.getUpdate()))
         registerModuleReference(CUDie, ObjectContexts.back(), Loader,
                                 OnCUDieLoaded);
     }
@@ -3060,14 +3062,14 @@ Error DWARFLinker::link() {
     if (!OptContext.File.Dwarf)
       continue;
 
-    if (Options.VerifyInputDWARF)
+    if (Options.getVerifyInputDWARF())
       verifyInput(OptContext.File);
 
     // Look for relocations that correspond to address map entries.
 
     // there was findvalidrelocations previously ... probably we need to gather
     // info here
-    if (LLVM_LIKELY(!Options.Update) &&
+    if (LLVM_LIKELY(!Options.getUpdate()) &&
         !OptContext.File.Addresses->hasValidRelocs()) {
       if (Options.Verbose)
         outs() << "No valid relocations found. Skipping.\n";
@@ -3142,10 +3144,11 @@ Error DWARFLinker::link() {
       auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false);
       std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
 
-      if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
+      if (!CUDie || LLVM_UNLIKELY(Options.getUpdate()) ||
           !isClangModuleRef(CUDie, PCMFile, Context, 0, true).first) {
         Context.CompileUnits.push_back(std::make_unique<CompileUnit>(
-            *CU, UniqueUnitID++, !Options.NoODR && !Options.Update, ""));
+            *CU, UniqueUnitID++, !Options.getNoODR() && !Options.getUpdate(),
+            ""));
       }
     }
 
@@ -3180,7 +3183,7 @@ Error DWARFLinker::link() {
     // Note that this loop can not be merged with the previous one because
     // cross-cu references require the ParentIdx to be setup for every CU in
     // the object file before calling this.
-    if (LLVM_UNLIKELY(Options.Update)) {
+    if (LLVM_UNLIKELY(Options.getUpdate())) {
       for (auto &CurrentUnit : OptContext.CompileUnits)
         CurrentUnit->markEverythingAsKept();
       copyInvariantDebugSection(*OptContext.File.Dwarf);
@@ -3199,12 +3202,12 @@ Error DWARFLinker::link() {
     // array again (in the same way findValidRelocsInDebugInfo() did). We
     // need to reset the NextValidReloc index to the beginning.
     if (OptContext.File.Addresses->hasValidRelocs() ||
-        LLVM_UNLIKELY(Options.Update)) {
+        LLVM_UNLIKELY(Options.getUpdate())) {
       SizeByObject[OptContext.File.FileName].Input =
           getDebugInfoSize(*OptContext.File.Dwarf);
       Expected<uint64_t> SizeOrErr =
           DIECloner(*this, TheDwarfEmitter, OptContext.File, DIEAlloc,
-                    OptContext.CompileUnits, Options.Update, DebugStrPool,
+                    OptContext.CompileUnits, Options.getUpdate(), DebugStrPool,
                     DebugLineStrPool, StringOffsetPool)
               .cloneAllCompileUnits(*OptContext.File.Dwarf, OptContext.File,
                                     OptContext.File.Dwarf->isLittleEndian());
@@ -3215,7 +3218,7 @@ Error DWARFLinker::link() {
       SizeByObject[OptContext.File.FileName].Output = *SizeOrErr;
     }
     if ((TheDwarfEmitter != nullptr) && !OptContext.CompileUnits.empty() &&
-        LLVM_LIKELY(!Options.Update))
+        LLVM_LIKELY(!Options.getUpdate()))
       patchFrameInfoForObject(OptContext);
 
     // Clean-up before starting working on the next object.
@@ -3383,7 +3386,7 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
   assert(TheDwarfEmitter);
   Expected<uint64_t> SizeOrErr =
       DIECloner(*this, TheDwarfEmitter, Unit.File, DIEAlloc, CompileUnits,
-                Options.Update, DebugStrPool, DebugLineStrPool,
+                Options.getUpdate(), DebugStrPool, DebugLineStrPool,
                 StringOffsetPool)
           .cloneAllCompileUnits(*Unit.File.Dwarf, Unit.File,
                                 Unit.File.Dwarf->isLittleEndian());

@@ -2386,8 +2386,11 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
     WorkList.push_back(Header);
     SmallPtrSet<BasicBlock *, 4> Seen;
     Seen.insert(Header);
-    Info.PathIsNoop &=
-        all_of(*Header, [](Instruction &I) { return !I.mayHaveSideEffects(); });
+    [&] {
+      auto PackedFlagValue = all_of(
+          *Header, [](Instruction &I) { return !I.mayHaveSideEffects(); });
+      return Info.setPathIsNoop(Info.getPathIsNoop() & PackedFlagValue);
+    }();
 
     while (!WorkList.empty()) {
       BasicBlock *Current = WorkList.pop_back_val();
@@ -2397,8 +2400,11 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
       if (!SeenIns.second)
         continue;
 
-      Info.PathIsNoop &= all_of(
-          *Current, [](Instruction &I) { return !I.mayHaveSideEffects(); });
+      [&] {
+        auto PackedFlagValue = all_of(
+            *Current, [](Instruction &I) { return !I.mayHaveSideEffects(); });
+        return Info.setPathIsNoop(Info.getPathIsNoop() & PackedFlagValue);
+      }();
       WorkList.append(succ_begin(Current), succ_end(Current));
     }
 
@@ -2442,12 +2448,15 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 
     // We could also allow loops with known trip counts without mustprogress,
     // but ScalarEvolution may not be available.
-    Info.PathIsNoop &= isMustProgress(&L);
+    [&] {
+      auto PackedFlagValue = isMustProgress(&L);
+      return Info.setPathIsNoop(Info.getPathIsNoop() & PackedFlagValue);
+    }();
 
     // If the path is considered a no-op so far, check if it reaches a
     // single exit block without any phis. This ensures no values from the
     // loop are used outside of the loop.
-    if (Info.PathIsNoop) {
+    if (Info.getPathIsNoop()) {
       for (auto *Exiting : ExitingBlocks) {
         if (!Seen.contains(Exiting))
           continue;
@@ -2455,9 +2464,13 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
           if (L.contains(Succ))
             continue;
 
-          Info.PathIsNoop &= Succ->phis().empty() &&
-                             (!Info.ExitForPath || Info.ExitForPath == Succ);
-          if (!Info.PathIsNoop)
+          [&] {
+            auto PackedFlagValue =
+                Succ->phis().empty() &&
+                (!Info.ExitForPath || Info.ExitForPath == Succ);
+            return Info.setPathIsNoop(Info.getPathIsNoop() & PackedFlagValue);
+          }();
+          if (!Info.getPathIsNoop())
             break;
           assert((!Info.ExitForPath || Info.ExitForPath == Succ) &&
                  "cannot have multiple exit blocks");
@@ -2466,9 +2479,9 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
       }
     }
     if (!Info.ExitForPath)
-      Info.PathIsNoop = false;
+      Info.setPathIsNoop(false);
 
-    Info.InstToDuplicate = std::move(InstToDuplicate);
+    Info.InstToDuplicate.assign(std::move(InstToDuplicate));
     return Info;
   };
 

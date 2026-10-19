@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <functional>
 #include <optional>
 #include <set>
@@ -139,19 +140,20 @@ private:
   };
   /// Every element currently in the progress of being replaced pushes a frame
   /// onto this stack.
-  llvm::SmallVector<ReplacementFrame> replacementStack;
+  llvm::SmallVectorWithFlags<ReplacementFrame> replacementStack;
   /// Maps from each input element to its indices on the replacement stack.
   llvm::DenseMap<InT, llvm::SmallVector<size_t, 2>> cyclicElementFrame;
   /// If set to true, we are currently asking an element to break a cycle. No
   /// more recursive invocations is allowed while this is true (the replacement
   /// stack can no longer grow).
-  bool resolvingCycle = false;
+  bool isResolvingCycle() const { return replacementStack.getFlag(0); }
+  void setResolvingCycle(bool value) { replacementStack.setFlag(0, value); }
 };
 
 template <typename InT, typename OutT>
 typename CyclicReplacerCache<InT, OutT>::CacheEntry
 CyclicReplacerCache<InT, OutT>::lookupOrInit(InT element) {
-  assert(!resolvingCycle &&
+  assert(!isResolvingCycle() &&
          "illegal recursive invocation while breaking cycle");
 
   if (auto it = standaloneCache.find(element); it != standaloneCache.end())
@@ -168,9 +170,9 @@ CyclicReplacerCache<InT, OutT>::lookupOrInit(InT element) {
   auto [it, inserted] = cyclicElementFrame.try_emplace(element);
   if (!inserted) {
     // This is a repeat of a known element. Try to break cycle here.
-    resolvingCycle = true;
+    setResolvingCycle(true);
     std::optional<OutT> result = cycleBreaker(element);
-    resolvingCycle = false;
+    setResolvingCycle(false);
     if (result) {
       // Cycle was broken.
       size_t dependentFrame = it->second.back();

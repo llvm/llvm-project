@@ -113,10 +113,10 @@ DarwinSDKInfo *
 Sema::getDarwinSDKInfoForAvailabilityChecking(SourceLocation Loc,
                                               StringRef Platform) {
   auto *SDKInfo = getDarwinSDKInfoForAvailabilityChecking();
-  if (!SDKInfo && !WarnedDarwinSDKInfoMissing) {
+  if (!SDKInfo && !getWarnedDarwinSDKInfoMissing()) {
     Diag(Loc, diag::warn_missing_sdksettings_for_availability_checking)
         << Platform;
-    WarnedDarwinSDKInfoMissing = true;
+    setWarnedDarwinSDKInfoMissing(true);
   }
   return SDKInfo;
 }
@@ -314,7 +314,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       X86Ptr(std::make_unique<SemaX86>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
-      MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
+      VtorDispStack(LangOpts.getVtorDispMode()),
       AlignPackStack(AlignPackInfo(getLangOpts().XLPragmaPack)),
       DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
       CodeSegStack(nullptr), StrictGuardStackCheckStack(false),
@@ -326,14 +326,13 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       FullyCheckedComparisonCategories(
           static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
       StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),
-      GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
-      TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
-      CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+      TyposCorrected(0), CurrentInstantiationScope(nullptr),
+      NonInstantiationEntries(0), ArgPackSubstIndex(std::nullopt),
+      SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
-  LoadedExternalKnownNamespaces = false;
+  setLoadedExternalKnownNamespaces(false);
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
     ObjC().NSNumberLiteralMethods[I] = nullptr;
 
@@ -1438,9 +1437,9 @@ void Sema::ActOnEndOfTranslationUnit() {
       return false;
     };
 
-    CurrentModule->NamedModuleHasInit =
+    CurrentModule->setNamedModuleHasInit(
         DoesModNeedInit(CurrentModule) ||
-        llvm::any_of(CurrentModule->submodules(), DoesModNeedInit);
+        llvm::any_of(CurrentModule->submodules(), DoesModNeedInit));
   }
 
   if (TUKind == TU_ClangModule) {
@@ -2711,7 +2710,7 @@ CapturingScopeInfo *Sema::getEnclosingLambdaOrBlock() const {
     if (auto *CSI = dyn_cast<CapturingScopeInfo>(Scope)) {
       auto *LSI = dyn_cast<LambdaScopeInfo>(CSI);
       if (LSI && LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
-          LSI->AfterParameterList) {
+          LSI->getAfterParameterList()) {
         // We have switched contexts due to template instantiation.
         // FIXME: We should swap out the FunctionScopes during code synthesis
         // so that we don't need to check for this.
@@ -2738,7 +2737,8 @@ LambdaScopeInfo *Sema::getCurLambda(bool IgnoreNonLambdaCapturingScope) {
   }
   auto *CurLSI = dyn_cast<LambdaScopeInfo>(*I);
   if (CurLSI && CurLSI->Lambda && CurLSI->CallOperator &&
-      !CurLSI->Lambda->Encloses(CurContext) && CurLSI->AfterParameterList) {
+      !CurLSI->Lambda->Encloses(CurContext) &&
+      CurLSI->getAfterParameterList()) {
     // We have switched contexts due to template instantiation.
     assert(!CodeSynthesisContexts.empty());
     return nullptr;
@@ -2805,12 +2805,12 @@ bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
     {
       // Answer as if Loc were not in a system header.
       ForceSystemWarningsRAII ShowSystemWarnings(Diags);
-      DocDiagsEnabledIgnoringSystem = computeDocumentationDiagsAt(Loc);
+      setDocDiagsEnabledIgnoringSystem(computeDocumentationDiagsAt(Loc));
     }
     DocDiagsExactComputed = 0;
   }
 
-  if (!DocDiagsEnabledIgnoringSystem)
+  if (!getDocDiagsEnabledIgnoringSystem())
     return false;
 
   DiagStateSystemClass SysClass = Diags.getDiagStateSystemClassForLoc(Loc);

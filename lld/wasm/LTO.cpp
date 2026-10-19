@@ -67,14 +67,14 @@ static lto::Config createConfig() {
   }
 
   c.CGOptLevel = ctx.arg.ltoCgo;
-  c.DebugPassManager = ctx.arg.ltoDebugPassManager;
+  c.DebugPassManager = ctx.arg.getLtoDebugPassManager();
   c.AlwaysEmitRegularLTOObj = !ctx.arg.ltoObjPath.empty();
 
   if (auto relocModel = getRelocModelFromCMModel())
     c.RelocModel = *relocModel;
   else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
-  else if (ctx.isPic)
+  else if (ctx.getIsPic())
     c.RelocModel = Reloc::PIC_;
   else if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     // With ImportDynamic we also need to use the PIC relocation model so that

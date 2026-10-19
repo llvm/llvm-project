@@ -346,7 +346,7 @@ static void
 AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                    unsigned Column, bool RightJustify,
                    ArrayRef<unsigned> Matches,
-                   SmallVector<WhitespaceManager::Change, 16> &Changes) {
+                   MutableArrayRef<WhitespaceManager::Change> Changes) {
   unsigned OriginalMatchColumn = 0;
   int Shift = 0;
 
@@ -504,7 +504,7 @@ enum class AlignStrategy { Normal, Macro, CaseBody, CaseColon };
 // lookahead.
 template <typename F, AlignStrategy Strategy = AlignStrategy::Normal>
 static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
-                            SmallVector<WhitespaceManager::Change, 16> &Changes,
+                            MutableArrayRef<WhitespaceManager::Change> Changes,
                             unsigned StartAt,
                             const FormatStyle::AlignConsecutiveStyle &ACS = {},
                             bool RightJustify = false) {
@@ -1670,7 +1670,7 @@ void WhitespaceManager::appendNewlineText(std::string &Text, const Change &C) {
   if (C.NewlinesBefore <= 0)
     return;
 
-  StringRef Newline = UseCRLF ? "\r\n" : "\n";
+  StringRef Newline = getUseCRLF() ? "\r\n" : "\n";
   Text.append(Newline);
 
   if (C.Tok->HasFormFeedBefore)
@@ -1688,7 +1688,7 @@ void WhitespaceManager::appendEscapedNewlineText(
         std::max<int>(1, EscapedNewlineColumn - PreviousEndOfTokenColumn - 1);
     for (unsigned i = 0; i < Newlines; ++i) {
       Text.append(Spaces, ' ');
-      Text.append(UseCRLF ? "\\\r\n" : "\\\n");
+      Text.append(getUseCRLF() ? "\\\r\n" : "\\\n");
       Spaces = std::max<int>(0, EscapedNewlineColumn - 1);
     }
   }

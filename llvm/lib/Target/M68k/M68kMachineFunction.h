@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_M68K_M68KMACHINEFUNCTION_H
 #define LLVM_LIB_TARGET_M68K_M68KMACHINEFUNCTION_H
 
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -50,7 +51,12 @@ class M68kMachineFunctionInfo : public MachineFunctionInfo {
 
   /// Keeps track of whether this function uses sequences of pushes to pass
   /// function parameters.
-  bool HasPushSequences = false;
+  bool getHasPushSequencesFlag() const {
+    return ForwardedMustTailRegParms.getFlag(0);
+  }
+  void setHasPushSequencesFlag(bool Value) {
+    ForwardedMustTailRegParms.setFlag(0, Value);
+  }
 
   /// Some subtargets require that sret lowering includes
   /// returning the value of the returned struct in a register. This field
@@ -59,7 +65,7 @@ class M68kMachineFunctionInfo : public MachineFunctionInfo {
 
   /// A list of virtual and physical registers that must be forwarded to every
   /// musttail call.
-  SmallVector<ForwardedRegister, 1> ForwardedMustTailRegParms;
+  llvm::SmallVectorWithFlags<ForwardedRegister, 1> ForwardedMustTailRegParms;
 
   /// The number of bytes on stack consumed by the arguments being passed on
   /// the stack.
@@ -96,8 +102,8 @@ public:
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
 
-  bool getHasPushSequences() const { return HasPushSequences; }
-  void setHasPushSequences(bool HasPush) { HasPushSequences = HasPush; }
+  bool getHasPushSequences() const { return getHasPushSequencesFlag(); }
+  void setHasPushSequences(bool HasPush) { setHasPushSequencesFlag(HasPush); }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
@@ -105,7 +111,7 @@ public:
   unsigned getArgumentStackSize() const { return ArgumentStackSize; }
   void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
 
-  SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
+  SmallVectorWithFlagsImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
   }
 

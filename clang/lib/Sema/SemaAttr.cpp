@@ -88,7 +88,7 @@ void Sema::AddAlignmentAttributesForRecord(RecordDecl *RD) {
 }
 
 void Sema::AddMsStructLayoutForRecord(RecordDecl *RD) {
-  if (MSStructPragmaOn)
+  if (getMSStructPragmaOn())
     RD->addAttr(MSStructAttr::CreateImplicit(Context));
 
   // FIXME: We should merge AddAlignmentAttributesForRecord with
@@ -657,7 +657,7 @@ void Sema::DiagnoseUnterminatedPragmaAlignPack() {
 }
 
 void Sema::ActOnPragmaMSStruct(PragmaMSStructKind Kind) {
-  MSStructPragmaOn = (Kind == PMSST_ON);
+  setMSStructPragmaOn((Kind == PMSST_ON));
 }
 
 void Sema::ActOnPragmaMSComment(SourceLocation CommentLoc,
@@ -1212,7 +1212,7 @@ void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc,
     if (PragmaAttributeStack[Index].Namespace == Namespace) {
       for (const PragmaAttributeEntry &Entry :
            PragmaAttributeStack[Index].Entries) {
-        if (!Entry.IsUsed) {
+        if (!Entry.getIsUsed()) {
           assert(Entry.Attribute && "Expected an attribute");
           Diag(Entry.Attribute->getLoc(), diag::warn_pragma_attribute_unused)
               << *Entry.Attribute;
@@ -1256,7 +1256,7 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
       }
       if (!Applies)
         continue;
-      Entry.IsUsed = true;
+      Entry.setIsUsed(true);
       PragmaAttributeCurrentTargetDecl = D;
       ParsedAttributesView Attrs;
       Attrs.addAtEnd(Attribute);
@@ -1302,7 +1302,7 @@ void Sema::ActOnPragmaMSOptimize(SourceLocation Loc, bool IsOn) {
     return;
   }
 
-  MSPragmaOptimizeIsOn = IsOn;
+  setMSPragmaOptimizeIsOn(IsOn);
 }
 
 void Sema::ActOnPragmaMSFunction(
@@ -1341,7 +1341,7 @@ void Sema::AddSectionMSAllocText(FunctionDecl *FD) {
 void Sema::ModifyFnAttributesMSPragmaOptimize(FunctionDecl *FD) {
   // Don't modify the function attributes if it's "on". "on" resets the
   // optimizations to the ones listed on the command line
-  if (!MSPragmaOptimizeIsOn)
+  if (!getMSPragmaOptimizeIsOn())
     AddOptnoneAttributeIfNoConflicts(FD, FD->getBeginLoc());
 }
 

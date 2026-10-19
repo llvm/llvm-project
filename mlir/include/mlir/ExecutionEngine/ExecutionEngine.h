@@ -14,6 +14,7 @@
 #define MLIR_EXECUTIONENGINE_EXECUTIONENGINE_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -256,9 +257,10 @@ private:
 
   /// Destroy functions in the libraries loaded by the ExecutionEngine that are
   /// called when this ExecutionEngine is destructed.
-  SmallVector<LibraryDestroyFn> destroyFns;
+  llvm::SmallVectorWithFlags<LibraryDestroyFn> destroyFns;
 
-  bool isInitialized = false;
+  bool getIsInitialized() const { return destroyFns.getFlag(0); }
+  void setIsInitialized(bool Value) { destroyFns.setFlag(0, Value); }
 };
 
 } // namespace mlir

@@ -183,7 +183,7 @@ Error DataAccessProfData::serialize(ProfOStream &OS) const {
   OS.write((uint64_t)(Records.size()));
   for (const auto &[Key, Rec] : Records) {
     OS.write(getEncodedIndex(Rec.SymbolID));
-    OS.writeByte(Rec.IsStringLiteral);
+    OS.writeByte(Rec.isStringLiteral());
     OS.write(Rec.AccessCount);
     OS.write(Rec.Locations.size());
     for (const auto &Loc : Rec.Locations) {

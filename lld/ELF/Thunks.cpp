@@ -426,7 +426,7 @@ public:
     alignment = 4;
   }
   uint32_t relOffset;
-  uint32_t size() override { return ctx.arg.isPic ? 12 : 8; }
+  uint32_t size() override { return ctx.arg.getIsPic() ? 12 : 8; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
 };
@@ -485,7 +485,7 @@ class PPC32LongThunk final : public Thunk {
 public:
   PPC32LongThunk(Ctx &ctx, Symbol &dest, int64_t addend)
       : Thunk(ctx, dest, addend) {}
-  uint32_t size() override { return ctx.arg.isPic ? 32 : 16; }
+  uint32_t size() override { return ctx.arg.getIsPic() ? 32 : 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
 };
@@ -1313,7 +1313,7 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
 void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t p,
                                 uint64_t gotPltVA, const InputFile *file,
                                 std::optional<int64_t> addend) {
-  if (!ctx.arg.isPic) {
+  if (!ctx.arg.getIsPic()) {
     write32(ctx, buf + 0, 0x3d600000 | (gotPltVA + 0x8000) >> 16); // lis r11,ha
     write32(ctx, buf + 4, 0x816b0000 | (uint16_t)gotPltVA); // lwz r11,l(r11)
     write32(ctx, buf + 8, 0x7d6903a6);                      // mtctr r11
@@ -1373,7 +1373,7 @@ void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
   std::string buf;
   raw_string_ostream os(buf);
   os << format_hex_no_prefix(addend, 8);
-  if (!ctx.arg.isPic)
+  if (!ctx.arg.getIsPic())
     os << ".plt_call32.";
   else if (addend >= 0x8000)
     os << ".got2.plt_pic32.";
@@ -1385,7 +1385,7 @@ void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
 
 bool PPC32PltCallStub::isCompatibleWith(const InputSection &isec,
                                         const Relocation &rel) const {
-  return !ctx.arg.isPic || (isec.file == file && rel.addend == addend);
+  return !ctx.arg.getIsPic() || (isec.file == file && rel.addend == addend);
 }
 
 void PPC32LongThunk::addSymbols(ThunkSection &isec) {
@@ -1397,7 +1397,7 @@ void PPC32LongThunk::writeTo(uint8_t *buf) {
   auto ha = [](uint32_t v) -> uint16_t { return (v + 0x8000) >> 16; };
   auto lo = [](uint32_t v) -> uint16_t { return v; };
   uint32_t d = destination.getVA(ctx, addend);
-  if (ctx.arg.isPic) {
+  if (ctx.arg.getIsPic()) {
     uint32_t off = d - (getThunkTargetSym()->getVA(ctx) + 8);
     write32(ctx, buf + 0, 0x7c0802a6);            // mflr r12,0
     write32(ctx, buf + 4, 0x429f0005);            // bcl r20,r31,.+4
@@ -1507,7 +1507,7 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
                      "R12 setup stub offset");
 
   int nextInstOffset;
-  if (ctx.arg.power10Stubs) {
+  if (ctx.arg.getPower10Stubs()) {
     const uint64_t imm = (((offset >> 16) & 0x3ffff) << 32) | (offset & 0xffff);
     // pld 12, func@plt@pcrel or  paddi r12, 0, func@pcrel
     writePrefixedInst(ctx, buf,
@@ -1568,7 +1568,7 @@ void HexagonThunk::writeTo(uint8_t *buf) {
   uint64_t s = getHexagonThunkDestVA(ctx, destination, addend);
   uint64_t p = getThunkTargetSym()->getVA(ctx);
 
-  if (ctx.arg.isPic) {
+  if (ctx.arg.getIsPic()) {
     write32(ctx, buf + 0, 0x00004000); // {  immext(#0)
     ctx.target->relocateNoSym(buf, R_HEX_B32_PCREL_X, s - p);
     write32(ctx, buf + 4, 0x6a49c00e); //    r14 = add(pc,##0) }
@@ -1606,7 +1606,7 @@ static std::unique_ptr<Thunk> addThunkAArch64(Ctx &ctx, const InputSection &sec,
   bool mayNeedLandingPad =
       (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
       !isAArch64BTILandingPad(ctx, s, a);
-  if (ctx.arg.picThunk)
+  if (ctx.arg.getPicThunk())
     return std::make_unique<AArch64ADRPThunk>(ctx, s, a, mayNeedLandingPad);
   if (sec.getParent()->flags & SHF_AARCH64_PURECODE)
     return std::make_unique<AArch64ABSXOLongThunk>(ctx, s, a,
@@ -1631,7 +1631,7 @@ static std::unique_ptr<Thunk> addThunkArmv4(Ctx &ctx, RelType reloc, Symbol &s,
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
   case R_ARM_CALL:
-    if (ctx.arg.picThunk) {
+    if (ctx.arg.getPicThunk()) {
       if (thumb_target)
         return std::make_unique<ARMV4PILongBXThunk>(ctx, s, a);
       return std::make_unique<ARMV4PILongThunk>(ctx, s, a);
@@ -1640,7 +1640,7 @@ static std::unique_ptr<Thunk> addThunkArmv4(Ctx &ctx, RelType reloc, Symbol &s,
       return std::make_unique<ARMV4ABSLongBXThunk>(ctx, s, a);
     return std::make_unique<ARMV5LongLdrPcThunk>(ctx, s, a);
   case R_ARM_THM_CALL:
-    if (ctx.arg.picThunk) {
+    if (ctx.arg.getPicThunk()) {
       if (thumb_target)
         return std::make_unique<ThumbV4PILongThunk>(ctx, s, a);
       return std::make_unique<ThumbV4PILongBXThunk>(ctx, s, a);
@@ -1667,7 +1667,7 @@ static std::unique_ptr<Thunk> addThunkArmv5v6(Ctx &ctx, RelType reloc,
   case R_ARM_JUMP24:
   case R_ARM_CALL:
   case R_ARM_THM_CALL:
-    if (ctx.arg.picThunk)
+    if (ctx.arg.getPicThunk())
       return std::make_unique<ARMV4PILongBXThunk>(ctx, s, a);
     return std::make_unique<ARMV5LongLdrPcThunk>(ctx, s, a);
   }
@@ -1688,7 +1688,7 @@ static std::unique_ptr<Thunk> addThunkV6M(Ctx &ctx, const InputSection &isec,
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
   case R_ARM_THM_CALL:
-    if (ctx.arg.isPic) {
+    if (ctx.arg.getIsPic()) {
       if (!isPureCode)
         return std::make_unique<ThumbV6MPILongThunk>(ctx, s, a);
 
@@ -1740,13 +1740,13 @@ static std::unique_ptr<Thunk> addThunkArm(Ctx &ctx, const InputSection &isec,
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
   case R_ARM_CALL:
-    if (ctx.arg.picThunk)
+    if (ctx.arg.getPicThunk())
       return std::make_unique<ARMV7PILongThunk>(ctx, s, a);
     return std::make_unique<ARMV7ABSLongThunk>(ctx, s, a);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
   case R_ARM_THM_CALL:
-    if (ctx.arg.picThunk)
+    if (ctx.arg.getPicThunk())
       return std::make_unique<ThumbV7PILongThunk>(ctx, s, a);
     return std::make_unique<ThumbV7ABSLongThunk>(ctx, s, a);
   }
@@ -1827,7 +1827,7 @@ static std::unique_ptr<Thunk> addThunkPPC64(Ctx &ctx, RelType type, Symbol &s,
   if (type == R_PPC64_REL24_NOTOC)
     return std::make_unique<PPC64R12SetupStub>(ctx, s, /*gotPlt=*/false);
 
-  if (ctx.arg.picThunk)
+  if (ctx.arg.getPicThunk())
     return std::make_unique<PPC64PILongBranchThunk>(ctx, s, a);
 
   return std::make_unique<PPC64PDLongBranchThunk>(ctx, s, a);

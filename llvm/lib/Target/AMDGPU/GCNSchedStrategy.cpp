@@ -1015,7 +1015,7 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
   // We want regions with a single MI to be scheduled so that we can reason
   // about them correctly during scheduling stages that move MIs between regions
   // (e.g., rematerialization).
-  ScheduleSingleMIRegions = true;
+  setScheduleSingleMIRegions(true);
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
   if (RelaxedOcc) {
     MinOccupancy = std::min(MFI.getMinAllowedOccupancy(), StartingOccupancy);
@@ -1924,7 +1924,7 @@ bool ClusteredLowOccStage::initGCNRegion() {
 }
 
 bool PreRARematStage::initGCNRegion() {
-  return !RevertAllRegions && RescheduleRegions[RegionIdx] &&
+  return !getRevertAllRegions() && RescheduleRegions[RegionIdx] &&
          GCNSchedStage::initGCNRegion();
 }
 
@@ -1969,7 +1969,7 @@ void PreRARematStage::finalizeGCNRegion() {
     REMAT_DEBUG(dbgs() << "Region " << RegionIdx
                        << " cannot meet occupancy target, interrupting "
                           "re-scheduling in all regions\n");
-    RevertAllRegions = true;
+    setRevertAllRegions(true);
   }
 }
 

@@ -1183,7 +1183,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
       ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : Call->getType(),
       Call->getAttributes().getRetAttrs(), /*IsPatchPoint=*/false);
   if (!VarArgDisallowed)
-    SI.CLI.IsVarArg = Call->getFunctionType()->isVarArg();
+    SI.CLI.setIsVarArg(Call->getFunctionType()->isVarArg());
 
   auto DeoptBundle = *Call->getOperandBundle(LLVMContext::OB_deopt);
 

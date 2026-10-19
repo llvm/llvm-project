@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -102,7 +103,8 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> ReductionOrigs;
   SmallVector<const Expr *, 4> ReductionCopies;
   SmallVector<const Expr *, 4> ReductionOps;
-  SmallVector<CanonicalDeclPtr<const VarDecl>, 4> PrivateLocals;
+  llvm::SmallVectorWithFlags<CanonicalDeclPtr<const VarDecl>, 4, 2>
+      PrivateLocals;
   struct DependData {
     OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
     const Expr *IteratorExpr = nullptr;
@@ -111,18 +113,24 @@ struct OMPTaskDataTy final {
     DependData(OpenMPDependClauseKind DepKind, const Expr *IteratorExpr)
         : DepKind(DepKind), IteratorExpr(IteratorExpr) {}
   };
-  SmallVector<DependData, 4> Dependences;
+  llvm::SmallVectorWithFlags<DependData, 4, 4> Dependences;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Final;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Schedule;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Priority;
   llvm::Value *Reductions = nullptr;
   unsigned NumberOfParts = 0;
-  bool Tied = true;
-  bool Nogroup = false;
-  bool IsReductionWithTaskMod = false;
-  bool IsWorksharingReduction = false;
-  bool HasNowaitClause = false;
-  bool HasModifier = false;
+  bool getTied() const { return !Dependences.getFlag(0); }
+  void setTied(bool Value) { Dependences.setFlag(0, !Value); }
+  bool getNogroup() const { return Dependences.getFlag(1); }
+  void setNogroup(bool Value) { Dependences.setFlag(1, Value); }
+  bool getIsReductionWithTaskMod() const { return Dependences.getFlag(2); }
+  void setIsReductionWithTaskMod(bool Value) { Dependences.setFlag(2, Value); }
+  bool getIsWorksharingReduction() const { return Dependences.getFlag(3); }
+  void setIsWorksharingReduction(bool Value) { Dependences.setFlag(3, Value); }
+  bool getHasNowaitClause() const { return PrivateLocals.getFlag(0); }
+  void setHasNowaitClause(bool Value) { PrivateLocals.setFlag(0, Value); }
+  bool getHasModifier() const { return PrivateLocals.getFlag(1); }
+  void setHasModifier(bool Value) { PrivateLocals.setFlag(1, Value); }
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.
@@ -477,7 +485,13 @@ protected:
   /// };
   QualType KmpDimTy;
 
-  bool ShouldMarkAsGlobal = true;
+  bool getShouldMarkAsGlobal() const {
+    return !LastprivateConditionalStack.getFlag(0);
+  }
+  bool setShouldMarkAsGlobal(bool Value) {
+    LastprivateConditionalStack.setFlag(0, !Value);
+    return Value;
+  }
   /// List of the emitted declarations.
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> AlreadyEmittedTargetDecls;
   /// List of the global variables with their addresses that should not be
@@ -501,21 +515,38 @@ protected:
   /// Stack for list of addresses of declarations in current context marked as
   /// lastprivate conditional. The set is the union of all current stack
   /// elements.
-  llvm::SmallVector<LastprivateConditionalData, 4> LastprivateConditionalStack;
+  llvm::SmallVectorWithFlags<LastprivateConditionalData, 4, 4>
+      LastprivateConditionalStack;
 
   /// Flag for keeping track of weather a requires unified_shared_memory
   /// directive is present.
-  bool HasRequiresUnifiedSharedMemory = false;
+  bool getHasRequiresUnifiedSharedMemory() const {
+    return LastprivateConditionalStack.getFlag(1);
+  }
+  void setHasRequiresUnifiedSharedMemory(bool Value) {
+    LastprivateConditionalStack.setFlag(1, Value);
+  }
 
   /// Atomic ordering from the omp requires directive.
   llvm::AtomicOrdering RequiresAtomicOrdering = llvm::AtomicOrdering::Monotonic;
 
   /// Flag for keeping track of weather a target region has been emitted.
-  bool HasEmittedTargetRegion = false;
+  bool getHasEmittedTargetRegion() const {
+    return LastprivateConditionalStack.getFlag(2);
+  }
+  void setHasEmittedTargetRegion(bool Value) {
+    LastprivateConditionalStack.setFlag(2, Value);
+  }
 
   /// Flag for keeping track of weather a device routine has been emitted.
   /// Device routines are specific to the
-  bool HasEmittedDeclareTargetRegion = false;
+  bool getHasEmittedDeclareTargetRegion() const {
+    return LastprivateConditionalStack.getFlag(3);
+  }
+  bool setHasEmittedDeclareTargetRegion(bool Value) {
+    LastprivateConditionalStack.setFlag(3, Value);
+    return Value;
+  }
 
   /// Start scanning from statement \a S and emit all target regions
   /// found along the way.
@@ -1245,9 +1276,21 @@ public:
                                    const DeclRefExpr *RHS);
 
   struct ReductionOptionsTy {
-    bool WithNowait;
-    bool SimpleReduction;
-    llvm::SmallVector<bool, 8> IsPrivateVarReduction;
+    ReductionOptionsTy(bool WithNowait, bool SimpleReduction,
+                       llvm::SmallVector<bool, 8> IsPrivateVarReduction,
+                       OpenMPDirectiveKind ReductionKind)
+        : IsPrivateVarReduction(unsigned(WithNowait) |
+                                    (unsigned(SimpleReduction) << 1),
+                                std::move(IsPrivateVarReduction)),
+          ReductionKind(ReductionKind) {}
+
+    bool getWithNowait() const { return IsPrivateVarReduction.getFlag(0); }
+    void setWithNowait(bool Value) { IsPrivateVarReduction.setFlag(0, Value); }
+    bool getSimpleReduction() const { return IsPrivateVarReduction.getFlag(1); }
+    void setSimpleReduction(bool Value) {
+      IsPrivateVarReduction.setFlag(1, Value);
+    }
+    llvm::SmallVectorWithFlags<bool, 8, 2> IsPrivateVarReduction;
     OpenMPDirectiveKind ReductionKind;
   };
 

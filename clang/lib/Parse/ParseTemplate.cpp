@@ -1392,7 +1392,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
   auto RunSignatureHelp = [&] {
     if (!Template)
       return QualType();
-    CalledSignatureHelp = true;
+    setCalledSignatureHelp(true);
     return Actions.CodeCompletion().ProduceTemplateArgumentSignatureHelp(
         Template, TemplateArgs, OpenLoc);
   };
@@ -1405,7 +1405,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
       Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
 
     if (Arg.isInvalid()) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+      if (PP.isCodeCompletionReached() && !getCalledSignatureHelp())
         RunSignatureHelp();
       return true;
     }

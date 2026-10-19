@@ -242,8 +242,9 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
 }
 
 json::Object &SarifDocumentWriter::getCurrentTool() {
-  assert(!Closed && "SARIF Document is closed. "
-                    "Need to call createRun() before using getcurrentTool!");
+  assert(!getClosed() &&
+         "SARIF Document is closed. "
+         "Need to call createRun() before using getcurrentTool!");
 
   // Since Closed = false here, expect there to be at least 1 Run, anything
   // else is an invalid state.
@@ -259,7 +260,7 @@ void SarifDocumentWriter::reset() {
 
 void SarifDocumentWriter::endRun() {
   // Exit early if trying to close a closed Document.
-  if (Closed) {
+  if (getClosed()) {
     reset();
     return;
   }
@@ -320,7 +321,7 @@ void SarifDocumentWriter::endRun() {
   reset();
 
   // Mark the document as closed.
-  Closed = true;
+  setClosed(true);
 }
 
 json::Array
@@ -349,7 +350,7 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
   endRun();
 
   // Signify a new run has begun.
-  Closed = false;
+  setClosed(false);
 
   json::Object Tool{
       {"driver",
@@ -367,7 +368,7 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
 }
 
 json::Object &SarifDocumentWriter::getCurrentRun() {
-  assert(!Closed &&
+  assert(!getClosed() &&
          "SARIF Document is closed. "
          "Can only getCurrentRun() if document is opened via createRun(), "
          "create a run first");

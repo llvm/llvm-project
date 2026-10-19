@@ -15,6 +15,7 @@
 
 #include "ARMBaseInstrInfo.h"
 #include "ARMMachineFunctionInfo.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>
@@ -22,7 +23,6 @@
 namespace llvm {
 
 struct BasicBlockInfo;
-using BBInfoVector = SmallVectorImpl<BasicBlockInfo>;
 
 /// UnknownPadding - Return the worst case padding that could result from
 /// unknown offset bits.  This does not include alignment padding caused by
@@ -110,15 +110,16 @@ class ARMBasicBlockUtils {
 
 private:
   MachineFunction &MF;
-  bool isThumb = false;
+  bool getIsThumb() const { return BBInfo.getFlag(0); }
+  void setIsThumb(bool Value) { BBInfo.setFlag(0, Value); }
   const ARMBaseInstrInfo *TII = nullptr;
-  SmallVector<BasicBlockInfo, 8> BBInfo;
+  llvm::SmallVectorWithFlags<BasicBlockInfo, 8> BBInfo;
 
 public:
   ARMBasicBlockUtils(MachineFunction &MF) : MF(MF) {
     TII =
       static_cast<const ARMBaseInstrInfo*>(MF.getSubtarget().getInstrInfo());
-    isThumb = MF.getInfo<ARMFunctionInfo>()->isThumbFunction();
+    setIsThumb(MF.getInfo<ARMFunctionInfo>()->isThumbFunction());
   }
 
   void computeAllBlockSizes() {
@@ -150,8 +151,7 @@ public:
 
   void clear() { BBInfo.clear(); }
 
-  BBInfoVector &getBBInfo() { return BBInfo; }
-
+  auto &getBBInfo() { return BBInfo; }
 };
 
 } // end namespace llvm

@@ -36,6 +36,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -130,19 +131,24 @@ namespace {
 // and return them to the stream to be read later.
 // Currently used when reading _Pragma/__pragma directives.
 struct TokenCollector {
+  TokenCollector(Preprocessor &Self, bool Collect, Token &Tok)
+      : Self(Self),
+        Tokens(decltype(this->Tokens)::withFlags(unsigned(Collect))), Tok(Tok) {
+  }
   Preprocessor &Self;
-  bool Collect;
-  SmallVector<Token, 3> Tokens;
+  bool getCollect() const { return Tokens.getFlag(0); }
+  void setCollect(bool Value) { Tokens.setFlag(0, Value); }
+  llvm::SmallVectorWithFlags<Token, 3> Tokens;
   Token &Tok;
 
   void lex() {
-    if (Collect)
+    if (getCollect())
       Tokens.push_back(Tok);
     Self.Lex(Tok);
   }
 
   void revert() {
-    assert(Collect && "did not collect tokens");
+    assert(getCollect() && "did not collect tokens");
     assert(!Tokens.empty() && "collected unexpected number of tokens");
 
     // Push the ( "string" ) tokens into the token stream.
@@ -175,8 +181,8 @@ void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
   PragmaHandlers->HandlePragma(*this, Introducer, Tok);
 
   // If the pragma handler didn't read the rest of the line, consume it now.
-  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective())
-   || (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
+  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective()) ||
+      (CurPPLexer && CurPPLexer->getParsingPreprocessorDirectiveFlag()))
     DiscardUntilEndOfDirective();
 }
 
@@ -204,7 +210,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   // In Case #2, we check the syntax now, but then put the tokens back into the
   // token stream for later consumption.
 
-  TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
+  TokenCollector Toks(*this, getInMacroArgPreExpansion(), Tok);
 
   // Remember the pragma token location.
   SourceLocation PragmaLoc = Tok.getLocation();
@@ -252,7 +258,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   }
 
   // If we're expanding a macro argument, put the tokens back.
-  if (InMacroArgPreExpansion) {
+  if (getInMacroArgPreExpansion()) {
     Toks.revert();
     return;
   }
@@ -355,7 +361,7 @@ void clang::prepare_PragmaString(SmallVectorImpl<char> &StrVal) {
 void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   // During macro pre-expansion, check the syntax now but put the tokens back
   // into the token stream for later consumption. Same as Handle_Pragma.
-  TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
+  TokenCollector Toks(*this, getInMacroArgPreExpansion(), Tok);
 
   // Remember the pragma token location.
   SourceLocation PragmaLoc = Tok.getLocation();
@@ -386,7 +392,7 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   }
 
   // If we're expanding a macro argument, put the tokens back.
-  if (InMacroArgPreExpansion) {
+  if (getInMacroArgPreExpansion()) {
     Toks.revert();
     return;
   }
@@ -445,9 +451,11 @@ void Preprocessor::HandlePragmaPoison() {
     // This avoids errors on code like:
     //   #pragma GCC poison X
     //   #pragma GCC poison X
-    if (CurPPLexer) CurPPLexer->LexingRawMode = true;
+    if (CurPPLexer)
+      CurPPLexer->setLexingRawMode(true);
     LexUnexpandedToken(Tok);
-    if (CurPPLexer) CurPPLexer->LexingRawMode = false;
+    if (CurPPLexer)
+      CurPPLexer->setLexingRawMode(false);
 
     // If we reached the end of line, we're done.
     if (Tok.is(tok::eod)) return;
@@ -822,7 +830,7 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
     DiscardUntilEndOfDirective();
   }
 
-  CurLexer->LexingRawMode = true;
+  CurLexer->setLexingRawMode(true);
 
   auto TryConsumeIdentifier = [&](StringRef Ident) -> bool {
     if (Tok.getKind() != tok::raw_identifier ||
@@ -852,7 +860,7 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
 
     // We hit something directive-shaped; check to see if this is the end
     // of the module build.
-    CurLexer->ParsingPreprocessorDirective = true;
+    CurLexer->setParsingPreprocessorDirectiveFlag(true);
     CurLexer->Lex(Tok);
     if (TryConsumeIdentifier("pragma") && TryConsumeIdentifier("clang") &&
         TryConsumeIdentifier("module")) {
@@ -870,7 +878,7 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
     }
   }
 
-  CurLexer->LexingRawMode = false;
+  CurLexer->setLexingRawMode(false);
 
   // Load the extracted text as a preprocessed module.
   assert(CurLexer->getBuffer().begin() <= Start &&
@@ -910,7 +918,7 @@ void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
     CurLexer->cutOffLexing();
   }
   if (usingPCHWithPragmaHdrStop())
-    SkippingUntilPragmaHdrStop = false;
+    setSkippingUntilPragmaHdrStop(false);
 }
 
 bool Preprocessor::isPragmaSetPPStateMacro(IdentifierInfo *MacroName) {
@@ -1206,7 +1214,7 @@ struct PragmaDebugHandler : public PragmaHandler {
             llvm::errs() << "\n";
           }
           for (Module *Sub : M->submodules()) {
-            if (!VisibleOnly || ImportLoc.isInvalid() || Sub->IsExplicit)
+            if (!VisibleOnly || ImportLoc.isInvalid() || Sub->getIsExplicit())
               visit(Sub, VisibleOnly);
           }
         }

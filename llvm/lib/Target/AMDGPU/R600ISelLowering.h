@@ -37,8 +37,7 @@ public:
                           SelectionDAG &DAG) const override;
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               bool isVarArg, llvm::ArrayRef<ISD::InputArg> Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,

@@ -143,16 +143,17 @@ bool LiveIntervalUnion::Query::isSeenInterference(
 unsigned
 LiveIntervalUnion::Query::collectInterferingVRegs(unsigned MaxInterferingRegs) {
   // Fast path return if we already have the desired information.
-  if (SeenAllInterferences || InterferingVRegs.size() >= MaxInterferingRegs)
+  if (getSeenAllInterferences() ||
+      InterferingVRegs.size() >= MaxInterferingRegs)
     return InterferingVRegs.size();
 
   // Set up iterators on the first call.
-  if (!CheckedFirstInterference) {
-    CheckedFirstInterference = true;
+  if (!getCheckedFirstInterference()) {
+    setCheckedFirstInterference(true);
 
     // Quickly skip interference check for empty sets.
     if (LR->empty() || LiveUnion->empty()) {
-      SeenAllInterferences = true;
+      setSeenAllInterferences(true);
       return 0;
     }
 
@@ -179,7 +180,7 @@ LiveIntervalUnion::Query::collectInterferingVRegs(unsigned MaxInterferingRegs) {
       }
       // This LiveUnion segment is no longer interesting.
       if (!(++LiveUnionI).valid()) {
-        SeenAllInterferences = true;
+        setSeenAllInterferences(true);
         return InterferingVRegs.size();
       }
     }
@@ -200,7 +201,7 @@ LiveIntervalUnion::Query::collectInterferingVRegs(unsigned MaxInterferingRegs) {
     // Still not overlapping. Catch up LiveUnionI.
     LiveUnionI.advanceTo(LRI->start);
   }
-  SeenAllInterferences = true;
+  setSeenAllInterferences(true);
   return InterferingVRegs.size();
 }
 

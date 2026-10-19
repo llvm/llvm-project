@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -203,7 +204,7 @@ namespace {
     SmallVector<MachineInstr*, 4> PushPopMIs;
 
     /// T2JumpTables - Keep track of all the Thumb2 jumptable instructions.
-    SmallVector<MachineInstr*, 4> T2JumpTables;
+    llvm::SmallVectorWithFlags<MachineInstr *, 4, 4> T2JumpTables;
 
     MachineFunction *MF;
     MachineConstantPool *MCP;
@@ -211,10 +212,18 @@ namespace {
     const ARMSubtarget *STI;
     ARMFunctionInfo *AFI;
     MachineDominatorTree *DT = nullptr;
-    bool isThumb;
-    bool isThumb1;
-    bool isThumb2;
-    bool isPositionIndependentOrROPI;
+    bool getIsThumb() const { return T2JumpTables.getFlag(0); }
+    void setIsThumb(bool Value) { T2JumpTables.setFlag(0, Value); }
+    bool getIsThumb1() const { return T2JumpTables.getFlag(1); }
+    void setIsThumb1(bool Value) { T2JumpTables.setFlag(1, Value); }
+    bool getIsThumb2() const { return T2JumpTables.getFlag(2); }
+    void setIsThumb2(bool Value) { T2JumpTables.setFlag(2, Value); }
+    bool getIsPositionIndependentOrROPI() const {
+      return T2JumpTables.getFlag(3);
+    }
+    void setIsPositionIndependentOrROPI(bool Value) {
+      T2JumpTables.setFlag(3, Value);
+    }
 
   public:
     static char ID;
@@ -295,7 +304,7 @@ char ARMConstantIslands::ID = 0;
 /// verify - check BBOffsets, BBSizes, alignment of islands
 void ARMConstantIslands::verify() {
 #ifndef NDEBUG
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   assert(is_sorted(*MF, [&BBInfo](const MachineBasicBlock &LHS,
                                   const MachineBasicBlock &RHS) {
     return BBInfo[LHS.getNumber()].postOffset() <
@@ -323,7 +332,7 @@ void ARMConstantIslands::verify() {
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
   LLVM_DEBUG({
-    BBInfoVector &BBInfo = BBUtils->getBBInfo();
+    auto &BBInfo = BBUtils->getBBInfo();
     for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
       const BasicBlockInfo &BBI = BBInfo[J];
       dbgs() << format("%08x %bb.%u\t", BBI.Offset, J)
@@ -390,16 +399,16 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
   STI = &MF->getSubtarget<ARMSubtarget>();
   TII = STI->getInstrInfo();
-  isPositionIndependentOrROPI =
-      STI->getTargetLowering()->isPositionIndependent() || STI->isROPI();
+  setIsPositionIndependentOrROPI(
+      STI->getTargetLowering()->isPositionIndependent() || STI->isROPI());
   AFI = MF->getInfo<ARMFunctionInfo>();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-  isThumb = AFI->isThumbFunction();
-  isThumb1 = AFI->isThumb1OnlyFunction();
-  isThumb2 = AFI->isThumb2Function();
+  setIsThumb(AFI->isThumbFunction());
+  setIsThumb1(AFI->isThumb1OnlyFunction());
+  setIsThumb2(AFI->isThumb2Function());
 
-  bool GenerateTBB = isThumb2 || (isThumb1 && SynthesizeThumb1TBB);
+  bool GenerateTBB = getIsThumb2() || (getIsThumb1() && SynthesizeThumb1TBB);
   // TBB generation code in this constant island pass has not been adapted to
   // deal with speculation barriers.
   if (STI->hardenSlsRetBr())
@@ -486,11 +495,11 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   }
 
   // Shrink 32-bit Thumb2 load and store instructions.
-  if (isThumb2 && !STI->prefers32BitThumb())
+  if (getIsThumb2() && !STI->prefers32BitThumb())
     MadeChange |= optimizeThumb2Instructions();
 
   // Shrink 32-bit branch instructions.
-  if (isThumb && STI->hasV8MBaselineOps())
+  if (getIsThumb() && STI->hasV8MBaselineOps())
     MadeChange |= optimizeThumb2Branches();
 
   // Optimize jump tables using TBB / TBH.
@@ -711,9 +720,9 @@ Align ARMConstantIslands::getCPEAlign(const MachineInstr *CPEMI) {
   case ARM::CONSTPOOL_ENTRY:
     break;
   case ARM::JUMPTABLE_TBB:
-    return isThumb1 ? Align(4) : Align(1);
+    return getIsThumb1() ? Align(4) : Align(1);
   case ARM::JUMPTABLE_TBH:
-    return isThumb1 ? Align(4) : Align(2);
+    return getIsThumb1() ? Align(4) : Align(2);
   case ARM::JUMPTABLE_INSTS:
     return Align(2);
   case ARM::JUMPTABLE_ADDRS:
@@ -746,7 +755,7 @@ void ARMConstantIslands::
 initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
 
   BBUtils->computeAllBlockSizes();
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   // The known bits of the entry block offset are determined by the function
   // alignment.
   BBInfo.front().KnownBits = Log2(MF->getAlignment());
@@ -982,8 +991,8 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   // Note the new unconditional branch is not being recorded.
   // There doesn't seem to be meaningful DebugInfo available; this doesn't
   // correspond to anything in the source.
-  unsigned Opc = isThumb ? (isThumb2 ? ARM::t2B : ARM::tB) : ARM::B;
-  if (!isThumb)
+  unsigned Opc = getIsThumb() ? (getIsThumb2() ? ARM::t2B : ARM::tB) : ARM::B;
+  if (!getIsThumb())
     BuildMI(OrigBB, DebugLoc(), TII->get(Opc)).addMBB(NewBB);
   else
     BuildMI(OrigBB, DebugLoc(), TII->get(Opc))
@@ -1047,12 +1056,12 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
 unsigned ARMConstantIslands::getUserOffset(CPUser &U) const {
   unsigned UserOffset = BBUtils->getOffsetOf(U.MI);
 
-  SmallVectorImpl<BasicBlockInfo> &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   const BasicBlockInfo &BBI = BBInfo[U.MI->getParent()->getNumber()];
   unsigned KnownBits = BBI.internalKnownBits();
 
   // The value read from PC is offset from the actual instruction address.
-  UserOffset += (isThumb ? 4 : 8);
+  UserOffset += (getIsThumb() ? 4 : 8);
 
   // Because of inline assembly, we may not know the alignment (mod 4) of U.MI.
   // Make sure U.getMaxDisp() returns a constrained range.
@@ -1061,7 +1070,7 @@ unsigned ARMConstantIslands::getUserOffset(CPUser &U) const {
   // On Thumb, offsets==2 mod 4 are rounded down by the hardware for
   // purposes of the displacement computation; compensate for that here.
   // For unknown alignments, getMaxDisp() constrains the range instead.
-  if (isThumb && U.KnownAlignment)
+  if (getIsThumb() && U.KnownAlignment)
     UserOffset &= ~3u;
 
   return UserOffset;
@@ -1096,7 +1105,7 @@ bool ARMConstantIslands::isOffsetInRange(unsigned UserOffset,
 bool ARMConstantIslands::isWaterInRange(unsigned UserOffset,
                                         MachineBasicBlock* Water, CPUser &U,
                                         unsigned &Growth) {
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   const Align CPEAlign = getCPEAlign(U.CPEMI);
   const unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset(CPEAlign);
   unsigned NextBlockOffset;
@@ -1141,7 +1150,7 @@ bool ARMConstantIslands::isCPEntryInRange(MachineInstr *MI, unsigned UserOffset,
 
   if (DoDump) {
     LLVM_DEBUG({
-        BBInfoVector &BBInfo = BBUtils->getBBInfo();
+      auto &BBInfo = BBUtils->getBBInfo();
       unsigned Block = MI->getParent()->getNumber();
       const BasicBlockInfo &BBI = BBInfo[Block];
       dbgs() << "User of CPE#" << CPEMI->getOperand(0).getImm()
@@ -1289,7 +1298,7 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
   // When a CP access is out of range, BB0 may be used as water. However,
   // inserting islands between BB0 and BB1 makes other accesses out of range.
   MachineBasicBlock *UserBB = U.MI->getParent();
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   const Align CPEAlign = getCPEAlign(U.CPEMI);
   unsigned MinNoSplitDisp = BBInfo[UserBB->getNumber()].postOffset(CPEAlign);
   if (CloserWater && MinNoSplitDisp > U.getMaxDisp() / 2)
@@ -1346,7 +1355,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   MachineInstr *CPEMI  = U.CPEMI;
   const Align CPEAlign = getCPEAlign(CPEMI);
   MachineBasicBlock *UserMBB = UserMI->getParent();
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   const BasicBlockInfo &UserBBI = BBInfo[UserMBB->getNumber()];
 
   // If the block does not end in an unconditional branch already, and if the
@@ -1355,7 +1364,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   // Thumb2, 2 on Thumb1.
   if (BBHasFallthrough(UserMBB)) {
     // Size of branch to insert.
-    unsigned Delta = isThumb1 ? 2 : 4;
+    unsigned Delta = getIsThumb1() ? 2 : 4;
     // Compute the offset where the CPE will begin.
     unsigned CPEOffset = UserBBI.postOffset(CPEAlign) + Delta;
 
@@ -1368,8 +1377,9 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
       // but if the preceding conditional branch is out of range, the targets
       // will be exchanged, and the altered branch may be out of range, so the
       // machinery has to know about it.
-      int UncondBr = isThumb ? ((isThumb2) ? ARM::t2B : ARM::tB) : ARM::B;
-      if (!isThumb)
+      int UncondBr =
+          getIsThumb() ? ((getIsThumb2()) ? ARM::t2B : ARM::tB) : ARM::B;
+      if (!getIsThumb())
         BuildMI(UserMBB, DebugLoc(), TII->get(UncondBr)).addMBB(NewMBB);
       else
         BuildMI(UserMBB, DebugLoc(), TII->get(UncondBr))
@@ -1499,7 +1509,8 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   // the instruction and fail to update the MOVT instruction.
   // (These instructions are bundled up until right before the ConstantIslands
   // pass.)
-  if (STI->isTargetWindows() && isThumb && MI->getOpcode() == ARM::t2MOVTi16 &&
+  if (STI->isTargetWindows() && getIsThumb() &&
+      MI->getOpcode() == ARM::t2MOVTi16 &&
       (MI->getOperand(2).getTargetFlags() & ARMII::MO_OPTION_MASK) ==
           ARMII::MO_HI16) {
     --MI;
@@ -1511,7 +1522,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   // We really must not split an IT block.
 #ifndef NDEBUG
   Register PredReg;
-  assert(!isThumb || getITInstrPredicate(*MI, PredReg) == ARMCC::AL);
+  assert(!getIsThumb() || getITInstrPredicate(*MI, PredReg) == ARMCC::AL);
 #endif
   NewMBB = splitBlockBeforeInstr(&*MI);
 }
@@ -1577,7 +1588,7 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
   // Always align the new block because CP entries can be smaller than 4
   // bytes. Be careful not to decrease the existing alignment, e.g. NewMBB may
   // be an already aligned constant pool block.
-  const Align Alignment = isThumb ? Align(2) : Align(4);
+  const Align Alignment = getIsThumb() ? Align(2) : Align(4);
   if (NewMBB->getAlignment() < Alignment)
     NewMBB->setAlignment(Alignment);
 
@@ -1635,7 +1646,7 @@ void ARMConstantIslands::removeDeadCPEMI(MachineInstr *CPEMI) {
   MachineBasicBlock *CPEBB = CPEMI->getParent();
   unsigned Size = CPEMI->getOperand(2).getImm();
   CPEMI->eraseFromParent();
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   BBUtils->adjustBBSize(CPEBB, -Size);
   // All succeeding offsets have the current size value added in, fix this.
   if (CPEBB->empty()) {
@@ -1696,7 +1707,7 @@ bool
 ARMConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
   MachineInstr *MI = Br.MI;
   MachineBasicBlock *MBB = MI->getParent();
-  if (!isThumb1)
+  if (!getIsThumb1())
     llvm_unreachable("fixupUnconditionalBr is Thumb1 only!");
 
   if (!AFI->isLRSpilled())
@@ -1705,7 +1716,7 @@ ARMConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
   // Use BL to implement far jump.
   Br.MaxDisp = (1 << 21) * 2;
   MI->setDesc(TII->get(ARM::tBfar));
-  BBInfoVector &BBInfo = BBUtils->getBBInfo();
+  auto &BBInfo = BBUtils->getBBInfo();
   BBInfo[MBB->getNumber()].Size += 2;
   BBUtils->adjustBBOffsetsAfter(MBB);
   ++NumUBrFixed;
@@ -1792,7 +1803,7 @@ ARMConstantIslands::fixupConditionalBr(ImmBranch &Br) {
     .addMBB(NextBB).addImm(CC).addReg(CCReg);
   Br.MI = &MBB->back();
   BBUtils->adjustBBSize(MBB, TII->getInstSizeInBytes(MBB->back()));
-  if (isThumb)
+  if (getIsThumb())
     BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr))
         .addMBB(DestBB)
         .add(predOps(ARMCC::AL));
@@ -1929,7 +1940,7 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     // Check if the distance is within 126. Subtract starting offset by 2
     // because the cmp will be eliminated.
     unsigned BrOffset = BBUtils->getOffsetOf(Br.MI) + 4 - 2;
-    BBInfoVector &BBInfo = BBUtils->getBBInfo();
+    auto &BBInfo = BBUtils->getBBInfo();
     unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
     if (BrOffset >= DestOffset || (DestOffset - BrOffset) > 126)
       return false;
@@ -2136,7 +2147,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
 
   if (RemovableAdd) {
     RemovableAdd->eraseFromParent();
-    DeadSize += isThumb2 ? 4 : 2;
+    DeadSize += getIsThumb2() ? 4 : 2;
   } else if (BaseReg == EntryReg) {
     // The add wasn't removable, but clobbered the base for the TBB. So we can't
     // preserve it.
@@ -2221,7 +2232,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
     bool HalfWordOk = true;
     unsigned JTOffset = BBUtils->getOffsetOf(MI) + 4;
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
-    BBInfoVector &BBInfo = BBUtils->getBBInfo();
+    auto &BBInfo = BBUtils->getBBInfo();
     for (MachineBasicBlock *MBB : JTBBs) {
       unsigned DstOffset = BBInfo[MBB->getNumber()].Offset;
       // Negative offset is not ok. FIXME: We should change BB layout to make
@@ -2249,7 +2260,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
 
     unsigned IdxReg = ~0U;
     bool IdxRegKill = true;
-    if (isThumb2) {
+    if (getIsThumb2()) {
       IdxReg = MI->getOperand(1).getReg();
       IdxRegKill = MI->getOperand(1).isKill();
 
@@ -2302,7 +2313,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       if (registerDefinedBetween(BaseReg, Load->getNextNode(), MBB->end(), TRI))
         continue;
 
-      if (isPositionIndependentOrROPI) {
+      if (getIsPositionIndependentOrROPI()) {
         MachineInstr *Add = Load->getNextNode();
         if (Add->getOpcode() != ARM::tADDrr ||
             Add->getOperand(2).getReg() != BaseReg ||
@@ -2334,7 +2345,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
     LLVM_DEBUG(dbgs() << "Shrink JT: " << *MI);
     MachineInstr *CPEMI = User.CPEMI;
     unsigned Opc = ByteOk ? ARM::t2TBB_JT : ARM::t2TBH_JT;
-    if (!isThumb2)
+    if (!getIsThumb2())
       Opc = ByteOk ? ARM::tTBB_JT : ARM::tTBH_JT;
 
     MachineBasicBlock::iterator MI_JT = MI;
@@ -2355,11 +2366,11 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       NewJTMI->getOperand(0).setIsKill(false);
 
       if (CanDeleteLEA) {
-        if (isThumb2)
+        if (getIsThumb2())
           RemoveDeadAddBetweenLEAAndJT(User.MI, MI, DeadSize);
 
         User.MI->eraseFromParent();
-        DeadSize += isThumb2 ? 4 : 2;
+        DeadSize += getIsThumb2() ? 4 : 2;
 
         // The LEA was eliminated, the TBB instruction becomes the only new user
         // of the jump table.
@@ -2478,7 +2489,7 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
   // Add an unconditional branch from NewBB to BB.
   // There doesn't seem to be meaningful DebugInfo available; this doesn't
   // correspond directly to anything in the source.
-  if (isThumb2)
+  if (getIsThumb2())
     BuildMI(NewBB, DebugLoc(), TII->get(ARM::t2B))
         .addMBB(BB)
         .add(predOps(ARMCC::AL));

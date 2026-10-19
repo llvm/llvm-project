@@ -37,6 +37,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -3022,10 +3023,11 @@ template <typename T> constexpr uint64_t barrierFlagValue(T Flag) {
 /// the entry points.
 class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
-  bool DiagnoseAvailability;
+  bool getDiagnoseAvailability() const { return DeclsToScan.getFlag(0); }
+  void setDiagnoseAvailability(bool Value) { DeclsToScan.setFlag(0, Value); }
 
   // Stack of functions to be scaned
-  llvm::SmallVector<const FunctionDecl *, 8> DeclsToScan;
+  llvm::SmallVectorWithFlags<const FunctionDecl *, 8, 2> DeclsToScan;
 
   // Tracks which environments functions have been scanned in.
   //
@@ -3059,7 +3061,10 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   // True if scanning a function that was already scanned in a different
   // shader stage context. Suppress stage-independent diagnostics because
   // they were reported during the first scan.
-  bool ReportOnlyShaderStageIssues;
+  bool getReportOnlyShaderStageIssues() const { return DeclsToScan.getFlag(1); }
+  void setReportOnlyShaderStageIssues(bool Value) {
+    DeclsToScan.setFlag(1, Value);
+  }
 
   // Helper methods for dealing with current stage context / environment
   void SetShaderStageContext(llvm::Triple::EnvironmentType ShaderType) {
@@ -3125,9 +3130,10 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
 
 public:
   DiagnoseHLSLAvailability(Sema &SemaRef, bool DiagnoseAvailability)
-      : SemaRef(SemaRef), DiagnoseAvailability(DiagnoseAvailability),
+      : SemaRef(SemaRef), DeclsToScan(decltype(this->DeclsToScan)::withFlags(
+                              unsigned(DiagnoseAvailability))),
         CurrentShaderEnvironment(llvm::Triple::UnknownEnvironment),
-        CurrentShaderStageBit(0), ReportOnlyShaderStageIssues(false) {}
+        CurrentShaderStageBit(0) {}
 
   // AST traversal methods
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);
@@ -3205,7 +3211,7 @@ void DiagnoseHLSLAvailability::DiagnoseBarrierGroupSemantic(
 void DiagnoseHLSLAvailability::DiagnoseBarrierScope(Expr *SemanticArg,
                                                     uint64_t MemoryFlags,
                                                     uint64_t SemanticFlags) {
-  if (ReportOnlyShaderStageIssues)
+  if (getReportOnlyShaderStageIssues())
     return;
 
   const uint64_t DeviceScopeMemory =
@@ -3275,7 +3281,7 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
          "expected DeclRefExpr or MemberExpr");
 
-  if (DiagnoseAvailability)
+  if (getDiagnoseAvailability())
     if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
       CheckDeclAvailability(
           FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
@@ -3381,7 +3387,7 @@ void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
     if (WasAlreadyScannedInCurrentStage(ScannedStages))
       continue;
 
-    ReportOnlyShaderStageIssues = !NeverBeenScanned(ScannedStages);
+    setReportOnlyShaderStageIssues(!NeverBeenScanned(ScannedStages));
 
     AddToScannedFunctions(FD);
     TraverseStmt(FD->getBody());
@@ -3451,7 +3457,7 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
     // Do not report shader-stage-independent issues if scanning a function
     // that was already scanned in a different shader stage context (they would
     // be duplicate)
-    if (ReportOnlyShaderStageIssues)
+    if (getReportOnlyShaderStageIssues())
       return;
 
   } else {
@@ -5902,13 +5908,13 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
   bool IsVulkan = getASTContext().getTargetInfo().getTriple().getOS() ==
                   llvm::Triple::Vulkan;
   if (IsVulkan && Decl->hasAttr<HLSLVkPushConstantAttr>()) {
-    if (HasDeclaredAPushConstant)
+    if (getHasDeclaredAPushConstant())
       SemaRef.Diag(Decl->getLocation(), diag::err_hlsl_push_constant_unique);
 
     LangAS ImplAS = LangAS::hlsl_push_constant;
     Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
     Decl->setType(Type);
-    HasDeclaredAPushConstant = true;
+    setHasDeclaredAPushConstant(true);
     return;
   }
 
@@ -6644,12 +6650,13 @@ class InitListTransformer {
   // Is wrapping the destination type iterator required? This is only used for
   // incomplete array types where we loop over the destination type since we
   // don't know the full number of elements from the declaration.
-  bool Wrap;
+  bool getWrap() const { return ArgExprs.getFlag(0); }
+  void setWrap(bool Value) { ArgExprs.setFlag(0, Value); }
 
   bool castInitializer(Expr *E) {
     assert(DstIt && "This should always be something!");
     if (DstIt == DestTypes.end()) {
-      if (!Wrap) {
+      if (!getWrap()) {
         ArgExprs.push_back(E);
         // This is odd, but it isn't technically a failure due to conversion, we
         // handle mismatched counts of arguments differently.
@@ -6839,15 +6846,16 @@ class InitListTransformer {
 
 public:
   llvm::SmallVector<QualType, 16> DestTypes;
-  llvm::SmallVector<Expr *, 16> ArgExprs;
+  llvm::SmallVectorWithFlags<Expr *, 16> ArgExprs;
   InitListTransformer(Sema &SemaRef, const InitializedEntity &Entity)
       : S(SemaRef), Ctx(SemaRef.getASTContext()),
-        Wrap(Entity.getType()->isIncompleteArrayType()) {
+        ArgExprs(decltype(this->ArgExprs)::withFlags(
+            unsigned(bool(Entity.getType()->isIncompleteArrayType())))) {
     InitTy = Entity.getType().getNonReferenceType();
     // When we're generating initializer lists for incomplete array types we
     // need to wrap around both when building the initializers and when
     // generating the final initializer lists.
-    if (Wrap) {
+    if (getWrap()) {
       assert(InitTy->isIncompleteArrayType());
       const IncompleteArrayType *IAT = Ctx.getAsIncompleteArrayType(InitTy);
       InitTy = IAT->getElementType();
@@ -6862,7 +6870,7 @@ public:
     assert(!ArgExprs.empty() &&
            "Call buildInitializerList to generate argument expressions.");
     ArgIt = ArgExprs.begin();
-    if (!Wrap)
+    if (!getWrap())
       return generateInitListsImpl(InitTy);
     llvm::SmallVector<Expr *> Inits;
     while (ArgIt != ArgExprs.end())

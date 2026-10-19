@@ -103,7 +103,7 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   OwnsHeaderSearch = OwnsHeaders;
 
   // Only record check points if we might highlight diagnostic snippets.
-  RecordCheckPoints = getDiagnostics().getShowColors();
+  setRecordCheckPoints(getDiagnostics().getShowColors());
 
   // Default to discarding comments.
   KeepComments = false;
@@ -115,11 +115,11 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   MacroExpansionInDirectivesOverride = false;
   InMacroArgs = false;
   ArgMacro = nullptr;
-  InMacroArgPreExpansion = false;
+  setInMacroArgPreExpansion(false);
   NumCachedTokenLexers = 0;
   PragmasEnabled = true;
-  ParsingIfOrElifDirective = false;
-  PreprocessedOutput = false;
+  setParsingIfOrElifDirective(false);
+  setPreprocessedOutputFlag(false);
 
   // We haven't read anything from the external source.
   ReadMacrosFromExternalSource = false;
@@ -163,16 +163,16 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
 
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
-  IncrementalProcessing = LangOpts.IncrementalExtensions;
+  setIncrementalProcessing(LangOpts.IncrementalExtensions);
 
   // If using a PCH where a #pragma hdrstop is expected, start skipping tokens.
   if (usingPCHWithPragmaHdrStop())
-    SkippingUntilPragmaHdrStop = true;
+    setSkippingUntilPragmaHdrStop(true);
 
   // If using a PCH with a through header, start skipping tokens.
   if (!this->PPOpts.PCHThroughHeader.empty() &&
       !this->PPOpts.ImplicitPCHInclude.empty())
-    SkippingUntilPCHThroughHeader = true;
+    setSkippingUntilPCHThroughHeader(true);
 
   if (this->PPOpts.GeneratePreamble)
     PreambleConditionalStack.startRecording();
@@ -626,9 +626,10 @@ void Preprocessor::EnterMainSourceFile() {
       std::optional<StringRef> Input =
           getSourceManager().getBufferDataOrNone(MainFileID);
       if (!isPreprocessedModuleFile() && Input)
-        MainFileIsPreprocessedModuleFile =
-            clang::isPreprocessedModuleFile(*Input);
-      if (Input && !MainFileIsPreprocessedModuleFile && hasDeferredGMFInputs())
+        setMainFileIsPreprocessedModuleFile(
+            clang::isPreprocessedModuleFile(*Input));
+      if (Input && !getMainFileIsPreprocessedModuleFile() &&
+          hasDeferredGMFInputs())
         MainFileModuleUnitKind = scanInputForCXX20ModuleUnit(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
@@ -645,7 +646,7 @@ void Preprocessor::EnterMainSourceFile() {
   // GMF, synthesize the introducer before the main file and use the same
   // deferred-input path.
   if (hasDeferredGMFInputs()) {
-    if (PredefinesWereReplaced) {
+    if (getPredefinesWereReplaced()) {
       // Loading an implicit PCH replaces Predefines with the directives
       // suggested by ASTReader. For a module unit, those are the only implicit
       // inputs that still need to be processed in the GMF.
@@ -661,7 +662,7 @@ void Preprocessor::EnterMainSourceFile() {
     if (MainFileModuleUnitKind ==
         ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment) {
       Predefines += "# 1 \"<implicit-global-module-fragment>\" 1\nmodule;\n";
-      HasSynthesizedGMF = true;
+      setHasSynthesizedGMF(true);
     } else if (MainFileModuleUnitKind == ModuleUnitKind::NotModuleUnit) {
       DeferredGMFInputs.clear();
     }
@@ -697,8 +698,8 @@ void Preprocessor::EnterMainSourceFile() {
   }
 
   // Skip tokens from the Predefines and if needed the main file.
-  if ((usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) ||
-      (usingPCHWithPragmaHdrStop() && SkippingUntilPragmaHdrStop))
+  if ((usingPCHWithThroughHeader() && getSkippingUntilPCHThroughHeader()) ||
+      (usingPCHWithPragmaHdrStop() && getSkippingUntilPragmaHdrStop()))
     SkipTokensWhileUsingPCH();
 }
 
@@ -753,8 +754,8 @@ bool Preprocessor::usingPCHWithPragmaHdrStop() {
 /// main file is reached, it's a fatal error.
 void Preprocessor::SkipTokensWhileUsingPCH() {
   bool ReachedMainFileEOF = false;
-  bool UsingPCHThroughHeader = SkippingUntilPCHThroughHeader;
-  bool UsingPragmaHdrStop = SkippingUntilPragmaHdrStop;
+  bool UsingPCHThroughHeader = getSkippingUntilPCHThroughHeader();
+  bool UsingPragmaHdrStop = getSkippingUntilPragmaHdrStop();
   Token Tok;
   while (true) {
     bool InPredefines =
@@ -764,9 +765,9 @@ void Preprocessor::SkipTokensWhileUsingPCH() {
       ReachedMainFileEOF = true;
       break;
     }
-    if (UsingPCHThroughHeader && !SkippingUntilPCHThroughHeader)
+    if (UsingPCHThroughHeader && !getSkippingUntilPCHThroughHeader())
       break;
-    if (UsingPragmaHdrStop && !SkippingUntilPragmaHdrStop)
+    if (UsingPragmaHdrStop && !getSkippingUntilPragmaHdrStop())
       break;
   }
   if (ReachedMainFileEOF) {
@@ -966,7 +967,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // Handle module contextual keywords.
   if (getLangOpts().CPlusPlusModules && CurLexer &&
       !CurLexer->isLexingRawMode() && !CurLexer->isPragmaLexer() &&
-      !CurLexer->ParsingPreprocessorDirective &&
+      !CurLexer->getParsingPreprocessorDirectiveFlag() &&
       Identifier.isModuleContextualKeyword() &&
       HandleModuleContextualKeyword(Identifier)) {
     HandleDirective(Identifier);
@@ -1068,7 +1069,7 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (RecordCheckPoints && CurLexer &&
+  if (getRecordCheckPoints() && CurLexer &&
       ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
@@ -1085,7 +1086,7 @@ void Preprocessor::Lex(Token &Result) {
   if (LexLevel == 0 && !PendingDestroyLexers.empty())
     PendingDestroyLexers.clear();
 
-  if ((LexLevel == 0 || PreprocessToken) &&
+  if ((LexLevel == 0 || getPreprocessTokenFlag()) &&
       !Result.getFlag(Token::IsReinjected)) {
     if (LexLevel == 0)
       ++TokenCount;
@@ -1123,7 +1124,7 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   if (CurPPLexer) {
     // Avoid nested header-name lexing when macro expansion recurses
     // __has_include(__has_include))
-    if (CurPPLexer->ParsingFilename)
+    if (CurPPLexer->getParsingFilename())
       LexUnexpandedToken(FilenameTok);
     else
       CurPPLexer->LexIncludeFilename(FilenameTok);
@@ -1406,8 +1407,14 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
 
   assert(CurPPLexer && "CurPPLexer must not be null");
 
-  llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
-      CurPPLexer->ParsingPreprocessorDirective, true);
+  auto SavedParsingPreprocessorDirective = [PackedFlagOwner_ = CurPPLexer] {
+    const bool PackedFlagOld_ =
+        PackedFlagOwner_->getParsingPreprocessorDirectiveFlag();
+    PackedFlagOwner_->setParsingPreprocessorDirectiveFlag(true);
+    return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+      PackedFlagOwner_->setParsingPreprocessorDirectiveFlag(PackedFlagOld_);
+    });
+  }();
 
   if (II->isModuleKeyword()) {
     if (auto NextTok = peekNextPPToken()) {
@@ -1423,8 +1430,13 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   }
 
   if (II->isImportKeyword()) {
-    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
-                                                    true);
+    auto SavedParsingFilename = [PackedFlagOwner_ = CurPPLexer] {
+      const bool PackedFlagOld_ = PackedFlagOwner_->getParsingFilename();
+      PackedFlagOwner_->setParsingFilename(true);
+      return llvm::scope_exit([PackedFlagOwner_, PackedFlagOld_] {
+        PackedFlagOwner_->setParsingFilename(PackedFlagOld_);
+      });
+    }();
     if (auto NextTok = peekNextPPToken()) {
       if (NextTok->is(tok::raw_identifier))
         LookUpIdentifierInfo(*NextTok);

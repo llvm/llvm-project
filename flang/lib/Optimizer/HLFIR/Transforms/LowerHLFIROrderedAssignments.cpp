@@ -30,6 +30,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <unordered_set>
@@ -297,7 +298,7 @@ private:
   /// Construct stack in the current run. This allows setting back the insertion
   /// point correctly when leaving a node that requires a fir.do_loop or fir.if
   /// operation.
-  llvm::SmallVector<mlir::Operation *> constructStack;
+  llvm::SmallVectorWithFlags<mlir::Operation *> constructStack;
   /// Current where loop nest, if any.
   std::optional<hlfir::LoopNest> whereLoopNest;
 
@@ -322,7 +323,8 @@ private:
   /// When allocating temporary storage inlined, indicate if the storage should
   /// be heap or stack allocated. Temporary allocated with the runtime are heap
   /// allocated by the runtime.
-  bool allocateOnHeap = true;
+  bool getAllocateOnHeap() const { return !constructStack.getFlag(0); }
+  void setAllocateOnHeap(bool Value) { constructStack.setFlag(0, !Value); }
 };
 } // namespace
 
@@ -1239,10 +1241,10 @@ void OrderedAssignmentRewriter::generateSaveEntity(
         auto sequenceType = mlir::cast<fir::SequenceType>(
             builder.getVarLenSeqTy(entityType, /*rank=*/loopNest.size()));
         temp = insertSavedEntity(
-            region,
-            fir::factory::ArrayTemp{loc, builder, sequenceType, tempExtents,
-                                    tempLowerBounds,
-                                    /*lengths=*/{}, allocateOnHeap, tempName});
+            region, fir::factory::ArrayTemp{loc, builder, sequenceType,
+                                            tempExtents, tempLowerBounds,
+                                            /*lengths=*/{}, getAllocateOnHeap(),
+                                            tempName});
       } else if (loopShapeCanBePreComputed && fir::isa_trivial(entityType)) {
         mlir::Value loopExtent =
             computeLoopNestIterationNumber(loc, builder, loopNest);
@@ -1251,7 +1253,7 @@ void OrderedAssignmentRewriter::generateSaveEntity(
         temp = insertSavedEntity(region,
                                  fir::factory::HomogeneousScalarStack{
                                      loc, builder, sequenceType, loopExtent,
-                                     /*lenParams=*/{}, allocateOnHeap,
+                                     /*lenParams=*/{}, getAllocateOnHeap(),
                                      /*stackThroughLoops=*/true, tempName});
       } else {
         // If the number of iteration is not known, or if the values at each

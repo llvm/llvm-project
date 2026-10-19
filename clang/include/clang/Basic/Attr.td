@@ -4961,9 +4961,9 @@ def OMPDeclareVariant : InheritableAttr {
     void printPrettyPragma(raw_ostream & OS, const PrintingPolicy &Policy)
         const;
     static StringRef getInteropTypeString(const OMPInteropInfo *I) {
-      if (I->IsTarget && I->IsTargetSync)
+      if (I->isTarget() && I->isTargetSync())
         return "target,targetsync";
-      if (I->IsTarget)
+      if (I->isTarget())
         return "target";
       return "targetsync";
     }

@@ -21,6 +21,7 @@
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include <optional>
 
 namespace mlir {
@@ -318,12 +319,13 @@ protected:
 
   /// Return the number of fixed columns, as described in the constructor above,
   /// this is the number of columns beyond those for the variables in var.
-  unsigned getNumFixedCols() const { return usingBigM ? 3u : 2u; }
+  unsigned getNumFixedCols() const { return getUsingBigM() ? 3u : 2u; }
   unsigned getNumRows() const { return tableau.getNumRows(); }
   unsigned getNumColumns() const { return tableau.getNumColumns(); }
 
   /// Stores whether or not a big M column is present in the tableau.
-  bool usingBigM;
+  bool getUsingBigM() const { return var.getFlag(0); }
+  void setUsingBigM(bool Value) { var.setFlag(0, Value); }
 
   /// The number of redundant rows in the tableau. These are the first
   /// nRedundant rows.
@@ -338,7 +340,8 @@ protected:
 
   /// This is true if the tableau has been detected to be empty, false
   /// otherwise.
-  bool empty;
+  bool getEmpty() const { return var.getFlag(1); }
+  void setEmpty(bool Value) { var.setFlag(1, Value); }
 
   /// Holds a log of operations, used for rolling back to a previous state.
   SmallVector<UndoLogEntry, 8> undoLog;
@@ -358,7 +361,8 @@ protected:
   SmallVector<int, 8> rowUnknown, colUnknown;
 
   /// These hold information about each unknown.
-  SmallVector<Unknown, 8> con, var;
+  SmallVector<Unknown, 8> con;
+  llvm::SmallVectorWithFlags<Unknown, 8, 2> var;
 };
 
 /// Simplex class using the lexicographic pivot rule. Used for lexicographic

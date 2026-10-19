@@ -37,6 +37,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -172,7 +173,12 @@ class LoopIdiomRecognize {
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
   OptimizationRemarkEmitter &ORE;
-  bool ApplyCodeSizeHeuristics;
+  bool getApplyCodeSizeHeuristics() const {
+    return StoreRefsForMemcpy.getFlag(0);
+  }
+  void setApplyCodeSizeHeuristics(bool Value) {
+    StoreRefsForMemcpy.setFlag(0, Value);
+  }
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
@@ -196,10 +202,13 @@ private:
 
   StoreListMap StoreRefsForMemset;
   StoreListMap StoreRefsForMemsetPattern;
-  StoreList StoreRefsForMemcpy;
-  bool HasMemset;
-  bool HasMemsetPattern;
-  bool HasMemcpy;
+  llvm::SmallVectorWithFlagsFor<StoreList, 4> StoreRefsForMemcpy;
+  bool getHasMemset() const { return StoreRefsForMemcpy.getFlag(1); }
+  void setHasMemset(bool Value) { StoreRefsForMemcpy.setFlag(1, Value); }
+  bool getHasMemsetPattern() const { return StoreRefsForMemcpy.getFlag(2); }
+  void setHasMemsetPattern(bool Value) { StoreRefsForMemcpy.setFlag(2, Value); }
+  bool getHasMemcpy() const { return StoreRefsForMemcpy.getFlag(3); }
+  void setHasMemcpy(bool Value) { StoreRefsForMemcpy.setFlag(3, Value); }
 
   /// Return code for isLegalStore()
   enum LegalStoreKind {
@@ -333,20 +342,20 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
     return false;
 
   // Determine if code size heuristics need to be applied.
-  ApplyCodeSizeHeuristics =
-      L->getHeader()->getParent()->hasOptSize() && Opts.use_lir_code_size_heurs;
+  setApplyCodeSizeHeuristics(L->getHeader()->getParent()->hasOptSize() &&
+                             Opts.use_lir_code_size_heurs);
 
-  HasMemset = TLI->has(LibFunc_memset);
+  setHasMemset(TLI->has(LibFunc_memset));
   // TODO: Unconditionally enable use of the memset pattern intrinsic (or at
   // least, opt-in via target hook) once we are confident it will never result
   // in worse codegen than without. For now, use it only when the target
   // supports memset_pattern16 libcall (or unless this is overridden by
   // command line option).
-  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
-  HasMemcpy = TLI->has(LibFunc_memcpy);
+  setHasMemsetPattern(TLI->has(LibFunc_memset_pattern16));
+  setHasMemcpy(TLI->has(LibFunc_memcpy));
 
-  if (HasMemset || HasMemsetPattern ||
-      Opts.loop_idiom_force_memset_pattern_intrinsic || HasMemcpy ||
+  if (getHasMemset() || getHasMemsetPattern() ||
+      Opts.loop_idiom_force_memset_pattern_intrinsic || getHasMemcpy() ||
       !DisableLIRP::HashRecognize)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
@@ -507,7 +516,7 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
 
   // If we're allowed to form a memset, and the stored value would be
   // acceptable for memset, use it.
-  if (!MustPreserveExternalState && !UnorderedAtomic && HasMemset &&
+  if (!MustPreserveExternalState && !UnorderedAtomic && getHasMemset() &&
       SplatValue && !DisableLIRP::Memset &&
       // Verify that the stored value is loop invariant.  If not, we can't
       // promote the memset.
@@ -516,7 +525,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     return LegalStoreKind::Memset;
   }
   if (!MustPreserveExternalState && !UnorderedAtomic &&
-      (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic) &&
+      (getHasMemsetPattern() ||
+       Opts.loop_idiom_force_memset_pattern_intrinsic) &&
       !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
@@ -526,7 +536,7 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   }
 
   // Otherwise, see if the store can be turned into a memcpy.
-  if (HasMemcpy && !DisableLIRP::Memcpy) {
+  if (getHasMemcpy() && !DisableLIRP::Memcpy) {
     // Check to see if the stride matches the size of the store.  If so, then we
     // know that every byte is touched in the loop.
     unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
@@ -815,7 +825,7 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   // If we're not allowed to hack on memcpy, we fail. We don't mess with the
   // inlined version as generating a larger inline mempcy could affect code
   // size.
-  if (!HasMemcpy || MCI->isForceInlined() || DisableLIRP::Memcpy)
+  if (!getHasMemcpy() || MCI->isForceInlined() || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -879,7 +889,7 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
   // If we're not allowed to hack on memset, we fail. We don't mess with the
   // inlined version as generating a larger memset could affect code size.
-  if (!HasMemset || MSI->isForceInlined() || DisableLIRP::Memset)
+  if (!getHasMemset() || MSI->isForceInlined() || DisableLIRP::Memset)
     return false;
 
   Value *Pointer = MSI->getDest();
@@ -1141,8 +1151,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *MemsetArg;
   std::optional<int64_t> BytesWritten;
 
-  if (PatternValue &&
-      (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic)) {
+  if (PatternValue && (getHasMemsetPattern() ||
+                       Opts.loop_idiom_force_memset_pattern_intrinsic)) {
     const SCEV *TripCountS =
         SE->getTripCountFromExitCount(BECount, IntIdxTy, CurLoop);
     if (!Expander.isSafeToExpand(TripCountS))
@@ -1567,7 +1577,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 //
 bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
                                                    bool IsLoopMemset) {
-  if (ApplyCodeSizeHeuristics && CurLoop->getNumBlocks() > 1) {
+  if (getApplyCodeSizeHeuristics() && CurLoop->getNumBlocks() > 1) {
     if (CurLoop->isOutermost() && (!IsMemset || !IsLoopMemset)) {
       LLVM_DEBUG(dbgs() << "  " << CurLoop->getHeader()->getParent()->getName()
                         << " : LIR " << (IsMemset ? "Memset" : "Memcpy")
@@ -1683,7 +1693,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // TODO: The clmul optimization is around the same size in many cases, so it
     // could be worth it to take advantage of that fact, especially if it would
     // be much faster than the original loop.
-    if (ApplyCodeSizeHeuristics) {
+    if (getApplyCodeSizeHeuristics()) {
       ReportMissed("optimizing for size");
       return false;
     }

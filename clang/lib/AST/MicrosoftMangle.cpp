@@ -31,6 +31,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
@@ -316,7 +317,7 @@ class MicrosoftCXXNameMangler {
   unsigned StructorType;
 
   typedef llvm::SmallVector<std::string, 10> BackRefVec;
-  BackRefVec NameBackReferences;
+  llvm::SmallVectorWithFlagsFor<BackRefVec, 1> NameBackReferences;
 
   typedef llvm::DenseMap<const void *, unsigned> ArgBackRefMap;
   ArgBackRefMap FunArgBackReferences;
@@ -332,7 +333,7 @@ class MicrosoftCXXNameMangler {
 
   ASTContext &getASTContext() const { return Context.getASTContext(); }
 
-  const bool PointersAre64Bit;
+  bool getPointersAre64Bit() const { return NameBackReferences.getFlag(0); }
 
   DiagnosticBuilder Error(SourceLocation, StringRef, StringRef);
   DiagnosticBuilder Error(SourceLocation, StringRef);
@@ -344,23 +345,26 @@ public:
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
       : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
-        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
-                             LangAS::Default) == 64) {}
+        NameBackReferences(decltype(this->NameBackReferences)::withFlags(
+            unsigned(bool(C.getASTContext().getTargetInfo().getPointerWidth(
+                              LangAS::Default) == 64)))),
+        TemplateArgStringStorage(TemplateArgStringStorageAlloc) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
                           const CXXConstructorDecl *D, CXXCtorType Type)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
-        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
-                             LangAS::Default) == 64) {}
+        NameBackReferences(decltype(this->NameBackReferences)::withFlags(
+            unsigned(bool(C.getASTContext().getTargetInfo().getPointerWidth(
+                              LangAS::Default) == 64)))),
+        TemplateArgStringStorage(TemplateArgStringStorageAlloc) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
                           const CXXDestructorDecl *D, CXXDtorType Type)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
-        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
-                             LangAS::Default) == 64) {}
+        NameBackReferences(decltype(this->NameBackReferences)::withFlags(
+            unsigned(bool(C.getASTContext().getTargetInfo().getPointerWidth(
+                              LangAS::Default) == 64)))),
+        TemplateArgStringStorage(TemplateArgStringStorageAlloc) {}
 
   raw_ostream &getStream() const { return Out; }
 
@@ -415,8 +419,8 @@ private:
   bool is64BitPointer(Qualifiers Quals) const {
     LangAS AddrSpace = Quals.getAddressSpace();
     return AddrSpace == LangAS::ptr64 ||
-           (PointersAre64Bit && !(AddrSpace == LangAS::ptr32_sptr ||
-                                  AddrSpace == LangAS::ptr32_uptr));
+           (getPointersAre64Bit() && !(AddrSpace == LangAS::ptr32_sptr ||
+                                       AddrSpace == LangAS::ptr32_uptr));
   }
 
   void mangleUnqualifiedName(GlobalDecl GD) {
@@ -1443,7 +1447,7 @@ void MicrosoftCXXNameMangler::mangleNestedName(GlobalDecl GD) {
       // struct __block_literal *
       Out << 'P';
       // __ptr64
-      if (PointersAre64Bit)
+      if (getPointersAre64Bit())
         Out << 'E';
       Out << 'A';
       mangleArtificialTagType(TagTypeKind::Struct,
@@ -1658,7 +1662,8 @@ void MicrosoftCXXNameMangler::mangleTemplateInstantiationName(
   // Templates have their own context for back references.
   ArgBackRefMap OuterFunArgsContext;
   ArgBackRefMap OuterTemplateArgsContext;
-  BackRefVec OuterTemplateContext;
+  auto OuterTemplateContext =
+      decltype(NameBackReferences)::withFlags(NameBackReferences.getFlags());
   PassObjectSizeArgsSet OuterPassObjectSizeArgs;
   NameBackReferences.swap(OuterTemplateContext);
   FunArgBackReferences.swap(OuterFunArgsContext);
@@ -2338,8 +2343,9 @@ MicrosoftCXXNameMangler::mangleRefQualifier(RefQualifierKind RefQualifier) {
 void MicrosoftCXXNameMangler::manglePointerExtQualifiers(Qualifiers Quals,
                                                          QualType PointeeType) {
   // Check if this is a default 64-bit pointer or has __ptr64 qualifier.
-  bool is64Bit = PointeeType.isNull() ? PointersAre64Bit :
-      is64BitPointer(PointeeType.getQualifiers());
+  bool is64Bit = PointeeType.isNull()
+                     ? getPointersAre64Bit()
+                     : is64BitPointer(PointeeType.getQualifiers());
   if (is64Bit && (PointeeType.isNull() || !PointeeType->isFunctionType()))
     Out << 'E';
 
@@ -3156,7 +3162,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       // extra argument is not reflected in the AST.
       if (StructorType == Dtor_Deleting ||
           StructorType == Dtor_VectorDeleting) {
-        Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
+        Out << (getPointersAre64Bit() ? "PEAXI@Z" : "PAXI@Z");
         return;
       }
       // The vbase destructor returns void which is not reflected in the AST.
@@ -3837,7 +3843,8 @@ void MicrosoftCXXNameMangler::mangleType(const ObjCObjectType *T,
 
   ArgBackRefMap OuterFunArgsContext;
   ArgBackRefMap OuterTemplateArgsContext;
-  BackRefVec OuterTemplateContext;
+  auto OuterTemplateContext =
+      decltype(NameBackReferences)::withFlags(NameBackReferences.getFlags());
 
   FunArgBackReferences.swap(OuterFunArgsContext);
   TemplateArgBackReferences.swap(OuterTemplateArgsContext);

@@ -515,7 +515,7 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
 
 /// Returns true when it can be guaranteed that the elements of the
 /// container are not being modified.
-static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
+static bool usagesAreConst(ASTContext *Context, ArrayRef<Usage> Usages) {
   return llvm::none_of(Usages, [&Context](const Usage &U) {
     // Lambda captures are just redeclarations (VarDecl) of the same variable,
     // not expressions. If we want to know if a variable that is captured by
@@ -530,7 +530,7 @@ static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
 
 /// Returns true if the elements of the container are never accessed
 /// by reference.
-static bool usagesReturnRValues(const UsageResult &Usages) {
+static bool usagesReturnRValues(ArrayRef<Usage> Usages) {
   return llvm::all_of(Usages, [](const Usage &U) {
     return !U.Expression || U.Expression->isPRValue();
   });
@@ -663,7 +663,7 @@ void LoopConvertCheck::getAliasRange(SourceManager &SM, SourceRange &Range) {
 /// applies them.
 void LoopConvertCheck::doConversion(
     ASTContext *Context, const VarDecl *IndexVar,
-    const ValueDecl *MaybeContainer, const UsageResult &Usages,
+    const ValueDecl *MaybeContainer, ArrayRef<Usage> Usages,
     const DeclStmt *AliasDecl, bool AliasUseRequired, bool AliasFromForInit,
     const ForStmt *Loop, RangeDescriptor Descriptor) {
   std::string VarNameOrStructuredBinding;
@@ -868,7 +868,7 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
 void LoopConvertCheck::getArrayLoopQualifiers(ASTContext *Context,
                                               const BoundNodes &Nodes,
                                               const Expr *ContainerExpr,
-                                              const UsageResult &Usages,
+                                              ArrayRef<Usage> Usages,
                                               RangeDescriptor &Descriptor) {
   // On arrays and pseudoarrays, we must figure out the qualifiers from the
   // usages.
@@ -940,8 +940,8 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
 /// Determines the parameters needed to build the range replacement.
 void LoopConvertCheck::determineRangeDescriptor(
     ASTContext *Context, const BoundNodes &Nodes, const ForStmt *Loop,
-    LoopFixerKind FixerKind, const Expr *ContainerExpr,
-    const UsageResult &Usages, RangeDescriptor &Descriptor) {
+    LoopFixerKind FixerKind, const Expr *ContainerExpr, ArrayRef<Usage> Usages,
+    RangeDescriptor &Descriptor) {
   Descriptor.ContainerString =
       std::string(getContainerString(Context, Loop, ContainerExpr));
   Descriptor.NeedsReverseCall = (FixerKind == LFK_ReverseIterator);
@@ -1092,7 +1092,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Find out which qualifiers we have to use in the loop range.
   const TraversalKindScope RAII(*Context, TK_AsIs);
-  const UsageResult &Usages = Finder.getUsages();
+  ArrayRef<Usage> Usages = Finder.getUsages();
   determineRangeDescriptor(Context, Nodes, Loop, FixerKind, ContainerExpr,
                            Usages, Descriptor);
 

@@ -37,9 +37,8 @@ TargetMachine *EngineBuilder::selectTarget() {
 /// selectTarget - Pick a target either via -march or by guessing the native
 /// arch.  Add any CPU features specified via -mcpu or -mattr.
 TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
-                              StringRef MArch,
-                              StringRef MCPU,
-                              const SmallVectorImpl<std::string>& MAttrs) {
+                                           StringRef MArch, StringRef MCPU,
+                                           ArrayRef<std::string> MAttrs) {
   Triple TheTriple(TargetTriple);
   if (TheTriple.getTriple().empty())
     TheTriple.setTriple(sys::getProcessTriple());
@@ -87,7 +86,7 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
   TargetMachine *Target = TheTarget->createTargetMachine(
       TheTriple, MCPU, FeaturesStr, Options, RelocModel, CMModel, OptLevel,
       /*JIT=*/true);
-  Target->Options.EmulatedTLS = EmulatedTLS;
+  Target->Options.EmulatedTLS = getEmulatedTLSFlag();
 
   assert(Target && "Could not allocate target machine!");
   return Target;

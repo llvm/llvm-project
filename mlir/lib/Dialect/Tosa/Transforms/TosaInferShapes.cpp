@@ -362,7 +362,7 @@ private:
             auto inferredKnowledge = ValueKnowledge::getPessimisticValueState();
             inferredKnowledge.dtype =
                 cast<ShapedType>(resultTy).getElementType();
-            inferredKnowledge.hasRank = predictedShape.hasRank();
+            inferredKnowledge.setHasRank(predictedShape.hasRank());
             if (predictedShape.hasRank()) {
               for (auto dim : predictedShape.getDims()) {
                 inferredKnowledge.sizes.push_back(dim);

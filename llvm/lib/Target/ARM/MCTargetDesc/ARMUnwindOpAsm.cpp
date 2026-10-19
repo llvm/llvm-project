@@ -159,7 +159,7 @@ void UnwindOpcodeAssembler::Finalize(unsigned &PersonalityIndex,
                                      SmallVectorImpl<uint8_t> &Result) {
   UnwindOpcodeStreamer OpStreamer(Result);
 
-  if (HasPersonality) {
+  if (getHasPersonality()) {
     // User-specified personality routine: [ SIZE , OP1 , OP2 , ... ]
     PersonalityIndex = ARM::EHABI::NUM_PERSONALITY_INDEX;
     size_t TotalSize = Ops.size() + 1;

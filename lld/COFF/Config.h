@@ -13,6 +13,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -121,13 +122,19 @@ struct Configuration {
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   bool machineInferred = false;
   size_t wordsize;
-  bool verbose = false;
+  bool getVerbose() const { return dtltoCompilerArgs.getFlag(0); }
+  bool setVerbose(bool Value) {
+    dtltoCompilerArgs.setFlag(0, Value);
+    return Value;
+  }
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
   bool noEntry = false;
   std::string outputFile;
   std::string importName;
-  bool demangle = true;
-  bool doGC = true;
+  bool getDemangle() const { return !dtltoCompilerArgs.getFlag(1); }
+  void setDemangle(bool Value) { dtltoCompilerArgs.setFlag(1, !Value); }
+  bool getDoGC() const { return !dtltoCompilerArgs.getFlag(2); }
+  void setDoGC(bool Value) { dtltoCompilerArgs.setFlag(2, !Value); }
   ICFLevel doICF = ICFLevel::None;
   bool tailMerge;
   bool relocatable = true;
@@ -145,7 +152,7 @@ struct Configuration {
   bool showSummary = false;
   bool printSearchPaths = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
-  llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> mllvmOpts;
   std::vector<std::string> natvisFiles;
   llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;
@@ -158,12 +165,18 @@ struct Configuration {
   std::vector<Symbol *> gcroot;
 
   llvm::StringSet<> noDefaultLibs;
-  bool noDefaultLibAll = false;
+  bool getNoDefaultLibAll() const { return dtltoCompilerArgs.getFlag(3); }
+  bool setNoDefaultLibAll(bool Value) {
+    dtltoCompilerArgs.setFlag(3, Value);
+    return Value;
+  }
 
   // True if we are creating a DLL.
-  bool dll = false;
+  bool getDll() const { return dtltoCompilerPrependArgs.getFlag(0); }
+  void setDll(bool Value) { dtltoCompilerPrependArgs.setFlag(0, Value); }
   StringRef implib;
-  bool noimplib = false;
+  bool getNoimplib() const { return dtltoCompilerPrependArgs.getFlag(1); }
+  void setNoimplib(bool Value) { dtltoCompilerPrependArgs.setFlag(1, Value); }
   llvm::StringSet<> delayLoads;
   std::map<std::string, int> dllOrder;
   Symbol *arm64ECIcallHelper = nullptr;
@@ -198,22 +211,30 @@ struct Configuration {
   StringRef dtltoDistributor;
 
   // Used for /thinlto-distributor-arg:<arg>
-  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> dtltoDistributorArgs;
 
   // Used for /thinlto-remote-compiler:<path>
   StringRef dtltoCompiler;
 
   // Used for /thinlto-remote-compiler-prepend-arg:<arg>
-  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> dtltoCompilerPrependArgs;
 
   // Used for /thinlto-remote-compiler-arg:<arg>
-  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
+  llvm::SmallVectorWithFlags<llvm::StringRef, 0, 4> dtltoCompilerArgs;
 
   // Used for /fat-lto-objects
-  bool fatLTOObjects = false;
+  bool getFatLTOObjects() const { return dtltoCompilerPrependArgs.getFlag(2); }
+  void setFatLTOObjects(bool Value) {
+    dtltoCompilerPrependArgs.setFlag(2, Value);
+  }
 
   // Used for /opt:[no]ltodebugpassmanager
-  bool ltoDebugPassManager = false;
+  bool getLtoDebugPassManager() const {
+    return dtltoCompilerPrependArgs.getFlag(3);
+  }
+  void setLtoDebugPassManager(bool Value) {
+    dtltoCompilerPrependArgs.setFlag(3, Value);
+  }
 
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> merge;
@@ -230,7 +251,8 @@ struct Configuration {
   ManifestKind manifest = Default;
   int manifestID = 1;
   llvm::SetVector<StringRef> manifestDependencies;
-  bool manifestUAC = true;
+  bool getManifestUAC() const { return !dtltoDistributorArgs.getFlag(0); }
+  void setManifestUAC(bool Value) { dtltoDistributorArgs.setFlag(0, !Value); }
   std::vector<std::string> manifestInput;
   StringRef manifestLevel = "'asInvoker'";
   StringRef manifestUIAccess = "'false'";
@@ -255,7 +277,11 @@ struct Configuration {
   std::string mapFile;
 
   // Used for /mapinfo.
-  bool mapInfo = false;
+  bool getMapInfo() const { return dtltoDistributorArgs.getFlag(1); }
+  bool setMapInfo(bool Value) {
+    dtltoDistributorArgs.setFlag(1, Value);
+    return Value;
+  }
 
   // Used for /thinlto-index-only:
   llvm::StringRef thinLTOIndexOnlyArg;
@@ -278,13 +304,23 @@ struct Configuration {
   llvm::StringRef ltoObjPath;
 
   // Used for /lto-cs-profile-generate:
-  bool ltoCSProfileGenerate = false;
+  bool getLtoCSProfileGenerate() const {
+    return dtltoDistributorArgs.getFlag(2);
+  }
+  void setLtoCSProfileGenerate(bool Value) {
+    dtltoDistributorArgs.setFlag(2, Value);
+  }
 
   // Used for /lto-cs-profile-path
   llvm::StringRef ltoCSProfileFile;
 
   // Used for /lto-pgo-warn-mismatch:
-  bool ltoPGOWarnMismatch = true;
+  bool getLtoPGOWarnMismatch() const {
+    return !dtltoDistributorArgs.getFlag(3);
+  }
+  void setLtoPGOWarnMismatch(bool Value) {
+    dtltoDistributorArgs.setFlag(3, !Value);
+  }
 
   // Used for /lto-sample-profile:
   llvm::StringRef ltoSampleProfileName;
@@ -293,7 +329,8 @@ struct Configuration {
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,
                   uint64_t>
       callGraphProfile;
-  bool callGraphProfileSort = false;
+  bool getCallGraphProfileSort() const { return mllvmOpts.getFlag(0); }
+  void setCallGraphProfileSort(bool Value) { mllvmOpts.setFlag(0, Value); }
 
   // Used for /print-symbol-order:
   StringRef printSymbolOrder;
@@ -354,14 +391,20 @@ struct Configuration {
   bool pseudoRelocs = false;
   bool stdcallFixup = false;
   bool writeCheckSum = false;
-  bool prefetchInputs = false;
+  bool getPrefetchInputs() const { return mllvmOpts.getFlag(1); }
+  bool setPrefetchInputs(bool Value) {
+    mllvmOpts.setFlag(1, Value);
+    return Value;
+  }
   EmitKind emit = EmitKind::Obj;
-  bool allowDuplicateWeak = false;
+  bool getAllowDuplicateWeak() const { return mllvmOpts.getFlag(2); }
+  void setAllowDuplicateWeak(bool Value) { mllvmOpts.setFlag(2, Value); }
   BuildIDHash buildIDHash = BuildIDHash::None;
   llvm::StringRef optRemarksFilename;
   llvm::StringRef optRemarksPasses;
   llvm::StringRef optRemarksFormat;
-  bool optRemarksWithHotness = false;
+  bool getOptRemarksWithHotness() const { return mllvmOpts.getFlag(3); }
+  void setOptRemarksWithHotness(bool Value) { mllvmOpts.setFlag(3, Value); }
   std::optional<uint64_t> optRemarksHotnessThreshold = 0;
 };
 

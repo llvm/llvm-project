@@ -15,6 +15,7 @@
 
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -75,7 +76,12 @@ private:
   DenseMap<unsigned, Register> IncomingIndirectArgs;
 
   /// Is there any vector argument or return?
-  bool IsVectorCall = false;
+  bool getIsVectorCallFlag() const {
+    return InterruptCSRFrameIndexes.getFlag(0);
+  }
+  void setIsVectorCallFlag(bool Value) {
+    InterruptCSRFrameIndexes.setFlag(0, Value);
+  }
 
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
@@ -88,15 +94,26 @@ private:
   unsigned QCIInterruptStackSize = 0;
 
   /// Store Frame Indexes for Interrupt-Related CSR Spills.
-  SmallVector<int, 2> InterruptCSRFrameIndexes;
+  llvm::SmallVectorWithFlags<int, 2, 3> InterruptCSRFrameIndexes;
 
   int64_t StackProbeSize = 0;
 
   /// Does it probe the stack for a dynamic allocation?
-  bool HasDynamicAllocation = false;
+  bool getHasDynamicAllocation() const {
+    return InterruptCSRFrameIndexes.getFlag(1);
+  }
+  void setHasDynamicAllocation(bool Value) {
+    InterruptCSRFrameIndexes.setFlag(1, Value);
+  }
 
   /// Whether the function has cf-protection-branch module flag set.
-  bool CFProtectionBranch = false;
+  bool getCFProtectionBranch() const {
+    return InterruptCSRFrameIndexes.getFlag(2);
+  }
+  bool setCFProtectionBranch(bool Value) {
+    InterruptCSRFrameIndexes.setFlag(2, Value);
+    return Value;
+  }
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
@@ -241,13 +258,13 @@ public:
   void addSExt32Register(Register Reg);
   bool isSExt32Register(Register Reg) const;
 
-  bool isVectorCall() const { return IsVectorCall; }
-  void setIsVectorCall() { IsVectorCall = true; }
+  bool isVectorCall() const { return getIsVectorCallFlag(); }
+  void setIsVectorCall() { setIsVectorCallFlag(true); }
 
-  bool hasDynamicAllocation() const { return HasDynamicAllocation; }
-  void setDynamicAllocation() { HasDynamicAllocation = true; }
+  bool hasDynamicAllocation() const { return getHasDynamicAllocation(); }
+  void setDynamicAllocation() { setHasDynamicAllocation(true); }
 
-  bool hasCFProtectionBranch() const { return CFProtectionBranch; }
+  bool hasCFProtectionBranch() const { return getCFProtectionBranch(); }
 };
 
 } // end namespace llvm

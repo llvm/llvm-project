@@ -89,9 +89,9 @@ MCAssembler::MCAssembler(MCContext &Context,
 }
 
 void MCAssembler::reset() {
-  HasLayout = false;
-  HasFinalLayout = false;
-  RelaxAll = false;
+  setHasLayout(false);
+  setHasFinalLayout(false);
+  setRelaxAllFlag(false);
   BundleAlign.reset();
   Sections.clear();
   Symbols.clear();
@@ -338,7 +338,7 @@ uint64_t MCAssembler::getSymbolOffset(const MCSymbol &S) const {
 }
 
 const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
-  assert(HasLayout);
+  assert(getHasLayout());
   if (!Symbol.isVariable())
     return &Symbol;
 
@@ -373,7 +373,7 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
   const MCFragment &F = *Sec.curFragList()->Tail;
-  assert(HasLayout && F.getKind() == MCFragment::FT_Data);
+  assert(getHasLayout() && F.getKind() == MCFragment::FT_Data);
   return getFragmentOffset(F) + F.getSize();
 }
 
@@ -697,7 +697,7 @@ void MCAssembler::layout() {
   }
 
   // Layout until everything fits.
-  this->HasLayout = true;
+  this->setHasLayout(true);
   for (MCSection &Sec : *this)
     layoutSection(Sec);
   unsigned FirstStable = Sections.size();
@@ -726,7 +726,7 @@ void MCAssembler::layout() {
 
   // Fragment sizes are finalized. For RISC-V linker relaxation, this flag
   // helps check whether a PC-relative fixup is fully resolved.
-  this->HasFinalLayout = true;
+  this->setHasFinalLayout(true);
 
   // Stores the current .reloc group for each fragment.
   //
@@ -810,7 +810,7 @@ void MCAssembler::Finish() {
   if (!getContext().hadError())
     stats::ObjectBytes += getWriter().writeObject();
 
-  HasLayout = false;
+  setHasLayout(false);
   assert(PendingErrors.empty());
 }
 

@@ -383,8 +383,8 @@ static bool CC_Lanai32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 SDValue LanaiTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv) {
   case CallingConv::C:
   case CallingConv::Fast:
@@ -398,23 +398,23 @@ SDValue LanaiTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  auto &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  auto &Ins = CLI.Ins;
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
-  bool &IsTailCall = CLI.IsTailCall;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = CLI.IsVarArg;
+  bool IsVarArg = CLI.getIsVarArg();
 
   // Lanai target does not yet support tail call optimization.
-  IsTailCall = false;
+  CLI.setIsTailCall(false);
 
   switch (CallConv) {
   case CallingConv::Fast:
   case CallingConv::C:
-    return LowerCCCCallTo(Chain, Callee, CallConv, IsVarArg, IsTailCall, Outs,
-                          OutVals, Ins, DL, DAG, InVals);
+    return LowerCCCCallTo(Chain, Callee, CallConv, IsVarArg,
+                          CLI.getIsTailCall(), Outs, OutVals, Ins, DL, DAG,
+                          InVals);
   default:
     report_fatal_error("Unsupported calling convention");
   }
@@ -424,8 +424,8 @@ SDValue LanaiTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 // generate load operations for arguments places on the stack.
 SDValue LanaiTargetLowering::LowerCCCArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -517,10 +517,11 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
   return Chain;
 }
 
-bool LanaiTargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-    const Type *RetTy) const {
+bool LanaiTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                         MachineFunction &MF, bool IsVarArg,
+                                         llvm::ArrayRef<ISD::OutputArg> Outs,
+                                         LLVMContext &Context,
+                                         const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
@@ -530,7 +531,7 @@ bool LanaiTargetLowering::CanLowerReturn(
 SDValue
 LanaiTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  bool IsVarArg,
-                                 const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                 llvm::ArrayRef<ISD::OutputArg> Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &DL, SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of the return value to a location
@@ -592,10 +593,10 @@ LanaiTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 // (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
 SDValue LanaiTargetLowering::LowerCCCCallTo(
     SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool IsVarArg,
-    bool /*IsTailCall*/, const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    bool /*IsTailCall*/, llvm::ArrayRef<ISD::OutputArg> Outs,
+    const SmallVectorImpl<SDValue> &OutVals, llvm::ArrayRef<ISD::InputArg> Ins,
+    const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
@@ -758,8 +759,8 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
 // appropriate copies out of appropriate physical registers.
 SDValue LanaiTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+    llvm::ArrayRef<ISD::InputArg> Ins, const SDLoc &DL, SelectionDAG &DAG,
+    SmallVectorImpl<SDValue> &InVals) const {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,

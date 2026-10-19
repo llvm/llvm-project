@@ -21,6 +21,7 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace fir {
 class FirOpBuilder;
@@ -122,9 +123,15 @@ public:
   bool canBeFetchedAfterPush() const { return true; }
 
 private:
-  const bool allocateOnHeap;
+  bool getAllocateOnHeap() const { return typeParams.getFlag(0); }
   mlir::Value temp;
-  llvm::SmallVector<mlir::Value> typeParams;
+  llvm::SmallVectorWithFlags<mlir::Value> typeParams;
+
+public:
+  ArrayTemp(const ArrayTemp &) = default;
+  ArrayTemp(ArrayTemp &&) = default;
+  ArrayTemp &operator=(const ArrayTemp &) = delete;
+  ArrayTemp &operator=(ArrayTemp &&) = delete;
 };
 
 /// Structure to hold the value of a single entity.

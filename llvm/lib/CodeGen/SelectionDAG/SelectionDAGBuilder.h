@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -162,11 +163,21 @@ class SelectionDAGBuilder {
 
   /// Cache the module flag for whether we should use debug-info assignment
   /// tracking.
-  bool AssignmentTrackingEnabled = false;
+  bool getAssignmentTrackingEnabled() const {
+    return PendingConstrainedFPStrict.getFlag(0);
+  }
+  void setAssignmentTrackingEnabled(bool Value) {
+    PendingConstrainedFPStrict.setFlag(0, Value);
+  }
 
   /// Cache whether a debug value can name the address of a global directly,
   /// rather than holding out for a register with it.
-  bool CanDescribeGlobalAddressInLocationList = false;
+  bool getCanDescribeGlobalAddressInLocationList() const {
+    return PendingConstrainedFPStrict.getFlag(1);
+  }
+  void setCanDescribeGlobalAddressInLocationList(bool Value) {
+    PendingConstrainedFPStrict.setFlag(1, Value);
+  }
 
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and
@@ -194,10 +205,10 @@ private:
   /// terminator instruction (like PendingExports).  We track the latter
   /// set of nodes in a separate list.
   SmallVector<SDValue, 8> PendingConstrainedFP;
-  SmallVector<SDValue, 8> PendingConstrainedFPStrict;
+  llvm::SmallVectorWithFlags<SDValue, 8, 3> PendingConstrainedFPStrict;
 
   /// Update root to include all chains from the Pending list.
-  SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
+  template <typename PendingT> SDValue updateRoot(PendingT &Pending);
 
   /// Given a node representing a floating-point operation and its specified
   /// exception behavior, this either updates the root or stores the node in
@@ -279,7 +290,11 @@ public:
 
   /// This is set to true if a call in the current block has been translated as
   /// a tail call. In this case, no subsequent DAG nodes should be created.
-  bool HasTailCall = false;
+  bool getHasTailCall() const { return PendingConstrainedFPStrict.getFlag(2); }
+  bool setHasTailCall(bool Value) {
+    PendingConstrainedFPStrict.setFlag(2, Value);
+    return Value;
+  }
 
   LLVMContext *Context = nullptr;
 

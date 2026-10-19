@@ -76,9 +76,9 @@ OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 OptTable::OptTable(const Tables &T, bool IgnoreCase)
     : StrTable(T.StrTable), PrefixesTable(T.PrefixesTable),
       OptionInfos(T.Infos), InfoExtrasTable(T.InfoExtras),
-      IgnoreCase(IgnoreCase), SubCommands(T.SubCommands),
-      SubCommandIDsTable(T.SubCommandIDs),
-      HelpTextVariantsTable(T.HelpTextVariants) {
+      SubCommands(T.SubCommands), SubCommandIDsTable(T.SubCommandIDs),
+      HelpTextVariantsTable(T.HelpTextVariants),
+      PrefixesUnion(decltype(PrefixesUnion)::withFlags(unsigned(IgnoreCase))) {
   // Each prefix set in PrefixesTable starts with its size.
   for (unsigned I = 0, E = PrefixesTable.size(); I != E;) {
     unsigned Size = PrefixesTable[I++].value();
@@ -371,7 +371,7 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
   // Search for the option which matches Str.
   for (; Start != End; ++Start) {
     unsigned ArgSize =
-        matchOption(StrTable, PrefixesTable, Start, Str, IgnoreCase);
+        matchOption(StrTable, PrefixesTable, Start, Str, getIgnoreCase());
     if (!ArgSize)
       continue;
 
@@ -468,8 +468,8 @@ std::unique_ptr<Arg> OptTable::internalParseOneArg(
     unsigned ArgSize = 0;
     // Scan for first option which is a proper prefix.
     for (; Start != End; ++Start)
-      if ((ArgSize =
-               matchOption(StrTable, PrefixesTable, Start, Str, IgnoreCase)))
+      if ((ArgSize = matchOption(StrTable, PrefixesTable, Start, Str,
+                                 getIgnoreCase())))
         break;
     if (Start == End)
       break;
@@ -552,7 +552,7 @@ InputArgList OptTable::internalParseArgs(
 
     // In DashDashParsing mode, the first "--" stops option scanning and treats
     // all subsequent arguments as positional.
-    if (DashDashParsing && Str == "--") {
+    if (getDashDashParsingFlag() && Str == "--") {
       while (++Index < End) {
         Args.append(new Arg(getOption(InputOptionID), Str, Index,
                             Args.getArgString(Index)));
@@ -561,10 +561,11 @@ InputArgList OptTable::internalParseArgs(
     }
 
     unsigned Prev = Index;
-    std::unique_ptr<Arg> A = GroupedShortOptions
-                 ? parseOneArgGrouped(Args, Index)
-                 : internalParseOneArg(Args, Index, ExcludeOption);
-    assert((Index > Prev || GroupedShortOptions) &&
+    std::unique_ptr<Arg> A =
+        getGroupedShortOptionsFlag()
+            ? parseOneArgGrouped(Args, Index)
+            : internalParseOneArg(Args, Index, ExcludeOption);
+    assert((Index > Prev || getGroupedShortOptionsFlag()) &&
            "Parser failed to consume argument.");
 
     // Check for missing argument error.

@@ -8,6 +8,7 @@
 
 #include "llvm-dwarfdump.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -432,13 +433,22 @@ struct VarKey {
 };
 
 struct VarCoverage {
-  SmallVector<DWARFDie> Parents;
+  VarCoverage(ArrayRef<DWARFDie> Parents, size_t Cov, size_t BaselineCov,
+              size_t LTCov, size_t Missing, size_t Instances,
+              bool MissingBaseline)
+      : Parents(decltype(this->Parents)::withFlags(unsigned(MissingBaseline),
+                                                   Parents)),
+        Cov(Cov), BaselineCov(BaselineCov), LTCov(LTCov), Missing(Missing),
+        Instances(Instances) {}
+
+  llvm::SmallVectorWithFlags<DWARFDie> Parents;
   size_t Cov;
   size_t BaselineCov;
   size_t LTCov;
   size_t Missing;
   size_t Instances;
-  bool MissingBaseline;
+  bool getMissingBaseline() const { return Parents.getFlag(0); }
+  void setMissingBaseline(bool Value) { Parents.setFlag(0, Value); }
 };
 
 typedef std::multimap<VarKey, VarCoverage, std::less<>> VarMap;
@@ -457,7 +467,7 @@ static std::optional<const VarKey> getVarKey(DWARFDie VariableDIE,
                 VariableDIE.getDeclLine()};
 }
 
-static void displayParents(SmallVector<DWARFDie> Parents, raw_ostream &OS) {
+static void displayParents(ArrayRef<DWARFDie> Parents, raw_ostream &OS) {
   bool First = true;
   for (const auto Parent : Parents) {
     if (auto FormValue = Parent.find(DW_AT_call_file)) {
@@ -494,7 +504,7 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
        << format("%.3g", ((float)Var.LTCov / Var.Instances)) << "\t"
        << format("%.3g", ((float)Var.LTCov / Var.BaselineCov));
   OS << "\n";
-  if (Var.MissingBaseline)
+  if (Var.getMissingBaseline())
     WithColor(errs(), HighlightColor::Warning).warning()
         << "DIE not found in baseline\n";
   if (Var.Missing)
@@ -596,7 +606,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
           for (const auto &L : BCov)
             VarCov.LTCov += SubroutineCov.count(L);
         } else {
-          VarCov.MissingBaseline = true;
+          VarCov.setMissingBaseline(true);
         }
       }
 
@@ -628,7 +638,11 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
         CombinedCov.BaselineCov += Var->second.BaselineCov;
         CombinedCov.LTCov += Var->second.LTCov;
         CombinedCov.Missing += Var->second.Missing;
-        CombinedCov.MissingBaseline |= Var->second.MissingBaseline;
+        [&] {
+          auto PackedFlagValue = Var->second.getMissingBaseline();
+          return CombinedCov.setMissingBaseline(
+              CombinedCov.getMissingBaseline() | PackedFlagValue);
+        }();
       }
       displayVariableCoverage(FirstVar->first, CombinedCov, true, OS);
     }
