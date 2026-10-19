@@ -1,4 +1,4 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugTypeFunction --implicit-check-not=DebugTypePointer
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Pointer without dwarfAddressSpace not supported yet: no DebugTypePointer, and
@@ -8,7 +8,6 @@
 ; CHECK: DebugCompilationUnit
 ; CHECK: DebugTypeComposite
 ; CHECK: DebugTypeFunction
-; CHECK-NOT: DebugTypePointer
 
 target triple = "spirv64-unknown-unknown"
 
