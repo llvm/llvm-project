@@ -22638,6 +22638,37 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                "  tm t; // FormatOff\n"
                " int i;",
                Style);
+
+  Style = getLLVMStyle();
+  Style.UseTab = FormatStyle::UT_Always;
+  Style.TabWidth = 4;
+  Style.IndentWidth = 4;
+  Style.ReflowComments = FormatStyle::RCS_Never;
+  Style.OneLineFormatOffRegex = "// #if";
+  verifyFormat("void f() {\n"
+               "#if !X\n"
+               "#else\n"
+               "\t{\n"
+               "#if Y\n"
+               "#else // #if Y\n"
+               "\t\t// comment\n"
+               "#endif\n"
+               "\t}\n"
+               "#endif\n"
+               "}",
+               "void f()\n"
+               "{\n"
+               "#if !X\n"
+               "#else\n"
+               "  {\n"
+               "#if Y\n"
+               "#else // #if Y\n"
+               "    // comment\n"
+               "#endif\n"
+               "  }\n"
+               "#endif\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
