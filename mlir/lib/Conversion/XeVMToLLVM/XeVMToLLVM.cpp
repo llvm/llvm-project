@@ -1364,10 +1364,11 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     // bftof/convert_half round trip.
     //
     // `src_etype` is what says how to read the source, so the bf16 bitcast is
-    // driven by it. An operand whose element type disagrees with it is invalid
-    // IR that `TruncfOp::verify` does not reject yet, and mangle() has no code
-    // for bf16, so it asserts there. A verifier rule for that belongs with the
-    // op, not here.
+    // driven by it, and is only the step the wrapper's shortN signature needs.
+    // An operand whose element type disagrees with `src_etype` is a case
+    // `TruncfOp::verify` accepts today but should not: mangle() has no bf16
+    // case, so it reaches the unreachable in getTypeMangling. That verifier
+    // rule belongs with the op, not here.
     bool srcIsBF16 = srcEtype == TruncfSrcElemTypes::BF16;
     if (srcIsBF16)
       src = LLVM::BitcastOp::create(
@@ -1516,8 +1517,8 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
                        rewriter, mangle(convertName, argTypes), resTy, argTypes,
                        args, {}, funcAttrs, op.getOperation())
                        ->getResult(0);
-    // The bf16 wrapper returns the bits as i16, and `dst_etype` may disagree
-    // with the result's element type, so cast to what the op produces.
+    // The bf16 wrapper returns the bits as i16, so cast to the bf16 result
+    // type. An f16 result needs nothing: the wrapper returns it.
     rewriter.replaceOp(op, castIfNeeded(rewriter, loc, vecDstTy, result));
     return success();
   }
