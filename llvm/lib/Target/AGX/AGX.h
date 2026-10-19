@@ -28,6 +28,7 @@ FunctionPass *createAGXCodeGenPreparePass();
 FunctionPass *createAGXStrictFPPass();
 FunctionPass *createAGXLowerFPEnvPass();
 FunctionPass *createAGXSoftF64Pass();
+FunctionPass *createAGXExpandWideAtomicsPass();
 FunctionPass *createAGXAnnotateControlFlowPass();
 
 // Instruction selection.
@@ -43,6 +44,7 @@ void initializeAGXCodeGenPreparePass(PassRegistry &);
 void initializeAGXStrictFPPass(PassRegistry &);
 void initializeAGXLowerFPEnvPass(PassRegistry &);
 void initializeAGXSoftF64Pass(PassRegistry &);
+void initializeAGXExpandWideAtomicsPass(PassRegistry &);
 void initializeAGXAnnotateControlFlowPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAGXFoldOperandsPass(PassRegistry &);

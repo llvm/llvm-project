@@ -40,6 +40,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXStrictFPPass(PR);
   initializeAGXLowerFPEnvPass(PR);
   initializeAGXSoftF64Pass(PR);
+  initializeAGXExpandWideAtomicsPass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
@@ -147,6 +148,8 @@ void AGXPassConfig::addIRPasses() {
   addPass(createAGXAlwaysInlinePass());
   addPass(createAlwaysInlinerLegacyPass());
 
+  // 64- and 128-bit atomics take locks; the others are hardware atomics.
+  addPass(createAGXExpandWideAtomicsPass());
   addPass(createAtomicExpandLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInferAddressSpacesPass());

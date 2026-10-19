@@ -241,6 +241,14 @@ Supported:
   intrinsics (inline or as loops).
 * Device and threadgroup 32-bit atomics. Other atomic operations become
   compare-and-swap loops; atomic loads and stores become atomic operations.
+  The hardware has no 64-bit or 128-bit atomics (beyond 64-bit ``umin`` and
+  ``umax`` without a result): those take a lock from a table of 1024 device
+  memory locks (the ``__agx_atomic_locks`` global, in the global data
+  buffer), chosen by the address of the 16-byte block they access, and read
+  and write the value with 32-bit atomics between fences while they hold it.
+  The critical section is in the loop that takes the lock, so the threads of
+  a SIMD-group that wait for the same lock do not deadlock. They are atomic
+  with respect to each other, not to 32-bit atomics on the same memory.
 * SIMD-group and quad shuffles, ballots, reductions and prefixes, derivatives,
   barriers and special registers through the ``llvm.agx.*`` intrinsics.
 
