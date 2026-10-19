@@ -40,7 +40,6 @@ void func() {
   for (int i = {0}; i < 7; ++i)
     ;
 
-  // expected-error@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
   #pragma omp reverse
   for (int i = {}; i < 7; ++i)
     ;

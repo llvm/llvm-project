@@ -8674,13 +8674,18 @@ static const StmtExpr *findStmtExpr(const Expr *E) {
   return nullptr;
 }
 
-static Expr *ignoreTransparentInitLists(Expr *E) {
-  while (auto *ILE = dyn_cast<InitListExpr>(E)) {
-    if (!ILE->isTransparent())
-      break;
-    E = ILE->getInit(0);
-  }
-  return E;
+static ExprResult buildInitListValue(Sema &SemaRef, Expr *E) {
+  auto *ILE = dyn_cast<InitListExpr>(E);
+  if (!ILE)
+    return E;
+  if (ILE->isTransparent())
+    return buildInitListValue(SemaRef, ILE->getInit(0));
+  if (ILE->getNumInits() != 0 || !ILE->getType()->isScalarType())
+    return E;
+  SourceLocation Loc = ILE->getLBraceLoc();
+  return SemaRef.BuildCStyleCastExpr(
+      Loc, SemaRef.Context.getTrivialTypeSourceInfo(ILE->getType(), Loc), Loc,
+      SemaRef.ActOnIntegerConstant(Loc, 0).get());
 }
 
 bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
@@ -8704,13 +8709,10 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
   if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
   if (!SemaRef.CurContext->isDependentContext()) {
-    NewLB = ignoreTransparentInitLists(NewLB);
-    if (auto *ILE = dyn_cast<InitListExpr>(NewLB)) {
-      if (EmitDiags)
-        SemaRef.Diag(ILE->getBeginLoc(), diag::err_omp_loop_not_canonical_init)
-            << ILE->getSourceRange();
+    ExprResult LBVal = buildInitListValue(SemaRef, NewLB);
+    if (LBVal.isInvalid())
       return true;
-    }
+    NewLB = LBVal.get();
   }
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
@@ -8757,12 +8759,10 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   if (!NewStep || NewStep->containsErrors())
     return true;
   if (!SemaRef.CurContext->isDependentContext()) {
-    NewStep = ignoreTransparentInitLists(NewStep);
-    if (auto *ILE = dyn_cast<InitListExpr>(NewStep)) {
-      SemaRef.Diag(ILE->getBeginLoc(), diag::err_omp_loop_not_canonical_incr)
-          << ILE->getSourceRange() << LCDecl;
+    ExprResult StepVal = buildInitListValue(SemaRef, NewStep);
+    if (StepVal.isInvalid())
       return true;
-    }
+    NewStep = StepVal.get();
   }
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.

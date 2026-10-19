@@ -420,7 +420,6 @@ int test_iteration_spaces() {
   }
 
 #pragma omp parallel
-// expected-error@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
 #pragma omp for
   for (int a = {}; a < 10; ++a) {
   }

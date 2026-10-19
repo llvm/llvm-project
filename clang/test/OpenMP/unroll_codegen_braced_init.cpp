@@ -16,3 +16,17 @@ void braced_init() {
   for (int i = {3}; i < 7; i++)
     body(i);
 }
+
+// CHECK-LABEL: define {{.*}}void @_Z10empty_initv(
+// CHECK:         store i32 0, ptr %[[I:.+]], align 4
+// CHECK:         icmp sgt i32 %{{.+}}, 1
+// CHECK:         icmp slt i32 %{{.+}}, 4
+// CHECK:         %[[MUL:.+]] = mul nsw i32 %{{.+}}, 1
+// CHECK-NEXT:    %[[ADD:.+]] = add nsw i32 0, %[[MUL]]
+// CHECK-NEXT:    store i32 %[[ADD]], ptr %[[I]], align 4
+void empty_init() {
+#pragma omp for
+#pragma omp unroll partial(2)
+  for (int i = {}; i < 4; i++)
+    body(i);
+}

@@ -163,7 +163,6 @@ void braced_init() {
   for (j = {0}; j < 2; j++)
     ;
 
-  // expected-error@+2 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
 #pragma omp unroll partial
   for (int i = {}; i < 2; i++)
     ;
@@ -181,7 +180,7 @@ void braced_init() {
   for (int i = 0; i < 2; i -= {-1})
     ;
 
-  // expected-error@+2 {{increment clause of OpenMP for loop must perform simple addition or subtraction on loop variable 'i'}}
+  // expected-error@+2 {{increment expression must cause 'i' to increase on each iteration of OpenMP for loop}} expected-note@+2 {{loop step is expected to be positive due to this condition}}
 #pragma omp unroll partial
   for (int i = 0; i < 2; i += {})
     ;
