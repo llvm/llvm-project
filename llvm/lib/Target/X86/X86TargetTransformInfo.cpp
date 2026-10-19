@@ -71,6 +71,7 @@ using namespace llvm;
 
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?
+namespace {
 struct CostKindCosts {
   unsigned RecipThroughputCost = ~0U;
   unsigned LatencyCost = ~0U;
@@ -99,6 +100,7 @@ struct CostKindCosts {
     return Cost;
   }
 };
+} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
@@ -7334,10 +7336,7 @@ static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
 
-  if (ScalarTy->isHalfTy() && ST->hasBWI())
-    return true;
-
-  if (ScalarTy->isBFloatTy() && ST->hasBF16())
+  if ((ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()) && ST->hasBWI())
     return true;
 
   if (!ScalarTy->isIntegerTy())

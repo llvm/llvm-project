@@ -276,6 +276,14 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: fexecve
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: char *const []
+      - type: char *const []
   - name: fpathconf
     standards:
       - posix
