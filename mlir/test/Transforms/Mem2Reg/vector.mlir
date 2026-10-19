@@ -223,7 +223,7 @@ func.func @negative_dynamic_shape(%pad: f32, %d: index) -> vector<4xf32> {
   return %r : vector<4xf32>
 }
 
-// RUN: mlir-opt %s --mem2reg --split-input-file | FileCheck %s
+// -----
 
 // A static, same-rank memref.subview is a promotable sub-slice alias: a write
 // into the subview becomes vector.insert_strided_slice into the buffer's value,
