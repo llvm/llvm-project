@@ -716,13 +716,46 @@ Adds an implicit #undef into the predefines buffer which is read before the
 source file is preprocessed.
 :::
 
+:::{option} -fheader-search=<value>
+Specify the method used to resolve included header files. Supported options
+include `gcc` to select GCC compatible resolution or `microsoft` to select
+MSVC compatible resolution. `gcc` is the default for the `clang`, `clang++`,
+and `clang-cpp` drivers. `microsoft` is the default for `clang-cl`.
+:::
+
 :::{option} -include <filename>
 Adds an implicit #include into the predefines buffer which is read before the
 source file is preprocessed.
 :::
 
-:::{option} -I<directory>
+:::{option} -I <directory>
 Add the specified directory to the search path for include files.
+:::
+
+:::{option} -iquote <directory>
+Add directory to QUOTE include search path.
+:::
+
+:::{option} -isystem <directory>
+Add directory to SYSTEM include search path.
+:::
+
+:::{option} -iexternal <directory>
+Add directory to include search path with warnings suppressed.
+:::
+
+:::{option} -iexternal-env=<var>
+Add the directories specified in the named environment variable to the include
+search path with warnings suppressed.
+:::
+
+:::{option} -iexternal-anglebrackets
+Treat all #include paths enclosed in angle brackets as including a system header.
+:::
+
+:::{option} /imsvc <directory>
+`clang-cl` only; Add the specified directory to the system include search path
+as if it was specified in the `INCLUDE` environment variable.
 :::
 
 :::{option} -F<directory>
@@ -762,6 +795,11 @@ different version of the STL) may result in different behavior. Always verify
 the preprocessed file by compiling it separately.
 :::
 
+:::{option} /X
+`clang-cl` only; Do not add directories from the `INCLUDE` environment
+variable to the include search path.
+:::
+
 ## ENVIRONMENT
 
 :::{envvar} TMPDIR, TEMP, TMP
@@ -769,22 +807,31 @@ These environment variables are checked, in order, for the location to write
 temporary files used during the compilation process.
 :::
 
-```{eval-rst}
-.. envvar:: CPATH
-
-  This environment variable specifies additional (non-system) header search
-  paths to be used to find included header files. These paths are searched after
-  paths specified with the :option:`-I\<directory\>` option, but before any
-  system header search paths. Paths are delimited by the platform dependent
-  delimiter as used in the ``PATH`` environment variable. Empty entries in the
-  delimited path list, including those at the beginning or end of the list, are
-  treated as specifying the compiler's current working directory.
-```
+:::{envvar} CPATH
+This environment variable specifies additional (non-system) header search
+paths to be used to find included header files. These paths are searched after
+paths specified with the {option}`-I` option, but before any system header
+search paths. Paths are delimited by the platform dependent delimiter as used
+in the `PATH` environment variable. Empty entries in the delimited path list,
+including those at the beginning or end of the list, are treated as specifying
+the compiler's current working directory.
+:::
 
 :::{envvar} C_INCLUDE_PATH, OBJC_INCLUDE_PATH, CPLUS_INCLUDE_PATH, OBJCPLUS_INCLUDE_PATH
 These environment variables specify additional system header file search
 paths to be used when processing the corresponding language. Search paths are
 delimited as for the {envvar}`CPATH` environment variable.
+:::
+
+:::{envvar} INCLUDE, EXTERNAL_INCLUDE
+These environment variables specify additional system header file search
+paths to be used when using the MSVC compatible `clang-cl` driver. Search
+paths are delimited as for the {envvar}`CPATH` environment variable. These
+paths are added after builtin header search paths and any paths specified by
+{option}`/imsvc` command-line arguments. These environment variables are
+ignored if any of the {option}`-nostdinc`, {option}`-nostdlibinc`,
+{option}`/X`, `/vctoolsdir`, `/winsdkdir`, or `/winsdkversion` options are
+used.
 :::
 
 :::{envvar} MACOSX_DEPLOYMENT_TARGET

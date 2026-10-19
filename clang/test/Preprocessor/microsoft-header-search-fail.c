@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -Eonly -fms-compatibility %t/test.c -I %t/include -verify
+// RUN: %clang_cc1 -Eonly -fheader-search=microsoft %t/test.c -I %t/include -verify
 
 //--- test.c
 #include "x/header.h"
