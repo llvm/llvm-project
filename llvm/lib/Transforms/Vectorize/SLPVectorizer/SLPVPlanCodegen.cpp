@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPVPlanCodegen.h"
-#include "LoopVectorizationPlanner.h"
-#include "VPlan.h"
-#include "VPlanHelpers.h"
+#include "../LoopVectorizationPlanner.h"
+#include "../VPlan.h"
+#include "../VPlanHelpers.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 
@@ -57,8 +58,12 @@ VPValue *slpvectorizer::createRecipeForBundle(VPlan &Plan, VPBuilder &VPB,
                                               ArrayRef<VPValue *> Ops) {
   VPIRFlags Flags = computeIntersectedFlags(MainOp, Scalars);
   // Only instructions carry metadata, so other lanes, e.g. poison, are skipped.
-  VPIRMetadata Metadata(
-      *MainOp, to_vector(make_filter_range(Scalars, IsaPred<Instruction>)));
+  // Compute the combined metadata on a detached clone of MainOp.
+  Instruction *Repr = MainOp->clone();
+  propagateMetadata(
+      Repr, to_vector(make_filter_range(Scalars, IsaPred<Instruction>)));
+  VPIRMetadata Metadata(*Repr);
+  Repr->deleteValue();
   DebugLoc DL = MainOp->getDebugLoc();
 
   if (auto *LI = dyn_cast<LoadInst>(MainOp))

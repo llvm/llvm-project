@@ -1120,21 +1120,17 @@ void llvm::getMetadataToPropagate(
   }
 }
 
-/// Add metadata from all of \p VL to \p Metadata, if it can be preserved after
-/// combining them into \p Repr.
-void llvm::getMetadataToPropagate(
-    const Instruction *Repr, ArrayRef<Value *> VL,
-    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
+/// \returns \p I after propagating metadata from \p VL.
+Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
-    return;
+    return Inst;
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
   for (auto &[Kind, MD] : Metadata) {
-    // Drop MMRA metadata if the combined instruction cannot have it.
-    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Repr)) {
-      MD = nullptr;
+    // Skip MMRA metadata if the instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
       continue;
-    }
 
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
@@ -1142,7 +1138,7 @@ void llvm::getMetadataToPropagate(
 
       switch (Kind) {
       case LLVMContext::MD_mmra: {
-        MD = MMRAMetadata::combine(Repr->getContext(), MD, IMD);
+        MD = MMRAMetadata::combine(Inst->getContext(), MD, IMD);
         break;
       }
       case LLVMContext::MD_tbaa:
@@ -1160,21 +1156,16 @@ void llvm::getMetadataToPropagate(
         MD = MDNode::intersect(MD, IMD);
         break;
       case LLVMContext::MD_access_group:
-        MD = intersectAccessGroups(Repr, IJ);
+        MD = intersectAccessGroups(Inst, IJ);
         break;
       default:
         llvm_unreachable("unhandled metadata");
       }
     }
-  }
-}
 
-/// \returns \p Inst after propagating metadata from \p VL.
-Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
-  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-  getMetadataToPropagate(Inst, VL, Metadata);
-  for (auto &[Kind, MD] : Metadata)
     Inst->setMetadata(Kind, MD);
+  }
+
   return Inst;
 }
 
