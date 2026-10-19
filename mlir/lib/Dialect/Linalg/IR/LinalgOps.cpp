@@ -2046,6 +2046,8 @@ enum class BroadcastReduceKind {
   MinUI,
   AndI,
   OrI,
+  MaximumF,
+  MinimumF,
 };
 
 /// Match a supported reduction body and return its reduction kind.
@@ -2092,6 +2094,10 @@ matchBroadcastReduceBody(ReduceOp reduceOp) {
       .Case<arith::AndIOp>(
           [](arith::AndIOp) { return BroadcastReduceKind::AndI; })
       .Case<arith::OrIOp>([](arith::OrIOp) { return BroadcastReduceKind::OrI; })
+      .Case<arith::MaximumFOp>(
+          [](arith::MaximumFOp) { return BroadcastReduceKind::MaximumF; })
+      .Case<arith::MinimumFOp>(
+          [](arith::MinimumFOp) { return BroadcastReduceKind::MinimumF; })
       .Default([](Operation *) -> std::optional<BroadcastReduceKind> {
         return std::nullopt;
       });
@@ -2102,6 +2108,17 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
   auto initAttr = getScalarConstantAttrFromDenseSplat(init);
   if (!initAttr)
     return false;
+
+  // Float kinds: identity is the corresponding infinity.
+  if (kind == BroadcastReduceKind::MaximumF ||
+      kind == BroadcastReduceKind::MinimumF) {
+    auto floatAttr = dyn_cast<FloatAttr>(*initAttr);
+    if (!floatAttr)
+      return false;
+    const APFloat &value = floatAttr.getValue();
+    return kind == BroadcastReduceKind::MaximumF ? value.isNegInfinity()
+                                                 : value.isPosInfinity();
+  }
 
   auto integerAttr = dyn_cast<IntegerAttr>(*initAttr);
   if (!integerAttr)
@@ -2130,6 +2147,8 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
 ///  minsi(broadcast(y)) -> y
 ///  andi(broadcast(z)) -> z
 ///  ori(broadcast(w)) -> w
+///  maximumf(broadcast(x)) -> x
+///  minimumf(broadcast(y)) -> y
 ///
 /// provided the reduction init is the identity value of the combiner.
 struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
