@@ -17,9 +17,7 @@ define <vscale x 4 x i16> @complex_add_v4i16(<vscale x 4 x i16> %a, <vscale x 4 
 ; CHECK-NEXT:    uzp1 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    sub z0.d, z1.d, z0.d
 ; CHECK-NEXT:    add z1.d, z2.d, z4.d
-; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
+; CHECK-NEXT:    trn1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave2.nxv4i16(<vscale x 4 x i16> %a)
