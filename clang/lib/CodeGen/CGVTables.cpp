@@ -332,17 +332,19 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(CurGD.getDecl());
 
   // Adjust the 'this' pointer if necessary
-  const CXXRecordDecl *ThisValueClass =
-      MD->getThisType()->getPointeeCXXRecordDecl();
+  llvm::Value *AdjustedThisPtr;
   if (Thunk) {
-    ThisValueClass = Thunk->ThisType->getPointeeCXXRecordDecl();
-    CXXThisAlignment = CGM.getClassPointerAlignment(ThisValueClass);
+    const CXXRecordDecl *ThisValueClass =
+        Thunk->ThisType->getPointeeCXXRecordDecl();
+    Address ThisPtr = makeNaturalAddressForPointer(
+        LoadCXXThis(), Thunk->ThisType->getPointeeType(),
+        CGM.getClassPointerAlignment(ThisValueClass), /*ForPointeeType=*/false,
+        /*BaseInfo=*/nullptr, /*TBAAInfo=*/nullptr, KnownNonNull);
+    AdjustedThisPtr = CGM.getCXXABI().performThisAdjustment(
+        *this, ThisPtr, ThisValueClass, *Thunk);
+  } else {
+    AdjustedThisPtr = LoadCXXThis();
   }
-
-  llvm::Value *AdjustedThisPtr =
-      Thunk ? CGM.getCXXABI().performThisAdjustment(*this, LoadCXXThisAddress(),
-                                                    ThisValueClass, *Thunk)
-            : LoadCXXThis();
 
   // If perfect forwarding is required a variadic method, a method using
   // inalloca, or an unprototyped thunk, use musttail. Emit an error if this
