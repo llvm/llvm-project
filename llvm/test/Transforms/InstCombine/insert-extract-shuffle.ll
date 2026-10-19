@@ -870,7 +870,7 @@ entry:
 define <4 x float> @insert_into_float_zero_vector(<4 x float> %vec) {
 ; CHECK-LABEL: @insert_into_float_zero_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, <4 x float> [[VEC:%.*]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x float> [[VECINS]]
 ;
 entry:
@@ -883,7 +883,7 @@ entry:
 define <4 x ptr> @insert_into_null_ptr_vector(<4 x ptr> %vec) {
 ; CHECK-LABEL: @insert_into_null_ptr_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x ptr> [[VEC:%.*]], <4 x ptr> <ptr poison, ptr null, ptr null, ptr null>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x ptr> <ptr null, ptr poison, ptr poison, ptr poison>, <4 x ptr> [[VEC:%.*]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x ptr> [[VECINS]]
 ;
 entry:
