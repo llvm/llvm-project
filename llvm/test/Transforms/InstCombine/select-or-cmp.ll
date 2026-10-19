@@ -141,7 +141,7 @@ define i32 @select_and_icmp_pred_bad_2(i32 %x, i32 %y, i32 %z) !prof !0 {
 define i32 @select_and_icmp_pred_bad_3(i32 %x, i32 %y, i32 %z) !prof !0 {
 ; CHECK-LABEL: @select_and_icmp_pred_bad_3(
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[B]], i32 [[Z]], i32 [[X:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[B]], i32 [[Z]], i32 [[X:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %A = icmp eq i32 %x, %z
@@ -326,6 +326,5 @@ define i32 @select_or_icmp_alt_bad_false_val(i32 %x, i32 %y, i32 %z, i32 %k) {
 !1 = !{!"branch_weights", i32 2, i32 3}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 2}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 2, i32 3}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ;.
