@@ -513,14 +513,16 @@ gpu.module @xevm_test {
 }
 
 // -----
-// Nested slice layout: source effective lane layout is [16, 1], so dim 1
+// Nested slice layout: the 2D reduction's source is a 1D reduction result
+// (slice<root, [0]>), so its effective lane layout is [16, 1]; dim 1
 // (intra-lane) reduces first, then the cross-lane dim 0.
 // CHECK-LABEL: gpu.func @nested_slice_reduce_order(
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: vector<4x16x8xi32>) -> i32 {
-// CHECK:         %[[ACC_VEC:.*]] = arith.constant dense<0> : vector<16xi32>
-// CHECK:         %[[ACC_SCALAR:.*]] = arith.constant 0 : i32
-// CHECK:         %[[EXTRACTED:.*]] = vector.extract %[[ARG0]][0] : vector<16x8xi32> from vector<4x16x8xi32>
-// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[EXTRACTED]], %[[ACC_VEC]] [1] : vector<16x8xi32> to vector<16xi32>
+// CHECK-DAG:     %[[ACC_VEC:.*]] = arith.constant dense<0> : vector<16xi32>
+// CHECK-DAG:     %[[ACC_2D:.*]] = arith.constant dense<0> : vector<16x8xi32>
+// CHECK-DAG:     %[[ACC_SCALAR:.*]] = arith.constant 0 : i32
+// CHECK:         %[[REDUCE_0:.*]] = vector.multi_reduction <add>, %[[ARG0]], %[[ACC_2D]] [0] : vector<4x16x8xi32> to vector<16x8xi32>
+// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[REDUCE_0]], %[[ACC_VEC]] [1] : vector<16x8xi32> to vector<16xi32>
 // CHECK:         %[[REDUCE_2:.*]] = vector.multi_reduction <add>, %[[REDUCE_1]], %[[ACC_SCALAR]] [0] : vector<16xi32> to i32
 // CHECK:         xegpu.convert_layout %[[REDUCE_2]]
 #root = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [1, 1, 1]>
@@ -528,26 +530,29 @@ gpu.module @xevm_test {
 #res = #xegpu.slice<#src, dims = [0, 1]>
 gpu.module @xevm_module {
   gpu.func @nested_slice_reduce_order(%arg: vector<4x16x8xi32>) -> i32 {
-    %v = vector.extract %arg[0]
-      {layout_operand_0 = #root, layout_result_0 = #src}
-      : vector<16x8xi32> from vector<4x16x8xi32>
-    %zero = arith.constant 0 : i32
-    %r = vector.multi_reduction <add>, %v, %zero
+    %c1 = arith.constant dense<0> : vector<16x8xi32>
+    %c2 = arith.constant 0 : i32
+    %r1 = vector.multi_reduction <add>, %arg, %c1
+      {layout_result_0 = #src}
+      [0] : vector<4x16x8xi32> to vector<16x8xi32>
+    %r2 = vector.multi_reduction <add>, %r1, %c2
       {layout_result_0 = #res}
       [0, 1] : vector<16x8xi32> to i32
-    gpu.return %r : i32
+    gpu.return %r2 : i32
   }
 }
 
 // -----
-// Reducing non-leading dims [1, 2]: source effective lane layout is [1, 16, 1],
-// so dim 2 (intra-lane) reduces first, then dim 1.
+// Reducing non-leading dims [1, 2] on a nested slice source (slice<root, [0]>):
+// effective lane layout is [1, 16, 1], so dim 2 (intra-lane) reduces first,
+// then the cross-lane dim 1.
 // CHECK-LABEL: gpu.func @nested_slice_reduce_dims_12(
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: vector<2x2x16x8xi32>) -> vector<2xi32> {
-// CHECK:         %[[ACC_2D:.*]] = arith.constant dense<0> : vector<2x16xi32>
-// CHECK:         %[[ACC_1D:.*]] = arith.constant dense<0> : vector<2xi32>
-// CHECK:         %[[EXTRACTED:.*]] = vector.extract %[[ARG0]][0] : vector<2x16x8xi32> from vector<2x2x16x8xi32>
-// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[EXTRACTED]], %[[ACC_2D]] [2] : vector<2x16x8xi32> to vector<2x16xi32>
+// CHECK-DAG:     %[[ACC_2D:.*]] = arith.constant dense<0> : vector<2x16xi32>
+// CHECK-DAG:     %[[ACC_3D:.*]] = arith.constant dense<0> : vector<2x16x8xi32>
+// CHECK-DAG:     %[[ACC_1D:.*]] = arith.constant dense<0> : vector<2xi32>
+// CHECK:         %[[REDUCE_0:.*]] = vector.multi_reduction <add>, %[[ARG0]], %[[ACC_3D]] [0] : vector<2x2x16x8xi32> to vector<2x16x8xi32>
+// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[REDUCE_0]], %[[ACC_2D]] [2] : vector<2x16x8xi32> to vector<2x16xi32>
 // CHECK:         %[[REDUCE_2:.*]] = vector.multi_reduction <add>, %[[REDUCE_1]], %[[ACC_1D]] [1] : vector<2x16xi32> to vector<2xi32>
 // CHECK:         xegpu.convert_layout %[[REDUCE_2]]
 #root3 = #xegpu.layout<lane_layout = [1, 1, 16, 1], lane_data = [1, 1, 1, 1]>
@@ -555,14 +560,15 @@ gpu.module @xevm_module {
 #res3 = #xegpu.slice<#src3, dims = [1, 2]>
 gpu.module @xevm_module {
   gpu.func @nested_slice_reduce_dims_12(%arg: vector<2x2x16x8xi32>) -> vector<2xi32> {
-    %v = vector.extract %arg[0]
-      {layout_operand_0 = #root3, layout_result_0 = #src3}
-      : vector<2x16x8xi32> from vector<2x2x16x8xi32>
-    %zero = arith.constant dense<0> : vector<2xi32>
-    %r = vector.multi_reduction <add>, %v, %zero
+    %c1 = arith.constant dense<0> : vector<2x16x8xi32>
+    %c2 = arith.constant dense<0> : vector<2xi32>
+    %r1 = vector.multi_reduction <add>, %arg, %c1
+      {layout_result_0 = #src3}
+      [0] : vector<2x2x16x8xi32> to vector<2x16x8xi32>
+    %r2 = vector.multi_reduction <add>, %r1, %c2
       {layout_result_0 = #res3}
       [1, 2] : vector<2x16x8xi32> to vector<2xi32>
-    gpu.return %r : vector<2xi32>
+    gpu.return %r2 : vector<2xi32>
   }
 }
 
