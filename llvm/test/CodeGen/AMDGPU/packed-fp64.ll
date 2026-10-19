@@ -2306,9 +2306,10 @@ define amdgpu_kernel void @fneg_v32f64_vec(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[4:7], v[8:11], 0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x8
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[20:23], 0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX1251-SDAG-NEXT:    s_clause 0x3
+; GFX1251-SDAG-NEXT:    s_clause 0x1
 ; GFX1251-SDAG-NEXT:    global_store_b128 v64, v[40:43], s[0:1] offset:96
 ; GFX1251-SDAG-NEXT:    global_store_b128 v64, v[44:47], s[0:1] offset:112
+; GFX1251-SDAG-NEXT:    s_clause 0x1
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[40:43], v64, s[0:1]
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[44:47], v64, s[0:1] offset:16
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x8
