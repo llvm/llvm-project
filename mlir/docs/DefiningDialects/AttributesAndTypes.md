@@ -192,7 +192,7 @@ mlir_tablegen(<Your Dialect>AttrDefs.h.inc -gen-attrdef-decls
               -attrdefs-dialect=<Your Dialect>)
 mlir_tablegen(<Your Dialect>AttrDefs.cpp.inc -gen-attrdef-defs 
               -attrdefs-dialect=<Your Dialect>)
-add_public_tablegen_target(<Your Dialect>AttrDefsIncGen)
+add_mlir_dialect_tablegen_target(<Your Dialect>AttrDefsIncGen)
 ```
 
 The generated `<Your Dialect>AttrDefs.h.inc` will need to be included whereever

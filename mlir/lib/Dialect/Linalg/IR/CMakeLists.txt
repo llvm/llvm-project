@@ -17,6 +17,10 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRShardingInterfaceIncGen
   MLIRRelayoutOpInterfaceIncGen
 
+  # LinalgDialect.cpp includes ShardingInterface.h for promised interfaces.
+  HEADER_LIBS
+  MLIRShardingInterface
+
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect

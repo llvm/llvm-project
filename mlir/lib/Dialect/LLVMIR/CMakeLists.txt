@@ -49,6 +49,10 @@ add_mlir_dialect_library(MLIRLLVMDialect
   BinaryFormat
   Core
 
+  # LLVMAttrs.cpp includes mlir/Dialect/Ptr/IR/PtrEnums.h.
+  HEADER_LIBS
+  MLIRPtrDialect
+
   LINK_LIBS PUBLIC
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
@@ -136,6 +140,8 @@ add_mlir_dialect_library(MLIRROCDLDialect
   [["mlir/Dialect/LLVMIR/ROCDLDialect.h"]]
 
   DEPENDS
+  # TODO: Migrate this IncGen dependency to HEADER_LIBS after refactoring
+  # MLIRGPUCompilationInterfaces into a separate link target.
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRROCDLOpsIncGen
   MLIRROCDLOpsShardGen
@@ -181,6 +187,8 @@ add_mlir_dialect_library(MLIRXeVMDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
   DEPENDS
+  # TODO: Migrate this IncGen dependency to HEADER_LIBS after refactoring
+  # MLIRGPUCompilationInterfaces into a separate link target.
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRXeVMOpsIncGen
   MLIRXeVMConversionsIncGen

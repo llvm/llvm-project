@@ -10,6 +10,10 @@ set(LLVM_OPTIONAL_SOURCES
 add_mlir_translation_library(MLIRSPIRVBinaryUtils
   SPIRVBinaryUtils.cpp
 
+  # SPIRVBinaryUtils.h includes the generated SPIRVEnums.h.
+  HEADER_LIBS
+  MLIRSPIRVDialect
+
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRSupport

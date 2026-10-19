@@ -9,10 +9,8 @@ add_mlir_dialect_library(MLIRShapeOpsTransforms
 
   DEPENDS
   MLIRShapeTransformsIncGen
-  )
 
-target_link_libraries(MLIRShapeOpsTransforms
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
