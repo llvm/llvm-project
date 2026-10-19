@@ -179,12 +179,12 @@ void APFixedPoint::add(int x) const {
 // CIR:   cir.return
 
 // LLVM: define {{.*}} void @_ZNK12APFixedPoint3addEi(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}})
-// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.APInt
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   %[[X_ADDR:.*]] = alloca i32
 // LLVM:   %[[THISVAL:.*]] = alloca %struct.APInt
 // LLVM:   %[[CLEANUP_COND_TRUE:.*]] = alloca i8
 // LLVM:   %[[CLEANUP_COND_FALSE:.*]] = alloca i8
+// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.APInt
 // LLVM:   br i1 %{{.*}}, label %[[OUTER_TRUE:.*]], label %[[OUTER_END:.*]]
 // LLVM: [[OUTER_TRUE]]:
 // LLVM:   br i1 %{{.*}}, label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
@@ -298,11 +298,11 @@ void makeEntry() {
 // CIR:   cir.return
 
 // LLVM: define {{.*}} void @_Z9makeEntryv()
+// LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
+// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[AGG_TMP0:.*]] = alloca %struct.Path
 // LLVM:   %[[ENSURED_T:.*]] = alloca %struct.Entry
 // LLVM:   %[[ENSURED_F:.*]] = alloca %struct.Entry
-// LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
-// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[CALL:.*]] = call {{.*}} i1 @_ZN4ItercvbEv(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
 // LLVM:   br i1 %[[CALL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]

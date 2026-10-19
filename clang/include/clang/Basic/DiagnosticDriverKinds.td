@@ -443,6 +443,8 @@ def err_drv_negative_columns : Error<
   "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
 def err_drv_small_columns : Error<
   "invalid value '%1' in '%0', value must be '%2' or greater">;
+def err_drv_large_columns : Error<
+  "invalid value '%1' in '%0', value must be '%2' or smaller">;
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
@@ -561,6 +563,8 @@ def warn_incompatible_sysroot : Warning<"using sysroot for '%0' but targeting '%
   InGroup<DiagGroup<"incompatible-sysroot">>;
 def warn_debug_compression_unavailable : Warning<"cannot compress debug sections (%0 not enabled)">,
   InGroup<DiagGroup<"debug-compression-unavailable">>;
+def err_drv_time_trace_compression_unavailable
+    : Error<"cannot compress time trace (%0 not enabled)">;
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
   InGroup<AutoDisableVptrSanitizer>;
@@ -573,6 +577,8 @@ def warn_ignoring_verify_debuginfo_preserve_export : Warning<
   InGroup<UnusedCommandLineArgument>;
 def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
+def warn_harden_pac_ret_requires_pac_ret: Warning<
+  "ignoring '-mharden-pac-ret' as it requires return address signing">, InGroup<UnusedCommandLineArgument>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 def warn_drv_large_data_threshold_invalid_code_model: Warning<

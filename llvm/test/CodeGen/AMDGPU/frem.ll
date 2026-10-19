@@ -19073,7 +19073,7 @@ define half @fast_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1150-TRUE16-NEXT:    v_trunc_f16_e32 v0.l, v0.l
 ; GFX1150-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1150-TRUE16-NEXT:    v_fma_f16 v0.l, s1, v0.l, s0
+; GFX1150-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, s1, s0
 ; GFX1150-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1150-FAKE16-LABEL: fast_frem_f16_uniform:
@@ -19097,7 +19097,7 @@ define half @fast_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1150-FAKE16-NEXT:    v_trunc_f16_e32 v0, v0
 ; GFX1150-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1150-FAKE16-NEXT:    v_fma_f16 v0, s1, v0, s0
+; GFX1150-FAKE16-NEXT:    v_fma_f16 v0, v0, s1, s0
 ; GFX1150-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-TRUE16-LABEL: fast_frem_f16_uniform:
@@ -19127,7 +19127,7 @@ define half @fast_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1200-TRUE16-NEXT:    v_trunc_f16_e32 v0.l, v0.l
 ; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1200-TRUE16-NEXT:    v_fma_f16 v0.l, s1, v0.l, s0
+; GFX1200-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, s1, s0
 ; GFX1200-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-FAKE16-LABEL: fast_frem_f16_uniform:
@@ -19157,7 +19157,7 @@ define half @fast_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1200-FAKE16-NEXT:    v_trunc_f16_e32 v0, v0
 ; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1200-FAKE16-NEXT:    v_fma_f16 v0, s1, v0, s0
+; GFX1200-FAKE16-NEXT:    v_fma_f16 v0, v0, s1, s0
 ; GFX1200-FAKE16-NEXT:    s_setpc_b64 s[30:31]
    %r2 = frem fast half %in1, %in2
   ret half %r2
@@ -19432,7 +19432,7 @@ define half @unsafe_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1150-TRUE16-NEXT:    v_trunc_f16_e32 v0.l, v0.l
 ; GFX1150-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1150-TRUE16-NEXT:    v_fma_f16 v0.l, s1, v0.l, s0
+; GFX1150-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, s1, s0
 ; GFX1150-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1150-FAKE16-LABEL: unsafe_frem_f16_uniform:
@@ -19456,7 +19456,7 @@ define half @unsafe_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1150-FAKE16-NEXT:    v_trunc_f16_e32 v0, v0
 ; GFX1150-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1150-FAKE16-NEXT:    v_fma_f16 v0, s1, v0, s0
+; GFX1150-FAKE16-NEXT:    v_fma_f16 v0, v0, s1, s0
 ; GFX1150-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-TRUE16-LABEL: unsafe_frem_f16_uniform:
@@ -19486,7 +19486,7 @@ define half @unsafe_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1200-TRUE16-NEXT:    v_trunc_f16_e32 v0.l, v0.l
 ; GFX1200-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1200-TRUE16-NEXT:    v_fma_f16 v0.l, s1, v0.l, s0
+; GFX1200-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, s1, s0
 ; GFX1200-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-FAKE16-LABEL: unsafe_frem_f16_uniform:
@@ -19516,7 +19516,7 @@ define half @unsafe_frem_f16_uniform(half inreg %in1, half inreg %in2) #0 {
 ; GFX1200-FAKE16-NEXT:    v_trunc_f16_e32 v0, v0
 ; GFX1200-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1200-FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX1200-FAKE16-NEXT:    v_fma_f16 v0, s1, v0, s0
+; GFX1200-FAKE16-NEXT:    v_fma_f16 v0, v0, s1, s0
 ; GFX1200-FAKE16-NEXT:    s_setpc_b64 s[30:31]
    %r2 = frem afn half %in1, %in2
   ret half %r2

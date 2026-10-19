@@ -57,4 +57,5 @@ MACHINE_FUNCTION_PASS("spirv-asm-printer", SPIRVAsmPrinterPass())
 MACHINE_FUNCTION_PASS("spirv-postlegalizer", SPIRVPostLegalizerPass())
 MACHINE_FUNCTION_PASS("spirv-prelegalizer", SPIRVPreLegalizerPass())
 MACHINE_FUNCTION_PASS("spirv-prelegalizer-combiner", SPIRVPreLegalizerCombinerPass())
+MACHINE_FUNCTION_PASS("spirv-prepare-module-analysis", SPIRVPrepareModuleAnalysisPass())
 #undef MACHINE_FUNCTION_PASS

@@ -121,6 +121,8 @@ defm : BoolField<"disable-machine-licm", "false",
   "Disable Machine LICM">;
 defm : BoolField<"disable-machine-sink", "false",
   "Disable Machine Sinking">;
+defm : BoolField<"disable-mir-output-verify", "false",
+  "Do not verify machine code at the end of a pipeline that stops before code emission">;
 defm : BoolField<"disable-partial-libcall-inlining", "false",
   "Disable Partial Libcall Inlining">;
 defm : BoolField<"disable-post-ra", "false",

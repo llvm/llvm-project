@@ -594,7 +594,7 @@ class EncodingByHwMode<list<HwMode> Ms = [], list<InstructionEncoding> Ts = []>
 
 //===----------------------------------------------------------------------===//
 // Instruction set description - These classes correspond to the C++ classes in
-// the Target/TargetInstrInfo.h file.
+// the CodeGen/TargetInstrInfo.h file.
 //
 class Instruction : InstructionEncoding {
   string Namespace = "";

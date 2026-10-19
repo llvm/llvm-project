@@ -599,6 +599,9 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     auto inputElementType = inputType.getElementType();
 
     if (isa<FloatType>(inputElementType)) {
+      if (op.getNanMode() == tosa::NanPropagationMode::IGNORE)
+        return failure();
+
       // Unlike integer types, floating point types can represent infinity.
       const auto minClamp =
           llvm::cast<mlir::FloatAttr>(op.getMinValAttr()).getValue();
@@ -2060,10 +2063,12 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<FloatType>(inETy) && llvm::isa<IntegerType>(outETy)) {
+      auto floatVal = operand.getSplatValue<APFloat>();
+      if (outETy.isInteger(1))
+        return SplatElementsAttr::get(outTy, !floatVal.isZero());
       auto unsign = llvm::cast<IntegerType>(outETy).isUnsignedInteger();
       auto intVal = APSInt(
           llvm::cast<IntegerType>(outETy).getIntOrFloatBitWidth(), unsign);
-      auto floatVal = operand.getSplatValue<APFloat>();
       bool exact;
       floatVal.convertToInteger(intVal, llvm::RoundingMode::NearestTiesToEven,
                                 &exact);

@@ -26,20 +26,18 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov s16, v7.s[1]
 ; CHECK-GI-NEXT:    mov s5, v2.s[1]
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-GI-NEXT:    mov s3, v6.s[3]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov v16.s[1], v6.s[2]
 ; CHECK-GI-NEXT:    mov v5.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI0_0]
+; CHECK-GI-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    mov v3.s[1], v4.s[0]
 ; CHECK-GI-NEXT:    mov v16.s[2], v1.s[3]
 ; CHECK-GI-NEXT:    mov v5.s[2], v4.s[1]
+; CHECK-GI-NEXT:    trn2 v2.4s, v2.4s, v1.4s
 ; CHECK-GI-NEXT:    mov v3.s[2], v7.s[3]
 ; CHECK-GI-NEXT:    mov v16.s[3], v1.s[0]
 ; CHECK-GI-NEXT:    mov v5.s[3], v7.s[0]
-; CHECK-GI-NEXT:    tbl v1.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v2.16b, #12
 ; CHECK-GI-NEXT:    mov v3.s[3], v7.s[2]
 ; CHECK-GI-NEXT:    mov v0.16b, v16.16b
 ; CHECK-GI-NEXT:    mov v2.16b, v5.16b
@@ -124,21 +122,12 @@ define <4 x i32> @test_shuf2(<16 x i32> %x, <16 x i32> %y) {
 }
 
 define <4 x i32> @test_shuf3(<16 x i32> %x, <16 x i32> %y) {
-; CHECK-SD-LABEL: test_shuf3:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    trn2 v1.4s, v2.4s, v1.4s
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_shuf3:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI2_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_shuf3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
+; CHECK-NEXT:    trn2 v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf3:
 ; CHECKBE:       // %bb.0:
@@ -226,22 +215,13 @@ define <4 x i32> @test_shuf5(<16 x i32> %x, <16 x i32> %y) {
 }
 
 define <4 x i32> @test1503(<4 x i32> %a, <4 x i32> %b)
-; CHECK-SD-LABEL: test1503:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip1 v1.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    ext v1.16b, v1.16b, v0.16b, #8
-; CHECK-SD-NEXT:    mov v1.s[3], v0.s[3]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test1503:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI5_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test1503:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ext v1.16b, v1.16b, v0.16b, #8
+; CHECK-NEXT:    mov v1.s[3], v0.s[3]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test1503:
 ; CHECKBE:       // %bb.0:
@@ -261,21 +241,12 @@ define <4 x i32> @test1503(<4 x i32> %a, <4 x i32> %b)
 }
 
 define <4 x i32> @test4366(<4 x i32> %a, <4 x i32> %b)
-; CHECK-SD-LABEL: test4366:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1 v1.4s, v1.4s, v1.4s
-; CHECK-SD-NEXT:    mov v1.s[1], v0.s[3]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test4366:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI6_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI6_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test4366:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    mov v1.s[1], v0.s[3]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test4366:
 ; CHECKBE:       // %bb.0:
@@ -294,22 +265,13 @@ define <4 x i32> @test4366(<4 x i32> %a, <4 x i32> %b)
 }
 
 define <4 x i32> @test7367(<4 x i32> %a, <4 x i32> %b)
-; CHECK-SD-LABEL: test7367:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov v2.16b, v1.16b
-; CHECK-SD-NEXT:    mov v2.d[0], v0.d[1]
-; CHECK-SD-NEXT:    mov v2.s[0], v1.s[3]
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test7367:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI7_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test7367:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    mov v2.d[0], v0.d[1]
+; CHECK-NEXT:    mov v2.s[0], v1.s[3]
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test7367:
 ; CHECKBE:       // %bb.0:
@@ -329,20 +291,11 @@ define <4 x i32> @test7367(<4 x i32> %a, <4 x i32> %b)
 }
 
 define <4 x i32> @test4045(<4 x i32> %a, <4 x i32> %b)
-; CHECK-SD-LABEL: test4045:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1 v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test4045:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test4045:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test4045:
 ; CHECKBE:       // %bb.0:
@@ -362,20 +315,11 @@ define <4 x i32> @test4045(<4 x i32> %a, <4 x i32> %b)
 }
 
 define <4 x i32> @test0067(<4 x i32> %a, <4 x i32> %b)
-; CHECK-SD-LABEL: test0067:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1 v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test0067:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test0067:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    mov v0.d[1], v1.d[1]
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test0067:
 ; CHECKBE:       // %bb.0:
@@ -393,20 +337,11 @@ define <4 x i32> @test0067(<4 x i32> %a, <4 x i32> %b)
 }
 
 define <4 x i32> @test_shuf6(<4 x i32> %a, <4 x i32> %b)
-; CHECK-SD-LABEL: test_shuf6:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov v0.s[2], v1.s[3]
-; CHECK-SD-NEXT:    trn1 v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_shuf6:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI10_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_shuf6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v0.s[2], v1.s[3]
+; CHECK-NEXT:    trn1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf6:
 ; CHECKBE:       // %bb.0:
@@ -436,12 +371,11 @@ define <4 x i16> @test_shuf7(<4 x i16> %a, <4 x i16> %b)
 ; CHECK-GI-LABEL: test_shuf7:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI11_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    mov v0.h[2], v1.h[3]
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[3]
+; CHECK-GI-NEXT:    trn1 v0.4h, v2.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf7:
@@ -977,11 +911,9 @@ define <4 x i32> @test_shuf_zero_ext_start_lhs_splat(<4 x i32> %a, i32 %b) {
 ;
 ; CHECK-GI-LABEL: test_shuf_zero_ext_start_lhs_splat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-GI-NEXT:    dup v1.4s, w0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI29_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v1.16b, #4
+; CHECK-GI-NEXT:    ext v0.16b, v1.16b, v0.16b, #12
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_shuf_zero_ext_start_lhs_splat:

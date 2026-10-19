@@ -1580,6 +1580,13 @@ def no_use_spirv_backend
       Group<hip_Group>,
       Flags<[HelpHidden]>,
       HelpText<"Do not use the SPIRV backend for compilation ">;
+def fenable_spirv_size_optimization
+    : Flag<["-"], "fenable-spirv-size-optimization">,
+      MarshallingInfoFlag<CodeGenOpts<"AMDGCNSPIRVSizeOptimization">>,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<hip_Group>,
+      Flags<[HelpHidden]>,
+      HelpText<"Enable size reducing optimizations for AMDGCNSPIRV">;
 }
 
 // Clang specific/exclusive options for OpenACC.
@@ -4841,6 +4848,13 @@ def ftime_trace_verbose : Joined<["-"], "ftime-trace-verbose">, Group<f_Group>,
   HelpText<"Make time trace capture verbose event details (e.g. source filenames). This can increase the size of the output by 2-3 times">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   MarshallingInfoFlag<FrontendOpts<"TimeTraceVerbose">>;
+def ftime_trace_compress_EQ : Joined<["-"], "ftime-trace-compress=">, Group<f_Group>,
+  HelpText<"Compress -ftime-trace output with the specified algorithm">,
+  Values<"none,zstd,infer">,
+  NormalizedValuesScope<"llvm::TimeTraceCompression">,
+  NormalizedValues<["None", "Zstd", "Infer"]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  MarshallingInfoEnum<FrontendOpts<"TimeTraceCompress">, "Infer">;
 def ftime_trace_EQ : Joined<["-"], "ftime-trace=">, Group<f_Group>,
   HelpText<"Similar to -ftime-trace. Specify the JSON file or a directory which will contain the JSON file">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -6018,6 +6032,15 @@ def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Visibility<[ClangOption, CC1Option]>,
   Group<m_Group>, Values<"none,all,non-leaf">,
   HelpText<"Select return address signing scope">;
+
+def mharden_pac_ret_EQ : Joined<["-"], "mharden-pac-ret=">,
+  Visibility<[ClangOption, CC1Option]>,
+  Flags<[TargetSpecific]>, Group<m_Group>,
+  HelpText<"Select the return address authentication hardening scheme">,
+  Values<"none,load-return-address">, NormalizedValues<["None", "LoadReturnAddress"]>,
+  NormalizedValuesScope<"LangOptions::SignReturnAddressHardeningKind">,
+  MarshallingInfoEnum<LangOpts<"SignReturnAddressHardening">, "None">;
+
 let Flags = [TargetSpecific] in {
 def mbranch_protection_EQ : Joined<["-"], "mbranch-protection=">,
   Group<m_Group>,
@@ -10024,6 +10047,19 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+def dxc_pack_prefix_stable : DXCFlag<"pack-prefix-stable">,
+  HelpText<"Pack signature elements without moving previously packed elements (default)">;
+def dxc_pack_optimized : DXCFlag<"pack-optimized">,
+  HelpText<"Reorder signature elements for optimized packing">;
+def fdx_semantic_signature_packing_mode_EQ :
+  Joined<["-"], "fdx-semantic-signature-packing-mode=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Select the packing mode for HLSL semantic signatures (default: prefix-stable)">,
+  Values<"prefix-stable,optimized">,
+  NormalizedValuesScope<"CodeGenOptions::HLSLSemanticSignaturePackingMode">,
+  NormalizedValues<["PrefixStable", "Optimized"]>,
+  MarshallingInfoEnum<CodeGenOpts<"HLSLSemanticSignaturePacking">, "Default">;
 def fdx_rootsignature_version :
   Joined<["-"], "fdx-rootsignature-version=">,
   Group<dxc_Group>,
