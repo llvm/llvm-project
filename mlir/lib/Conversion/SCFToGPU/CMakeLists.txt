@@ -9,6 +9,7 @@ add_mlir_conversion_library(MLIRSCFToGPU
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRAffineToStandard
   MLIRArithDialect
