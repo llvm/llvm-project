@@ -3,8 +3,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIAffine
   AffinePasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRAffinePassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -17,8 +15,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
   AMDGPUPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRNVGPUPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -63,8 +59,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIArmSVE
   ArmSVEPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRArmSVEPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -77,8 +71,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIAsync
   AsyncPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRAsyncPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -92,8 +84,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIBufferization
   BufferizationPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRBufferizationPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -156,8 +146,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIGPU
   GPUPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRGPUPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -188,8 +176,6 @@ add_mlir_upstream_c_api_library(MLIRCAPILinalg
   LinalgPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRLinalgPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -226,8 +212,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIMemRef
 
   PARTIAL_SOURCES_INTENDED
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRMemRefPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -240,8 +224,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIMLProgram
   MLProgramPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRMLProgramPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -263,8 +245,6 @@ add_mlir_upstream_c_api_library(MLIRCAPINVGPU
   NVGPUPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRNVGPUPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -286,8 +266,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIOpenACC
   OpenACCPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIROpenACCPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -354,8 +332,6 @@ add_mlir_upstream_c_api_library(MLIRCAPISCF
   SCFPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRSCFPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -379,8 +355,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIShard
   ShardPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRShardPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -402,8 +376,6 @@ add_mlir_upstream_c_api_library(MLIRCAPISparseTensor
   SparseTensorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRSparseTensorPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -416,8 +388,6 @@ add_mlir_upstream_c_api_library(MLIRCAPISPIRV
   SPIRVPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRSPIRVPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
@@ -441,8 +411,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITosa
   TosaPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
-  DEPENDS
-  MLIRTosaPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR

@@ -10,7 +10,6 @@ add_mlir_conversion_library(MLIRShapeToStandard
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ShapeToStandard
 
   DEPENDS
-  MLIRConversionPassIncGen
   ShapeToStandardIncGen
 
   LINK_COMPONENTS

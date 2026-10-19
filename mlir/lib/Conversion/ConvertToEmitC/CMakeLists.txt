@@ -5,7 +5,6 @@ add_mlir_conversion_library(MLIRConvertToEmitC
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ConvertToEmitC
 
   DEPENDS
-  MLIRConversionPassIncGen
   MLIRConvertToEmitCPatternInterfaceIncGen
 
   LINK_LIBS PUBLIC

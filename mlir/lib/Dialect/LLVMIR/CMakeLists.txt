@@ -38,9 +38,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMAllOpsIncGen
   MLIRLLVMOpsIncGen
   MLIRLLVMOpsShardGen
-  MLIRLLVMTranslationDialectInterfaceIncGen
   MLIRLLVMTypesIncGen
-  MLIROpenMPOpsIncGen
   intrinsics_gen
   MLIRLLVMConversionsIncGen
   MLIRLLVMIntrinsicConversionsIncGen
@@ -93,7 +91,6 @@ add_mlir_dialect_library(MLIRNVVMDialect
   [["mlir/Dialect/LLVMIR/NVVMDialect.h"]]
 
   DEPENDS
-  MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
   MLIRNVVMOpsShardGen
   MLIRNVVMConversionsIncGen

@@ -25,9 +25,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Affine
 
   DEPENDS
-  MLIRAffineOpsIncGen
   MLIRAffinePassIncGen
-  MLIRLoopLikeInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

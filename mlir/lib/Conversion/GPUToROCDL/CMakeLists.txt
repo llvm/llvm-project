@@ -6,7 +6,6 @@ add_mlir_conversion_library(MLIRGPUToROCDLTransforms
   LowerGpuOpsToROCDLOps.cpp
 
   DEPENDS
-  MLIRConversionPassIncGen
   MLIRGPUToROCDLIncGen
 
   LINK_LIBS PUBLIC

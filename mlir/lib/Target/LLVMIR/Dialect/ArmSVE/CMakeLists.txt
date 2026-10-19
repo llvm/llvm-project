@@ -1,9 +1,6 @@
 add_mlir_translation_library(MLIRArmSVEToLLVMIRTranslation
   ArmSVEToLLVMIRTranslation.cpp
 
-  DEPENDS
-  MLIRArmSVEConversionsIncGen
-
   LINK_COMPONENTS
   Core
 
