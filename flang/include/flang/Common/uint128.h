@@ -23,13 +23,9 @@
 #include "leading-zero-bit-count.h"
 #include "numeric-limits.h"
 #include <cstdint>
-#include <limits>
 #include <type_traits>
 
 namespace Fortran::common {
-namespace detail {
-template <typename T> class numeric_limits;
-}
 
 template <bool IS_SIGNED = false> class Int128 {
   friend class detail::numeric_limits_impl<Int128>;
@@ -38,15 +34,21 @@ public:
   constexpr Int128() {}
   // This means of definition provides some portability for
   // "size_t" operands.
-  template <typename T,
-      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
-  constexpr Int128(T n) {
+  constexpr Int128(unsigned n) : low_{n} {}
+  constexpr Int128(unsigned long n) : low_{n} {}
+  constexpr Int128(unsigned long long n) : low_{n} {}
+  constexpr Int128(int n) {
     low_ = static_cast<std::uint64_t>(n);
-    if constexpr (std::is_signed_v<T>) {
-      high_ = -static_cast<std::uint64_t>(n < 0);
-    }
+    high_ = -static_cast<std::uint64_t>(n < 0);
   }
-
+  constexpr Int128(long n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
+  constexpr Int128(long long n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
   constexpr Int128(const Int128 &) = default;
   constexpr Int128(Int128 &&) = default;
   constexpr Int128 &operator=(const Int128 &) = default;
@@ -62,12 +64,9 @@ public:
   constexpr Int128 operator-() const { return ~*this + 1; }
   constexpr bool operator!() const { return !low_ && !high_; }
   constexpr explicit operator bool() const { return low_ || high_; }
-
-  template <typename T,
-      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
-  constexpr explicit operator T() const {
-    return static_cast<T>(low_);
-  }
+  constexpr explicit operator std::uint64_t() const { return low_; }
+  constexpr explicit operator std::int64_t() const { return low_; }
+  constexpr explicit operator int() const { return static_cast<int>(low_); }
 
   constexpr std::uint64_t high() const { return high_; }
   constexpr std::uint64_t low() const { return low_; }
