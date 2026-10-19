@@ -428,6 +428,19 @@ exact zero sum that it requires. An operation whose denormal mode differs
 from its function's flushes its operands and result explicitly. The software
 paths do not depend on the ``ieee-fp32`` feature.
 
+SIMD-group matrices
+-------------------
+
+``llvm.agx.simdgroup.matrix.fma(a, b, c)`` computes D = A * B + C on 8x8
+matrices spread over the SIMD-group, of ``half``, ``bfloat`` or ``float``
+elements. Thread t holds the elements (r, c) and (r, c + 1) of each matrix
+in a ``<2 x T>``, with r = 4 * (t / 16) + (t / 2) % 4 and
+c = 4 * ((t / 8) % 2) + 2 * (t % 2). It is computed with shuffles (each
+thread gathers its row of A and its two columns of B, 24 shuffles; four times
+as many on subtargets with ``quad-shuffle-index-merge``) and 16 fused
+multiply-adds per thread, in order of k starting from C; the matrix unit of
+Apple9 GPUs is not used yet.
+
 SIMD-group shuffles
 -------------------
 

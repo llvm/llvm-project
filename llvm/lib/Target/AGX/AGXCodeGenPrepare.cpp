@@ -179,6 +179,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool unifyExits(Function &F);
   bool lowerConstrainedFP(Function &F);
   bool lowerDivergentShuffles(Function &F, const UniformityInfo &UI);
+  bool lowerMatrixFMA(Function &F);
   bool flushHalfDenormals(Function &F);
   bool flushFloatMinMax(Function &F);
   bool diagnoseDoubles(Function &F);
@@ -508,6 +509,64 @@ static bool isFPArithmetic(const Instruction &I) {
 
 static bool isHalf(const Type *Ty) { return Ty->getScalarType()->isHalfTy(); }
 
+/// llvm.agx.simdgroup.matrix.fma: D = A * B + C on 8x8 matrices spread over
+/// the SIMD-group. Thread t holds the elements (r, c) and (r, c + 1) of each
+/// matrix, with r = 4 * (t / 16) + (t / 2) % 4 and c = 4 * ((t / 8) % 2) +
+/// 2 * (t % 2). Each thread gathers its row of A and its two columns of B
+/// with shuffles and accumulates in order of k with fused multiply-adds.
+bool AGXCodeGenPrepare::lowerMatrixFMA(Function &F) {
+  SmallVector<IntrinsicInst *, 2> Calls;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::agx_simdgroup_matrix_fma)
+      Calls.push_back(II);
+  for (IntrinsicInst *II : Calls) {
+    IRBuilder<> B(II);
+    Type *VT = II->getType();
+    Value *A = II->getArgOperand(0), *Bm = II->getArgOperand(1),
+          *C = II->getArgOperand(2);
+    Value *T = B.CreateIntrinsic(Intrinsic::agx_thread_index_in_simdgroup, {});
+    auto Bits = [&](Value *V, unsigned Shift, unsigned Mask) {
+      return B.CreateAnd(B.CreateLShr(V, Shift), Mask);
+    };
+    // The thread holding the elements 2j and 2j + 1 of row r.
+    auto Holder = [&](Value *R, Value *J) {
+      Value *L = B.CreateShl(B.CreateLShr(R, 2), 4);
+      L = B.CreateOr(L, B.CreateShl(B.CreateLShr(J, 1), 3));
+      L = B.CreateOr(L, B.CreateShl(B.CreateAnd(R, 3), 1));
+      return B.CreateOr(L, B.CreateAnd(J, 1));
+    };
+    auto Shuffle = [&](Value *V, unsigned Elt, Value *Lane) {
+      Value *X = B.CreateExtractElement(V, Elt);
+      return B.CreateIntrinsic(Intrinsic::agx_simd_shuffle, {X->getType()}, {X, Lane});
+    };
+    Value *Row = B.CreateOr(B.CreateShl(Bits(T, 4, 1), 2), Bits(T, 1, 3));
+    Value *ColPair = B.CreateOr(B.CreateShl(Bits(T, 3, 1), 1), Bits(T, 0, 1));
+    SmallVector<Value *, 8> RowA, ColB0, ColB1;
+    for (unsigned J = 0; J < 4; ++J) {
+      Value *Lane = Holder(Row, B.getInt32(J));
+      RowA.push_back(Shuffle(A, 0, Lane));
+      RowA.push_back(Shuffle(A, 1, Lane));
+    }
+    for (unsigned K = 0; K < 8; ++K) {
+      Value *Lane = Holder(B.getInt32(K), ColPair);
+      ColB0.push_back(Shuffle(Bm, 0, Lane));
+      ColB1.push_back(Shuffle(Bm, 1, Lane));
+    }
+    Value *D0 = B.CreateExtractElement(C, uint64_t(0));
+    Value *D1 = B.CreateExtractElement(C, 1);
+    for (unsigned K = 0; K < 8; ++K) {
+      D0 = B.CreateIntrinsic(Intrinsic::fma, {D0->getType()}, {RowA[K], ColB0[K], D0});
+      D1 = B.CreateIntrinsic(Intrinsic::fma, {D1->getType()}, {RowA[K], ColB1[K], D1});
+    }
+    Value *R = B.CreateInsertElement(PoisonValue::get(VT), D0, uint64_t(0));
+    R = B.CreateInsertElement(R, D1, 1);
+    II->replaceAllUsesWith(R);
+    II->eraseFromParent();
+  }
+  return !Calls.empty();
+}
+
 /// The hardware minimum and maximum return a denormal operand as it is, also
 /// where float denormals are flushed: flush their results.
 bool AGXCodeGenPrepare::flushFloatMinMax(Function &F) {
@@ -667,6 +726,7 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   const auto &ST = TM.getSubtarget<AGXSubtarget>(F);
   bool Changed = diagnoseDoubles(F);
+  Changed |= lowerMatrixFMA(F);
   if (ST.hasQuadShuffleIndexMerge())
     Changed |= lowerDivergentShuffles(
         F, getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo());
