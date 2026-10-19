@@ -31,7 +31,7 @@
 #include <__numeric/reduce.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
-#include <__thread/thread.h>
+#include <__thread/hardware_concurrency.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_trivially_copyable.h>
@@ -138,7 +138,7 @@ __partition(_Iterator __first,
             size_t __min_partition_size = 1,
             size_t __prefix_to_skip     = 0,
             size_t __suffix_to_skip     = 0,
-            size_t __workers_count      = thread::hardware_concurrency()) noexcept {
+            size_t __workers_count      = std::__thread_hardware_concurrency()) noexcept {
   // Forward iterators will be supported later.
   static_assert(__has_random_access_iterator_category_or_concept<_Iterator>::value);
 

@@ -62,7 +62,8 @@ using __current_configuration _LIBCPP_NODEBUG =
 using __current_configuration _LIBCPP_NODEBUG =
     __backend_configuration<__libdispatch_backend_tag, __default_backend_tag, __serial_backend_tag>;
 #  elif defined(_LIBCPP_PSTL_BACKEND_STATPART)
-using __current_configuration _LIBCPP_NODEBUG = __backend_configuration<__statpart_backend_tag, __default_backend_tag>;
+using __current_configuration _LIBCPP_NODEBUG =
+    __backend_configuration<__statpart_backend_tag, __default_backend_tag, __serial_backend_tag>;
 #  else
 
 // ...New vendors can add parallel backends here...
