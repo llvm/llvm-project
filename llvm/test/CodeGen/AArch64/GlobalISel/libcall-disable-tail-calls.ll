@@ -4,7 +4,7 @@
 ; Libcalls in tail position must not be emitted as tail calls when the caller
 ; has "disable-tail-calls"="true".
 
-define fp128 @fadd_tail(fp128 %a, fp128 %b) {
+define fp128 @fadd_tail(fp128 %a, fp128 %b) nounwind {
 ; CHECK-LABEL: fadd_tail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    b __addtf3
@@ -12,12 +12,10 @@ define fp128 @fadd_tail(fp128 %a, fp128 %b) {
   ret fp128 %r
 }
 
-define fp128 @fadd_disable_tail_calls(fp128 %a, fp128 %b) "disable-tail-calls"="true" {
+define fp128 @fadd_disable_tail_calls(fp128 %a, fp128 %b) nounwind "disable-tail-calls"="true" {
 ; CHECK-LABEL: fadd_disable_tail_calls:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -25,7 +23,7 @@ define fp128 @fadd_disable_tail_calls(fp128 %a, fp128 %b) "disable-tail-calls"="
   ret fp128 %r
 }
 
-define void @memcpy_tail(ptr %d, ptr %s, i64 %n) {
+define void @memcpy_tail(ptr %d, ptr %s, i64 %n) nounwind {
 ; CHECK-LABEL: memcpy_tail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    b memcpy
@@ -33,12 +31,10 @@ define void @memcpy_tail(ptr %d, ptr %s, i64 %n) {
   ret void
 }
 
-define void @memcpy_disable_tail_calls(ptr %d, ptr %s, i64 %n) "disable-tail-calls"="true" {
+define void @memcpy_disable_tail_calls(ptr %d, ptr %s, i64 %n) nounwind "disable-tail-calls"="true" {
 ; CHECK-LABEL: memcpy_disable_tail_calls:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl memcpy
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

@@ -534,10 +534,6 @@ static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
   MachineBasicBlock &MBB = *MI.getParent();
   const Function &F = MBB.getParent()->getFunction();
 
-  // First, check if tail calls have been disabled in this function.
-  if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
-    return false;
-
   // Conservatively require the attributes of the call to match those of
   // the return. Ignore NoAlias and NonNull because they don't affect the
   // call sequence.
@@ -551,6 +547,10 @@ static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
   // It's not safe to eliminate the sign / zero extension of the return value.
   if (CallerAttrs.hasRetAttr(Attribute::ZExt) ||
       CallerAttrs.hasRetAttr(Attribute::SExt))
+    return false;
+
+  // Check if tail calls have been disabled in this function.
+  if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
   // Only tail call if the following instruction is a standard return or if we
