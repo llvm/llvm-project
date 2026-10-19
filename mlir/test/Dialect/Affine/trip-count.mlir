@@ -36,3 +36,27 @@ func.func @affine_symbolic_loops(%N : index) {
 
   return
 }
+
+// -----
+
+// The upper bound is below the lower bound, so none of these loops executes.
+
+// CHECK-LABEL: func.func @affine_empty_loops
+func.func @affine_empty_loops(%N : index) {
+  // CHECK: "test.trip-count" = 0
+  affine.for %i = affine_map<(d0) -> (d0)>(%N) to affine_map<(d0) -> (d0 - 2)>(%N) {
+    affine.yield
+  }
+
+  // CHECK: "test.trip-count" = 0
+  affine.for %i = max affine_map<(d0) -> (d0)>(%N) to min affine_map<(d0) -> (d0 - 4, d0 + 4)>(%N) {
+    affine.yield
+  }
+
+  // CHECK: "test.trip-count" = 0
+  affine.for %i = 5 to min affine_map<() -> (3, 10)>() {
+    affine.yield
+  }
+
+  return
+}

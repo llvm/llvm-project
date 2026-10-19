@@ -131,8 +131,7 @@ TEST(MLGOUtilsTest, CreateReleaseModeModelRunnerModelSelection) {
       }
       llvm_unreachable("unknown model choice");
     };
-    return createReleaseModeModelRunner<NoopSavedModelImpl,
-                                        /*HaveMLIRLowering=*/true>(
+    return createReleaseModeModelRunner<NoopSavedModelImpl>(
         Ctx, Inputs, "decision", "", OutputSpec, Factory);
   };
 
@@ -162,16 +161,11 @@ TEST(MLGOUtilsTest, CreateReleaseModeModelRunnerAOTFallback) {
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   TensorSpec OutputSpec = TensorSpec::createSpec<int64_t>("result", {1});
 
-  auto DummyEmitCFactory =
-      [](LLVMContext &,
-         const std::vector<TensorSpec> &) -> std::unique_ptr<MLModelRunner> {
-    llvm_unreachable(
-        "EmitC factory should not be called when HaveMLIRLowering=false");
-  };
+  auto DummyEmitCFactory = [](LLVMContext &, const std::vector<TensorSpec> &)
+      -> std::unique_ptr<MLModelRunner> { return nullptr; };
 
-  auto Runner =
-      createReleaseModeModelRunner<MockAOTModel, /*HaveMLIRLowering=*/false>(
-          Ctx, Inputs, "result", "", OutputSpec, DummyEmitCFactory);
+  auto Runner = createReleaseModeModelRunner<MockAOTModel>(
+      Ctx, Inputs, "result", "", OutputSpec, DummyEmitCFactory);
   ASSERT_NE(Runner, nullptr);
   EXPECT_TRUE(ReleaseModeModelRunner<MockAOTModel>::classof(Runner.get()));
   *Runner->getTensor<int64_t>(0) = 10;

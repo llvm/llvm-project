@@ -173,7 +173,7 @@ bool matchAArch64MulConstCombine(
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
     if (MRI.hasOneNonDBGUse(Dst)) {
-      MachineInstr &UseMI = *MRI.use_instr_begin(Dst);
+      MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
       unsigned UseOpc = UseMI.getOpcode();
       if (UseOpc == TargetOpcode::G_ADD || UseOpc == TargetOpcode::G_PTR_ADD ||
           UseOpc == TargetOpcode::G_SUB)

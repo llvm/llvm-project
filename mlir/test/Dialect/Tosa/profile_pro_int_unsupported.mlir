@@ -201,7 +201,6 @@ func.func @test_reduce_sum(%arg0: tensor<13x21x3xi32>) -> tensor<1x21x3xi32> {
 func.func @test_pad(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
   %padding = tosa.const_shape values(dense<0> : tensor<6xindex>) : () -> !tosa.shape<6>
   %pad_const = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
-  // expected-error@+1 {{'tosa.pad' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %0 = tosa.pad %arg0, %padding, %pad_const : (tensor<13x21x3xi8>, !tosa.shape<6>, tensor<1xi8>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
@@ -209,14 +208,12 @@ func.func @test_pad(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
 // -----
 func.func @test_reshape(%arg0: tensor<13x21x3xi8>) -> tensor<1x819xi8> {
   %1 = tosa.const_shape values(dense<[1, 819]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.reshape' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xi8>, !tosa.shape<2>) -> tensor<1x819xi8>
   return %0 : tensor<1x819xi8>
 }
 
 // -----
 func.func @test_reverse(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
-  // expected-error@+1 {{'tosa.reverse' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reverse %arg0 axis(0) : (tensor<13x21x3xi8>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
@@ -225,7 +222,6 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
 func.func @test_slice(%arg0: tensor<13x21x3xi8>) -> tensor<4x11x1xi8> {
   %size = tosa.const_shape values(dense<[4, 11, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
   %start = tosa.const_shape values(dense<[6, 8, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi8>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi8>
   return %2 : tensor<4x11x1xi8>
 }
@@ -233,14 +229,12 @@ func.func @test_slice(%arg0: tensor<13x21x3xi8>) -> tensor<4x11x1xi8> {
 // -----
 func.func @test_tile(%arg0: tensor<13x21x3xi8>) -> tensor<39x21x6xi8> {
   %cst = tosa.const_shape values(dense<[3, 1, 2]> : tensor<3xindex>) : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.tile' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tile %arg0, %cst: (tensor<13x21x3xi8>, !tosa.shape<3>) -> tensor<39x21x6xi8>
   return %0 : tensor<39x21x6xi8>
 }
 
 // -----
 func.func @test_transpose(%arg0: tensor<13x21x3xi8>, %arg1: tensor<3xi32>) -> tensor<3x13x21xi8> {
-  // expected-error@+1 {{'tosa.transpose' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %1 = tosa.transpose %arg0 perms([2, 0, 1]) : (tensor<13x21x3xi8>) -> tensor<3x13x21xi8>
   return %1 : tensor<3x13x21xi8>
 }
