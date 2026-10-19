@@ -3,8 +3,8 @@
 
 ; Make sure we infer no inputs are used through some intrinsics
 
-define void @use_fake_use(i32 %arg) {
-; CHECK-LABEL: define void @use_fake_use(
+define amdgpu_kernel void @use_fake_use(i32 %arg) {
+; CHECK-LABEL: define amdgpu_kernel void @use_fake_use(
 ; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[ARG]])
 ; CHECK-NEXT:    ret void
@@ -13,8 +13,8 @@ define void @use_fake_use(i32 %arg) {
   ret void
 }
 
-define void @use_donothing() {
-; CHECK-LABEL: define void @use_donothing(
+define amdgpu_kernel void @use_donothing() {
+; CHECK-LABEL: define amdgpu_kernel void @use_donothing(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    ret void
@@ -23,8 +23,8 @@ define void @use_donothing() {
   ret void
 }
 
-define void @use_assume(i1 %arg) {
-; CHECK-LABEL: define void @use_assume(
+define amdgpu_kernel void @use_assume(i1 %arg) {
+; CHECK-LABEL: define amdgpu_kernel void @use_assume(
 ; CHECK-SAME: i1 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ARG]])
 ; CHECK-NEXT:    ret void
@@ -33,8 +33,8 @@ define void @use_assume(i1 %arg) {
   ret void
 }
 
-define void @use_trap() {
-; CHECK-LABEL: define void @use_trap(
+define amdgpu_kernel void @use_trap() {
+; CHECK-LABEL: define amdgpu_kernel void @use_trap(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
@@ -43,8 +43,8 @@ define void @use_trap() {
   ret void
 }
 
-define void @use_trap_with_handler() {
-; CHECK-LABEL: define void @use_trap_with_handler(
+define amdgpu_kernel void @use_trap_with_handler() {
+; CHECK-LABEL: define amdgpu_kernel void @use_trap_with_handler(
 ; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.trap() #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    ret void
@@ -53,8 +53,8 @@ define void @use_trap_with_handler() {
   ret void
 }
 
-define void @use_debugtrap() {
-; CHECK-LABEL: define void @use_debugtrap(
+define amdgpu_kernel void @use_debugtrap() {
+; CHECK-LABEL: define amdgpu_kernel void @use_debugtrap(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.debugtrap()
 ; CHECK-NEXT:    ret void
@@ -63,8 +63,8 @@ define void @use_debugtrap() {
   ret void
 }
 
-define void @use_ubsantrap() {
-; CHECK-LABEL: define void @use_ubsantrap(
+define amdgpu_kernel void @use_ubsantrap() {
+; CHECK-LABEL: define amdgpu_kernel void @use_ubsantrap(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.ubsantrap(i8 0)
 ; CHECK-NEXT:    ret void
@@ -76,8 +76,8 @@ define void @use_ubsantrap() {
 
 attributes #0 = { "trap-func-name"="handler" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-dma" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0,0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-dma" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="0,0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind }

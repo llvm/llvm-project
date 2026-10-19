@@ -1306,16 +1306,48 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   // packing.
   return std::min(MaxVirtReg + MaxPhysReg, 256u);
 }
+struct AGPRAllocState : public AbstractState {
+  DecIntegerState<> Min, Max;
 
-struct AAAMDGPUMinAGPRAlloc
-    : public StateWrapper<DecIntegerState<>, AbstractAttribute> {
-  using Base = StateWrapper<DecIntegerState<>, AbstractAttribute>;
-  AAAMDGPUMinAGPRAlloc(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+  bool isValidState() const override { return Min.isValidState(); }
 
-  static AAAMDGPUMinAGPRAlloc &createForPosition(const IRPosition &IRP,
-                                                 Attributor &A) {
+  bool isAtFixpoint() const override {
+    return Min.isAtFixpoint() && Max.isAtFixpoint();
+  }
+
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return Min.indicateOptimisticFixpoint() | Max.indicateOptimisticFixpoint();
+  }
+
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return Min.indicatePessimisticFixpoint() |
+           Max.indicatePessimisticFixpoint();
+  }
+
+  AGPRAllocState &operator^=(const AGPRAllocState &Other) {
+    Min ^= Other.Min;
+    Max ^= Other.Max;
+    return *this;
+  }
+
+  bool operator==(const AGPRAllocState &Other) const {
+    return Min == Other.Min && Max == Other.Max;
+  }
+
+  AGPRAllocState() : Min(), Max() {}
+
+  AGPRAllocState &getAssumed() { return *this; }
+  const AGPRAllocState &getAssumed() const { return *this; }
+};
+struct AAAMDGPUAGPRAlloc
+    : public StateWrapper<AGPRAllocState, AbstractAttribute> {
+  using Base = StateWrapper<AGPRAllocState, AbstractAttribute>;
+  AAAMDGPUAGPRAlloc(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  static AAAMDGPUAGPRAlloc &createForPosition(const IRPosition &IRP,
+                                              Attributor &A) {
     if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
-      return *new (A.Allocator) AAAMDGPUMinAGPRAlloc(IRP, A);
+      return *new (A.Allocator) AAAMDGPUAGPRAlloc(IRP, A);
     llvm_unreachable(
         "AAAMDGPUMinAGPRAlloc is only valid for function position");
   }
@@ -1337,14 +1369,15 @@ struct AAAMDGPUMinAGPRAlloc
   const std::string getAsStr(Attributor *A) const override {
     std::string Str = "amdgpu-agpr-alloc=";
     raw_string_ostream OS(Str);
-    OS << getAssumed();
+    OS << Min.getAssumed() << ',' << Max.getAssumed();
     return OS.str();
   }
 
   void trackStatistics() const override {}
 
   ChangeStatus updateImpl(Attributor &A) override {
-    DecIntegerState<> Maximum;
+    DecIntegerState<> MinAGPRs;
+    DecIntegerState<> MaxAGPRs;
 
     // Check for cases which require allocation of AGPRs. The only cases where
     // AGPRs are required are if there are direct references to AGPRs, so inline
@@ -1357,7 +1390,7 @@ struct AAAMDGPUMinAGPRAlloc
         // Technically, the inline asm could be invoking a call to an unknown
         // external function that requires AGPRs, but ignore that.
         unsigned NumRegs = inlineAsmGetNumRequiredAGPRs(IA, CB);
-        Maximum.takeAssumedMaximum(NumRegs);
+        MinAGPRs.takeAssumedMaximum(NumRegs);
         return true;
       }
       switch (CB.getIntrinsicID()) {
@@ -1373,7 +1406,7 @@ struct AAAMDGPUMinAGPRAlloc
         auto [Kind, RegIdx, NumRegs] =
             AMDGPU::parseAsmPhysRegName(RegName->getString());
         if (Kind == 'a')
-          Maximum.takeAssumedMaximum(std::min(RegIdx + NumRegs, 256u));
+          MinAGPRs.takeAssumedMaximum(std::min(RegIdx + NumRegs, 256u));
 
         return true;
       }
@@ -1401,43 +1434,99 @@ struct AAAMDGPUMinAGPRAlloc
       auto *CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (!CBEdges || CBEdges->hasUnknownCallee()) {
-        Maximum.indicatePessimisticFixpoint();
+        MinAGPRs.indicatePessimisticFixpoint();
         return false;
       }
 
       for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
-        const auto *CalleeInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+        const auto *CalleeInfo = A.getAAFor<AAAMDGPUAGPRAlloc>(
             *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
-        if (!CalleeInfo || !CalleeInfo->isValidState()) {
-          Maximum.indicatePessimisticFixpoint();
+        if (!CalleeInfo || !CalleeInfo->Min.isValidState()) {
+          MinAGPRs.indicatePessimisticFixpoint();
           return false;
         }
 
-        Maximum.takeAssumedMaximum(CalleeInfo->getAssumed());
+        MinAGPRs.takeAssumedMaximum(CalleeInfo->Min.getAssumed());
       }
 
+      return true;
+    };
+    // This lambda function propogates the maximum AGPR allocation from the
+    // caller to callee.
+    auto CheckForMaxAGPRAllocs = [&](AbstractCallSite CS) {
+      // obtain the caller function
+      Function *Caller = CS.getInstruction()->getFunction();
+
+      // Obtain the AGPR Attribute from the caller function
+      const auto *CallerInfo = A.getAAFor<AAAMDGPUAGPRAlloc>(
+          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+      // Obtain Caller budget from the Information Cache
+      const GCNSubtarget &CallerST =
+          InfoCache.TM.getSubtarget<GCNSubtarget>(*Caller);
+      unsigned Callerbudget = CallerST.getMaxNumVGPRs(*Caller);
+      // Obtain Callee budget from the Information Cache
+      Function *Callee = getAssociatedFunction();
+      const GCNSubtarget &CalleeST =
+          InfoCache.TM.getSubtarget<GCNSubtarget>(*Callee);
+      unsigned Calleebudget = CalleeST.getMaxNumVGPRs(*Callee);
+
+      unsigned Budgetdifference = Callerbudget - Calleebudget;
+      // Check if the caller function has a valid state
+      if (!CallerInfo || !CallerInfo->isValidState()) {
+        return false;
+      }
+
+      // Take the maximum AGPR allocation from the caller
+      unsigned Maximuminherited =
+          (CallerInfo->Max.getAssumed() > Budgetdifference)
+              ? CallerInfo->Max.getAssumed() - Budgetdifference
+              : 0u;
+      MaxAGPRs.takeAssumedMaximum(Maximuminherited);
       return true;
     };
 
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallLikeInstructions(CheckForMinAGPRAllocs, *this,
-                                           UsedAssumedInformation))
+                                           UsedAssumedInformation)) {
+      LLVM_DEBUG(dbgs() << '[' << getName() << "] caller "
+                        << getAssociatedFunction()->getName()
+                        << " is invalid (CheckForMinAGPRAllocs)\n");
       return indicatePessimisticFixpoint();
+    }
 
-    return clampStateAndIndicateChange(getState(), Maximum);
+    if (AMDGPU::isEntryFunctionCC(getAssociatedFunction()->getCallingConv())) {
+      MaxAGPRs.takeAssumedMaximum(MinAGPRs.getAssumed());
+    } else {
+      bool AllCallSitesKnown = true;
+      if (!A.checkForAllCallSites(CheckForMaxAGPRAllocs, *this,
+                                  /*RequireAllCallSites=*/true,
+                                  AllCallSitesKnown)) {
+        LLVM_DEBUG(dbgs() << '[' << getName() << "] caller "
+                          << getAssociatedFunction()->getName()
+                          << " is invalid (CheckForMaxAGPRAllocs)\n");
+        Max.indicatePessimisticFixpoint();
+      }
+    }
+    ChangeStatus Change = clampStateAndIndicateChange(Min, MinAGPRs);
+    Change |= clampStateAndIndicateChange(Max, MaxAGPRs);
+    return Change;
   }
 
   ChangeStatus manifest(Attributor &A) override {
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
     SmallString<4> Buffer;
     raw_svector_ostream OS(Buffer);
-    OS << getAssumed();
+    if (Max.isValidState())
+      OS << Min.getAssumed() << ',' << Max.getAssumed();
+    else
+      OS << Min.getAssumed();
 
     return A.manifestAttrs(
         getIRPosition(), {Attribute::get(Ctx, "amdgpu-agpr-alloc", OS.str())});
   }
 
-  StringRef getName() const override { return "AAAMDGPUMinAGPRAlloc"; }
+  StringRef getName() const override { return "AAAMDGPUAGPRAlloc"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1449,7 +1538,7 @@ struct AAAMDGPUMinAGPRAlloc
   static const char ID;
 };
 
-const char AAAMDGPUMinAGPRAlloc::ID = 0;
+const char AAAMDGPUAGPRAlloc::ID = 0;
 
 /// Deduce the function attribute "amdgpu-no-lds-dma"
 struct AAAMDGPUNoLDSDMA : public StateWrapper<BooleanState, AbstractAttribute> {
@@ -1708,11 +1797,11 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   DenseSet<const char *> Allowed(
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
-       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID, &AAAlign::ID});
+       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUAGPRAlloc::ID,
+       &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID,
+       &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1758,7 +1847,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
     if (Features.test(AMDGPU::FEAT_AGPR_ALLOC))
-      A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDGPUAGPRAlloc>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;
