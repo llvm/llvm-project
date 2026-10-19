@@ -82,6 +82,7 @@ bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
                                       bool &is_signed) {
   if (!type)
     return false;
+
   int kind = static_cast<FortranType *>(type)->GetKind();
   if (kind == FortranType::KIND_INTEGER || kind == FortranType::KIND_UNSIGNED) {
     is_signed = (kind == FortranType::KIND_INTEGER);
