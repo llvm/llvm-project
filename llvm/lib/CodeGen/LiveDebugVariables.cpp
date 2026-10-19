@@ -478,6 +478,11 @@ public:
   /// Replace the stale indexes in locInts and trimmedDefs.
   void canonicalizeIndexes(const SlotIndexes &SI);
 
+  /// Rewrite virtual register locations that have been assigned to physical
+  /// registers according to the provided virtual register map. Other
+  /// locations are left unchanged.
+  void rewriteAssignedLocations(VirtRegMap &VRM, const TargetRegisterInfo &TRI);
+
   /// Rewrite virtual register locations according to the provided virtual
   /// register map. Record the stack slot offsets for the locations that
   /// were spilled.
@@ -682,6 +687,10 @@ public:
 
   /// Replace every stale index held by this analysis.
   void canonicalizeIndexes(const SlotIndexes &SI);
+
+  /// Replace locations in virtual registers that have been assigned to
+  /// physical registers.
+  void rewriteAssignedLocations(VirtRegMap &VRM);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
@@ -1686,6 +1695,19 @@ void LiveDebugVariables::canonicalizeIndexes(const SlotIndexes &SI) {
     PImpl->canonicalizeIndexes(SI);
 }
 
+void UserValue::rewriteAssignedLocations(VirtRegMap &VRM,
+                                         const TargetRegisterInfo &TRI) {
+  // Identical locations are merged by rewriteLocations when debug values are
+  // emitted.
+  for (MachineOperand &Loc : locations) {
+    if (!Loc.isReg() || !Loc.getReg() || !Loc.getReg().isVirtual())
+      continue;
+    Register VirtReg = Loc.getReg();
+    if (VRM.isAssignedReg(VirtReg) && VRM.hasPhys(VirtReg))
+      Loc.substPhysReg(VRM.getPhys(VirtReg), TRI);
+  }
+}
+
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                                  const TargetInstrInfo &TII,
                                  const TargetRegisterInfo &TRI,
@@ -1985,6 +2007,26 @@ void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
   LLVM_DEBUG(dbgs() << '\n');
 }
 
+void LiveDebugVariables::LDVImpl::rewriteAssignedLocations(VirtRegMap &VRM) {
+  if (!MF)
+    return;
+
+  for (auto &userValue : userValues)
+    userValue->rewriteAssignedLocations(VRM, *TRI);
+
+  for (auto &[InstNum, Pos] : PHIValToPos) {
+    if (!Pos.Reg.isVirtual() || !VRM.isAssignedReg(Pos.Reg) ||
+        !VRM.hasPhys(Pos.Reg))
+      continue;
+    RegToPHIIdx.erase(Pos.Reg);
+    MCRegister PhysReg = VRM.getPhys(Pos.Reg);
+    if (Pos.SubReg)
+      PhysReg = TRI->getSubReg(PhysReg, Pos.SubReg);
+    Pos.Reg = PhysReg;
+    Pos.SubReg = 0;
+  }
+}
+
 void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
@@ -2020,8 +2062,9 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     unsigned SubReg = It.second.SubReg;
 
     MachineBasicBlock *OrigMBB = Slots->getMBBFromIndex(Slot);
-    if (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg)) {
-      unsigned PhysReg = VRM->getPhys(Reg);
+    if (Reg.isPhysical() || (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg))) {
+      // Reg may already have been rewritten by rewriteAssignedLocations.
+      MCRegister PhysReg = Reg.isPhysical() ? Reg.asMCReg() : VRM->getPhys(Reg);
       if (SubReg != 0)
         PhysReg = TRI->getSubReg(PhysReg, SubReg);
 
@@ -2134,6 +2177,11 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
   EmitDone = true;
   BBSkipInstsMap.clear();
+}
+
+void LiveDebugVariables::rewriteAssignedLocations(VirtRegMap &VRM) {
+  if (PImpl)
+    PImpl->rewriteAssignedLocations(VRM);
 }
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
