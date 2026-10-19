@@ -22,8 +22,8 @@
 #include <concepts>
 #include <iterator>
 #include <ranges>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "test_iterators.h"
 #include "test_range.h"
