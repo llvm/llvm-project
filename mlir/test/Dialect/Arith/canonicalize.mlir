@@ -1505,6 +1505,86 @@ func.func @truncUitofp_nneg(%arg0: i32) -> f32 {
   return %trunc : f32
 }
 
+// i64 does not fit the f64 mantissa, so the two roundings must be kept.
+// CHECK-LABEL: @truncSitofpInexact
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i64 to f64
+//       CHECK:     %[[TRUNCF:.*]] = arith.truncf %[[SITOFP]] : f64 to f32
+//       CHECK:     return %[[TRUNCF]]
+func.func @truncSitofpInexact(%arg0: i64) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i64 to f64
+  %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncUitofpInexact
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i64 to f64
+//       CHECK:     %[[TRUNCF:.*]] = arith.truncf %[[UITOFP]] : f64 to f32
+//       CHECK:     return %[[TRUNCF]]
+func.func @truncUitofpInexact(%arg0: i64) -> f32 {
+  %uitofp = arith.uitofp %arg0 : i64 to f64
+  %trunc = arith.truncf %uitofp : f64 to f32
+  return %trunc : f32
+}
+
+// A signed i54 has 53 magnitude bits, which exactly fit the f64 mantissa.
+// CHECK-LABEL: @truncSitofpExactBoundary
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i54 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[SITOFP]]
+func.func @truncSitofpExactBoundary(%arg0: i54) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i54 to f64
+  %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncSitofpInexactBoundary
+//       CHECK:     arith.sitofp %{{.*}} : i55 to f64
+//       CHECK:     arith.truncf
+func.func @truncSitofpInexactBoundary(%arg0: i55) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i55 to f64
+  %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// An unsigned i53 fits the f64 mantissa, an unsigned i54 does not.
+// CHECK-LABEL: @truncUitofpExactBoundary
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i53 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[UITOFP]]
+func.func @truncUitofpExactBoundary(%arg0: i53) -> f32 {
+  %uitofp = arith.uitofp %arg0 : i53 to f64
+  %trunc = arith.truncf %uitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncUitofpInexactBoundary
+//       CHECK:     arith.uitofp %{{.*}} : i54 to f64
+//       CHECK:     arith.truncf
+func.func @truncUitofpInexactBoundary(%arg0: i54) -> f32 {
+  %uitofp = arith.uitofp %arg0 : i54 to f64
+  %trunc = arith.truncf %uitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncSitofpExactVector
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : vector<2xi32> to vector<2xf32>
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[SITOFP]]
+func.func @truncSitofpExactVector(%arg0: vector<2xi32>) -> vector<2xf32> {
+  %sitofp = arith.sitofp %arg0 : vector<2xi32> to vector<2xf64>
+  %trunc = arith.truncf %sitofp : vector<2xf64> to vector<2xf32>
+  return %trunc : vector<2xf32>
+}
+
+// CHECK-LABEL: @truncSitofpInexactVector
+//       CHECK:     arith.sitofp %{{.*}} : vector<2xi64> to vector<2xf64>
+//       CHECK:     arith.truncf
+func.func @truncSitofpInexactVector(%arg0: vector<2xi64>) -> vector<2xf32> {
+  %sitofp = arith.sitofp %arg0 : vector<2xi64> to vector<2xf64>
+  %trunc = arith.truncf %sitofp : vector<2xf64> to vector<2xf32>
+  return %trunc : vector<2xf32>
+}
+
 // CHECK-LABEL: @sitofpExtsi
 //       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i8 to bf16
 //       CHECK:     return %[[SITOFP]]

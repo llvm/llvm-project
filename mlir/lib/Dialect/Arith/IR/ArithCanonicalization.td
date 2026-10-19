@@ -521,17 +521,27 @@ def TruncIShrSIToTrunciShrUI :
 // TruncFOp
 //===----------------------------------------------------------------------===//
 
-// truncf(sitofp(x)) -> sitofp(x) if default rounding mode.
+// An inexact intermediate conversion rounds twice and may change the result.
+def IsExactSIToFP :
+    Constraint<CPred<"isExactIntToFPCast($0, $1, /*isSigned=*/true)">,
+               "exact sitofp">;
+def IsExactUIToFP :
+    Constraint<CPred<"isExactIntToFPCast($0, $1, /*isSigned=*/false)">,
+               "exact uitofp">;
+
+// truncf(sitofp(x)) -> sitofp(x) if default rounding mode and sitofp is exact.
 def TruncFSIToFPToSIToFP :
     Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf),
         (Arith_SIToFPOp $x),
-        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf),
+         (IsExactSIToFP $x, $fp)]>;
 
-// truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
+// truncf(uitofp(x)) -> uitofp(x) if default rounding mode and uitofp is exact.
 def TruncFUIToFPToUIToFP :
     Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x, $nneg), $rmf, $fmf),
         (Arith_UIToFPOp $x, $nneg),
-        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf),
+         (IsExactUIToFP $x, $fp)]>;
 
 //===----------------------------------------------------------------------===//
 // SIToFPOp
