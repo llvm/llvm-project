@@ -2953,6 +2953,11 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vl8r.v v8, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
@@ -2968,8 +2973,9 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
-; CHECK-NEXT:    vmv4r.v v16, v24
 ; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vmv4r.v v16, v24
 ; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v24, a2
@@ -3143,6 +3149,11 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vl8r.v v8, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
@@ -3158,8 +3169,9 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
-; CHECK-NEXT:    vmv4r.v v16, v24
 ; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vmv4r.v v16, v24
 ; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v24, a2
