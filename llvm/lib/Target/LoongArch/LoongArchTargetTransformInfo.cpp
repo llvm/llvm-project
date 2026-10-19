@@ -27,6 +27,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarchtti"
 
+namespace {
 struct CostKindCosts {
   unsigned LatencyCost = ~0U;
   unsigned RecipThroughputCost = ~0U;
@@ -55,6 +56,7 @@ struct CostKindCosts {
     return Cost;
   }
 };
+} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 
 TypeSize LoongArchTTIImpl::getRegisterBitWidth(

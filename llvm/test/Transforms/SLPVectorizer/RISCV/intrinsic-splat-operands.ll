@@ -8,7 +8,7 @@
 ; REMARK-NEXT: Function:        smax_splat_first
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          'Stores SLP vectorized with cost '
-; REMARK-NEXT:   - Cost:            '-3'
+; REMARK-NEXT:   - Cost:            '-5'
 ; REMARK-NEXT:   - String:          ' and with tree size '
 ; REMARK-NEXT:   - TreeSize:        '4'
 define void @smax_splat_first(ptr %out, ptr %in, i32 %splat) {
@@ -31,7 +31,7 @@ entry:
 ; REMARK-NEXT: Function:        ssub_splat_second
 ; REMARK-NEXT: Args:
 ; REMARK-NEXT:   - String:          'Stores SLP vectorized with cost '
-; REMARK-NEXT:   - Cost:            '-13'
+; REMARK-NEXT:   - Cost:            '-15'
 ; REMARK-NEXT:   - String:          ' and with tree size '
 ; REMARK-NEXT:   - TreeSize:        '4'
 define void @ssub_splat_second(ptr %out, ptr %in, i32 %splat) {

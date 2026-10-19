@@ -160,7 +160,8 @@ private:
 PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts =
+      L.getHeader()->getContext().getLibraryOptions().get<VectorizeOptions>();
   if (Opts.disable_loop_idiom_vectorize_all)
     return PreservedAnalyses::all();
 

@@ -127,7 +127,8 @@ def ACCOptimizeFirstprivateMap
     pass-by-value instead of using global memory mapping through the
     runtime.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect",
+                           "mlir::arith::ArithDialect"];
 }
 
 def ACCMapInfoPrep
