@@ -65,7 +65,7 @@ void thread::detach() {
 }
 
 // Defined here only for backwards compatibility.
-unsigned thread::hardware_concurrency() noexcept { return __thread_hardware_concurrency(); }
+unsigned thread::hardware_concurrency() noexcept { return std::__thread_hardware_concurrency(); }
 
 namespace this_thread {
 
