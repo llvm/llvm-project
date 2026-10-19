@@ -5361,8 +5361,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
       // FIXME: Do we need to make sure that we only consider conversion
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
-      if ((AllowRValues ||
-           Conv->getConversionType()->isLValueReferenceType())) {
+      if (ConvTemplate || AllowRValues ||
+          Conv->getConversionType()->isLValueReferenceType()) {
         if (ConvTemplate)
           S.AddTemplateConversionCandidate(
               ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
