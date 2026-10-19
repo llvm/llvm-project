@@ -153,7 +153,7 @@ add_mlir_library(MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisPresburger
   MLIRDestinationStyleOpInterface
   MLIRIR
   )
