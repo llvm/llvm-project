@@ -5678,8 +5678,16 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                   Op1Info, Op2Info, I);
+  InstructionCost Cost = BaseT::getCmpSelInstrCost(
+      Opcode, ValTy, CondTy, VecPred, CostKind, Op1Info, Op2Info, I);
+  // The SVE integer compares, writing the predicates, are executed on fewer
+  // pipelines than the Neon compares on these cores.
+  if (Opcode == Instruction::ICmp && isa<ScalableVectorType>(ValTy) &&
+      CostKind == TTI::TCK_RecipThroughput &&
+      (ST->getProcFamily() == AArch64Subtarget::Olympus ||
+       ST->getProcFamily() == AArch64Subtarget::NeoverseV2))
+    Cost *= 2;
+  return Cost;
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
