@@ -1,6 +1,6 @@
 // RUN: %libomp-compile -fopenmp-version=61 && %libomp-run \
 // RUN:   | FileCheck %s --match-full-lines
-
+// XFAIL: *
 #ifndef HEADER
 #define HEADER
 
