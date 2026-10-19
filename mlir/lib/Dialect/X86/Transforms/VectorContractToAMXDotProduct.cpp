@@ -561,7 +561,8 @@ getAccTileAccess(Operation *op) {
   VectorType vecTy;
   ValueRange indices;
   if (auto transfer = dyn_cast<VectorTransferOpInterface>(op)) {
-    if (transfer.getMask() || !transfer.getPermutationMap().isMinorIdentity())
+    if (transfer.getMask() || transfer.hasOutOfBoundsDim() ||
+        !transfer.getPermutationMap().isMinorIdentity())
       return std::nullopt;
     base = transfer.getBase();
     vecTy = transfer.getVectorType();
