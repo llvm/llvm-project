@@ -21,6 +21,7 @@ program main
    implicit none
    integer :: i,j,red
    integer :: array(1024), errors = 0
+   integer :: big(1000000)
    array = 1
 
    ! No-loop kernel
@@ -78,6 +79,17 @@ program main
       errors = errors + 1
    end if
 
+   ! No-loop kernel
+   !$omp target teams distribute parallel do
+   do i = 1, 1000000
+      big(i) = i
+   end do
+   do i = 1, 1000000
+      if (big(i) .ne. i) then
+         errors = errors + 1
+      end if
+   end do
+
    print *,"number of errors: ", errors
 
 end program main
@@ -94,6 +106,9 @@ end program main
 ! CHECK:  info: #Args: 3 Teams x Thrds:   16x  16 {{.*}}
 ! CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
 ! CHECK:  info: #Args: 4 Teams x Thrds:   16x  16 {{.*}}
+! CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+! CHECK:  info: #Args: 3 Teams x Thrds: {{ *}}[[#TEAMS:]]x{{ *}}[[#THRDS:]]
+! CHECK-SAME: Tripcount: [[#min(mul(TEAMS,THRDS),1000000)]]
 ! CHECK:  number of errors: 0
 
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
@@ -105,5 +120,8 @@ end program main
 ! DEFAULT:  info: #Args: 3 Teams x Thrds:    1x{{ *[0-9]+}}
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} Generic mode
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+! DEFAULT:  info: #Args: 3 Teams x Thrds: {{ *}}[[#TEAMS:]]x{{ *}}[[#THRDS:]]
+! DEFAULT-SAME: Tripcount: [[#min(mul(TEAMS,THRDS),1000000)]]
 ! DEFAULT:  number of errors: 0
 
