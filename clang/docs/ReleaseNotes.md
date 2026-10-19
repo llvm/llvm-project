@@ -974,6 +974,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed deduction of the template parameters appearing in the type of a
   constant template parameter of reference type. (#GH40328)
 
+- Fixed a crash when instantiating a local `extern` variable declaration whose
+  previous declaration was in a discarded branch of an `if constexpr`. (#GH223003)
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 

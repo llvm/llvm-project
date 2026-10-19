@@ -34,6 +34,24 @@ foo: should_not_be_used();
 // CHECK: should_be_used_2
 // CHECK: should_be_used_3
 
+namespace GH223003 {
+  static int internal_var = 42;
+  template <bool x>
+  int read() {
+    if constexpr (x) {
+      extern int internal_var;
+      return internal_var;
+    } else {
+      extern int internal_var;
+      return internal_var;
+    }
+  }
+  int use() { return read<false>(); }
+}
+
+// CHECK-LABEL: define {{.*}} @_ZN8GH2230034readILb0EEEiv(
+// CHECK: load i32, ptr @_ZN8GH223003L12internal_varE
+
 namespace BlockThisCapture {
   void foo();
   struct S {
