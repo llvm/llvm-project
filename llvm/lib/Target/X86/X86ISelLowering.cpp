@@ -22601,8 +22601,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   assert(SatWidth <= 32 &&
          "Expected saturation width no wider than result element");
 
-  if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f16 ||
-                         SrcVT.getScalarType() == MVT::bf16)) {
+  if (SrcVT.getScalarType() == MVT::f16 || SrcVT.getScalarType() == MVT::bf16) {
     SrcVT = SrcVT.changeVectorElementType(MVT::f32);
     Src = DAG.getNode(ISD::FP_EXTEND, dl, SrcVT, Src);
   }
@@ -22628,22 +22627,14 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                       /*IsSigned=*/true, APFloat::rmTowardZero);
       PosOvfBoundFlt.changeSign();
       SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
-      EVT SelCCVT =
-          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
-
       SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
       SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
 
-      if (CCVT != SelCCVT) {
-        PosOvf = DAG.getSExtOrTrunc(PosOvf, dl, SelCCVT);
-        IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
-      }
-
       // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
-      // bitmask vector (SelCCVT == DstVT). XOR(Cvt, PosOvf) maps INT_MIN
+      // bitmask vector (CCVT == DstVT). XOR(Cvt, PosOvf) maps INT_MIN
       // (0x80000000) to INT_MAX (0x7FFFFFFF) on positive overflow without
       // needing INT_MAX in the constant pool or select emulation.
-      if (SelCCVT == DstVT) {
+      if (CCVT == DstVT) {
         SDValue Fixed = DAG.getNode(ISD::XOR, dl, DstVT, Cvt, PosOvf);
         SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
         return DAG.getNode(ISD::AND, dl, DstVT, Fixed, NotNaN);
