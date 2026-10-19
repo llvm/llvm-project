@@ -1750,9 +1750,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   bool HasSideEffects = false;
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
-      // Pseudo-probes are placeholders with side effects but
-      // no real memory dependence, and should not disqualify early exit loops.
-      if (I.isDebugOrPseudoInst())
+      if (isa<PseudoProbeInst>(I))
         continue;
       if (I.mayWriteToMemory()) {
         if (isa<StoreInst>(&I) && cast<StoreInst>(&I)->isSimple()) {
@@ -1900,7 +1898,7 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       // Pseudo-probes are placeholders with no real memory
       // access, so they cannot alias the exit condition load and do not need
       // to be masked.
-      if (I.isDebugOrPseudoInst())
+      if (isa<PseudoProbeInst>(I))
         continue;
 
       if (I.mayReadOrWriteMemory()) {
