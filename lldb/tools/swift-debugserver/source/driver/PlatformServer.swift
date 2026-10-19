@@ -1,2 +1,0 @@
-internal struct PlatformServer {
-}
