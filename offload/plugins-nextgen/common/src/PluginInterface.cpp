@@ -45,13 +45,6 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
   LocalAsyncInfo.ProfilerData = nullptr;
 }
 
-Error AsyncInfoWrapperTy::synchronize() {
-  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
-
-  // Synchronize with the async info's operations without releasing the queue.
-  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
-}
-
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
@@ -61,6 +54,13 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
   // the synchronize operation.
   if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
+
+  // With the force-synchronization escape hatch enabled, also drain external
+  // async info objects after each operation.
+  else if (shouldForceSync(Device.forceSyncOps(),
+                           AsyncInfoPtr == &LocalAsyncInfo,
+                           AsyncInfoPtr->Queue != nullptr, (bool)Err))
+    Err = Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
 
   // Invalidate the wrapper object.
   AsyncInfoPtr = nullptr;
@@ -115,48 +115,17 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
         error::ErrorCode::INVALID_ARGUMENT,
         "Requested block memory size (static + dynamic) exceeds maximum");
 
-  RecordReplayTy::HandleTy RRHandle;
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
-  if (RecordReplay) {
-    // Record replay requires synchronization of any previous operation.
-    if (auto Err = AsyncInfoWrapper.synchronize())
-      return Err;
-
-    // Record the kernel prologue data before kernel launch.
-    auto RRHandleOrErr = RecordReplay->recordPrologue(
-        *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
-        LaunchArgs.DynCGroupMem);
-    if (!RRHandleOrErr)
-      return RRHandleOrErr.takeError();
-    RRHandle = *RRHandleOrErr;
-  }
-
   Profiler.handlePreKernelLaunch(&GenericDevice, EffectiveNumBlocks,
                                  AsyncInfoWrapper);
 
-  if (auto Err =
-          launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
-                     LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper))
-    return Err;
-
-  if (RecordReplay) {
-    // Record replay requires synchronization.
-    if (auto Err = AsyncInfoWrapper.synchronize())
-      return Err;
-
-    // Record the epilogue data after kernel synchronization.
-    return RecordReplay->recordEpilogue(*this, RRHandle);
-  }
-  return Plugin::success();
+  return launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
+                    LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper);
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                                  int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : Plugin(Plugin), OMP_TeamLimit("OMP_TEAM_LIMIT"),
-      OMP_NumTeams("OMP_NUM_TEAMS"),
-      OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
-      OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
+    : Plugin(Plugin),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We initialize them in GenericDeviceTy::init().
@@ -170,32 +139,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   // Conservative fall-back to the plugin's device uid for the case that no real
   // vendor (u)uid will become available later.
   setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
-
-  // Envar that indicates whether mapped host buffers should be locked
-  // automatically. The possible values are boolean (on/off) and a special:
-  //   off:       Mapped host buffers are not locked.
-  //   on:        Mapped host buffers are locked in a best-effort approach.
-  //              Failure to lock the buffers are silent.
-  //   mandatory: Mapped host buffers are always locked and failures to lock
-  //              a buffer results in a fatal error.
-  StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
-                                     "off");
-
-  bool Enabled;
-  if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
-    // Parsed as a boolean value. Enable the feature if necessary.
-    LockMappedBuffers = Enabled;
-    IgnoreLockMappedFailures = true;
-  } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
-    // Enable the feature and failures are fatal.
-    LockMappedBuffers = true;
-    IgnoreLockMappedFailures = false;
-  } else {
-    // Disable by default.
-    ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
-                     << OMPX_LockMappedBuffers.get();
-    LockMappedBuffers = false;
-  }
 }
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin,
@@ -225,16 +168,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin,
     OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
   }
 
-  // Update the maximum number of teams and threads after the device
-  // initialization sets the corresponding hardware limit.
-  if (OMP_NumTeams > 0)
-    GridValues.GV_Max_Teams =
-        std::min(GridValues.GV_Max_Teams, uint32_t(OMP_NumTeams));
-
-  if (OMP_TeamsThreadLimit > 0)
-    GridValues.GV_Max_WG_Size =
-        std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
-
   return Plugin::success();
 }
 
@@ -246,6 +179,7 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
 
   if (!ProfOrErr->empty()) {
     // Dump out profdata
+    static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
         uint32_t(DeviceDebugKind::PGODump))
       ProfOrErr->dump();
@@ -1312,60 +1246,6 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                                   void **LockedPtr) {
-  auto LockedPtrOrErr = getDevice(DeviceId).registerMemory(Ptr, Size);
-  if (!LockedPtrOrErr) {
-    auto Err = LockedPtrOrErr.takeError();
-    REPORT() << "Failure to lock memory " << Ptr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  if (!(*LockedPtrOrErr)) {
-    REPORT() << "Failure to lock memory " << Ptr
-             << ": obtained a null locked pointer";
-    return OFFLOAD_FAIL;
-  }
-  *LockedPtr = *LockedPtrOrErr;
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_unlock(int32_t DeviceId, void *Ptr) {
-  auto Err = getDevice(DeviceId).unregisterMemory(Ptr);
-  if (Err) {
-    REPORT() << "Failure to unlock memory " << Ptr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_notify_mapped(int32_t DeviceId, void *HstPtr,
-                                            int64_t Size) {
-  auto Err = getDevice(DeviceId).notifyDataMapped(HstPtr, Size);
-  if (Err) {
-    REPORT() << "Failure to notify data mapped " << HstPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
-  auto Err = getDevice(DeviceId).notifyDataUnmapped(HstPtr);
-  if (Err) {
-    REPORT() << "Failure to notify data unmapped " << HstPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::data_submit(int32_t DeviceId, void *TgtPtr,
                                      void *HstPtr, int64_t Size) {
   return data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
@@ -1441,104 +1321,8 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::synchronize(int32_t DeviceId,
-                                     __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).synchronize(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to synchronize stream " << AsyncInfoPtr->Queue << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::query_async(int32_t DeviceId,
-                                     __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).queryAsync(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to query stream " << AsyncInfoPtr->Queue << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::create_event(int32_t DeviceId, void **EventPtr) {
-  auto Err = getDevice(DeviceId).createEvent(EventPtr);
-  if (Err) {
-    REPORT() << "Failure to create event: " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::record_event(int32_t DeviceId, void *EventPtr,
-                                      __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).recordEvent(EventPtr, AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to record event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::wait_event(int32_t DeviceId, void *EventPtr,
-                                    __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).waitEvent(EventPtr, AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to wait event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::sync_event(int32_t DeviceId, void *EventPtr) {
-  auto Err = getDevice(DeviceId).syncEvent(EventPtr);
-  if (Err) {
-    REPORT() << "Failure to synchronize event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
-  auto Err = getDevice(DeviceId).destroyEvent(EventPtr);
-  if (Err) {
-    REPORT() << "Failure to destroy event " << EventPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
-}
-
-int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
-                                           size_t Size) {
-  auto HandleError = [&](Error Err) -> bool {
-    std::string ErrStr = toString(std::move(Err));
-    ODBG(OLDT_Device) << "Failure while checking accessibility of pointer "
-                      << Ptr << " for device " << DeviceId << ": " << ErrStr;
-    return false;
-  };
-
-  auto AccessibleOrErr = getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
-  if (Error Err = AccessibleOrErr.takeError())
-    return HandleError(std::move(Err));
-
-  return *AccessibleOrErr;
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,

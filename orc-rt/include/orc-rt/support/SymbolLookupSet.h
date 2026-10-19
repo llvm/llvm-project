@@ -63,7 +63,7 @@ private:
 /// weakly referenced symbol is reported as a present optional holding a null
 /// address.
 class SymbolLookupResult {
-  using VectorType = std::vector<std::optional<void *>>;
+  using VectorType = std::vector<std::optional<const void *>>;
 
 public:
   using value_type = VectorType::value_type;

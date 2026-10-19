@@ -101,6 +101,15 @@ template <typename... ArgsTy>
                                     ArgsTy... Args);
 } // namespace Plugin
 
+/// Decide whether an operation must be synchronized eagerly because the
+/// force-synchronization escape hatch (OFFLOAD_FORCE_SYNC_OPS) is enabled. Only
+/// external async info objects are affected; local ones are always synchronized
+/// on finalization. A pending error suppresses synchronization.
+inline bool shouldForceSync(bool ForceSyncOps, bool IsLocalAsyncInfo,
+                            bool HasQueue, bool HasError) {
+  return ForceSyncOps && !IsLocalAsyncInfo && HasQueue && !HasError;
+}
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -147,14 +156,6 @@ struct AsyncInfoWrapperTy {
     }
     return getQueueAs<Ty>();
   }
-
-  /// Explicitly synchronize with the __tgt_async_info's pending operations
-  /// regardless of which async info this object wraps. The associated
-  /// underlying queue (if any) will not be released. Calling this function does
-  /// not obviate the need to call the finalize function later. This function is
-  /// intended for specific use cases where a synchronous operation needs to
-  /// explicitly wait for the operations already on the queue.
-  Error synchronize();
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the asynchronous operations
@@ -360,9 +361,6 @@ public:
 /// so it is never aliased onto compiler-emitted memory and may be extended
 /// freely.
 struct KernelLaunchArgsTy {
-  /// Version of KernelArgsTy this launch was built from, for ABI
-  /// compatibility checks.
-  uint32_t OmpABIVersion = 0;
   /// Number of kernel arguments in \p Args.
   uint32_t NumArgs = 0;
   /// Array of \p NumArgs pointers, each pointing at one argument's value,
@@ -380,19 +378,9 @@ struct KernelLaunchArgsTy {
   /// User-requested number of threads (for x,y,z dimension).
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   struct {
-    /// Maximum number of threads per block that this kernel may use.
-    uint32_t MaxNumThreads = 0;
-    /// Number of blocks originally requested by the program for the first
-    /// dimension (e.g., num_teams clause), or 0 if none was requested.
-    uint32_t RequestedNumBlocks = 0;
-  } KernelLaunchInfo;
-  struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
     uint64_t Unused : 63;
   } Flags = {0, 0};
-  /// Set by the caller when replaying a previously recorded kernel launch, so
-  /// the plugin can report the outcome back; null for a normal launch.
-  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
@@ -985,30 +973,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Unlock a previously locked host buffer starting at \p HstPtr.
   virtual Error dataUnlockImpl(void *HstPtr) = 0;
 
-  /// Mark the host buffer with address \p HstPtr and \p Size bytes as a mapped
-  /// buffer. This means that libomptarget created a new mapping of that host
-  /// buffer (e.g., because a user OpenMP target map) and the buffer may be used
-  /// as source/destination of memory transfers. We can use this information to
-  /// lock the host buffer and optimize its memory transfers.
-  Error notifyDataMapped(void *HstPtr, int64_t Size) {
-    auto Err = PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
-    if (!Err && !IgnoreLockMappedFailures)
-      return Err.takeError();
-    return Plugin::success();
-  }
-
-  /// Mark the host buffer with address \p HstPtr as unmapped. This means that
-  /// libomptarget removed an existing mapping. If the plugin locked the buffer
-  /// in notifyDataMapped, this function should unlock it.
-  Error notifyDataUnmapped(void *HstPtr) {
-    auto Err = PinnedAllocs.unregisterMemory(HstPtr, LockMappedBuffers);
-    if (IgnoreLockMappedFailures) {
-      consumeError(std::move(Err));
-      return Plugin::success();
-    }
-    return Err;
-  }
-
   /// Check whether the host buffer with address \p HstPtr is pinned by the
   /// underlying vendor-specific runtime (if any). Retrieve the host pointer,
   /// the device accessible pointer and the size of the original pinned buffer.
@@ -1141,7 +1105,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
-  uint32_t getDebugKind() const { return OMPX_DebugKind; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get a device-specific timestamp in nanoseconds, used by the profiler
@@ -1313,6 +1276,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// Environment flag that forces every device operation to be synchronized,
+  /// draining the queue after each operation. Debugging escape hatch.
+  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_BLOCKING", false);
+
+  /// Return whether all device operations should be forced synchronous.
+  bool forceSyncOps() const { return OF_ForceSyncOps; }
+
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
@@ -1334,13 +1304,7 @@ private:
     return false;
   }
 
-  /// Environment variables defined by the OpenMP standard.
-  Int32Envar OMP_TeamLimit;
-  Int32Envar OMP_NumTeams;
-  Int32Envar OMP_TeamsThreadLimit;
-
   /// Environment variables defined by the LLVM OpenMP implementation.
-  Int32Envar OMPX_DebugKind;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
@@ -1352,12 +1316,6 @@ private:
 
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
-
-  /// Indicate whether mapped host buffers should be locked automatically.
-  bool LockMappedBuffers;
-
-  /// Indicate whether failures when locking mapped buffers should be ignored.
-  bool IgnoreLockMappedFailures;
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
@@ -1620,19 +1578,6 @@ public:
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
                       GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Locks / pins host memory using the plugin runtime.
-  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                    void **LockedPtr);
-
-  /// Unlocks / unpins host memory using the plugin runtime.
-  int32_t data_unlock(int32_t DeviceId, void *Ptr);
-
-  /// Notify the runtime about a new mapping that has been created outside.
-  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
-
-  /// Notify t he runtime about a mapping that has been deleted.
-  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
-
   /// Copy data to the given device.
   int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                       int64_t Size);
@@ -1664,34 +1609,8 @@ public:
                         __tgt_async_info *AsyncInfoPtr,
                         GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Synchronize an asyncrhonous queue with the plugin runtime.
-  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Query the current state of an asynchronous queue.
-  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Creates an event in the given plugin if supported.
-  int32_t create_event(int32_t DeviceId, void **EventPtr);
-
-  /// Records an event that has occurred.
-  int32_t record_event(int32_t DeviceId, void *EventPtr,
-                       __tgt_async_info *AsyncInfoPtr);
-
-  /// Wait until an event has occurred.
-  int32_t wait_event(int32_t DeviceId, void *EventPtr,
-                     __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize execution until an event is done.
-  int32_t sync_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
-
-  /// Returns if the associated storage is accessible for a given device.
-  int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
 
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,

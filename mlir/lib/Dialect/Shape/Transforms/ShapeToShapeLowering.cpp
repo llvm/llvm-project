@@ -27,7 +27,7 @@ namespace {
 /// Converts `shape.num_elements` to `shape.reduce`.
 struct NumElementsOpConverter : public OpRewritePattern<NumElementsOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(NumElementsOp op,
                                 PatternRewriter &rewriter) const final;

@@ -2077,11 +2077,6 @@ LLVM_ABI bool isOneOrOneSplatFP(SDValue V, bool AllowUndefs = false);
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
 
-/// Return true if the value is a constant 1 integer or a splatted vector of a
-/// constant 1 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
-LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
-
 /// Return true if the value is a constant 0 integer or a splatted vector of a
 /// constant 0 integer (with no undefs).
 /// Build vector implicit truncation is allowed.

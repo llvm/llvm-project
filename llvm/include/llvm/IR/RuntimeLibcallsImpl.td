@@ -92,6 +92,29 @@ def Ptr : FuncArgType;      // Any pointer type.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
 def Same : FuncArgType;     // Same argument type as the previous one.
+def NXV2I1 : FuncArgType;
+def NXV4I1 : FuncArgType;
+def V2I32 : FuncArgType;
+def V4I32 : FuncArgType;
+def V8I32 : FuncArgType;
+def V16I32 : FuncArgType;
+def NXV2I32 : FuncArgType;
+def NXV4I32 : FuncArgType;
+
+class VectorFuncArgType<FuncArgType intType> : FuncArgType {
+  FuncArgType IntType = intType;
+  FuncArgType MaskType = ?;
+}
+
+def V2F32 : VectorFuncArgType<V2I32>;
+def V4F32 : VectorFuncArgType<V4I32>;
+def V8F32 : VectorFuncArgType<V8I32>;
+def V16F32 : VectorFuncArgType<V16I32>;
+def NXV4F32 : VectorFuncArgType<NXV4I32> { let MaskType = NXV4I1; }
+def V2F64 : VectorFuncArgType<V2I32>;
+def V4F64 : VectorFuncArgType<V4I32>;
+def V8F64 : VectorFuncArgType<V8I32>;
+def NXV2F64 : VectorFuncArgType<NXV2I32> { let MaskType = NXV2I1; }
 
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
@@ -111,13 +134,29 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   // TODO: Record attributes
 }
 
+class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
+    : RuntimeLibcall<unmasked.ReturnType,
+                     !if(!empty(unmasked.ArgumentTypes), [],
+                         !listconcat(unmasked.ArgumentTypes, [mask]))> {
+  RuntimeLibcall Unmasked = unmasked;
+}
+
+multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
+                             list<FuncArgType> ArgTypes = []> {
+  defvar VT = !cast<VectorFuncArgType>(suffix);
+  def _#suffix : RuntimeLibcall<RetType, ArgTypes>;
+  if !initialized(VT.MaskType) then
+    def _MASKED_#suffix
+        : MaskedRuntimeLibcall<!cast<RuntimeLibcall>(NAME#"_"#suffix),
+                               VT.MaskType>;
+}
+
 // Concrete implementation of a libcall, which may have a different
 // name and only be valid on some subset of targets.
 
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
-  bit IsDefault = false;
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
@@ -153,8 +192,8 @@ class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
   LibcallCallingConv CallingConv = CC;
 }
 
-// A named runtime library whose Impls are made available as a unit. Impls use
-// the same dag vocabulary as SystemRuntimeLibrary.
+// A named runtime library whose Impls are made available as a unit. Impls is a
+// set of RuntimeLibcallImpls, optionally grouped with LibcallImpls.
 class LibcallLibrary<string name, dag impls,
                      RuntimeLibcallAvailability pred = AlwaysAvailable> {
   string LibraryName = name;
@@ -181,9 +220,10 @@ class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
   list<RuntimeLibcallImpl> Exclude = exclude;
 }
 
-/// Define a complete top level set of runtime libcalls for a target.
+/// Define a complete top level set of runtime libcalls for a target. Every
+/// member of funcList must be a LibcallLibrary or LibraryRef.
 class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
-  /// Set the default calling convention assumed for RuntimeLibcallImpl members.
+  /// Set the default calling convention assumed for library members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
   RuntimeLibcallAvailability TriplePred = Pred;
   LibcallImpls MemberList = LibcallImpls<funcList>;
