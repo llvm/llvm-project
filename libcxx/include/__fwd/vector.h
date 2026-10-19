@@ -24,15 +24,11 @@ class vector;
 template <class _Allocator>
 class vector<bool, _Allocator>;
 
-#if _LIBCPP_STD_VER >= 23
-
 template <class _Tp>
 inline constexpr bool __is_std_vector_bool_v = false;
 
 template <class _Allocator>
 inline constexpr bool __is_std_vector_bool_v<vector<bool, _Allocator>> = true;
-
-#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 
