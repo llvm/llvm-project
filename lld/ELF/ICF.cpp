@@ -539,16 +539,9 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
-  auto print = [&ctx = ctx]() -> ELFSyncStream {
-    return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
-  };
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
-    if (end - begin == 1)
-      return;
-    print() << "selected section " << sections[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence
@@ -558,6 +551,22 @@ template <class ELFT> void ICF<ELFT>::run() {
         isec->markDead();
     }
   });
+
+  // Print classes in input order, independent of the hash.
+  if (ctx.arg.printIcfSections) {
+    DenseMap<InputSection *, SmallVector<InputSection *, 0>> folded;
+    for (InputSectionBase *sec : ctx.inputSections)
+      if (auto *s = dyn_cast<InputSection>(sec); s && s->repl != s)
+        folded[s->repl].push_back(s);
+    for (InputSectionBase *sec : ctx.inputSections) {
+      auto it = folded.find(dyn_cast<InputSection>(sec));
+      if (it == folded.end())
+        continue;
+      Msg(ctx) << "selected section " << sec;
+      for (InputSection *s : it->second)
+        Msg(ctx) << "  removing identical section " << s;
+    }
+  }
 
   // Change Defined symbol's section field to the canonical one.
   auto fold = [](Symbol *sym) {
