@@ -25,6 +25,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableAsyncUnwindForMinsize(
+    "aarch64-enable-async-unwind-for-minsize", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Enable asynchronous unwind info generation for minsize functions"));
+
 static std::optional<uint64_t>
 getSVEStackSize(const AArch64FunctionInfo &MFI,
                 uint64_t (AArch64FunctionInfo::*GetStackSize)() const) {
@@ -240,7 +245,8 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
     //  outlined from.
     NeedsAsyncDwarfUnwindInfo =
         needsDwarfUnwindInfo(MF) &&
-        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+        ((F.getUWTableKind() == UWTableKind::Async &&
+          (!F.hasMinSize() || EnableAsyncUnwindForMinsize)) ||
          AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
