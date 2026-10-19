@@ -112,9 +112,6 @@ body: |
 ---
 name: early_term_scc0_trailing_debug
 tracksRegLiveness: true
-liveins:
-  - { reg: '$sgpr0' }
-  - { reg: '$sgpr1' }
 body: |
   ; GCN-LABEL: name: early_term_scc0_trailing_debug
   ; GCN: bb.0:
@@ -153,9 +150,6 @@ body: |
 ---
 name: early_term_scc0_debug_before_instruction
 tracksRegLiveness: true
-liveins:
-  - { reg: '$sgpr0' }
-  - { reg: '$sgpr1' }
 body: |
   ; GCN-LABEL: name: early_term_scc0_debug_before_instruction
   ; GCN: bb.0:
@@ -188,9 +182,6 @@ body: |
 ---
 name: early_term_scc0_debug_before_terminator
 tracksRegLiveness: true
-liveins:
-  - { reg: '$sgpr0' }
-  - { reg: '$sgpr1' }
 body: |
   ; GCN-LABEL: name: early_term_scc0_debug_before_terminator
   ; GCN: bb.0:
