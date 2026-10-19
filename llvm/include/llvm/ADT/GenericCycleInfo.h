@@ -44,6 +44,7 @@
 
 namespace llvm {
 
+template <typename PtrType> class SmallPtrSetImpl;
 template <typename ContextT> class GenericCycleInfo;
 template <typename ContextT> class GenericCycleInfoCompute;
 
@@ -160,6 +161,11 @@ private:
            "CycleInfo used with outdated block number epoch");
   }
   void addToBlockMap(BlockT *Block, CycleRef C);
+
+  /// Implementation of verifyCycle. \p Reachable caches the blocks reachable
+  /// from the function entry; it is computed on first use, so that verifying
+  /// many cycles walks the whole function at most once.
+  void verifyCycle(CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const;
 
 public:
   /// Iteration over child cycles, yielding handles. The first child (if any)
