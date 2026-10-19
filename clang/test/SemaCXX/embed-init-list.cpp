@@ -214,4 +214,14 @@ void call_scalar_arg() {
 #embed __FILE__ limit(2)
   });
 }
+
+_BitInt(7) fits[] = {
+#embed __FILE__ limit(3)
+};
+_BitInt(7) narrowed[] = { // expected-error@+1 {{constant expression evaluates to 82 which cannot be narrowed to type '_BitInt(7)'}}
+#embed __FILE__ limit(4)
+};
+std::initializer_list<_BitInt(7)> narrowed_il = { // expected-error@+1 {{constant expression evaluates to 82 which cannot be narrowed to type '_BitInt(7)'}}
+#embed __FILE__ limit(4)
+};
 }

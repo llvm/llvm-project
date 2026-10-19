@@ -9949,6 +9949,20 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
+static NarrowingKind getNarrowingKindWithEmbedExpanded(
+    Sema &S, const StandardConversionSequence &SCS, const Expr *Init,
+    APValue &ConstantValue, QualType &ConstantType) {
+  const auto *Embed = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts());
+  if (!Embed || Embed->getDataElementCount() <= 1)
+    return SCS.getNarrowingKind(S.Context, Init, ConstantValue, ConstantType);
+  for (const IntegerLiteral *Elt : Embed->underlying_data_elements())
+    if (NarrowingKind NK =
+            SCS.getNarrowingKind(S.Context, Elt, ConstantValue, ConstantType);
+        NK != NK_Not_Narrowing)
+      return NK;
+  return NK_Not_Narrowing;
+}
+
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -9985,8 +9999,8 @@ static void DiagnoseNarrowingInInitList(Sema &S,
   // C++11 [dcl.init.list]p7: Check whether this is a narrowing conversion.
   APValue ConstantValue;
   QualType ConstantType;
-  switch (SCS->getNarrowingKind(S.Context, PostInit, ConstantValue,
-                                ConstantType)) {
+  switch (getNarrowingKindWithEmbedExpanded(S, *SCS, PostInit, ConstantValue,
+                                            ConstantType)) {
   case NK_Not_Narrowing:
   case NK_Dependent_Narrowing:
     // No narrowing occurred.
@@ -10069,9 +10083,8 @@ static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
   APValue Value;
   QualType PreNarrowingType;
   // Reuse C++ narrowing check.
-  switch (ICS.Standard.getNarrowingKind(
-      S.Context, Init, Value, PreNarrowingType,
-      /*IgnoreFloatToIntegralConversion*/ false)) {
+  switch (getNarrowingKindWithEmbedExpanded(S, ICS.Standard, Init, Value,
+                                            PreNarrowingType)) {
   // The value doesn't fit.
   case NK_Constant_Narrowing:
     S.Diag(Init->getBeginLoc(), diag::err_c23_constexpr_init_not_representable)
