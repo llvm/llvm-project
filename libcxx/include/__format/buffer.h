@@ -649,9 +649,9 @@ public:
     allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __capacity_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __iterator __make_output_iterator() { return __iterator{*this}; }
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator __make_output_iterator() { return __iterator{*this}; }
 
-  _LIBCPP_HIDE_FROM_ABI void push_back(_CharT __c) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void push_back(_CharT __c) {
     std::construct_at(__ptr_ + __size_, __c);
     ++__size_;
 
@@ -660,7 +660,7 @@ public:
   }
 
   template <__fmt_char_type _InCharT>
-  _LIBCPP_HIDE_FROM_ABI void __copy(basic_string_view<_InCharT> __str) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __copy(basic_string_view<_InCharT> __str) {
     size_t __n = __str.size();
     if (__size_ + __n >= __capacity_)
       // Push_back requires the buffer to have room for at least one character.
@@ -673,7 +673,7 @@ public:
   template <contiguous_iterator _Iterator,
             class _UnaryOperation,
             __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
-  _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
     _LIBCPP_ASSERT_INTERNAL(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
@@ -686,7 +686,7 @@ public:
     __size_ += __n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __fill(size_t __n, _CharT __value) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __fill(size_t __n, _CharT __value) {
     if (__size_ + __n >= __capacity_)
       // Push_back requires the buffer to have room for at least one character.
       __grow_buffer(__size_ + __n + 1);
@@ -695,7 +695,7 @@ public:
     __size_ += __n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT> __view() { return {__ptr_, __size_}; }
+  _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT> __view() { return {__ptr_, __size_}; }
 
 private:
   _LIBCPP_HIDE_FROM_ABI void __grow_buffer() { __grow_buffer(__capacity_ * 1.6); }
