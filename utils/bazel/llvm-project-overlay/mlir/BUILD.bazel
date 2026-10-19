@@ -2684,7 +2684,9 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
+        ":VectorTransforms",
         ":VectorUtils",
         ":X86Dialect",
         ":X86Utils",
@@ -4093,6 +4095,7 @@ td_library(
         ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":DLTIDialectTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -5018,6 +5021,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
+        ":DLTIDialect",
         ":FuncIncGen",
         ":FunctionInterfaces",
         ":IR",
@@ -13813,8 +13817,8 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
         "include/mlir/Dialect/MemRef/IR/MemRefDialect.h",
-        "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
         "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h",
+        "include/mlir/Dialect/MemRef/IR/MemorySlotInterfacesImpl.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -14550,12 +14554,24 @@ td_library(
     srcs = [
         "include/mlir/Dialect/DLTI/DLTI.td",
         "include/mlir/Dialect/DLTI/DLTIBase.td",
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
     ],
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "DLTIOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
+    deps = [":DLTIDialectTdFiles"],
 )
 
 gentbl_cc_library(
@@ -14603,6 +14619,7 @@ cc_library(
     deps = [
         ":DLTIAttrsIncGen",
         ":DLTIBaseIncGen",
+        ":DLTIOpInterfacesIncGen",
         ":DataLayoutInterfaces",
         ":IR",
         "//llvm:Support",
