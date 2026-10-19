@@ -175,6 +175,8 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
     return {Type::getVoidTy(Ctx), Attribute()};
   case Bool:
     return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+  case Int8:
+    return {IntegerType::get(Ctx, 8), Attribute()};
   case Int16:
   case UInt16:
     return {IntegerType::get(Ctx, 16), Attribute()};
@@ -195,6 +197,8 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case LLong:
   case ULLong:
     return {IntegerType::get(Ctx, 64), Attribute()};
+  case Int128:
+    return {IntegerType::get(Ctx, 128), Attribute()};
   case SizeT:
   case SSizeT:
     return {getSizeTType(Ctx, DL), Attribute()};
