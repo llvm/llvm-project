@@ -509,8 +509,9 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     if (!Ordering || !Volatile)
       return false; // Invalid.
 
-    unsigned OrderingVal = static_cast<unsigned>(Ordering->getZExtValue());
-    if (OrderingVal > static_cast<unsigned>(AtomicOrdering::SequentiallyConsistent))
+    uint64_t OrderingVal = Ordering->getZExtValue();
+    if (OrderingVal >
+        static_cast<unsigned>(AtomicOrdering::SequentiallyConsistent))
       return false;
 
     Info.PtrVal = Inst->getArgOperand(0);
@@ -1264,8 +1265,9 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
-    unsigned EltSize = static_cast<unsigned>(
-        DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType()));
+    uint64_t EltSize =
+        DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType())
+            .getFixedValue();
     // Dynamic indexing isn't free and is best avoided.
     if (Index == ~0u)
       return 2;

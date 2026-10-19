@@ -545,11 +545,11 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
 ///////////////////////////////////////////////////////////////////////////////
 // Demangling
 
-static int parseVecSize(StringRef& mangledName) {
+static unsigned char parseVecSize(StringRef &mangledName) {
   size_t const Len = eatNumber(mangledName);
   switch (Len) {
   case 2: case 3: case 4: case 8: case 16:
-    return static_cast<int>(Len);
+    return static_cast<unsigned char>(Len);
   default:
     break;
   }
@@ -618,7 +618,7 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
 
   // parse vector size
   if (eatTerm(param,"Dv")) {
-    res.VectorSize = static_cast<unsigned char>(parseVecSize(param));
+    res.VectorSize = parseVecSize(param);
     if (res.VectorSize==1 || !eatTerm(param, '_')) return false;
   }
 
