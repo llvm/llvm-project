@@ -193,7 +193,7 @@ auto j = std::initializer_list<InitListCtor>{ i };
 #endif
 } // namespace cwg2311
 
-namespace cwg2327 { // cwg2327: 23 drafting P2828R3
+namespace cwg2327 { // cwg2327: 24 drafting P2828R3
 
 #if __cplusplus >= 201703L
 namespace example1 {
