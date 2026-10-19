@@ -32,10 +32,10 @@ $script:ThirdPartyLibraries = @(
 
 function Get-ThirdPartyLibrary {
     param([Parameter(Mandatory)][string]$Name)
-    foreach ($library in $script:ThirdPartyLibraries) {
-        if ($library.Name -eq $Name) {
+    foreach ($Library in $script:ThirdPartyLibraries) {
+        if ($Library.Name -eq $Name) {
             # The comma keeps the hashtable from being enumerated into entries.
-            return ,$library
+            return ,$Library
         }
     }
     throw "Unknown third-party library '$Name'."
@@ -49,19 +49,19 @@ function Install-ThirdPartySources {
 
     Push-Location $Directory
     try {
-        foreach ($library in $script:ThirdPartyLibraries) {
-            if ($SkipExisting -and (Test-Path -LiteralPath $library.SourceDirectory)) {
-                Write-Step "Skipping $($library.Name) download (already exists)"
+        foreach ($Library in $script:ThirdPartyLibraries) {
+            if ($SkipExisting -and (Test-Path -LiteralPath $Library.SourceDirectory)) {
+                Write-Step "Skipping $($Library.Name) download (already exists)"
                 continue
             }
 
-            Write-Step "Downloading $($library.Name)"
-            $downloadArguments = $library.DownloadArguments
-            Invoke-NativeCommand curl.exe @downloadArguments
-            Test-FileChecksum -Path $library.Archive -Algorithm SHA256 `
-                -ExpectedHash $library.Sha256
-            $extractArguments = $library.ExtractArguments
-            Invoke-NativeCommand tar @extractArguments
+            Write-Step "Downloading $($Library.Name)"
+            $DownloadArguments = $Library.DownloadArguments
+            Invoke-NativeCommand curl.exe @DownloadArguments
+            Test-FileChecksum -Path $Library.Archive -Algorithm SHA256 `
+                -ExpectedHash $Library.Sha256
+            $ExtractArguments = $Library.ExtractArguments
+            Invoke-NativeCommand tar @ExtractArguments
         }
     } finally {
         Pop-Location

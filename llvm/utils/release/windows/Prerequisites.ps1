@@ -2,27 +2,27 @@
 
 function Find-Wix314Bin {
     # Prefer WiX found on PATH before checking the standard install locations.
-    $binDirs = @(Get-Command candle -All -CommandType Application -ErrorAction SilentlyContinue |
+    $BinDirs = @(Get-Command candle -All -CommandType Application -ErrorAction SilentlyContinue |
         ForEach-Object { Split-Path -Parent $_.Source })
-    $binDirs += @(
+    $BinDirs += @(
         "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin"
         "$env:ProgramFiles\WiX Toolset v3.14\bin"
     )
 
-    foreach ($binDir in ($binDirs | Select-Object -Unique)) {
-        $candlePath = Join-Path $binDir 'candle.exe'
-        $lightPath = Join-Path $binDir 'light.exe'
-        if (-not (Test-Path -LiteralPath $candlePath -PathType Leaf) -or
-            -not (Test-Path -LiteralPath $lightPath -PathType Leaf)) { continue }
-        if ((Get-Item -LiteralPath $candlePath).VersionInfo.FileVersion -notlike '3.14.*' -or
-            (Get-Item -LiteralPath $lightPath).VersionInfo.FileVersion -notlike '3.14.*') {
+    foreach ($BinDir in ($BinDirs | Select-Object -Unique)) {
+        $CandlePath = Join-Path $BinDir 'candle.exe'
+        $LightPath = Join-Path $BinDir 'light.exe'
+        if (-not (Test-Path -LiteralPath $CandlePath -PathType Leaf) -or
+            -not (Test-Path -LiteralPath $LightPath -PathType Leaf)) { continue }
+        if ((Get-Item -LiteralPath $CandlePath).VersionInfo.FileVersion -notlike '3.14.*' -or
+            (Get-Item -LiteralPath $LightPath).VersionInfo.FileVersion -notlike '3.14.*') {
             continue
         }
         try {
-            & $candlePath -? *> $null
+            & $CandlePath -? *> $null
             if ($LASTEXITCODE -ne 0) { continue }
-            & $lightPath -? *> $null
-            if ($LASTEXITCODE -eq 0) { return $binDir }
+            & $LightPath -? *> $null
+            if ($LASTEXITCODE -eq 0) { return $BinDir }
         } catch {
             # Try the next WiX installation location.
         }
@@ -34,9 +34,9 @@ function Get-CMakeVersion {
     param([Parameter(Mandatory)][string]$Path)
 
     try {
-        $versionOutput = (& $Path --version 2>&1 | Out-String)
+        $VersionOutput = (& $Path --version 2>&1 | Out-String)
         if ($LASTEXITCODE -ne 0 -or
-            $versionOutput -notmatch '(?m)^cmake version (\d+(?:\.\d+){1,3})\s*$') {
+            $VersionOutput -notmatch '(?m)^cmake version (\d+(?:\.\d+){1,3})\s*$') {
             return $null
         }
         return [version]$Matches[1]
@@ -48,123 +48,123 @@ function Get-CMakeVersion {
 function Find-CMakeExecutable {
     # Prefer the first usable version on PATH, then the standard CMake
     # installation, and finally CMake bundled with any Visual Studio instance.
-    $candidates = @()
-    foreach ($pathDir in ($env:PATH -split ';')) {
-        if ($pathDir) {
-            $candidates += Join-Path $pathDir 'cmake.exe'
+    $Candidates = @()
+    foreach ($PathDir in ($env:PATH -split ';')) {
+        if ($PathDir) {
+            $Candidates += Join-Path $PathDir 'cmake.exe'
         }
     }
 
     if ($env:ProgramFiles) {
-        $candidates += Join-Path $env:ProgramFiles 'CMake\bin\cmake.exe'
+        $Candidates += Join-Path $env:ProgramFiles 'CMake\bin\cmake.exe'
     }
 
-    $vsInstallPaths = @()
+    $VsInstallPaths = @()
     if ($env:VSINSTALLDIR) {
-        $vsInstallPaths += $env:VSINSTALLDIR
+        $VsInstallPaths += $env:VSINSTALLDIR
     }
-    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-    if (Test-Path -LiteralPath $vswhere -PathType Leaf) {
+    $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path -LiteralPath $VsWhere -PathType Leaf) {
         try {
-            $vsInstallPaths += @(& $vswhere -all -products '*' -property installationPath 2>$null)
+            $VsInstallPaths += @(& $VsWhere -all -products '*' -property installationPath 2>$null)
         } catch {
             # CMake may still be available through PATH or the standard install.
         }
     }
-    foreach ($vsInstallPath in ($vsInstallPaths | Where-Object { $_ } | Select-Object -Unique)) {
-        $candidates += Join-Path $vsInstallPath 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
+    foreach ($VsInstallPath in ($VsInstallPaths | Where-Object { $_ } | Select-Object -Unique)) {
+        $Candidates += Join-Path $VsInstallPath 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
     }
 
-    foreach ($candidate in ($candidates | Select-Object -Unique)) {
-        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+    foreach ($Candidate in ($Candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $Candidate -PathType Leaf)) { continue }
 
-        $version = Get-CMakeVersion -Path $candidate
-        if ($null -eq $version -or $version -lt $script:MinimumCMakeVersion) {
-            if ($null -ne $version) {
-                Write-SubStep "Ignoring CMake $version at $candidate; LLVM requires $($script:MinimumCMakeVersion) or newer."
+        $Version = Get-CMakeVersion -Path $Candidate
+        if ($null -eq $Version -or $Version -lt $script:MinimumCMakeVersion) {
+            if ($null -ne $Version) {
+                Write-SubStep "Ignoring CMake $Version at $Candidate; LLVM requires $($script:MinimumCMakeVersion) or newer."
             }
             continue
         }
 
         # Put the selected directory first so every later `cmake` invocation
         # uses the validated executable, even if an older one appeared earlier.
-        $binDir = Split-Path -Parent $candidate
-        $otherPaths = @($env:PATH -split ';' | Where-Object {
-            $_ -and $_.TrimEnd('\') -ine $binDir.TrimEnd('\')
+        $BinDir = Split-Path -Parent $Candidate
+        $OtherPaths = @($env:PATH -split ';' | Where-Object {
+            $_ -and $_.TrimEnd('\') -ine $BinDir.TrimEnd('\')
         })
-        $env:PATH = (@($binDir) + $otherPaths) -join ';'
-        Write-SubStep "CMake ${version}: $candidate"
-        return $candidate
+        $env:PATH = (@($BinDir) + $OtherPaths) -join ';'
+        Write-SubStep "CMake ${version}: $Candidate"
+        return $Candidate
     }
 
     return $null
 }
 
 function Find-SevenZipExecutable {
-    $candidates = @()
-    $command = Get-Command 7z -CommandType Application -ErrorAction SilentlyContinue
-    if ($command) { $candidates += $command.Source }
-    foreach ($programFiles in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
-        if ($programFiles) {
-            $candidates += Join-Path $programFiles '7-Zip\7z.exe'
+    $Candidates = @()
+    $Command = Get-Command 7z -CommandType Application -ErrorAction SilentlyContinue
+    if ($Command) { $Candidates += $Command.Source }
+    foreach ($ProgramFiles in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
+        if ($ProgramFiles) {
+            $Candidates += Join-Path $ProgramFiles '7-Zip\7z.exe'
         }
     }
 
-    foreach ($candidate in ($candidates | Select-Object -Unique)) {
-        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+    foreach ($Candidate in ($Candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $Candidate -PathType Leaf)) { continue }
         try {
-            & $candidate -? *> $null
+            & $Candidate -? *> $null
             if ($LASTEXITCODE -ne 0) { continue }
         } catch {
             continue
         }
 
         # An existing installation may not have added 7z.exe to PATH.
-        if (-not $command -or $command.Source -ne $candidate) {
-            $binDir = Split-Path -Parent $candidate
-            $otherPaths = @($env:PATH -split ';' | Where-Object { $_ -and $_ -ne $binDir })
-            $env:PATH = (@($binDir) + $otherPaths) -join ';'
-            Write-SubStep "Using 7-Zip from: $binDir"
+        if (-not $Command -or $Command.Source -ne $Candidate) {
+            $BinDir = Split-Path -Parent $Candidate
+            $OtherPaths = @($env:PATH -split ';' | Where-Object { $_ -and $_ -ne $BinDir })
+            $env:PATH = (@($BinDir) + $OtherPaths) -join ';'
+            Write-SubStep "Using 7-Zip from: $BinDir"
         }
-        return $candidate
+        return $Candidate
     }
     return $null
 }
 
 function Find-MakeExecutable {
-    $candidates = @()
-    $command = Get-Command make -CommandType Application -ErrorAction SilentlyContinue
-    if ($command) { $candidates += $command.Source }
-    foreach ($programFiles in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
-        if ($programFiles) {
-            $candidates += Join-Path $programFiles 'GnuWin32\bin\make.exe'
+    $Candidates = @()
+    $Command = Get-Command make -CommandType Application -ErrorAction SilentlyContinue
+    if ($Command) { $Candidates += $Command.Source }
+    foreach ($ProgramFiles in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
+        if ($ProgramFiles) {
+            $Candidates += Join-Path $ProgramFiles 'GnuWin32\bin\make.exe'
         }
     }
 
-    foreach ($candidate in ($candidates | Select-Object -Unique)) {
-        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf) -or
-            -not (Test-ExecutableVersion -Path $candidate)) { continue }
+    foreach ($Candidate in ($Candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $Candidate -PathType Leaf) -or
+            -not (Test-ExecutableVersion -Path $Candidate)) { continue }
 
-        if (-not $command -or $command.Source -ne $candidate) {
-            $binDir = Split-Path -Parent $candidate
-            $otherPaths = @($env:PATH -split ';' | Where-Object { $_ -and $_ -ne $binDir })
-            $env:PATH = (@($binDir) + $otherPaths) -join ';'
-            Write-SubStep "Using GNU Make from: $binDir"
+        if (-not $Command -or $Command.Source -ne $Candidate) {
+            $BinDir = Split-Path -Parent $Candidate
+            $OtherPaths = @($env:PATH -split ';' | Where-Object { $_ -and $_ -ne $BinDir })
+            $env:PATH = (@($BinDir) + $OtherPaths) -join ';'
+            Write-SubStep "Using GNU Make from: $BinDir"
         }
-        return $candidate
+        return $Candidate
     }
     return $null
 }
 
 function Find-OfficialLlvmBin {
-    $binDir = Join-Path $env:ProgramFiles 'LLVM\bin'
-    $clangCl = Join-Path $binDir 'clang-cl.exe'
-    $lldLink = Join-Path $binDir 'lld-link.exe'
-    if ((Test-Path -LiteralPath $clangCl -PathType Leaf) -and
-        (Test-Path -LiteralPath $lldLink -PathType Leaf) -and
-        (Test-ExecutableVersion -Path $clangCl) -and
-        (Test-ExecutableVersion -Path $lldLink)) {
-        return $binDir
+    $BinDir = Join-Path $env:ProgramFiles 'LLVM\bin'
+    $ClangCl = Join-Path $BinDir 'clang-cl.exe'
+    $LldLink = Join-Path $BinDir 'lld-link.exe'
+    if ((Test-Path -LiteralPath $ClangCl -PathType Leaf) -and
+        (Test-Path -LiteralPath $LldLink -PathType Leaf) -and
+        (Test-ExecutableVersion -Path $ClangCl) -and
+        (Test-ExecutableVersion -Path $LldLink)) {
+        return $BinDir
     }
     return $null
 }
@@ -178,31 +178,31 @@ function Get-MissingPrerequisites {
     Write-Step "Validating prerequisites"
 
     # Fix up PATH for tools that install to well-known non-PATH locations.
-    $pathFixups = @(
+    $PathFixups = @(
         "$env:ProgramFiles\Git\usr\bin"                     # sh, bash, sed, grep (needed by tests)
         "${env:ProgramFiles(x86)}\GnuWin32\bin"             # make (GnuWin32 default)
         "$env:ProgramFiles\GnuWin32\bin"                    # make (alt location)
     )
-    foreach ($dir in $pathFixups) {
-        if ((Test-Path $dir) -and ($env:PATH -notlike "*$dir*")) {
-            $env:PATH = "$env:PATH;$dir"
-            Write-SubStep "Added to PATH: $dir"
+    foreach ($Dir in $PathFixups) {
+        if ((Test-Path $Dir) -and ($env:PATH -notlike "*$Dir*")) {
+            $env:PATH = "$env:PATH;$Dir"
+            Write-SubStep "Added to PATH: $Dir"
         }
     }
 
-    $cmakePath = Find-CMakeExecutable
+    $CMakePath = Find-CMakeExecutable
 
     # CPack finds WiX through PATH. An older candle/light pair can appear
     # before the installed 3.14 tools (for example, in an Unreal SDK).
-    $wixBin = Find-Wix314Bin
-    if ($wixBin) {
-        $otherPaths = @($env:PATH -split ';' | Where-Object { $_ -and $_ -ne $wixBin })
-        $env:PATH = (@($wixBin) + $otherPaths) -join ';'
-        Write-SubStep "Using WiX 3.14 from: $wixBin"
+    $WixBin = Find-Wix314Bin
+    if ($WixBin) {
+        $OtherPaths = @($env:PATH -split ';' | Where-Object { $_ -and $_ -ne $WixBin })
+        $env:PATH = (@($WixBin) + $OtherPaths) -join ';'
+        Write-SubStep "Using WiX 3.14 from: $WixBin"
     }
 
     # Check all required tools.
-    $required = @(
+    $Required = @(
         @{ Name = "Ninja";      Cmd = "ninja" }
         @{ Name = "Python";     Cmd = "python" }
         @{ Name = "7-Zip";      Cmd = "7z" }
@@ -214,63 +214,63 @@ function Get-MissingPrerequisites {
         @{ Name = "Make";       Cmd = "make" }
     )
 
-    $missing = @()
-    foreach ($tool in $required) {
-        $cmd = Get-Command $tool.Cmd -ErrorAction SilentlyContinue
-        $toolPath = if ($cmd) { $cmd.Source } else { $null }
+    $Missing = @()
+    foreach ($Tool in $Required) {
+        $Cmd = Get-Command $Tool.Cmd -ErrorAction SilentlyContinue
+        $ToolPath = if ($Cmd) { $Cmd.Source } else { $null }
         # Windows may expose a python.exe App Execution Alias that is not an
         # installed interpreter.
-        if ($cmd -and $tool.Cmd -eq 'python' -and
-            -not (Test-ExecutableVersion -Path $cmd.Source)) {
-            $toolPath = $null
+        if ($Cmd -and $Tool.Cmd -eq 'python' -and
+            -not (Test-ExecutableVersion -Path $Cmd.Source)) {
+            $ToolPath = $null
         }
-        if ($tool.Cmd -eq '7z') {
-            $toolPath = Find-SevenZipExecutable
+        if ($Tool.Cmd -eq '7z') {
+            $ToolPath = Find-SevenZipExecutable
         }
-        if ($tool.Cmd -eq 'make') {
-            $toolPath = Find-MakeExecutable
+        if ($Tool.Cmd -eq 'make') {
+            $ToolPath = Find-MakeExecutable
         }
         # These tools are deprecated and removed in newer version of WiX.
-        if ($tool.Cmd -in @('candle', 'light') -and -not $wixBin) {
-            $toolPath = $null
+        if ($Tool.Cmd -in @('candle', 'light') -and -not $WixBin) {
+            $ToolPath = $null
         }
-        if ($toolPath) {
-            Write-SubStep "$($tool.Name): $toolPath"
+        if ($ToolPath) {
+            Write-SubStep "$($Tool.Name): $ToolPath"
         } else {
-            $missing += $tool.Name
+            $Missing += $Tool.Name
         }
     }
 
-    if (-not $cmakePath) {
-        $missing += "CMake $($script:MinimumCMakeVersion) or newer"
+    if (-not $CMakePath) {
+        $Missing += "CMake $($script:MinimumCMakeVersion) or newer"
     }
 
     if (-not $ForceMSVC) {
-        $llvmBin = Find-OfficialLlvmBin
-        if ($llvmBin) {
-            Write-SubStep "LLVM release (clang-cl and lld-link): $llvmBin"
+        $LLVMBin = Find-OfficialLlvmBin
+        if ($LLVMBin) {
+            Write-SubStep "LLVM release (clang-cl and lld-link): $LLVMBin"
         } else {
-            $missing += 'LLVM release (clang-cl and lld-link)'
+            $Missing += 'LLVM release (clang-cl and lld-link)'
         }
     }
 
     # Lit disables the Python user site when running tests. Check the Python
     # installation itself so timeouts and tests requiring them stay available.
-    $hostPython = Get-PythonExecutableForArch -Arch 'amd64'
-    if ($hostPython) {
-        if (Test-PythonPsutil -PythonExecutable $hostPython) {
-            Write-SubStep "Python psutil: $hostPython"
+    $HostPython = Get-PythonExecutableForArch -Arch 'amd64'
+    if ($HostPython) {
+        if (Test-PythonPsutil -PythonExecutable $HostPython) {
+            Write-SubStep "Python psutil: $HostPython"
         } else {
-            $missing += 'Python psutil'
+            $Missing += 'Python psutil'
         }
     }
     if ($script:BuildArch -eq 'arm64') {
-        $arm64Python = Get-PythonExecutableForArch -Arch 'arm64'
-        if ($arm64Python -and $arm64Python -ne $hostPython) {
-            if (Test-PythonPsutil -PythonExecutable $arm64Python) {
-                Write-SubStep "Python psutil (ARM64): $arm64Python"
+        $Arm64Python = Get-PythonExecutableForArch -Arch 'arm64'
+        if ($Arm64Python -and $Arm64Python -ne $HostPython) {
+            if (Test-PythonPsutil -PythonExecutable $Arm64Python) {
+                Write-SubStep "Python psutil (ARM64): $Arm64Python"
             } else {
-                $missing += 'Python psutil (ARM64)'
+                $Missing += 'Python psutil (ARM64)'
             }
         }
     }
@@ -278,27 +278,27 @@ function Get-MissingPrerequisites {
     if (Test-NetFx3Installed) {
         Write-SubStep 'NetFx3 (.NET Framework 3.5): installed'
     } else {
-        $missing += 'NetFx3 (.NET Framework 3.5)'
+        $Missing += 'NetFx3 (.NET Framework 3.5)'
     }
 
-    return $missing
+    return $Missing
 }
 
 function Assert-SevenZipSymlinkSupport {
     # 7-Zip 21+ extracts symlinks from LLVM's source archive. Windows must
     # allow symlink creation when -DownloadSource is selected.
-    $banner = (& 7z 2>&1 | Select-Object -First 2) -join ' '
-    if ($banner -notmatch '7-Zip\s+(\d+)\.' -or [int]$Matches[1] -lt 21) {
+    $Banner = (& 7z 2>&1 | Select-Object -First 2) -join ' '
+    if ($Banner -notmatch '7-Zip\s+(\d+)\.' -or [int]$Matches[1] -lt 21) {
         return
     }
 
-    $linkPath = Join-Path ([IO.Path]::GetTempPath()) ("llvm-release-" + [guid]::NewGuid())
+    $LinkPath = Join-Path ([IO.Path]::GetTempPath()) ("llvm-release-" + [guid]::NewGuid())
     try {
-        New-Item -ItemType SymbolicLink -Path $linkPath -Target $PWD.Path -ErrorAction Stop | Out-Null
+        New-Item -ItemType SymbolicLink -Path $LinkPath -Target $PWD.Path -ErrorAction Stop | Out-Null
     } catch {
         throw "7-Zip 21+ needs permission to create symlinks when extracting the source archive. Run elevated, enable Developer Mode, or use 7-Zip 20.x."
     } finally {
-        Remove-Item -LiteralPath $linkPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $LinkPath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -307,17 +307,17 @@ function Assert-SevenZipSymlinkSupport {
 #===============================================================================
 
 function Test-IsElevated {
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = [Security.Principal.WindowsPrincipal]::new($identity)
-    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    $Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $Principal = [Security.Principal.WindowsPrincipal]::new($Identity)
+    return $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
 function Test-NetFx3Installed {
     # The .NET Framework 3.5 installer records this value on both Windows
     # Server and desktop Windows. WiX 3.14 needs the feature to run.
-    $key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5'
-    $framework = Get-ItemProperty -LiteralPath $key -ErrorAction SilentlyContinue
-    return $null -ne $framework -and $framework.Install -eq 1
+    $Key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5'
+    $Framework = Get-ItemProperty -LiteralPath $Key -ErrorAction SilentlyContinue
+    return $null -ne $Framework -and $Framework.Install -eq 1
 }
 
 function Install-NetFx3 {
@@ -327,30 +327,30 @@ function Install-NetFx3 {
     }
 
     Write-SubStep 'Installing NetFx3 (.NET Framework 3.5)...'
-    $installationType = (Get-ItemProperty `
+    $InstallationType = (Get-ItemProperty `
         -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').InstallationType
-    if ($installationType -like 'Server*') {
+    if ($InstallationType -like 'Server*') {
         # Windows Server exposes NetFx3 as the NET-Framework-Core server role.
         # Use the built-in Windows PowerShell to load ServerManager reliably,
         # even when this release script is running under PowerShell 7.
-        $windowsPowerShell = Join-Path $env:SystemRoot `
+        $WindowsPowerShell = Join-Path $env:SystemRoot `
             'System32\WindowsPowerShell\v1.0\powershell.exe'
-        $serverCommand = @'
+        $ServerCommand = @'
 $ErrorActionPreference = 'Stop'
 Import-Module ServerManager
-$feature = Get-WindowsFeature -Name NET-Framework-Core
-if (-not $feature) { throw 'NET-Framework-Core is not available on this server.' }
-if (-not $feature.Installed) {
-    $result = Install-WindowsFeature -Name NET-Framework-Core
-    if (-not $result.Success) {
-        throw "Install-WindowsFeature failed: $($result.ExitCode)"
+$Feature = Get-WindowsFeature -Name NET-Framework-Core
+if (-not $Feature) { throw 'NET-Framework-Core is not available on this server.' }
+if (-not $Feature.Installed) {
+    $Result = Install-WindowsFeature -Name NET-Framework-Core
+    if (-not $Result.Success) {
+        throw "Install-WindowsFeature failed: $($Result.ExitCode)"
     }
-    if ($result.RestartNeeded -eq 'Yes') { exit 3010 }
+    if ($Result.RestartNeeded -eq 'Yes') { exit 3010 }
 }
 '@
-        $encodedCommand = [Convert]::ToBase64String(
-            [Text.Encoding]::Unicode.GetBytes($serverCommand))
-        & $windowsPowerShell -NoProfile -NonInteractive -EncodedCommand $encodedCommand
+        $EncodedCommand = [Convert]::ToBase64String(
+            [Text.Encoding]::Unicode.GetBytes($ServerCommand))
+        & $WindowsPowerShell -NoProfile -NonInteractive -EncodedCommand $EncodedCommand
         if ($LASTEXITCODE -eq 3010) {
             throw 'NetFx3 installation requires a restart. Restart Windows and rerun the release script.'
         }
@@ -358,9 +358,9 @@ if (-not $feature.Installed) {
             throw "NetFx3 installation failed (exit code $LASTEXITCODE). If Windows cannot find the feature files, install NET-Framework-Core from matching Windows Server media and rerun the release script."
         }
     } else {
-        $result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
+        $Result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
             -All -NoRestart -ErrorAction Stop
-        if ($result.RestartNeeded) {
+        if ($Result.RestartNeeded) {
             throw 'NetFx3 installation requires a restart. Restart Windows and rerun the release script.'
         }
     }
@@ -374,104 +374,104 @@ if (-not $feature.Installed) {
 function Update-PathAfterPrerequisites {
     # The elevated installer runs in a separate process, so refresh the
     # caller's PATH from the machine and user environment after it exits.
-    $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
-    $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $env:PATH = "$machinePath;$userPath"
+    $MachinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
+    $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+    $env:PATH = "$MachinePath;$UserPath"
 }
 
 function Invoke-ElevatedPrerequisiteInstallation {
-    $releaseRoot = $script:ReleaseScriptRoot.Replace("'", "''")
-    $commonPath = (Join-Path $script:ReleaseScriptRoot 'windows\Common.ps1').Replace("'", "''")
-    $prerequisitesPath = (Join-Path $script:ReleaseScriptRoot 'windows\Prerequisites.ps1').Replace("'", "''")
-    $toolchainPath = (Join-Path $script:ReleaseScriptRoot 'windows\Toolchain.ps1').Replace("'", "''")
-    $buildArch = $script:BuildArch.Replace("'", "''")
-    $minimumCMakeVersion = $script:MinimumCMakeVersion.ToString()
-    $forceMSVCValue = if ($ForceMSVC) { '$true' } else { '$false' }
-    $unattendedValue = if ($Unattended) { '$true' } else { '$false' }
+    $ReleaseRoot = $script:ReleaseScriptRoot.Replace("'", "''")
+    $CommonPath = (Join-Path $script:ReleaseScriptRoot 'windows\Common.ps1').Replace("'", "''")
+    $PrerequisitesPath = (Join-Path $script:ReleaseScriptRoot 'windows\Prerequisites.ps1').Replace("'", "''")
+    $ToolchainPath = (Join-Path $script:ReleaseScriptRoot 'windows\Toolchain.ps1').Replace("'", "''")
+    $BuildArch = $script:BuildArch.Replace("'", "''")
+    $MinimumCMakeVersion = $script:MinimumCMakeVersion.ToString()
+    $ForceMSVCValue = if ($ForceMSVC) { '$true' } else { '$false' }
+    $UnattendedValue = if ($Unattended) { '$true' } else { '$false' }
 
     # Keep the elevated window open so the user can review the result.
-    $pauseCommand = if (-not $Unattended) {
+    $PauseCommand = if (-not $Unattended) {
         "Read-Host 'Press Enter to close this window' | Out-Null"
     } else {
         ''
     }
-    $workerCommand = @"
+    $WorkerCommand = @"
 Set-StrictMode -Version Latest
 `$ErrorActionPreference = 'Stop'
-`$script:ReleaseScriptRoot = '$releaseRoot'
-`$script:MinimumCMakeVersion = [version]'$minimumCMakeVersion'
-`$script:BuildArch = '$buildArch'
-`$ForceMSVC = $forceMSVCValue
-`$Unattended = $unattendedValue
-. '$commonPath'
-. '$prerequisitesPath'
-. '$toolchainPath'
+`$script:ReleaseScriptRoot = '$ReleaseRoot'
+`$script:MinimumCMakeVersion = [version]'$MinimumCMakeVersion'
+`$script:BuildArch = '$BuildArch'
+`$ForceMSVC = $ForceMSVCValue
+`$Unattended = $UnattendedValue
+. '$CommonPath'
+. '$PrerequisitesPath'
+. '$ToolchainPath'
 
-`$exitCode = 0
+`$ExitCode = 0
 try {
     Install-Prerequisites
 } catch {
     Write-Host "Prerequisite installation failed:" -ForegroundColor Red
     Write-Host (`$_ | Out-String) -ForegroundColor Red
-    `$exitCode = 1
+    `$ExitCode = 1
 }
-$pauseCommand
-exit `$exitCode
+$PauseCommand
+exit `$ExitCode
 "@
-    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($workerCommand))
+    $EncodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($WorkerCommand))
 
     Write-SubStep 'Requesting administrator access to install prerequisites...'
     try {
-        $process = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') `
-            -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', $encodedCommand) `
+        $Process = Start-Process -FilePath (Join-Path $PSHOME 'pwsh.exe') `
+            -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', $EncodedCommand) `
             -Verb RunAs -Wait -PassThru
     } catch {
         throw "Could not start elevated prerequisite installation: $_"
     }
-    if ($process.ExitCode -ne 0) {
-        throw "Elevated prerequisite installation failed (exit code $($process.ExitCode))."
+    if ($Process.ExitCode -ne 0) {
+        throw "Elevated prerequisite installation failed (exit code $($Process.ExitCode))."
     }
 }
 
 function Find-WingetExecutable {
-    $candidates = @()
-    $winget = Get-Command winget -CommandType Application -ErrorAction SilentlyContinue
-    if ($winget) { $candidates += $winget.Source }
+    $Candidates = @()
+    $Winget = Get-Command winget -CommandType Application -ErrorAction SilentlyContinue
+    if ($Winget) { $Candidates += $Winget.Source }
     if ($env:LOCALAPPDATA) {
-        $candidates += Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+        $Candidates += Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
     }
 
     # On fresh Windows Server images the App Installer alias may be absent
     # from the elevated PATH. Discover the installed package directly too.
     try {
-        $packages = @(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller -ErrorAction Stop)
-        foreach ($package in ($packages | Sort-Object Version -Descending)) {
-            if ($package.InstallLocation) {
-                $candidates += Join-Path $package.InstallLocation 'winget.exe'
+        $Packages = @(Get-AppxPackage -AllUsers -Name Microsoft.DesktopAppInstaller -ErrorAction Stop)
+        foreach ($Package in ($Packages | Sort-Object Version -Descending)) {
+            if ($Package.InstallLocation) {
+                $Candidates += Join-Path $Package.InstallLocation 'winget.exe'
             }
         }
     } catch {
         # Appx discovery is not available on every Windows image.
     }
 
-    foreach ($candidate in ($candidates | Select-Object -Unique)) {
-        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+    foreach ($Candidate in ($Candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $Candidate -PathType Leaf)) { continue }
         try {
-            & $candidate --version *> $null
-            if ($LASTEXITCODE -eq 0) { return $candidate }
+            & $Candidate --version *> $null
+            if ($LASTEXITCODE -eq 0) { return $Candidate }
         } catch {
             # Try the next location.
         }
     }
-    throw "winget cannot run in the elevated shell. Checked: $($candidates -join ', '). Ensure App Installer is available to the account used by UAC."
+    throw "winget cannot run in the elevated shell. Checked: $($Candidates -join ', '). Ensure App Installer is available to the account used by UAC."
 }
 
 function Assert-WixToolsUsable {
-    $binDir = Find-Wix314Bin
-    if (-not $binDir) {
+    $BinDir = Find-Wix314Bin
+    if (-not $BinDir) {
         throw 'WiX 3.14 was installed, but candle.exe and light.exe could not run.'
     }
-    Write-SubStep "WiX tools verified: $binDir"
+    Write-SubStep "WiX tools verified: $BinDir"
 }
 
 function Install-Prerequisites {
@@ -491,7 +491,7 @@ function Install-Prerequisites {
     Write-Step "Installing prerequisites"
 
     Install-NetFx3
-    $wingetPath = Find-WingetExecutable
+    $WingetPath = Find-WingetExecutable
 
     # Version requirements for the release build:
     #   - CMake 3.31 or newer
@@ -503,7 +503,7 @@ function Install-Prerequisites {
     #   - GNU Make is needed by LLDB API tests
     #   - 7-Zip 21.x+ needs permission to create source archive symlinks
     #   - LLVM.LLVM supplies the stage 0 clang-cl and lld-link tools
-    $tools = @(
+    $Tools = @(
         @{ Name = "cmake";      WingetId = "Kitware.CMake";                 Version = "";            Verify = "cmake" }
         @{ Name = "ninja";      WingetId = "Ninja-build.Ninja";             Version = "";            Verify = "ninja" }
         @{ Name = "python3.13"; WingetId = "Python.Python.3.13";            Version = "";            Verify = "python" }
@@ -515,120 +515,120 @@ function Install-Prerequisites {
         @{ Name = "make";       WingetId = "GnuWin32.Make";                 Version = "";            Verify = "make" }
     )
 
-    foreach ($tool in $tools) {
-        $cmd = Get-Command $tool.Verify -ErrorAction SilentlyContinue
-        if ($cmd -and $tool.Verify -eq 'python' -and
-            -not (Test-ExecutableVersion -Path $cmd.Source)) {
-            $cmd = $null
+    foreach ($Tool in $Tools) {
+        $Cmd = Get-Command $Tool.Verify -ErrorAction SilentlyContinue
+        if ($Cmd -and $Tool.Verify -eq 'python' -and
+            -not (Test-ExecutableVersion -Path $Cmd.Source)) {
+            $Cmd = $null
         }
-        $existingPath = if ($tool.Name -eq 'cmake') { Find-CMakeExecutable }
-            elseif ($tool.Name -eq 'wix') { Find-Wix314Bin }
-            elseif ($tool.Name -eq '7z') { Find-SevenZipExecutable }
-            elseif ($tool.Name -eq 'make') { Find-MakeExecutable }
-            elseif ($cmd) { $cmd.Source }
-        if ($existingPath) {
-            Write-SubStep "$($tool.Name) is already installed: $existingPath"
+        $ExistingPath = if ($Tool.Name -eq 'cmake') { Find-CMakeExecutable }
+            elseif ($Tool.Name -eq 'wix') { Find-Wix314Bin }
+            elseif ($Tool.Name -eq '7z') { Find-SevenZipExecutable }
+            elseif ($Tool.Name -eq 'make') { Find-MakeExecutable }
+            elseif ($Cmd) { $Cmd.Source }
+        if ($ExistingPath) {
+            Write-SubStep "$($Tool.Name) is already installed: $ExistingPath"
         } else {
-            $versionArg = if ($tool.Version) { @("--version", $tool.Version) } else { @() }
-            $versionLabel = if ($tool.Version) { " $($tool.Version)" } else { '' }
-            Write-SubStep "Installing $($tool.Name) ($($tool.WingetId)$versionLabel)..."
-            $installArgs = @('install', '--id', $tool.WingetId) + $versionArg +
+            $VersionArg = if ($Tool.Version) { @("--version", $Tool.Version) } else { @() }
+            $VersionLabel = if ($Tool.Version) { " $($Tool.Version)" } else { '' }
+            Write-SubStep "Installing $($Tool.Name) ($($Tool.WingetId)$VersionLabel)..."
+            $InstallArgs = @('install', '--id', $Tool.WingetId) + $VersionArg +
                 @('--accept-package-agreements', '--accept-source-agreements', '--silent')
-            & $wingetPath @installArgs
-            $installExitCode = $LASTEXITCODE
-            if ($tool.Name -eq 'wix' -and $installExitCode -eq -1978334960) {
+            & $WingetPath @InstallArgs
+            $InstallExitCode = $LASTEXITCODE
+            if ($Tool.Name -eq 'wix' -and $InstallExitCode -eq -1978334960) {
                 # winget can fail while checking its NetFx3 dependency on
                 # Server 2025 even after the feature is installed. The feature
                 # was installed and verified above; bypass only this check.
                 Write-Warning 'winget could not verify the installed NetFx3 feature. Retrying WiX with --force.'
-                & $wingetPath @installArgs --force
-                $installExitCode = $LASTEXITCODE
+                & $WingetPath @InstallArgs --force
+                $InstallExitCode = $LASTEXITCODE
             }
-            if ($tool.Name -eq '7z') {
-                $sevenZipPath = Find-SevenZipExecutable
-                if ($sevenZipPath) {
-                    if ($installExitCode -ne 0) {
-                        Write-Warning "winget exited with code $installExitCode, but 7-Zip is usable at $sevenZipPath. Continuing."
+            if ($Tool.Name -eq '7z') {
+                $SevenZipPath = Find-SevenZipExecutable
+                if ($SevenZipPath) {
+                    if ($InstallExitCode -ne 0) {
+                        Write-Warning "winget exited with code $InstallExitCode, but 7-Zip is usable at $SevenZipPath. Continuing."
                     }
-                    Write-SubStep "7-Zip verified: $sevenZipPath"
+                    Write-SubStep "7-Zip verified: $SevenZipPath"
                     continue
                 }
             }
-            if ($tool.Name -eq 'make') {
-                $makePath = Find-MakeExecutable
-                if ($makePath) {
-                    if ($installExitCode -ne 0) {
-                        Write-Warning "winget exited with code $installExitCode, but GNU Make is usable at $makePath. Continuing."
+            if ($Tool.Name -eq 'make') {
+                $MakePath = Find-MakeExecutable
+                if ($MakePath) {
+                    if ($InstallExitCode -ne 0) {
+                        Write-Warning "winget exited with code $InstallExitCode, but GNU Make is usable at $MakePath. Continuing."
                     }
-                    Write-SubStep "GNU Make verified: $makePath"
+                    Write-SubStep "GNU Make verified: $MakePath"
                     continue
                 }
             }
-            if ($tool.Name -eq 'cmake') {
+            if ($Tool.Name -eq 'cmake') {
                 if (-not (Find-CMakeExecutable)) {
                     throw "CMake installation finished, but version $($script:MinimumCMakeVersion) or newer could not be found."
                 }
                 continue
             }
-            if ($installExitCode -ne 0) {
-                if ($tool.Name -eq 'wix') {
-                    throw "Failed to install WiX via winget (exit code $installExitCode). NetFx3 is installed; inspect winget's error above."
+            if ($InstallExitCode -ne 0) {
+                if ($Tool.Name -eq 'wix') {
+                    throw "Failed to install WiX via winget (exit code $InstallExitCode). NetFx3 is installed; inspect winget's error above."
                 }
-                throw "Failed to install $($tool.Name) via winget (exit code $installExitCode)."
+                throw "Failed to install $($Tool.Name) via winget (exit code $InstallExitCode)."
             }
-            if ($tool.Name -eq '7z') {
+            if ($Tool.Name -eq '7z') {
                 throw '7-Zip installation finished, but 7z.exe could not be found or run.'
             }
-            if ($tool.Name -eq 'make') {
+            if ($Tool.Name -eq 'make') {
                 throw 'GNU Make installation finished, but make.exe could not be found or run.'
             }
-            if ($tool.Name -eq 'wix') { Assert-WixToolsUsable }
+            if ($Tool.Name -eq 'wix') { Assert-WixToolsUsable }
         }
     }
 
     if (-not $ForceMSVC) {
-        $llvmBin = Find-OfficialLlvmBin
-        if ($llvmBin) {
-            Write-SubStep "LLVM release is already installed: $llvmBin"
+        $LLVMBin = Find-OfficialLlvmBin
+        if ($LLVMBin) {
+            Write-SubStep "LLVM release is already installed: $LLVMBin"
         } else {
             Write-SubStep 'Installing LLVM release (LLVM.LLVM)...'
-            & $wingetPath install --id LLVM.LLVM --exact --source winget `
+            & $WingetPath install --id LLVM.LLVM --exact --source winget `
                 --accept-package-agreements --accept-source-agreements --silent
-            $installExitCode = $LASTEXITCODE
-            $llvmBin = Find-OfficialLlvmBin
-            if (-not $llvmBin) {
-                throw "LLVM installation did not provide usable clang-cl.exe and lld-link.exe in $env:ProgramFiles\LLVM\bin (winget exit code $installExitCode)."
+            $InstallExitCode = $LASTEXITCODE
+            $LLVMBin = Find-OfficialLlvmBin
+            if (-not $LLVMBin) {
+                throw "LLVM installation did not provide usable clang-cl.exe and lld-link.exe in $env:ProgramFiles\LLVM\bin (winget exit code $InstallExitCode)."
             }
-            if ($installExitCode -ne 0) {
-                Write-Warning "winget exited with code $installExitCode, but LLVM tools are usable at $llvmBin. Continuing."
+            if ($InstallExitCode -ne 0) {
+                Write-Warning "winget exited with code $InstallExitCode, but LLVM tools are usable at $LLVMBin. Continuing."
             }
-            Write-SubStep "LLVM release verified: $llvmBin"
+            Write-SubStep "LLVM release verified: $LLVMBin"
         }
     }
 
     # Install ARM64 Python when building ARM64 so LLDB uses a matching Python.
     # The main Python install above covers the runner's default architecture.
-    $archPython = @()
-    if ($script:BuildArch -eq 'arm64') { $archPython += @{ Arch = 'arm64'; Suffix = '-arm64' } }
-    foreach ($ap in $archPython) {
-        $basePath = "$env:LOCALAPPDATA\Programs\Python"
-        $existing = if (Test-Path $basePath) {
-            Get-ChildItem -Path $basePath -Directory -Filter "Python3*$($ap.Suffix)" |
+    $ArchPython = @()
+    if ($script:BuildArch -eq 'arm64') { $ArchPython += @{ Arch = 'arm64'; Suffix = '-arm64' } }
+    foreach ($Ap in $ArchPython) {
+        $BasePath = "$env:LOCALAPPDATA\Programs\Python"
+        $Existing = if (Test-Path $BasePath) {
+            Get-ChildItem -Path $BasePath -Directory -Filter "Python3*$($Ap.Suffix)" |
                 Where-Object { Test-Path (Join-Path $_.FullName 'python.exe') }
         } else { $null }
-        if ($existing) {
-            Write-SubStep "Python for $($ap.Arch) already installed: $($existing[0].FullName)"
+        if ($Existing) {
+            Write-SubStep "Python for $($Ap.Arch) already installed: $($Existing[0].FullName)"
         } else {
-            Write-SubStep "Installing Python for $($ap.Arch) (Python.Python.3.13 --architecture $($ap.Arch))..."
-            & $wingetPath install --id Python.Python.3.13 --architecture $($ap.Arch) --accept-package-agreements --accept-source-agreements --silent
+            Write-SubStep "Installing Python for $($Ap.Arch) (Python.Python.3.13 --architecture $($Ap.Arch))..."
+            & $WingetPath install --id Python.Python.3.13 --architecture $($Ap.Arch) --accept-package-agreements --accept-source-agreements --silent
             if ($LASTEXITCODE -ne 0) {
-                Write-Warning "Failed to install Python for $($ap.Arch). LLDB may not work for this architecture."
+                Write-Warning "Failed to install Python for $($Ap.Arch). LLDB may not work for this architecture."
             }
         }
     }
 
     # Visual Studio Build Tools - special handling
-    Install-VisualStudio -WingetPath $wingetPath
+    Install-VisualStudio -WingetPath $WingetPath
 
     # Get-MissingPrerequisites will add non-standard paths such as GnuWin32.
     Update-PathAfterPrerequisites
@@ -650,7 +650,7 @@ function Install-VisualStudio {
     # Component IDs reference:
     #   https://learn.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-build-tools
 
-    $requiredComponents = @(
+    $RequiredComponents = @(
         "Microsoft.VisualStudio.Workload.VCTools"
         "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
         "Microsoft.VisualStudio.Component.VC.Tools.ARM64"
@@ -660,42 +660,42 @@ function Install-VisualStudio {
         # The latest Windows SDK is included automatically via --includeRecommended
     )
 
-    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-    if (Test-Path $vswhere) {
-        $vs = & $vswhere -nologo -latest -products '*' -format json | ConvertFrom-Json
-        if ($vs) {
-            Write-SubStep "Visual Studio already installed: $($vs[0].installationPath)"
+    $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $VsWhere) {
+        $Vs = & $VsWhere -nologo -latest -products '*' -format json | ConvertFrom-Json
+        if ($Vs) {
+            Write-SubStep "Visual Studio already installed: $($Vs[0].installationPath)"
             Write-SubStep "Ensuring required components are installed..."
             # setup.exe modify does not accept --wait; wait for the process
             # from PowerShell instead.
-            $addArgs = @()
-            foreach ($component in $requiredComponents) {
-                $addArgs += '--add'
-                $addArgs += $component
+            $AddArgs = @()
+            foreach ($Component in $RequiredComponents) {
+                $AddArgs += '--add'
+                $AddArgs += $Component
             }
-            $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
-            if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
-                throw "Visual Studio Installer not found: $installer"
+            $Installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+            if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) {
+                throw "Visual Studio Installer not found: $Installer"
             }
-            $installPath = $vs[0].installationPath
-            $installArgs = @('modify', '--installPath', "`"$installPath`"") +
-                $addArgs + @('--includeRecommended', '--passive', '--norestart')
-            $process = Start-Process -FilePath $installer -ArgumentList $installArgs -Wait -PassThru
-            if ($process.ExitCode -eq 3010) {
+            $InstallPath = $Vs[0].installationPath
+            $InstallArgs = @('modify', '--installPath', "`"$InstallPath`"") +
+                $AddArgs + @('--includeRecommended', '--passive', '--norestart')
+            $Process = Start-Process -FilePath $Installer -ArgumentList $InstallArgs -Wait -PassThru
+            if ($Process.ExitCode -eq 3010) {
                 throw 'Visual Studio components were installed, but Windows must be restarted before building.'
             }
-            if ($process.ExitCode -ne 0) {
-                throw "Failed to modify Visual Studio installation (exit code $($process.ExitCode))."
+            if ($Process.ExitCode -ne 0) {
+                throw "Failed to modify Visual Studio installation (exit code $($Process.ExitCode))."
             }
             return
         }
     }
 
     Write-SubStep "Installing Visual Studio Build Tools 2022..."
-    $addArgs = ($requiredComponents | ForEach-Object { "--add $_" }) -join ' '
+    $AddArgs = ($RequiredComponents | ForEach-Object { "--add $_" }) -join ' '
     & $WingetPath install Microsoft.VisualStudio.2022.BuildTools `
         --accept-package-agreements --accept-source-agreements --silent `
-        --override "$addArgs --includeRecommended --passive --wait"
+        --override "$AddArgs --includeRecommended --passive --wait"
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install Visual Studio Build Tools."
     }
