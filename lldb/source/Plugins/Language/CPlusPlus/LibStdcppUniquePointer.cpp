@@ -33,7 +33,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
   bool GetSummary(Stream &stream, const TypeSummaryOptions &options);
 
@@ -139,7 +139,8 @@ LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
 }
 
 llvm::Expected<size_t>
-LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
   if (name == "ptr" || name == "pointer")
     return 0;
   if (name == "del" || name == "deleter")
