@@ -17,6 +17,7 @@
 
 #include "SimInst.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 namespace llvm {
 namespace AMDGPUSim {
@@ -53,8 +54,13 @@ public:
   /// Return 15 when no VaVdst wait applies.
   virtual unsigned getVaVdstTarget(const SimInst &SI) const = 0;
 
-  /// Return the properties that select the WMMA coexecution window.
-  virtual WMMAProperties getWMMAProperties(const SimInst &SI) const = 0;
+  /// Return the coexecution window of a WMMA \p SI, or no value when the
+  /// variant is not modeled.
+  virtual std::optional<AMDGPU::CoExecInfo>
+  getCoExecInfo(const SimInst &SI) const = 0;
+
+  /// Return whether a WMMA \p SI has an LD_SCALE stage.
+  virtual bool hasWMMAScaling(const SimInst &SI) const = 0;
 
   /// Return whether \p SI has an explicit physical SGPR source.
   virtual bool hasSGPROperands(const SimInst &SI) const = 0;

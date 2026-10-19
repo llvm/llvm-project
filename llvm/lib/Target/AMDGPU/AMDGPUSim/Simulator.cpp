@@ -313,8 +313,7 @@ class Simulator::Impl {
     }
 
     if (IC == InstClass::WMMA) {
-      WMMAProperties Properties = InstInfo.getWMMAProperties(Inst);
-      if (Properties.HasScaling) {
+      if (InstInfo.hasWMMAScaling(Inst)) {
         applyStall(IssueCycle, State.CurrentCycle + State.getWMMATRANSStall());
         computeScaledWMMAStall(IssueCycle, Sources);
       } else {
@@ -404,11 +403,12 @@ class Simulator::Impl {
       break;
     case InstClass::WMMA: {
       State.trackTRANS(Inst.Latency);
-      WMMAProperties Properties = InstInfo.getWMMAProperties(Inst);
+      bool HasScaling = InstInfo.hasWMMAScaling(Inst);
       unsigned EffectiveStart =
-          Properties.HasScaling ? WMMAStartCycle : State.CurrentCycle;
-      unsigned Occupancy = State.startWMMAWindow(Properties, EffectiveStart);
-      if (Properties.HasScaling)
+          HasScaling ? WMMAStartCycle : State.CurrentCycle;
+      unsigned Occupancy =
+          State.startWMMAWindow(InstInfo.getCoExecInfo(Inst), EffectiveStart);
+      if (HasScaling)
         State.reserveScaledWMMAScaleRead(State.CurrentCycle);
       if (InstInfo.hasSGPROperands(Inst))
         State.VaSSRCBusyUntil =

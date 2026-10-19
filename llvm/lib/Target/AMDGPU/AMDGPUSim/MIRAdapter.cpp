@@ -261,9 +261,21 @@ unsigned MachineInstrInfo::getVaVdstTarget(const SimInst &SI) const {
   return 15;
 }
 
-WMMAProperties MachineInstrInfo::getWMMAProperties(const SimInst &SI) const {
+std::optional<AMDGPU::CoExecInfo>
+MachineInstrInfo::getCoExecInfo(const SimInst &SI) const {
   const auto *MI = SI.getAs<MachineInstr>();
-  return TII.getWMMAProperties(*MI);
+  const AMDGPU::WMMAInstInfo *Info =
+      AMDGPU::getWMMAInstInfoHelper(MI->getOpcode());
+  if (!Info || Info->CoExecVariant == AMDGPU::WMMAVariant::Unknown)
+    return std::nullopt;
+  return AMDGPU::getCoExecInfo(*MI, TII);
+}
+
+bool MachineInstrInfo::hasWMMAScaling(const SimInst &SI) const {
+  const auto *MI = SI.getAs<MachineInstr>();
+  const AMDGPU::WMMAInstInfo *Info =
+      AMDGPU::getWMMAInstInfoHelper(MI->getOpcode());
+  return Info && Info->HasMatrixScale;
 }
 
 bool MachineInstrInfo::hasSGPROperands(const SimInst &SI) const {

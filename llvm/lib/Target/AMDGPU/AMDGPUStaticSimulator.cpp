@@ -283,8 +283,7 @@ static void logInstruction(unsigned Cycle, const MachineInstr &MI,
 
   if (SI.Class == InstClass::WMMA) {
     AMDGPU::CoExecInfo Info =
-        AMDGPU::getKnownCoExecInfo(MII.getWMMAProperties(SI))
-            .value_or(AMDGPU::CoExecInfo());
+        MII.getCoExecInfo(SI).value_or(AMDGPU::CoExecInfo());
     dbgs() << "  Class: WMMA | Unit: XDL | Occupancy: " << Info.UnitOccupancy
            << " | Window: " << Info.TotalWindow << "\n";
     return;

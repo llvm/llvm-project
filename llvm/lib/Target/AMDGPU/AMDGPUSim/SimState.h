@@ -275,10 +275,8 @@ struct GPUSimState {
 
   /// Start a window, reserve XDL, and return its occupancy.
   /// Clear the window and return zero when unmodeled.
-  unsigned startWMMAWindow(const WMMAProperties &Properties,
+  unsigned startWMMAWindow(const std::optional<AMDGPU::CoExecInfo> &Info,
                            unsigned MatrixStartCycle) {
-    std::optional<AMDGPU::CoExecInfo> Info =
-        AMDGPU::getKnownCoExecInfo(Properties);
     if (!Info || Info->TotalWindow == 0) {
       ActiveWMMA = WMMACoExecState();
       return 0;

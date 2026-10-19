@@ -57,8 +57,12 @@ public:
   /// Decode the VaVdst target from S_WAITCNT_DEPCTR, or return 15 otherwise.
   unsigned getVaVdstTarget(const SimInst &SI) const override;
 
-  /// Extract normalized WMMA coexecution properties through SIInstrInfo.
-  WMMAProperties getWMMAProperties(const SimInst &SI) const override;
+  /// Return the WMMA coexecution window from AMDGPU::getCoExecInfo.
+  std::optional<AMDGPU::CoExecInfo>
+  getCoExecInfo(const SimInst &SI) const override;
+
+  /// Return whether the WMMA opcode has matrix scale operands.
+  bool hasWMMAScaling(const SimInst &SI) const override;
 
   /// Return whether the MachineInstr has an explicit physical SGPR source.
   bool hasSGPROperands(const SimInst &SI) const override;

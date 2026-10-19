@@ -85,7 +85,7 @@ body: |
 ...
 
 ---
-# 5 SALUs, then V_EXP in I-slot OK; 2nd V_EXP waits FU+V-slot - stall=2
+# 5 SALUs, then V_EXP in I-slot OK. 2nd V_EXP waits FU+V-slot, stall=2
 name: trans_fu_lands_in_v_stage
 # CHECK-LABEL: trans_fu_lands_in_v_stage
 # CHECK: End BB#0: 9 insts, 11 cycles, 2 stalls
@@ -308,7 +308,7 @@ body: |
 ...
 
 ---
-# Long-lat VALU waits for WMMA window end; TRANS can co-execute
+# Long-lat VALU waits for WMMA window end. TRANS can co-execute
 name: longlatvalu_waits_for_wmma_window
 # CHECK-LABEL: longlatvalu_waits_for_wmma_window
 # CHECK: V_EXP_F32_e32

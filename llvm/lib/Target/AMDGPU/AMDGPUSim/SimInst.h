@@ -21,9 +21,6 @@
 namespace llvm {
 namespace AMDGPUSim {
 
-using AMDGPU::WMMAProperties;
-using AMDGPU::WMMAVariant;
-
 /// Instruction classes used to select simulator timing behavior.
 enum class InstClass : uint8_t {
   VALU,
