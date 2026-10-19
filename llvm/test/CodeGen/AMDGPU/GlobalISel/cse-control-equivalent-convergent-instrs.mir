@@ -1,4 +1,3 @@
-# RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -o - -run-pass=machine-cse %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -o - -passes=machine-cse %s | FileCheck %s
 
 # Check that a convergent instruction is CSE'd across BB's when the
