@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVPLANCODEGEN_H
-#define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVPLANCODEGEN_H
+#ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPVPLANCODEGEN_H
+#define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPVPLANCODEGEN_H
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -48,4 +48,4 @@ void executeSLPPlan(VPlan &Plan, VPTransformState &State);
 } // namespace slpvectorizer
 } // namespace llvm
 
-#endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVPLANCODEGEN_H
+#endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPVPLANCODEGEN_H
