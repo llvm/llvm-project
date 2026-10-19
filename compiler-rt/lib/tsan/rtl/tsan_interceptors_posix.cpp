@@ -858,28 +858,16 @@ static int munmap_interceptor(ThreadState *thr, uptr pc, Munmap real_munmap,
   return res;
 }
 
-#if SANITIZER_LINUX
-const int MREMAP_FIXED = 2;
-const int MREMAP_DONTUNMAP = 4;
-
-TSAN_INTERCEPTOR(void*, mremap, void* old_address, SIZE_T old_size,
-                 SIZE_T new_size, int flags, ...) {
-  void* new_address = nullptr;
-  if (flags & (MREMAP_FIXED | MREMAP_DONTUNMAP)) {
-    va_list ap;
-    va_start(ap, flags);
-    new_address = va_arg(ap, void*);
-    va_end(ap);
-  }
-  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
-    return (void*)internal_mremap(old_address, old_size, new_size, flags,
-                                  new_address);
-  SCOPED_TSAN_INTERCEPTOR(mremap, old_address, old_size, new_size, flags,
-                          new_address);
+template <class Mremap>
+static void* mremap_interceptor(ThreadState* thr, uptr pc, Mremap real_mremap,
+                                void* old_address, SIZE_T old_size,
+                                SIZE_T new_size, int flags, void* new_address) {
+  const int MREMAP_FIXED = 1 << 1;
+  const int MREMAP_DONTUNMAP = 1 << 2;
   if (!fix_mmap_addr(&new_address, new_size,
                      (flags & MREMAP_FIXED) ? MAP_FIXED : 0))
     return MAP_FAILED;
-  void* res = REAL(mremap)(old_address, old_size, new_size, flags, new_address);
+  void* res = real_mremap(old_address, old_size, new_size, flags, new_address);
   if (res == MAP_FAILED)
     return res;
   if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + new_size - 1)) {
@@ -910,10 +898,6 @@ TSAN_INTERCEPTOR(void*, mremap, void* old_address, SIZE_T old_size,
   }
   return res;
 }
-#  define TSAN_MAYBE_INTERCEPT_MREMAP TSAN_INTERCEPT(mremap)
-#else
-#  define TSAN_MAYBE_INTERCEPT_MREMAP
-#endif
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
@@ -2742,6 +2726,13 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
     return munmap_interceptor(thr, pc, REAL(munmap), addr, sz); \
   } while (false)
 
+#define COMMON_INTERCEPTOR_MREMAP_IMPL(ctx, addr, old_sz, new_sz, flags,   \
+                                       new_addr)                           \
+  do {                                                                     \
+    return mremap_interceptor(thr, pc, REAL(mremap), addr, old_sz, new_sz, \
+                              flags, new_addr);                            \
+  } while (false)
+
 #if !SANITIZER_APPLE
 #define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg) \
   HandleRecvmsg(((TsanInterceptorContext *)ctx)->thr, \
@@ -3136,7 +3127,6 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   TSAN_INTERCEPT(cfree);
   TSAN_INTERCEPT(munmap);
-  TSAN_MAYBE_INTERCEPT_MREMAP;
   TSAN_MAYBE_INTERCEPT_MEMALIGN;
   TSAN_INTERCEPT(valloc);
   TSAN_MAYBE_INTERCEPT_PVALLOC;

@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -O1 -pthread %s -o %t && %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <pthread.h>
@@ -8,12 +8,37 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "../test.h"
+#if !defined(__has_feature)
+#  define __has_feature(x) 0
+#endif
 
+#if __has_feature(thread_sanitizer)
+typedef unsigned invisible_barrier_t;
 extern "C" {
+void __tsan_testonly_barrier_init(invisible_barrier_t *barrier, unsigned count);
+void __tsan_testonly_barrier_wait(invisible_barrier_t *barrier);
 void __tsan_read1(void *addr);
 void __tsan_write4(void *addr);
 }
+static invisible_barrier_t barrier;
+static void barrier_init(invisible_barrier_t *b, unsigned count) {
+  __tsan_testonly_barrier_init(b, count);
+}
+static void barrier_wait(invisible_barrier_t *b) {
+  __tsan_testonly_barrier_wait(b);
+}
+#else
+static pthread_barrier_t barrier;
+static void barrier_init(pthread_barrier_t *b, unsigned count) {
+  assert(pthread_barrier_init(b, nullptr, count) == 0);
+}
+static void barrier_wait(pthread_barrier_t *b) {
+  int res = pthread_barrier_wait(b);
+  assert(res == 0 || res == PTHREAD_BARRIER_SERIAL_THREAD);
+}
+static void __tsan_read1(void *addr) { (void)addr; }
+static void __tsan_write4(void *addr) { (void)addr; }
+#endif
 
 struct MoveParams {
   char *src;
@@ -27,7 +52,7 @@ static void *move_worker(void *arg) {
   p->src[0] = 0x11;
   p->src[p->src_size - 1] = 0x22;
   // Record unsynchronized accesses in shadow across the target range (start,
-  // middle, and end) before it is unmapped and reused as mremap destination.
+  // middle, and end) before it is replaced as mremap destination.
   p->dst[0] = 0x33;
   p->dst[p->dst_size / 2] = 0x44;
   p->dst[p->dst_size - 1] = 0x55;
@@ -37,7 +62,6 @@ static void *move_worker(void *arg) {
 
 static void test_mremap_move(size_t page_size, size_t src_size,
                              size_t dst_size) {
-  barrier_init(&barrier, 2);
   char *src = (char *)mmap(nullptr, src_size, PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   assert(src != MAP_FAILED);
@@ -50,8 +74,7 @@ static void test_mremap_move(size_t page_size, size_t src_size,
   pthread_create(&th, nullptr, move_worker, &params);
   barrier_wait(&barrier);
 
-  // Unmap dst, then move and expand src into dst via mremap.
-  assert(munmap(dst, dst_size) == 0);
+  // Move and expand src into dst via mremap (MREMAP_FIXED unmaps previous dst).
   char *remapped = (char *)mremap(src, src_size, dst_size,
                                   MREMAP_MAYMOVE | MREMAP_FIXED, dst);
   assert(remapped == dst);
@@ -86,7 +109,6 @@ static void *shrink_expand_worker(void *arg) {
 }
 
 static void test_mremap_shrink_and_expand(size_t page_size) {
-  barrier_init(&barrier, 2);
   // Reserve 2 pages so we can shrink to 1 page and then expand in-place back to
   // 2 pages.
   char *buf = (char *)mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE,
@@ -121,6 +143,7 @@ static void test_mremap_shrink_and_expand(size_t page_size) {
 }
 
 int main() {
+  barrier_init(&barrier, 2);
   const size_t page_size = sysconf(_SC_PAGESIZE);
   // Test both below and above clear_shadow_mmap_threshold (64KB).
   test_mremap_move(page_size, page_size - 1, 2 * page_size);
