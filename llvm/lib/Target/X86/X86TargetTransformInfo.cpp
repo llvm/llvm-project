@@ -7699,49 +7699,54 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
       unsigned RowLanes = std::max(Lanes, std::min(VF, 4u));
       unsigned FitVF = std::min<unsigned>(PowerOf2Ceil(RowLanes), ShapeVF);
 
-      std::optional<InstructionCost::CostType> Margin;
-      for (unsigned NativeVF = std::max(FitVF, 1u); NativeVF <= ShapeVF;
-           NativeVF *= 2) {
+      // A row's premium is its calibrated total less the body it was measured
+      // against. Both are read for the dword-indexed form the calibration
+      // used, so a retune moves the body, the premium absorbs it, and the
+      // total holds.
+      //
+      // A qword-indexed shape carries that premium over a different body. It
+      // prices above its row where the wider index only grows the body --
+      // v8i64 scatter at 35 against 32, the gap between VPSCATTERQQZ and
+      // VPSCATTERDQZ -- and below it where the wider index also splits the
+      // shape across narrower rows, as the v16i32 scatter does at 45 against
+      // 47.
+      auto premiumFor =
+          [&](unsigned NativeVF) -> std::optional<InstructionCost::CostType> {
         auto *NativeVTy = FixedVectorType::get(EltTy, NativeVF);
         std::optional<unsigned> Total =
             getZenGSCalibratedTotal(IsLoad, NativeVTy);
-
-        // The row holds the total for the dword-indexed form it was calibrated
-        // against, so the premium is recovered from that same form: a retune
-        // moves the body, the premium absorbs it, and the total holds.
-        //
-        // A qword-indexed shape carries that premium over a different body. It
-        // prices above its row where the wider index only grows the body --
-        // v8i64 scatter at 35 against 32, the gap between VPSCATTERQQZ and
-        // VPSCATTERDQZ -- and below it where the wider index also splits the
-        // shape across narrower rows, as the v16i32 scatter does at 45
-        // against 47.
         std::optional<unsigned> NativeBody =
             getModeledGSInstrCost(IsLoad, NativeVTy, /*IndexSize=*/32, CostKind,
                                   /*WidenWithoutVLX=*/false);
         if (!Total || !NativeBody)
-          continue;
-        // Every row is calibrated above the body it prices, which is what lets
-        // a retune move the two together. The margin is not generous -- the
-        // smallest is 4, for the v4f64 scatter at 10 against 6 -- so a retune
-        // could cross one, and a crossed row would price the shape at its body
-        // alone and go on answering queries. Assert where it happens.
+          return std::nullopt;
+        // Some rows clear their body by only a few cycles, so a retune can
+        // cross one. A crossed row would price the shape at its body alone and
+        // go on answering queries.
         assert(*Total > *NativeBody &&
                "calibrated total must exceed the body it is measured against; "
                "the row needs recalibrating against the retuned schedule");
-        InstructionCost::CostType Premium =
-            *Total > *NativeBody ? *Total - *NativeBody : 0;
-        // The premium is charged once per register's worth of live lanes, and
-        // counts how many there are rather than how far apart the mask spreads
-        // them: per occupied register would price four isolated lanes above
-        // the sixteen that compile to one instruction.
-        //
-        // The narrowest row holding the live lanes is the cheapest, so the
-        // first match wins. That rests on premiums growing with the row, which
-        // the assert above does not cover: a retune that inverted two rows
-        // would price a partly masked operation above the full one.
-        Margin = divideCeil(Lanes, NativeVF) * Premium;
-        break;
+        return *Total - *NativeBody;
+      };
+
+      // The premium is charged once per register's worth of live lanes, and
+      // counts how many there are rather than how far apart the mask spreads
+      // them: per occupied register would price four isolated lanes above the
+      // sixteen that compile to one instruction.
+      //
+      // Every row from here up holds the live lanes in one register's worth, so
+      // take the cheapest rather than the narrowest. The rows are measured, so
+      // nothing orders their premiums. Charging the narrowest would price a
+      // subset of lanes above the superset it belongs to.
+      std::optional<InstructionCost::CostType> Margin;
+      for (unsigned NativeVF = std::max(FitVF, 1u); NativeVF <= ShapeVF;
+           NativeVF *= 2) {
+        std::optional<InstructionCost::CostType> Premium = premiumFor(NativeVF);
+        if (!Premium)
+          continue;
+        InstructionCost::CostType Charge =
+            divideCeil(Lanes, NativeVF) * *Premium;
+        Margin = Margin ? std::min(*Margin, Charge) : Charge;
       }
 
       if (!Margin)
