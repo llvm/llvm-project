@@ -2457,8 +2457,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v8f32, Legal);
       setOperationAction(ISD::FP_EXTEND,          MVT::v4f64, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v4f64, Legal);
-      setOperationAction(ISD::FREM, MVT::v8f16, Custom);
-      setOperationAction(ISD::FREM, MVT::v16f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v2f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v4f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v8f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v16f16, Custom);
 
       // INSERT_VECTOR_ELT v8f16 extended to VECTOR_SHUFFLE
       setOperationAction(ISD::INSERT_VECTOR_ELT,    MVT::v8f16,  Custom);
@@ -23309,6 +23311,16 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   assert(VT.getScalarType() == MVT::f16 && "Unexpected type for FREM");
 
   bool IsVec = VT.isVector();
+  // f64 widening is only legal up to v8f64. v16f16 & v32f16 would widen to 
+  // v16f64 & v32f64, which gets scalarized, so operands split in half.
+  if (IsVec && VT.getVectorNumElements() > 8) {
+    auto [LoA, HiA] = DAG.SplitVector(Op.getOperand(0), Dl);
+    auto [LoB, HiB] = DAG.SplitVector(Op.getOperand(1), Dl);
+    SDValue Lo = DAG.getNode(ISD::FREM, Dl, LoA.getValueType(), LoA, LoB);
+    SDValue Hi = DAG.getNode(ISD::FREM, Dl, HiA.getValueType(), HiA, HiB);
+    return DAG.getNode(ISD::CONCAT_VECTORS, Dl, VT, Lo, Hi);
+  }
+
   MVT WideVT = IsVec ? VT.changeVectorElementType(MVT::f64) : MVT::f64;
   MVT MaskVT = IsVec ? VT.changeVectorElementType(MVT::i1) : MVT::v1i1;
 
@@ -35062,6 +35074,42 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Vec =
         DAG.getNode(N->getOpcode(), dl, MVT::v8bf16, VecOps, N->getFlags());
     Results.push_back(DAG.getExtractVectorElt(dl, MVT::bf16, Vec, 0));
+    return;
+  }
+  case ISD::FREM: {
+    MVT VT = N->getSimpleValueType(0);
+
+    if (VT != MVT::v2f16 && VT != MVT::v4f16)
+      return;
+
+    MVT WideVT = VT.changeVectorElementType(MVT::f64);
+    MVT MaskVT = VT.changeVectorElementType(MVT::i1);
+
+    SDValue X = DAG.getNode(ISD::FP_EXTEND, dl, WideVT, N->getOperand(0));
+    SDValue Y = DAG.getNode(ISD::FP_EXTEND, dl, WideVT, N->getOperand(1));
+
+    SDValue Q = DAG.getNode(ISD::FTRUNC, dl, WideVT,
+                            DAG.getNode(ISD::FDIV, dl, WideVT, X, Y));
+    SDValue Res = DAG.getNode(ISD::FMA, dl, WideVT,
+                              DAG.getNode(ISD::FNEG, dl, WideVT, Q), Y, X);
+    Res = DAG.getNode(ISD::FCOPYSIGN, dl, WideVT, Res, X);
+
+    SDValue XNotFinite = DAG.getNode(X86ISD::VFPCLASS, dl, MaskVT, X,
+                                     DAG.getTargetConstant(0x99, dl, MVT::i32));
+    SDValue YIsInf = DAG.getNode(X86ISD::VFPCLASS, dl, MaskVT, Y,
+                                 DAG.getTargetConstant(0x18, dl, MVT::i32));
+    SDValue UseX = DAG.getNode(ISD::AND, dl, MaskVT,
+                               DAG.getNOT(dl, XNotFinite, MaskVT), YIsInf);
+
+    Res = DAG.getSelect(dl, WideVT, UseX, X, Res);
+
+    SDValue Rounded =
+        DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+
+    SmallVector<SDValue, 4> Ops(8 / VT.getVectorNumElements(), DAG.getUNDEF(VT));
+    Ops[0] = Rounded;
+    Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8f16, Ops));
     return;
   }
   case X86ISD::CVTPH2PS: {
