@@ -832,6 +832,9 @@ class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
   return static_cast<const SITargetLowering *>(getTargetLowering())
       ->isUniformLoad(cast<LoadSDNode>(N));
 }]> {
+  let IsLoad = 1;
+  let AddressSpaces = LoadAddress_global.AddrSpaces;
+
   let GISelPredicateCode = [{
     if (!MI.hasOneMemOperand())
       return false;
@@ -1402,11 +1405,12 @@ defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29>;
 
 def SMInfoTable : GenericTable {
   let FilterClass = "SM_Real";
+  let FilterClassField = "is_buffer";
   let CppTypeName = "SMInfo";
-  let Fields = ["Opcode", "is_buffer"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getSMEMOpcodeHelper";
+  let PrimaryKeyName = "isSMEMOpcodeHelper";
 }
 
 //===----------------------------------------------------------------------===//

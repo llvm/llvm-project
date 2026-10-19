@@ -7,8 +7,6 @@
 ; cached by the alias analysis must not be reused when scheduling the second
 ; tree (the stores to %out+96/%out+104), or the store is treated as
 ; independent of the gather and sunk below it.
-;
-; FIXME: The store to %p8 is currently sunk below the gather (miscompile).
 
 define void @test(ptr %out, double %v32, double %v40, double %v48, double %v56, double %k0, double %k1, double %k13) {
 ; CHECK-LABEL: define void @test(
@@ -28,13 +26,6 @@ define void @test(ptr %out, double %v32, double %v40, double %v48, double %v56, 
 ; CHECK-NEXT:    store double [[V40]], ptr [[P40]], align 8
 ; CHECK-NEXT:    store double [[V48]], ptr [[P48]], align 8
 ; CHECK-NEXT:    store double [[V56]], ptr [[P56]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = call <5 x double> @llvm.masked.gather.v5f64.v5p0(<5 x ptr> align 8 [[TMP2]], <5 x i1> splat (i1 true), <5 x double> poison)
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <5 x double> [[TMP7]], <5 x double> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 0, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <5 x double> [[TMP7]], <5 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul <8 x double> [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <5 x double> [[TMP7]], i64 0
-; CHECK-NEXT:    [[U:%.*]] = fmul double [[TMP15]], [[K13]]
-; CHECK-NEXT:    store <8 x double> [[TMP14]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    [[O12:%.*]] = getelementptr i8, ptr [[OUT]], i64 96
 ; CHECK-NEXT:    [[S:%.*]] = fadd double [[K0]], [[K1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[S]], i64 0
@@ -42,6 +33,13 @@ define void @test(ptr %out, double %v32, double %v40, double %v48, double %v56, 
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], <double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], zeroinitializer
 ; CHECK-NEXT:    store double [[S]], ptr [[P8]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call <5 x double> @llvm.masked.gather.v5f64.v5p0(<5 x ptr> align 8 [[TMP2]], <5 x i1> splat (i1 true), <5 x double> poison)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <5 x double> [[TMP7]], <5 x double> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 0, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <5 x double> [[TMP7]], <5 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul <8 x double> [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <5 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[U:%.*]] = fmul double [[TMP15]], [[K13]]
+; CHECK-NEXT:    store <8 x double> [[TMP14]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[O12]], align 8
 ; CHECK-NEXT:    ret void
 ;

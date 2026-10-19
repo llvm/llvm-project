@@ -2856,7 +2856,7 @@ void AsmConstraintsInfo::EmitAsmStmt() {
   if (IsGCCAsmGoto && !CBRRegResults.empty()) {
     for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
       llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-      Builder.SetInsertPoint(Succ, --(Succ->end()));
+      Builder.SetInsertPoint(--(Succ->end()));
       EmitAsmStores(CBRRegResults[Succ]);
     }
   }
@@ -3519,18 +3519,24 @@ static llvm::ConvergenceControlInst *getConvergenceToken(llvm::BasicBlock *BB) {
   return nullptr;
 }
 
-llvm::CallBase *
-CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
+void CodeGenFunction::addConvergenceControlBundle(
+    SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+  if (!CGM.shouldEmitConvergenceTokens())
+    return;
+
   llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
   assert(ParentToken);
+  Bundles.emplace_back("convergencectrl", ParentToken);
+}
 
-  llvm::Value *bundleArgs[] = {ParentToken};
-  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
-  auto *Output = llvm::CallBase::addOperandBundle(
-      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input->getIterator());
-  Input->replaceAllUsesWith(Output);
-  Input->eraseFromParent();
-  return Output;
+void CodeGenFunction::setConvergentCallSite(llvm::CallBase *Call,
+                                            bool IsConvergent) {
+  if (IsConvergent && !Call->isConvergent())
+    Call->setConvergent();
+
+  assert((IsConvergent || !Call->isConvergent() ||
+          !CGM.shouldEmitConvergenceTokens()) &&
+         "convergent call is missing a convergence control token");
 }
 
 llvm::ConvergenceControlInst *

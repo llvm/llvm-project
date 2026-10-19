@@ -2925,6 +2925,10 @@ public:
   /// created.
   unsigned getNumParams() const;
 
+  /// Return the number of parameters, including the implicit 'this' parameter
+  /// if this function has one.
+  unsigned getNumParamsIncludingThis() const;
+
   const ParmVarDecl *getParamDecl(unsigned i) const {
     assert(i < getNumParams() && "Illegal param #");
     return ParamInfo[i];

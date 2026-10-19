@@ -96,25 +96,10 @@ void ThreadFinalize(ThreadState *thr) {
   }
 
   for (uptr i = 0; i < leaks.Size(); i++) {
-    // Use alloca, because malloc during signal handling deadlocks
-    ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-    // Take a new scope as Apple platforms require the below locks released
-    // before symbolizing in order to avoid a deadlock
-    {
-      ThreadRegistryLock l(&ctx->thread_registry);
-      new (rep) ScopedReport(ReportTypeThreadLeak);
-      rep->AddThread(leaks[i].tctx, true);
-      rep->SetCount(leaks[i].count);
-#  if SANITIZER_APPLE
-    }  // Close this scope to release the locks
-#  endif
-      OutputReport(thr, *rep);
-
-      // Need to manually destroy this because we used placement new to allocate
-      rep->~ScopedReport();
-#  if !SANITIZER_APPLE
-    }
-#  endif
+    ScopedReport rep(ReportTypeThreadLeak);
+    rep.AddThread(leaks[i].tctx, true);
+    rep.SetCount(leaks[i].count);
+    OutputReport(thr, rep);
   }
 #endif
 }

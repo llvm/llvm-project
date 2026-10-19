@@ -15,4 +15,5 @@ add_clang_library(CIRRegisterAllDialects
   CIROpenACCSupport
   CIROpenMPSupport
   MLIRDLTIDialect
+  MLIRLLVMDialect
 )
