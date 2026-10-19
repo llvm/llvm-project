@@ -22,7 +22,6 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
-#include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -135,42 +134,6 @@ protected:
   std::unique_ptr<Preprocessor> PP;
   std::string PreDefines;
 };
-
-TEST_F(LexerTest, PragmaKeywordAliasesKeepTheirNames) {
-  LangOpts.CPlusPlus = true;
-  LangOpts.CXXOperatorNames = true;
-  PP = std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, SourceMgr,
-                                      HeaderInfo, ModLoader);
-
-  class RecordingPragmaHandler : public PragmaHandler {
-    std::vector<std::string> &Names;
-
-  public:
-    RecordingPragmaHandler(StringRef Name, std::vector<std::string> &Names)
-        : PragmaHandler(Name), Names(Names) {}
-
-    void HandlePragma(Preprocessor &, PragmaIntroducer, Token &) override {
-      Names.push_back(getName().str());
-    }
-  };
-
-  std::vector<std::string> Names;
-  for (StringRef Name : {"const", "__const__", "and", "or"})
-    PP->AddPragmaHandler(new RecordingPragmaHandler(Name, Names));
-  PP->AddPragmaHandler("test", new RecordingPragmaHandler("__const__", Names));
-  PP->AddPragmaHandler("test", new RecordingPragmaHandler("or", Names));
-
-  Lex("#pragma const\n"
-      "#pragma __const__\n"
-      "#pragma test __const__\n"
-      "#pragma and\n"
-      "#pragma or\n"
-      "#pragma test or\n"
-      "#pragma &&\n"
-      "#pragma test ||\n");
-  EXPECT_THAT(
-      Names, ElementsAre("const", "__const__", "__const__", "and", "or", "or"));
-}
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
   std::vector<tok::TokenKind> ExpectedTokens;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fms-extensions -verify=expected,c %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -fms-extensions -verify=expected,cxx %s
+// RUN: %clang_cc1 -fsyntax-only -fms-extensions -verify=expected,c %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -fms-extensions -verify=expected,cxx %s 2>&1 | FileCheck %s
 
 // Nested _Pragma annotations must be rejected without querying identifier
 // information on the annotation token. Existing recovery can leave
@@ -72,15 +72,42 @@ __pragma(clang __debug macro _Pragma("weak foobar")) // expected-warning {{missi
 __pragma(clang __debug module_lookup _Pragma("weak foobar")) // expected-warning {{missing argument to debug command 'module_lookup'}}
 __pragma(clang __debug modules _Pragma("weak foobar")) // expected-warning {{missing argument to debug command 'modules'}}
 
-// Macro names may be keywords.
+// Keywords and aliases must retain their original macro names.
+#define const 1
+#pragma clang __debug macro const
+// CHECK-LABEL: MacroState {{.*}} const{{$}}
+// CHECK: #define <macro> 1{{$}}
+#undef const
+
+#define __const__ 2
+#pragma clang __debug macro __const__
+// CHECK-LABEL: MacroState {{.*}} __const__{{$}}
+// CHECK: #define <macro> 2{{$}}
+#undef __const__
+
+// C++ operator keywords carry identifier information despite punctuator kinds.
+#define and 3
+#pragma clang __debug macro and
+// CHECK-LABEL: MacroState {{.*}} and{{$}}
+// CHECK: #define <macro> 3{{$}}
+#undef and
+
+#define or 4
+#pragma clang __debug macro or
+// CHECK-LABEL: MacroState {{.*}} or{{$}}
+// CHECK: #define <macro> 4{{$}}
+#undef or
+
+// A self-referential macro preserves the keyword through __pragma expansion.
 #define int int
 __pragma(clang __debug macro int)
+// CHECK-LABEL: MacroState {{.*}} int{{$}}
+// CHECK: #define <macro> int{{$}}
 #undef int
 
-// MS extensions also permit C++ operator names as macro names.
-#define and 1
-#pragma clang __debug macro and
-#undef and
+// Punctuators must not be treated as operator keyword names.
+#pragma clang __debug macro && // expected-warning {{missing argument to debug command 'macro'}}
+#pragma clang __debug macro || // expected-warning {{missing argument to debug command 'macro'}}
 
 int after_pragmas;
 int use_after_pragmas(void) { return after_pragmas; }
