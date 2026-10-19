@@ -308,7 +308,8 @@ bool AGXDAGToDAGISel::SelectDeviceAddr(SDValue Addr, unsigned ElemLog2,
         Scale = Log2_64(C->getZExtValue());
         O = O.getOperand(0);
       }
-      if (Scale < ElemLog2 || Scale > ElemLog2 + 3)
+      // The shift field is 0 to 2: applegpu notes that 3 may act as 2.
+      if (Scale < ElemLog2 || Scale > ElemLog2 + 2)
         continue;
       bool IsSExt = O.getOpcode() == ISD::SIGN_EXTEND;
       if (!IsSExt && O.getOpcode() != ISD::ZERO_EXTEND)

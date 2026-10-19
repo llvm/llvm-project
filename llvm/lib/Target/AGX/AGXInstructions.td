@@ -388,6 +388,21 @@ def : Pat<(i32 (sext_inreg i32:$a, i1)),
           (ISUB_I32 0, (i32 0), 0, (BITOP_I32 TT_AND, 0, $a, 0, (i32 1)), 0)>;
 def : Pat<(i16 (sext_inreg i16:$a, i1)),
           (ISUB_I16 0, (i16 0), 0, (BITOP_I16 TT_AND, 0, $a, 0, (i16 1)), 0)>;
+// 64-bit: the low half, sign-extended as above, then to 64 bits.
+def : Pat<(i64 (sext_inreg i64:$a, i16)),
+          (IADD_I64_FROM32 MOD_SX,
+            (IADD_I32_FROM16 MOD_SX,
+              (i16 (EXTRACT_SUBREG (i32 (EXTRACT_SUBREG $a, sub0)), lo16)), 0,
+              (i16 0), 0), 0, (i32 0), 0)>;
+def : Pat<(i64 (sext_inreg i64:$a, i8)),
+          (IADD_I64_FROM32 MOD_SX,
+            (ASR_I32 0, (BFI_I32 0, (i32 0), 0, (i32 (EXTRACT_SUBREG $a, sub0)),
+                                 0, (i32 24), 0), 0, (i32 24)), 0, (i32 0), 0)>;
+def : Pat<(i64 (sext_inreg i64:$a, i1)),
+          (IADD_I64_FROM32 MOD_SX,
+            (ISUB_I32 0, (i32 0), 0,
+              (BITOP_I32 TT_AND, 0, (i32 (EXTRACT_SUBREG $a, sub0)), 0, (i32 1)), 0),
+            0, (i32 0), 0)>;
 
 // Count leading zeros: 31 - ffs(x); ffs(0) is -1.
 def : Pat<(i32 (ctlz AGXIntSrc32:$a)),
