@@ -64,7 +64,7 @@ define void @scatter_v12i32_dword_index(<12 x i32> %val, ptr %base, <12 x i32> %
 define <12 x i32> @gather_v12i32_qword_index(ptr %base, <12 x i64> %idx, <12 x i1> %mask) {
 ; FEATURE-LABEL: 'gather_v12i32_qword_index'
 ; FEATURE-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <12 x i64> %idx
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:37 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <12 x i32> %v
 ;
 ; GENERIC-LABEL: 'gather_v12i32_qword_index'

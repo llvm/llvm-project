@@ -29,7 +29,7 @@ define <8 x i32> @gather_v8i32_dword_index(ptr %base, <8 x i32> %idx, <8 x i1> %
 ;
 ; NOVL-LABEL: 'gather_v8i32_dword_index'
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; NOVL-ASM-LABEL: gather_v8i32_dword_index:
@@ -47,7 +47,7 @@ define void @scatter_v8i32_dword_index(<8 x i32> %val, ptr %base, <8 x i32> %idx
 ;
 ; NOVL-LABEL: 'scatter_v8i32_dword_index'
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> %mask)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> %mask)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx
@@ -78,11 +78,11 @@ define <4 x i64> @gather_v4i64_qword_index(<4 x ptr> %ptrs, <4 x i1> %mask) {
 ; Index alone already fills a zmm, so no AVX512VL is needed and the cost holds.
 define <8 x i32> @gather_v8i32_qword_index(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; VL-LABEL: 'gather_v8i32_qword_index'
-; VL-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
+; VL-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; VL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; NOVL-LABEL: 'gather_v8i32_qword_index'
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; NOVL-ASM-LABEL: gather_v8i32_qword_index:
@@ -94,11 +94,11 @@ define <8 x i32> @gather_v8i32_qword_index(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; Already full width: unaffected either way.
 define <16 x i32> @gather_v16i32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 ; VL-LABEL: 'gather_v16i32'
-; VL-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; VL-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; VL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; NOVL-LABEL: 'gather_v16i32'
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
   %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
@@ -118,7 +118,7 @@ define <3 x i32> @gather_v3i32_qword_index(ptr %base, <3 x i64> %idx, <3 x i1> %
 ;
 ; NOVL-LABEL: 'gather_v3i32_qword_index'
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v = call <3 x i32> @llvm.masked.gather.v3i32.v3p0(<3 x ptr> align 4 %ptrs, <3 x i1> %mask, <3 x i32> poison)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <3 x i32> @llvm.masked.gather.v3i32.v3p0(<3 x ptr> align 4 %ptrs, <3 x i1> %mask, <3 x i32> poison)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <3 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx
@@ -129,12 +129,12 @@ define <3 x i32> @gather_v3i32_qword_index(ptr %base, <3 x i64> %idx, <3 x i1> %
 define void @scatter_v3i32_qword_index(<3 x i32> %val, ptr %base, <3 x i64> %idx, <3 x i1> %mask) {
 ; VL-LABEL: 'scatter_v3i32_qword_index'
 ; VL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx
-; VL-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.scatter.v3i32.v3p0(<3 x i32> %val, <3 x ptr> align 4 %ptrs, <3 x i1> %mask)
+; VL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v3i32.v3p0(<3 x i32> %val, <3 x ptr> align 4 %ptrs, <3 x i1> %mask)
 ; VL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOVL-LABEL: 'scatter_v3i32_qword_index'
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.masked.scatter.v3i32.v3p0(<3 x i32> %val, <3 x ptr> align 4 %ptrs, <3 x i1> %mask)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: call void @llvm.masked.scatter.v3i32.v3p0(<3 x i32> %val, <3 x ptr> align 4 %ptrs, <3 x i1> %mask)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx

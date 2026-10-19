@@ -7349,10 +7349,10 @@ X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
     return std::nullopt;
   // Each value sits on the intended side of the measured flip: above it where
   // the scalarised lowering wins (all i64 shapes, and v4i32/v4f32 scatter),
-  // below it where the masked operation does. The four-lane scatter rows hold
-  // 20 against a break-even of 19, so the qword spelling prices at 19 and not
-  // under it. i64 sits above f64 by design -- its scalarised alternative runs
-  // on the integer pipes, a much faster baseline than f64 on the FP pipes
+  // below it where the masked operation does. Znver4Model prices the two
+  // four-lane scatter rows alike, so both index spellings sit on the stored
+  // 20. i64 sits above f64 by design -- its scalarised alternative runs on
+  // the integer pipes, a much faster baseline than f64 on the FP pipes
   // (cf. llvm/llvm-project#198850).
   static const CostTblEntry ZenGatherTotalTable[] = {
       {ISD::LOAD, MVT::v4i32, 12},  {ISD::LOAD, MVT::v8i32, 25},
@@ -7735,9 +7735,10 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
       // sixteen that compile to one instruction.
       //
       // Every row from here up holds the live lanes in one register's worth, so
-      // take the cheapest rather than the narrowest. The rows are measured, so
-      // nothing orders their premiums. Charging the narrowest would price a
-      // subset of lanes above the superset it belongs to.
+      // take the cheapest rather than the narrowest. The rows are measured and
+      // need not grow with the row: the four-lane scatter premium sits above
+      // the eight-lane one. Charging the narrowest would price a subset of
+      // lanes above the superset it belongs to.
       std::optional<InstructionCost::CostType> Margin;
       for (unsigned NativeVF = std::max(FitVF, 1u); NativeVF <= ShapeVF;
            NativeVF *= 2) {
