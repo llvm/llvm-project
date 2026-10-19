@@ -48,7 +48,3 @@ define amdgpu_kernel void @fuzz_kernel(ptr addrspace(1) %in) {
   store i64 %xor, ptr addrspace(1) null, align 8
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

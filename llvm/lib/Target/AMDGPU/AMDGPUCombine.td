@@ -206,14 +206,13 @@ def zext_of_shift_amount_combines : GICombineGroup<[
 
 // Fold (xor x, x) -> 0 and (sub x, x) -> 0.
 //
-// Like same_val_zero, but builds the 0 straight into $dst instead of a new
-// temp reg + COPY. We're past RegBankSelect here, so a new temp reg would
-// have no register bank and fail selection later.
+// Like same_val_zero, but keeps $dst's register bank. We're past RegBankSelect
+// here, so the temp reg that one creates would have no bank and fail selection.
 def same_val_zero_regbank_aware : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_XOR, G_SUB):$dst,
-    [{ return matchSameValZeroRegBankAware(*${dst}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${dst}, ${matchinfo}); }])>;
+  (match (same_val_zero_frags $dst, $x),
+    [{ return matchSameValZeroRegBankAware(${dst}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnMO(${dst}, ${matchinfo}); }])>;
 
 def minmax3_matchdata : GIDefMatchData<"MinMaxToMinMax3MatchInfo">;
 
