@@ -3461,6 +3461,12 @@ public:
     return false;
   }
 
+  /// Return true if (fp_round (fp_round x)) should be folded into a single
+  /// fp_round from \p SrcVT to \p DestVT.
+  virtual bool shouldFoldFPRoundPair(EVT DestVT, EVT SrcVT) const {
+    return true;
+  }
+
   /// Return true if an fpext operation input to an \p Opcode operation is free
   /// (for instance, because half-precision floating-point numbers are
   /// implicitly extended to float-precision) for an FMA instruction.

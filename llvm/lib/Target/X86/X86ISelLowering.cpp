@@ -22848,15 +22848,6 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::FP_ROUND, DL, VT, F32, Rnd);
   }
 
-  // Otherwise round to f32 inexact-to-odd first, so that the final rounding
-  // gives the same result as rounding f64 to f16 directly.
-  if (VT == MVT::f16 && SVT == MVT::f64 && !IsStrict && !Subtarget.hasFP16() &&
-      Subtarget.hasF16C()) {
-    SDValue Rod = expandRoundInexactToOdd(MVT::f32, In, DL, DAG);
-    return DAG.getNode(ISD::FP_ROUND, DL, VT, Rod,
-                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  }
-
   if (VT == MVT::f16 && (SVT == MVT::f64 || SVT == MVT::f32) &&
       !Subtarget.hasFP16() && (SVT == MVT::f64 || !Subtarget.hasF16C())) {
     if (!Subtarget.getTargetTriple().isOSDarwin())
@@ -36778,6 +36769,14 @@ bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   unsigned NumBits1 = VT1.getSizeInBits();
   unsigned NumBits2 = VT2.getSizeInBits();
   return NumBits1 > NumBits2;
+}
+
+bool X86TargetLowering::shouldFoldFPRoundPair(EVT DestVT, EVT SrcVT) const {
+  // Without FP16, f64->f16 is a libcall, but F16C rounds f64->f32->f16 in two
+  // instructions.
+  return DestVT.getScalarType() != MVT::f16 ||
+         SrcVT.getScalarType() != MVT::f64 || !Subtarget.hasF16C() ||
+         Subtarget.hasFP16();
 }
 
 bool X86TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {

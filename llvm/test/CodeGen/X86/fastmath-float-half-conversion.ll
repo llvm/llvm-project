@@ -3,39 +3,14 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s --check-prefixes=ALL,AVX
 
 define zeroext i16 @test1_fast(double %d) #0 {
-; F16C-LABEL: test1_fast:
-; F16C:       # %bb.0: # %entry
-; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; F16C-NEXT:    vmovd %xmm1, %eax
-; F16C-NEXT:    leal 1(%rax), %ecx
-; F16C-NEXT:    leal -1(%rax), %edx
-; F16C-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
-; F16C-NEXT:    # xmm2 = mem[0,0]
-; F16C-NEXT:    vandps %xmm2, %xmm0, %xmm3
-; F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vandps %xmm2, %xmm1, %xmm2
-; F16C-NEXT:    vucomisd %xmm2, %xmm3
-; F16C-NEXT:    cmoval %ecx, %edx
-; F16C-NEXT:    vucomisd %xmm1, %xmm0
-; F16C-NEXT:    sete %cl
-; F16C-NEXT:    testb $1, %al
-; F16C-NEXT:    setne %sil
-; F16C-NEXT:    orb %cl, %sil
-; F16C-NEXT:    cmovnel %eax, %edx
-; F16C-NEXT:    vmovd %edx, %xmm0
-; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
-; F16C-NEXT:    retq
-;
-; AVX-LABEL: test1_fast:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    callq __truncdfhf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX-NEXT:    popq %rcx
-; AVX-NEXT:    retq
+; ALL-LABEL: test1_fast:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    callq __truncdfhf2@PLT
+; ALL-NEXT:    vpextrw $0, %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    popq %rcx
+; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
   ret i16 %0
@@ -58,39 +33,14 @@ entry:
 }
 
 define zeroext i16 @test1(double %d) #1 {
-; F16C-LABEL: test1:
-; F16C:       # %bb.0: # %entry
-; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; F16C-NEXT:    vmovd %xmm1, %eax
-; F16C-NEXT:    leal 1(%rax), %ecx
-; F16C-NEXT:    leal -1(%rax), %edx
-; F16C-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
-; F16C-NEXT:    # xmm2 = mem[0,0]
-; F16C-NEXT:    vandps %xmm2, %xmm0, %xmm3
-; F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vandps %xmm2, %xmm1, %xmm2
-; F16C-NEXT:    vucomisd %xmm2, %xmm3
-; F16C-NEXT:    cmoval %ecx, %edx
-; F16C-NEXT:    vucomisd %xmm1, %xmm0
-; F16C-NEXT:    sete %cl
-; F16C-NEXT:    testb $1, %al
-; F16C-NEXT:    setne %sil
-; F16C-NEXT:    orb %cl, %sil
-; F16C-NEXT:    cmovnel %eax, %edx
-; F16C-NEXT:    vmovd %edx, %xmm0
-; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
-; F16C-NEXT:    retq
-;
-; AVX-LABEL: test1:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    callq __truncdfhf2@PLT
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX-NEXT:    popq %rcx
-; AVX-NEXT:    retq
+; ALL-LABEL: test1:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    callq __truncdfhf2@PLT
+; ALL-NEXT:    vpextrw $0, %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    popq %rcx
+; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
   ret i16 %0
@@ -202,35 +152,12 @@ define <4 x half> @fptrunc_afn_v4f64(<4 x double> %d) #0 {
 }
 
 define half @fptrunc_contract(double %d) #0 {
-; F16C-LABEL: fptrunc_contract:
-; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; F16C-NEXT:    vmovd %xmm1, %eax
-; F16C-NEXT:    leal 1(%rax), %ecx
-; F16C-NEXT:    leal -1(%rax), %edx
-; F16C-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
-; F16C-NEXT:    # xmm2 = mem[0,0]
-; F16C-NEXT:    vandps %xmm2, %xmm0, %xmm3
-; F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vandps %xmm2, %xmm1, %xmm2
-; F16C-NEXT:    vucomisd %xmm2, %xmm3
-; F16C-NEXT:    cmoval %ecx, %edx
-; F16C-NEXT:    vucomisd %xmm1, %xmm0
-; F16C-NEXT:    sete %cl
-; F16C-NEXT:    testb $1, %al
-; F16C-NEXT:    setne %sil
-; F16C-NEXT:    orb %cl, %sil
-; F16C-NEXT:    cmovnel %eax, %edx
-; F16C-NEXT:    vmovd %edx, %xmm0
-; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    retq
-;
-; AVX-LABEL: fptrunc_contract:
-; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    callq __truncdfhf2@PLT
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    retq
+; ALL-LABEL: fptrunc_contract:
+; ALL:       # %bb.0:
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    callq __truncdfhf2@PLT
+; ALL-NEXT:    popq %rax
+; ALL-NEXT:    retq
   %r = fptrunc contract double %d to half
   ret half %r
 }
@@ -238,24 +165,7 @@ define half @fptrunc_contract(double %d) #0 {
 define half @fptrunc_contract_twostep(double %d) #0 {
 ; F16C-LABEL: fptrunc_contract_twostep:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
-; F16C-NEXT:    vmovd %xmm1, %eax
-; F16C-NEXT:    leal 1(%rax), %ecx
-; F16C-NEXT:    leal -1(%rax), %edx
-; F16C-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
-; F16C-NEXT:    # xmm2 = mem[0,0]
-; F16C-NEXT:    vandps %xmm2, %xmm0, %xmm3
-; F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vandps %xmm2, %xmm1, %xmm2
-; F16C-NEXT:    vucomisd %xmm2, %xmm3
-; F16C-NEXT:    cmoval %ecx, %edx
-; F16C-NEXT:    vucomisd %xmm1, %xmm0
-; F16C-NEXT:    sete %cl
-; F16C-NEXT:    testb $1, %al
-; F16C-NEXT:    setne %sil
-; F16C-NEXT:    orb %cl, %sil
-; F16C-NEXT:    cmovnel %eax, %edx
-; F16C-NEXT:    vmovd %edx, %xmm0
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
