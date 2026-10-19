@@ -31,18 +31,17 @@
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
-
 // A pipe only goes one way, so these are the only modes popen accepts.
-constexpr FileMode VALID_POPEN_MODES[] = {FileMode("r"), FileMode("w"),
-                                          FileMode("re"), FileMode("we")};
+static constexpr FileMode VALID_POPEN_MODES[] = {
+    FileMode("r"), FileMode("w"), FileMode("re"), FileMode("we")};
 
 // TODO: Simplify this with a cpp::find (or similar) helper in
 // src/__support/CPP/algorithm.h once one exists.
-bool is_valid_popen_mode(const FileMode &file_mode) {
+static bool is_valid_popen_mode(const FileMode &file_mode) {
   for (const FileMode &valid_mode : VALID_POPEN_MODES)
     if (file_mode == valid_mode)
       return true;
@@ -50,7 +49,7 @@ bool is_valid_popen_mode(const FileMode &file_mode) {
 }
 
 // Clears FD_CLOEXEC on |fd|, leaving its other descriptor flags unchanged.
-ErrorOr<int> clear_close_on_exec(int fd) {
+static ErrorOr<int> clear_close_on_exec(int fd) {
   ErrorOr<int> flags = linux_syscalls::fcntl(fd, F_GETFD);
   if (!flags)
     return flags;
@@ -61,15 +60,16 @@ ErrorOr<int> clear_close_on_exec(int fd) {
 // Makes |fd| available as |target_fd| in a process that is about to exec.
 // Both ends of the pipe are created close-on-exec, so if |fd| is already
 // |target_fd| its FD_CLOEXEC flag has to be cleared instead.
-bool move_fd_for_exec(int fd, int target_fd) {
+static bool duplicate_fd_for_exec(int fd, int target_fd) {
   if (fd == target_fd)
     return clear_close_on_exec(fd).has_value();
   return linux_syscalls::dup2(fd, target_fd).has_value();
 }
 
-} // namespace
-
 LLVM_LIBC_FUNCTION(::FILE *, popen, (const char *command, const char *mode)) {
+  LIBC_CRASH_ON_NULLPTR(command);
+  LIBC_CRASH_ON_NULLPTR(mode);
+
   const FileMode file_mode(mode);
   if (!is_valid_popen_mode(file_mode)) {
     libc_errno = EINVAL;
@@ -78,7 +78,8 @@ LLVM_LIBC_FUNCTION(::FILE *, popen, (const char *command, const char *mode)) {
   const bool read = file_mode.is_read();
 
   // Both ends start out close-on-exec so that no other child process can
-  // inherit them. The child moves its end onto stdin or stdout before exec.
+  // inherit them. The child duplicates its end onto stdin or stdout before
+  // exec.
   int pipe_fds[2];
   if (ErrorOr<int> res = linux_syscalls::pipe2(pipe_fds, O_CLOEXEC); !res) {
     libc_errno = res.error();
@@ -103,7 +104,7 @@ LLVM_LIBC_FUNCTION(::FILE *, popen, (const char *command, const char *mode)) {
   PopenFile::lock_popen_list();
   ErrorOr<pid_t> fork_result = shell_fork(command, [&] {
     PopenFile::close_popen_list_fds_unlocked();
-    return move_fd_for_exec(child_fd, child_target_fd);
+    return duplicate_fd_for_exec(child_fd, child_target_fd);
   });
   linux_syscalls::close(child_fd);
 

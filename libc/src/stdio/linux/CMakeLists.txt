@@ -67,6 +67,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.__support.OSUtil.linux.shell_fork
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.dup2
@@ -88,6 +89,7 @@ add_entrypoint_object(
     libc.src.__support.File.linux.popen_file
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.__support.OSUtil.linux.shell_fork
 )
 

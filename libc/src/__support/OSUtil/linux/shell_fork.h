@@ -32,6 +32,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// TODO: Move SHELL_PATH into its own header so it can be shared with functions
+// like execvp.
 LIBC_INLINE_VAR constexpr char SHELL_PATH[] = "/bin/sh";
 
 // Work to do in the child process after forking and before executing the
@@ -39,7 +41,7 @@ LIBC_INLINE_VAR constexpr char SHELL_PATH[] = "/bin/sh";
 using ShellChildSetup = cpp::function<bool()>;
 
 // Forks a child process which runs |setup| and then executes
-// "sh -c |command|" with the current environment. If |setup| or the exec
+// "sh -c -- |command|" with the current environment. If |setup| or the exec
 // fails, the child exits with status 127. Returns the child's pid in the
 // parent.
 LIBC_INLINE ErrorOr<pid_t> shell_fork(const char *command,
@@ -54,7 +56,7 @@ LIBC_INLINE ErrorOr<pid_t> shell_fork(const char *command,
     // Error checking isn't helpful since this is the forked process, so we
     // can't set errno. All we can meaningfully do is exit with status 127.
     if (setup())
-      linux_syscalls::execle(SHELL_PATH, "sh", "-c", command, 0, environ);
+      linux_syscalls::execle(SHELL_PATH, "sh", "-c", "--", command, 0, environ);
     internal::exit(127);
   }
 

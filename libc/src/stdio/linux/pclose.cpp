@@ -21,10 +21,13 @@
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pclose, (::FILE * stream)) {
+  LIBC_CRASH_ON_NULLPTR(stream);
+
   // Passing a stream that was not created by popen is undefined behavior.
   auto *file = reinterpret_cast<PopenFile *>(stream);
   const pid_t pid = file->get_pid();
