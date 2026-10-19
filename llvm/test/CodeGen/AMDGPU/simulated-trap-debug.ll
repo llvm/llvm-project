@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck %s
-; RUN: llc -global-isel -global-isel-abort=1 -mtriple=amdgpu11.00-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -global-isel -global-isel-abort=1 -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck %s
 
 declare void @llvm.trap()
 
