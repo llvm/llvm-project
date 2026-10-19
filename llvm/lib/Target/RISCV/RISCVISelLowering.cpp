@@ -7907,6 +7907,7 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   SDValue Y = Op.getOperand(1);
 
   if (!VT.isVector()) {
+    assert(VT == MVT::f16 && "Unexpected scalar type");
     MVT XLenVT = Subtarget.getXLenVT();
 
     // If X is a nan, replace Y with X. If Y is a nan, replace X with Y. This
