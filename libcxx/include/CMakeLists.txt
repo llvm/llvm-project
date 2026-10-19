@@ -258,6 +258,7 @@ set(files
   __charconv/to_chars_result.h
   __charconv/traits.h
   __chrono/calendar.h
+  __chrono/clock_cast.h
   __chrono/concepts.h
   __chrono/convert_to_timespec.h
   __chrono/convert_to_tm.h
