@@ -278,6 +278,29 @@ set(CUSTOM_MULTI_VALUE_ARGS MULT_A MULT_B)
         self.assertIn("SING_A", ctx.learned_one_value)
         self.assertIn("MULT_A", ctx.learned_multi_value)
 
+    def test_llvm_libc_mode_prefixed_schema_learning(self):
+        """Verifies OVERLAY_<arg> and FULL_BUILD_<arg> variants are learned from LLVM_LIBC_*_ARGS."""
+        code = """
+set(LLVM_LIBC_COMMON_OPTIONAL_ARGS FULL_BUILD_ONLY OVERLAY_ONLY)
+set(LLVM_LIBC_OPTIONAL_ARGS NEED_MPFR)
+set(LLVM_LIBC_SINGLE_VALUE_ARGS SUITE)
+set(LLVM_LIBC_MULTI_VALUE_ARGS DEPENDS COMPILE_OPTIONS)
+"""
+        ctx = cmake_format.FormatterContext()
+        cmake_format.scan_dynamic_schemas(code, ctx=ctx)
+        self.assertIn("FULL_BUILD_ONLY", ctx.learned_options)
+        self.assertNotIn("OVERLAY_FULL_BUILD_ONLY", ctx.learned_options)
+        self.assertIn("NEED_MPFR", ctx.learned_options)
+        self.assertIn("OVERLAY_NEED_MPFR", ctx.learned_options)
+        self.assertIn("FULL_BUILD_NEED_MPFR", ctx.learned_options)
+        self.assertIn("SUITE", ctx.learned_one_value)
+        self.assertIn("OVERLAY_SUITE", ctx.learned_one_value)
+        self.assertIn("FULL_BUILD_SUITE", ctx.learned_one_value)
+        self.assertIn("OVERLAY_DEPENDS", ctx.learned_multi_value)
+        self.assertIn("FULL_BUILD_COMPILE_OPTIONS", ctx.learned_multi_value)
+        self.assertIn("OVERLAY_DEPENDS", ctx.list_keywords)
+        self.assertIn("FULL_BUILD_COMPILE_OPTIONS", ctx.list_keywords)
+
     def test_cache_variable_exclusion(self):
         """Verifies cache variable declarations like set(FOO "" CACHE STRING "...") are excluded."""
         code = 'set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Docstring")\n'

@@ -1789,8 +1789,12 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     cleanupDominator = Builder.CreateUnreachable();
   }
 
-  assert((allocSize == allocSizeWithoutCookie) ==
-         CalculateCookiePadding(*this, E).isZero());
+  // Without a cookie the two sizes must match. With a cookie they usually
+  // differ, but on overflow the allocation size is all-ones, which can
+  // coincide with the size without the cookie.
+  assert(allocSize == llvm::Constant::getAllOnesValue(SizeTy) ||
+         ((allocSize == allocSizeWithoutCookie) ==
+          CalculateCookiePadding(*this, E).isZero()));
   if (allocSize != allocSizeWithoutCookie) {
     assert(E->isArray());
     allocation = CGM.getCXXABI().InitializeArrayCookie(
