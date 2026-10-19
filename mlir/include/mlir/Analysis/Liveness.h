@@ -78,7 +78,7 @@ public:
   bool isDeadAfter(Value value, Operation *operation) const;
 
   /// Dumps the liveness information in a human readable format.
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
   /// Dumps the liveness information to the given stream.
   void print(raw_ostream &os) const;

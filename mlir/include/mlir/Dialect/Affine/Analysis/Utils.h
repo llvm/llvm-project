@@ -264,7 +264,7 @@ public:
 
   void print(raw_ostream &os) const;
 
-  void dump() const { print(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 
   /// The block for which this graph is created to perform fusion.
   Block &block;
@@ -372,7 +372,7 @@ struct ComputationSliceState {
   /// If the validity cannot be determined, returns std::nullopt.
   std::optional<bool> isSliceValid() const;
 
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   /// Fast check to determine if the computation slice is maximal. Returns true

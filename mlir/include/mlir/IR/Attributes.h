@@ -63,7 +63,7 @@ public:
   /// without a trailing colon type if it has one.
   void print(raw_ostream &os, bool elideType = false) const;
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
   /// Print the attribute without dialect wrapping.
   void printStripped(raw_ostream &os) const;

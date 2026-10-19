@@ -110,7 +110,7 @@ public:
   IntegerRelation getAsRelation() const;
 
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   /// Assert that the MAF is consistent.
@@ -221,7 +221,7 @@ public:
   PWMAFunction unionLexMax(const PWMAFunction &func);
 
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   /// Return a function defined on the union of the domains of `this` and

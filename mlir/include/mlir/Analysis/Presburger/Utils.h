@@ -182,7 +182,7 @@ public:
   removeDuplicateDivs(llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   /// Each row of the Matrix represents a single division dividend. The

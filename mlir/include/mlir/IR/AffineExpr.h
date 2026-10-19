@@ -87,7 +87,7 @@ public:
   AffineExprKind getKind() const;
 
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
   /// Returns true if this expression is made out of only symbols and
   /// constants, i.e., it does not involve dimensional identifiers.

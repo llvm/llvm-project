@@ -198,7 +198,7 @@ public:
 
   // Prints affine map to 'os'.
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
   unsigned getNumDims() const;
   unsigned getNumSymbols() const;

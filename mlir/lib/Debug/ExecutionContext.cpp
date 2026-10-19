@@ -42,6 +42,11 @@ void ActionActiveStack::print(raw_ostream &os, bool withContext) const {
   }
 }
 
+void ActionActiveStack::dump() const {
+  print(llvm::errs(), /*withContext=*/true);
+  llvm::errs() << "\n";
+}
+
 //===----------------------------------------------------------------------===//
 // ExecutionContext
 //===----------------------------------------------------------------------===//

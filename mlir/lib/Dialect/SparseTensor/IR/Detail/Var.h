@@ -134,7 +134,7 @@ public:
   std::string str() const;
   void print(llvm::raw_ostream &os) const;
   void print(AsmPrinter &printer) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 };
 static_assert(IsZeroCostAbstraction<Var>);
 

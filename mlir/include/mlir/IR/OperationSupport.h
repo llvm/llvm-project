@@ -541,7 +541,7 @@ public:
   StringAttr getIdentifier() const { return getImpl()->getName(); }
 
   void print(raw_ostream &os) const;
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
