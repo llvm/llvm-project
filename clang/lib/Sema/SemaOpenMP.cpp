@@ -927,11 +927,31 @@ public:
   void setRegionHasOrderConcurrent(bool HasOrderConcurrent) {
     getTopOfStack().RegionHasOrderConcurrent = HasOrderConcurrent;
   }
-  /// Returns true, if parent region is order (has associated
-  /// 'order' clause), false - otherwise.
-  bool isParentOrderConcurrent() const {
-    if (const SharingMapTy *Parent = getSecondOnStackOrNull())
-      return Parent->RegionHasOrderConcurrent;
+  /// Returns true if the nearest enclosing directive that is not a
+  /// loop-transforming construct has an order(concurrent) clause.
+  bool isEnclosingOrderConcurrent() const {
+    for (const_iterator I = begin() + std::min<size_t>(1, getStackSize()),
+                        E = end();
+         I != E; ++I) {
+      if (I->RegionHasOrderConcurrent)
+        return true;
+      if (!isOpenMPLoopTransformationDirective(I->Directive))
+        return false;
+    }
+    return false;
+  }
+  /// Returns true if the nearest enclosing directive that is not a
+  /// loop-transforming or ordered simd construct is a simd directive.
+  bool isInSimdRegion() const {
+    for (const_iterator I = begin() + std::min<size_t>(1, getStackSize()),
+                        E = end();
+         I != E; ++I) {
+      if (isOpenMPSimdDirective(I->Directive))
+        return true;
+      if (!isOpenMPLoopTransformationDirective(I->Directive) &&
+          I->Directive != OMPD_ordered_blockassoc)
+        return false;
+    }
     return false;
   }
   /// Marks current region as nowait (it has a 'nowait' clause).
@@ -5386,17 +5406,23 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
   llvm::omp::Version OMPVersion = SemaRef.getLangOpts().getOpenMPVersion();
 
-  if (OMPVersion >= 50 && Stack->isParentOrderConcurrent() &&
+  if (OMPVersion >= 50 && Stack->isEnclosingOrderConcurrent() &&
       !isOpenMPOrderConcurrentNestableDirective(CurrentRegion,
                                                 SemaRef.LangOpts)) {
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
         << getOpenMPDirectiveName(CurrentRegion, OMPVersion);
     return true;
   }
-  if (isOpenMPSimdDirective(ParentRegion) &&
+  // A construct nested in a loop-transforming or ordered construct is still
+  // encountered during execution of an enclosing simd region.
+  if (Stack->isInSimdRegion() &&
       ((OMPVersion <= 45 && CurrentRegion != OMPD_ordered_blockassoc) ||
        (OMPVersion >= 50 &&
-        !isOpenMPSimdizableDirective(CurrentRegion, SemaRef.LangOpts)))) {
+        !isOpenMPSimdizableDirective(CurrentRegion, SemaRef.LangOpts) &&
+        // The loop construct is simdizable if and only if its binding region
+        // is not defined: no bind clause, or bind(thread).
+        !(CurrentRegion == OMPD_loop &&
+          (BindKind == OMPC_BIND_unknown || BindKind == OMPC_BIND_thread))))) {
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside a simd region.
     // OpenMP [2.8.1,simd Construct, Restrictions]

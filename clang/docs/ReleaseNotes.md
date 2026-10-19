@@ -1263,6 +1263,14 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.
+- The `loop` construct without a `bind` clause or with `bind(thread)` is now
+  allowed inside a `simd` region for OpenMP 5.0 or later, as the OpenMP
+  specification permits.
+- Constructs nested inside a loop-transforming construct are now checked
+  against the restrictions of an enclosing `simd` region or of a loop with an
+  `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
+  inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
+  `order(concurrent)`) were incorrectly accepted.
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings
