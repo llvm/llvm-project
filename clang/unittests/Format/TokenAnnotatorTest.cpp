@@ -697,19 +697,23 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   Style.AttributeMacros = {"AttributeA", "AttributeB"};
   Tokens = annotate("enum class AttributeA AttributeB Enum {};", Style);
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_AttributeMacro);
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_EnumLBrace);
   EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_EnumRBrace);
 
   Tokens = annotate("enum class AttributeA [[nodiscard]] AttributeB Enum {};",
                     Style);
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
-  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[3], tok::l_square, TT_AttributeLSquare);
-  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_EnumLBrace);
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate(
+      "enum class AttributeA __attribute__((nodiscard)) AttributeB Enum {};",
+      Style);
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_EnumRBrace);
 
   Tokens = annotate("enum __attribute__((deprecated)) Foo {};");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;

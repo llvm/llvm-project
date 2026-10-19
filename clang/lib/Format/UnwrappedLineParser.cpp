@@ -3947,8 +3947,10 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     }
     // We can have macros or attributes in between 'enum' and the enum name.
-    if (FormatTok->is(tok::l_paren))
+    if (FormatTok->is(tok::l_paren)) {
       parseParens();
+      continue;
+    }
     if (FormatTok->is(tok::identifier)) {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate
