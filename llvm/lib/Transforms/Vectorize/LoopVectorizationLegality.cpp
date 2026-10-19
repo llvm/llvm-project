@@ -729,7 +729,6 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
 bool LoopVectorizationLegality::addConditionalInduction(
     PHINode *Phi, const ConditionalInductionDescriptor &CondID) {
-  ConditionalInductions[Phi] = CondID;
   DenseMap<Value *, const SCEVAddRecExpr *> CompressedPtrsForCondID;
   if (!collectCompressedPtrs(CompressedPtrsForCondID, *TheLoop, CondID,
                              *PSE.getSE())) {
@@ -738,6 +737,8 @@ bool LoopVectorizationLegality::addConditionalInduction(
         "UnsupportedConditionalInductionUse", ORE, TheLoop);
     return false;
   }
+
+  ConditionalInductions[Phi] = CondID;
 
   for (auto [Ptr, PtrAddRec] : CompressedPtrsForCondID) {
     LLVM_DEBUG(dbgs() << "LV: Found compressed pointer: " << *Ptr << '\n');

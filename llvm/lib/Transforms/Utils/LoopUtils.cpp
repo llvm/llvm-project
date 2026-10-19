@@ -2498,6 +2498,8 @@ bool llvm::collectCompressedPtrs(
     DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
     const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
   assert(L.isInnermost() && "Expected innermost loop!");
+
+  const DataLayout &DL = SE.getDataLayout();
   const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
   ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
 
@@ -2522,10 +2524,13 @@ bool llvm::collectCompressedPtrs(
     return PtrAddRec;
   };
 
-  SmallSetVector<Use *, 16> Worklist;
-  Worklist.insert_range(make_pointer_range(CondID.getHeaderPHI()->uses()));
-  for (unsigned I = 0; I < Worklist.size(); ++I) {
-    Use *U = Worklist[I];
+  SmallPtrSet<Use *, 16> Seen;
+  SmallVector<Use *> Worklist(
+      make_pointer_range(CondID.getHeaderPHI()->uses()));
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    if (!Seen.insert(U).second)
+      continue;
 
     auto *UserI = cast<Instruction>(U->getUser());
     // Disallow out of loop users. TODO: This could be relaxed if the loop
@@ -2544,12 +2549,17 @@ bool llvm::collectCompressedPtrs(
       if (SI && SI->getValueOperand() == CurrentVal)
         return false;
 
+      Type *AccessTy = getLoadStoreType(UserI);
+
+      // Disallow loads/stores of irregular types (like i4).
+      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+        return false;
+
       Value *Ptr = getLoadStorePointerOperand(UserI);
-      const SCEVAddRecExpr *PtrAddRec =
-          GetCompressedPtrSCEV(Ptr, getLoadStoreType(UserI));
+      const SCEVAddRecExpr *PtrAddRec = GetCompressedPtrSCEV(Ptr, AccessTy);
       if (!PtrAddRec)
         return false;
-      CompressedPtrs.insert({Ptr, PtrAddRec});
+      CompressedPtrs.try_emplace(Ptr, PtrAddRec);
       continue;
     }
 
@@ -2566,7 +2576,7 @@ bool llvm::collectCompressedPtrs(
         find_singleton<Value>(UserI->operands(), LoopVariantOp) != CurrentVal)
       return false;
 
-    Worklist.insert_range(make_pointer_range(UserI->uses()));
+    append_range(Worklist, make_pointer_range(UserI->uses()));
   }
 
   return true;
