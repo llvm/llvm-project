@@ -45,6 +45,14 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
           std::move(*ErrorOrLiteralConverter));
     else
       return ErrorOrLiteralConverter.getError();
+
+    ErrorOrLiteralConverter =
+        llvm::TextEncodingConverter::create(TE.LiteralEncoding, UTF8);
+    if (ErrorOrLiteralConverter)
+      TE.FromLiteralEncodingConverter = std::make_unique<TextEncodingConverter>(
+          std::move(*ErrorOrLiteralConverter));
+    else
+      return ErrorOrLiteralConverter.getError();
   }
 
   if (TInfo.getDefaultOrdinaryLiteralEncoding() == UTF8)
