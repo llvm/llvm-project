@@ -12,7 +12,7 @@ declare void @init_mem(ptr, i64);
 define i64 @read_only_early_exit_with_pseudo_probe() {
 ; CHECK-LABEL: LV: Checking a loop in 'read_only_early_exit_with_pseudo_probe'
 ; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-NEXT:  LV: We can vectorize this loop!
+; CHECK:       LV: VPlan created successfully. Loop can be vectorized.
 ; CHECK-NOT:   LV: Not vectorizing:
 entry:
   %p1 = alloca [1024 x i8]
@@ -47,7 +47,7 @@ loop.end:
 ;; condition load from being moved.
 define void @store_early_exit_with_pseudo_probe(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'store_early_exit_with_pseudo_probe'
-; CHECK:       LV: We can vectorize this loop!
+; CHECK:       LV: VPlan created successfully. Loop can be vectorized.
 ; CHECK-NOT:   LV: Not vectorizing:
 entry:
   br label %for.body
