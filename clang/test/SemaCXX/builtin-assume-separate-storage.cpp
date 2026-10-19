@@ -3,9 +3,8 @@
 
 // __builtin_assume_separate_storage is not constant-evaluable (#225335).
 
-constexpr int separated(int *a, int *b) { // ref-error {{constexpr function never produces a constant expression}}
-  __builtin_assume_separate_storage(a, b); // ref-note 2 {{subexpression not valid in a constant expression}} \
-                                           // expected-note {{subexpression not valid in a constant expression}}
+constexpr int separated(int *a, int *b) { // both-error {{constexpr function never produces a constant expression}}
+  __builtin_assume_separate_storage(a, b); // both-note 2 {{subexpression not valid in a constant expression}}
   return 0;
 }
 
