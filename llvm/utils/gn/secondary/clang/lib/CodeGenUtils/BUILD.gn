@@ -10,12 +10,13 @@ static_library("CodeGenUtils") {
     "BackendDiagnosticHandler.cpp",
     "CallUtils.cpp",
     "ClassUtils.cpp",
-    "CodeGenUtils.cpp",
     "EHPersonality.cpp",
     "ExprUtils.cpp",
     "FunctionUtils.cpp",
     "ItaniumCXXABIUtils.cpp",
     "ModuleUtils.cpp",
+    "RecordLayoutUtils.cpp",
     "StmtUtils.cpp",
+    "TargetUtils.cpp",
   ]
 }

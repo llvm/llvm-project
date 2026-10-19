@@ -171,7 +171,7 @@ public:
     const Value inputPadConst =
         createPadConstTensor(builder, op->getLoc(), input, inputZpVal);
     const Value weightPadConst =
-        createPadConstTensor(builder, op->getLoc(), input, weightZpVal);
+        createPadConstTensor(builder, op->getLoc(), weight, weightZpVal);
 
     weight = CreateOpAndInferShape<tosa::PadOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,

@@ -30,6 +30,8 @@ defm : ValueField<"instcombine-max-num-phis", "unsigned", "512",
   "Maximum number phis to handle in intptr/ptrint folding">;
 defm : ValueField<"instcombine-max-sink-users", "unsigned", "32",
   "Maximum number of undroppable users for instruction sinking">;
+defm : ValueField<"instcombine-max-type-eval-depth", "unsigned", "128",
+  "Maximum recursion depth when checking whether an expression can be evaluated in a different type">;
 defm : ValueField<"instcombine-maxarray-size", "unsigned", "1024",
   "Maximum array size considered when doing a combine">;
 defm : BoolField<"instcombine-negator-enabled", "true",

@@ -24,6 +24,13 @@ tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PreLegalizerCombiner")
 tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PostLegalizerCombiner")
+
+set(LLVM_TARGET_DEFINITIONS X86Options.td)
+tablegen(LLVM X86Options.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/X86MCOptions.td)
+tablegen(LLVM X86MCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
@@ -112,6 +119,7 @@ add_llvm_target(X86CodeGen ${sources}
   Instrumentation
   MC
   ObjCARC
+  Option
   Passes
   ProfileData
   SelectionDAG

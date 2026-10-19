@@ -211,7 +211,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
   LLVMContext &Ctx = F.getContext();
   const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
+  IRBuilder<> Builder(getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -231,7 +231,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
 
   uint64_t ExplicitArgOffset = 0;
 
-  addAliasScopeMetadata(F, F.getParent()->getDataLayout(), DT);
+  addAliasScopeMetadata(F, F.getDataLayout(), DT);
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();

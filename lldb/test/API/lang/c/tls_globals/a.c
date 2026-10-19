@@ -1,15 +1,10 @@
-#include <unistd.h>
+#include <stdio.h>
 
 __thread int var_shared = 33;
 
-int
-touch_shared()
-{
-    return var_shared;
-}
+int LLDB_DYLIB_EXPORT touch_shared() { return var_shared; }
 
-void shared_check()
-{
-	var_shared *= 2;
-	usleep(1); // shared thread breakpoint
+void LLDB_DYLIB_EXPORT shared_check() {
+  var_shared *= 2;
+  printf(""); // shared thread breakpoint
 }

@@ -470,3 +470,6 @@ struct S2 {
 const struct S2 s2[2] = {{{"foo"}, 1}, [0].L[2] = 'x'}; // expected-warning {{initializer partially overrides prior initialization of this subobject}} \
                                                         // expected-note {{previous initialization is here}}
 static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant is a GNU extension}}
+
+x y; // expected-error{{unknown type name 'x'}}
+constexpr int *p = (int*){y};

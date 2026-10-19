@@ -1,5 +1,11 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64v1.1-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.1-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.1 %}
+; RUN: llc -O0 -mtriple=spirv32v1.0-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV_1_0
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.0-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.0 %}
+; RUN: llc -O0 -mtriple=spirv64v1.0-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV_1_0
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.0-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.0 %}
 
 ; CHECK-SPIRV:     OpName %[[#PTR_ID:]] "ptr"
 ; CHECK-SPIRV:     OpName %[[#PTR2_ID:]] "ptr2"
@@ -9,6 +15,9 @@
 ; CHECK-SPIRV:     %[[#CHAR_PTR_T:]] = OpTypePointer Workgroup %[[#CHAR_T]]
 ; CHECK-SPIRV:     %[[#PTR_ID]] = OpFunctionParameter %[[#CHAR_PTR_T]]
 ; CHECK-SPIRV:     %[[#PTR2_ID]] = OpFunctionParameter %[[#CHAR_PTR_T]]
+
+; CHECK-SPIRV_1_0-NOT: MaxByteOffset
+; CHECK-SPIRV_1_0:     OpFunctionParameter
 
 define spir_kernel void @worker(ptr addrspace(3) dereferenceable(12) %ptr) {
 entry:

@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H
 #define _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H
 
+#include <__bit/has_single_bit.h>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <cstdint>
@@ -18,22 +19,28 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t _Alignment, class _Tp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __is_sufficiently_aligned(_Tp* __ptr) {
+  static_assert(std::has_single_bit(_Alignment), "alignment must be a power of two.");
+
   return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
 }
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
 
 template <size_t _Alignment, class _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_sufficiently_aligned(_Tp* __ptr) {
   return std::__is_sufficiently_aligned<_Alignment>(__ptr);
 }
 
-#endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H

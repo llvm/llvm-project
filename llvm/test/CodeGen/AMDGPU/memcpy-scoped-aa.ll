@@ -13,7 +13,7 @@
 
 ; MIR-LABEL: name: test_memcpy
 ; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy:
@@ -33,7 +33,7 @@ define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocaptur
 
 ; MIR-LABEL: name: test_memcpy_inline
 ; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memcpy_inline(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy_inline:
@@ -53,7 +53,7 @@ define i32 @test_memcpy_inline(ptr addrspace(1) nocapture %p, ptr addrspace(1) n
 
 ; MIR-LABEL: name: test_memmove
 ; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memmove(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memmove on %p.
 ; CHECK-LABEL: test_memmove:
@@ -72,7 +72,7 @@ define i32 @test_memmove(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocaptu
 }
 
 ; MIR-LABEL: name: test_memset
-; MIR: GLOBAL_STORE_DWORDX4 killed %{{[0-9]+}}, killed %{{[0-9]+}}, 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memset(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memset on %p.
 ; CHECK-LABEL: test_memset:
