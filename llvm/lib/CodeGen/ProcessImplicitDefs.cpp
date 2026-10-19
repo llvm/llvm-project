@@ -172,6 +172,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
     return;
   }
 
+  // TODO: Can we just erase the instruction instead of marking dead? Is that
+  // safe with !tracksRegLiveness?
   if (SearchedWholeBlock && !MRI->isReserved(Reg) &&
       none_of(MBB->successors(), [&](MachineBasicBlock *Succ) {
         return Succ->isLiveInOverlappedWith(Reg, *TRI);
