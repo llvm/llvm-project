@@ -23311,49 +23311,59 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   assert(VT.getScalarType() == MVT::f16 && "Unexpected type for FREM");
 
   bool IsVec = VT.isVector();
-  // f64 widening is only legal up to v8f64. v16f16 & v32f16 would widen to 
-  // v16f64 & v32f64, which gets scalarized, so operands split in half.
-  if (IsVec && VT.getVectorNumElements() > 8) {
-    auto [LoA, HiA] = DAG.SplitVector(Op.getOperand(0), Dl);
-    auto [LoB, HiB] = DAG.SplitVector(Op.getOperand(1), Dl);
-    SDValue Lo = DAG.getNode(ISD::FREM, Dl, LoA.getValueType(), LoA, LoB);
-    SDValue Hi = DAG.getNode(ISD::FREM, Dl, HiA.getValueType(), HiA, HiB);
-    return DAG.getNode(ISD::CONCAT_VECTORS, Dl, VT, Lo, Hi);
-  }
-
-  MVT WideVT = IsVec ? VT.changeVectorElementType(MVT::f64) : MVT::f64;
-  MVT MaskVT = IsVec ? VT.changeVectorElementType(MVT::i1) : MVT::v1i1;
-
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
 
-  SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, A);
-  SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, B);
-  SDValue Q = DAG.getNode(ISD::FTRUNC, Dl, WideVT,
-                          DAG.getNode(ISD::FDIV, Dl, WideVT, X, Y));
-  SDValue Res = DAG.getNode(ISD::FMA, Dl, WideVT,
-                            DAG.getNode(ISD::FNEG, Dl, WideVT, Q), Y, X);
-  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, WideVT, Res, X);
-  Res = DAG.getNode(ISD::FP_ROUND, Dl, VT, Res,
-                    DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
+  // f64 widening is only legal up to v8f64, so only the arithmetic is
+  // chunked into 8 elements.
+  unsigned NumElts = IsVec ? VT.getVectorNumElements() : 1;
+  unsigned ChunkElts = std::min(NumElts, 8u);
+  MVT ChunkVT = IsVec ? MVT::getVectorVT(MVT::f16, ChunkElts) : MVT::f16;
+  MVT WideVT = IsVec ? MVT::getVectorVT(MVT::f64, ChunkElts) : MVT::f64;
 
-  SDValue AC = A, BC = B;
-  unsigned ClassOpc = X86ISD::VFPCLASS;
-  if (!IsVec) {
-    AC = DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, A);
-    BC = DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, B);
-    ClassOpc = X86ISD::VFPCLASSS;
+  SmallVector<SDValue, 4> Parts;
+  for (unsigned I = 0; I != NumElts; I += ChunkElts) {
+    SDValue AC = A, BC = B;
+    if (NumElts > ChunkElts) {
+      AC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl, ChunkVT, A,
+                       DAG.getIntPtrConstant(I, Dl));
+      BC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl, ChunkVT, B,
+                       DAG.getIntPtrConstant(I, Dl));
+    }
+    SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, AC);
+    SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, BC);
+    SDValue Q = DAG.getNode(ISD::FTRUNC, Dl, WideVT,
+                            DAG.getNode(ISD::FDIV, Dl, WideVT, X, Y));
+    SDValue R = DAG.getNode(ISD::FMA, Dl, WideVT,
+                            DAG.getNode(ISD::FNEG, Dl, WideVT, Q), Y, X);
+    R = DAG.getNode(ISD::FCOPYSIGN, Dl, WideVT, R, X);
+    Parts.push_back(DAG.getNode(ISD::FP_ROUND, Dl, ChunkVT, R,
+                                DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true)));
   }
-  SDValue XNotFinite = DAG.getNode(ClassOpc, Dl, MaskVT, AC,
+
+  SDNodeFlags Flags = Op->getFlags();
+  SDValue Res = Parts.size() == 1
+                    ? Parts[0]
+                    : DAG.getNode(ISD::CONCAT_VECTORS, Dl, VT, Parts);
+
+  if (Flags.hasNoNaNs() && Flags.hasNoInfs())
+    return Res;
+
+  MVT MaskVT = IsVec ? VT.changeVectorElementType(MVT::i1) : MVT::v1i1;
+  unsigned ClassOpc = IsVec ? X86ISD::VFPCLASS : X86ISD::VFPCLASSS;
+  SDValue AV = IsVec ? A : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, A);
+  SDValue BV = IsVec ? B : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, B);
+
+  SDValue XNotFinite = DAG.getNode(ClassOpc, Dl, MaskVT, AV,
                                    DAG.getTargetConstant(0x99, Dl, MVT::i32));
-  SDValue YIsInf = DAG.getNode(ClassOpc, Dl, MaskVT, BC,
+  SDValue YIsInf = DAG.getNode(ClassOpc, Dl, MaskVT, BV,
                                DAG.getTargetConstant(0x18, Dl, MVT::i32));
   SDValue UseX = DAG.getNode(ISD::AND, Dl, MaskVT,
                              DAG.getNOT(Dl, XNotFinite, MaskVT), YIsInf);
 
-  if (!IsVec)
-    return DAG.getNode(X86ISD::SELECTS, Dl, VT, UseX, A, Res);
-  return DAG.getSelect(Dl, VT, UseX, A, Res);
+
+  return IsVec ? DAG.getSelect(Dl, VT, UseX, A, Res)
+               : DAG.getNode(X86ISD::SELECTS, Dl, VT, UseX, A, Res);
 }
 
 /// Helper for attempting to create a X86ISD::BT node.
