@@ -17,7 +17,11 @@
     ret void
   }
 
-  define amdgpu_ps void @early_term_scc0_next_terminator() !dbg !14 {
+  define amdgpu_ps void @early_term_scc0_debug_before_terminator() !dbg !14 {
+    ret void
+  }
+
+  define amdgpu_ps void @early_term_scc0_next_terminator() {
     ret void
   }
 
@@ -61,7 +65,7 @@
   !11 = !{!12}
   !12 = !DILocalVariable(name: "value", scope: !10, file: !1, line: 2, type: !8)
   !13 = !DILocation(line: 2, column: 1, scope: !10)
-  !14 = distinct !DISubprogram(name: "early_term_scc0_next_terminator", scope: !1, file: !1, line: 3, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !14 = distinct !DISubprogram(name: "early_term_scc0_debug_before_terminator", scope: !1, file: !1, line: 3, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
   !15 = !{!16}
   !16 = !DILocalVariable(name: "value", scope: !14, file: !1, line: 3, type: !8)
   !17 = !DILocation(line: 3, column: 1, scope: !14)
@@ -182,13 +186,13 @@ body: |
 ...
 
 ---
-name: early_term_scc0_next_terminator
+name: early_term_scc0_debug_before_terminator
 tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
 body: |
-  ; GCN-LABEL: name: early_term_scc0_next_terminator
+  ; GCN-LABEL: name: early_term_scc0_debug_before_terminator
   ; GCN: bb.0:
   ; GCN:   successors: %bb.2(0x80000000), %bb.3(0x00000000)
   ; GCN:   liveins: $sgpr0, $sgpr1
@@ -218,6 +222,54 @@ body: |
     dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
     SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
     DBG_VALUE $vgpr0, $noreg, !16, !DIExpression(), debug-location !17
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    liveins: $vgpr0
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: early_term_scc0_next_terminator
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0' }
+  - { reg: '$sgpr1' }
+body: |
+  ; GCN-LABEL: name: early_term_scc0_next_terminator
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.2(0x80000000), %bb.3(0x00000000)
+  ; GCN:   liveins: $sgpr0, $sgpr1
+  ; GCN:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN:   dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+  ; GCN:   S_CBRANCH_SCC0 %bb.3, implicit $scc
+  ; GCN:   S_BRANCH %bb.2
+  ; GCN: bb.1:
+  ; GCN:   successors: %bb.2(0x80000000)
+  ; GCN:   $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+  ; GCN: bb.2:
+  ; GCN:   liveins: $vgpr0
+  ; GCN:   EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  ; GCN: bb.3:
+  ; GCN:   $exec = S_MOV_B64 0
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 0, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    successors: %bb.2
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+    SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.1:
