@@ -15,8 +15,7 @@ namespace Fortran::evaluate {
 
 // DOT_PRODUCT
 template <typename T>
-static Expr<T> FoldDotProduct(
-    FoldingContext &context, FunctionRef<T> &&funcRef) {
+Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
   const int kind{funcRef.kind()};
   auto args{funcRef.arguments()};
@@ -133,9 +132,9 @@ template <typename T> struct ArrayAndMask {
   Constant<LogicalResult> mask;
 };
 template <typename T>
-static std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
-    FoldingContext &context, ActualArguments &arg, std::optional<int> &dim,
-    int arrayIndex, std::optional<int> dimIndex = std::nullopt,
+std::optional<ArrayAndMask<T>> ProcessReductionArgs(FoldingContext &context,
+    ActualArguments &arg, std::optional<int> &dim, int arrayIndex,
+    std::optional<int> dimIndex = std::nullopt,
     std::optional<int> maskIndex = std::nullopt) {
   if (arg.empty()) {
     return std::nullopt;
@@ -176,7 +175,7 @@ static std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
 // operator()(Scalar<T> &, const ConstantSubscripts &, bool first)
 // and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
-static Constant<T> DoReduction(int kind, const Constant<ARRAY> &array,
+Constant<T> DoReduction(const Constant<ARRAY> &array,
     const Constant<LogicalResult> &mask, std::optional<int> &dim,
     const Scalar<T> &identity, ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
@@ -271,8 +270,8 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldMaxvalMinval(int kind, FoldingContext &context,
-    FunctionRef<T> &&ref, RelationalOperator opr, const Scalar<T> &identity) {
+Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
+    RelationalOperator opr, const Scalar<T> &identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
@@ -316,7 +315,7 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldProduct(
+Expr<T> FoldProduct(
     FoldingContext &context, FunctionRef<T> &&ref, Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
@@ -381,7 +380,7 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
+Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||

@@ -515,11 +515,6 @@ struct TypeBuilderImpl {
     return getCharacterLengthHelper(kind, symbol);
   }
 
-  template <typename A>
-  Fortran::lower::LenParameterTy getCharacterLength(const A &expr) {
-    return fir::SequenceType::getUnknownExtent();
-  }
-
   template <typename T>
   Fortran::lower::LenParameterTy
   getCharacterLength(const Fortran::evaluate::FunctionRef<T> &funcRef) {

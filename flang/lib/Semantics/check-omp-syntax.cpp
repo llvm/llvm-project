@@ -49,16 +49,6 @@ static llvm::omp::ModifierSets GetSets(
   return desc.getModifierSets(version);
 }
 
-template <typename DescriptorTy>
-static auto GetAllowedElements(
-    const DescriptorTy &desc, llvm::omp::Version version) {
-  auto allowed{GetElements(desc, version)};
-  for (auto s : GetSets(desc, version)) {
-    allowed |= GetElements(GetDescriptor(s), version);
-  }
-  return allowed;
-}
-
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy = llvm::DenseMap<ElemTy,
@@ -519,10 +509,6 @@ void OmpStructureChecker::VerifyModifierSyntax(const parser::OmpClause &x) {
   llvm::omp::Clause id{x.Id()};
   auto clauseId{WithSource(id, x.source)};
   switch (id) {
-  case llvm::omp::Clause::OMPC_ompx_bare:
-  case llvm::omp::Clause::OMPC_cancellation_construct_type:
-    // Those are extensions/synthetic clauses and they don't have descriptors.
-    break;
   case llvm::omp::Clause::OMPC_uses_allocators: {
     // The traits of the deprecated syntax are stored as a traits-array
     // modifier, but they are not the 5.2 modifier, so they must not be

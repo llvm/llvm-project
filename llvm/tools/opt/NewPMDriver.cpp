@@ -473,7 +473,7 @@ bool llvm::runPassPipeline(
     Debugify.registerCallbacks(PIC, MAM);
   }
 
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&M.getContext().getLibraryOptions());
   // LoopUnrolling defaults on to true and DisableLoopUnrolling is initialized
   // to false above so we shouldn't necessarily need to check whether or not the
   // option has been enabled.
@@ -571,14 +571,15 @@ bool llvm::runPassPipeline(
 
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string Pipeline;
     raw_string_ostream SOS(Pipeline);
     MPM.printPipeline(SOS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    printFormattedPipelinePasses(outs(), Pipeline, *PrintPipelinePasses);
+    printFormattedPipelinePasses(outs(), Pipeline, *Format);
     outs() << "\n";
 
     if (!DisablePipelineVerification) {

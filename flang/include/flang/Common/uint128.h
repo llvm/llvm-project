@@ -21,31 +21,34 @@
 
 #include "api-attrs.h"
 #include "leading-zero-bit-count.h"
+#include "numeric-limits.h"
 #include <cstdint>
-#include <limits>
 #include <type_traits>
 
 namespace Fortran::common {
-namespace detail {
-template <typename T> class numeric_limits;
-}
 
 template <bool IS_SIGNED = false> class Int128 {
-  friend class detail::numeric_limits<Int128>;
+  friend class detail::numeric_limits_impl<Int128>;
 
 public:
   constexpr Int128() {}
   // This means of definition provides some portability for
   // "size_t" operands.
-  template <typename T,
-      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
-  constexpr Int128(T n) {
+  constexpr Int128(unsigned n) : low_{n} {}
+  constexpr Int128(unsigned long n) : low_{n} {}
+  constexpr Int128(unsigned long long n) : low_{n} {}
+  constexpr Int128(int n) {
     low_ = static_cast<std::uint64_t>(n);
-    if constexpr (std::is_signed_v<T>) {
-      high_ = -static_cast<std::uint64_t>(n < 0);
-    }
+    high_ = -static_cast<std::uint64_t>(n < 0);
   }
-
+  constexpr Int128(long n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
+  constexpr Int128(long long n) {
+    low_ = static_cast<std::uint64_t>(n);
+    high_ = -static_cast<std::uint64_t>(n < 0);
+  }
   constexpr Int128(const Int128 &) = default;
   constexpr Int128(Int128 &&) = default;
   constexpr Int128 &operator=(const Int128 &) = default;
@@ -61,12 +64,9 @@ public:
   constexpr Int128 operator-() const { return ~*this + 1; }
   constexpr bool operator!() const { return !low_ && !high_; }
   constexpr explicit operator bool() const { return low_ || high_; }
-
-  template <typename T,
-      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
-  constexpr explicit operator T() const {
-    return static_cast<T>(low_);
-  }
+  constexpr explicit operator std::uint64_t() const { return low_; }
+  constexpr explicit operator std::int64_t() const { return low_; }
+  constexpr explicit operator int() const { return static_cast<int>(low_); }
 
   constexpr std::uint64_t high() const { return high_; }
   constexpr std::uint64_t low() const { return low_; }
@@ -309,12 +309,7 @@ using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
 namespace detail {
 
-template <typename T> class numeric_limits {
-public:
-  static constexpr bool is_specialized{false};
-};
-
-template <> class numeric_limits<Fortran::common::UnsignedInt128> {
+template <> class numeric_limits_impl<Fortran::common::UnsignedInt128> {
 public:
   using T = Fortran::common::UnsignedInt128;
 
@@ -327,7 +322,7 @@ public:
   static constexpr T lowest() { return min(); }
 };
 
-template <> class numeric_limits<Fortran::common::SignedInt128> {
+template <> class numeric_limits_impl<Fortran::common::SignedInt128> {
 public:
   using T = Fortran::common::SignedInt128;
 
@@ -344,62 +339,17 @@ public:
   static constexpr T lowest() { return min(); }
 };
 
-#if defined(__SIZEOF_INT128__)
-// Handle discrepancy of support bit 128 bit integers by compiler and standard
-// library. The compiler may treat __int128 as a builtin type, but the standard
-// library does not define std::numeric_limits for it. Two cases are known:
-//
-// 1. clang-cl supports __int128, but MSVC, and therefore its STL used by
-//    clang-cl, does not.
-//
-// 2. libstdc++ in strict mode (-std=c++NN) intentionally removes any use of
-//    __int128, even though gcc does not make such a distinction.
-//
-// Note: Using __int128_t/__uint128_t typedefs; spelling out the __int128
-// keyword is a warning "ISO C++ does not support ‘__int128’ for ‘type name’"
-// under -Wpedantic
-
-template <> class numeric_limits<__uint128_t> {
+template <> class make_unsigned_impl<Fortran::common::UnsignedInt128> {
 public:
-  using T = __uint128_t;
-
-  static constexpr bool is_specialized{true};
-  static constexpr bool is_signed{false};
-  static constexpr bool is_integer{true};
-
-  static constexpr T min() { return static_cast<T>(0); }
-  static constexpr T max() { return ~static_cast<T>(0); }
-  static constexpr T lowest() { return min(); }
+  using type = Fortran::common::UnsignedInt128;
 };
 
-template <> class numeric_limits<__int128_t> {
+template <> class make_unsigned_impl<Fortran::common::SignedInt128> {
 public:
-  using T = __int128_t;
-
-  static constexpr bool is_specialized{true};
-  static constexpr bool is_signed{true};
-  static constexpr bool is_integer{true};
-
-  static constexpr T min() {
-    return static_cast<T>(static_cast<__uint128_t>(1) << 127u);
-  }
-  static constexpr T max() {
-    return static_cast<T>(~(static_cast<__uint128_t>(1) << 127u));
-  }
-  static constexpr T lowest() { return min(); }
+  using type = Fortran::common::UnsignedInt128;
 };
-#endif
+
 } // namespace detail
-
-/// Same as std::numeric_limits, but also defined for 128 bit integers. While
-/// std::numeric_limits is allowed to be extended for user-defined types such as
-/// UnsignedInt128/SignedInt128 (C++ [namespace.std]), it is not for the
-/// __int128/__uint128 workaround above.
-template <typename T>
-using numeric_limits =
-    std::conditional_t<detail::numeric_limits<T>::is_specialized &&
-            !std::numeric_limits<T>::is_specialized,
-        detail::numeric_limits<T>, std::numeric_limits<T>>;
 
 } // namespace Fortran::common
 #endif

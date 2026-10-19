@@ -667,6 +667,29 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
   return std::nullopt;
 }
 
+Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
+  using IntType = Type<TypeCategory::Integer, 4>;
+  const semantics::DerivedTypeSpec *derived{
+      GetDerivedTypeSpec(operand.GetType())};
+  CHECK(derived);
+  DynamicType enumType{*derived};
+  DynamicType intResultType{TypeCategory::Integer, 4};
+  characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};
+  ddo.intent = common::Intent::In;
+  characteristics::Procedure::Attrs attrs{
+      characteristics::Procedure::Attr::Pure,
+      characteristics::Procedure::Attr::Elemental};
+  characteristics::DummyArguments dummies;
+  dummies.emplace_back("a"s, std::move(ddo));
+  SpecificIntrinsic intSpec{"int"s,
+      characteristics::Procedure{characteristics::FunctionResult{intResultType},
+          std::move(dummies), attrs}};
+  ActualArguments intArgs;
+  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
+  return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
+      ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+}
+
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
     RelationalOperator opr, Expr<SomeType> &&x, Expr<SomeType> &&y) {
   return common::visit(
@@ -758,36 +781,10 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
                   return Relate(
                       messages, opr, std::move(*xOrd), std::move(*yOrd));
                 }
-                // Non-constant operands: wrap in INT() to convert to
-                // integer comparison. Build FunctionRef<Int4> for each
-                // operand representing INT(enumExpr).
-                auto makeIntCall =
-                    [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
-                  using IntType = Type<TypeCategory::Integer>;
-                  constexpr int intKind{4};
-                  DynamicType enumType{*xDerived};
-                  DynamicType intResultType{TypeCategory::Integer, 4};
-                  characteristics::DummyDataObject ddo{
-                      characteristics::TypeAndShape{enumType}};
-                  ddo.intent = common::Intent::In;
-                  characteristics::Procedure::Attrs attrs{
-                      characteristics::Procedure::Attr::Pure,
-                      characteristics::Procedure::Attr::Elemental};
-                  characteristics::DummyArguments dummies;
-                  dummies.emplace_back("a"s, std::move(ddo));
-                  SpecificIntrinsic intSpec{"int"s,
-                      characteristics::Procedure{
-                          characteristics::FunctionResult{intResultType},
-                          std::move(dummies), attrs}};
-                  ActualArguments intArgs;
-                  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
-                  return AsGenericExpr(
-                      Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-                          intKind, ProcedureDesignator{std::move(intSpec)},
-                          std::move(intArgs)})));
-                };
-                return Relate(messages, opr, makeIntCall(std::move(dx)),
-                    makeIntCall(std::move(dy)));
+                // Non-constant operands: compare INT(x) and INT(y).
+                return Relate(messages, opr,
+                    MakeEnumerationIntCall(std::move(dx)),
+                    MakeEnumerationIntCall(std::move(dy)));
               }
             }
             DIE("invalid types for relational operator");
@@ -1288,8 +1285,12 @@ GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+  if (deviceSymbols.empty()) {
+    return false;
+  }
+  // Device data used in an operation, even one with no other operand such as
+  // a negation or a conversion, is copied to the host to evaluate it there.
+  return HasConstant(expr) || !hostSymbols.empty() || !IsVariable(expr);
 }
 
 bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {
@@ -1514,16 +1515,11 @@ static SignedNumericExpr<CAT> buildSignedAdd(
       true};
 }
 
-template <typename T>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
-  return std::nullopt;
-}
-
-template <common::TypeCategory CAT>
-static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
-    const NumericExpr<CAT> &expr) {
-  const int kind{expr.kind()};
-  if (const auto *convert = std::get_if<Convert<Numeric<CAT>, CAT>>(&expr.u)) {
+template <common::TypeCategory CAT, int KIND>
+static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
+    const NumericExpr<CAT, KIND> &expr) {
+  if (const auto *convert =
+          std::get_if<Convert<Numeric<CAT, KIND>, CAT>>(&expr.u)) {
     std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
           if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
@@ -1562,24 +1558,6 @@ static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
-}
-
-template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const Expr<SomeKind<CAT>> &expr) {
-  // Keep the supported categories explicit: integer reassociation requires a
-  // separate intermediate-range policy.
-  if constexpr (CAT == common::TypeCategory::Real ||
-      CAT == common::TypeCategory::Complex) {
-    return common::visit(
-        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
-            return Expr<SomeType>{std::move(*result)};
-          return std::nullopt;
-        },
-        expr.u);
-  }
-  return std::nullopt;
 }
 
 template <typename> struct IsExpr : std::false_type {};

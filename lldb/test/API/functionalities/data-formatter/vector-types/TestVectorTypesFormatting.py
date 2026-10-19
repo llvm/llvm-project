@@ -17,6 +17,7 @@ class VectorTypesFormattingTestCase(TestBase):
 
     # rdar://problem/14035604
     @skipIf(compiler="gcc")  # gcc don't have ext_vector_type extension
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_run_command(self):
         """Check that vector types format properly"""
         self.build()

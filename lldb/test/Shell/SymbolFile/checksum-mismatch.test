@@ -1,5 +1,3 @@
-UNSUPPORTED: system-windows
-
 RUN: mkdir -p %t
 RUN: cp %S/Inputs/main.c %t/main.c
 RUN: %clang_host %t/main.c -std=c99 -gdwarf-5 -o %t/main.out
