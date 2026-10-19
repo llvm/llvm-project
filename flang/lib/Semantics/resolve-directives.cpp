@@ -2673,6 +2673,11 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     Symbol::Flags dsa;
 
     Scope &scope{context_.FindScope(dirContext.directiveSource)};
+    // Skip constructs that enclose the symbol declaration (e.g. in a nested
+    // BLOCK).
+    if (IsLocalInsideScope(symbol->GetUltimate(), scope)) {
+      continue;
+    }
 
     auto initSymbolDSA = [&](const Symbol *sym, Symbol::Flags &dsa) {
       auto it{scope.find(sym->name())};
