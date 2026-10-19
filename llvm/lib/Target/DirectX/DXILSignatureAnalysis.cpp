@@ -225,8 +225,8 @@ static Error parseSignature(Metadata *MD,
     if (E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics) {
       using Mode = dxbc::PSV::InterpolationMode;
       if (E.InterpMode == Mode::Undefined || E.InterpMode == Mode::Constant)
-        return signatureError(
-            "SV_Barycentrics requires perspective or noperspective interpolation");
+        return signatureError("SV_Barycentrics requires perspective or "
+                              "noperspective interpolation");
     }
 
     if (Stage == Triple::Vertex && IO == IOType::In &&
@@ -254,15 +254,18 @@ static Error parseSignature(Metadata *MD,
       for (unsigned Row = E.StartRow; Row != E.StartRow + E.Rows; ++Row) {
         if (AllocatedColumns[Row] & Mask)
           return signatureError("signature elements overlap at row " +
-                                Twine(Row) + " (element " + Twine(E.SigId) + ")");
+                                Twine(Row) + " (element " + Twine(E.SigId) +
+                                ")");
         if (AllocatedColumns[Row] && RowModes[Row] != E.InterpMode)
-          return signatureError("signature elements have different interpolation "
-                                "modes at row " +
-                                Twine(Row) + " (element " + Twine(E.SigId) + ")");
+          return signatureError(
+              "signature elements have different interpolation "
+              "modes at row " +
+              Twine(Row) + " (element " + Twine(E.SigId) + ")");
         if (AllocatedColumns[Row] && RowNative16[Row] != IsNative16)
           return signatureError("signature elements have different component "
                                 "widths at row " +
-                                Twine(Row) + " (element " + Twine(E.SigId) + ")");
+                                Twine(Row) + " (element " + Twine(E.SigId) +
+                                ")");
         AllocatedColumns[Row] |= Mask;
         RowModes[Row] = E.InterpMode;
         RowNative16[Row] = IsNative16;
@@ -406,10 +409,9 @@ analyzeModule(Module &M, const ModuleMetadataInfo &MMI) {
         return signatureError("entry '" + F->getName() + "' " + Category +
                               " signature: " + toString(std::move(Err)));
       };
-      if (Error Err =
-              parseSignature(Record->getOperand(1), Sig.Inputs, Info, Sig.Stage,
-                             IOType::In, MMI.ShaderModelVersion,
-                             Sig.UseNative16Bit, Sig.InputVectors))
+      if (Error Err = parseSignature(
+              Record->getOperand(1), Sig.Inputs, Info, Sig.Stage, IOType::In,
+              MMI.ShaderModelVersion, Sig.UseNative16Bit, Sig.InputVectors))
         return AddContext(std::move(Err), "input");
       if (Error Err = parseSignature(
               Record->getOperand(2), Sig.Outputs, Info, Sig.Stage, IOType::Out,
@@ -590,16 +592,14 @@ static void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
   for (const auto &E : Elements) {
     auto Type = getComponentType(E.CompType, Legacy);
     // SigComponentType and PSV ComponentType share COMPONENT_TYPE definitions.
-    Dest.push_back({E.SemanticKind == dxbc::PSV::SemanticKind::Arbitrary
-                        ? E.SemanticName
-                        : StringRef(),
-                    E.SemanticIndices,
-                    E.isAllocated() ? static_cast<uint8_t>(E.StartRow)
-                                    : uint8_t(0),
-                    E.Cols, E.isAllocated() ? E.StartCol : uint8_t(0),
-                    E.isAllocated(), E.SemanticKind,
-                    static_cast<dxbc::PSV::ComponentType>(Type), E.InterpMode,
-                    E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
+    Dest.push_back(
+        {E.SemanticKind == dxbc::PSV::SemanticKind::Arbitrary ? E.SemanticName
+                                                              : StringRef(),
+         E.SemanticIndices,
+         E.isAllocated() ? static_cast<uint8_t>(E.StartRow) : uint8_t(0),
+         E.Cols, E.isAllocated() ? E.StartCol : uint8_t(0), E.isAllocated(),
+         E.SemanticKind, static_cast<dxbc::PSV::ComponentType>(Type),
+         E.InterpMode, E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
   }
 }
 

@@ -1094,7 +1094,6 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
   return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
-
 // A fragment shader input interface variable whose base type is an integer or
 // a 64-bit float (double) cannot be interpolated by the rasterizer. The Vulkan
 // specification requires these variables to be decorated with Flat (see
@@ -1542,7 +1541,8 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return Barycentrics;
     }
     if (CGM.getTarget().getTriple().isDXIL())
-      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index, Signature);
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
     break;
   case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
     assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,

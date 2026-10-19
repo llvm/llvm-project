@@ -918,7 +918,8 @@ bool SemaHLSL::checkInterpolationModifiers(
   if (Modifiers == InterpolationModifier::NoInterpolation) {
     if (!Semantic)
       return true;
-    SemanticKind Kind = llvm::hlsl::getSemanticKind(Semantic->getSemanticName());
+    SemanticKind Kind =
+        llvm::hlsl::getSemanticKind(Semantic->getSemanticName());
     if (Kind != SemanticKind::Position && Kind != SemanticKind::Barycentrics)
       return true;
     Diag(A->getLocation(), diag::err_hlsl_interpolation_semantic)
@@ -1278,8 +1279,8 @@ void SemaHLSL::checkSemanticAnnotation(
   diagnoseSemanticShaderModel(SemanticAttr, Kind);
 }
 
-void SemaHLSL::diagnoseSemanticShaderModel(
-    const HLSLAppliedSemanticAttr *A, SemanticKind Kind) {
+void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
+                                           SemanticKind Kind) {
   const auto &Triple = getASTContext().getTargetInfo().getTriple();
   if (!Triple.isDXIL())
     return;
