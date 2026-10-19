@@ -782,25 +782,6 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
     return V;
   }
 
-  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI))))) {
-    bool IsAShr = cast<Operator>(V)->getOpcode() == Instruction::AShr;
-    if (!CI->uge(std::min(63u, CI->getBitWidth())) &&
-        (IsSigned == IsAShr || Info.isKnownNonNegative(Op0))) {
-      int64_t Factor = int64_t(1) << CI->getZExtValue();
-      auto Result = decompose(Op0, Info, IsSigned, DL);
-      if (Result.Offset % Factor == 0 &&
-          all_of(Result.Vars, [Factor](const DecompEntry &E) {
-            return E.Coefficient % Factor == 0;
-          })) {
-        Result.Offset /= Factor;
-        for (auto &E : Result.Vars)
-          E.Coefficient /= Factor;
-        return Result;
-      }
-    }
-    return V;
-  }
-
   if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
     if (isKnownNoWrap(V, Info, IsSigned)) {
       auto ResA = decompose(Op0, Info, IsSigned, DL);
@@ -819,6 +800,25 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
       auto Result = decompose(Op0, Info, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
+    }
+    return V;
+  }
+
+  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI))))) {
+    bool IsAShr = cast<Operator>(V)->getOpcode() == Instruction::AShr;
+    if (!CI->uge(std::min(63u, CI->getBitWidth())) &&
+        (IsSigned == IsAShr || Info.isKnownNonNegative(Op0))) {
+      int64_t Factor = int64_t(1) << CI->getZExtValue();
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (Result.Offset % Factor == 0 &&
+          all_of(Result.Vars, [Factor](const DecompEntry &E) {
+            return E.Coefficient % Factor == 0;
+          })) {
+        Result.Offset /= Factor;
+        for (auto &E : Result.Vars)
+          E.Coefficient /= Factor;
+        return Result;
+      }
     }
     return V;
   }
