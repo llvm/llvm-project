@@ -403,3 +403,66 @@ for.inc:
 exit:
   ret void
 }
+
+; CHECK: loop not vectorized: read with atomic ordering or volatile read
+
+; Negative test: We can't vectorize volatile compressed load/stores.
+define void @test_volatile_expand_load(ptr noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %iv
+  %load.dst = load i32, ptr %dst.ptr, align 4
+  %cmp = icmp slt i32 %load.dst, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %idx
+  %load.src = load volatile i32, ptr %src.ptr, align 4
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized: write with atomic ordering or volatile write
+
+; Negative test: We can't vectorize atomic compressed load/stores.
+define void @test_atomic_compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
+  store atomic i32 %load.src, ptr %dst.ptr unordered, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}

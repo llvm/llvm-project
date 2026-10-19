@@ -2065,7 +2065,10 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         "We can vectorize this loop with a compressstore or expandload, but "
         "vectorization support is not implemented yet.",
         "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
-    return false;
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
   }
 
   if (Result) {

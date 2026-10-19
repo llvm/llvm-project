@@ -2511,13 +2511,14 @@ bool llvm::collectCompressedPtrs(
     // operations.
     const SCEV *PtrSCEV =
         SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
+
+    SCEVUse Step;
     if (!match(PtrSCEV,
-               m_scev_AffineAddRec(m_SCEV(), m_SCEV(), m_SpecificLoop(&L))))
+               m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step), m_SpecificLoop(&L))))
       return nullptr;
 
     // Check if pointer step equals access size.
     const SCEVAddRecExpr *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
-    SCEVUse Step = PtrAddRec->getStepRecurrence(SE);
     if (Step != SE.getSizeOfExpr(Step->getType(), AccessTy))
       return nullptr;
 
