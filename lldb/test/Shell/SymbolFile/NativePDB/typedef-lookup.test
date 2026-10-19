@@ -1,0 +1,44 @@
+# REQUIRES: target-windows
+
+# Test that typedefs are found by name. They are only S_UDT records, not type
+# records, and "ns" isn't the scope of anything but a typedef. Evaluate the
+# expressions first, since looking up the type also creates the namespace.
+# RUN: split-file %s %t
+# RUN: %build --nodefaultlib -o %t.exe -- %t/main.cpp
+# RUN: %lldb -f %t.exe -s \
+# RUN:     %t/commands.input 2>&1 | FileCheck %s
+
+#--- main.cpp
+
+struct S {
+  char a[3];
+};
+
+typedef S GlobalTypedef;
+
+namespace ns {
+typedef S NamespaceTypedef;
+} // namespace ns
+
+int main() {
+  GlobalTypedef g;
+  ns::NamespaceTypedef n;
+  return sizeof(g) + sizeof(n);
+}
+
+#--- commands.input
+
+expr sizeof(ns::NamespaceTypedef)
+expr sizeof(GlobalTypedef)
+type lookup ns::NamespaceTypedef
+type lookup GlobalTypedef
+quit
+
+# CHECK:      (lldb) expr sizeof(ns::NamespaceTypedef)
+# CHECK-NEXT: ({{.*}}) $0 = 3
+# CHECK:      (lldb) expr sizeof(GlobalTypedef)
+# CHECK-NEXT: ({{.*}}) $1 = 3
+# CHECK:      (lldb) type lookup ns::NamespaceTypedef
+# CHECK-NEXT: struct S {
+# CHECK:      (lldb) type lookup GlobalTypedef
+# CHECK-NEXT: struct S {
