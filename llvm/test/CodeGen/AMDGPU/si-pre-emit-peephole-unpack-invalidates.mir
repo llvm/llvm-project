@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -passes='require<slot-indexes>,si-pre-emit-peephole,require<slot-indexes>' -debug-pass-manager -o /dev/null %s 2>&1 | FileCheck %s
 
 # CHECK: Running pass: SIPreEmitPeepholePass on unpack_invalidates_analyses
-# CHECK-NEXT: Running pass: RequireAnalysisPass<{{.*}}SlotIndexesAnalysis{{.*}}> on unpack_invalidates_analyses
+# CHECK-NEXT: Invalidating analysis: SlotIndexesAnalysis on unpack_invalidates_analyses
 
 ---
 name:            unpack_invalidates_analyses
