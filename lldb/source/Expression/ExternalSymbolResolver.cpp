@@ -9,6 +9,7 @@
 #include "lldb/Expression/ExternalSymbolResolver.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -79,6 +80,23 @@ public:
     m_symbol_was_missing_weak = true;
 
     for (auto candidate_sc : sc_list.SymbolContexts()) {
+      if (!candidate_sc.symbol && candidate_sc.function &&
+          candidate_sc.function->IsExternal()) {
+        Function *function = candidate_sc.function;
+        auto symbols = FindELFFunctionSymbolsWithName(
+            m_target, function->GetAddress().GetModule(),
+            function->GetMangled().GetName(Mangled::ePreferMangled));
+        // When a FunctionCallLabel resolves to a DWARF Function,
+        // candidate_sc.symbol is not set. Prefer a symbol at the function's
+        // own address; otherwise (e.g. an overridden weak DIE kept for its
+        // type when the strong definition has no DWARF), use the winning ELF
+        // symbol.
+        candidate_sc.symbol = FindSymbolAtFileAddress(
+            symbols, function->GetAddress().GetFileAddress());
+        if (!candidate_sc.symbol)
+          candidate_sc.symbol = FindUniqueExternalFunctionSymbol(symbols);
+      }
+
       // Only symbols can be weak undefined.
       if (!candidate_sc.symbol ||
           candidate_sc.symbol->GetType() != lldb::eSymbolTypeUndefined ||
