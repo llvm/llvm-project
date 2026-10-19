@@ -9,7 +9,6 @@
 #include "LibCxx.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"

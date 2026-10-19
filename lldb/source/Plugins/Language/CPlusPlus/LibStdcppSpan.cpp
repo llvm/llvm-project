@@ -9,7 +9,6 @@
 #include "LibStdcpp.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Error.h"
