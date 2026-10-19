@@ -55,11 +55,10 @@ constexpr bool test() {
     {
       std::ranges::chunk_view<
           std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-          chunked =
-              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                  cpp17_input_iterator<int*>(empty_vector.data()),
-                  sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(empty_vector.data()))) |
-              std::views::chunk(3);
+          chunked = std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                        cpp17_input_iterator<int*>(empty_vector.data()),
+                        sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(empty_vector.data()))) |
+                    std::views::chunk(3);
 
       assert(chunked.begin() == chunked.end());
     }
@@ -87,8 +86,7 @@ constexpr bool test() {
 
     // When range is empty
     {
-      std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked =
-          empty_vector | std::views::chunk(3);
+      std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked = empty_vector | std::views::chunk(3);
       std::ranges::chunk_view<std::ranges::ref_view<const std::vector<int>>> const_chunked =
           std::as_const(empty_vector) | std::views::chunk(3);
 
