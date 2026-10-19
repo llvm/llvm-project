@@ -48,23 +48,6 @@ static cl::opt<bool>
 #endif
 
 namespace {
-struct StackAddr {
-
-  /// Relative base address of the stack index.
-  int64_t Base;
-
-  /// < Offset from base address.
-  int64_t Offset;
-};
-
-struct StackRange {
-  int64_t Start;
-  int64_t End;
-
-  /// Gets the size of the stack range.
-  int64_t stride() { return End - Start; }
-};
-
 class SuperHExpandPseudo : public MachineFunctionPass {
 public:
   static char ID;
@@ -84,21 +67,13 @@ private:
   const SuperHInstrInfo *TII;
   const SuperHMachineFunctionInfo *MFI;
 
-  /// getStackBucketFor - Gets the enclosing bucket for a given Offset
-  /// from the start of a stack frame.
-  StackRange getStackBucketFor(const MachineFunction &MF, int64_t Offset, 
-                               uint8_t Bits, uint8_t Scale);
-
-  /// getStackOffset - Calculates the base and offset address for accessing
-  /// a stack slot.
-  StackAddr getStackOffset(const MachineFunction &MF, Register FrameReg,
-                           int64_t Offset, uint8_t Bits, uint8_t Scale = 1);
-
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
-  void emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameReg, StackAddr Addr);
+
   void emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, int64_t Offset);
+  void emitStackAdj(Block &MBB, BlockIt MBBI, Register &Base, 
+                    bool &BaseIsKill, RelativeAddr Addr);
 
   bool storeToFrame(Block &MBB, BlockIt MBBI, int Scale);
   bool storeToAddress(Block &MBB, BlockIt MBBI);
@@ -127,15 +102,6 @@ static bool eraseMI(MachineInstr &MI) {
   return true;
 }
 
-/// truncdiv - Performs a truncating division with 8 bits
-/// of fixed point preceision.
-static int64_t truncdiv(int64_t V, int64_t D) {
-  return ((V << 8LL) / D) >> 8LL;
-}
-
-
-
-
 //===----------------------------------------------------------------------===//
 //                            Stack Offset Calculation
 //===----------------------------------------------------------------------===//
@@ -159,34 +125,8 @@ static int64_t truncdiv(int64_t V, int64_t D) {
 //      end of the enclosing bucket.
 //===----------------------------------------------------------------------===//
 
-StackRange SuperHExpandPseudo::getStackBucketFor(const MachineFunction &MF,
-                                                 int64_t Offset, uint8_t Bits, 
-                                                 uint8_t Scale) {
-  int64_t BucketStride = (1 << Bits) * Scale;
-  int64_t BucketIdx = truncdiv(Offset-1, BucketStride);
-  return { BucketIdx*BucketStride, ((BucketIdx+1)*BucketStride) };
-}
-
-StackAddr SuperHExpandPseudo::getStackOffset(const MachineFunction &MF, 
-                                            Register FrameReg, int64_t Offset, 
-                                            uint8_t Bits, uint8_t Scale) {
-  assert(TRI->getFrameRegister(MF) == FrameReg && "Unexpected frame register!");
-  const TargetFrameLowering *TFI = TRI->getFrameLowering(MF);
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-
-  int64_t StackSize = MFI.getStackSize();
-  StackRange Bucket = getStackBucketFor(MF, Offset, Bits, Scale);
-
-  // NOTE: The 4 here adjusts out the stack frame pointer, otherwise
-  //       the offset will be wrong.
-  return {
-    (StackSize-Bucket.End),
-    (Bucket.stride() - (Offset-Bucket.Start))
-  };
-}
-
-void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameReg, 
-                                      StackAddr Addr) {
+void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register &Base, 
+                                      bool &BaseIsKill, RelativeAddr Addr) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   const MachineFunction &MF = *MBB.getParent();
   MachineInstr &MI = *MBBI;
@@ -194,25 +134,33 @@ void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameRe
   switch(MI.getOpcode()) {
   case SH::MOVF32SF:
   case SH::MOVF32LF: {
+    if (Addr.Base + Addr.Offset == 0)
+      break;
 
     // Expand sequence to
     // mov      <frame reg>,  r1
     // add      (offset),     r1 ! Repeats until offset is reached.
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-      .addReg(FrameReg);
+      .addReg(Base);
 
     TII->emitAddressAdjust(SH::R1, MBB, MBBI, Addr.Base + Addr.Offset, INT_MAX);
+    Base = SH::R1;
+    BaseIsKill = true;
     break;
   }
   default: {
+    if (Addr.Base == 0)
+      break;
 
     // Expand sequence to
     // mov      <frame reg>,  r1
     // add      #-SpOffset,   r1 ! Repeats until offset is reached.
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-      .addReg(FrameReg);
+      .addReg(Base);
 
     TII->emitAddressAdjust(SH::R1, MBB, MBBI, Addr.Base, INT_MAX);
+    Base = SH::R1;
+    BaseIsKill = true;
     break;
   }
   }
@@ -224,12 +172,14 @@ void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameRe
 //===----------------------------------------------------------------------===//
 //                            Heap Offset Calculation
 //===----------------------------------------------------------------------===//
-void SuperHExpandPseudo::emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, 
-                                      int64_t Offset) {
+void SuperHExpandPseudo::emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, int64_t Offset) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  LLVM_DEBUG(dbgs() << "HeapAccess @ " << TRI->getName(Base) << " + " << Offset << "\n");
+
   if (Offset != 0) {
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
       .addReg(Base);
+
     TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
     Base = SH::R1;
   }
@@ -244,59 +194,85 @@ void SuperHExpandPseudo::emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base,
 
 bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
   const DebugLoc &DL = MBBI->getDebugLoc();
-  const MachineFunction &MF = *MBB.getParent();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
 
   bool SrcIsKill = MI.getOperand(0).isKill();
   auto SrcReg = MI.getOperand(0).getReg();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
 
-  StackAddr Addr = getStackOffset(MF, FrameReg, Offset, 4, Scale);
-  emitStackAdj(MBB, MBBI, FrameReg, Addr);
+  bool FrameIsKill;
+  auto Addr = TRI->getStackAddress(MF, Offset, 4, Scale);
+  emitStackAdj(MBB, II, FrameReg, FrameIsKill, Addr);
 
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*SF opcode.");
   case SH::MOVBSF: {
+    if (Addr.Offset == 0) {
 
-    // mov      <src reg>,  r0
-    // mov.b    r0, @(offset,r1)
-    if (SrcReg != SH::R0)
-      BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R0)
-          .addReg(SrcReg, getKillRegState(SrcIsKill));
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS4))
-        .addReg(SH::R1, RegState::Kill)
-        .addImm(Addr.Offset);
+      // mov.b    <src reg>, @r1
+      BuildMI(MBB, II, DL, TII->get(SH::MOVBS))
+        .addReg(SrcReg)
+        .addReg(FrameReg);
+    } else {
+
+      // mov      <src reg>,  r0
+      // mov.b    r0, @(offset,r1)
+      if (SrcReg != SH::R0)
+        BuildMI(MBB, II, DL, TII->get(SH::MOV), SH::R0)
+            .addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::MOVBS4))
+          .addReg(FrameReg)
+          .addImm(Addr.Offset);
+    }
     break;
   }
   case SH::MOVWSF: {
+    if (Addr.Offset == 0) {
 
-    // mov      <src reg>,  r0
-    // mov.w    r0, @(offset,r1)
-    if (SrcReg != SH::R0)
-      BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R0)
-          .addReg(SrcReg, getKillRegState(SrcIsKill));
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS4))
-        .addReg(SH::R1, RegState::Kill)
-        .addImm(Addr.Offset);
+      // mov.w    <src reg>, @r1
+      BuildMI(MBB, II, DL, TII->get(SH::MOVWS))
+        .addReg(SrcReg)
+        .addReg(FrameReg);
+    } else {
+
+      // mov      <src reg>,  r0
+      // mov.w    r0, @(offset,r1)
+      if (SrcReg != SH::R0)
+        BuildMI(MBB, II, DL, TII->get(SH::MOV), SH::R0)
+            .addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::MOVWS4))
+          .addReg(FrameReg)
+          .addImm(Addr.Offset);
+    }
     break;
   }
   case SH::MOVLSF: {
+    if (Addr.Offset == 0) {
 
-    // mov.l    <src reg>, @(offset,r1)
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS4))
-        .addReg(SrcReg, getKillRegState(SrcIsKill))
-        .addReg(SH::R1, RegState::Kill)
-        .addImm(Addr.Offset);
+      // mov.l    <src reg>, @r1
+      BuildMI(MBB, II, DL, TII->get(SH::MOVLS))
+        .addReg(SrcReg)
+        .addReg(FrameReg);
+    } else {
+
+      // mov.l    <src reg>, @(offset,r1)
+      BuildMI(MBB, II, DL, TII->get(SH::MOVLS4))
+          .addReg(SrcReg)
+          .addReg(FrameReg)
+          .addImm(Addr.Offset);
+    }
     break;
   }
   case SH::MOVF32SF: {
 
     // fmov.s   <src reg>, @r1
-    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE))
-        .addReg(SrcReg, RegState::Kill)
-        .addReg(SH::R1, RegState::Kill);
+    BuildMI(MBB, II, DL, TII->get(SH::FMOV_STORE))
+        .addReg(SrcReg)
+        .addReg(FrameReg);
     break;
   }
   }
@@ -306,6 +282,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
 
 bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
 
@@ -316,7 +293,7 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
 
   if (MI.getOperand(1).isGlobal()) {
     if (auto *G = MFI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
+      BuildMI(MBB, II, DL, TII->get(SH::MOVLI), SH::R1)
           .addConstantPoolIndex(G->getLabelId());
       DstReg = SH::R1;
     }
@@ -344,9 +321,9 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
     break;
   }
 
-  emitBaseAdj(MBB, MBBI, DstReg, Offset);
-  BuildMI(MBB, MBBI, DL, TII->get(Opc))
-    .addReg(SrcReg, getKillRegState(SrcIsKill))
+  emitBaseAdj(MBB, II, DstReg, Offset);
+  BuildMI(MBB, II, DL, TII->get(Opc))
+    .addReg(SrcReg)
     .addReg(DstReg);
 
   return eraseMI(MI);
@@ -417,59 +394,82 @@ bool SuperHExpandPseudo::expand<SH::MOVF32SP>(Block &MBB, BlockIt MBBI) {
 
 bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
   const DebugLoc &DL = MBBI->getDebugLoc();
-  const MachineFunction &MF = *MBB.getParent();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
 
   auto DstReg = MI.getOperand(0).getReg();
   bool DstIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
 
-  StackAddr Addr = getStackOffset(MF, FrameReg, Offset, 4, Scale);
-  emitStackAdj(MBB, MBBI, FrameReg, Addr);
+  bool FrameIsKill;
+  auto Addr = TRI->getStackAddress(MF, Offset, 4, Scale);
+  emitStackAdj(MBB, II, FrameReg, FrameIsKill, Addr);
 
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*LF opcode.");
   case SH::MOVBLF: {
+    if (Addr.Offset == 0) {
 
-    // mov.b    @(offset,r1), r0
-    // mov      r0,           <dst reg>
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL4))
-        .addReg(SH::R1)
-        .addImm(Addr.Offset)
-        .addReg(SH::R0, RegState::Define);
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
-        .addReg(DstReg, getKillRegState(DstIsKill))
-        .addReg(SH::R0, RegState::Kill);
+      // mov.b  r1, <dst reg>
+      BuildMI(MBB, II, DL, TII->get(SH::MOVBL), DstReg)
+          .addReg(FrameReg);
+    } else {
+
+      // mov.b    @(offset,r1), r0
+      // mov      r0,           <dst reg>
+      BuildMI(MBB, II, DL, TII->get(SH::MOVBL4))
+          .addReg(FrameReg)
+          .addImm(Addr.Offset)
+          .addReg(SH::R0);
+      BuildMI(MBB, II, DL, TII->get(SH::MOV))
+          .addReg(DstReg)
+          .addReg(SH::R0);
+    }
     break;
   }
   case SH::MOVWLF: {
+    if (Addr.Offset == 0) {
 
-    // mov.w    @(offset,r1), r0
-    // mov      r0,           <dst reg>
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL4))
-      .addReg(SH::R1)
-      .addImm(Addr.Offset);
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
-        .addReg(DstReg, getKillRegState(DstIsKill))
-        .addReg(SH::R0, RegState::Define);
+      // mov.w  r1, <dst reg>
+      BuildMI(MBB, II, DL, TII->get(SH::MOVWL), DstReg)
+          .addReg(FrameReg);
+    } else {
+
+      // mov.w    @(offset,r1), r0
+      // mov      r0,           <dst reg>
+      BuildMI(MBB, II, DL, TII->get(SH::MOVWL4))
+        .addReg(FrameReg)
+        .addImm(Addr.Offset);
+      BuildMI(MBB, II, DL, TII->get(SH::MOV))
+          .addReg(DstReg)
+          .addReg(SH::R0);
+    }
     break;
   }
   case SH::MOVLLF: {
+    if (Addr.Offset == 0) {
 
-    // mov.l    @(offset,r1), <dst reg>
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL4))
-        .addReg(DstReg, getKillRegState(DstIsKill))
-        .addReg(SH::R1)
-        .addImm(Addr.Offset);
+      // mov.l  r1, <dst reg>
+      BuildMI(MBB, II, DL, TII->get(SH::MOVLL), DstReg)
+          .addReg(FrameReg);
+    } else {
+
+      // mov.l    @(offset,r1), <dst reg>
+      BuildMI(MBB, II, DL, TII->get(SH::MOVLL4))
+          .addReg(DstReg)
+          .addReg(FrameReg)
+          .addImm(Addr.Offset);
+    }
     break;
   }
   case SH::MOVF32LF: {
 
     // fmov.s   @r1, <dst reg>
-    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_LOAD), DstReg)
-        .addReg(SH::R1);
+    BuildMI(MBB, II, DL, TII->get(SH::FMOV_LOAD), DstReg)
+        .addReg(FrameReg);
     break;
   }
   }
@@ -479,6 +479,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
 
 bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
   const SuperHMachineFunctionInfo *FI = MF.getInfo<SuperHMachineFunctionInfo>();
@@ -516,8 +517,8 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
     break;
   }
 
-  emitBaseAdj(MBB, MBBI, DstReg, Offset);
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), DstReg)
+  emitBaseAdj(MBB, II, DstReg, Offset);
+  BuildMI(MBB, II, DL, TII->get(Opc), DstReg)
     .addReg(SrcReg);
 
   return eraseMI(MI);
@@ -588,14 +589,15 @@ bool SuperHExpandPseudo::expand<SH::MOVF32LP>(Block &MBB, BlockIt MBBI) {
 
 bool SuperHExpandPseudo::loadFromImmediate(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
   auto DstReg = MI.getOperand(0).getReg();
 
   if (MI.getOperand(1).isImm()) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), DstReg)
+    BuildMI(MBB, II, DL, TII->get(SH::MOVI), DstReg)
         .addImm(MI.getOperand(1).getImm());
   } else if (MI.getOperand(1).isCPI()) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), DstReg)
+    BuildMI(MBB, II, DL, TII->get(SH::MOVLI), DstReg)
           .addConstantPoolIndex(MI.getOperand(1).getIndex());
   }
 
@@ -620,18 +622,19 @@ bool SuperHExpandPseudo::expand<SH::MOVIL>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::MOVIF32>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
   auto DstReg = MI.getOperand(0).getReg();
   auto Src = MI.getOperand(1);
 
   if (Src.isFPImm()) {
     if (Src.getFPImm()->isZero()) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::FLDI0), DstReg);
+      BuildMI(MBB, II, DL, TII->get(SH::FLDI0), DstReg);
       return eraseMI(MI);
     }
 
     if (Src.getFPImm()->isOne()) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::FLDI1), DstReg);
+      BuildMI(MBB, II, DL, TII->get(SH::FLDI1), DstReg);
       return eraseMI(MI);
     }
 
@@ -640,11 +643,11 @@ bool SuperHExpandPseudo::expand<SH::MOVIF32>(Block &MBB, BlockIt MBBI) {
 
     // Load to FPUL, assuming data is fr32, then move
     // to destination register.
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
+    BuildMI(MBB, II, DL, TII->get(SH::MOVLI), SH::R1)
           .addConstantPoolIndex(MI.getOperand(1).getIndex());
-    BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
+    BuildMI(MBB, II, DL, TII->get(SH::LDSFPUL))
           .addReg(SH::R1);
-    BuildMI(MBB, MBBI, DL, TII->get(SH::FSTS), DstReg);
+    BuildMI(MBB, II, DL, TII->get(SH::FSTS), DstReg);
     return eraseMI(MI);
   }
   return false;
@@ -658,15 +661,16 @@ bool SuperHExpandPseudo::expand<SH::MOVIF32>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::LNOT>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
   auto SrcReg = MI.getOperand(1).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::TST))
+  BuildMI(MBB, II, DL, TII->get(SH::TST))
     .addReg(SrcReg)
     .addReg(SrcReg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOVT), DstReg);
+  BuildMI(MBB, II, DL, TII->get(SH::MOVT), DstReg);
 
   return eraseMI(MI);
 }
@@ -680,6 +684,7 @@ bool SuperHExpandPseudo::expand<SH::LNOT>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
@@ -688,27 +693,27 @@ bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
 
   while (Offset > 0) {
     if (Offset >= 16) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL16), DstReg).addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::SHLL16), DstReg).addReg(SrcReg);
 
       Offset -= 16;
       continue;
     }
 
     if (Offset >= 8) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL8), DstReg).addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::SHLL8), DstReg).addReg(SrcReg);
 
       Offset -= 8;
       continue;
     }
 
     if (Offset >= 2) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL2), DstReg).addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::SHLL2), DstReg).addReg(SrcReg);
 
       Offset -= 2;
       continue;
     }
 
-    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::SHLL), DstReg).addReg(SrcReg);
     Offset -= 1;
     continue;
   }
@@ -719,6 +724,7 @@ bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
@@ -728,27 +734,27 @@ bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
   while (Offset > 0) {
 
     if (Offset >= 16) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR16), DstReg).addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::SHLR16), DstReg).addReg(SrcReg);
 
       Offset -= 16;
       continue;
     }
 
     if (Offset >= 8) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR8), DstReg).addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::SHLR8), DstReg).addReg(SrcReg);
 
       Offset -= 8;
       continue;
     }
 
     if (Offset >= 2) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR2), DstReg).addReg(SrcReg);
+      BuildMI(MBB, II, DL, TII->get(SH::SHLR2), DstReg).addReg(SrcReg);
 
       Offset -= 2;
       continue;
     }
 
-    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::SHLR), DstReg).addReg(SrcReg);
     Offset -= 1;
     continue;
   }
@@ -759,6 +765,7 @@ bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
@@ -766,7 +773,7 @@ bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
   int64_t Offset = MI.getOperand(2).getImm();
 
   while (Offset > 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::SHAR), DstReg).addReg(SrcReg);
     Offset -= 1;
   }
 
@@ -776,6 +783,7 @@ bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::RTLri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
@@ -783,7 +791,7 @@ bool SuperHExpandPseudo::expand<SH::RTLri>(Block &MBB, BlockIt MBBI) {
   int64_t Offset = MI.getOperand(2).getImm();
 
   while (Offset > 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::ROTL), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::ROTL), DstReg).addReg(SrcReg);
     Offset -= 1;
   }
 
@@ -793,6 +801,7 @@ bool SuperHExpandPseudo::expand<SH::RTLri>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::RTRri>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
@@ -800,7 +809,7 @@ bool SuperHExpandPseudo::expand<SH::RTRri>(Block &MBB, BlockIt MBBI) {
   int64_t Offset = MI.getOperand(2).getImm();
 
   while (Offset > 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::ROTR), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::ROTR), DstReg).addReg(SrcReg);
     Offset -= 1;
   }
 
@@ -819,14 +828,15 @@ bool SuperHExpandPseudo::expand<SH::RTRri>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::SHLrr>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL)).addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-8);
+  BuildMI(MBB, II, DL, TII->get(SH::SHLL)).addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
 
   return eraseMI(MI);
 }
@@ -834,14 +844,15 @@ bool SuperHExpandPseudo::expand<SH::SHLrr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::SHRrr>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR)).addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-8);
+  BuildMI(MBB, II, DL, TII->get(SH::SHLR)).addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
 
   return eraseMI(MI);
 }
@@ -849,14 +860,15 @@ bool SuperHExpandPseudo::expand<SH::SHRrr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR)).addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-8);
+  BuildMI(MBB, II, DL, TII->get(SH::SHAR)).addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
 
   return eraseMI(MI);
 }
@@ -864,14 +876,15 @@ bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::RTLrr>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::ROTL)).addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-8);
+  BuildMI(MBB, II, DL, TII->get(SH::ROTL)).addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
 
   return eraseMI(MI);
 }
@@ -879,14 +892,15 @@ bool SuperHExpandPseudo::expand<SH::RTLrr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::RTRrr>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::ROTR)).addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-8);
+  BuildMI(MBB, II, DL, TII->get(SH::ROTR)).addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
 
   return eraseMI(MI);
 }
@@ -901,14 +915,15 @@ bool SuperHExpandPseudo::expand<SH::RTRrr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::FTOI>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto SrcReg = MI.getOperand(0).getReg();
   auto DstReg = MI.getOperand(1).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
+  BuildMI(MBB, II, DL, TII->get(SH::LDSFPUL))
     .addReg(SrcReg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::FLOAT32), DstReg);
+  BuildMI(MBB, II, DL, TII->get(SH::FLOAT32), DstReg);
 
   return eraseMI(MI);
 }
@@ -916,14 +931,15 @@ bool SuperHExpandPseudo::expand<SH::FTOI>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::ITOF>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto SrcReg = MI.getOperand(0).getReg();
   auto DstReg = MI.getOperand(1).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::FTRC32))
+  BuildMI(MBB, II, DL, TII->get(SH::FTRC32))
     .addReg(SrcReg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::STSFPUL), DstReg);
+  BuildMI(MBB, II, DL, TII->get(SH::STSFPUL), DstReg);
 
   return eraseMI(MI);
 }
@@ -931,14 +947,15 @@ bool SuperHExpandPseudo::expand<SH::ITOF>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::FTOIBITS>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto SrcReg = MI.getOperand(0).getReg();
   auto DstReg = MI.getOperand(1).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
+  BuildMI(MBB, II, DL, TII->get(SH::LDSFPUL))
     .addReg(SrcReg);
-  BuildMI(MBB, MI, DL, TII->get(SH::FSTS), DstReg);
+  BuildMI(MBB, II, DL, TII->get(SH::FSTS), DstReg);
 
   return eraseMI(MI);
 }
@@ -946,14 +963,15 @@ bool SuperHExpandPseudo::expand<SH::FTOIBITS>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::ITOFBITS>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  BlockIt II = std::next(MBBI);
   MachineInstr &MI = *MBBI;
 
   auto SrcReg = MI.getOperand(0).getReg();
   auto DstReg = MI.getOperand(1).getReg();
 
-  BuildMI(MBB, MI, DL, TII->get(SH::FLDS))
+  BuildMI(MBB, II, DL, TII->get(SH::FLDS))
     .addReg(SrcReg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::STSFPUL), DstReg);
+  BuildMI(MBB, II, DL, TII->get(SH::STSFPUL), DstReg);
 
   return eraseMI(MI);
 }

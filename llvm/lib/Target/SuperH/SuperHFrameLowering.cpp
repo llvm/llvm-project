@@ -59,52 +59,27 @@ using namespace llvm;
 //===--------------------------------------------------------------------------===//
 
 // Helper to emit stack pointer adjustment.
-void SuperHFrameLowering::emitFrameAdjust(Register Base, MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI, 
-                                          int32_t AdjValue) const {
+void SuperHFrameLowering::emitFrameAdjust(Register Base, Block &MBB, BlockIt MBBI, 
+                                          int32_t AdjValue, 
+                                          MachineInstr::MIFlag MIFlag) const {
   const SuperHInstrInfo &TII = *STI.getInstrInfo();
-  MachineInstr::MIFlag MFlag = AdjValue < 0 ? 
-    MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
-  TII.emitAddressAdjust(Base, MBB, MBBI, AdjValue, MaxSPAdd, MFlag);
+  TII.emitAddressAdjust(Base, MBB, MBBI, AdjValue, MaxSPAdd, MIFlag);
 }
-
-
-
-
-//===--------------------------------------------------------------------------===//
-//                              Call-Frame Objects
-//===--------------------------------------------------------------------------===//
 
 StackOffset
 SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                             Register &FrameReg) const {
-  const SuperHSubtarget &Subtarget = MF.getSubtarget<SuperHSubtarget>();
-  const SuperHRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SuperHMachineFunctionInfo *TMFI = MF.getInfo<SuperHMachineFunctionInfo>();
-  bool HasFP = hasFP(MF);
+  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
 
-  // NOTE:  All the frame indices are relative to the stack/frame pointer
-  //        post-offset. as such an extra adjustment is needed here.
-  int64_t FrameOffset = MFI.getObjectOffset(FI);
-  if (FI < 0)
-    FrameOffset += TMFI->ImplicitStackSize + 4;
+  // By default, assume all frame indices are referenced via whatever
+  // getFrameRegister() says. The target can override this if it's doing
+  // something different.
+  FrameReg = RI->getFrameRegister(MF);
 
-  LLVM_DEBUG(dbgs() << "FI[" << FI << "] == " << FrameOffset << "\n");
-
-  // R14 base
-  if (HasFP) {
-
-    // Adjust down to remove FP.
-    FrameReg = RegInfo->getFrameRegister();
-    return StackOffset::getFixed(FrameOffset);
-  }
-
-  // R15 base
-  FrameReg = RegInfo->getStackRegister(); // r15
-  return StackOffset::getFixed(FrameOffset);
+  return StackOffset::getFixed(MFI.getObjectOffset(FI) + MFI.getStackSize() -
+                               getOffsetOfLocalArea());
 }
-
 
 
 
@@ -131,10 +106,11 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Get stack frame size, align up to 32-bits if needed.
   int64_t StackSize = MFI.getStackSize();
+  int64_t StackOff = 0;
 
   // Store previous frame pointer.
   if (HasFP) {
-    TMFI->ImplicitStackSize += 4;
+    StackOff += 4;
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), FP)
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -142,19 +118,21 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Store Return address on stack (if needed)
   if (MFI.hasCalls()) {
-    TMFI->ImplicitStackSize += 4;
+    StackOff += 4;
     BuildMI(MBB, MBBI, DL, TII.get(SH::STSMPR))
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // Create new stack frame.
-  emitFrameAdjust(SP, MBB, MBBI, -StackSize);
+  emitFrameAdjust(SP, MBB, MBBI, -StackSize, MachineInstr::FrameSetup);
   if (HasFP) {
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), FP)
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameSetup);
   }
+
+  MFI.setOffsetAdjustment(StackOff);
 
   // // Store GOT
   // if (STI.isPositionIndependent()) {
@@ -171,7 +149,6 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "Emitting epilogue for " << MF.getName() << "...\n");
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  SuperHMachineFunctionInfo *TMFI = MF.getInfo<SuperHMachineFunctionInfo>();
   const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
   const SuperHInstrInfo &TII = *STI.getInstrInfo();
@@ -186,12 +163,12 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Restore stack frame
   if (HasFP) {
-    emitFrameAdjust(FP, MBB, MBBI, StackSize);
+    emitFrameAdjust(FP, MBB, MBBI, StackSize, MachineInstr::FrameDestroy);
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), SP)
         .addReg(FP)
-        .setMIFlag(MachineInstr::FrameSetup);
+        .setMIFlag(MachineInstr::FrameDestroy);
   } else {
-    emitFrameAdjust(SP, MBB, MBBI, StackSize);
+    emitFrameAdjust(SP, MBB, MBBI, StackSize, MachineInstr::FrameDestroy);
   }
 
   // Restore return address from stack (if needed.)
@@ -239,7 +216,7 @@ bool SuperHFrameLowering::spillCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   for (const CalleeSavedInfo &I : reverse(CSI)) {
     TII.storeRegToStackSlot(MBB, MI, I.getReg(), true, I.getFrameIdx(),
-                            &SH::GPRRegClass, 0);
+                            &SH::GPRRegClass, 0, MachineInstr::FrameSetup);
   }
   return true;
 }
@@ -259,7 +236,7 @@ bool SuperHFrameLowering::restoreCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   for (const CalleeSavedInfo &I : CSI) {
     TII.loadRegFromStackSlot(MBB, II, I.getReg(), I.getFrameIdx(),
-                             &SH::GPRRegClass, 0);
+                             &SH::GPRRegClass, 0, MachineInstr::FrameDestroy);
   }
 
   return true;

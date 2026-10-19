@@ -27,6 +27,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "sh-isel"
 #define PASS_NAME "SH DAG->DAG Instruction Selection"
@@ -318,12 +319,6 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
                           ->getZExtValue();
   SDLoc DL(N);
 
-  // Handle FP comparisons if enabled.
-  bool isFP32Cmp = 
-    Subtarget->hasFPU() &&
-    LHS.getSimpleValueType() == MVT::f32 && 
-    RHS.getSimpleValueType() == MVT::f32;
-
   // Comparison order is reverse in SuperH
   std::swap(LHS, RHS);
 
@@ -334,17 +329,11 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   default:
     break;
   case SHCC::COND_EQ: {
-    if (isFP32Cmp)
-      Res = CurDAG->getMachineNode(SH::FCMP_EQ, DL, MVT::Glue, LHS, RHS);
-    else
-      Res = CurDAG->getMachineNode(SH::CMPEQ, DL, MVT::Glue, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPEQ, DL, MVT::Glue, LHS, RHS);
     break;
   }
   case SHCC::COND_GT: {
-    if (isFP32Cmp)
-      Res = CurDAG->getMachineNode(SH::FCMP_GT, DL, MVT::Glue, LHS, RHS);
-    else
-      Res = CurDAG->getMachineNode(SH::CMPGT, DL, MVT::Glue, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPGT, DL, MVT::Glue, LHS, RHS);
     break;
   }
   case SHCC::COND_GE: {
@@ -414,6 +403,39 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::FCMP>(SDNode *N) {
     return true;
   }
 
+  return false;
+}
+
+template <> bool SuperHDAGToDAGISel::trySelect<SHISD::SETCC>(SDNode *N) {
+  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(0))
+                          ->getZExtValue();
+  SDValue Cmp = N->getOperand(1);
+  EVT RetTy = N->getValueType(0);
+  SDLoc DL(N);
+
+  SDNode *Res;
+  switch(CC) {
+  default: llvm_unreachable("Expected COND_T or COND_F!");
+  case SHCC::COND_T:
+    Res = CurDAG->getMachineNode(SH::MOVT, DL, RetTy, Cmp);
+    break;
+  case SHCC::COND_F:
+
+    // The following sequence is an optimal way to get the inverted
+    // T bit into a given register. 
+    //   mov -1, Rn
+    //   negc Rm, Rn
+    Res = CurDAG->getMachineNode(SH::MOVI, DL, RetTy, 
+      CurDAG->getSignedTargetConstant(-1, DL, MVT::i8));
+    Res = CurDAG->getMachineNode(SH::NEGC, DL, RetTy, {SDValue(Res, 0), Cmp});
+    break;
+  }
+
+  if (Res) {
+    ReplaceUses(SDValue(N, 0), SDValue(Res, 0));
+    CurDAG->RemoveDeadNode(N);
+    return true;
+  }
   return false;
 }
 
@@ -489,6 +511,7 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
   SELECT(SHISD::BRCOND);
   SELECT(SHISD::CMP);
   SELECT(SHISD::FCMP);
+  SELECT(SHISD::SETCC);
   }
 
 #undef SELECT

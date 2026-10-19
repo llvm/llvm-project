@@ -21,6 +21,10 @@ namespace llvm {
 class SuperHSubtarget;
 
 class SuperHFrameLowering : public TargetFrameLowering {
+private:
+  using Block = MachineBasicBlock;
+  using BlockIt = MachineBasicBlock::iterator;
+
 protected:
   const SuperHSubtarget &STI;
 
@@ -35,33 +39,28 @@ public:
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MI,
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
+  void emitPrologue(MachineFunction &MF, Block &MBB) const override;
+  void emitEpilogue(MachineFunction &MF, Block &MBB) const override;
+  bool spillCalleeSavedRegisters(Block &MBB, BlockIt MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
   bool
-  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MI,
+  restoreCalleeSavedRegisters(Block &MBB, BlockIt MI,
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
-  void emitFrameAdjust(Register Base, MachineBasicBlock &MBB, 
-                       MachineBasicBlock::iterator MBBI, int32_t AdjValue) const;
+  void emitFrameAdjust(Register Base, Block &MBB, BlockIt MI, 
+                       int32_t AdjValue, MachineInstr::MIFlag MIFlag) const;
 
-  /// getFrameIndexReference - This method should return the base register
-  /// and offset used to reference a frame index location. The offset is
-  /// returned directly, and the base register is returned via FrameReg.
-  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
-                                     Register &FrameReg) const override;
-
-  MachineBasicBlock::iterator
-  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator I) const override;
+  BlockIt
+  eliminateCallFramePseudoInstr(MachineFunction &MF, Block &MBB, 
+                                BlockIt MI) const override;
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;

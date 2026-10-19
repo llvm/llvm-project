@@ -54,6 +54,7 @@ def SHSDT_Brcond        : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1,
 def SHSDT_Cmp           : SDTypeProfile<0, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, i8>]>;
 def SHSDT_SelectCC      : SDTypeProfile<1, 3, 
                           [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
+def SHSDT_SetCC         : SDTypeProfile<1, 1, [SDTCisVT<1, i8>]>;
 
 //===--------------------------------------------------------------------------===//
 // SuperH Specific Nodes
@@ -79,6 +80,7 @@ def SHPICAdd        : SDNode<"SHISD::PIC_ADD", SHSDT_PICAdd>;
 
 // Conditional Branching and Comparison
 def SHselectcc      : SDNode<"SHISD::SELECT_CC", SHSDT_SelectCC, [SDNPInGlue]>;
+def SHsetcc         : SDNode<"SHISD::SETCC", SHSDT_SetCC, [SDNPInGlue]>;
 def SHbrcond        : SDNode<"SHISD::BRCOND", SHSDT_Brcond, [SDNPHasChain, SDNPInGlue]>;
 def SHcmp           : SDNode<"SHISD::CMP", SHSDT_Cmp, [SDNPOutGlue]>;
 
@@ -572,24 +574,24 @@ let hasSideEffects = 0, mayStore = 1 in {
 // Addition
 //===--------------------------------------------------------------------------===//
 
-let hasSideEffects = 0, Constraints = "$src = $Rn" in {
+let hasSideEffects = 0, Constraints = "$dst = $Rn" in {
   
   // add Rm, Rn
   def ADD           : InstRmRn<0b0011000000001100, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                               "add $Rm,$Rn",
                               []>;
 
   // add imm:8, Rn
   def ADDI          : InstRnI8<0b0111000000000000, 
-                              (outs GPR:$Rn), (ins GPR:$src, imm8:$imm),
+                              (outs GPR:$Rn), (ins GPR:$dst, imm8:$imm),
                               "add $imm,$Rn",
-                              [(set i32:$Rn, (add i32:$src, imm:$imm))]>;
+                              [(set i32:$Rn, (add i32:$dst, imm:$imm))]>;
 
   // addc Rm, Rn
   let Defs = [SR], Uses = [SR], isCommutable = 1 in
   def ADDC          : InstRmRn<0b0011000000001110,
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                               "addc $Rm,$Rn",
                               []>;
 
@@ -597,7 +599,7 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
   // addv Rm, Rn
   let Defs = [SR], isCommutable = 1 in
   def ADDV          : InstRmRn<0b0011000000001111,
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                               "addv $Rm,$Rn",
                               []>;
 }
@@ -608,34 +610,33 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
 // Subtraction
 //===--------------------------------------------------------------------------===//
 
-let hasSideEffects = 0, isCommutable = 1, Constraints = "$src = $Rn" in {
+let hasSideEffects = 0, isCommutable = 1, Constraints = "$dst = $Rn" in {
 
   // sub Rm, Rn
   def SUB           : InstRmRn<0b0011000000001000,
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                               "sub $Rm,$Rn",
-                              [(set i32:$Rn, (sub i32:$Rm, i32:$src))]>;
+                              []>;
 
   // subc Rm, Rn
   let Defs = [SR], Uses = [SR] in
   def SUBC          : InstRmRn<0b0011000000001010,
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                               "subc $Rm,$Rn",
                               []>;
 
   // subv Rm, Rn
   let Defs = [SR] in
   def SUBV          : InstRmRn<0b0011000000001011,
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                               "subv $Rm,$Rn",
                               []>;
   
   // dt Rn
-  let Defs = [SR] in
   def DT              : InstRn<0b0100000000010000,
-                              (outs GPR:$Rn), (ins GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$dst),
                               "dt $Rn",
-                              [(set i32:$Rn, (sub i32:$src, -1))]>;
+                              []>;
 }
 
 let hasSideEffects = 0 in {
@@ -857,9 +858,9 @@ def CMPSTR          : InstRmRn<0b0010000000001100,
 //===--------------------------------------------------------------------------===//
 
 // and Rm,Rn
-let Constraints = "$src = $Rn" in
+let Constraints = "$dst = $Rn" in
 def AND             : InstRmRn<0b0010000000001001, 
-                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                             "and $Rm,$Rn",
                             []>;
 
@@ -883,11 +884,11 @@ def NOT           : InstRmRn<0b0110000000000111,
                             []>;
 
 // or Rm,Rn
-let Constraints = "$src = $Rn" in
+let Constraints = "$dst = $Rn" in
 def OR            : InstRmRn<0b0010000000001011, 
-                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                             "or $Rm,$Rn",
-                            [(set i32:$Rn, (or i32:$Rm, i32:$src))]>;
+                            []>;
 
 // or #imm,R0
 let Defs = [R0], Uses = [R0] in
@@ -903,11 +904,11 @@ def ORM             : InstI8<0b1100111100000000,
                             []>;
 
 // xor Rm,Rn
-let Constraints = "$src = $Rn" in
+let Constraints = "$dst = $Rn" in
 def XOR           : InstRmRn<0b0010000000001010, 
-                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                            (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                             "xor $Rm,$Rn",
-                            [(set i32:$Rn, (xor i32:$Rm, i32:$src))]>;
+                            []>;
 
 // xor #imm,R0
 let Defs = [R0], Uses = [R0] in
@@ -1648,8 +1649,8 @@ def : Pat<(i16 (trunc  i32:$src)),    (EXTUW i32:$src)>;
 def : Pat<(i32 (shl   i32:$src1, i32:$src2)),         (SHLrr GPR:$src1,    GPR:$src2)>;
 def : Pat<(i32 (srl   i32:$src1, i32:$src2)),         (SHRrr GPR:$src1,    GPR:$src2)>;
 def : Pat<(i32 (sra   i32:$src1, i32:$src2)),         (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (rotl  i32:$src1, i16:$src2)),         (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (rotr  i32:$src1, i16:$src2)),         (RTRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (rotl  i32:$src1, i32:$src2)),         (RTLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (rotr  i32:$src1, i32:$src2)),         (RTRrr GPR:$src1,    GPR:$src2)>;
 def : Pat<(i16 (shl   i16:$src1, i16:$src2)),         (SHLrr GPR:$src1,    GPR:$src2)>;
 def : Pat<(i16 (srl   i16:$src1, i16:$src2)),         (SHRrr GPR:$src1,    GPR:$src2)>;
 def : Pat<(i16 (sra   i16:$src1, i16:$src2)),         (SRArr GPR:$src1,    GPR:$src2)>;
@@ -1681,21 +1682,21 @@ def : Pat<(i8  (rotr   i8:$src, anyimm32:$shift)),    (RTRri GPR:$src,  i32imm:$
 //===--------------------------------------------------------------------------===//
 // Bit Manipulation
 //===--------------------------------------------------------------------------===//
-def : Pat<(i32 (and i32:$src, i32:$dst)), (AND GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (and i16:$src, i16:$dst)), (EXTUW (AND GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (and  i8:$src,  i8:$dst)), (EXTUB (AND GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (and i32:$dst, i32:$src)), (AND GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (and i16:$dst, i16:$src)), (EXTUW (AND GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (and  i8:$dst,  i8:$src)), (EXTUB (AND GPR:$src, GPR:$dst))>;
 
 def : Pat<(i32 (not  i32:$src)),           (NOT GPR:$src)>;
 def : Pat<(i16 (not  i16:$src)),           (EXTUW (NOT GPR:$src))>;
 def : Pat<(i8  (not   i8:$src)),           (EXTUB (NOT GPR:$src))>;
 
-def : Pat<(i32 (or i32:$src, i32:$dst)),  (OR GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (or i16:$src, i16:$dst)),  (EXTUW (OR GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (or  i8:$src,  i8:$dst)),  (EXTUB (OR GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (or i32:$dst, i32:$src)),  (OR GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (or i16:$dst, i16:$src)),  (EXTUW (OR GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (or  i8:$dst,  i8:$src)),  (EXTUB (OR GPR:$src, GPR:$dst))>;
 
-def : Pat<(i32 (xor i32:$src, i32:$dst)), (XOR GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (xor i16:$src, i16:$dst)), (EXTUW (XOR GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (xor  i8:$src,  i8:$dst)), (EXTUB (XOR GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (xor i32:$dst, i32:$src)), (XOR GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (xor i16:$dst, i16:$src)), (EXTUW (XOR GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (xor  i8:$dst,  i8:$src)), (EXTUB (XOR GPR:$src, GPR:$dst))>;
 
 // Optimized codepath for the C not operator.
 def : Pat<(i32 (seteq i32:$src, 0)),       (LNOT GPR:$src)>;
@@ -1708,29 +1709,29 @@ def : Pat<(i32 (seteq  i8:$src, 0)),       (LNOT GPR:$src)>;
 //===--------------------------------------------------------------------------===//
 // Arithmetic
 //===--------------------------------------------------------------------------===//
-def : Pat<(i32 (add i32:$src, i32:$dst)),   (ADD GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (add i16:$src, i16:$dst)),   (ADD GPR:$src, GPR:$dst)>;
-def : Pat<(i8  (add  i8:$src,  i8:$dst)),   (ADD GPR:$src, GPR:$dst)>;
+def : Pat<(i32 (add i32:$dst, i32:$src)),   (ADD GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (add i16:$dst, i16:$src)),   (EXTSW (ADD GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (add  i8:$dst,  i8:$src)),   (EXTSB (ADD GPR:$src, GPR:$dst))>;
 
-def : Pat<(i32 (adde i32:$src, i32:$dst)),  (ADDC GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (adde i16:$src, i16:$dst)),  (ADDC GPR:$src, GPR:$dst)>;
-def : Pat<(i8  (adde  i8:$src,  i8:$dst)),  (ADDC GPR:$src, GPR:$dst)>;
+def : Pat<(i32 (adde i32:$dst, i32:$src)),  (ADDC GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (adde i16:$dst, i16:$src)),  (ADDC GPR:$src, GPR:$dst)>;
+def : Pat<(i8  (adde  i8:$dst,  i8:$src)),  (ADDC GPR:$src, GPR:$dst)>;
 
-def : Pat<(i32 (addc i32:$src, i32:$dst)),  (ADDV GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (addc i16:$src, i16:$dst)),  (ADDV GPR:$src, GPR:$dst)>;
-def : Pat<(i8  (addc  i8:$src,  i8:$dst)),  (ADDV GPR:$src, GPR:$dst)>;
+def : Pat<(i32 (addc i32:$dst,  i32:$src)),  (ADDV GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (addc i16:$dst,  i16:$src)),  (ADDV GPR:$src, GPR:$dst)>;
+def : Pat<(i8  (addc  i8:$dst,   i8:$src)),  (ADDV GPR:$src, GPR:$dst)>;
   
-def : Pat<(i32 (sub i32:$src, i32:$dst)),   (SUB GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (sub i16:$src, i16:$dst)),   (SUB GPR:$src, GPR:$dst)>;
-def : Pat<(i8  (sub  i8:$src,  i8:$dst)),   (SUB GPR:$src, GPR:$dst)>;
+def : Pat<(i32 (sub i32:$dst, i32:$src)),   (SUB GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (sub i16:$dst, i16:$src)),   (SUB GPR:$src, GPR:$dst)>;
+def : Pat<(i8  (sub  i8:$dst,  i8:$src)),   (SUB GPR:$src, GPR:$dst)>;
 
-def : Pat<(i32 (sube i32:$src, i32:$dst)),  (SUBC GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (sube i16:$src, i16:$dst)),  (SUBC GPR:$src, GPR:$dst)>;
-def : Pat<(i8  (sube  i8:$src,  i8:$dst)),  (SUBC GPR:$src, GPR:$dst)>;
+def : Pat<(i32 (sube i32:$dst, i32:$src )),  (SUBC GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (sube i16:$dst, i16:$src )),  (SUBC GPR:$src, GPR:$dst)>;
+def : Pat<(i8  (sube  i8:$dst,  i8:$src )),  (SUBC GPR:$src, GPR:$dst)>;
 
-def : Pat<(i32 (subc i32:$src, i32:$dst)),  (SUBV GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (subc i16:$src, i16:$dst)),  (SUBV GPR:$src, GPR:$dst)>;
-def : Pat<(i8  (subc  i8:$src,  i8:$dst)),  (SUBV GPR:$src, GPR:$dst)>;
+def : Pat<(i32 (subc i32:$dst, i32:$src)),  (SUBV GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (subc i16:$dst, i16:$src)),  (SUBV GPR:$src, GPR:$dst)>;
+def : Pat<(i8  (subc  i8:$dst,  i8:$src)),  (SUBV GPR:$src, GPR:$dst)>;
 
 def : Pat<(i32 (sub i32:$src, 1)),          (ADDI GPR:$src, -1)>;
 def : Pat<(i16 (sub i16:$src, 1)),          (EXTSW (ADDI GPR:$src, -1))>;
@@ -1786,19 +1787,19 @@ def : Pat<(i32 (zextloadi16    i32:$src)),        (EXTUW (MOVWL     i32:$src))>;
 // Stores
 //===--------------------------------------------------------------------------===//
 def : Pat<(store            i8:$src,    GPR:$dst),  (MOVBS GPR:$src,            GPR:$dst)>;
-def : Pat<(truncstorei8    i32:$src,    GPR:$dst),  (MOVBS (EXTUB GPR:$src),    GPR:$dst)>;
+def : Pat<(truncstorei8    i32:$src,    GPR:$dst),  (MOVBS GPR:$src,            GPR:$dst)>;
 def : Pat<(store           i16:$src,    GPR:$dst),  (MOVWS GPR:$src,            GPR:$dst)>;
-def : Pat<(truncstorei16   i32:$src,    GPR:$dst),  (MOVWS (EXTUW GPR:$src),    GPR:$dst)>;
-def : Pat<(store           i32:$src,    GPR:$dst),  (MOVLS  GPR:$src,           GPR:$dst)>;
+def : Pat<(truncstorei16   i32:$src,    GPR:$dst),  (MOVWS GPR:$src,            GPR:$dst)>;
+def : Pat<(store           i32:$src,    GPR:$dst),  (MOVLS GPR:$src,            GPR:$dst)>;
 
 def : Pat<(store            i8:$src,   addr:$dst),  (MOVBSP GPR:$src,           addr:$dst)>;
-def : Pat<(truncstorei8    i32:$src,   addr:$dst),  (MOVBSP (EXTUB GPR:$src),   addr:$dst)>;
+def : Pat<(truncstorei8    i32:$src,   addr:$dst),  (MOVBSP GPR:$src,           addr:$dst)>;
 def : Pat<(store           i16:$src,   addr:$dst),  (MOVWSP GPR:$src,           addr:$dst)>;
-def : Pat<(truncstorei16   i32:$src,   addr:$dst),  (MOVWSP (EXTUW GPR:$src),   addr:$dst)>;
+def : Pat<(truncstorei16   i32:$src,   addr:$dst),  (MOVWSP GPR:$src,           addr:$dst)>;
 def : Pat<(store           i32:$src,   addr:$dst),  (MOVLSP GPR:$src,           addr:$dst)>;
 
 def : Pat<(store            i8:$src, fraddr:$dst),  (MOVBSF GPR:$src,         fraddr:$dst)>;
-def : Pat<(truncstorei8    i32:$src, fraddr:$dst),  (MOVBSF (EXTUB GPR:$src), fraddr:$dst)>;
+def : Pat<(truncstorei8    i32:$src, fraddr:$dst),  (MOVBSF GPR:$src,         fraddr:$dst)>;
 def : Pat<(store           i16:$src, fraddr:$dst),  (MOVWSF GPR:$src,         fraddr:$dst)>;
-def : Pat<(truncstorei16   i32:$src, fraddr:$dst),  (MOVWSF (EXTUW GPR:$src), fraddr:$dst)>;
+def : Pat<(truncstorei16   i32:$src, fraddr:$dst),  (MOVWSF GPR:$src,         fraddr:$dst)>;
 def : Pat<(store           i32:$src, fraddr:$dst),  (MOVLSF GPR:$src,         fraddr:$dst)>;

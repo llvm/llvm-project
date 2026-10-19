@@ -48,11 +48,6 @@ public:
   // createConstIndex - Creates a new PIC Label UId.
   unsigned createConstIndex() { return CPIndexCount++; }
 
-  // ImplicitStackSize - The size of the implicit portion of the stack,
-  // this includes the saved frame pointer, saved procedure register,
-  // etc.
-  int64_t ImplicitStackSize;
-
   // tryGetConstant - SuperH's compressed instruction set means that
   // immediates and displacements can not be larger than 8 bits.
   // As such we need to store said immediates and displacements within

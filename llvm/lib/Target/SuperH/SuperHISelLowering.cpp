@@ -78,6 +78,8 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
+  setOperationAction(ISD::SETCC, MVT::i8, Custom);
+  setOperationAction(ISD::SETCC, MVT::i16, Custom);
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
 
@@ -364,11 +366,8 @@ SDValue SuperHTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetCC;
   SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
 
-  SDValue TrueV = DAG.getConstant(1, DL, Op.getValueType());
-  SDValue FalseV = DAG.getConstant(0, DL, Op.getValueType());
-  SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
-
-  return DAG.getNode(SHISD::SELECT_CC, DL, Op.getValueType(), Ops);
+  SDValue Ops[] = {TargetCC, Cmp};
+  return DAG.getNode(SHISD::SETCC, DL, Op.getValueType(), Ops);
 }
 
 SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
