@@ -2175,29 +2175,27 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
         PinnedMemoryManager(Plugin) {}
 
   /// Initialize the host device memory pools and the memory managers for
-  /// kernel args and host pinned memory allocations.
-  Error init() {
+  /// kernel args and host pinned memory allocations. Return false if the host
+  /// agent does not have the required memory pools.
+  Expected<bool> init() {
     if (auto Err = initMemoryPools())
-      return Err;
+      return std::move(Err);
 
     // The host device cannot be used without these pools. Release the pools
     // and leave the managers uninitialized.
-    if (!hasRequiredMemoryPools())
-      return deinitMemoryPools();
+    if (ArgsMemoryPools.empty() || FineGrainedMemoryPools.empty()) {
+      if (auto Err = deinitMemoryPools())
+        return std::move(Err);
+      return false;
+    }
 
     if (auto Err = ArgsMemoryManager.init(getArgsMemoryPool()))
-      return Err;
+      return std::move(Err);
 
     if (auto Err = PinnedMemoryManager.init(getFineGrainedMemoryPool()))
-      return Err;
+      return std::move(Err);
 
-    return Plugin::success();
-  }
-
-  /// Check whether the host agent has the kernel args and fine-grained memory
-  /// pools needed to use the host device.
-  bool hasRequiredMemoryPools() const {
-    return !ArgsMemoryPools.empty() && !FineGrainedMemoryPools.empty();
+    return true;
   }
 
   /// Deinitialize memory pools and managers.
@@ -4093,9 +4091,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       AMDHostDeviceTy *HostDevice = allocate<AMDHostDeviceTy>();
       new (HostDevice) AMDHostDeviceTy(*this, Agent);
 
-      if (auto Err = HostDevice->init())
-        return std::move(Err);
-      if (HostDevice->hasRequiredMemoryPools())
+      auto UsableOrErr = HostDevice->init();
+      if (!UsableOrErr)
+        return UsableOrErr.takeError();
+      if (*UsableOrErr)
         HostDevices.push_back(HostDevice);
     }
 
@@ -4176,14 +4175,14 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   /// Get the host device nearest to \p KernelAgent. If the runtime cannot
-  /// report the nearest host agent (e.g., an older libhsa) or the agent has no
-  /// host device, use the first host device.
+  /// report the nearest host agent (e.g., ROCm older than 6.0) or the agent has
+  /// no host device, use the first host device.
   AMDHostDeviceTy &getNearestHostDevice(hsa_agent_t KernelAgent) {
-    assert(!HostDevices.empty() && "Host devices not initialized");
     hsa_agent_t NearestCPU;
-    if (hsa_agent_get_info(KernelAgent,
-                           (hsa_agent_info_t)HSA_AMD_AGENT_INFO_NEAREST_CPU,
-                           &NearestCPU) == HSA_STATUS_SUCCESS) {
+    if (hsa_agent_get_info(
+            KernelAgent,
+            static_cast<hsa_agent_info_t>(HSA_AMD_AGENT_INFO_NEAREST_CPU),
+            &NearestCPU) == HSA_STATUS_SUCCESS) {
       for (AMDHostDeviceTy *HostDevice : HostDevices)
         if (HostDevice->getAgent().handle == NearestCPU.handle)
           return *HostDevice;
