@@ -1487,6 +1487,106 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @prefetch_data_sgpr_constant_write(ptr addrspace(4) inreg %ptr) {
+; GFX1250-LABEL: prefetch_data_sgpr_constant_write:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_constant_write:
+; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
+; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SPREFETCH-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SPREFETCH-NEXT:    v_nop
+; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX1250-SPREFETCH-NEXT:    s_endpgm
+;
+; NOSPREFETCH-LABEL: prefetch_data_sgpr_constant_write:
+; NOSPREFETCH:       ; %bb.0: ; %entry
+; NOSPREFETCH-NEXT:    s_endpgm
+;
+; GFX12-SPREFETCH-LABEL: prefetch_data_sgpr_constant_write:
+; GFX12-SPREFETCH:       ; %bb.0: ; %entry
+; GFX12-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX12-SPREFETCH-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.prefetch.p4(ptr addrspace(4) %ptr, i32 1, i32 0, i32 1)
+  ret void
+}
+
+define amdgpu_ps void @prefetch_data_sgpr_unknown_as(ptr addrspace(999) inreg %ptr) {
+; GFX1250-LABEL: prefetch_data_sgpr_unknown_as:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_unknown_as:
+; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
+; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SPREFETCH-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SPREFETCH-NEXT:    v_nop
+; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX1250-SPREFETCH-NEXT:    s_endpgm
+;
+; NOSPREFETCH-LABEL: prefetch_data_sgpr_unknown_as:
+; NOSPREFETCH:       ; %bb.0: ; %entry
+; NOSPREFETCH-NEXT:    s_endpgm
+;
+; GFX12-SPREFETCH-LABEL: prefetch_data_sgpr_unknown_as:
+; GFX12-SPREFETCH:       ; %bb.0: ; %entry
+; GFX12-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX12-SPREFETCH-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.prefetch.p999(ptr addrspace(999) %ptr, i32 0, i32 0, i32 1)
+  ret void
+}
+
+define amdgpu_ps void @prefetch_data_vgpr_unknown_as(ptr addrspace(999) %ptr) {
+; GFX1250-LABEL: prefetch_data_vgpr_unknown_as:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    global_prefetch_b8 v[0:1], off scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_unknown_as:
+; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
+; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SPREFETCH-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SPREFETCH-NEXT:    v_nop
+; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v[0:1], off scope:SCOPE_SYS
+; GFX1250-SPREFETCH-NEXT:    s_endpgm
+;
+; NOSPREFETCH-LABEL: prefetch_data_vgpr_unknown_as:
+; NOSPREFETCH:       ; %bb.0: ; %entry
+; NOSPREFETCH-NEXT:    s_endpgm
+;
+; GFX12-SPREFETCH-LABEL: prefetch_data_vgpr_unknown_as:
+; GFX12-SPREFETCH:       ; %bb.0: ; %entry
+; GFX12-SPREFETCH-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-SPREFETCH-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX12-SPREFETCH-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.prefetch.p999(ptr addrspace(999) %ptr, i32 0, i32 0, i32 1)
+  ret void
+}
+
 declare void @llvm.prefetch.pf(ptr nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p1(ptr addrspace(1) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p2(ptr addrspace(2) nocapture readonly, i32, i32, i32)
@@ -1496,6 +1596,7 @@ declare void @llvm.prefetch.p5(ptr addrspace(5) nocapture readonly, i32, i32, i3
 declare void @llvm.prefetch.p6(ptr addrspace(6) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p7(ptr addrspace(7) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p8(ptr addrspace(8) nocapture readonly, i32, i32, i32)
+declare void @llvm.prefetch.p999(ptr addrspace(999) nocapture readonly, i32, i32, i32)
 attributes #0 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
