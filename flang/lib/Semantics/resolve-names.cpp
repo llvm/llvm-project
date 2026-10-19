@@ -7260,9 +7260,23 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   if (!spec) {
     return;
   }
+  const auto &typeParamSpecs{std::get<std::list<parser::TypeParamSpec>>(x.t)};
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (spec->typeSymbol().get<DerivedTypeDetails>().isEnumerationType()) {
+    if (!typeParamSpecs.empty()) { // F2023 7.6.2
+      Say(typeName.source,
+          "Enumeration type '%s' has no type parameters"_err_en_US);
+    }
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(
+        GetDeclTypeSpecCategory(), std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
   bool seenAnyName{false};
-  for (const auto &typeParamSpec :
-      std::get<std::list<parser::TypeParamSpec>>(x.t)) {
+  for (const auto &typeParamSpec : typeParamSpecs) {
     const auto &optKeyword{
         std::get<std::optional<parser::Keyword>>(typeParamSpec.t)};
     std::optional<SourceName> name;
@@ -7292,17 +7306,6 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
-
-  // Enumeration types are a special case of derived types and are handled
-  // differently.
-  if (dtDetails.isEnumerationType()) {
-    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
-    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
-    SetDeclTypeSpec(type);
-    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
-    return;
-  }
-
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -8765,6 +8768,11 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveExtendsType(
       Say(extendsName->source,
           "Derived type '%s' cannot extend itself"_err_en_US);
     } else if (auto dtSpec{ResolveDerivedType(*extendsName)}) {
+      // Reject now so that no parent component of enumeration type is made.
+      if (IsEnumerationType(dtSpec->typeSymbol())) {
+        Say(extendsName->source, "The parent type is not extensible"_err_en_US);
+        return std::nullopt;
+      }
       if (!dtSpec->IsForwardReferenced()) {
         return dtSpec;
       }

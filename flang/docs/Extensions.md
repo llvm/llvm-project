@@ -596,7 +596,12 @@ end program
 * When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
-
+* In formatted I/O, an item of enumeration type may correspond to a `G`
+  edit descriptor, which is processed like an `I` edit descriptor (the
+  value written or read is the ordinal position).  F2023 12.6.3 permits
+  only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
+  items.  No diagnostic is issued.
+  
 ### `SIMPLE` classification of extensions
 
 The following extensions are `SIMPLE`: `IARGC`, `INT2`, `INT8`, `INT_PTR_KIND`, `ISNAN`,
@@ -659,11 +664,6 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
   Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
   enable a diagnostic warning for affected call sites.
   [-frelaxed-c-loc-checks]
-* In formatted I/O, an item of enumeration type may correspond to a `G`
-  edit descriptor, which is processed like an `I` edit descriptor (the
-  value written or read is the ordinal position).  F2023 12.6.3 permits
-  only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
-  items.  No diagnostic is issued.
 
 ### Extensions and legacy features deliberately not supported
 
@@ -759,6 +759,14 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
   derived type not processed by defined I/O -- in unformatted I/O with an
   error.  This can be a temporary flang limitation while enumeration-type
   support is incomplete, not a standard requirement.
+
+* F2023 C712 prohibits only an assumed-type or intrinsic-type data-ref
+  in a `CLASSOF` type specifier, so it does not exclude a data-ref of a
+  non-extensible type, such as a `SEQUENCE` or `BIND(C)` derived type or
+  an enumeration type.  A polymorphic entity of such a type could never
+  have a dynamic type other than its declared type, and C705 prohibits
+  the equivalent `CLASS` type specifier.  Flang requires the data-ref of
+  `CLASSOF` to be of an extensible type and reports an error otherwise.
 
 ## Standard features that might as well not be
 

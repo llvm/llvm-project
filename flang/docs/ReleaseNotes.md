@@ -180,6 +180,15 @@ page](https://llvm.org/releases/).
   - the `INT` intrinsic applied to an enumeration value, and the `HUGE`,
     `NEXT` and `PREVIOUS` intrinsics;
   - formatted I/O using the `I`, `B`, `O` and `Z` edit descriptors.
+  Known Limitations:
+  - unformatted I/O of enumeration types is rejected (issue 231638);
+  - formatted input is not range-checked (231636);
+  - NEXT/PREVIOUS with STAT= inside FORALL is not yet implemented (229873);
+  - WHERE with a derived-type vector-subscript gather fails to verify (230617).
+  Side effects:
+  - `-fenumeration-type` and `-fno-enumeration-type` have been removed;
+  - NEXT and PREVIOUS are new intrinsic functions, name re-use requires EXTERNAL
+    declaration or an explicit interface.
 
 ## Build System Changes
 

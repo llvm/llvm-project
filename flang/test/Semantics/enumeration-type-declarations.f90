@@ -156,3 +156,34 @@ subroutine test_assignment_and_arithmetic()
   !ERROR: Operands of + must be numeric; have TYPE(color) and TYPE(color)
   c = red + green
 end subroutine
+
+! An enumeration type has no type parameters (F2023 7.6.2), so no type-spec may
+! give it a type-param-spec-list.  An enumeration constructor is still valid.
+subroutine test_type_parameters(u)
+  enumeration type :: state
+    enumerator :: off, on
+  end enumeration type
+  type :: holder
+    !ERROR: Enumeration type 'state' has no type parameters
+    type(state(1)) :: comp
+  end type
+  class(*), intent(in) :: u
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(1)) :: a
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(k=2)) :: b
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(:)), allocatable :: c
+  class(*), allocatable :: d
+
+  a = state(1)
+  b = off
+  !ERROR: Enumeration type 'state' has no type parameters
+  allocate(state(1) :: d)
+  deallocate(d)
+  allocate(d, source=state(2))
+  select type (u)
+  !ERROR: Enumeration type 'state' has no type parameters
+  type is (state(1))
+  end select
+end subroutine
