@@ -47,12 +47,12 @@ function Remove-ItemWithoutProgress {
     # Recursive Remove-Item reports progress in PowerShell 7. In classic
     # conhost (including cmd.exe), that progress display can leave cursor
     # artifacts behind after deletion completes.
-    $savedProgressPreference = $ProgressPreference
+    $SavedProgressPreference = $ProgressPreference
     try {
         $ProgressPreference = 'SilentlyContinue'
         Remove-Item -LiteralPath $LiteralPath -Recurse:$Recurse -Force:$Force
     } finally {
-        $ProgressPreference = $savedProgressPreference
+        $ProgressPreference = $SavedProgressPreference
     }
 }
 
@@ -100,23 +100,23 @@ function Write-CMakeCacheFile {
         [string[]]$Flags,
         [string]$FileName = 'cache_flags.cmake'
     )
-    $cacheLines = @()
-    $otherFlags = @()
-    foreach ($f in $Flags) {
-        if ($f -match '^([A-Za-z_][A-Za-z0-9_]*)(?::([^=]*))?=(.*)$') {
-            $varName  = $Matches[1]
-            $varType  = if ($Matches[2]) { $Matches[2] } else { 'STRING' }
-            $varValue = ($Matches[3] -replace '"', '').Replace('\', '/')   # strip quotes, use forward slashes
-            $cacheLines += "set($varName `"$varValue`" CACHE $varType `"`" FORCE)"
+    $CacheLines = @()
+    $OtherFlags = @()
+    foreach ($F in $Flags) {
+        if ($F -match '^([A-Za-z_][A-Za-z0-9_]*)(?::([^=]*))?=(.*)$') {
+            $VarName  = $Matches[1]
+            $VarType  = if ($Matches[2]) { $Matches[2] } else { 'STRING' }
+            $VarValue = ($Matches[3] -replace '"', '').Replace('\', '/')   # strip quotes, use forward slashes
+            $CacheLines += "set($VarName `"$VarValue`" CACHE $VarType `"`" FORCE)"
         } else {
-            $otherFlags += $f
+            $OtherFlags += $F
         }
     }
-    $cachePath = (Join-Path $PWD $FileName).Replace('\', '/')
-    $cacheLines -join "`n" | Set-Content -Path $cachePath -Encoding UTF8
+    $CachePath = (Join-Path $PWD $FileName).Replace('\', '/')
+    $CacheLines -join "`n" | Set-Content -Path $CachePath -Encoding UTF8
     return @{
-        CacheFile  = $cachePath
-        OtherFlags = $otherFlags
+        CacheFile  = $CachePath
+        OtherFlags = $OtherFlags
     }
 }
 
@@ -172,9 +172,9 @@ function Test-FileChecksum {
         [Parameter(Mandatory)][string]$Algorithm,
         [Parameter(Mandatory)][string]$ExpectedHash
     )
-    $actual = (Get-FileHash -Path $Path -Algorithm $Algorithm).Hash
-    if ($actual -ne $ExpectedHash.ToUpperInvariant()) {
-        throw "Checksum mismatch for ${Path}:`n  expected $ExpectedHash`n  actual   $actual"
+    $Actual = (Get-FileHash -Path $Path -Algorithm $Algorithm).Hash
+    if ($Actual -ne $ExpectedHash.ToUpperInvariant()) {
+        throw "Checksum mismatch for ${Path}:`n  expected $ExpectedHash`n  actual   $Actual"
     }
     Write-SubStep "Checksum OK ($Algorithm): $Path"
 }
@@ -189,22 +189,22 @@ function Get-LLVMVersionFromSource {
         Extracts LLVM version from cmake/Modules/LLVMVersion.cmake.
     #>
     param([string]$SourceDir)
-    $versionFile = Join-Path $SourceDir 'cmake' 'Modules' 'LLVMVersion.cmake'
-    if (-not (Test-Path $versionFile)) {
-        throw "Cannot find LLVMVersion.cmake at: $versionFile"
+    $VersionFile = Join-Path $SourceDir 'cmake' 'Modules' 'LLVMVersion.cmake'
+    if (-not (Test-Path $VersionFile)) {
+        throw "Cannot find LLVMVersion.cmake at: $VersionFile"
     }
-    $content = Get-Content $versionFile -Raw
-    $major = if ($content -match 'LLVM_VERSION_MAJOR\s+(\d+)') { $Matches[1] } else { throw "Cannot parse LLVM_VERSION_MAJOR" }
-    $minor = if ($content -match 'LLVM_VERSION_MINOR\s+(\d+)') { $Matches[1] } else { throw "Cannot parse LLVM_VERSION_MINOR" }
-    $patch = if ($content -match 'LLVM_VERSION_PATCH\s+(\d+)') { $Matches[1] } else { throw "Cannot parse LLVM_VERSION_PATCH" }
-    $suffix = if ($content -match 'LLVM_VERSION_SUFFIX\s+(\S+)\)') { $Matches[1] } else { '' }
+    $Content = Get-Content $VersionFile -Raw
+    $Major = if ($Content -match 'LLVM_VERSION_MAJOR\s+(\d+)') { $Matches[1] } else { throw "Cannot parse LLVM_VERSION_MAJOR" }
+    $Minor = if ($Content -match 'LLVM_VERSION_MINOR\s+(\d+)') { $Matches[1] } else { throw "Cannot parse LLVM_VERSION_MINOR" }
+    $Patch = if ($Content -match 'LLVM_VERSION_PATCH\s+(\d+)') { $Matches[1] } else { throw "Cannot parse LLVM_VERSION_PATCH" }
+    $Suffix = if ($Content -match 'LLVM_VERSION_SUFFIX\s+(\S+)\)') { $Matches[1] } else { '' }
     # Don't include the "git" development suffix in the release version
-    if ($suffix -eq 'git') { $suffix = '' }
+    if ($Suffix -eq 'git') { $Suffix = '' }
     return @{
-        Major = $major
-        Minor = $minor
-        Patch = $patch
-        Suffix = $suffix
+        Major = $Major
+        Minor = $Minor
+        Patch = $Patch
+        Suffix = $Suffix
         Full = "${major}.${minor}.${patch}${suffix}"
     }
 }

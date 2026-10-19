@@ -126,24 +126,24 @@ param(
 #===============================================================================
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     # Try to find pwsh in PATH first.
-    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-    if (-not $pwsh) {
+    $Pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+    if (-not $Pwsh) {
         # Check the default install location.
-        $defaultPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
-        if (Test-Path $defaultPath) {
-            $pwsh = Get-Item $defaultPath
+        $DefaultPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
+        if (Test-Path $DefaultPath) {
+            $Pwsh = Get-Item $DefaultPath
         }
     }
 
-    if (-not $pwsh) {
+    if (-not $Pwsh) {
         if ($Unattended) {
             Write-Error "PowerShell 7 is required. Install it before running in unattended mode."
             exit 1
         }
         Write-Host "PowerShell 7 is required but not found." -ForegroundColor Yellow
         Write-Host "Attempting to install via winget..." -ForegroundColor Yellow
-        $winget = Get-Command winget -ErrorAction SilentlyContinue
-        if (-not $winget) {
+        $Winget = Get-Command winget -ErrorAction SilentlyContinue
+        if (-not $Winget) {
             Write-Error "Cannot install PowerShell 7: winget is not available.`nPlease install PowerShell 7 manually from https://aka.ms/powershell-release?tag=stable"
             exit 1
         }
@@ -155,14 +155,14 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
         # Refresh PATH so we can find the newly installed pwsh.
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
                      [System.Environment]::GetEnvironmentVariable("Path", "User")
-        $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-        if (-not $pwsh) {
-            $defaultPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
-            if (Test-Path $defaultPath) {
-                $pwsh = Get-Item $defaultPath
+        $Pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+        if (-not $Pwsh) {
+            $DefaultPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
+            if (Test-Path $DefaultPath) {
+                $Pwsh = Get-Item $DefaultPath
             }
         }
-        if (-not $pwsh) {
+        if (-not $Pwsh) {
             Write-Error "PowerShell 7 was installed but pwsh.exe could not be found in PATH."
             exit 1
         }
@@ -172,21 +172,21 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     # Re-launch this script under PowerShell 7, forwarding all arguments.
     # Note: avoid PS7-only syntax (??  ternary, etc.) in this block since
     # it executes under PS5 (PowerShell 5).
-    $pwshPath = if ($pwsh.Source) { $pwsh.Source } else { $pwsh.Path }
-    Write-Host "Re-launching under PowerShell 7 ($pwshPath)..." -ForegroundColor Cyan
-    $forwardArgs = @()
-    foreach ($entry in $PSBoundParameters.GetEnumerator()) {
-        if ($entry.Value -is [System.Management.Automation.SwitchParameter]) {
-            if ($entry.Value.IsPresent) { $forwardArgs += "-$($entry.Key)" }
+    $PwshPath = if ($Pwsh.Source) { $Pwsh.Source } else { $Pwsh.Path }
+    Write-Host "Re-launching under PowerShell 7 ($PwshPath)..." -ForegroundColor Cyan
+    $ForwardArgs = @()
+    foreach ($Entry in $PSBoundParameters.GetEnumerator()) {
+        if ($Entry.Value -is [System.Management.Automation.SwitchParameter]) {
+            if ($Entry.Value.IsPresent) { $ForwardArgs += "-$($Entry.Key)" }
         } else {
-            $forwardArgs += "-$($entry.Key)"
+            $ForwardArgs += "-$($Entry.Key)"
             # Windows PowerShell 5.1 drops empty-string arguments when calling
             # native programs; a literal pair of quotes survives as "".
-            $stringValue = [string]$entry.Value
-            $forwardArgs += if ($stringValue -eq '') { '""' } else { $stringValue }
+            $StringValue = [string]$Entry.Value
+            $ForwardArgs += if ($StringValue -eq '') { '""' } else { $StringValue }
         }
     }
-    & $pwshPath -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath @forwardArgs
+    & $PwshPath -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath @ForwardArgs
     exit $LASTEXITCODE
 }
 
@@ -241,8 +241,8 @@ $script:StepOrder   = @('dependencies','stage1','pgo','stage2','package','tarbal
 if ($PSBoundParameters.ContainsKey('StartAt')) {
     if (-not $StartAt -or $StartAt -eq '?') {
         Write-Host "Available -StartAt steps (in order):" -ForegroundColor Cyan
-        for ($i = 0; $i -lt $script:StepOrder.Count; $i++) {
-            Write-Host "  $($i + 1). $($script:StepOrder[$i])"
+        for ($I = 0; $I -lt $script:StepOrder.Count; $I++) {
+            Write-Host "  $($I + 1). $($script:StepOrder[$I])"
         }
         exit 0
     }
@@ -258,9 +258,9 @@ $script:StartAtStep = if ($StartAt) { $StartAt } else { $null }
 # Ninja override: allow using a custom ninja binary with extra flags.
 # Usage: $env:LLVM_NINJA_OVERRIDE = "myninja.exe --flag1 --flag2"
 if ($env:LLVM_NINJA_OVERRIDE) {
-    $tokens = @($env:LLVM_NINJA_OVERRIDE.Trim() -split '\s+')
-    $script:NinjaCommand  = $tokens[0]
-    [string[]]$script:NinjaExtraArgs = if ($tokens.Count -gt 1) { $tokens[1..($tokens.Count - 1)] } else { @() }
+    $Tokens = @($env:LLVM_NINJA_OVERRIDE.Trim() -split '\s+')
+    $script:NinjaCommand  = $Tokens[0]
+    [string[]]$script:NinjaExtraArgs = if ($Tokens.Count -gt 1) { $Tokens[1..($Tokens.Count - 1)] } else { @() }
     Write-Host "Using custom ninja: $($script:NinjaCommand)" -ForegroundColor Cyan
     if ($script:NinjaExtraArgs.Count -gt 0) {
         Write-Host "  Extra ninja args: $($script:NinjaExtraArgs -join ' ')" -ForegroundColor Cyan
@@ -278,13 +278,13 @@ $env:LIT_FILTER_OUT = "gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|u
 # Shared release helpers
 #===============================================================================
 # Keep these dot-sourced so shared $script: state and functions stay in this scope.
-$windowsScriptDir = Join-Path $script:ReleaseScriptRoot 'windows'
-. (Join-Path $windowsScriptDir 'Common.ps1')
-. (Join-Path $windowsScriptDir 'Prerequisites.ps1')
-. (Join-Path $windowsScriptDir 'Toolchain.ps1')
-. (Join-Path $windowsScriptDir 'ThirdParty.ps1')
-. (Join-Path $windowsScriptDir 'Package.ps1')
-. (Join-Path $windowsScriptDir 'Build.ps1')
+$WindowsScriptDir = Join-Path $script:ReleaseScriptRoot 'windows'
+. (Join-Path $WindowsScriptDir 'Common.ps1')
+. (Join-Path $WindowsScriptDir 'Prerequisites.ps1')
+. (Join-Path $WindowsScriptDir 'Toolchain.ps1')
+. (Join-Path $WindowsScriptDir 'ThirdParty.ps1')
+. (Join-Path $WindowsScriptDir 'Package.ps1')
+. (Join-Path $WindowsScriptDir 'Build.ps1')
 
 #===============================================================================
 # Main
@@ -301,22 +301,22 @@ if ($InstallPrerequisites) {
 }
 
 # Offer to install missing tools in interactive mode, then validate again.
-$missing = @(Get-MissingPrerequisites)
-if ($missing.Count -gt 0 -and -not $InstallPrerequisites -and -not $Unattended) {
-    Write-Host "Missing prerequisites: $($missing -join ', ')" -ForegroundColor Yellow
-    $answer = Read-Host "Install prerequisites (including NetFx3 and Visual Studio Build Tools if needed)? [y/N]"
-    if ($answer -eq 'y' -or $answer -eq 'Y') {
+$Missing = @(Get-MissingPrerequisites)
+if ($Missing.Count -gt 0 -and -not $InstallPrerequisites -and -not $Unattended) {
+    Write-Host "Missing prerequisites: $($Missing -join ', ')" -ForegroundColor Yellow
+    $Answer = Read-Host "Install prerequisites (including NetFx3 and Visual Studio Build Tools if needed)? [y/N]"
+    if ($Answer -eq 'y' -or $Answer -eq 'Y') {
         Install-Prerequisites
-        $missing = @(Get-MissingPrerequisites)
+        $Missing = @(Get-MissingPrerequisites)
     } else {
         Write-Host "Prerequisites were not installed. Aborted."
         exit 1
     }
 }
 
-if ($missing.Count -gt 0) {
+if ($Missing.Count -gt 0) {
     Write-Host ""
-    Write-Error ("Missing prerequisites: $($missing -join ', ')`n" +
+    Write-Error ("Missing prerequisites: $($Missing -join ', ')`n" +
         "Run the script with -InstallPrerequisites to install them, or install manually.")
     exit 1
 }
@@ -327,31 +327,31 @@ if ($DownloadSource -and -not $StartAt) {
 Write-SubStep "All prerequisites found."
 
 # Detect Visual Studio
-$vsDevCmd = Find-VisualStudio
+$VsDevCmd = Find-VisualStudio
 
 # Determine LLVM source directory
 if ($DownloadSource) {
-    $llvmSrc = $null  # Set after the build directory is known.
+    $LLVMSrc = $null  # Set after the build directory is known.
 } else {
-    $llvmSrc = Resolve-Path (Join-Path $script:ReleaseScriptRoot '..\..\..') | Select-Object -ExpandProperty Path
+    $LLVMSrc = Resolve-Path (Join-Path $script:ReleaseScriptRoot '..\..\..') | Select-Object -ExpandProperty Path
 }
 
 # Auto-detect or validate version
 if ($Version) {
-    $packageVersion = $Version
-    Write-Host "Using specified version: $packageVersion"
+    $PackageVersion = $Version
+    Write-Host "Using specified version: $PackageVersion"
 } else {
-    if ($llvmSrc) {
-        $versionInfo = Get-LLVMVersionFromSource -SourceDir $llvmSrc
-        $packageVersion = $versionInfo.Full
-        Write-Host "Auto-detected LLVM version from source: $packageVersion"
+    if ($LLVMSrc) {
+        $VersionInfo = Get-LLVMVersionFromSource -SourceDir $LLVMSrc
+        $PackageVersion = $VersionInfo.Full
+        Write-Host "Auto-detected LLVM version from source: $PackageVersion"
     } else {
         # -DownloadSource without -Version: try detecting from the repo the script lives in.
-        $repoRoot = Join-Path $script:ReleaseScriptRoot '..\..\..'
-        if (Test-Path (Join-Path $repoRoot 'cmake' 'Modules' 'LLVMVersion.cmake')) {
-            $versionInfo = Get-LLVMVersionFromSource -SourceDir (Resolve-Path $repoRoot)
-            $packageVersion = $versionInfo.Full
-            Write-Host "Auto-detected LLVM version from repo: $packageVersion"
+        $RepoRoot = Join-Path $script:ReleaseScriptRoot '..\..\..'
+        if (Test-Path (Join-Path $RepoRoot 'cmake' 'Modules' 'LLVMVersion.cmake')) {
+            $VersionInfo = Get-LLVMVersionFromSource -SourceDir (Resolve-Path $RepoRoot)
+            $PackageVersion = $VersionInfo.Full
+            Write-Host "Auto-detected LLVM version from repo: $PackageVersion"
         } else {
             Write-Error "Cannot auto-detect version. Use -Version <version> when using -DownloadSource."
             exit 1
@@ -359,82 +359,82 @@ if ($Version) {
     }
 }
 
-$revision = "llvmorg-$packageVersion"
-$buildDir = Join-Path $PWD "llvm_package_$packageVersion"
-$thirdPartyDir = Join-Path $buildDir 'third_party'
+$Revision = "llvmorg-$PackageVersion"
+$BuildDir = Join-Path $PWD "llvm_package_$PackageVersion"
+$ThirdPartyDir = Join-Path $BuildDir 'third_party'
 
 Write-Step "Configuration"
-Write-Host "  Revision:        $revision"
-Write-Host "  Package version: $packageVersion"
-Write-Host "  Build dir:       $buildDir"
+Write-Host "  Revision:        $Revision"
+Write-Host "  Package version: $PackageVersion"
+Write-Host "  Build dir:       $BuildDir"
 Write-Host "  Architecture:    $script:BuildArch"
 
 if ($StartAt) {
     # Resuming from a specific step: validate that the build directory exists.
-    if (-not (Test-Path $buildDir)) {
-        Write-Error "Build directory does not exist: $buildDir`nCannot use -StartAt without a previous build. Run a full build first."
+    if (-not (Test-Path $BuildDir)) {
+        Write-Error "Build directory does not exist: $BuildDir`nCannot use -StartAt without a previous build. Run a full build first."
         exit 1
     }
     Write-Host "  Resuming from step: $StartAt" -ForegroundColor Yellow
 } else {
     # Full build: prompt to delete existing build directory.
-    if (Test-Path $buildDir) {
+    if (Test-Path $BuildDir) {
         if ($Unattended) {
-            Write-Error "Build directory already exists: $buildDir`nUse -StartAt to resume it, or remove it before running an unattended full build."
+            Write-Error "Build directory already exists: $BuildDir`nUse -StartAt to resume it, or remove it before running an unattended full build."
             exit 1
         }
-        $answer = Read-Host "Build directory already exists: $buildDir`nDelete and re-create it? [y/N]"
-        if ($answer -ne 'y' -and $answer -ne 'Y') {
+        $Answer = Read-Host "Build directory already exists: $BuildDir`nDelete and re-create it? [y/N]"
+        if ($Answer -ne 'y' -and $Answer -ne 'Y') {
             Write-Host "Aborted."
             exit 1
         }
-        Remove-ItemWithoutProgress -LiteralPath $buildDir -Recurse -Force
+        Remove-ItemWithoutProgress -LiteralPath $BuildDir -Recurse -Force
     }
 }
 
-New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
-Push-Location $buildDir
+New-Item -ItemType Directory -Path $BuildDir -Force | Out-Null
+Push-Location $BuildDir
 
 try {
     # Download source if requested (skip when resuming with -StartAt)
     if ($DownloadSource) {
-        $llvmSrc = Join-Path $buildDir 'llvm-project'
+        $LLVMSrc = Join-Path $BuildDir 'llvm-project'
     }
     if ($DownloadSource -and -not $StartAt) {
-        Write-Step "Downloading $revision"
+        Write-Step "Downloading $Revision"
         Invoke-NativeCommand curl.exe -L `
-            "https://github.com/llvm/llvm-project/archive/$revision.zip" -o src.zip
+            "https://github.com/llvm/llvm-project/archive/$Revision.zip" -o src.zip
         Invoke-NativeCommand 7z x src.zip
         Get-ChildItem -Directory -Filter 'llvm-project-*' |
             Rename-Item -NewName 'llvm-project'
     }
     if ($DownloadSource) {
-        Assert-PathExists -Path $llvmSrc -Description 'downloaded LLVM source directory'
+        Assert-PathExists -Path $LLVMSrc -Description 'downloaded LLVM source directory'
     }
 
     # Keep third-party archives and extracted sources together.
-    New-Item -ItemType Directory -Path $thirdPartyDir -Force | Out-Null
-    Install-ThirdPartySources -Directory $thirdPartyDir -SkipExisting:([bool]$StartAt)
+    New-Item -ItemType Directory -Path $ThirdPartyDir -Force | Out-Null
+    Install-ThirdPartySources -Directory $ThirdPartyDir -SkipExisting:([bool]$StartAt)
 
     # Preserve original PATH
     $script:OriginalPath = $env:PATH
 
     # Common flags
-    $commonCompilerFlags = '-DLIBXML_STATIC -D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING'
-    $releaseCompilerFlags = '/O2 /Ob2 /DNDEBUG'
+    $CommonCompilerFlags = '-DLIBXML_STATIC -D_SILENCE_NONFLOATING_COMPLEX_DEPRECATION_WARNING'
+    $ReleaseCompilerFlags = '/O2 /Ob2 /DNDEBUG'
     # -FastBuild skips ThinLTO to keep the build time down.
-    $ltoFlags = if ($FastBuild) { '' } else { ' -flto=thin -fsplit-lto-unit' }
-    $wpvFlags = if ($FastBuild) { '' } else { ' -fwhole-program-vtables' }
-    $stage2CMakeFlags = @(
+    $LtoFlags = if ($FastBuild) { '' } else { ' -flto=thin -fsplit-lto-unit' }
+    $WpvFlags = if ($FastBuild) { '' } else { ' -fwhole-program-vtables' }
+    $Stage2CMakeFlags = @(
         # Pass the stage 1 bootstrap assembler to OpenMP's runtimes build too.
         'LLVM_EXTERNAL_PROJECT_PASSTHROUGH=CMAKE_ASM_MASM_COMPILER'
         # Early CMake probes need ThinLTO, and whole-program vtables require
         # every ThinLTO unit to use the same splitting mode.
-        "CMAKE_C_FLAGS_RELEASE=$releaseCompilerFlags -fstrict-aliasing$ltoFlags"
-        "CMAKE_CXX_FLAGS_RELEASE=$releaseCompilerFlags -Wno-unused-template -fstrict-aliasing$ltoFlags$wpvFlags"
+        "CMAKE_C_FLAGS_RELEASE=$ReleaseCompilerFlags -fstrict-aliasing$LtoFlags"
+        "CMAKE_CXX_FLAGS_RELEASE=$ReleaseCompilerFlags -Wno-unused-template -fstrict-aliasing$LtoFlags$WpvFlags"
     )
-    if (-not $FastBuild) { $stage2CMakeFlags += 'LLVM_ENABLE_LTO=THIN' }
-    $commonCMakeFlags = @(
+    if (-not $FastBuild) { $Stage2CMakeFlags += 'LLVM_ENABLE_LTO=THIN' }
+    $CommonCMakeFlags = @(
         "CMAKE_BUILD_TYPE=Release"
         "LLVM_ENABLE_ASSERTIONS=OFF"
         "LLVM_INSTALL_TOOLCHAIN_ONLY=ON"
@@ -443,15 +443,15 @@ try {
         'LLVM_TARGETS_TO_BUILD="AArch64;ARM;X86;BPF;WebAssembly;RISCV;NVPTX"'
         "LLVM_BUILD_LLVM_C_DYLIB=ON"
         "Python3_FIND_REGISTRY=NEVER"
-        "PACKAGE_VERSION=$packageVersion"
+        "PACKAGE_VERSION=$PackageVersion"
         'CMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: "'
         "LLVM_ENABLE_LIBXML2=FORCE_ON"
         "CLANG_ENABLE_LIBXML2=OFF"
         "LLVM_ENABLE_ZLIB=FORCE_ON"
         "LLVM_ENABLE_ZSTD=FORCE_ON"
-        "CMAKE_C_FLAGS=`"$commonCompilerFlags`""
-        "CMAKE_CXX_FLAGS=`"$commonCompilerFlags`""
-        "CMAKE_CXX_FLAGS_RELEASE=`"$releaseCompilerFlags`""
+        "CMAKE_C_FLAGS=`"$CommonCompilerFlags`""
+        "CMAKE_CXX_FLAGS=`"$CommonCompilerFlags`""
+        "CMAKE_CXX_FLAGS_RELEASE=`"$ReleaseCompilerFlags`""
         # libxml2 2.15 needs bcrypt on executable and shared links.
         "CMAKE_EXE_LINKER_FLAGS=bcrypt.lib"
         "CMAKE_SHARED_LINKER_FLAGS=bcrypt.lib"
@@ -467,22 +467,22 @@ try {
     )
 
     # Build each requested architecture
-    $buildParams = @{
-        VsDevCmd            = $vsDevCmd
-        LLVMSrc             = $llvmSrc
-        BuildDir            = $buildDir
-        ThirdPartyDir       = $thirdPartyDir
-        PackageVersion      = $packageVersion
-        CommonCMakeFlags    = $commonCMakeFlags
-        CommonCompilerFlags = $commonCompilerFlags
-        Stage2CMakeFlags    = $stage2CMakeFlags
+    $BuildParams = @{
+        VsDevCmd            = $VsDevCmd
+        LLVMSrc             = $LLVMSrc
+        BuildDir            = $BuildDir
+        ThirdPartyDir       = $ThirdPartyDir
+        PackageVersion      = $PackageVersion
+        CommonCMakeFlags    = $CommonCMakeFlags
+        CommonCompilerFlags = $CommonCompilerFlags
+        Stage2CMakeFlags    = $Stage2CMakeFlags
         UseFastBuild        = $FastBuild
     }
 
-    Build-Architecture -Arch $script:BuildArch @buildParams
+    Build-Architecture -Arch $script:BuildArch @BuildParams
 
     Write-Step "Build complete!"
-    Write-Host "Packages are in: $buildDir" -ForegroundColor Green
+    Write-Host "Packages are in: $BuildDir" -ForegroundColor Green
 
 } finally {
     Pop-Location
