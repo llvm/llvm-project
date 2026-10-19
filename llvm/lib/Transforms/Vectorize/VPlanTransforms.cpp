@@ -6262,14 +6262,7 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       auto *Trunc = cast<VPSingleDefRecipe>(&R);
-      if (auto *VPI = dyn_cast<VPInstruction>(Trunc);
-          VPI && VPI->getOpcode() != Instruction::Trunc)
-        continue;
-      if (auto *Rep = dyn_cast<VPReplicateRecipe>(Trunc);
-          Rep && Rep->getOpcode() != Instruction::Trunc)
-        continue;
-      if (auto *Cast = dyn_cast<VPWidenCastRecipe>(Trunc);
-          Cast && Cast->getOpcode() != Instruction::Trunc)
+      if (!match(Trunc, m_Trunc(m_VPValue())))
         continue;
 
       // A truncate that is not widened is left to the scalarization decisions
