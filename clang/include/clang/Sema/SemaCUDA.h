@@ -303,7 +303,7 @@ private:
   bool isDeviceVarInit() const;
 
   /// The default arguments and default member initializers, paired with the
-  /// function using them, that checkRTTIInDefaultInit has checked.
+  /// function using them.
   llvm::DenseSet<std::pair<const ValueDecl *, const FunctionDecl *>>
       RTTICheckedDefaultInits;
 

@@ -1040,8 +1040,7 @@ void SemaCUDA::checkRTTIUse(SourceLocation Loc, StringRef Op) {
 }
 
 namespace {
-/// Finds a use of RTTI, as diagnosed by checkRTTIUse, in a default argument or
-/// default member initializer.
+/// Finds a use of RTTI in a default argument or default member initializer.
 struct RTTIUseFinder : ConstDynamicRecursiveASTVisitor {
   const Expr *Use = nullptr;
 
@@ -1097,7 +1096,7 @@ void SemaCUDA::checkRTTIInDefaultInit(const ValueDecl *D, const Expr *Init,
     SemaDiagnosticBuilder DB =
         DiagIfDeviceCode(Use->getBeginLoc(), diag::err_cuda_device_rtti);
     DB << Op << CurrentTarget();
-    // Let the note below follow the error, as SemaBase::Diag does.
+    // Let the note below follow the error.
     SemaRef.IsLastErrorImmediate = DB.isImmediate();
   }
   DiagIfDeviceCode(UseLoc, diag::note_cuda_device_rtti_default_used_here)
