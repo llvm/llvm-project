@@ -1,69 +1,51 @@
-========
-search.h
-========
+# search.h
 
----------------
-Source Location
----------------
+## Source Location
 
--   The main source for search functions is located at:
-    ``libc/src/search``.
+- The main source for search functions is located at:
+  `libc/src/search`.
+- Hashtable implementation is located at:
+  `libc/src/__support/HashTable`.
+- The tests are located at:
+  `libc/test/src/search/`.
 
--   Hashtable implementation is located at:
-    ``libc/src/__support/HashTable``.
+## Implementation Status
 
--   The tests are located at:
-    ``libc/test/src/search/``.
+### POSIX Standard Types
 
----------------------
-Implementation Status
----------------------
+| Type Name | Available   |
+| --------- | ----------- |
+| ACTION    | {{ check }} |
+| ENTRY     | {{ check }} |
+| VISIT     | {{ check }} |
 
-POSIX Standard Types
-====================
+### POSIX Standard Functions
 
-============================ =========
-Type Name                    Available
-============================ =========
-ACTION                       |check|
-ENTRY                        |check|
-VISIT                        |check|
-============================ =========
+| Function Name | Available   |
+| ------------- | ----------- |
+| hcreate       | {{ check }} |
+| hdestroy      | {{ check }} |
+| hsearch       | {{ check }} |
+| insque        | {{ check }} |
+| lfind         | {{ check }} |
+| lsearch       | {{ check }} |
+| remque        | {{ check }} |
+| tdelete       |             |
+| tfind         |             |
+| tsearch       |             |
+| twalk         |             |
 
-POSIX Standard Functions
-========================
+### GNU Extension Functions
 
-============================ =========
-Function Name                Available
-============================ =========
-hcreate                      |check|
-hdestroy                     |check|
-hsearch                      |check|
-insque                       |check|
-lfind                        |check|
-lsearch                      |check|
-remque                       |check|
-tdelete
-tfind
-tsearch
-twalk
-============================ =========
+| Function Name | Available   |
+| ------------- | ----------- |
+| hsearch_r     | {{ check }} |
+| hcreate_r     | {{ check }} |
+| hdestroy_r    | {{ check }} |
+| tdestroy      |             |
+| twalk_r       |             |
 
+### Standards
 
-GNU Extension Functions
-=======================
-
-=========================  =========
-Function Name              Available
-=========================  =========
-hsearch_r                  |check|
-hcreate_r                  |check|
-hdestroy_r                 |check|
-tdestroy
-twalk_r
-=========================  =========
-
-
-Standards
-=========
 search.h is specified in POSIX.1-200x (Portable Operating System Interface, Volume1: Base Specifications).
+
