@@ -16,8 +16,8 @@ define void @call_fixed(ptr %f, i32 %x, double %y) {
 
 define void @call_varargs(ptr %f, i32 %x, double %y) {
 ; CHECK-LABEL: define void @call_varargs(
-; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], double [[TMP2:%.*]]) {
-; CHECK-NEXT:    tail call void @call_fixed(ptr [[TMP0]], i32 [[TMP1]], double [[TMP2]])
+; CHECK-SAME: ptr [[F:%.*]], i32 [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    call void (i32, ...) [[F]](i32 [[X]], double [[Y]])
 ; CHECK-NEXT:    ret void
 ;
   call void (i32, ...) %f(i32 %x, double %y)
