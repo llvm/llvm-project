@@ -42,6 +42,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -377,6 +378,7 @@ static void verifyBitcodeUseListOrder(const Module &M) {
     report_fatal_error("failed to write bitcode");
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(M.getContext().getLibraryOptions());
   verifyAfterRoundTrip(M, F.readBitcode(Context));
 }
 
@@ -389,6 +391,7 @@ static void verifyAssemblyUseListOrder(Module &M) {
     report_fatal_error("failed to write assembly");
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(M.getContext().getLibraryOptions());
   verifyAfterRoundTrip(M, F.readAssembly(Context));
 }
 
@@ -555,10 +558,10 @@ int main(int argc, char **argv) {
   EnableDebugBuffering = true;
 
   cl::HideUnrelatedOptions(Cat);
-  cl::ParseCommandLineOptions(argc, argv,
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
                               "llvm tool to verify use-list order\n");
 
-  LLVMContext Context;
   SMDiagnostic Err;
 
   // Load the input module...

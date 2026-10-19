@@ -1196,10 +1196,6 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       continue;
 
-    // Skip debug or pseudo instructions.
-    if (I.isDebugOrPseudoInst())
-      continue;
-
     // Skip eh pad instructions.
     if (I.isEHPad())
       continue;
@@ -2187,7 +2183,8 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LPMUpdater &) {
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F->getContext().getLibraryOptions().get<ScalarOptions>();
 
   IndVarSimplify IVS(Opts, &AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI,
                      AR.MSSA, WidenIndVars && Opts.indvars_widen_indvars);

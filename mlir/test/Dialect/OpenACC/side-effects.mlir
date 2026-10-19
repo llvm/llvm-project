@@ -23,10 +23,12 @@ func.func @atomic_read(%x: memref<i32>, %v: memref<i32>) {
 // what keeps `x` from being treated as overwritten.
 
 func.func @atomic_capture(%x: memref<i32>, %v: memref<i32>) {
+  // expected-remark @below {{recursive memory effects}}
   acc.atomic.capture {
     // expected-remark @below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
     // expected-remark @below {{found an instance of 'write' on op operand 1, on resource '<Default>'}}
     acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    // expected-remark @below {{recursive memory effects}}
     // expected-remark @below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
     // expected-remark @below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
     acc.atomic.update %x : memref<i32> {

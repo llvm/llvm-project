@@ -2872,8 +2872,6 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
 
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
-    // FIXME: Remove ?
-    // return getASTContext().getInstantiatedFromStaticDataMember(this);
     return dyn_cast_if_present<MemberSpecializationInfo *>(
         getASTContext().getTemplateOrSpecializationInfo(this));
   return nullptr;
@@ -3873,6 +3871,11 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
 unsigned FunctionDecl::getNumParams() const {
   const auto *FPT = getType()->getAs<FunctionProtoType>();
   return FPT ? FPT->getNumParams() : 0;
+}
+
+unsigned FunctionDecl::getNumParamsIncludingThis() const {
+  const auto *MD = dyn_cast<CXXMethodDecl>(this);
+  return getNumParams() + (MD && MD->isImplicitObjectMemberFunction());
 }
 
 void FunctionDecl::setParams(ASTContext &C,
