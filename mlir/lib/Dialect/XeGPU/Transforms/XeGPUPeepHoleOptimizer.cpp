@@ -331,8 +331,8 @@ public:
       // Compute base = aligned pointer + offset (in bytes).
       Value alignedPtr = memref::ExtractAlignedPointerAsIndexOp::create(
           rewriter, loc, meta.getBaseBuffer());
-      Value baseIdx = xegpu::addElemOffsetInBytes(
-          rewriter, loc, alignedPtr, meta.getOffset(), memrefType);
+      Value baseIdx = xegpu::addElemOffsetInBytes(rewriter, loc, alignedPtr,
+                                                  meta.getOffset(), memrefType);
       source = arith::IndexCastOp::create(rewriter, loc, rewriter.getI64Type(),
                                           baseIdx);
     }
