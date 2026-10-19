@@ -16,9 +16,9 @@ define { i64, i1 } @cmpxchg_natural(ptr %p, i64 %cmp, i64 %new) {
 
 define { i64, i1 } @cmpxchg_under(ptr %p, i64 %cmp, i64 %new) {
 ; CHECK-LABEL: define { i64, i1 } @cmpxchg_under(
-; CHECK-SAME: ptr [[TMP0:%.*]], i64 [[TMP1:%.*]], i64 [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call { i64, i1 } @cmpxchg_natural(ptr [[TMP0]], i64 [[TMP1]], i64 [[TMP2]])
-; CHECK-NEXT:    ret { i64, i1 } [[TMP4]]
+; CHECK-SAME: ptr [[P:%.*]], i64 [[CMP:%.*]], i64 [[NEW:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = cmpxchg ptr [[P]], i64 [[CMP]], i64 [[NEW]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    ret { i64, i1 } [[R]]
 ;
   %r = cmpxchg ptr %p, i64 %cmp, i64 %new seq_cst seq_cst, align 4
   ret { i64, i1 } %r
@@ -36,9 +36,9 @@ define i64 @atomicrmw_natural(ptr %p, i64 %v) {
 
 define i64 @atomicrmw_under(ptr %p, i64 %v) {
 ; CHECK-LABEL: define i64 @atomicrmw_under(
-; CHECK-SAME: ptr [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @atomicrmw_natural(ptr [[TMP0]], i64 [[TMP1]])
-; CHECK-NEXT:    ret i64 [[TMP3]]
+; CHECK-SAME: ptr [[P:%.*]], i64 [[V:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = atomicrmw xchg ptr [[P]], i64 [[V]] seq_cst, align 4
+; CHECK-NEXT:    ret i64 [[R]]
 ;
   %r = atomicrmw xchg ptr %p, i64 %v seq_cst, align 4
   ret i64 %r
