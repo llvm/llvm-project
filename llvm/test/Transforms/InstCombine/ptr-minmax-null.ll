@@ -8,9 +8,9 @@ declare void @use_i1(i1)
 
 define i1 @umax_null(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_null(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MAXNULL:%.*]] = icmp eq ptr [[MAX]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[MAXNULL:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    ret i1 [[MAXNULL]]
 ;
   %cmp = icmp ugt ptr %x, %y
@@ -54,11 +54,7 @@ define i1 @umax_null_multiuse_condition(ptr %x, ptr %y) {
 define i1 @umax_null_logical_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_null_logical_or(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr %x, null
   %cmp = icmp ugt ptr %x, %y
@@ -71,11 +67,7 @@ define i1 @umax_null_logical_or(ptr %x, ptr %y) {
 define i1 @umax_null_logical_or_commuted(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_null_logical_or_commuted(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[MINMAXNULL]], i1 true, i1 [[XNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr %x, null
   %cmp = icmp ugt ptr %x, %y
@@ -88,11 +80,7 @@ define i1 @umax_null_logical_or_commuted(ptr %x, ptr %y) {
 define i1 @umax_uge_null_logical_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_uge_null_logical_or(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ult ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP_NOT]], ptr [[Y]], ptr [[X]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr %x, null
   %cmp = icmp uge ptr %x, %y
@@ -105,9 +93,9 @@ define i1 @umax_uge_null_logical_or(ptr %x, ptr %y) {
 define i1 @umax_ult_null_logical_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_ult_null_logical_or(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    [[MINMAXNULL:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -122,11 +110,7 @@ define i1 @umax_ult_null_logical_or(ptr %x, ptr %y) {
 define i1 @umax_ule_null_logical_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_ule_null_logical_or(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP_NOT]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr %x, null
   %cmp = icmp ule ptr %x, %y
@@ -157,11 +141,7 @@ define i1 @umax_nonnull_logical_and(ptr %x, ptr %y) {
 define i1 @umax_null_or(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_null_or(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[XNULL]], [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr %x, null
   %cmp = icmp ugt ptr %x, %y
@@ -211,12 +191,11 @@ define i1 @umax_null_multiuse_select(ptr %x, ptr %y) {
 define i1 @umax_null_multiuse_cmp(ptr %x, ptr %y) {
 ; CHECK-LABEL: @umax_null_multiuse_cmp(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[MINMAXNULL:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    call void @use_i1(i1 [[MINMAXNULL]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr %x, null
   %cmp = icmp ugt ptr %x, %y
@@ -230,11 +209,7 @@ define i1 @umax_null_multiuse_cmp(ptr %x, ptr %y) {
 define i1 @umax_null_addrspace(ptr addrspace(1) %x, ptr addrspace(1) %y) {
 ; CHECK-LABEL: @umax_null_addrspace(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr addrspace(1) [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr addrspace(1) [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr addrspace(1) [[X]], ptr addrspace(1) [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr addrspace(1) [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr addrspace(1) %x, null
   %cmp = icmp ugt ptr addrspace(1) %x, %y
@@ -247,11 +222,7 @@ define i1 @umax_null_addrspace(ptr addrspace(1) %x, ptr addrspace(1) %y) {
 define i1 @umax_null_nonintegral(ptr addrspace(2) %x, ptr addrspace(2) %y) {
 ; CHECK-LABEL: @umax_null_nonintegral(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr addrspace(2) [[X:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr addrspace(2) [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr addrspace(2) [[X]], ptr addrspace(2) [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr addrspace(2) [[MINMAX]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[XNULL]]
 ;
   %xnull = icmp eq ptr addrspace(2) %x, null
   %cmp = icmp ugt ptr addrspace(2) %x, %y
@@ -320,9 +291,9 @@ define i1 @smax_null_logical_or(ptr %x, ptr %y) {
 define i1 @umax_null_unrelated_pointer(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: @umax_null_unrelated_pointer(
 ; CHECK-NEXT:    [[XNULL:%.*]] = icmp eq ptr [[Z:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MINMAX:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y]]
-; CHECK-NEXT:    [[MINMAXNULL:%.*]] = icmp eq ptr [[MINMAX]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[MINMAXNULL:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[XNULL]], i1 true, i1 [[MINMAXNULL]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
