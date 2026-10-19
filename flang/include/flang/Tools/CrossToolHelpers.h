@@ -112,15 +112,13 @@ private:
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
 struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
-  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
-    OptLevel = level;
-    useArrayRuntime = level == llvm::OptimizationLevel::O0;
-  }
+  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level)
+      : OptLevel(level),
+        optimizeArrayExpression(level != llvm::OptimizationLevel::O0) {}
   explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level,
       const Fortran::frontend::CodeGenOptions &opts,
-      const Fortran::common::MathOptionsBase &mathOpts) {
-    OptLevel = level;
-    useArrayRuntime = level == llvm::OptimizationLevel::O0;
+      const Fortran::common::MathOptionsBase &mathOpts)
+      : MLIRToLLVMPassPipelineConfig(level) {
     StackArrays = opts.StackArrays;
     EnableSafeTrampoline = opts.EnableSafeTrampoline;
     Underscoring = opts.Underscoring;
@@ -153,9 +151,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
-  /// Prefer runtime calls over inline expansion of HLFIR array operations.
-  /// Scalar-to-array assignments are still inlined when possible.
-  bool useArrayRuntime = true;
+  /// Enable HLFIR optimizations; expensive ones still require O3.
+  bool optimizeArrayExpression;
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.
@@ -179,10 +176,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenACC = false; ///< Enable OpenACC lowering.
-  bool EnableCUDA = false; ///< Enable CUDA Fortran lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
-  bool EnableOpenMPIsTargetDevice =
-      false; ///< Compiling for an OpenMP target device.
   bool UseSampleProfile = false; ///< Enable sample based profiling
   bool UniqueInternalLinkageNames = false; ///< Append MD5 hash suffix to
                                            ///< internal linkage symbol names.

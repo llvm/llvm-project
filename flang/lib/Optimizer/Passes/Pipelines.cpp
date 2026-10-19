@@ -292,7 +292,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 
   config.invokeHLFIROptEarlyEPCallbacks(pm, optLevel);
 
-  if (!config.useArrayRuntime) {
+  if (config.optimizeArrayExpression) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
     addCanonicalizerPassWithoutRegionSimplification(pm);
@@ -305,7 +305,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       pm, hlfir::createInlineElementals);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createSeparateAllocatableAssign);
-  if (!config.useArrayRuntime) {
+  if (config.optimizeArrayExpression) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
@@ -333,7 +333,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
-      {/*tryFusingAssignments=*/!config.useArrayRuntime}));
+      {/*tryFusingAssignments=*/config.optimizeArrayExpression}));
 
   config.invokeHLFIROptLastEPCallbacks(pm, optLevel);
 
@@ -344,7 +344,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   // from hlfir.elemental lowering, if the result is an empty array.
   // This helps to avoid long running loops for elementals with
   // shapes like (0, HUGE).
-  if (!config.useArrayRuntime)
+  if (config.optimizeArrayExpression)
     bufferizeOptions.optimizeEmptyElementals = true;
   pm.addPass(hlfir::createBufferizeHLFIR(bufferizeOptions));
   // Run hlfir.assign inlining again after BufferizeHLFIR,
@@ -354,7 +354,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   // TODO: we can remove the previous InlineHLFIRAssign, when
   // FIR AliasAnalysis is good enough to say that a temporary
   // array does not alias with any user object.
-  if (!config.useArrayRuntime)
+  if (config.optimizeArrayExpression)
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
