@@ -1106,18 +1106,21 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
 static Instruction *foldLoadOfSelectOfConstPtrs(LoadInst &LI,
                                                 const DataLayout &DL) {
   Value *Op = LI.getOperand(0);
-  APInt Offset(DL.getIndexTypeSizeInBits(Op->getType()), 0);
-  Value *Base = Op->stripAndAccumulateConstantOffsets(
-      DL, Offset, /*AllowNonInbounds=*/true);
-
-  // Stripping an addrspacecast may have changed the index width.
-  if (DL.getIndexTypeSizeInBits(Base->getType()) != Offset.getBitWidth())
-    return nullptr;
-
+  // Avoid computing offsets unless the base is a select of constants.
+  Value *Base = getUnderlyingObject(Op);
   Value *Cond;
   Constant *TrueC, *FalseC;
   if (!match(Base,
              m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
+    return nullptr;
+
+  APInt Offset(DL.getIndexTypeSizeInBits(Op->getType()), 0);
+  if (Op->stripAndAccumulateConstantOffsets(DL, Offset,
+                                            /*AllowNonInbounds=*/true) != Base)
+    return nullptr;
+
+  // Stripping an addrspacecast may have changed the index width.
+  if (DL.getIndexTypeSizeInBits(Base->getType()) != Offset.getBitWidth())
     return nullptr;
 
   Constant *TrueVal =
