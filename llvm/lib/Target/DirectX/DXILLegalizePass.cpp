@@ -9,11 +9,11 @@
 #include "DXILLegalizePass.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -581,19 +581,19 @@ public:
   DXILLegalizationPipeline() { initializeLegalizationPipeline(); }
 
   bool runLegalizationPipeline(Function &F) {
-    bool MadeChange = false;
+    bool MadeChange = removeUnreachableBlocks(F);
     SmallVector<Instruction *> ToRemove;
     DenseMap<Value *, Value *> ReplacedValues;
     for (int Stage = 0; Stage < NumStages; ++Stage) {
       ToRemove.clear();
       ReplacedValues.clear();
-      for (auto &I : instructions(F)) {
-        for (auto &LegalizationFn : LegalizationPipeline[Stage])
-          if (LegalizationFn(I, ToRemove, ReplacedValues)) {
-            MadeChange = true;
-            break;
-          }
-      }
+      for (BasicBlock *BB : ReversePostOrderTraversal<Function *>(&F))
+        for (Instruction &I : *BB)
+          for (auto &LegalizationFn : LegalizationPipeline[Stage])
+            if (LegalizationFn(I, ToRemove, ReplacedValues)) {
+              MadeChange = true;
+              break;
+            }
 
       for (auto *Inst : reverse(ToRemove))
         Inst->eraseFromParent();

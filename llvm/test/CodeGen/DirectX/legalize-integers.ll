@@ -223,6 +223,33 @@ define ptr @narrow_to_ptr(i64 %v) {
   ret ptr %r
 }
 
+define i32 @block_order(i32 %v) {
+; CHECK-LABEL: define i32 @block_order(
+; CHECK: consumer:
+; CHECK-NEXT: [[R:%.*]] = and i32 %v, 7
+; CHECK-NEXT: ret i32 [[R]]
+entry:
+  br label %producer
+consumer:
+  %r = zext i3 %n to i32
+  ret i32 %r
+producer:
+  %n = trunc i32 %v to i3
+  br label %consumer
+}
+
+define void @unreachable_integer() {
+; CHECK-LABEL: define void @unreachable_integer(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: ret void
+; CHECK-NEXT: }
+entry:
+  ret void
+dead:
+  %n = add i3 1, 2
+  br label %dead
+}
+
 ; CHECK: [[PROF]] = !{!"branch_weights", i32 3, i32 5}
 ; CHECK: [[UNKNOWN]] = !{!"unknown", !"dxil-legalize"}
 !0 = !{!"branch_weights", i32 3, i32 5}
