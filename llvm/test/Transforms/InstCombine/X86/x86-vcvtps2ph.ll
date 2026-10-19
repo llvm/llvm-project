@@ -7,9 +7,7 @@ declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32 immarg)
 ; Regression test for https://github.com/llvm/llvm-project/issues/215070.
 define i16 @constant_lane_zero() {
 ; CHECK-LABEL: define i16 @constant_lane_zero() {
-; CHECK-NEXT:    [[PACKED:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, i32 0)
-; CHECK-NEXT:    [[LANE0:%.*]] = extractelement <8 x i16> [[PACKED]], i64 0
-; CHECK-NEXT:    ret i16 [[LANE0]]
+; CHECK-NEXT:    ret i16 15360
 ;
   %packed = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.0, float 0.0, float 0.0, float 0.0>, i32 0)
   %lane0 = extractelement <8 x i16> %packed, i64 0
@@ -18,8 +16,7 @@ define i16 @constant_lane_zero() {
 
 define <8 x i16> @exact_128() {
 ; CHECK-LABEL: define <8 x i16> @exact_128() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00>, i32 0)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 0, i16 -32768, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.0, float -1.0, float 0.0, float -0.0>, i32 0)
   ret <8 x i16> %r
@@ -27,8 +24,7 @@ define <8 x i16> @exact_128() {
 
 define <8 x i16> @exact_256() {
 ; CHECK-LABEL: define <8 x i16> @exact_256() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00, float 6.550400e+04, float -6.550400e+04, float f0x38800000, float f0x33800000>, i32 0)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 0, i16 -32768, i16 31743, i16 -1025, i16 1024, i16 1>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.0, float -1.0, float 0.0, float -0.0, float 65504.0, float -65504.0, float 0x3F10000000000000, float 0x3E70000000000000>, i32 0)
   ret <8 x i16> %r
@@ -37,8 +33,7 @@ define <8 x i16> @exact_256() {
 ; Halfway values between adjacent half-precision numbers, of both signs.
 define <8 x i16> @round_nearest_128() {
 ; CHECK-LABEL: define <8 x i16> @round_nearest_128() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000>, i32 0)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 15362, i16 -17406, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375>, i32 0)
   ret <8 x i16> %r
@@ -46,8 +41,7 @@ define <8 x i16> @round_nearest_128() {
 
 define <8 x i16> @round_nearest_256() {
 ; CHECK-LABEL: define <8 x i16> @round_nearest_256() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000, float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00>, i32 0)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 15362, i16 -17406, i16 15360, i16 -17408, i16 0, i16 -32768>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375, float 1.0, float -1.0, float 0.0, float -0.0>, i32 0)
   ret <8 x i16> %r
@@ -55,8 +49,7 @@ define <8 x i16> @round_nearest_256() {
 
 define <8 x i16> @round_down_128() {
 ; CHECK-LABEL: define <8 x i16> @round_down_128() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000>, i32 1)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17407, i16 15361, i16 -17406, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375>, i32 1)
   ret <8 x i16> %r
@@ -64,8 +57,7 @@ define <8 x i16> @round_down_128() {
 
 define <8 x i16> @round_down_256() {
 ; CHECK-LABEL: define <8 x i16> @round_down_256() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000, float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00>, i32 1)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17407, i16 15361, i16 -17406, i16 15360, i16 -17408, i16 0, i16 -32768>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375, float 1.0, float -1.0, float 0.0, float -0.0>, i32 1)
   ret <8 x i16> %r
@@ -73,8 +65,7 @@ define <8 x i16> @round_down_256() {
 
 define <8 x i16> @round_up_128() {
 ; CHECK-LABEL: define <8 x i16> @round_up_128() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000>, i32 2)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15361, i16 -17408, i16 15362, i16 -17407, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375>, i32 2)
   ret <8 x i16> %r
@@ -82,8 +73,7 @@ define <8 x i16> @round_up_128() {
 
 define <8 x i16> @round_up_256() {
 ; CHECK-LABEL: define <8 x i16> @round_up_256() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000, float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00>, i32 2)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15361, i16 -17408, i16 15362, i16 -17407, i16 15360, i16 -17408, i16 0, i16 -32768>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375, float 1.0, float -1.0, float 0.0, float -0.0>, i32 2)
   ret <8 x i16> %r
@@ -91,8 +81,7 @@ define <8 x i16> @round_up_256() {
 
 define <8 x i16> @round_zero_128() {
 ; CHECK-LABEL: define <8 x i16> @round_zero_128() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000>, i32 3)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 15361, i16 -17407, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375>, i32 3)
   ret <8 x i16> %r
@@ -100,8 +89,7 @@ define <8 x i16> @round_zero_128() {
 
 define <8 x i16> @round_zero_256() {
 ; CHECK-LABEL: define <8 x i16> @round_zero_256() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000, float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00>, i32 3)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 15361, i16 -17407, i16 15360, i16 -17408, i16 0, i16 -32768>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375, float 1.0, float -1.0, float 0.0, float -0.0>, i32 3)
   ret <8 x i16> %r
@@ -109,8 +97,7 @@ define <8 x i16> @round_zero_256() {
 
 define <8 x i16> @ignored_immediate_bits() {
 ; CHECK-LABEL: define <8 x i16> @ignored_immediate_bits() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x3F801000, float f0xBF801000, float f0x3F803000, float f0xBF803000>, i32 248)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 15362, i16 -17406, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.00048828125, float -1.00048828125, float 1.00146484375, float -1.00146484375>, i32 248)
   ret <8 x i16> %r
@@ -118,8 +105,7 @@ define <8 x i16> @ignored_immediate_bits() {
 
 define <8 x i16> @mxcsr_exact_128() {
 ; CHECK-LABEL: define <8 x i16> @mxcsr_exact_128() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00>, i32 4)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 0, i16 -32768, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 1.0, float -1.0, float 0.0, float -0.0>, i32 4)
   ret <8 x i16> %r
@@ -127,8 +113,7 @@ define <8 x i16> @mxcsr_exact_128() {
 
 define <8 x i16> @mxcsr_exact_256() {
 ; CHECK-LABEL: define <8 x i16> @mxcsr_exact_256() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -0.000000e+00, float 6.550400e+04, float -6.550400e+04, float f0x38800000, float f0x33800000>, i32 7)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 15360, i16 -17408, i16 0, i16 -32768, i16 31743, i16 -1025, i16 1024, i16 1>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> <float 1.0, float -1.0, float 0.0, float -0.0, float 65504.0, float -65504.0, float 0x3F10000000000000, float 0x3E70000000000000>, i32 7)
   ret <8 x i16> %r
@@ -154,8 +139,7 @@ define <8 x i16> @mxcsr_inexact_256() {
 
 define <8 x i16> @special_values() {
 ; CHECK-LABEL: define <8 x i16> @special_values() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float +inf, float -inf, float +nan(0x12345), float -snan(0x12345)>, i32 0)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 31744, i16 -1024, i16 32265, i16 -503, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 0x7FF0000000000000, float 0xFFF0000000000000, float 0x7FF82468A0000000, float 0xFFF02468A0000000>, i32 0)
   ret <8 x i16> %r
@@ -163,8 +147,7 @@ define <8 x i16> @special_values() {
 
 define <8 x i16> @extreme_nearest() {
 ; CHECK-LABEL: define <8 x i16> @extreme_nearest() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x7F7FFFFF, float f0xFF7FFFFF, float f0x33000000, float f0xB3000000>, i32 0)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 31744, i16 -1024, i16 0, i16 -32768, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 0x47EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0x3E60000000000000, float 0xBE60000000000000>, i32 0)
   ret <8 x i16> %r
@@ -172,8 +155,7 @@ define <8 x i16> @extreme_nearest() {
 
 define <8 x i16> @extreme_down() {
 ; CHECK-LABEL: define <8 x i16> @extreme_down() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x7F7FFFFF, float f0xFF7FFFFF, float f0x33000000, float f0xB3000000>, i32 1)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 31743, i16 -1024, i16 0, i16 -32767, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 0x47EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0x3E60000000000000, float 0xBE60000000000000>, i32 1)
   ret <8 x i16> %r
@@ -181,8 +163,7 @@ define <8 x i16> @extreme_down() {
 
 define <8 x i16> @extreme_up() {
 ; CHECK-LABEL: define <8 x i16> @extreme_up() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x7F7FFFFF, float f0xFF7FFFFF, float f0x33000000, float f0xB3000000>, i32 2)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 31744, i16 -1025, i16 1, i16 -32768, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 0x47EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0x3E60000000000000, float 0xBE60000000000000>, i32 2)
   ret <8 x i16> %r
@@ -190,8 +171,7 @@ define <8 x i16> @extreme_up() {
 
 define <8 x i16> @extreme_zero() {
 ; CHECK-LABEL: define <8 x i16> @extreme_zero() {
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float f0x7F7FFFFF, float f0xFF7FFFFF, float f0x33000000, float f0xB3000000>, i32 3)
-; CHECK-NEXT:    ret <8 x i16> [[R]]
+; CHECK-NEXT:    ret <8 x i16> <i16 31743, i16 -1025, i16 0, i16 -32768, i16 0, i16 0, i16 0, i16 0>
 ;
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> <float 0x47EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0x3E60000000000000, float 0xBE60000000000000>, i32 3)
   ret <8 x i16> %r
