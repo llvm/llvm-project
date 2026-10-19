@@ -291,5 +291,27 @@ void SystemZInstPrinterCommon::printCond4Operand(const MCInst *MI, int OpNum,
                                           "nl", "le", "nh",  "no"};
   uint64_t Imm = MI->getOperand(OpNum).getImm();
   assert(Imm > 0 && Imm < 15 && "Invalid condition");
+  if (MAI.getAssemblerDialect() == AD_HLASM) {
+    switch (Imm) {
+    case 3: // "nle" -> "h"
+      Imm = 2;
+      break;
+    case 5: // "nhe" -> "l"
+      Imm = 4;
+      break;
+    case 6: // "lh" -> "ne"
+      Imm = 7;
+      break;
+    case 9: // "nlh" -> "e"
+      Imm = 8;
+      break;
+    case 10: // "he" -> "nl"
+      Imm = 11;
+      break;
+    case 12: // "le" -> "nh"
+      Imm = 13;
+      break;
+    }
+  }
   O << CondNames[Imm - 1];
 }
