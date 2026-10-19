@@ -559,6 +559,21 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DRIVER_ID:
     return Info.write<uint32_t>(Device->Device->getDriverId());
 
+  case OL_DEVICE_INFO_COMPUTE_UNIT_KIND:
+    return Info.writeString(Device->Device->getComputeUnitKind());
+
+  case OL_DEVICE_INFO_TIMESTAMP_FREQUENCY:
+    return Info.write<uint64_t>(Device->Device->getClockFrequency());
+
+  case OL_DEVICE_INFO_HARDWARE_PARALLELISM:
+    return Info.write<uint64_t>(Device->Device->getHardwareParallelism());
+
+  case OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE:
+    return Info.write<uint32_t>(Device->Device->getDefaultNumThreads());
+
+  case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
+
   default:
     break;
   }
@@ -1331,7 +1346,6 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
-  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
