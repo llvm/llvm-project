@@ -484,34 +484,24 @@ let TargetPrefix = "spv" in {
   // whether that index may be non-uniform.
   def int_spv_resource_handlefrombinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
-                              [llvm_i32_ty /*Set*/,
-                               llvm_i32_ty /*Binding*/,
-                               llvm_i32_ty /*Range*/,
-                               llvm_i32_ty /*Index*/,
-                               llvm_ptr_ty /*Name*/],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
 
   def int_spv_resource_handlefromimplicitbinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
-                              [llvm_i32_ty /*OrderID*/,
-                               llvm_i32_ty /*Set*/,
-                               llvm_i32_ty /*Range*/,
-                               llvm_i32_ty /*Index*/,
-                               llvm_ptr_ty /*Name*/],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
 
   def int_spv_resource_counterhandlefromimplicitbinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
-                              [llvm_any_ty /*MainHandle*/,
-                               llvm_i32_ty /*OrderID*/,
-                               llvm_i32_ty /*Set*/],
+                              [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
                               [IntrNoMem, IntrConvergent]>;
 
   def int_spv_resource_counterhandlefrombinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
-                              [llvm_any_ty /*MainHandle*/,
-                               llvm_i32_ty /*Set*/,
-                               llvm_i32_ty /*Binding*/],
+                              [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
                               [IntrNoMem, IntrConvergent]>;
 
   def int_spv_resource_handlefromheap

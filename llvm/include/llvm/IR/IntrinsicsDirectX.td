@@ -33,11 +33,8 @@ let TargetPrefix = "dx" in {
   // whether that index may be non-uniform.
   def int_dx_resource_handlefrombinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
-                              [llvm_i32_ty /*Space*/,
-                               llvm_i32_ty /*Register*/,
-                               llvm_i32_ty /*Range*/,
-                               llvm_i32_ty /*Index*/,
-                               llvm_ptr_ty /*Name*/],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
 
   // Create resource handle with implicit binding in given register space.
@@ -45,11 +42,8 @@ let TargetPrefix = "dx" in {
   // the range size and index of the binding.
   def int_dx_resource_handlefromimplicitbinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
-                              [llvm_i32_ty /*OrderID*/,
-                               llvm_i32_ty /*Space*/,
-                               llvm_i32_ty /*Range*/,
-                               llvm_i32_ty /*Index*/,
-                               llvm_ptr_ty /*Name*/],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
 
   // Create resource handle from a descriptor heap. Returns a `target("dx.")`
@@ -598,7 +592,7 @@ let TargetPrefix = "dx" in {
                                llvm_i8_ty /*ColIndex*/,
                                llvm_i32_ty /*GsVertexOrPrimIndex*/],
                               [IntrConvergent, ImmArg<ArgIndex<0>>,
-                               ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+                               ImmArg<ArgIndex<2>>]>;
 
   def int_dx_store_output
       : DefaultAttrsIntrinsic<[],
@@ -606,5 +600,5 @@ let TargetPrefix = "dx" in {
                                llvm_i32_ty /*RowIndex*/,
                                llvm_i8_ty /*ColIndex*/, llvm_any_ty /*Value*/],
                               [IntrConvergent, ImmArg<ArgIndex<0>>,
-                               ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+                               ImmArg<ArgIndex<2>>]>;
 }
