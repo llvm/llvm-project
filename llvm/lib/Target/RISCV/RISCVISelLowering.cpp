@@ -526,9 +526,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v2i16, MVT::v4i8}, Custom);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::v2i16, MVT::v4i8},
                          Custom);
-      // Operand legalization queries the action using the illegal subvector.
-      setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
-                         Custom);
     } else {
       VTs = P32VecVTs;
     }
@@ -14499,9 +14496,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   bool IsPExtInsert =
       Subtarget.hasStdExtP() &&
-      ((Subtarget.is64Bit() &&
-        (SubVecVT == MVT::v2i16 || SubVecVT == MVT::v4i8)) ||
-       (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)));
+      (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8));
 
   // Fold insert of a 32-bit packed type into a zero-filled 64-bit packed vector
   // at index 0 (a zero-extend) to avoid scalarizing it into a byte-wise repack.
@@ -14511,11 +14506,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
         !ISD::isConstantSplatVectorAllZeros(Vec.getNode()))
       return SDValue();
 
-    if (!Subtarget.is64Bit()) {
-      SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
-    }
-    return widenPackedVectorWithZeros(DAG, DL, SubVec, VecVT);
+    SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
   }
 
   if (OrigIdx == 0 && Vec.isUndef())
@@ -16941,13 +16933,12 @@ static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
-// Zero-extend a 32-bit packed vector to the 64-bit packed type WideVT,
-// clearing the upper lanes.
+// Widen a 32-bit packed vector to the 64-bit packed type WideVT by
+// concatenating it with zeros, clearing the upper lanes.
 static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
                                           SDValue V, MVT WideVT) {
-  SDValue Wide =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, DAG.getBitcast(MVT::i32, V));
-  return DAG.getBitcast(WideVT, Wide);
+  SDValue Zero = DAG.getConstant(0, DL, V.getValueType());
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, V, Zero);
 }
 
 void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
@@ -30053,6 +30044,28 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   // e8 element type access.  Given this, we effectively support all unmasked
   // misaligned accesses.  TODO: Work through the codegen implications of
   // allowing such accesses to be formed, and considered fast.
+  if (Fast)
+    *Fast = Subtarget.enableUnalignedVectorMem();
+  return Subtarget.enableUnalignedVectorMem();
+}
+
+// Same as above but handling LLTs instead.
+bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
+    LLT Ty, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    unsigned *Fast) const {
+  if (!Ty.isVector() || Subtarget.hasStdExtP()) {
+    if (Fast)
+      *Fast = Subtarget.enableUnalignedScalarMem();
+    return Subtarget.enableUnalignedScalarMem();
+  }
+
+  // All vector implementations must support element alignment.
+  if (Alignment >= Ty.getScalarType().getSizeInBytes()) {
+    if (Fast)
+      *Fast = 1;
+    return true;
+  }
+
   if (Fast)
     *Fast = Subtarget.enableUnalignedVectorMem();
   return Subtarget.enableUnalignedVectorMem();
