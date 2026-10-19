@@ -203,6 +203,18 @@ define i64 @known_sign_bits(i64 %v) {
   ret i64 %r
 }
 
+define i64 @insufficient_sign_bits(i64 %v) {
+; CHECK-LABEL: define i64 @insufficient_sign_bits(
+; CHECK-NEXT: [[S:%.*]] = ashr i64 %v, 26
+; CHECK-NEXT: [[L:%.*]] = shl i64 [[S]], 27
+; CHECK-NEXT: [[R:%.*]] = ashr i64 [[L]], 27
+; CHECK-NEXT: ret i64 [[R]]
+  %s = ashr i64 %v, 26
+  %n = trunc i64 %s to i37
+  %r = sext i37 %n to i64
+  ret i64 %r
+}
+
 define i32 @ptr_to_narrow(ptr %v) {
 ; CHECK-LABEL: define i32 @ptr_to_narrow(
 ; CHECK: [[P:%.*]] = ptrtoint ptr %v to i32

@@ -47,6 +47,7 @@ static bool legalizeInteger(Instruction &I,
                             SmallVectorImpl<Instruction *> &ToRemove,
                             DenseMap<Value *, Value *> &ReplacedValues) {
   IRBuilder<> B(&I);
+  
   auto operand = [&](Value *V, IntegerExtension Ext = IntegerExtension::None) {
     auto *Ty = getLegalIntegerType(V->getType());
     if (!Ty)
@@ -68,6 +69,7 @@ static bool legalizeInteger(Instruction &I,
       R = B.CreateAnd(R, APInt::getLowBitsSet(Ty->getBitWidth(), Width));
     return R;
   };
+
   auto replace = [&](Value *V) {
     if (I.getType() == V->getType())
       I.replaceAllUsesWith(V);
