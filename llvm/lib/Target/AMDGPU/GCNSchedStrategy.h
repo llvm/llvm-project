@@ -86,8 +86,8 @@ protected:
   void getRegisterPressures(bool AtTop, const RegPressureTracker &RPTracker,
                             SUnit *SU, std::vector<unsigned> &Pressure,
                             std::vector<unsigned> &MaxPressure,
-                            GCNDownwardRPTracker &DownwardTracker,
-                            GCNUpwardRPTracker &UpwardTracker,
+                            const GCNDownwardRPTrackerBase &DownwardTracker,
+                            const GCNUpwardRPTracker &UpwardTracker,
                             ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
 
   std::vector<unsigned> Pressure;
@@ -105,7 +105,7 @@ protected:
   SmallVectorImpl<GCNSchedStageID>::iterator CurrentStage = nullptr;
 
   // GCN RP Tracker for top-down scheduling
-  mutable GCNDownwardRPTracker DownwardTracker;
+  mutable GCNManualDownwardRPTracker DownwardTracker;
 
   // GCN RP Tracker for botttom-up scheduling
   mutable GCNUpwardRPTracker UpwardTracker;
@@ -175,9 +175,9 @@ public:
     return GCNTrackersOverride.value_or(UseGCNTrackers);
   }
 
-  GCNDownwardRPTracker *getDownwardTracker() { return &DownwardTracker; }
+  GCNDownwardRPTrackerBase &getDownwardTracker() { return DownwardTracker; }
 
-  GCNUpwardRPTracker *getUpwardTracker() { return &UpwardTracker; }
+  GCNUpwardRPTracker &getUpwardTracker() { return UpwardTracker; }
 };
 
 /// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.

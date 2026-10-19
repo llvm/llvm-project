@@ -472,6 +472,9 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (MemSize != RegSize && RegSize != 32)
     return false;
 
+  if (IsLoad && RegSize == 16 && !ST.d16PreservesUnusedBits())
+    return false;
+
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
                                     Query.MMODescrs[0].Ordering !=
                                         AtomicOrdering::NotAtomic))
@@ -1274,7 +1277,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                     .legalFor({{I32, F32}, {I32, F64}})
                     .customFor({{I64, F32}, {I64, F64}})
                     .widenScalarFor({{I32, F16}}, changeElementSizeTo(1, F32))
-                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
+                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32))
+                    .widenScalarFor({{I16, BF16}, {I32, BF16}, {I64, BF16}},
+                                    changeElementTo(1, F32));
   if (ST.has16BitInsts())
     FPToI.legalFor({{I16, F16}});
   else
@@ -1382,7 +1387,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasSALUFloatInsts())
     FCmpBuilder.legalForCartesianProduct({I32}, {F16, F32});
 
-  FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
+  FCmpBuilder.widenScalarFor({{I1, BF16}}, changeElementTo(1, F32))
+      .widenScalarToNextPow2(1)
+      .minScalar(1, F32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(G_FPOW)
       .customFor({F32})
@@ -1659,13 +1667,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
          {V4S32, ConstantPtr, V4S32, GlobalAlign32},
          {S64, ConstantPtr, S64, GlobalAlign32}});
 
-    Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
-                                     {{S16, GlobalPtr, S8, GlobalAlign8},
-                                      {S16, GlobalPtr, S16, GlobalAlign16},
-                                      {S16, LocalPtr, S8, 8},
-                                      {S16, LocalPtr, S16, 16},
-                                      {S16, PrivatePtr, S8, 8},
-                                      {S16, PrivatePtr, S16, 16}});
+    if (IsStore || ST.d16PreservesUnusedBits()) {
+      Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
+                                       {{S16, GlobalPtr, S8, GlobalAlign8},
+                                        {S16, GlobalPtr, S16, GlobalAlign16},
+                                        {S16, LocalPtr, S8, 8},
+                                        {S16, LocalPtr, S16, 16},
+                                        {S16, PrivatePtr, S8, 8},
+                                        {S16, PrivatePtr, S16, 16}});
+    }
 
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
@@ -3307,6 +3317,7 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
       MIB.addImm(0);
     else
       MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+    MIB.setOperandDead(3); // $scc
   }
 
   if (PtrTy.getSizeInBits() == 32)
@@ -6545,17 +6556,6 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
-}
-
-bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B) const {
-  Function &F = B.getMF().getFunction();
-  std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
-  if (KnownSize.has_value())
-    B.buildConstant(DstReg, *KnownSize);
-  return false;
 }
 
 bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,

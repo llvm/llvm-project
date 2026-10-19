@@ -137,6 +137,10 @@ Loads or stores data between global memory and LDS using a tensor descriptor
 descriptor groups; `%desc4` is reserved for future targets and must be
 zero-initialized.
 
+The descriptor carries global and LDS addresses in integer vectors. These
+intrinsics may access ordinary memory; their effects are not limited to
+pointer arguments or inaccessible memory.
+
 Despite the absence of `.async` in their names, these intrinsics are
 asynchronous.
 

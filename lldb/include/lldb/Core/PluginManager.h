@@ -675,7 +675,7 @@ public:
 
   static bool UnregisterPlugin(ScriptedInterfaceCreateInstance create_callback);
 
-  static uint32_t GetNumScriptedInterfaces();
+  static size_t GetNumScriptedInterfaces();
 
   static llvm::StringRef GetScriptedInterfaceNameAtIndex(uint32_t idx);
 

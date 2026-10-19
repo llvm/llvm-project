@@ -265,6 +265,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fexecve
+  SRCS
+    fexecve.cpp
+  HDRS
+    ../fexecve.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execveat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fsync
   SRCS
     fsync.cpp
@@ -458,6 +473,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lchown
+  SRCS
+    lchown.cpp
+  HDRS
+    ../lchown.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lchown
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   link
   SRCS
     link.cpp
@@ -480,6 +510,26 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  lockf
+  SRCS
+    lockf.cpp
+  HDRS
+    ../lockf.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.struct_flock
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -792,6 +842,31 @@ add_entrypoint_object(
     libc.include.unistd
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sync
+  SRCS
+    sync.cpp
+  HDRS
+    ../sync.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sync
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  syncfs
+  SRCS
+    syncfs.cpp
+  HDRS
+    ../syncfs.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.syncfs
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
