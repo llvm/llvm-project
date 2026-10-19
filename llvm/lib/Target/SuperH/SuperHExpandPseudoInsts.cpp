@@ -75,6 +75,12 @@ private:
   void emitStackAdj(Block &MBB, BlockIt MBBI, Register &Base, 
                     bool &BaseIsKill, RelativeAddr Addr);
 
+  bool emitPtrLoad(Block &MBB, BlockIt MBBI, MVT Type,
+                   Register &Src, Register &Dst, int64_t Offset);
+
+  bool emitPtrStore(Block &MBB, BlockIt MBBI, MVT Type,
+                   Register &Src, Register &Dst, int64_t Offset);
+
   bool storeToFrame(Block &MBB, BlockIt MBBI, int Scale);
   bool storeToAddress(Block &MBB, BlockIt MBBI);
   bool loadFromFrame(Block &MBB, BlockIt MBBI, int Scale);
@@ -183,6 +189,236 @@ void SuperHExpandPseudo::emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, i
     TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
     Base = SH::R1;
   }
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                            Pointer Load-Store
+//===----------------------------------------------------------------------===//
+
+enum MemAccessType {
+  
+  // Direct access to memory location
+  ACCESS_DIRECT,
+
+  // Access to memory location via 4-bit displacement
+  ACCESS_DISP4,
+
+  // Access to memory location via 4-bit displacement
+  // Source/Destination is stored in R0
+  ACCESS_DISP4_R0,
+
+  // Access to memory location via R0 displacement
+  ACCESS_DISP_R0
+};
+
+bool SuperHExpandPseudo::emitPtrLoad(Block &MBB, BlockIt MBBI, MVT Type,
+                                     Register &Src, Register &Dst, 
+                                     int64_t Offset) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+
+  // Range of an indirect load/store.
+  int32_t ILRange = (1 << 4) * Type.getScalarStoreSize();
+
+  // Get the best opcode for the given load.
+  MemAccessType AType;
+  unsigned Opc;
+  switch(Type.SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected load size!");
+  case MVT::i8:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::MOVBL;
+    } else if (Offset > 0 && Offset < ILRange) {
+      AType = ACCESS_DISP4_R0;
+      Opc = SH::MOVBL4;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::MOVBL0;
+    }
+    break;
+  case MVT::i16:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::MOVWL;
+    } else if (Offset > 0 && Offset < ILRange) {
+      AType = ACCESS_DISP4_R0;
+      Opc = SH::MOVWL4;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::MOVWL0;
+    }
+    break;
+  case MVT::i32:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::MOVLL;
+    } else if (Offset > 0 && Offset < ILRange) {
+      AType = ACCESS_DISP4;
+      Opc = SH::MOVLL4;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::MOVLL0;
+    }
+    break;
+  case MVT::f32:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::FMOV_LOAD;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::FMOV_INDEX_LOAD;
+    }
+  }
+
+  // Generate the appropriate instruction sequence.
+  switch(AType) {
+  case ACCESS_DIRECT:
+      BuildMI(MBB, MBBI, DL, TII->get(Opc), Dst)
+          .addReg(Src);
+      return true;
+
+  case ACCESS_DISP4:
+      BuildMI(MBB, MBBI, DL, TII->get(Opc), Dst)
+          .addReg(Src)
+          .addImm(Offset);
+      return true;
+
+  case ACCESS_DISP4_R0:
+      BuildMI(MBB, MBBI, DL, TII->get(Opc))
+        .addReg(Src)
+        .addImm(Offset);
+      BuildMI(MBB, MBBI, DL, TII->get(MOV), Dst)
+        .addReg(SH::R0);
+      return true;
+
+  case ACCESS_DISP_R0:
+
+      // Add displacement to R0
+      if (isInt<8>(Offset)) {
+        BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), SH::R0)
+          .addImm(Offset);
+      } else {
+        BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), SH::R0)
+          .addImm(0);
+        TII->emitAddressAdjust(SH::R0, MBB, MBBI, Offset, CFPMaxAdd);
+      }
+
+      BuildMI(MBB, MBBI, DL, TII->get(Opc), Dst)
+          .addReg(Src)
+          .addReg(SH::R0)
+          .addImm(Offset);
+      return true;
+  }
+  return false;
+}
+
+bool SuperHExpandPseudo::emitPtrStore(Block &MBB, BlockIt MBBI, MVT Type,
+                                      Register &Src, Register &Dst, 
+                                      int64_t Offset) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+
+  // Range of an indirect load/store.
+  int32_t ILRange = (1 << 4) * Type.getScalarStoreSize();
+
+  // Get the best opcode for the given load.
+  MemAccessType AType;
+  unsigned Opc;
+  switch(Type.SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected load size!");
+  case MVT::i8:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::MOVBS;
+    } else if (Offset > 0 && Offset < ILRange) {
+      AType = ACCESS_DISP4_R0;
+      Opc = SH::MOVBS4;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::MOVBS0;
+    }
+    break;
+  case MVT::i16:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::MOVWS;
+    } else if (Offset > 0 && Offset < ILRange) {
+      AType = ACCESS_DISP4_R0;
+      Opc = SH::MOVWS4;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::MOVWS0;
+    }
+    break;
+  case MVT::i32:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::MOVLS;
+    } else if (Offset > 0 && Offset < ILRange) {
+      AType = ACCESS_DISP4;
+      Opc = SH::MOVLS4;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::MOVLS0;
+    }
+    break;
+  case MVT::f32:
+    if (Offset == 0) {
+      AType = ACCESS_DIRECT;
+      Opc = SH::FMOV_STORE;
+    } else {
+      AType = ACCESS_DISP_R0;
+      Opc = SH::FMOV_INDEX_STORE;
+    }
+  }
+
+  // Generate the appropriate instruction sequence.
+  switch(AType) {
+  case ACCESS_DIRECT:
+      BuildMI(MBB, MBBI, DL, TII->get(Opc))
+        .addReg(Src)
+        .addReg(Dst);
+      return true;
+      
+  case ACCESS_DISP4:
+      BuildMI(MBB, MBBI, DL, TII->get(Opc))
+        .addReg(Src)
+        .addReg(Dst)
+        .addImm(Offset);
+      return true;
+
+  case ACCESS_DISP4_R0:
+      BuildMI(MBB, MBBI, DL, TII->get(MOV), SH::R0)
+        .addReg(Src);
+      BuildMI(MBB, MBBI, DL, TII->get(Opc))
+        .addReg(SH::R0)
+        .addReg(Dst)
+        .addImm(Offset);
+      return true;
+
+  case ACCESS_DISP_R0:
+
+      // Add displacement to R0
+      if (isInt<8>(Offset)) {
+        BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), SH::R0)
+          .addImm(Offset);
+      } else {
+        BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), SH::R0)
+          .addImm(0);
+        TII->emitAddressAdjust(SH::R0, MBB, MBBI, Offset, CFPMaxAdd);
+      }
+
+      BuildMI(MBB, MBBI, DL, TII->get(Opc))
+          .addReg(Dst)
+          .addReg(SH::R0)
+          .addImm(Offset);
+      return true;
+  }
+  return false;
 }
 
 
@@ -299,33 +535,24 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
     }
   } else if (MI.getOperand(1).isReg()) {
     DstReg = MI.getOperand(1).getReg();
-  }  
+  }
 
-  // TODO: Use store-with-offset.
-  
-  unsigned Opc;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*SP opcode.");
   case SH::MOVBSP:
-    Opc = SH::MOVBS;
+    emitPtrStore(MBB, II, MVT::i8, SrcReg, DstReg, Offset);
     break;
   case SH::MOVWSP:
-    Opc = SH::MOVWS;
+    emitPtrStore(MBB, II, MVT::i16, SrcReg, DstReg, Offset);
     break;
   case SH::MOVLSP:
-    Opc = SH::MOVLS;
+    emitPtrStore(MBB, II, MVT::i32, SrcReg, DstReg, Offset);
     break;
   case SH::MOVF32SP:
-    Opc = SH::FMOV_STORE;
+    emitPtrStore(MBB, II, MVT::f32, SrcReg, DstReg, Offset);
     break;
   }
-
-  emitBaseAdj(MBB, II, DstReg, Offset);
-  BuildMI(MBB, II, DL, TII->get(Opc))
-    .addReg(SrcReg)
-    .addReg(DstReg);
-
   return eraseMI(MI);
 }
 
@@ -498,29 +725,22 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
     SrcReg = MI.getOperand(1).getReg();
   }
 
-  // TODO: Use load-with-offset.
-  unsigned Opc;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*LP opcode.");
   case SH::MOVBLP:
-    Opc = SH::MOVBL;
+    emitPtrLoad(MBB, II, MVT::i8, SrcReg, DstReg, Offset);
     break;
   case SH::MOVWLP:
-    Opc = SH::MOVWL;
+    emitPtrLoad(MBB, II, MVT::i16, SrcReg, DstReg, Offset);
     break;
   case SH::MOVLLP:
-    Opc = SH::MOVLL;
+    emitPtrLoad(MBB, II, MVT::i32, SrcReg, DstReg, Offset);
     break;
   case SH::MOVF32LP:
-    Opc = SH::FMOV_LOAD;
+    emitPtrLoad(MBB, II, MVT::f32, SrcReg, DstReg, Offset);
     break;
   }
-
-  emitBaseAdj(MBB, II, DstReg, Offset);
-  BuildMI(MBB, II, DL, TII->get(Opc), DstReg)
-    .addReg(SrcReg);
-
   return eraseMI(MI);
 }
 

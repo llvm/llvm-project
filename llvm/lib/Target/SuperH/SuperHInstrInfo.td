@@ -247,6 +247,9 @@ def anyimm8 : ComplexPattern<i8, 1, "SelectImm", [imm]>;
 def anyimm16 : ComplexPattern<i16, 1, "SelectImm", [imm]>;
 def anyimm32 : ComplexPattern<i32, 1, "SelectImm", [imm]>;
 def anyimmf32 : ComplexPattern<f32, 1, "SelectImm", [imm]>;
+
+// Pseudo Instruction Immediates.
+def pimm : ComplexPattern<i32, 1, "SelectPImm", [imm]>;
 }
 
 
@@ -586,7 +589,7 @@ let hasSideEffects = 0, Constraints = "$dst = $Rn" in {
   def ADDI          : InstRnI8<0b0111000000000000, 
                               (outs GPR:$Rn), (ins GPR:$dst, imm8:$imm),
                               "add $imm,$Rn",
-                              [(set i32:$Rn, (add i32:$dst, imm:$imm))]>;
+                              []>;
 
   // addc Rm, Rn
   let Defs = [SR], Uses = [SR], isCommutable = 1 in
@@ -1646,37 +1649,37 @@ def : Pat<(i16 (trunc  i32:$src)),    (EXTUW i32:$src)>;
 //===--------------------------------------------------------------------------===//
 // Shifts
 //===--------------------------------------------------------------------------===//
-def : Pat<(i32 (shl   i32:$src1, i32:$src2)),         (SHLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (srl   i32:$src1, i32:$src2)),         (SHRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (sra   i32:$src1, i32:$src2)),         (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (rotl  i32:$src1, i32:$src2)),         (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (rotr  i32:$src1, i32:$src2)),         (RTRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (shl   i16:$src1, i16:$src2)),         (SHLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (srl   i16:$src1, i16:$src2)),         (SHRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (sra   i16:$src1, i16:$src2)),         (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (rotl  i16:$src1, i16:$src2)),         (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (rotr  i16:$src1, i16:$src2)),         (RTRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (shl    i8:$src1,  i8:$src2)),         (SHLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (srl    i8:$src1,  i8:$src2)),         (SHRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (sra    i8:$src1,  i8:$src2)),         (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (rotl   i8:$src1,  i8:$src2)),         (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (rotr   i8:$src1,  i8:$src2)),         (RTRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (shl   i32:$src1,  i32:$src2)),        (SHLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (srl   i32:$src1,  i32:$src2)),        (SHRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (sra   i32:$src1,  i32:$src2)),        (SRArr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (rotl  i32:$src1,  i32:$src2)),        (RTLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i32 (rotr  i32:$src1,  i32:$src2)),        (RTRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i16 (shl   i16:$src1,  i16:$src2)),        (SHLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i16 (srl   i16:$src1,  i16:$src2)),        (SHRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i16 (sra   i16:$src1,  i16:$src2)),        (SRArr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i16 (rotl  i16:$src1,  i16:$src2)),        (RTLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i16 (rotr  i16:$src1,  i16:$src2)),        (RTRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i8  (shl    i8:$src1,   i8:$src2)),        (SHLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i8  (srl    i8:$src1,   i8:$src2)),        (SHRrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i8  (sra    i8:$src1,   i8:$src2)),        (SRArr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i8  (rotl   i8:$src1,   i8:$src2)),        (RTLrr GPR:$src1,    GPR:$src2)>;
+def : Pat<(i8  (rotr   i8:$src1,   i8:$src2)),        (RTRrr GPR:$src1,    GPR:$src2)>;
 
-def : Pat<(i32 (shl   i32:$src, anyimm32:$shift)),    (SHLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (srl   i32:$src, anyimm32:$shift)),    (SHRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (sra   i32:$src, anyimm32:$shift)),    (SRAri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (rotl  i32:$src, anyimm32:$shift)),    (RTLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (rotr  i32:$src, anyimm32:$shift)),    (RTRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (shl   i16:$src, anyimm32:$shift)),    (SHLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (srl   i16:$src, anyimm32:$shift)),    (SHRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (sra   i16:$src, anyimm32:$shift)),    (SRAri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (rotl  i16:$src, anyimm32:$shift)),    (RTLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (rotr  i16:$src, anyimm32:$shift)),    (RTRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (shl    i8:$src, anyimm32:$shift)),    (SHLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (srl    i8:$src, anyimm32:$shift)),    (SHRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (sra    i8:$src, anyimm32:$shift)),    (SRAri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (rotl   i8:$src, anyimm32:$shift)),    (RTLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (rotr   i8:$src, anyimm32:$shift)),    (RTRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (shl   i32:$src, pimm:$shift)),        (SHLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (srl   i32:$src, pimm:$shift)),        (SHRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (sra   i32:$src, pimm:$shift)),        (SRAri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (rotl  i32:$src, pimm:$shift)),        (RTLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (rotr  i32:$src, pimm:$shift)),        (RTRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i16 (shl   i16:$src, pimm:$shift)),        (SHLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i16 (srl   i16:$src, pimm:$shift)),        (SHRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i16 (sra   i16:$src, pimm:$shift)),        (SRAri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i16 (rotl  i16:$src, pimm:$shift)),        (RTLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i16 (rotr  i16:$src, pimm:$shift)),        (RTRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i8  (shl    i8:$src, pimm:$shift)),        (SHLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i8  (srl    i8:$src, pimm:$shift)),        (SHRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i8  (sra    i8:$src, pimm:$shift)),        (SRAri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i8  (rotl   i8:$src, pimm:$shift)),        (RTLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i8  (rotr   i8:$src, pimm:$shift)),        (RTRri GPR:$src,  i32imm:$shift)>;
 
 
 //===--------------------------------------------------------------------------===//
@@ -1686,9 +1689,9 @@ def : Pat<(i32 (and i32:$dst, i32:$src)), (AND GPR:$src, GPR:$dst)>;
 def : Pat<(i16 (and i16:$dst, i16:$src)), (EXTUW (AND GPR:$src, GPR:$dst))>;
 def : Pat<(i8  (and  i8:$dst,  i8:$src)), (EXTUB (AND GPR:$src, GPR:$dst))>;
 
-def : Pat<(i32 (not  i32:$src)),           (NOT GPR:$src)>;
-def : Pat<(i16 (not  i16:$src)),           (EXTUW (NOT GPR:$src))>;
-def : Pat<(i8  (not   i8:$src)),           (EXTUB (NOT GPR:$src))>;
+def : Pat<(i32 (not  i32:$src)),          (NOT GPR:$src)>;
+def : Pat<(i16 (not  i16:$src)),          (EXTUW (NOT GPR:$src))>;
+def : Pat<(i8  (not   i8:$src)),          (EXTUB (NOT GPR:$src))>;
 
 def : Pat<(i32 (or i32:$dst, i32:$src)),  (OR GPR:$src, GPR:$dst)>;
 def : Pat<(i16 (or i16:$dst, i16:$src)),  (EXTUW (OR GPR:$src, GPR:$dst))>;
@@ -1744,8 +1747,16 @@ def : Pat<(i8  (ineg  i8:$src)),            (EXTSB (NEG GPR:$src))>;
 //===--------------------------------------------------------------------------===//
 // Loads
 //===--------------------------------------------------------------------------===//
+
+// Address
 def : Pat<(i8  (load          addr:$src)),               (MOVBLP   addr:$src)>;
 def : Pat<(i16 (load          addr:$src)),               (MOVWLP   addr:$src)>;
+def : Pat<(i16 (extloadi1     addr:$src)),               (MOVBLP   addr:$src)>;
+def : Pat<(i16 (extloadi8     addr:$src)),               (MOVBLP   addr:$src)>;
+def : Pat<(i16 (sextloadi1    addr:$src)),               (MOVBLP   addr:$src)>;
+def : Pat<(i16 (sextloadi8    addr:$src)),               (MOVBLP   addr:$src)>;
+def : Pat<(i16 (zextloadi1    addr:$src)),        (EXTUB (MOVBLP   addr:$src))>;
+def : Pat<(i16 (zextloadi8    addr:$src)),        (EXTUB (MOVBLP   addr:$src))>;
 def : Pat<(i32 (load          addr:$src)),               (MOVLLP   addr:$src)>;
 def : Pat<(i32 (extloadi1     addr:$src)),               (MOVBLP   addr:$src)>;
 def : Pat<(i32 (extloadi8     addr:$src)),               (MOVBLP   addr:$src)>;
@@ -1757,8 +1768,15 @@ def : Pat<(i32 (zextloadi1    addr:$src)),        (EXTUB (MOVBLP   addr:$src))>;
 def : Pat<(i32 (zextloadi8    addr:$src)),        (EXTUB (MOVBLP   addr:$src))>;
 def : Pat<(i32 (zextloadi16   addr:$src)),        (EXTUW (MOVWLP   addr:$src))>;
 
+// Frame Address
 def : Pat<(i8  (load        fraddr:$src)),               (MOVBLF fraddr:$src)>;
 def : Pat<(i16 (load        fraddr:$src)),               (MOVWLF fraddr:$src)>;
+def : Pat<(i16 (extloadi1   fraddr:$src)),               (MOVBLP fraddr:$src)>;
+def : Pat<(i16 (extloadi8   fraddr:$src)),               (MOVBLP fraddr:$src)>;
+def : Pat<(i16 (sextloadi1  fraddr:$src)),               (MOVBLP fraddr:$src)>;
+def : Pat<(i16 (sextloadi8  fraddr:$src)),               (MOVBLP fraddr:$src)>;
+def : Pat<(i16 (zextloadi1  fraddr:$src)),        (EXTUB (MOVBLP fraddr:$src))>;
+def : Pat<(i16 (zextloadi8  fraddr:$src)),        (EXTUB (MOVBLP fraddr:$src))>;
 def : Pat<(i32 (load        fraddr:$src)),               (MOVLLF fraddr:$src)>;
 def : Pat<(i32 (extloadi1   fraddr:$src)),               (MOVBLF fraddr:$src)>;
 def : Pat<(i32 (extloadi8   fraddr:$src)),               (MOVBLF fraddr:$src)>;
@@ -1770,8 +1788,15 @@ def : Pat<(i32 (zextloadi1  fraddr:$src)),        (EXTUB (MOVBLF fraddr:$src))>;
 def : Pat<(i32 (zextloadi8  fraddr:$src)),        (EXTUB (MOVBLF fraddr:$src))>;
 def : Pat<(i32 (zextloadi16 fraddr:$src)),        (EXTUW (MOVWLF fraddr:$src))>;
 
+// Address-in-register
 def : Pat<(i8  (load           i32:$src)),               (MOVBL     i32:$src)>;
 def : Pat<(i16 (load           i32:$src)),               (MOVWL     i32:$src)>;
+def : Pat<(i16 (extloadi1      i32:$src)),               (MOVBL     i32:$src)>;
+def : Pat<(i16 (extloadi8      i32:$src)),               (MOVBL     i32:$src)>;
+def : Pat<(i16 (sextloadi1     i32:$src)),               (MOVBL     i32:$src)>;
+def : Pat<(i16 (sextloadi8     i32:$src)),               (MOVBL     i32:$src)>;
+def : Pat<(i16 (zextloadi1     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
+def : Pat<(i16 (zextloadi8     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
 def : Pat<(i32 (load           i32:$src)),               (MOVLL     i32:$src)>;
 def : Pat<(i32 (extloadi1      i32:$src)),               (MOVBL     i32:$src)>;
 def : Pat<(i32 (extloadi8      i32:$src)),               (MOVBL     i32:$src)>;
