@@ -70,8 +70,7 @@ private:
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
-
-  void emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, int64_t Offset);
+  
   void emitStackAdj(Block &MBB, BlockIt MBBI, Register &Base, 
                     bool &BaseIsKill, RelativeAddr Addr);
 
@@ -107,6 +106,9 @@ static bool eraseMI(MachineInstr &MI) {
   MI.eraseFromParent();
   return true;
 }
+
+
+
 
 //===----------------------------------------------------------------------===//
 //                            Stack Offset Calculation
@@ -169,25 +171,6 @@ void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register &Base,
     BaseIsKill = true;
     break;
   }
-  }
-}
-
-
-
-
-//===----------------------------------------------------------------------===//
-//                            Heap Offset Calculation
-//===----------------------------------------------------------------------===//
-void SuperHExpandPseudo::emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, int64_t Offset) {
-  const DebugLoc &DL = MBBI->getDebugLoc();
-  LLVM_DEBUG(dbgs() << "HeapAccess @ " << TRI->getName(Base) << " + " << Offset << "\n");
-
-  if (Offset != 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-      .addReg(Base);
-
-    TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
-    Base = SH::R1;
   }
 }
 
@@ -522,7 +505,7 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
 
-  bool SrcIsKill = MI.getOperand(0).isKill();
+  // bool SrcIsKill = MI.getOperand(0).isKill();
   Register SrcReg = MI.getOperand(0).getReg();
   Register DstReg;
   auto Offset = MI.getOperand(2).getImm();
