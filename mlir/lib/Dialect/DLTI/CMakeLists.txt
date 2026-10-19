@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRDLTIDialect
   DEPENDS
   MLIRDLTIIncGen
   MLIRDLTIAttrsIncGen
+  MLIRDLTIOpInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
