@@ -150,9 +150,7 @@ Reuse Cache::reuse(const LiveInterval &LI, MCRegister FromReg) {
     erase(LI.reg().id());
     return Reuse::Miss;
   }
-  // Hint-only orders and a saturated freed list both need the real scan to
-  // decide whether any visited register became free.
-  if (E.Saturated || (E.HintOnly && !E.FreedRegs.empty()))
+  if (E.Saturated || E.HintOnly)
     return Reuse::Miss;
   if (E.FreedRegs.empty())
     return Reuse::HitFalse;

@@ -88,8 +88,9 @@ public:
     void shiftAcrossBucket(const LiveInterval &Range) {
       SlotIndexes &Indexes = *LIS.getSlotIndexes();
       SlotIndex Zero = Indexes.getZeroIndex();
-      unsigned Before = static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
-                        reassign::Cache::BucketShift;
+      unsigned Before =
+          static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
+          reassign::Cache::BucketShift;
 
       MachineBasicBlock &MBB = MF.front();
       const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -107,8 +108,9 @@ public:
       }
       Indexes.packIndexes();
 
-      unsigned After = static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
-                       reassign::Cache::BucketShift;
+      unsigned After =
+          static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
+          reassign::Cache::BucketShift;
       EXPECT_NE(Before, After);
     }
 
@@ -269,10 +271,34 @@ TEST_F(FailedReassignCacheTest, HintOnlyMissesOnceFreed) {
   runWithFixture(64, [&](Fixture &F) {
     const LiveInterval &LI = F.LI(0);
     F.Cache.remember(LI, /*HintOnly=*/true);
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::HitFalse);
+    // Hint-only is not a hit even before any free: the hint set is not
+    // validated against the matrix.
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
 
     F.Cache.noteUnassign(F.LI(1), F.vgpr(1),
                          /*ClearAllReferencingSegments=*/false);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
+  });
+}
+
+TEST_F(FailedReassignCacheTest, HintOnlyMissesOnNonOverlappingUnassign) {
+  runWithFixture(64, [&](Fixture &F) {
+    const LiveInterval &LI = F.LI(0);
+    F.Cache.remember(LI, /*HintOnly=*/true);
+
+    // A free that ends where LI starts does not overlap, so FreedRegs stays
+    // empty. TILE-style hints can still gain a destination from that free.
+    SlotIndex Begin = LI.beginIndex();
+    SlotIndex Prev = Begin.getPrevIndex();
+    ASSERT_TRUE(Prev < Begin);
+    LiveInterval Outside(F.LI(1).reg(), 0.0f);
+    Outside.addSegment(LiveRange::Segment(Prev, Begin, nullptr));
+    F.Cache.noteUnassign(Outside, F.vgpr(1),
+                         /*ClearAllReferencingSegments=*/false);
+
+    EXPECT_TRUE(F.Cache.freedRegs(LI.reg().id()).empty());
     EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
     EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
   });

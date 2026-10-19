@@ -66,8 +66,9 @@ public:
   ///
   /// \returns
   /// - Miss: no entry, fingerprint mismatch (entry erased), saturated,
-  ///   HintOnly with pending frees, or slot indexes were renumbered since the
-  ///   entry was recorded (the cache is dropped). Caller runs the full scan.
+  ///   hint-only (the hint set is not validated here), or slot indexes were
+  ///   renumbered since the entry was recorded (the cache is dropped).
+  ///   Caller runs the full scan.
   /// - HitFalse: entry is valid and FreedRegs is empty; failure still holds.
   /// - RecheckFalse: FreedRegs were tested (and aliases in the order); none
   ///   are free. FreedRegs is cleared so later queries can HitFalse.
@@ -93,7 +94,8 @@ private:
     unsigned SegCount = 0;  ///< Segment count at remember time (fingerprint).
     SlotIndex Begin;        ///< Live range begin (fingerprint).
     SlotIndex End;          ///< Live range end (fingerprint).
-    bool HintOnly = false;  ///< Failure was for a hint-only order scan.
+    bool HintOnly = false;  ///< Hint-only scan. Not reused; hints can change
+                            ///< without an overlapping unassign.
     bool Saturated = false; ///< FreedRegs hit MaxFreedRegs; treat as Miss.
     SmallVector<MCPhysReg, 4>
         FreedRegs; ///< Physregs freed across [Begin, End).
