@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -pedantic -ast-dump | FileCheck %s
+// RUN: %clang_cc1 %s -pedantic -ast-dump -verify | FileCheck %s
 
 struct X {
   X() __private = default;
@@ -16,4 +16,14 @@ void k() {
   // CHECK: VarDecl {{.*}} x2
   // CHECK: CXXConstructExpr {{.*}} 'const __private X'
   const X x2;
+}
+
+// A temporary is created in __private, so its type can only name an address
+// space that __private implicitly converts to, such as __generic.
+struct Y {};
+using gnY = __generic Y;
+using gY = __global Y;
+void addrSpace() {
+  (void)gnY();
+  (void)gY(); // expected-error {{temporary of type 'gY' (aka '__global Y') cannot be created in address space '__global'}}
 }

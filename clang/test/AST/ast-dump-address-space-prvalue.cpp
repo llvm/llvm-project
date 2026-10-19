@@ -1,41 +1,113 @@
 // RUN: %clang_cc1 %s -ast-dump | FileCheck %s
 
-struct X { int a; };
-
-using as1_X = X __attribute__((address_space(1)));
-
-as1_X prvalue();
-as1_X &lvalue();
-as1_X &&xvalue();
-
-void test() {
-  // A prvalue should not have an address space even if the function's
-  // return type is address-space qualified.
-  // CHECK: VarDecl {{.*}} v 'X'
-  // CHECK: CallExpr {{.*}} 'X'{{$}}
-  auto v = prvalue();
-
-  // CHECK: VarDecl {{.*}} l '__attribute__((address_space(1))) X &'
-  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) X' lvalue
-  auto &l = lvalue();
-
-  // CHECK: VarDecl {{.*}} r '__attribute__((address_space(1))) X &&'
-  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) X' xvalue
-  auto &&r = xvalue();
-}
-
-struct S {
-  S(int);
+struct X {
+  void f() const;
 };
 
 using as1_int = __attribute__((address_space(1))) int;
 using const_as1_int = const __attribute__((address_space(1))) int;
-using as1_S = __attribute__((address_space(1))) S;
-using const_as1_S = const __attribute__((address_space(1))) S;
+using as1_X = X __attribute__((address_space(1)));
+using const_as1_X = const __attribute__((address_space(1))) X;
 
-void qualifiersTest() {
-  // The address space and const qualifier are dropped on a prvalue of non-class
-  // type.
+as1_X prvalue();
+as1_int prvalueInt();
+const_as1_X constPrvalue();
+const_as1_int constPrvalueInt();
+as1_X &lvalue();
+as1_int &lvalueInt();
+as1_X &&xvalue();
+as1_int &&xvalueInt();
+
+void callResult() {
+  // A prvalue should not have an address space even if the function's
+  // return type is address-space qualified.
+  // CHECK: CallExpr {{.*}} 'X'{{$}}
+  (void)prvalue();
+  // CHECK: CallExpr {{.*}} 'int'{{$}}
+  (void)prvalueInt();
+
+  // const is retained on a class prvalue.
+  // CHECK: CallExpr {{.*}} 'const X'{{$}}
+  (void)constPrvalue();
+  // CHECK: CallExpr {{.*}} 'int'{{$}}
+  (void)constPrvalueInt();
+
+  // A reference names an object in the address space.
+  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) X' lvalue
+  (void)lvalue();
+  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) int' lvalue
+  (void)lvalueInt();
+  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) X' xvalue
+  (void)xvalue();
+  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) int' xvalue
+  (void)xvalueInt();
+}
+
+struct M {
+  as1_X m();
+  as1_X operator-();
+  as1_X operator+(int);
+  as1_X operator[](int);
+  as1_X operator()();
+  operator as1_X();
+};
+
+struct MInt {
+  as1_int m();
+  as1_int operator-();
+  as1_int operator+(int);
+  as1_int operator[](int);
+  as1_int operator()();
+  operator as1_int();
+};
+
+// Calls to overloaded operators, member functions and conversion
+// functions also produce a prvalue.
+void overloadedCalls(M mm, MInt mi) {
+  // CHECK: CXXMemberCallExpr {{.*}} 'X'{{$}}
+  mm.m().f();
+  // CHECK: CXXMemberCallExpr {{.*}} 'int'{{$}}
+  (void)mi.m();
+  // CHECK: CXXOperatorCallExpr {{.*}} 'X' '-'
+  (-mm).f();
+  // CHECK: CXXOperatorCallExpr {{.*}} 'int' '-'
+  (void)-mi;
+  // CHECK: CXXOperatorCallExpr {{.*}} 'X' '+'
+  (mm + 1).f();
+  // CHECK: CXXOperatorCallExpr {{.*}} 'int' '+'
+  (void)(mi + 1);
+  // CHECK: CXXOperatorCallExpr {{.*}} 'X' '[]'
+  mm[0].f();
+  // CHECK: CXXOperatorCallExpr {{.*}} 'int' '[]'
+  (void)mi[0];
+  // CHECK: CXXOperatorCallExpr {{.*}} 'X' '()'
+  mm().f();
+  // CHECK: CXXOperatorCallExpr {{.*}} 'int' '()'
+  (void)mi();
+  // CHECK: CXXMemberCallExpr {{.*}} 'X'{{$}}
+  X c = mm;
+  // CHECK: CXXMemberCallExpr {{.*}} 'int'{{$}}
+  int i = mi;
+}
+
+// A by-value return initializes a result object without the address space.
+// The declared function type keeps the address space.
+// CHECK: FunctionDecl {{.*}} fnReturn 'as1_X ()'
+// CHECK: ReturnStmt
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'X' 'void (const X &) noexcept'
+X x;
+as1_X fnReturn() { return x; }
+// CHECK: FunctionDecl {{.*}} fnReturnInt 'as1_int ()'
+// CHECK: ReturnStmt
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+int i;
+as1_int fnReturnInt() { return i; }
+
+// A cast to a non-class type ignores top-level qualifiers, so the address
+// space and const are dropped and the result is a plain value. A class type
+// keeps its qualifiers, so a cast or temporary of an address-space-qualified
+// class type is rejected (see SemaCXX/address-space-prvalue.cpp).
+void castTest() {
   // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to as1_int
   (void)(as1_int{1});
   // CHECK: CXXFunctionalCastExpr {{.*}} 'int' functional cast to const_as1_int
@@ -46,25 +118,6 @@ void qualifiersTest() {
   (void)(const_as1_int)0;
   // CHECK: CXXStaticCastExpr {{.*}} 'int' static_cast<const_as1_int> <NoOp>
   (void)static_cast<const_as1_int>(0);
-
-  // The address space is dropped on a prvalue of class type
-  // const is retained.
-  // CHECK: CXXStaticCastExpr {{.*}} 'S' static_cast<as1_S> <NoOp>
-  (void)static_cast<as1_S>(S{0});
-  // CHECK: CXXStaticCastExpr {{.*}} 'const S' static_cast<const_as1_S> <NoOp>
-  (void)static_cast<const_as1_S>(S{0});
-}
-
-as1_int &&rvalueRefInt();
-as1_X &&rvalueRefX();
-
-void rvalueReferenceTest() {
-  // An rvalue reference is an xvalue naming an object, not a prvalue, so the
-  // address space is kept.
-  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) int' xvalue
-  (void)rvalueRefInt();
-  // CHECK: CallExpr {{.*}}:'__attribute__((address_space(1))) X' xvalue
-  (void)rvalueRefX();
 }
 
 void vaArgTest(__builtin_va_list va) {
@@ -83,4 +136,3 @@ void vaArgTest(__builtin_va_list va) {
 // CHECK: NonTypeTemplateParmDecl {{.*}} 'int' {{.*}} N
 template <as1_int N> struct NT {};
 NT<0> nt;
-
