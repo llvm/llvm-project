@@ -260,6 +260,11 @@
 
 #endif
 
+// This controls the availability of the C++26 rcu functions.
+// The platform specific implementation is built in the library.
+#define _LIBCPP_AVAILABILITY_HAS_RCU _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_RCU _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
+
 // This controls the availability of the C++26 debugging functions.
 // The platform specific implementation is built in the library.
 #define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
