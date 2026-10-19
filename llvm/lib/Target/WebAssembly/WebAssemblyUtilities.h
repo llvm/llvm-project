@@ -23,6 +23,7 @@
 namespace llvm {
 
 class MachineBasicBlock;
+class MachineFunction;
 class MachineInstr;
 class MachineOperand;
 class MCContext;
@@ -103,6 +104,12 @@ MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
 template <typename RangeT> void moveToFront(RangeT &Range, size_t Idx) {
   std::rotate(Range.begin(), Range.begin() + Idx, Range.begin() + Idx + 1);
 }
+
+/// Returns the virtual register defined by the ARGUMENT instruction of the
+/// swiftasync argument, or an invalid register if there is none. The argument
+/// arrives in local 0, which must hold the async context for the whole
+/// function.
+Register getSwiftAsyncArgReg(const MachineFunction &MF);
 
 } // end namespace WebAssembly
 
