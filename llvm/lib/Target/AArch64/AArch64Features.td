@@ -618,6 +618,16 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
   "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
 
 //===----------------------------------------------------------------------===//
+//  Armv9.8 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
+  "Enable Armv9.8-A Conditional Fault instructions">;
+
+def FeatureLSC64B : ExtensionWithMArch<"lsc64b", "LSC64B", "FEAT_LSC64B",
+  "Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension", [FeatureLSCP]>;
+
+//===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
 
@@ -664,6 +674,10 @@ def FeatureExperimentalZeroingPseudos
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP",
   [], InlineIgnore>;
+
+def FeatureDontPreferPredicatedLD1R : SubtargetFeature <
+    "dont-prefer-predicated-ld1r", "NoPredicatedLD1R", "true",
+    "Don't prefer predicated SVE LD1R over sign-extended-load + NEON dup", [], InlineIgnore>;
 
 def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGPR64", "true",
                                         "Has zero-cycle register moves for GPR64 registers",
@@ -1117,6 +1131,9 @@ def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
     FeatureF16F32DOT])>;
+def HasV9_8aOps : Architecture64<9, 8, "a", "v9.8a",
+  [HasV9_7aOps],
+  HasV9_7aOps.DefaultExts>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fminimumbf16.h"
 
-LIST_FMINIMUM_TESTS(bfloat16, LIBC_NAMESPACE::fminimumbf16)
+LIST_FMINIMUM_TESTS(Fminimumbf16, bfloat16, LIBC_NAMESPACE::fminimumbf16)

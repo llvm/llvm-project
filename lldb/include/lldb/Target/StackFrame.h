@@ -231,6 +231,12 @@ public:
   ///   not be provided.
   virtual Block *GetFrameBlock();
 
+  /// Let F be this frame's function. Returns true if \p addr points to code
+  /// inside F.
+  /// Note: if some other function F2 has been inlined into F, and \p
+  /// addr points to code of the inlined copy of F2, this returns false.
+  bool IsAddressInFrameScope(const Address &addr);
+
   /// Get the RegisterContext for this frame, if possible.
   ///
   /// Returns a shared pointer to the RegisterContext for this stack frame.
@@ -534,8 +540,8 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  virtual lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
-                                                             int64_t offset);
+  virtual lldb::ValueObjectSP
+  GuessValueForRegisterAndOffset(llvm::StringRef reg, int64_t offset);
 
   /// Attempt to reconstruct the ValueObject for a variable with a given \a name
   /// from within the current StackFrame, within the current block. The search
@@ -562,6 +568,14 @@ public:
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
   virtual lldb::RecognizedStackFrameSP GetRecognizedFrame();
+
+  // Return a ThreadPlanSP or an error.  Returning an empty ThreadPlanSP means
+  // the frame doesn't have a custom step plan, only return an error if the
+  // frame intended to provide a plan but there was an error in doing so.
+  virtual llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) {
+    return lldb::ThreadPlanSP();
+  }
 
   /// Get the identifier of the StackFrameList that contains this frame.
   ///

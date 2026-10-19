@@ -301,7 +301,8 @@ Status ProcessElfCore::DoLoadCore() {
         }
       }
       if (exe_module_sp)
-        GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        GetTarget().RebuildModuleListWithExecutable(exe_module_sp,
+                                                    eLoadDependentsNo);
     }
   }
   return error;
@@ -654,7 +655,10 @@ void ProcessElfCore::Initialize() {
 }
 
 lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
-  ObjectFile *obj_file = GetTarget().GetExecutableModule()->GetObjectFile();
+  lldb::ModuleSP executable_sp = GetTarget().GetExecutableModule();
+  if (!executable_sp)
+    return LLDB_INVALID_ADDRESS;
+  ObjectFile *obj_file = executable_sp->GetObjectFile();
   Address addr = obj_file->GetImageInfoAddress(&GetTarget());
 
   if (addr.IsValid())

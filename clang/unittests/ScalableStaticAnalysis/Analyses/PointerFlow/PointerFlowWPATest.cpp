@@ -27,8 +27,6 @@ using namespace ssaf;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
-PointerFlowEntitySummary ssaf::buildPointerFlowEntitySummary(EdgeSet Edges);
-
 namespace {
 
 class PointerFlowWPATest : public TestFixture {

@@ -11,10 +11,20 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
-
-LLVM_ATTRIBUTE_MINSIZE TosaProfileCompliance::TosaProfileCompliance() {
+namespace mlir {
+namespace tosa {
+// Building this ~5,000-line generated initializer map under AddressSanitizer,
+// HWAddressSanitizer, or MemorySanitizer leads to extreme compile times (>3.5
+// minutes) during InstCombine and greedy register allocation due to
+// instrumentation overhead. Disable optimization under ASan/HWAsan/MSan to keep
+// build times manageable.
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD ||          \
+    LLVM_MEMORY_SANITIZER_BUILD
+__attribute__((optnone))
+#else
+LLVM_ATTRIBUTE_MINSIZE
+#endif
+TosaProfileCompliance::TosaProfileCompliance() {
   const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
   const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
   const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};
@@ -373,6 +383,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(CastToBlockScaled)
   POPULATE_PROFILE_INFO_COMMON(Const)
   POPULATE_PROFILE_INFO_COMMON(ArgMax)
+  POPULATE_PROFILE_INFO_COMMON(ArgMin)
   POPULATE_PROFILE_INFO_COMMON(Sub)
   POPULATE_PROFILE_INFO_COMMON(Maximum)
   POPULATE_PROFILE_INFO_COMMON(Minimum)
@@ -743,3 +754,5 @@ TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
 
   return stringifyScalarTypeInfo(typeInfo);
 }
+} // namespace tosa
+} // namespace mlir

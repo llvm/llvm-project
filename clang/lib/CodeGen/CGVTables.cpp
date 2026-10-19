@@ -21,8 +21,6 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
@@ -165,9 +163,6 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
       for (llvm::DbgVariableRecord &DVR :
            llvm::filterDbgVars(I.getDbgRecordRange()))
         PrepareVariableMapping(DVR.getVariable());
-
-      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
-        PrepareVariableMapping(DII->getVariable());
     }
   }
 }
@@ -819,16 +814,6 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     }
 
     auto getSpecialVirtualFn = [&](StringRef name) -> llvm::Constant * {
-      // FIXME(PR43094): When merging comdat groups, lld can select a local
-      // symbol as the signature symbol even though it cannot be accessed
-      // outside that symbol's TU. The relative vtables ABI would make
-      // __cxa_pure_virtual and __cxa_deleted_virtual local symbols, and
-      // depending on link order, the comdat groups could resolve to the one
-      // with the local symbol. As a temporary solution, fill these components
-      // with zero. We shouldn't be calling these in the first place anyway.
-      if (RelativeCXXABIVTables)
-        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
-
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
       auto *F = cast<llvm::Function>(

@@ -5,16 +5,20 @@ define void @main() {
   %cttz_some = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 false, i1 true, i1 false>, i1 true)
   %cttz_all = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 false)
   %cttz_poison = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 true)
+  %cttz_poison_elt = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 true, i1 poison, i1 false>, i1 false)
 
   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false)
   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false)
   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false)
   %evl_scalable = call i32 @llvm.experimental.get.vector.length.i32(i32 20, i32 4, i1 true)
   %evl_poison = call i32 @llvm.experimental.get.vector.length.i64(i64 poison, i32 4, i1 false)
+  %evl_large_vf = call i32 @llvm.experimental.get.vector.length.i32(i32 1, i32 1073741824, i1 true)
 
   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99)
   %last_passthru = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, i32 99)
   %last_poison = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, i32 99)
+  ; Make sure we use the correct poison representation for byte values.
+  %poison_byte = call b8 @llvm.experimental.vector.extract.last.active.v1b8(<1 x b8> zeroinitializer, <1 x i1> poison, b8 0)
 
   %compress = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 true, i1 false, i1 true>, <4 x i32> <i32 101, i32 102, i32 103, i32 104>)
   %compress_all_false = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, <4 x i32> <i32 101, i32 102, i32 103, i32 104>)
@@ -79,14 +83,17 @@ define void @main() {
 ; CHECK-NEXT:   %cttz_some = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 false, i1 true, i1 false>, i1 true) => i8 2
 ; CHECK-NEXT:   %cttz_all = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 false) => i8 4
 ; CHECK-NEXT:   %cttz_poison = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 true) => poison
+; CHECK-NEXT:   %cttz_poison_elt = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 true, i1 poison, i1 false>, i1 false) => poison
 ; CHECK-NEXT:   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false) => i32 0
 ; CHECK-NEXT:   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false) => i32 3
 ; CHECK-NEXT:   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false) => i32 3
 ; CHECK-NEXT:   %evl_scalable = call i32 @llvm.experimental.get.vector.length.i32(i32 20, i32 4, i1 true) => i32 13
 ; CHECK-NEXT:   %evl_poison = call i32 @llvm.experimental.get.vector.length.i64(i64 poison, i32 4, i1 false) => poison
+; CHECK-NEXT:   %evl_large_vf = call i32 @llvm.experimental.get.vector.length.i32(i32 1, i32 1073741824, i1 true) => i32 1
 ; CHECK-NEXT:   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99) => i32 30
 ; CHECK-NEXT:   %last_passthru = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, i32 99) => i32 99
 ; CHECK-NEXT:   %last_poison = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, i32 99) => poison
+; CHECK-NEXT:   %poison_byte = call b8 @llvm.experimental.vector.extract.last.active.v1b8(<1 x b8> zeroinitializer, <1 x i1> poison, b8 0) => b8 0x!! 
 ; CHECK-NEXT:   %compress = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 true, i1 false, i1 true>, <4 x i32> <i32 101, i32 102, i32 103, i32 104>) => { i32 20, i32 40, i32 103, i32 104 }
 ; CHECK-NEXT:   %compress_all_false = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, <4 x i32> <i32 101, i32 102, i32 103, i32 104>) => { i32 101, i32 102, i32 103, i32 104 }
 ; CHECK-NEXT:   %compress_poison = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, <4 x i32> zeroinitializer) => { poison, poison, poison, poison }

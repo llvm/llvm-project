@@ -14,12 +14,12 @@ subroutine array_elements(i,x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QParray_elements
+! SPLIT: %[[AB:.*]] = arith.mulf
+! SPLIT: %[[HEAD:.*]] = arith.addf %{{.*}}, %[[AB]]
 ! SPLIT: %[[CD:.*]] = arith.mulf
 ! SPLIT: %[[EF:.*]] = arith.mulf
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
-! SPLIT: %[[AB:.*]] = arith.mulf
-! SPLIT: %[[HEAD:.*]] = arith.addf %{{.*}}, %[[AB]]
-! SPLIT: %[[SUM:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[SUM]]
 
 ! ORDERED-LABEL: func.func @_QParray_elements
@@ -39,12 +39,12 @@ subroutine nested_subscript(i,j,x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QPnested_subscript
+! SPLIT: %[[AB:.*]] = arith.mulf
+! SPLIT: %[[HEAD:.*]] = arith.addf %{{.*}}, %[[AB]]
 ! SPLIT: %[[CD:.*]] = arith.mulf
 ! SPLIT: %[[EF:.*]] = arith.mulf
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
-! SPLIT: %[[AB:.*]] = arith.mulf
-! SPLIT: %[[HEAD:.*]] = arith.addf %{{.*}}, %[[AB]]
-! SPLIT: %[[SUM:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[SUM]]
 
 ! ORDERED-LABEL: func.func @_QPnested_subscript
@@ -64,13 +64,13 @@ subroutine real_subscript_conversion(r,x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QPreal_subscript_conversion
-! SPLIT: %[[CD:.*]] = arith.mulf
-! SPLIT: %[[EF:.*]] = arith.mulf
-! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
 ! SPLIT: fir.convert %{{.*}} : (f32) -> i64
 ! SPLIT: %[[AB:.*]] = arith.mulf
 ! SPLIT: %[[HEAD:.*]] = arith.addf %{{.*}}, %[[AB]]
-! SPLIT: %[[SUM:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[CD:.*]] = arith.mulf
+! SPLIT: %[[EF:.*]] = arith.mulf
+! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[SUM]]
 
 ! ORDERED-LABEL: func.func @_QPreal_subscript_conversion

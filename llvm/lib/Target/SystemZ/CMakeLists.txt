@@ -8,6 +8,7 @@ tablegen(LLVM SystemZGenHLASMAsmWriter.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM SystemZGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM SystemZGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM SystemZGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM SystemZGenInsnMatchTable.inc -gen-insn-directive-match-table)
 tablegen(LLVM SystemZGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM SystemZGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM SystemZGenRegisterInfo.inc -gen-register-info)
@@ -18,6 +19,7 @@ add_public_tablegen_target(SystemZCommonTableGen)
 
 add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
+  SystemZAlignGlobals.cpp
   SystemZCallingConv.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-bind-routine),acc-routine-to-gpu-func,func.func(acc-cg-to-gpu))" | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(acc-materialize-routine-bind-targets,func.func(acc-bind-routine),acc-routine-to-gpu-func,func.func(acc-cg-to-gpu))" | FileCheck %s
 
 // Bound acc.routine metadata must remain available after ACCBindRoutine and
 // ACCRoutineToGPUFunc so ACCCGToGPU can classify the bound callee as vector.

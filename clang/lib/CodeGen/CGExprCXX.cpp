@@ -1391,9 +1391,19 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   ///
   /// We model such elidable calls with the 'builtin' attribute.
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
-  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn &&
-      Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-    CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn) {
+    if (Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
+      CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+
+    // A sane operator new does not read or write accessible memory.
+    if (CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
+        CalleeDecl->getDeclName().isAnyOperatorNew()) {
+      // FIXME: inaccessiblemem could cause issues if LTO makes the
+      // previously inaccessible memory accessible after linking.
+      CallOrInvoke->setMemoryEffects(
+          llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
+              llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
+    }
   }
 
   return RV;
@@ -1779,8 +1789,12 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     cleanupDominator = Builder.CreateUnreachable();
   }
 
-  assert((allocSize == allocSizeWithoutCookie) ==
-         CalculateCookiePadding(*this, E).isZero());
+  // Without a cookie the two sizes must match. With a cookie they usually
+  // differ, but on overflow the allocation size is all-ones, which can
+  // coincide with the size without the cookie.
+  assert(allocSize == llvm::Constant::getAllOnesValue(SizeTy) ||
+         ((allocSize == allocSizeWithoutCookie) ==
+          CalculateCookiePadding(*this, E).isZero()));
   if (allocSize != allocSizeWithoutCookie) {
     assert(E->isArray());
     allocation = CGM.getCXXABI().InitializeArrayCookie(

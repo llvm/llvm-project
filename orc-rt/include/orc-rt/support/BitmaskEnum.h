@@ -112,9 +112,10 @@ constexpr std::underlying_type_t<E> bitmask_enum_mask() noexcept {
   constexpr int Width = bit_width(largest_bitmask_enum_bit<E>::value);
   // Shifting by the full width of the type would be undefined, so handle a
   // largest bit in the top position separately: the mask is then every bit.
-  return Width == std::numeric_limits<UnderlyingTy>::digits
-             ? static_cast<UnderlyingTy>(~UnderlyingTy(0))
-             : static_cast<UnderlyingTy>((UnderlyingTy(1) << Width) - 1);
+  if constexpr (Width == std::numeric_limits<UnderlyingTy>::digits)
+    return static_cast<UnderlyingTy>(~UnderlyingTy(0));
+  else
+    return static_cast<UnderlyingTy>((UnderlyingTy(1) << Width) - 1);
 }
 
 template <typename E>

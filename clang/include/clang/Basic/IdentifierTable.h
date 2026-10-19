@@ -943,7 +943,7 @@ protected:
 } // namespace detail
 
 /// One of these variable length records is kept for each
-/// selector containing more than one keyword. We use a folding set
+/// selector containing more than one keyword. We use UniquingSet
 /// to unique aggregate names (keyword selectors in ObjC parlance). Access to
 /// this class is provided strictly through Selector.
 class alignas(IdentifierInfoAlignment) MultiKeywordSelector
@@ -984,15 +984,8 @@ public:
     return keyword_begin()[i];
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
-                      unsigned NumArgs) {
-    ID.AddInteger(NumArgs);
-    for (unsigned i = 0; i != NumArgs; ++i)
-      ID.AddPointer(ArgTys[i]);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, keyword_begin(), getNumArgs());
+  ArrayRef<const IdentifierInfo *> getKey() const {
+    return {keyword_begin(), getNumArgs()};
   }
 };
 

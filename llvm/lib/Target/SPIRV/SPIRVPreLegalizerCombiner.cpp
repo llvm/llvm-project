@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define GET_GICOMBINER_DEPS
 #include "SPIRVGenPreLegalizeGICombiner.inc"
@@ -186,7 +187,9 @@ PreservedAnalyses
 SPIRVPreLegalizerCombinerPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   bool Changed = runPreLegalizerCombiner(
-      MF, MF.getFunction().hasOptNone(),
+      MF,
+      MF.getFunction().hasOptNone() ||
+          shouldSkipOptimizationForOptBisect(MF.getFunction()),
       [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
       [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
   if (!Changed)

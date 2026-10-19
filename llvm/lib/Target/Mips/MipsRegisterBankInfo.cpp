@@ -136,7 +136,7 @@ void MipsRegisterBankInfo::AmbiguousRegDefUseContainer::addDefUses(
     Register Reg, const MachineRegisterInfo &MRI) {
   assert(!MRI.getType(Reg).isPointer() &&
          "Pointers are gprb, they should not be considered as ambiguous.\n");
-  for (MachineInstr &UseMI : MRI.use_instructions(Reg)) {
+  for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
     MachineInstr *NonCopyInstr = skipCopiesOutgoing(&UseMI);
     // Copy with many uses.
     if (NonCopyInstr->getOpcode() == TargetOpcode::COPY &&
@@ -163,8 +163,8 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::skipCopiesOutgoing(
   MachineInstr *Ret = MI;
   while (Ret->getOpcode() == TargetOpcode::COPY &&
          !Ret->getOperand(0).getReg().isPhysical() &&
-         MRI.hasOneUse(Ret->getOperand(0).getReg())) {
-    Ret = &(*MRI.use_instr_begin(Ret->getOperand(0).getReg()));
+         MRI.hasOneNonDBGUse(Ret->getOperand(0).getReg())) {
+    Ret = &(*MRI.use_instr_nodbg_begin(Ret->getOperand(0).getReg()));
   }
   return Ret;
 }
@@ -533,7 +533,8 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     else if (InstTy == InstType::Integer) {
       OperandsMapping = GPRValueMapping;
     } else {
-      assert(isAmbiguousWithMergeOrUnmerge_64(InstTy, Op0Size) &&
+      assert((isAmbiguous_32(InstTy, Op0Size) ||
+              isAmbiguousWithMergeOrUnmerge_64(InstTy, Op0Size)) &&
              "Unexpected Inst type");
       OperandsMapping = getGprbOrCustomMapping(Op0Size, MappingID);
     }

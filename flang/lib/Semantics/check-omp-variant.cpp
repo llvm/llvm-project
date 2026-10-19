@@ -191,7 +191,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
   // controls can be paired with it for static-applicability matching. A
   // well-formed WHEN clause has exactly one modifier, its context selector;
   // pair it only in that case, which also makes front() safe. Any other count
-  // is malformed and already diagnosed by VerifyModifiers.
+  // is malformed and already diagnosed by VerifyModifierSyntax.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =
@@ -659,8 +659,8 @@ void OmpStructureChecker::CheckTraitRequires(
 
   for (const parser::OmpTraitProperty &property : properties) {
     auto clauseId{*GetClauseFromProperty(property)};
-    if (!llvm::omp::isAllowedClauseForDirective(
-            llvm::omp::OMPD_requires, clauseId, version)) {
+    if (!IsClauseAllowedOnDirective(
+            clauseId, llvm::omp::OMPD_requires, version, &context_)) {
       context_.Say(property.source,
           "%s trait requires a clause from the requirement clause set"_err_en_US,
           parser::ToUpperCaseLetters(traitName.ToString()));
@@ -684,8 +684,8 @@ void OmpStructureChecker::CheckTraitSimd(
 
   for (const parser::OmpTraitProperty &property : properties) {
     auto clauseId{*GetClauseFromProperty(property)};
-    if (!llvm::omp::isAllowedClauseForDirective(
-            llvm::omp::OMPD_declare_simd, clauseId, version)) {
+    if (!IsClauseAllowedOnDirective(
+            clauseId, llvm::omp::OMPD_declare_simd, version, &context_)) {
       context_.Say(property.source,
           "%s trait requires a clause that is allowed on the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(traitName.ToString()),
@@ -721,7 +721,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
       switch (llvm::omp::getDirectiveAssociation(dirId)) {
       case llvm::omp::Association::Block:
       case llvm::omp::Association::LoopNest:
-      case llvm::omp::Association::LoopSeq:
+      case llvm::omp::Association::LoopSequence:
         break;
       default:
         if (dirId != llvm::omp::Directive::OMPD_nothing) {
@@ -875,7 +875,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
       } else {
         CheckRectangularNest(*spec, sequence);
       }
-    } else if (assoc == llvm::omp::Association::LoopSeq) {
+    } else if (assoc == llvm::omp::Association::LoopSequence) {
       (void)checkRootLoopCanonical(*spec, /*isSequence=*/true);
     }
   }
@@ -909,7 +909,7 @@ void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
     if (assoc == llvm::omp::Association::LoopNest) {
       context_.Say(
           variant.spec->DirName().source, MsgShouldContainDoOr, "nest");
-    } else if (assoc == llvm::omp::Association::LoopSeq) {
+    } else if (assoc == llvm::omp::Association::LoopSequence) {
       context_.Say(
           variant.spec->DirName().source, MsgShouldContainDoOr, "sequence");
     }

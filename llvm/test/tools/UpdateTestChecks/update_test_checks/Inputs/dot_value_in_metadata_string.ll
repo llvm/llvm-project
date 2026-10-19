@@ -8,4 +8,4 @@ define i32 @dot_value_and_metadata_string(ptr %p, i32 %n) {
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"callee: %.arg"}
-!2 = distinct !{!2, !"callee"}
+!2 = distinct !{!2, i1 false, !"callee"}

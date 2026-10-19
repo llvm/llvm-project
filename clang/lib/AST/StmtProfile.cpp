@@ -535,6 +535,11 @@ void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
     Profiler->VisitExpr(Factor);
 }
 
+void OMPClauseProfiler::VisitOMPDepthClause(const OMPDepthClause *C) {
+  if (const Expr *Depth = C->getDepth())
+    Profiler->VisitExpr(Depth);
+}
+
 void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   if (const Expr *First = C->getFirst())
     Profiler->VisitExpr(First);
@@ -1091,6 +1096,10 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPFlattenDirective(const OMPFlattenDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
@@ -2259,8 +2268,30 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
 }
 
 void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): Add support for Null, TypeSourceInfo,
+  // TemplateReference and DeclRefExpr
+  VisitExpr(E);
+  ID.AddInteger(static_cast<int>(E->getKind()));
+  switch (E->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return;
+  case ReflectionKind::Type: {
+    QualType QT = E->getTypeSourceInfo()->getType();
+    if (isTypeAliasAsReflectionName(QT)) {
+      if (const auto *TDT = QT->getAs<TypedefType>()) {
+        ID.AddBoolean(true);
+        VisitDecl(TDT->getDecl()->getCanonicalDecl());
+        return;
+      }
+    }
+    ID.AddBoolean(false);
+    VisitType(QT);
+    return;
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
 }
 
 void

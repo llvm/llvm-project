@@ -22,7 +22,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -420,6 +419,9 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
     Out << "amdgpu_gfx_whole_wave";
     break;
   case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
+  case CallingConv::WASM_EmscriptenInvoke:
+    Out << "wasm_emscripten_invokecc";
+    break;
   case CallingConv::RISCV_VectorCall:
     Out << "riscv_vector_cc";
     break;
@@ -2186,6 +2188,29 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                     /* Default */ false);
   Printer.printInt("atomGroup", DL->getAtomGroup());
   Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
+  Printer.printMetadata("irlayers", DL->getRawIRLayers());
+  Out << ")";
+}
+
+static void writeDILayerLoc(raw_ostream &Out, const DILayerLoc *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DILayerLoc(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
+  Printer.printInt("column", N->getColumn());
+  Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
+  Printer.printString("kind", N->getKind(), /* ShouldSkipEmpty */ false);
+  Out << ")";
+}
+
+static void writeDILayerLocList(raw_ostream &Out, const DILayerLocList *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DILayerLocList(";
+  ListSeparator FS;
+  for (const MDOperand &Op : N->operands()) {
+    Out << FS;
+    writeMetadataAsOperand(Out, Op, WriterCtx);
+  }
   Out << ")";
 }
 
@@ -2340,6 +2365,7 @@ static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printMetadata("charType", N->getRawCharType());
   Out << ")";
 }
 
@@ -2960,7 +2986,6 @@ class AssemblyWriter {
   SlotTracker &Machine;
   TypePrinting TypePrinter;
   AssemblyAnnotationWriter *AnnotationWriter = nullptr;
-  SetVector<const Comdat *> Comdats;
   bool IsForDebug;
   bool ShouldPreserveUseListOrder;
   UseListOrderMap UseListOrders;
@@ -3068,13 +3093,7 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
       ShouldPreserveUseListOrder(
           PreserveAssemblyUseListOrder.getNumOccurrences()
               ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {
-  if (!TheModule)
-    return;
-  for (const GlobalObject &GO : TheModule->global_objects())
-    if (const Comdat *C = GO.getComdat())
-      Comdats.insert(C);
-}
+              : ShouldPreserveUseListOrder) {}
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
@@ -3243,13 +3262,16 @@ void AssemblyWriter::printModule(const Module *M) {
 
   printTypeIdentities();
 
-  // Output all comdats.
-  if (!Comdats.empty())
-    Out << '\n';
-  for (const Comdat *C : Comdats) {
-    printComdat(C);
-    if (C != Comdats.back())
+  {
+    // Output each used comdat at its first global object.
+    SmallPtrSet<const Comdat *, 8> PrintedComdats;
+    for (const GlobalObject &GO : M->global_objects()) {
+      const Comdat *C = GO.getComdat();
+      if (!C || !PrintedComdats.insert(C).second)
+        continue;
       Out << '\n';
+      printComdat(C);
+    }
   }
 
   // Output all globals.
@@ -4905,9 +4927,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ' ';
       TypePrinter.print(GEP->getSourceElementType(), Out);
       Out << ',';
-    } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
+    } else if (isa<BitExtractInst>(I) || isa<LoadInst>(I)) {
       Out << ' ';
-      TypePrinter.print(LI->getType(), Out);
+      TypePrinter.print(I.getType(), Out);
       Out << ',';
     }
 

@@ -1,0 +1,73 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func @bad_bool(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+2 {{expected attribute value}}
+  // expected-error@+1 {{failed to parse CIR_LoopHintAttr parameter 'vectorize_scalable'}}
+  } loop_hints < vectorize_scalable = maybe>
+  cir.return
+}
+
+// -----
+
+cir.func @bad_mode(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < unroll = sometimes>
+  cir.return
+}
+
+// -----
+
+cir.func @missing_value(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+2 {{expected integer value}}
+  // expected-error@+1 {{failed to parse CIR_LoopHintAttr parameter 'vectorize_width'}}
+  } loop_hints < vectorize_width = >
+  cir.return
+}
+
+// -----
+
+cir.func @unknown_entry(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < bogus>
+  cir.return
+}
+
+// -----
+
+cir.func @out_of_order(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < unroll_count = 4 must_progress>
+  cir.return
+}
+
+// -----
+
+cir.func @repeated(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < must_progress must_progress>
+  cir.return
+}
