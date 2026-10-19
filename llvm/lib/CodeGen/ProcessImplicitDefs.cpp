@@ -172,7 +172,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
     return;
   }
 
-  if (SearchedWholeBlock &&
+  if (SearchedWholeBlock && !MRI->isReserved(Reg) &&
       none_of(MBB->successors(), [&](MachineBasicBlock *Succ) {
         return Succ->isLiveInOverlappedWith(Reg, *TRI);
       }))

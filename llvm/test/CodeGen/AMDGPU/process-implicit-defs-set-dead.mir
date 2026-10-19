@@ -55,3 +55,28 @@ body:             |
 
     S_ENDPGM 0, implicit $sgpr2, implicit $sgpr1
 ...
+
+---
+name:            reserved_reg
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: reserved_reg
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $flat_scr = IMPLICIT_DEF
+  ; CHECK-NEXT:   $sgpr20_sgpr21 = COPY undef $flat_scr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $sgpr20_sgpr21
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit $sgpr20_sgpr21
+  bb.0:
+    $flat_scr = IMPLICIT_DEF
+    $sgpr20_sgpr21 = COPY $flat_scr
+
+  bb.1:
+    liveins: $sgpr20_sgpr21
+
+    S_ENDPGM 0, implicit $sgpr20_sgpr21
+...
