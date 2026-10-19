@@ -14,13 +14,13 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "amdgpu-lower-intrinsics"
@@ -40,16 +40,12 @@ public:
   bool run();
 
 private:
-  DenseMap<Function *, Value *> McastHalfMasks;
-
   bool visitBarrier(IntrinsicInst &I);
   bool visitPtrSBufferLoad(IntrinsicInst &I);
   bool visitMonitorSleep(IntrinsicInst &I);
   bool visitCvtScale(IntrinsicInst &I);
   bool visitUnscaledWMMA(IntrinsicInst &I);
   bool visitTensorLoadToLDS(IntrinsicInst &I);
-  Value *getMcastHalfMask(Function &F);
-  Value *splitFullMcastMask(IRBuilder<> &B, Value *Mask);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -76,6 +72,10 @@ template <class T> static void forEachCall(Function &Intrin, T Callback) {
 
 bool AMDGPULowerIntrinsicsImpl::run() {
   bool Changed = false;
+  const bool HasMcastFullMaskBug =
+      AMDGPU::getFeatureBitset(
+          AMDGPU::getGPUKindFromSubArch(M.getTargetTriple().getSubArch()))
+          .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG);
 
   for (Function &F : M) {
     switch (F.getIntrinsicID()) {
@@ -118,6 +118,8 @@ bool AMDGPULowerIntrinsicsImpl::run() {
           F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
       break;
     case Intrinsic::amdgcn_tensor_load_to_lds:
+      if (!HasMcastFullMaskBug)
+        break;
       forEachCall(
           F, [&](IntrinsicInst *II) { Changed |= visitTensorLoadToLDS(*II); });
       break;
@@ -356,54 +358,35 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
 bool AMDGPULowerIntrinsicsImpl::visitTensorLoadToLDS(IntrinsicInst &I) {
   assert(I.getIntrinsicID() == Intrinsic::amdgcn_tensor_load_to_lds);
 
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
-  if (!ST.hasMcastFullMaskBug())
-    return false;
-
   IRBuilder<> B(&I);
   // The workgroup mask is in dword 0 of D# group 1.
   Value *Group1 = I.getArgOperand(1);
-  Value *Dword0 = findScalarElement(Group1, 0);
-  if (!Dword0)
-    Dword0 = B.CreateExtractElement(Group1, uint64_t(0));
-  Value *NewDword0 = splitFullMcastMask(B, Dword0);
-  if (!NewDword0)
-    return false;
-  I.setArgOperand(1, B.CreateInsertElement(Group1, NewDword0, uint64_t(0)));
-  return true;
-}
+  Value *Mask = findScalarElement(Group1, 0);
+  if (!Mask)
+    Mask = B.CreateExtractElement(Group1, uint64_t(0));
 
-Value *AMDGPULowerIntrinsicsImpl::getMcastHalfMask(Function &F) {
-  Value *&HalfMask = McastHalfMasks[&F];
-  if (HalfMask)
-    return HalfMask;
-
-  IRBuilder<> B(F.getContext());
-  B.SetInsertPointPastAllocas(&F);
-  Value *FlatID =
-      B.CreateIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {});
-  Value *IsUpperHalf = B.CreateICmpUGE(FlatID, B.getInt32(8));
-  HalfMask = B.CreateSelect(IsUpperHalf, B.getInt32(0xffffff00),
-                            B.getInt32(0xffff00ff));
-  return HalfMask;
-}
-
-// Returns nullptr if Mask is a constant without all 16 workgroup bits set.
-Value *AMDGPULowerIntrinsicsImpl::splitFullMcastMask(IRBuilder<> &B,
-                                                     Value *Mask) {
   constexpr uint32_t FullMask = 0xffff;
   ConstantInt *CMask = dyn_cast<ConstantInt>(Mask);
   if (CMask && (CMask->getZExtValue() & FullMask) != FullMask)
-    return nullptr;
+    return false;
 
-  Value *SplitMask =
-      B.CreateAnd(getMcastHalfMask(*B.GetInsertBlock()->getParent()), Mask);
-  if (CMask)
-    return SplitMask;
+  // Compute the half mask in the entry block so it is not recomputed in loops.
+  IRBuilder<> EntryB(I.getContext());
+  EntryB.SetInsertPointPastAllocas(I.getFunction());
+  Value *FlatID =
+      EntryB.CreateIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {});
+  Value *IsUpperHalf = EntryB.CreateICmpUGE(FlatID, EntryB.getInt32(8));
+  Value *HalfMask = EntryB.CreateSelect(
+      IsUpperHalf, EntryB.getInt32(0xffffff00), EntryB.getInt32(0xffff00ff));
+  Value *NewMask = B.CreateAnd(HalfMask, Mask);
+  if (!CMask) {
+    Value *IsFull =
+        B.CreateICmpEQ(B.CreateAnd(Mask, FullMask), B.getInt32(FullMask));
+    NewMask = B.CreateSelect(IsFull, NewMask, Mask);
+  }
 
-  Value *IsFull =
-      B.CreateICmpEQ(B.CreateAnd(Mask, FullMask), B.getInt32(FullMask));
-  return B.CreateSelect(IsFull, SplitMask, Mask);
+  I.setArgOperand(1, B.CreateInsertElement(Group1, NewMask, uint64_t(0)));
+  return true;
 }
 
 PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,

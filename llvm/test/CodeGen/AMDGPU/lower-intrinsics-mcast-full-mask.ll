@@ -159,7 +159,10 @@ define void @tensor_loads_in_loop(<4 x i32> %d0, <8 x i32> %d1, i32 %n) {
 ; BUG-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
 ; BUG-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
 ; BUG-NEXT:    [[TMP1:%.*]] = icmp uge i32 [[TMP0]], 8
-; BUG-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -256, i32 -65281
+; BUG-NEXT:    [[TMP11:%.*]] = select i1 [[TMP1]], i32 -256, i32 -65281
+; BUG-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP13:%.*]] = icmp uge i32 [[TMP12]], 8
+; BUG-NEXT:    [[TMP2:%.*]] = select i1 [[TMP13]], i32 -256, i32 -65281
 ; BUG-NEXT:    [[D1_FULL:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
 ; BUG-NEXT:    br label %[[LOOP:.*]]
 ; BUG:       [[LOOP]]:
@@ -171,7 +174,7 @@ define void @tensor_loads_in_loop(<4 x i32> %d0, <8 x i32> %d1, i32 %n) {
 ; BUG-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP4]], i32 [[TMP3]]
 ; BUG-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[D1]], i32 [[TMP7]], i64 0
 ; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP8]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; BUG-NEXT:    [[TMP9:%.*]] = and i32 [[TMP2]], 65535
+; BUG-NEXT:    [[TMP9:%.*]] = and i32 [[TMP11]], 65535
 ; BUG-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[D1_FULL]], i32 [[TMP9]], i64 0
 ; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP10]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
 ; BUG-NEXT:    [[I_NEXT]] = add i32 [[I]], 1

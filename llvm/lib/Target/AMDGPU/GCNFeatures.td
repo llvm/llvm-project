@@ -1683,7 +1683,7 @@ defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   /*GenPredicate=*/1
 >;
 
-defm McastFullMaskBug : AMDGPUSubtargetFeature<"mcast-full-mask-bug",
+defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
   "Multicast tensor loads with all 16 workgroup mask bits set may never complete",
   /*GenPredicate=*/0
 >;
@@ -2842,7 +2842,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
-  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureSGPRInitBug, FeatureMcastFullMaskBug, FeatureApertureRegs,
+  FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,
