@@ -1207,11 +1207,10 @@ SPIRVNonSemanticDebugHandler::emitDebugFunction(
                                      LineReg,    ColReg,   Parent.Reg,
                                      LinkageReg, FlagsReg, ScopeLineReg};
 
-  // TODO: Create on demand once beginModule collects missing getDeclaration()
-  // cases.
   if (const DISubprogram *Decl = SP->getDeclaration()) {
-    if (auto DeclRegOpt = lookupOptReg(DebugScopeRegs, Decl))
-      Ops.push_back(*DeclRegOpt);
+    EmitResult DeclRes = getOrCreateDebugScope(Decl);
+    if (DeclRes)
+      Ops.push_back(DeclRes.Reg);
   }
 
   return EmitResult::emitted(
