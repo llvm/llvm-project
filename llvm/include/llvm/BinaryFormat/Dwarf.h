@@ -869,6 +869,11 @@ enum AddressSpace {
 #include "llvm/BinaryFormat/Dwarf.def"
 };
 
+enum AddressClass {
+  // Address class encodings
+  DW_ADDR_none = 0x00
+};
+
 enum InlineAttribute {
   // Inline codes
   DW_INL_not_inlined = 0x00,
