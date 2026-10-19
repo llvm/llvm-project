@@ -382,9 +382,7 @@ void CIRGenModule::constructAttributeList(
       addAttributesFromFunctionProtoType(
           getBuilder(), attrs, func->getType()->getAs<FunctionProtoType>());
 
-      // A sane operator new returns a non-aliasing pointer. Classic applies
-      // this only at call sites. The inaccessible-or-errno memory effect is
-      // set on the new-expression call in emitNewDeleteCall.
+      // A sane operator new returns a non-aliasing pointer.
       if (attrOnCallSite && func->isReplaceableGlobalAllocationFunction() &&
           codeGenOpts.AssumeSaneOperatorNew &&
           func->getDeclName().isAnyOperatorNew()) {

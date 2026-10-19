@@ -769,16 +769,16 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
       callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
                              mlir::UnitAttr::get(callOrTryCall->getContext()));
 
-    // A sane operator new does not read or write accessible memory. Classic
-    // sets this on the new-expression call, not on a direct ::operator new
-    // call and not on the function definition. inaccessibleMem is readwrite
-    // and errnoMem is write, matching inaccessibleOrErrnoMemOnly(ModRef, Mod).
+    // A sane operator new does not read or write accessible memory.
     if (cgf.cgm.getCodeGenOpts().AssumeSaneOperatorNew &&
-        calleeDecl->getDeclName().isAnyOperatorNew())
+        calleeDecl->getDeclName().isAnyOperatorNew()) {
+      // FIXME: inaccessiblemem could cause issues if LTO makes the
+      // previously inaccessible memory accessible after linking.
       callOrTryCall.setMemoryEffectsAttr(
           cir::MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
               callOrTryCall->getContext(), cir::ModRefInfo::ModRef,
               cir::ModRefInfo::Mod));
+    }
   }
 
   return rv;
