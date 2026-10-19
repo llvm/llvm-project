@@ -45,12 +45,13 @@ Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
         "failed to get device address of global symbol %s: %s", Name,
         Res->Details);
 
-  if (Size)
+  if (Size) {
     if (auto Res = olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
                                    sizeof(*Size), Size))
       return error::createOffloadError(
           error::ErrorCode::INVALID_BINARY,
           "failed to get size of global symbol %s: %s", Name, Res->Details);
+  }
 
   return Address;
 }
