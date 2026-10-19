@@ -487,6 +487,7 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   if (getOptLevel() >= CodeGenOptLevel::Default &&
+      CLOpts.enable_subreg_liveness_tracking &&
       CLOpts.enable_predicate_as_counter_loop_rewrites)
     addPass(createAArch64PredicateAsCounterLoopRewritesPass());
 
