@@ -1,12 +1,8 @@
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 // FIXME
 auto y  = "// expected-no-diagnostics";
-
-
-// TODO:
-// R-U-N:
-auto x = " //  %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s";
 
 // trunc
 // truncf
@@ -52,8 +48,6 @@ static_assert(__builtin_truncf128(+2.7f) == 2.0f);
   static_assert(FUNC(T(Inf)) == T(Inf)); \
   static_assert(FUNC(T(NegInf)) == T(NegInf)); \
   static_assert(__builtin_isnan(FUNC(NaN)));
-
-// FIXME: add NaN handling here as well
 
 #define LIST_TRUNC_TESTS(T, FUNC) \
     TRUNC_TEST_POSITIVE(T, FUNC) \
