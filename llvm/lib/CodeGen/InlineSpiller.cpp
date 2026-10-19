@@ -1578,19 +1578,17 @@ bool InlineSpiller::tryShareRematerializedLoad(MachineInstr &KeepMI,
   MCRegister SharedPhys;
   // An existing chain already has identity copies into KeepReg. Preserve
   // their assignment so extending the chain cannot introduce physical moves.
-  SmallVector<MCRegister, 16> Choices{KeepPhys};
-  if (KeepReg == KeepMI.getOperand(0).getReg()) {
-    Choices.push_back(DropPhys);
+  auto TryPhys = [&](MCRegister Phys) {
+    if (Matrix->checkInterference(Combined, Phys) != LiveRegMatrix::IK_Free)
+      return false;
+    SharedPhys = Phys;
+    return true;
+  };
+  if (!TryPhys(KeepPhys) && KeepReg == KeepMI.getOperand(0).getReg() &&
+      !TryPhys(DropPhys))
     for (MCRegister Phys : PhysRegs)
-      if (!llvm::is_contained(Choices, Phys))
-        Choices.push_back(Phys);
-  }
-  for (MCRegister Phys : Choices) {
-    if (Matrix->checkInterference(Combined, Phys) == LiveRegMatrix::IK_Free) {
-      SharedPhys = Phys;
-      break;
-    }
-  }
+      if (Phys != KeepPhys && Phys != DropPhys && TryPhys(Phys))
+        break;
   Matrix->invalidateVirtRegs();
   if (!SharedPhys) {
     Matrix->assign(KeepLI, KeepPhys);
@@ -1626,7 +1624,7 @@ bool InlineSpiller::tryShareRematerializedLoad(MachineInstr &KeepMI,
 
 void InlineSpiller::shareRematerializedLoads() {
   unsigned Merged = 0;
-  DenseMap<const TargetRegisterClass *, SmallVector<MCRegister, 8>>
+  DenseMap<const TargetRegisterClass *, SmallSetVector<MCRegister, 8>>
       RematPhysRegs;
 
   // These registers already occur as destinations of actual invariant loads.
@@ -1637,8 +1635,8 @@ void InlineSpiller::shareRematerializedLoads() {
         Register Reg = MI.getOperand(0).getReg();
         MCRegister Phys = VRM.getPhys(Reg);
         auto &Pool = RematPhysRegs[MRI.getRegClass(Reg)];
-        if (!MRI.isReserved(Phys) && !llvm::is_contained(Pool, Phys))
-          Pool.push_back(Phys);
+        if (!MRI.isReserved(Phys))
+          Pool.insert(Phys);
       }
 
   for (MachineBasicBlock &MBB : MF) {
@@ -1650,8 +1648,9 @@ void InlineSpiller::shareRematerializedLoads() {
       Register Root = VRM.getOriginal(Reg);
       auto [Keep, Carrier] = Last.lookup(Root);
       if (Keep && isRematLoadCandidate(*Keep) &&
-          tryShareRematerializedLoad(*Keep, Carrier, MI,
-                                     RematPhysRegs[MRI.getRegClass(Reg)])) {
+          tryShareRematerializedLoad(
+              *Keep, Carrier, MI,
+              RematPhysRegs[MRI.getRegClass(Reg)].getArrayRef())) {
         ++Merged;
         Last[Root] = {Keep, Reg};
       } else {
