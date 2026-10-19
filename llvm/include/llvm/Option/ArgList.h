@@ -307,7 +307,12 @@ public:
 
   /// getAllArgValues - Get the values of all instances of the given argument
   /// as strings.
-  LLVM_ABI std::vector<std::string> getAllArgValues(OptSpecifier Id) const;
+  template <typename... OptSpecifiers>
+  std::vector<std::string> getAllArgValues(OptSpecifiers... Ids) const {
+    SmallVector<const char *, 16> Values;
+    AddAllArgValues(Values, Ids...);
+    return std::vector<std::string>(Values.begin(), Values.end());
+  }
 
   /// @}
   /// @name Translation Utilities
