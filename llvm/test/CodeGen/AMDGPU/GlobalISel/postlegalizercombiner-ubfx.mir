@@ -93,10 +93,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ASHR]], [[C1]]
-    ; GCN-NEXT: $vgpr0 = COPY [[AND]](s32)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C]](s32), [[C1]]
+    ; GCN-NEXT: $vgpr0 = COPY [[UBFX]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 8
     %2:_(s32) = G_ASHR %0, %1(s32)
