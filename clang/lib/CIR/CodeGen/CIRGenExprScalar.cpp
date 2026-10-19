@@ -2922,10 +2922,12 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
   case CK_VectorSplat: {
     // Create a vector object and fill all elements with the same scalar value.
-    assert(destTy->isVectorType() && "CK_VectorSplat to non-vector type");
+    mlir::Type destCIRTy = cgf.convertType(destTy);
+    assert(mlir::isa<cir::VectorType>(destCIRTy) &&
+           "CK_VectorSplat to non-vector type");
     return cir::VecSplatOp::create(builder,
                                    cgf.getLoc(subExpr->getSourceRange()),
-                                   cgf.convertType(destTy), Visit(subExpr));
+                                   destCIRTy, Visit(subExpr));
   }
   case CK_FunctionToPointerDecay:
     return cgf.emitLValue(subExpr).getPointer();

@@ -492,6 +492,173 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+/// Match perfect shuffle entries
+bool matchPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         SmallVector<ShuffleEntry> &Entries) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  assert(Ty.getSizeInBits() == 64 || Ty.getSizeInBits() == 128);
+  if (Ty.getNumElements() != 4)
+    return false;
+  if (!generatePerfectShuffle(MI.getOperand(3).getShuffleMask(), 4, Entries))
+    return false;
+  return Entries.size() == 1 || !preferTBLToMultiInstrShuffle(MI.getParent());
+}
+
+void applyPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &MIB,
+                         SmallVector<ShuffleEntry> &Entries) {
+  SmallVector<Register> Vals;
+  auto getValue = [](unsigned Idx, Register LHS, Register RHS,
+                     SmallVector<Register> &Vals) {
+    if (Idx == ShuffleEntry::LHS)
+      return LHS;
+    if (Idx == ShuffleEntry::RHS)
+      return RHS;
+    assert(Idx < Vals.size());
+    return Vals[Idx];
+  };
+
+  Register V1 = MI.getOperand(1).getReg();
+  Register V2 = MI.getOperand(2).getReg();
+  LLT VT = MRI.getType(MI.getOperand(0).getReg());
+
+  for (const ShuffleEntry &Entry : Entries) {
+    Register OpLHS = getValue(Entry.LHSID, V1, V2, Vals);
+
+    switch (Entry.Op) {
+    case ShuffleEntry::OP_COPY:
+    case ShuffleEntry::OP_MOVLANE:
+      llvm_unreachable("Did not expect a OP_COPY or OP_MOVLANE");
+    case ShuffleEntry::OP_MOVLANE64: {
+      unsigned ExtLane = (Entry.RHSID >> 8) & 0xff;
+      unsigned ToLane = Entry.RHSID & 0xff;
+      bool Input2 = Entry.RHSID >> 16;
+
+      Register Input = Input2 ? V2 : V1;
+      assert(
+          (VT.getScalarSizeInBits() == 16 || VT.getScalarSizeInBits() == 32) &&
+          "Expected 16 or 32 bit shuffle elements");
+      LLT ExtTy = VT.getScalarSizeInBits() == 16
+                      ? LLT::fixed_vector(2, LLT::float32())
+                      : LLT::fixed_vector(2, LLT::float64());
+
+      Input = MIB.buildBitcast(ExtTy, Input).getReg(0);
+      OpLHS = MIB.buildBitcast(ExtTy, OpLHS).getReg(0);
+      auto Ext = MIB.buildExtractVectorElementConstant(ExtTy.getScalarType(),
+                                                       Input, ExtLane);
+      auto Ins = MIB.buildInsertVectorElement(
+          ExtTy, OpLHS, Ext, MIB.buildConstant(LLT::integer(64), ToLane));
+      Vals.push_back(MIB.buildBitcast(VT, Ins).getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_MOVLANE32: {
+      unsigned ExtLane = (Entry.RHSID >> 8) & 0xff;
+      unsigned ToLane = Entry.RHSID & 0xff;
+      bool Input2 = Entry.RHSID >> 16;
+
+      Register Input = Input2 ? V2 : V1;
+      auto Ext = MIB.buildExtractVectorElementConstant(VT.getScalarType(),
+                                                       Input, ExtLane);
+      Vals.push_back(
+          MIB.buildInsertVectorElement(
+                 VT, OpLHS, Ext, MIB.buildConstant(LLT::integer(64), ToLane))
+              .getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_VREV: {
+      // VREV divides the vector in half and swaps within the half.
+      assert(VT.getScalarSizeInBits() == 32 || VT.getScalarSizeInBits() == 16);
+      if (VT.getScalarSizeInBits() == 32) {
+        Vals.push_back(
+            MIB.buildInstr(AArch64::G_REV64, {VT}, {OpLHS}).getReg(0));
+      } else {
+        Vals.push_back(
+            MIB.buildInstr(AArch64::G_REV32, {VT}, {OpLHS}).getReg(0));
+      }
+      break;
+    }
+    case ShuffleEntry::OP_VDUP0:
+    case ShuffleEntry::OP_VDUP1:
+    case ShuffleEntry::OP_VDUP2:
+    case ShuffleEntry::OP_VDUP3: {
+      unsigned Opcode;
+      if (VT.getScalarSizeInBits() == 8)
+        Opcode = AArch64::G_DUPLANE8;
+      else if (VT.getScalarSizeInBits() == 16)
+        Opcode = AArch64::G_DUPLANE16;
+      else if (VT.getScalarSizeInBits() == 32)
+        Opcode = AArch64::G_DUPLANE32;
+      else if (VT.getScalarSizeInBits() == 64)
+        Opcode = AArch64::G_DUPLANE64;
+      else
+        llvm_unreachable("Invalid vector element type?");
+
+      if (VT.getSizeInBits() == 64) {
+        auto Undef = MIB.buildUndef(VT);
+        OpLHS = MIB.buildConcatVectors(VT.multiplyElements(2),
+                                       {OpLHS, Undef.getReg(0)})
+                    .getReg(0);
+      }
+      auto Lane = MIB.buildConstant(LLT::integer(64),
+                                    Entry.Op - ShuffleEntry::OP_VDUP0);
+      Vals.push_back(MIB.buildInstr(Opcode, {VT}, {OpLHS, Lane}).getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_VEXT1:
+    case ShuffleEntry::OP_VEXT2:
+    case ShuffleEntry::OP_VEXT3: {
+      unsigned ExtFactor = VT.getScalarSizeInBits() / 8;
+      unsigned Imm = (Entry.Op - ShuffleEntry::OP_VEXT1 + 1) * ExtFactor;
+      Vals.push_back(MIB.buildInstr(AArch64::G_EXT, {VT},
+                                    {OpLHS, getValue(Entry.RHSID, V1, V2, Vals),
+                                     MIB.buildConstant(LLT::integer(32), Imm)})
+                         .getReg(0));
+      break;
+    }
+    case ShuffleEntry::OP_VUZPL:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_UZP1, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VUZPR:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_UZP2, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VZIPL:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_ZIP1, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VZIPR:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_ZIP2, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VTRNL:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_TRN1, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    case ShuffleEntry::OP_VTRNR:
+      Vals.push_back(
+          MIB.buildInstr(AArch64::G_TRN2, {VT},
+                         {OpLHS, getValue(Entry.RHSID, V1, V2, Vals)})
+              .getReg(0));
+      break;
+    }
+  }
+  assert(Vals.size() == Entries.size());
+  MRI.replaceRegWith(MI.getOperand(0).getReg(), Vals.back());
+  MI.eraseFromParent();
+}
+
 /// isVShiftRImm - Check if this is a valid vector for the immediate
 /// operand of a vector shift right operation. The value must be in the range:
 ///   1 <= Value <= ElementBits for a right shift.

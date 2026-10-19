@@ -11,13 +11,15 @@
 ;    remapper is cumulative across read() calls, foo was inserted by the first
 ;    read, so foo is decoded again and its head, body and callsite samples are
 ;    doubled: entry count 201. The remapping file's content is irrelevant; the
-;    rule in it matches nothing in this test. A follow-up PR will fix this.
+;    rule in it matches nothing in this test.
 ;
 ; The profile also carries a vtable type record at foo's indirect callsite. The
 ; per-location vtable type map is the one consumer that rejects duplicate keys,
-; so decoding foo twice additionally surfaces as a "Duplicate vtable type"
-; warning (a build error under -Werror=backend-plugin). No warning is emitted
-; without the remapping file.
+; so decoding foo twice additionally surfaced as a "Duplicate vtable type"
+; warning (a build error under -Werror=backend-plugin).
+;
+; readFuncProfiles now skips profiles that are already loaded, so foo keeps the
+; same counts with and without the remapping file and no warning is emitted.
 ;
 ; bar(int) is read exactly once in both cases (51).
 ;
@@ -25,28 +27,21 @@
 ; RUN:   %S/Inputs/remapper-reread-loaded-profile.prof -o %t.afdo
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
 ; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=CHECK,NOREMAP \
-; RUN:       --implicit-check-not='Duplicate vtable type'
+; RUN:   | FileCheck %s --implicit-check-not='Duplicate vtable type'
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
 ; RUN:   -sample-profile-remapping-file=%S/Inputs/remapper-reread-loaded-profile.map \
 ; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=CHECK,REMAP
+; RUN:   | FileCheck %s --implicit-check-not='Duplicate vtable type'
 
-; FIXME: foo's vtable record is decoded twice; the second copy is rejected with
-; this warning. It should not be emitted.
-; REMAP: warning: {{.*}}Duplicate vtable type _ZTV4Base at the same location
 ; CHECK: define {{.*}} @_Z3fooP4Basei({{.*}} !prof ![[FOO_ENTRY:[0-9]+]]
 ; CHECK: br i1 %cmp, label %if.then, label %if.end, {{.*}} !prof ![[FOO_BR:[0-9]+]]
 ; CHECK: define {{.*}} @_ZN2ns3barEl({{.*}} !prof ![[BAR_ENTRY:[0-9]+]]
 
-; foo has 100 head samples and 100 body samples on the branch at line 3.
-; NOREMAP-DAG: ![[FOO_ENTRY]] = !{!"function_entry_count", i64 101}
-; NOREMAP-DAG: ![[FOO_BR]] = !{!"branch_weights", i32 101, i32 2}
-; FIXME: foo's profile is read twice and merged into itself; both its head and
-; its body samples are doubled. These should be 101 and "101, 2".
-; REMAP-DAG:   ![[FOO_ENTRY]] = !{!"function_entry_count", i64 201}
-; REMAP-DAG:   ![[FOO_BR]] = !{!"branch_weights", i32 201, i32 2}
-; CHECK-DAG:   ![[BAR_ENTRY]] = !{!"function_entry_count", i64 51}
+; foo has 100 head samples and 100 body samples on the branch at line 3; neither
+; is doubled by the incremental read, with or without the remapping file.
+; CHECK-DAG: ![[FOO_ENTRY]] = !{!"function_entry_count", i64 101}
+; CHECK-DAG: ![[FOO_BR]] = !{!"branch_weights", i32 101, i32 2}
+; CHECK-DAG: ![[BAR_ENTRY]] = !{!"function_entry_count", i64 51}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

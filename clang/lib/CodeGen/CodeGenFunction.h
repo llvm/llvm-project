@@ -3504,9 +3504,6 @@ public:
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
 
-  /// Get the record field index as represented in debug info.
-  unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
-
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission
   //===--------------------------------------------------------------------===//
@@ -4708,7 +4705,8 @@ public:
                                   const Twine &name = "");
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   ArrayRef<llvm::Value *> args,
-                                  const Twine &name = "");
+                                  const Twine &name = "",
+                                  bool IsConvergent = false);
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                     const Twine &Name = "");
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5562,9 +5560,14 @@ public:
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
 private:
-  // Adds a convergence_ctrl token with |ParentToken| as parent convergence
-  // instr to the call |Input|.
-  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
+  // Adds a convergencectrl bundle with the current convergence token to
+  // |Bundles|, if convergence tokens are used.
+  void
+  addConvergenceControlBundle(SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  // Marks |Call| convergent if |IsConvergent| and its callee does not already
+  // imply it.
+  void setConvergentCallSite(llvm::CallBase *Call, bool IsConvergent);
 
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.
