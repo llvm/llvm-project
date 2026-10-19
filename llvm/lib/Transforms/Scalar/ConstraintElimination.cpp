@@ -1233,7 +1233,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
-      !SE->isSCEVable(PN->getType()) || !SE->isSCEVable(B->getType()))
+      !SE->isSCEVable(PN->getType()))
     return;
 
   bool IsZExt = match(A, m_ZExt(m_Specific(PN)));
@@ -1267,8 +1267,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
   // For widened inductions, the narrow phi can wrap before reaching B if B
   // exceeds the narrow type's range, unless the narrow induction itself is
-  // guaranteed not to wrap.
-  if ((IsZExt && !Info.Unsigned) || (IsSExt && !Info.Signed))
+  // guaranteed not to wrap. Also bail out on decreasing steps (including i1
+  // true, which is -1 when sign-extended).
+  if ((IsZExt && !Info.Unsigned) ||
+      (IsSExt && (!Info.Signed || Info.Decreasing)))
     return;
 
   Value *IndTarget = PN;

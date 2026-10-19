@@ -296,3 +296,42 @@ loop.body:
 exit:
   ret void
 }
+
+; i1 induction widened via sext: adding true in i1 is a signed step of -1
+; (0 -> -1), so %c must not be folded to true.
+define i1 @sext_i1_header_bound(i64 %n) {
+; CHECK-LABEL: define i1 @sext_i1_header_bound(
+; CHECK-SAME: i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[IV]] to i64
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[S]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[S]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LATCH]], label %[[EXIT:.*]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i1 [[IV]], true
+; CHECK-NEXT:    br i1 [[IV]], label %[[EXIT]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ [[C]], %[[LOOP]] ], [ [[C]], %[[LATCH]] ]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i1 [ false, %entry ], [ %iv.next, %latch ]
+  %s = sext i1 %iv to i64
+  %c = icmp ule i64 %s, %n
+  %cmp = icmp ne i64 %s, %n
+  br i1 %cmp, label %latch, label %exit
+
+latch:
+  %iv.next = add nsw i1 %iv, true
+  br i1 %iv, label %exit, label %loop
+
+exit:
+  %r = phi i1 [ %c, %loop ], [ %c, %latch ]
+  ret i1 %r
+}
