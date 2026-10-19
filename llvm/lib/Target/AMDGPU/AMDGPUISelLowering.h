@@ -201,6 +201,7 @@ public:
   bool isFNegFree(EVT VT) const override;
   bool isTruncateFree(EVT Src, EVT Dest) const override;
   bool isTruncateFree(Type *Src, Type *Dest) const override;
+  bool shouldFoldFPRoundPair(EVT DestVT, EVT SrcVT) const override;
 
   bool isZExtFree(Type *Src, Type *Dest) const override;
   bool isZExtFree(EVT Src, EVT Dest) const override;

@@ -986,6 +986,13 @@ bool AMDGPUTargetLowering::isTruncateFree(Type *Source, Type *Dest) const {
   return DestSize < SrcSize && DestSize % 32 == 0;
 }
 
+bool AMDGPUTargetLowering::shouldFoldFPRoundPair(EVT DestVT, EVT SrcVT) const {
+  // There is no f64->f16 instruction, so f64->f16 is a long integer sequence,
+  // but f64->f32->f16 is two instructions.
+  return DestVT.getScalarType() != MVT::f16 ||
+         SrcVT.getScalarType() != MVT::f64;
+}
+
 bool AMDGPUTargetLowering::isZExtFree(Type *Src, Type *Dest) const {
   unsigned SrcSize = Src->getScalarSizeInBits();
   unsigned DestSize = Dest->getScalarSizeInBits();
