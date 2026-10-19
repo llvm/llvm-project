@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__execution/is_execution_policy.h>
 #include <__functional/invoke.h>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
@@ -24,7 +25,6 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_execution_policy.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
 
