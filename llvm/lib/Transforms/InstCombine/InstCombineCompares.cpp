@@ -1379,22 +1379,17 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
   ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
 
-  auto handleDomCond = [&](bool TrueEdge, ICmpInst::Predicate DomPred,
-                           Value *DomX, const APInt *DomC) -> Instruction * {
+  auto handleDomCond = [&](bool TrueEdge, Value *DomCond,
+                           ICmpInst::Predicate DomPred, Value *DomX,
+                           const APInt *DomC) -> Instruction * {
     // If the dominating comparison is on an expression of X, assume the
-    // candidate equality holds and simplify that expression. If the
-    // dominating condition then disagrees with the edge reaching Cmp, the
-    // equality is impossible.
+    // candidate equality holds and simplify the dominating condition.
+    // If the result contradicts the edge reaching Cmp, the equality
+    // is impossible.
     if (DomX != X) {
-      Value *SimplifiedDomX =
-          simplifyWithOpReplaced(DomX, X, Y, SQ.getWithInstruction(&Cmp),
-                                 /*AllowRefinement=*/false);
-      if (!SimplifiedDomX)
-        return nullptr;
-
       Value *SimplifiedCond =
-          simplifyICmpInst(DomPred, SimplifiedDomX, Builder.getInt(*DomC),
-                           SQ.getWithInstruction(&Cmp));
+          simplifyWithOpReplaced(DomCond, X, Y, SQ.getWithInstruction(&Cmp),
+                                 /*AllowRefinement=*/false);
 
       if (auto *CondC = dyn_cast_or_null<ConstantInt>(SimplifiedCond)) {
         if (CondC->isOne() != TrueEdge)
@@ -1451,6 +1446,8 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
   };
 
   for (CondBrInst *BI : DC.conditionsFor(X)) {
+    Value *DomCond = BI->getCondition();
+
     CmpPredicate DomPred;
     Value *DomX;
     const APInt *DomC;
@@ -1458,19 +1455,20 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     // Direct comparisons on X retain the existing handling. Comparisons on an
     // expression of X are only used when the current comparison is an equality
     // comparison.
-    if (!match(BI->getCondition(),
-               m_ICmp(DomPred, m_Value(DomX), m_APInt(DomC))) ||
+    if (!match(DomCond, m_ICmp(DomPred, m_Value(DomX), m_APInt(DomC))) ||
         !(Cmp.isEquality() || DomX == X))
       continue;
 
     BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
     if (DT.dominates(Edge0, Cmp.getParent())) {
-      if (auto *V = handleDomCond(/*TrueEdge=*/true, DomPred, DomX, DomC))
+      if (auto *V =
+              handleDomCond(/*TrueEdge=*/true, DomCond, DomPred, DomX, DomC))
         return V;
     } else {
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (DT.dominates(Edge1, Cmp.getParent()))
-        if (auto *V = handleDomCond(/*TrueEdge=*/false, DomPred, DomX, DomC))
+        if (auto *V =
+                handleDomCond(/*TrueEdge=*/false, DomCond, DomPred, DomX, DomC))
           return V;
     }
   }
