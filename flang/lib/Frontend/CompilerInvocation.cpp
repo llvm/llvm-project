@@ -29,6 +29,8 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -870,12 +872,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (argValue == "none") {
       columns = 0;
     } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
-      if (!argValue.empty() &&
-          std::all_of(argValue.begin(), argValue.end(),
-                      [](char c) { return c >= '0' && c <= '9'; })) {
+      if (!argValue.empty() && llvm::all_of(argValue, llvm::isDigit)) {
         // Route oversized positive decimals to the large-columns diagnostic.
-        columns =
-            static_cast<std::int64_t>(std::numeric_limits<int>::max()) + 1;
+        columns = std::numeric_limits<std::int64_t>::max();
       } else {
         columns = -1;
       }
