@@ -48,6 +48,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
     static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
+    static llvm::StringRef getLoweringLevelAttrName() { return "cir.lowering_level"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getCallingConvAttrName() { return "calling_conv"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }

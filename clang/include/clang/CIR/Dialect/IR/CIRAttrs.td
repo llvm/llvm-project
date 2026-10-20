@@ -1644,6 +1644,59 @@ def CIR_FramePointerKindAttr
 }
 
 //===----------------------------------------------------------------------===//
+// LoweringLevel
+//===----------------------------------------------------------------------===//
+
+// The cases are ordered: each lowering pass expects the level of the pass
+// before it, so the values must follow the order of the pipeline.
+def CIR_LoweringLevel : CIR_I32Enum<"LoweringLevel", "lowering level", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"TargetLegal", 1, "target_legal">,
+  I32EnumCase<"CXXABILowered", 2, "cxxabi_lowered">,
+  I32EnumCase<"Prepared", 3, "prepared">,
+  I32EnumCase<"CallConvLowered", 4, "callconv_lowered">
+]>;
+
+def CIR_LoweringLevelAttr
+    : CIR_EnumAttr<CIR_LoweringLevel, "lowering_level"> {
+  let summary = "Records how far a module has been through the CIR lowering "
+                "passes.";
+
+  let description = [{
+    The CIR lowering passes have to run in a fixed order, and none of them can
+    run twice on the same module.  Their output does not always show that they
+    ran: the signatures CallConvLowering produces use the same types as its
+    input.  This module attribute records which lowerings a module has been
+    through, so that a pass run out of order, or a second time, reports an
+    error instead of producing wrong code.
+
+    The levels name a condition of the module, in pipeline order:
+
+    - `none`: no lowering pass has run.  CIRGen creates a module at this level.
+    - `target_legal`: TargetLowering has run.
+    - `cxxabi_lowered`: CXXABILowering has run.
+    - `prepared`: LoweringPrepare has run.
+    - `callconv_lowered`: CallConvLowering has run.
+
+    Each of these passes requires the module to be at the level of the pass
+    before it, and records the level it names once it has lowered the module;
+    a pass that fails leaves the level unchanged.  Lowering to LLVM
+    requires `prepared` or later; CallConvLowering is not run for every
+    target.
+
+    A module without the attribute, such as hand-written test input, is not
+    tracked: the passes neither check nor set its level.
+
+    Example:
+
+    ```
+    module attributes {cir.lowering_level = #cir.lowering_level<prepared>} {
+    }
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GloblCtorAttr
 //===----------------------------------------------------------------------===//
 

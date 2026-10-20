@@ -339,6 +339,17 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     return success();
   }
 
+  if (attrName == getLoweringLevelAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getLoweringLevelAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    if (!mlir::isa<cir::LoweringLevelAttr>(attr.getValue()))
+      return op->emitOpError() << "expects '" << getLoweringLevelAttrName()
+                               << "' to be a #cir.lowering_level attribute";
+    return success();
+  }
+
   // LoweringPrepare uses this attribute directly as the fatbin global's
   // initializer, so it must be a valid #cir.const_array payload for its type.
   if (attrName == getCUDADeviceBinaryAttrName()) {

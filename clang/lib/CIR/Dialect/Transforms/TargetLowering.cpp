@@ -304,6 +304,10 @@ void TargetLoweringPass::runOnOperation() {
     return;
   }
 
+  if (mlir::failed(cir::checkLoweringLevelBefore(
+          mod, cir::LoweringLevel::TargetLegal, getArgument())))
+    return signalPassFailure();
+
   const auto &targetInfo = lowerModule->getTargetLoweringInfo();
 
   mod->walk([&](mlir::Operation *op) {
@@ -330,6 +334,8 @@ void TargetLoweringPass::runOnOperation() {
 
   if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+  else
+    cir::recordLoweringLevel(mod, cir::LoweringLevel::TargetLegal);
 
   typeConverter.restoreRecordTypeNames();
 }

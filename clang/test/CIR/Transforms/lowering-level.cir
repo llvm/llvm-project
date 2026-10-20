@@ -1,0 +1,15 @@
+// RUN: cir-opt %s -split-input-file --cir-target-lowering --cir-cxxabi-lowering --cir-lowering-prepare -o - | FileCheck %s
+
+// Each lowering pass records the level it lowers the module to.
+
+// CHECK: module attributes {{{.*}}cir.lowering_level = #cir.lowering_level<prepared>
+module attributes {cir.lowering_level = #cir.lowering_level<none>, cir.triple = "x86_64-unknown-linux-gnu"} {
+}
+
+// -----
+
+// A module without a lowering level is not tracked.
+
+// CHECK-NOT: cir.lowering_level
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+}

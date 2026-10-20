@@ -168,6 +168,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                      builder.getStringAttr(getTriple().str()));
   theModule->setAttr(cir::CIRDialect::getTargetABIAttrName(),
                      builder.getStringAttr(getTarget().getABI()));
+  // Track the module through the lowering passes, so that a .cir file read
+  // back cannot be lowered twice or out of order.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLevelAttrName(),
+      cir::LoweringLevelAttr::get(&getMLIRContext(), cir::LoweringLevel::None));
 
   // If cxxabi was overridden via -fc++-abi, record it.
   if (langOpts.CXXABI)

@@ -956,6 +956,12 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
+  if (failed(cir::checkLoweringLevelBefore(
+          moduleOp, cir::LoweringLevel::CallConvLowered, getArgument()))) {
+    signalPassFailure();
+    return;
+  }
+
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
@@ -1247,6 +1253,8 @@ void CallConvLoweringPass::runOnOperation() {
       }
     }
   }
+
+  cir::recordLoweringLevel(moduleOp, cir::LoweringLevel::CallConvLowered);
 }
 
 } // namespace

@@ -1056,6 +1056,51 @@ RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
 }
 
 //===----------------------------------------------------------------------===//
+// Lowering level
+//===----------------------------------------------------------------------===//
+
+static LoweringLevelAttr getLoweringLevelAttr(mlir::ModuleOp mod) {
+  return mod->getAttrOfType<LoweringLevelAttr>(
+      CIRDialect::getLoweringLevelAttrName());
+}
+
+mlir::LogicalResult cir::checkLoweringLevelBefore(mlir::ModuleOp mod,
+                                                  LoweringLevel level,
+                                                  llvm::StringRef passArg) {
+  assert(level != LoweringLevel::None && "no pass lowers a module to 'none'");
+  LoweringLevelAttr current = getLoweringLevelAttr(mod);
+  if (!current)
+    return mlir::success();
+
+  auto expected = static_cast<LoweringLevel>(static_cast<uint32_t>(level) - 1);
+  if (current.getValue() == expected)
+    return mlir::success();
+  return mod.emitError() << "'" << passArg << "' expects a module at "
+                         << "lowering level '"
+                         << stringifyLoweringLevel(expected)
+                         << "', but the module is at '"
+                         << stringifyLoweringLevel(current.getValue()) << "'";
+}
+
+void cir::recordLoweringLevel(mlir::ModuleOp mod, LoweringLevel level) {
+  if (getLoweringLevelAttr(mod))
+    mod->setAttr(CIRDialect::getLoweringLevelAttrName(),
+                 LoweringLevelAttr::get(mod.getContext(), level));
+}
+
+mlir::LogicalResult cir::requireLoweringLevel(mlir::ModuleOp mod,
+                                              LoweringLevel level,
+                                              llvm::StringRef passArg) {
+  LoweringLevelAttr current = getLoweringLevelAttr(mod);
+  if (!current || current.getValue() >= level)
+    return mlir::success();
+  return mod.emitError() << "'" << passArg << "' expects a module at "
+                         << "lowering level '" << stringifyLoweringLevel(level)
+                         << "' or later, but the module is at '"
+                         << stringifyLoweringLevel(current.getValue()) << "'";
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 

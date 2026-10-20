@@ -4771,6 +4771,13 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
   mlir::ModuleOp module = getOperation();
+
+  // CallConvLowering is not run for every target, so a prepared module is
+  // ready for LLVM.
+  if (mlir::failed(cir::requireLoweringLevel(
+          module, cir::LoweringLevel::Prepared, getArgument())))
+    return signalPassFailure();
+
   mlir::DataLayout dl(module);
   mlir::LLVMTypeConverter converter(&getContext());
   prepareTypeConverter(converter, dl);

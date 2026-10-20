@@ -442,9 +442,10 @@ void CIRGenAction::ExecuteAction() {
   }
 
   // The CIR-to-CIR pipeline is not run: CIR printed by -emit-cir has already
-  // been through it, and its lowering passes are not idempotent.
-  // TODO: Decide from a pipeline-stage attribute on the module which passes
-  // still have to run, once -emit-cir can stop before ABI lowering.
+  // been through it, and its lowering passes are not idempotent. The module's
+  // cir.lowering_level rejects input that has not been through it.
+  // TODO: Add a cc1 option that runs the pipeline on such input, once
+  // -emit-cir can stop before ABI lowering.
   BackendDiagnosticConsumer DiagConsumer(Diags, CI.getCodeGenOpts());
   DiagConsumer.setSourceManager(&SM);
   emitCIRModuleOutput(Action, CI, *Module, *Ctx, LinkModules, DiagConsumer,

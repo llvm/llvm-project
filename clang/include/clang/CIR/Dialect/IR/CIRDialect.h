@@ -101,6 +101,24 @@ RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 /// Same lookup as getRecordLayout, but returns a null attribute instead of
 /// asserting when the record has no layout entry.
 RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Called by the lowering pass \p passArg before it lowers \p mod to
+/// \p level.  Fails with an error unless the module is at the level just
+/// before \p level.  A module without a cir.lowering_level attribute is not
+/// tracked and passes.
+mlir::LogicalResult checkLoweringLevelBefore(mlir::ModuleOp mod,
+                                             LoweringLevel level,
+                                             llvm::StringRef passArg);
+
+/// Called by a lowering pass once it has lowered \p mod to \p level.  Does
+/// nothing to a module that is not tracked.
+void recordLoweringLevel(mlir::ModuleOp mod, LoweringLevel level);
+
+/// Fails with an error if \p mod is at a lowering level before \p level.  A
+/// module without a cir.lowering_level attribute is not tracked and passes.
+mlir::LogicalResult requireLoweringLevel(mlir::ModuleOp mod,
+                                         LoweringLevel level,
+                                         llvm::StringRef passArg);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when

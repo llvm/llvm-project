@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error @below {{expects 'cir.lowering_level' to be a #cir.lowering_level attribute}}
+module attributes {cir.lowering_level = 1 : i32} {
+}
+
+// -----
+
+module {
+  // expected-error @below {{expects 'cir.lowering_level' attribute to be attached to 'builtin.module'}}
+  cir.func private @f() attributes {cir.lowering_level = #cir.lowering_level<none>}
+}

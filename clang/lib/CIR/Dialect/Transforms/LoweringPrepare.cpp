@@ -3430,6 +3430,10 @@ void LoweringPreparePass::runOnOperation() {
     return signalPassFailure();
   }
 
+  if (mlir::failed(cir::checkLoweringLevelBefore(
+          mlirModule, cir::LoweringLevel::Prepared, getArgument())))
+    return signalPassFailure();
+
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
   mlirModule->walk([&](mlir::Operation *op) {
@@ -3457,6 +3461,7 @@ void LoweringPreparePass::runOnOperation() {
   }
 
   buildGlobalCtorDtorList();
+  cir::recordLoweringLevel(mlirModule, cir::LoweringLevel::Prepared);
 }
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
