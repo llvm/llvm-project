@@ -64,6 +64,7 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   if (!RD.getDeclName().isIdentifier())
     return false;
 
+  // partially removeable with feature
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
       return N->isStdNamespace() ||
@@ -236,14 +237,38 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
-AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
+static bool hasAnalyzeAsMethodNameHelper(const NamedDecl &Node,
+                                         std::string MethodName,
+                                         std::string Label) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
     if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
       StringRef AttrValue = Attr->getMethodName();
-      return AttrValue == MethodName;
+      StringRef LabelValue = Attr->getLabel();
+      return (AttrValue == MethodName && LabelValue == Label);
     }
   }
   return false;
+}
+
+AST_MATCHER_P2(NamedDecl, hasAnalyzeAsMethodNameAndLabel, std::string,
+               MethodName, std::string, Label) {
+  return hasAnalyzeAsMethodNameHelper(Node, MethodName, Label);
+}
+
+AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
+  return hasAnalyzeAsMethodNameHelper(Node, MethodName, "");
+}
+
+auto isOptionalOperatorCallWithLabelMatcher(std::string operatorName,
+                                            std::string label) {
+  return cxxOperatorCallExpr(callee(
+      cxxMethodDecl(hasAnalyzeAsMethodNameAndLabel(operatorName, label))));
+}
+
+auto isOptionalConstructorCallWithLabelMatcher(std::string operatorName,
+                                            std::string label) {
+  return cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+    hasAnalyzeAsMethodNameAndLabel(operatorName, label))));
 }
 
 auto isOptionalMemberCallWithNameMatcher(
@@ -270,6 +295,7 @@ auto isMakeOptionalCall() {
       hasOptionalType());
 }
 
+// partially removeable with feature
 auto nulloptTypeDecl() {
   return namedDecl(hasAnyName("std::nullopt_t", "absl::nullopt_t",
                               "base::nullopt_t", "folly::None",
@@ -278,6 +304,7 @@ auto nulloptTypeDecl() {
 
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
+// partially removeable with feature
 auto inPlaceClass() {
   return namedDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
                               "base::in_place_t", "folly::in_place_t",
@@ -450,6 +477,20 @@ locForAssertResultSuccess(const RecordStorageLocation &AssertResultLoc) {
 void setHasValue(RecordStorageLocation &OptionalLoc, BoolValue &HasValueVal,
                  Environment &Env) {
   Env.setValue(locForHasValue(OptionalLoc), HasValueVal);
+}
+
+static void setHasValueHelper(const CXXMemberCallExpr *E,
+                              LatticeTransferState &State, bool objectValue) {
+  if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env)) {
+    setHasValue(*Loc, State.Env.getBoolLiteralValue(objectValue), State.Env);
+  }
+}
+
+auto transferSetHasValue(bool Value) {
+  return [Value](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+                 LatticeTransferState &State) {
+    setHasValueHelper(E, State, Value);
+  };
 }
 
 /// Returns the symbolic value that represents the "has_value" property of the
@@ -852,6 +893,18 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
   setHasValue(*Loc2, *BoolVal1, Env);
 }
 
+void transferObjectValue(const CXXMemberCallExpr *E,
+                         const MatchFinder::MatchResult &,
+                         LatticeTransferState &State) {
+  assert(E->getNumArgs() == 1);
+  auto *OtherLoc = State.Env.get<RecordStorageLocation>(*E->getArg(0));
+  auto HasValue = getHasValue(State.Env, OtherLoc);
+  if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env)) {
+    setHasValue(*Loc, HasValue ? *HasValue : State.Env.makeAtomicBoolValue(),
+                State.Env);
+  }
+}
+
 void transferSwapCall(const CXXMemberCallExpr *E,
                       const MatchFinder::MatchResult &,
                       LatticeTransferState &State) {
@@ -1019,6 +1072,13 @@ auto buildTransferMatchSwitch() {
 
       // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalConstructorCallWithLabelMatcher("constr", "value"),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(true));
+          })
+      .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -1027,6 +1087,14 @@ auto buildTransferMatchSwitch() {
           })
       // optional::optional(nullopt_t)
       .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalConstructorCallWithLabelMatcher("constr", "null"),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(false));
+          }
+        )
+      .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalNulloptConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -1034,10 +1102,28 @@ auto buildTransferMatchSwitch() {
                                    State.Env.getBoolLiteralValue(false));
           })
       // optional::optional (value/conversion)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalConstructorCallWithLabelMatcher("constr", "object"),
+          transferValueOrConversionConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
 
       // optional::operator=
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isOptionalOperatorCallWithLabelMatcher("operator=", "null"),
+          transferNulloptAssignment)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnalyzeAsMethodNameAndLabel("operator=", "null")),
+          transferSetHasValue(false))
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnalyzeAsMethodNameAndLabel("operator=", "value")),
+          transferSetHasValue(true))
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnalyzeAsMethodNameAndLabel("operator=", "object")),
+          transferObjectValue)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isOptionalValueOrConversionAssignment(),
           transferValueOrConversionAssignment)
@@ -1076,7 +1162,7 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
               anyOf(hasAnyName("has_value", "hasValue"),
-              hasAnalyzeAsMethodName("has_value"))),
+                    hasAnalyzeAsMethodName("has_value"))),
           transferOptionalHasValueCall)
 
       // optional::operator bool
@@ -1085,18 +1171,17 @@ auto buildTransferMatchSwitch() {
           transferOptionalHasValueCall)
 
       // this code could be removed if NullableValue used
-      // [[clang::analyze_as_inverse_method("std::optional::has_value")]] on isNull() *NYI
-      // NullableValue::isNull
-      // Only NullableValue has isNull
+      // [[clang::analyze_as_inverse_method("std::optional::has_value")]] on
+      // isNull() *NYI NullableValue::isNull Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
       // this code could be removed if NullableValue used
-      // [[clang::analyze_as_method("emplace")]] on makeValue() and makeValueInplace()
-      // NullableValue::makeValue, NullableValue::makeValueInplace
-      // Only NullableValue has these methods, but this
-      // will also pass for other types
+      // [[clang::analyze_as_method("emplace")]] on makeValue() and
+      // makeValueInplace() NullableValue::makeValue,
+      // NullableValue::makeValueInplace Only NullableValue has these methods,
+      // but this will also pass for other types
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
               hasAnyName("makeValue", "makeValueInplace")),
@@ -1110,7 +1195,8 @@ auto buildTransferMatchSwitch() {
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(anyOf(hasName("emplace"), hasAnalyzeAsMethodName("emplace"))),
+          isOptionalMemberCallWithNameMatcher(
+              anyOf(hasName("emplace"), hasAnalyzeAsMethodName("emplace"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1121,7 +1207,8 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(anyOf(hasName("reset"), hasAnalyzeAsMethodName("reset"))),
+          isOptionalMemberCallWithNameMatcher(
+              anyOf(hasName("reset"), hasAnalyzeAsMethodName("reset"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1133,7 +1220,8 @@ auto buildTransferMatchSwitch() {
 
       // optional::swap
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(anyOf(hasName("swap"), hasAnalyzeAsMethodName("swap"))),
+          isOptionalMemberCallWithNameMatcher(
+              anyOf(hasName("swap"), hasAnalyzeAsMethodName("swap"))),
           transferSwapCall)
 
       // std::swap

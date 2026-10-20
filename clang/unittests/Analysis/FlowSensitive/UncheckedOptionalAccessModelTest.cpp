@@ -3037,6 +3037,80 @@ TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeHicketts) {
   )cc");
 }
 
+// Mock for the semantic-label tests: assignment-like methods mapped to
+// std::optional::operator= with a label selecting the target overload.
+static constexpr char LabeledOptionalMock[] = R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct none_t {};
+
+    template <typename T>
+    class __attribute__((analyze_as_class("std::optional"))) LabeledOptional {
+    public:
+      bool has_value() const;
+      T& value();
+      void reset();
+      T& emplace(T val);
+
+      __attribute__((analyze_as_method("operator=", "null")))
+      LabeledOptional& assign(none_t);
+      __attribute__((analyze_as_method("operator=", "value")))
+      LabeledOptional& assign(const T& val);
+      __attribute__((analyze_as_method("operator=", "object")))
+      LabeledOptional& assign(const LabeledOptional& other);
+
+      __attribute__((analyze_as_method("operator=", "null")))
+      LabeledOptional& operator=(none_t);
+    };
+)cc";
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelNull) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt) {
+      opt.emplace(1);
+      opt.assign(none_t{});
+      opt.value(); // [[unsafe]]
+
+      opt.emplace(1);
+      opt = none_t{};
+      opt.value(); // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelValue) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt) {
+      opt.reset();
+      opt.assign(42);
+      opt.value();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelObjectEngaged) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt, LabeledOptional<int> other) {
+      opt.reset();
+      if (other.has_value()) {
+        opt.assign(other);
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelObjectEmpty) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt, LabeledOptional<int> other) {
+      opt.emplace(1);
+      other.reset();
+      opt.assign(other);
+      opt.value(); // [[unsafe]]
+    }
+  )cc");
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)

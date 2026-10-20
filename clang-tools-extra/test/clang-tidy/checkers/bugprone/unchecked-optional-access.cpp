@@ -451,3 +451,75 @@ void std_named_reset_then_access(StdNamedOptional<int> opt) {
   opt.value();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
+
+// Semantic labels: the second analyze_as_method argument selects which
+// overload of the target method a source declaration represents.
+struct none_t {};
+
+template <typename T>
+class [[clang::analyze_as_class("std::optional")]] LabeledOptional {
+public:
+  bool has_value() const;
+  const T &value();
+  void reset();
+  T &emplace(T val);
+
+  [[clang::analyze_as_method("operator=", "null")]]
+  LabeledOptional &assign(none_t);
+
+  [[clang::analyze_as_method("operator=", "value")]]
+  LabeledOptional &assign(const T &val);
+
+  [[clang::analyze_as_method("operator=", "value")]]
+  LabeledOptional &assign(T &&val);
+
+  [[clang::analyze_as_method("operator=", "object")]]
+  LabeledOptional &assign(const LabeledOptional &other);
+
+  [[clang::analyze_as_method("operator=", "null")]]
+  LabeledOptional &operator=(none_t);
+};
+
+void label_null_member_call(LabeledOptional<int> opt) {
+  opt.emplace(1);
+  opt.assign(none_t{});
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void label_null_operator(LabeledOptional<int> opt) {
+  opt.emplace(1);
+  opt = none_t{};
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void label_value_lvalue(LabeledOptional<int> opt) {
+  int x = 42;
+  opt.reset();
+  opt.assign(x);
+  opt.value();
+}
+
+void label_value_rvalue(LabeledOptional<int> opt) {
+  opt.reset();
+  opt.assign(42);
+  opt.value();
+}
+
+void label_object_engaged(LabeledOptional<int> opt,
+                          LabeledOptional<int> other) {
+  opt.reset();
+  if (other.has_value()) {
+    opt.assign(other);
+    opt.value();
+  }
+}
+
+void label_object_empty(LabeledOptional<int> opt, LabeledOptional<int> other) {
+  opt.emplace(1);
+  other.reset();
+  opt.assign(other);
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}

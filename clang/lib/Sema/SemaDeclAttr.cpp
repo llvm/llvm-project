@@ -6486,7 +6486,8 @@ static void handleAnalyzeAsClass(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 // for now this only handles std::optional (POC)
-static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef Tag) {
+static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef MethodName,
+                                       StringRef Label) {
   // no validation is done currently.  if someone writes something with a nonsense name,
   // it simply won't be validated but also no warning will be emitted
   // would be nice to do something smarter in the real implementation
@@ -6494,19 +6495,24 @@ static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef Tag) {
 }
 
 static void handleAnalyzeAsMethod(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef Str;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+  StringRef MethodName, Label;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, MethodName))
     return;
   if (D->hasAttr<AnalyzeAsMethodAttr>()) {
     S.Diag(AL.getLoc(), diag::err_duplicate_attribute) << AL;
     return;
   }
-  if (!isValidAnalyzeAsMethodAttr(D, Str)) {
+  if (!isValidAnalyzeAsMethodAttr(D, MethodName, Label)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL;
     return;
   }
 
-  D->addAttr(::new (S.Context) AnalyzeAsMethodAttr(S.Context, AL, Str));
+  if (AL.isArgExpr(1) && AL.getArgAsExpr(1) &&
+      !S.checkStringLiteralArgumentAttr(AL, 1, Label))
+    return;
+
+  D->addAttr(::new (S.Context)
+                 AnalyzeAsMethodAttr(S.Context, AL, MethodName, Label));
 }
 
 static bool hasBTFDeclTagAttr(Decl *D, StringRef Tag) {

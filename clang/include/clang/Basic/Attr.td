@@ -931,7 +931,7 @@ def AnalyzeAsClass : InheritableAttr {
 
 def AnalyzeAsMethod : InheritableAttr {
   let Spellings = [Clang<"analyze_as_method">];
-  let Args = [StringArgument<"MethodName">];
+  let Args = [StringArgument<"MethodName">, StringArgument<"Label", 1>];
   let Subjects = SubjectList<[CXXMethod],
                              ErrorDiag>;
   let Documentation = [Undocumented];
