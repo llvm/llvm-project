@@ -1286,20 +1286,6 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEFAULT_DEVICE)(void) {
 #endif
 }
 
-void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
-#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-// Nothing.
-#else
-  __kmp_entry_thread()->th.th_current_task->td_icvs.default_device =
-      KMP_DEREF arg;
-#endif
-}
-
-void FTN_STDCALL FTN_SET_DEFAULT_DEVICE_8(kmp_int64 KMP_DEREF arg) {
-  int arg32 = __kmp_ftn_int64_to_int(KMP_DEREF arg);
-  KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(KMP_FTN_PASS(arg32));
-}
-
 // Get number of NON-HOST devices.
 // libomptarget, if loaded, provides this function in api.cpp.
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void)
@@ -1335,6 +1321,24 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)(void)
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)(void) {
   // same as omp_get_num_devices()
   return KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)();
+}
+
+void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+// Nothing.
+#else
+  int device_num = KMP_DEREF arg;
+  // When offload is disabled, store the initial device so the ICV itself stays
+  // valid for both the getter and internal runtime uses of default_device.
+  if (__kmp_target_offload == tgt_disabled)
+    device_num = KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+  __kmp_entry_thread()->th.th_current_task->td_icvs.default_device = device_num;
+#endif
+}
+
+void FTN_STDCALL FTN_SET_DEFAULT_DEVICE_8(kmp_int64 KMP_DEREF arg) {
+  int arg32 = __kmp_ftn_int64_to_int(KMP_DEREF arg);
+  KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(KMP_FTN_PASS(arg32));
 }
 
 #if defined(KMP_STUB)
