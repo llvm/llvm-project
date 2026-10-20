@@ -39,12 +39,12 @@ TEST_F(CopyProfStateTest, NestingCounters) {
   EXPECT_EQ(__copyprof_state.smf_context, SmfContext::NONE);
 
   // Enter constructor callback.
-  __copyprof_ctor_enter_callback(nullptr, 16);
+  __copyprof_ctor_enter_callback(/*this_ptr=*/nullptr, /*obj_size=*/16);
   EXPECT_EQ(__copyprof_state.construct_nesting_level, 1u);
   EXPECT_EQ(__copyprof_state.smf_context, SmfContext::CTOR);
 
   // Exit constructor callback.
-  __copyprof_ctor_exit_callback(nullptr, 16);
+  __copyprof_ctor_exit_callback(/*this_ptr=*/nullptr, /*obj_size=*/16);
   EXPECT_EQ(__copyprof_state.construct_nesting_level, 0u);
   EXPECT_EQ(__copyprof_state.smf_context, SmfContext::NONE);
 }
@@ -79,7 +79,7 @@ TEST_F(CopyProfStateTest, ModifiedCopyIsNotMakedAsCopyAnymore) {
   EXPECT_TRUE(IsMarkedAsCopy(obj, sizeof(obj)));
 
   // Modifying `obj` must mark it as non-copy.
-  __copyprof_store_callback(obj + 4, 4);
+  __copyprof_store_callback(obj + 4, /*size=*/4);
   EXPECT_FALSE(IsMarkedAsCopy(obj, sizeof(obj)));
 
   // After destroying the modified copy, `is_transitive_copy` must be `false`.
@@ -107,48 +107,34 @@ TEST_F(CopyProfStateTest, CheckModeIgnoresStores) {
   __copyprof_dtor_exit_callback(obj, sizeof(obj));
 }
 
-// Tests that the `DTOR` context invariant covers every shadow write, not just
-// stores. A temporary object created inside a d'tor must leave shadow memory
-// alone too.
-TEST_F(CopyProfStateTest, CheckModeIgnoresConstruction) {
+// Unlike a c'tor, a copy assignment inside a d'tor overwrites an existing
+// object, so it must leave shadow memory alone, just like a store.
+TEST_F(CopyProfStateTest, CheckModeIgnoresCopyAssignment) {
   char obj[32] = {0};
   char other[32] = {0};
-  char scratch[32] = {0};
+  char target[32] = {0};
 
-  // Mark `scratch` as a copy up front so a stray shadow write is observable.
-  MarkApplicationMemory(scratch, sizeof(scratch), /*is_copy=*/true);
+  // Mark `target` as non-copy up front so a stray shadow write is observable.
+  MarkApplicationMemory(target, sizeof(target), /*is_copy=*/false);
 
   __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
   __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
 
-  // Enter the d'tor, then construct an object over `scratch`.
+  // Enter the d'tor, then copy-assign to `target`.
   __copyprof_dtor_enter_callback(obj, sizeof(obj));
-  __copyprof_ctor_enter_callback(scratch, sizeof(scratch));
-  __copyprof_ctor_exit_callback(scratch, sizeof(scratch));
-  // The c'tor must not have modified shadow memory so `scratch` must still be
-  // marked as copy.
-  EXPECT_TRUE(IsMarkedAsCopy(scratch, sizeof(scratch)));
+  __copyprof_copy_assign_op_enter_callback(target, other, sizeof(target));
+  __copyprof_copy_assign_op_exit_callback(target, other, sizeof(target));
+  EXPECT_FALSE(IsMarkedAsCopy(target, sizeof(target)));
   __copyprof_dtor_exit_callback(obj, sizeof(obj));
 }
 
 // A d'tor whose body constructs and destroys an object that the destroyed
-// object does not own must not suppress the report. `is_transitive_copy` is
-// folded with `IsMarkedAsCopy` for every nested d'tor exit, with no check that
-// the nested object is reachable from the top-level one, so any local in the
-// d'tor body (a string built for a log message, a lock guard, an iterator)
-// clears it. Contrast with SimulatedUnnecessaryCopy, which is the same
-// scenario with an empty d'tor body and does report.
-//
-// DISABLED: this is a known limitation of the minimal runtime, not a defect to
-// be fixed in isolation. Telling a temporary created *by* the d'tor apart from
-// a sub-object that the destroyed object *owns* requires per-object state keyed
-// by allocation, which arrives with the malloc/new interceptors in a follow-up
-// patch. Restricting the fold to the top-level object's flat extent does make
-// this test pass, but it then misses heap-owned sub-objects with non-trivial
-// d'tors (`std::vector<std::string>`), turning a false negative into a false
-// positive -- the worse trade for this tool. Re-enable once allocation
-// tracking can supply the ownership predicate.
-TEST_F(CopyProfStateTest, DISABLED_TemporaryObjectInDtorDoesNotSuppressReport) {
+// object does not own (a string built for a log message, a lock guard, an
+// iterator) must not suppress the report. Objects constructed inside a d'tor
+// are marked as copy, so destroying them leaves `is_transitive_copy` unchanged.
+// Contrast with SimulatedUnnecessaryCopy, which is the same scenario with an
+// empty d'tor body.
+TEST_F(CopyProfStateTest, TemporaryObjectInDtorDoesNotSuppressReport) {
   char obj[32] = {0};
   char source_obj[32] = {0};
   char local[32] = {0};
@@ -171,6 +157,53 @@ TEST_F(CopyProfStateTest, DISABLED_TemporaryObjectInDtorDoesNotSuppressReport) {
   // `obj` itself was never modified, so it must still be marked as copy.
   __copyprof_dtor_exit_callback(obj, sizeof(obj));
   EXPECT_TRUE(IsMarkedAsCopy(obj, sizeof(obj)));
+  EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+}
+
+// Likewise for a temporary that the d'tor copy-constructs, e.g. from a member.
+TEST_F(CopyProfStateTest, CopiedTemporaryInDtorDoesNotSuppressReport) {
+  char obj[32] = {0};
+  char source_obj[32] = {0};
+  char temp[32] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, source_obj, sizeof(obj));
+  __copyprof_copy_ctor_exit_callback(obj, source_obj, sizeof(obj));
+  // Memory occupied by `temp` is not a copy.
+  MarkApplicationMemory(temp, sizeof(temp), /*is_copy=*/false);
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  __copyprof_copy_ctor_enter_callback(temp, obj, sizeof(temp));
+  __copyprof_copy_ctor_exit_callback(temp, obj, sizeof(temp));
+  __copyprof_dtor_enter_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+  EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+}
+
+// A temporary with a trivial c'tor gets no c'tor callback, so it is not marked
+// as copy when a d'tor creates it. If its d'tor is instrumented, destroying it
+// folds whatever shadow its memory had before into `is_transitive_copy`, which
+// may suppress the report.
+//
+// DISABLED: known limitation. Possible fixes are to also instrument trivial
+// construction, or to skip the fold for objects in the stack frames below the
+// top-level d'tor.
+TEST_F(CopyProfStateTest,
+       DISABLED_TriviallyConstructedTemporaryInDtorDoesNotSuppressReport) {
+  char obj[32] = {0};
+  char source_obj[32] = {0};
+  char temp[32] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, source_obj, sizeof(obj));
+  __copyprof_copy_ctor_exit_callback(obj, source_obj, sizeof(obj));
+  // Memory occupied by `temp` is not a copy.
+  MarkApplicationMemory(temp, sizeof(temp), /*is_copy=*/false);
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  // `temp` is created without a c'tor callback, then destroyed.
+  __copyprof_dtor_enter_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
   EXPECT_TRUE(__copyprof_state.is_transitive_copy);
 }
 
