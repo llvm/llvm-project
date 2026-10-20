@@ -351,15 +351,17 @@ llvm.func @test_omp_masked(%arg0: i32)-> () {
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK-LABEL: @wsloop_linear
 
+// CHECK: %[[LINEAR_RESULT:omp.private.alloc]] = alloca i32, align 4
+// CHECK: %[[LINEAR_VAR:.linear_var]] = alloca i32, align 4
 // CHECK: %p.lastiter = alloca i32, align 4
 // CHECK: %p.lowerbound = alloca i32, align 4
 // CHECK: %p.upperbound = alloca i32, align 4
 // CHECK: %p.stride = alloca i32, align 4
-// CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
-// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
 
 // CHECK: omp_loop.preheader:
 // CHECK: %[[LOAD:.*]] = load i32, ptr %{{.*}}, align 4
@@ -387,7 +389,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: call void @__kmpc_barrier(ptr {{.*}}, i32 %[[THREAD_ID]])
 // CHECK: br label %omp_loop.after
 
-  omp.wsloop linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
+  omp.wsloop linear(@lin.i32 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -764,13 +766,15 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @simd_linear
 // CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %[[STEP:.*]], ptr %[[X:.*]])
 
-// CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
-// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
+// CHECK: %[[LINEAR_RESULT:omp.private.alloc]] = alloca i32, align 4
+// CHECK: %[[LINEAR_VAR:.linear_var]] = alloca i32, align 4
 
 // CHECK: omp_loop.preheader:
 // CHECK: %[[LOAD:.*]] = load i32, ptr {{.*}}, align 4
@@ -790,10 +794,10 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK-NEXT: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]]
 // CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]]
 // CHECK-NEXT: store i32 %[[LOAD]], ptr %[[X]], align 4
-  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
+  omp.simd linear(@lin.i32 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      llvm.store %iv, %x : i32, !llvm.ptr
-      llvm.store %iv, %x : i32, !llvm.ptr
+      llvm.store %iv, %lin0 : i32, !llvm.ptr
+      llvm.store %iv, %lin0 : i32, !llvm.ptr
       omp.yield
     }
   }
@@ -802,6 +806,8 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.private {type = linear} @lin.i64 : i64
+
 // Test linear clause with mismatched types (i32 step, i64 variable)
 // This is a regression test for issue #173332
 llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
@@ -809,8 +815,8 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @simd_linear_i64_var_i32_step
 
-// CHECK: %[[LINEAR_VAR:.*]] = alloca i64
-// CHECK: %[[LINEAR_RESULT:.*]] = alloca i64
+// CHECK: %[[LINEAR_RESULT:omp.private.alloc]] = alloca i64
+// CHECK: %[[LINEAR_VAR:.linear_var]] = alloca i64
 
 // CHECK: omp_loop.preheader:
 // CHECK: %[[LOAD:.*]] = load i64, ptr {{.*}}
@@ -824,7 +830,7 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
 // CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
 // CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i64]) {
+  omp.simd linear(@lin.i64 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([i64]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -834,6 +840,8 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.private {type = linear} @lin.f64 : f64
+
 // Test linear clause with floating-point variable and i32 step
 // This tests the floating-point path in updateLinearVar
 llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
@@ -841,8 +849,8 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @simd_linear_f64_var_i32_step
 
-// CHECK: %[[LINEAR_VAR:.*]] = alloca double
-// CHECK: %[[LINEAR_RESULT:.*]] = alloca double
+// CHECK: %[[LINEAR_RESULT:omp.private.alloc]] = alloca double
+// CHECK: %[[LINEAR_VAR:.linear_var]] = alloca double
 
 // CHECK: omp_loop.preheader:
 // CHECK: %[[LOAD:.*]] = load double, ptr {{.*}}
@@ -856,7 +864,7 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
 // CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
 // CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([f64]) {
+  omp.simd linear(@lin.f64 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([f64]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -866,15 +874,16 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 // Test the update of omp.simd linear iteration variables, when nested inside
 // omp.wsloop.
 llvm.func @wsloop_simd_linear(%x : !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_simd_linear
 
-// CHECK: omp.wsloop.region:
-// CHECK: %[[LINEAR_VAR:.*]] = alloca i32
-// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32
+// CHECK: %[[LINEAR_RESULT:omp.private.alloc]] = alloca i32
+// CHECK: %[[LINEAR_VAR:.linear_var]] = alloca i32
 
 // CHECK: omp.region.cont2:
 // CHECK: %[[VAL:.*]] = load i32, ptr %[[LINEAR_RESULT]]
@@ -884,9 +893,9 @@ llvm.func @wsloop_simd_linear(%x : !llvm.ptr) {
   %ub = llvm.mlir.constant(100 : i32) : i32
   %step = llvm.mlir.constant(25 : i32) : i32
   omp.wsloop {
-    omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
+    omp.simd linear(@lin.i32 %x -> %lin0 : !llvm.ptr = %step : i32) linear_var_types([i32]) {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-        llvm.store %iv, %x : i32, !llvm.ptr
+        llvm.store %iv, %lin0 : i32, !llvm.ptr
         omp.yield
       }
     } {omp.composite}

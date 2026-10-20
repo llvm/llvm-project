@@ -64,15 +64,16 @@ end subroutine
 ! CHECK: %[[SIMD_I:.*]]:2 = hlfir.declare {{.*}}_QFtest_simdEi
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         omp.simd linear(
-! CHECK-SAME:      val(%[[SIMD_I]]#0 : !fir.ref<i32> =
+! CHECK-SAME:      val(@{{[^ ]+}} %[[SIMD_I]]#0 -> %[[SIMD_I_ARG:[^ ]+]] : !fir.ref<i32> =
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.loop_nest (%[[SIMD_IV:.*]]) :
+! CHECK:             %[[SIMD_I_PRIV:.*]]:2 = hlfir.declare %[[SIMD_I_ARG]]
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
-! CHECK:             hlfir.assign %[[SIMD_IV]] to %[[SIMD_I]]#0
+! CHECK:             hlfir.assign %[[SIMD_IV]] to %[[SIMD_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
-! CHECK:             %[[SIMD_VALUE:.*]] = fir.load %[[SIMD_I]]#0
+! CHECK:             %[[SIMD_VALUE:.*]] = fir.load %[[SIMD_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
-! CHECK:             %[[SIMD_INDEX:.*]] = fir.load %[[SIMD_I]]#0
+! CHECK:             %[[SIMD_INDEX:.*]] = fir.load %[[SIMD_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             %[[SIMD_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[SIMD_INDEX]]
@@ -109,18 +110,19 @@ end subroutine
 ! CHECK:         omp.wsloop
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.simd linear(
-! CHECK-SAME:        val(%[[DO_SIMD_I]]#0 : !fir.ref<i32> =
+! CHECK-SAME:        val(@{{[^ ]+}} %[[DO_SIMD_I]]#0 -> %[[DO_SIMD_I_ARG:[^ ]+]] : !fir.ref<i32> =
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest (%[[DO_SIMD_IV:.*]]) :
+! CHECK:               %[[DO_SIMD_I_PRIV:.*]]:2 = hlfir.declare %[[DO_SIMD_I_ARG]]
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               hlfir.assign %[[DO_SIMD_IV]] to
-! CHECK-SAME:            %[[DO_SIMD_I]]#0
+! CHECK-SAME:            %[[DO_SIMD_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[DO_SIMD_VALUE:.*]] =
-! CHECK-SAME:            fir.load %[[DO_SIMD_I]]#0
+! CHECK-SAME:            fir.load %[[DO_SIMD_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[DO_SIMD_INDEX:.*]] =
-! CHECK-SAME:            fir.load %[[DO_SIMD_I]]#0
+! CHECK-SAME:            fir.load %[[DO_SIMD_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[DO_SIMD_INDEX_I64:.*]] =
 ! CHECK-SAME:            fir.convert %[[DO_SIMD_INDEX]]
@@ -728,11 +730,12 @@ end module
 ! CHECK:           fir.if {{.*}} {
 ! CHECK-NOT:         {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.simd linear(
-! CHECK-SAME:          val(%[[PURE_I]]#0 : !fir.ref<i32> =
+! CHECK-SAME:          val(@{{[^ ]+}} %[[PURE_I]]#0 -> %[[PURE_I_ARG:[^ ]+]] : !fir.ref<i32> =
 ! CHECK-NOT:         {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               omp.loop_nest (%[[PURE_SIMD_IV:.*]]) :
+! CHECK:                 %[[PURE_I_PRIV:.*]]:2 = hlfir.declare %[[PURE_I_ARG]]
 ! CHECK-NOT:         {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
-! CHECK:                 hlfir.assign %[[PURE_SIMD_IV]] to %[[PURE_I]]#0
+! CHECK:                 hlfir.assign %[[PURE_SIMD_IV]] to %[[PURE_I_PRIV]]#0
 ! CHECK-NOT:         {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:             {{^ *}}}
 ! CHECK:                 %[[PURE_SIMD_ELEMENT:.*]] = hlfir.designate
@@ -829,18 +832,19 @@ end subroutine
 ! CHECK:         } else {
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.simd linear(
-! CHECK-SAME:        val(%[[DYNAMIC_I]]#0 : !fir.ref<i32> =
+! CHECK-SAME:        val(@{{[^ ]+}} %[[DYNAMIC_I]]#0 -> %[[DYNAMIC_I_ARG:[^ ]+]] : !fir.ref<i32> =
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest (%[[DYNAMIC_SIMD_IV:.*]]) :
+! CHECK:               %[[DYNAMIC_I_PRIV:.*]]:2 = hlfir.declare %[[DYNAMIC_I_ARG]]
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               hlfir.assign %[[DYNAMIC_SIMD_IV]] to
-! CHECK-SAME:            %[[DYNAMIC_I]]#0
+! CHECK-SAME:            %[[DYNAMIC_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[DYNAMIC_SIMD_VALUE:.*]] =
-! CHECK-SAME:            fir.load %[[DYNAMIC_I]]#0
+! CHECK-SAME:            fir.load %[[DYNAMIC_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[DYNAMIC_SIMD_INDEX:.*]] =
-! CHECK-SAME:            fir.load %[[DYNAMIC_I]]#0
+! CHECK-SAME:            fir.load %[[DYNAMIC_I_PRIV]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[DYNAMIC_SIMD_INDEX_I64:.*]] =
 ! CHECK-SAME:            fir.convert %[[DYNAMIC_SIMD_INDEX]]
@@ -1283,16 +1287,17 @@ end subroutine
 ! CHECK:         } else {
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.simd linear(
-! CHECK-SAME:        val(%[[DC_I]]#0 : !fir.ref<i32> =
+! CHECK-SAME:        val(@{{[^ ]+}} %[[DC_I]]#0 -> %[[DC_I_ARG:[^ ]+]] : !fir.ref<i32> =
 ! CHECK-SAME:        %[[DC_FB_STEP:[^ ]+]] : i32))
 ! CHECK-SAME:        linear_var_types([i32]) {
 ! CHECK-NOT:         Ei_private
 ! CHECK-NOT:         Ej_private
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest (%[[DC_FB_IV:.*]]) : i32
+! CHECK:               %[[DC_I_PRIV:.*]]:2 = hlfir.declare %[[DC_I_ARG]]
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
-! CHECK:               hlfir.assign %[[DC_FB_IV]] to %[[DC_I]]#0
+! CHECK:               hlfir.assign %[[DC_FB_IV]] to %[[DC_I_PRIV]]#0
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               fir.do_loop %[[DC_INNER_IV:.*]] =
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
@@ -1300,12 +1305,12 @@ end subroutine
 ! CHECK:                 fir.store %[[DC_INNER_IV]] to %[[DC_J]]#0
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:             {{^ *}}}
-! CHECK:                 %[[DC_FB_I_VALUE:.*]] = fir.load %[[DC_I]]#0
+! CHECK:                 %[[DC_FB_I_VALUE:.*]] = fir.load %[[DC_I_PRIV]]#0
 ! CHECK:                 %[[DC_FB_J_VALUE:.*]] = fir.load %[[DC_J]]#0
 ! CHECK:                 %[[DC_FB_SUM:.*]] = arith.addi
 ! CHECK-SAME:              %[[DC_FB_I_VALUE]], %[[DC_FB_J_VALUE]]
 ! CHECK:                 %[[DC_FB_J_INDEX:.*]] = fir.load %[[DC_J]]#0
-! CHECK:                 %[[DC_FB_I_INDEX:.*]] = fir.load %[[DC_I]]#0
+! CHECK:                 %[[DC_FB_I_INDEX:.*]] = fir.load %[[DC_I_PRIV]]#0
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:             {{^ *}}}
 ! CHECK:                 %[[DC_FB_ELEMENT:.*]] = hlfir.designate
