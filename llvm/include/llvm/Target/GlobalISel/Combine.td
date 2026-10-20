@@ -862,9 +862,10 @@ def same_val_zero_frags : GICombinePatFrag<
            (pattern (op $dst, $x, $x)))>;
 
 def same_val_zero: GICombineRule<
-  (defs root:$dst),
-  (match (same_val_zero_frags $dst, $x)),
-  (apply (COPY $dst, (GITypeOf<"$x"> 0)))
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (same_val_zero_frags $dst, $x),
+    [{ return Helper.matchSameValZero(${dst}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnMO(${dst}, ${matchinfo}); }])
 >;
 
 // Fold (0 op x) -> 0. Use matchConstantOp so splat-zero LHS matches.
