@@ -95,8 +95,11 @@ void AGXAsmPrinter::emitFunctionBodyStart() {
                               Twine(MFI->getUniformHalfCount()) +
                               " x 16-bit (threadgroups_per_grid at u" +
                               Twine(MFI->getImplicitArgHalfIndex() / 2) + ")");
-  OutStreamer->emitRawComment(" general purpose registers: " +
-                              Twine(getGPRCount(*MF)) + " x 32-bit");
+  unsigned GPRs = getGPRCount(*MF);
+  OutStreamer->emitRawComment(
+      " general purpose registers: " + Twine(GPRs) + " x 32-bit (up to " +
+      Twine(AGXSubtarget::maxThreadsForHalves(2 * GPRs)) +
+      " threads per threadgroup)");
   if (MFI->getGlobalDataVReg())
     OutStreamer->emitRawComment(
         " global data buffer at u" + Twine(MFI->getGlobalDataHalfIndex() / 2) +

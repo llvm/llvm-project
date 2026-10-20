@@ -31,3 +31,24 @@ AGXSubtarget::AGXSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                           /*TuneCPU=*/CPU.empty() ? "generic" : CPU, FS),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       FrameLowering(*this), TLInfo(TM, *this) {}
+
+unsigned AGXSubtarget::maxThreadsForHalves(unsigned Halves) {
+  Halves = std::max(Halves, 104u);
+  return std::min(64 * (1664 / Halves), 1024u);
+}
+
+unsigned AGXSubtarget::getMaxGPRs(const Function &F) const {
+  // Enough for any instruction's operands and the reserved r0.
+  constexpr unsigned MinGPRs = 16;
+  unsigned Max = getMaxGPRs();
+  if (unsigned N = F.getFnAttributeAsParsedInteger("agx-max-gprs", 0))
+    Max = std::min(Max, std::max(N, MinGPRs));
+  if (unsigned T = F.getFnAttributeAsParsedInteger(
+          "agx-max-threads-per-threadgroup", 0)) {
+    // The largest register count with maxThreadsForHalves(2 * GPRs) >= T.
+    unsigned K = std::max<unsigned>(divideCeil(std::min(T, 1024u), 64), 1);
+    Max = std::min(Max, std::max<unsigned>(1664 / K / 2, MinGPRs));
+  }
+  return Max;
+}
+

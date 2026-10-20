@@ -66,6 +66,18 @@ public:
   /// The number of addressable 32-bit general purpose registers.
   unsigned getMaxGPRs() const { return MaxGPRs ? MaxGPRs : 128; }
 
+  /// The threads of one threadgroup that fit on a core when each thread uses
+  /// \p Halves 16-bit registers. G13 and G14 run 2 * floor(3328 / (2 * Halves))
+  /// SIMD-groups of 32 threads, at most 1024 threads (Mesa's agx_occupancy
+  /// table); later generations are assumed to be the same.
+  static unsigned maxThreadsForHalves(unsigned Halves);
+
+  /// The 32-bit GPRs \p F may use: getMaxGPRs(), fewer with the function
+  /// attributes "agx-max-gprs"="N" (PTX .maxnreg) or
+  /// "agx-max-threads-per-threadgroup"="N" (PTX .maxntid / .reqntid), which
+  /// keeps the register use low enough for N threads to fit on a core.
+  unsigned getMaxGPRs(const Function &F) const;
+
   const AGXInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const AGXFrameLowering *getFrameLowering() const override {
     return &FrameLowering;

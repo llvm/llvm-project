@@ -172,6 +172,25 @@ another.
                                   (off by default).
    ============================== ==============================================
 
+Occupancy attributes
+--------------------
+
+A core of G13 and G14 runs 2 * floor(3328 / (2 * H)) SIMD-groups of 32
+threads, at most 1024 threads, when each thread uses H 16-bit registers (the
+occupancy table of Mesa's AGX compiler). All the threads of a threadgroup run
+on one core, so the registers a kernel uses limit its threadgroup size: 52
+32-bit registers allow 1024 threads, 128 allow 384. The resource comments
+print the limit (``up to N threads per threadgroup``). Two function
+attributes lower the register use, spilling the rest to the stack:
+
+* ``"agx-max-threads-per-threadgroup"="N"`` (PTX ``.maxntid`` and
+  ``.reqntid``): at most as many registers as let N threads fit.
+* ``"agx-max-gprs"="N"`` (PTX ``.maxnreg``): at most N 32-bit registers, and
+  no fewer than 16.
+
+Later generations are assumed to have the same register budget; this is not
+measured.
+
 Address spaces
 ==============
 
