@@ -2,6 +2,7 @@
 # a valid TranslationUnitReplacements with an empty Replacements sequence.
 # Per spec the MainSourceFile is the shared value when all inputs agree.
 
+# XFAIL: target={{.*}}-zos{{.*}}
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

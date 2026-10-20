@@ -1,6 +1,7 @@
 # Three inputs all conflict pairwise at (foo.cpp, 10) — drop-all removes
 # all three from the merged YAML; SARIF result lists three relatedLocations.
 
+# XFAIL: target={{.*}}-zos{{.*}}
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

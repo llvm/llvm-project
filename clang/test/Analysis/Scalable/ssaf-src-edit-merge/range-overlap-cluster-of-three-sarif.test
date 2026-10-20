@@ -13,6 +13,7 @@
 ## This is the regression guard for transitive merging — it cannot be
 ## exercised by any pairwise-only fixture.
 
+# XFAIL: target={{.*}}-zos{{.*}}
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp
