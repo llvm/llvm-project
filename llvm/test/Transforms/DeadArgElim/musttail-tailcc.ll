@@ -3,8 +3,8 @@
 
 define internal tailcc i32 @tailcc_caller(i32 %a, i32 %dead) {
 ; CHECK-LABEL: define internal tailcc i32 @tailcc_caller(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[DEAD:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = musttail call tailcc i32 @tailcc_callee(i32 [[A]], i32 poison)
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = musttail call tailcc i32 @tailcc_callee(i32 [[A]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = musttail call tailcc i32 @tailcc_callee(i32 %a, i32 0)
@@ -13,7 +13,7 @@ define internal tailcc i32 @tailcc_caller(i32 %a, i32 %dead) {
 
 define internal tailcc i32 @tailcc_callee(i32 %a, i32 %dead) {
 ; CHECK-LABEL: define internal tailcc i32 @tailcc_callee(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[DEAD:%.*]]) {
+; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   ret i32 %a
@@ -22,7 +22,7 @@ define internal tailcc i32 @tailcc_callee(i32 %a, i32 %dead) {
 define i32 @tailcc_entry(i32 %x) {
 ; CHECK-LABEL: define i32 @tailcc_entry(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call tailcc i32 @tailcc_caller(i32 [[X]], i32 poison)
+; CHECK-NEXT:    [[R:%.*]] = call tailcc i32 @tailcc_caller(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call tailcc i32 @tailcc_caller(i32 %x, i32 1)
@@ -31,8 +31,8 @@ define i32 @tailcc_entry(i32 %x) {
 
 define internal swifttailcc i32 @swifttailcc_caller(i32 %a, i32 %dead) {
 ; CHECK-LABEL: define internal swifttailcc i32 @swifttailcc_caller(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[DEAD:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = musttail call swifttailcc i32 @swifttailcc_callee(i32 [[A]], i32 poison)
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = musttail call swifttailcc i32 @swifttailcc_callee(i32 [[A]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = musttail call swifttailcc i32 @swifttailcc_callee(i32 %a, i32 0)
@@ -41,7 +41,7 @@ define internal swifttailcc i32 @swifttailcc_caller(i32 %a, i32 %dead) {
 
 define internal swifttailcc i32 @swifttailcc_callee(i32 %a, i32 %dead) {
 ; CHECK-LABEL: define internal swifttailcc i32 @swifttailcc_callee(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[DEAD:%.*]]) {
+; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   ret i32 %a
@@ -50,7 +50,7 @@ define internal swifttailcc i32 @swifttailcc_callee(i32 %a, i32 %dead) {
 define i32 @swifttailcc_entry(i32 %x) {
 ; CHECK-LABEL: define i32 @swifttailcc_entry(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call swifttailcc i32 @swifttailcc_caller(i32 [[X]], i32 poison)
+; CHECK-NEXT:    [[R:%.*]] = call swifttailcc i32 @swifttailcc_caller(i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call swifttailcc i32 @swifttailcc_caller(i32 %x, i32 1)
