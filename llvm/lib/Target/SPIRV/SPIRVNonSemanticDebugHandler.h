@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -89,6 +90,37 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   // NonSemantic debug instruction result id per emitted scope.
   DenseMap<const DIScope *, MCRegister> DebugScopeRegs;
+
+  enum class EmitStatus {
+    Emitted,
+    Unsupported,
+    InProgress,
+  };
+
+  struct EmitResult {
+    EmitStatus Status;
+    MCRegister Reg;
+
+    static EmitResult emitted(MCRegister R) { return {EmitStatus::Emitted, R}; }
+    static EmitResult unsupported() {
+      return {EmitStatus::Unsupported, MCRegister()};
+    }
+    static EmitResult inProgress() {
+      return {EmitStatus::InProgress, MCRegister()};
+    }
+
+    explicit operator bool() const {
+      assert((Status != EmitStatus::Emitted || Reg.isValid()) &&
+             "emitted EmitResult without a result id");
+      return Status == EmitStatus::Emitted;
+    }
+  };
+
+  // Types and scopes whose instruction is currently being built.
+  SmallPtrSet<const DIScope *, 8> ScopesInProgress;
+
+  // Types and scopes that are not supported.
+  SmallPtrSet<const DIScope *, 8> FailedScopes;
 
   // DISubprogram nodes that are declarations only (!isDefinition()), collected
   // in beginModule() for DebugFunctionDeclaration emission.
@@ -367,48 +399,63 @@ private:
   /// one if the module does not contain it.
   MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit \c DebugTypePointer for pointer metadata \p PT.
-  ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p PT has no DWARF address space (needed to pick the
-  /// SPIR-V storage class), or if \p PT has a non-null base DI type that is not
-  /// yet in \c DebugScopeRegs (the pointee was not emitted as a debug type).
-  ///
-  /// Base Type operand: the register from \c DebugScopeRegs for \p PT's base
-  /// type when it is set and mapped; \c DebugInfoNone when there is no base
-  /// type (e.g. \c void * in IR), consistent with SPIRV-LLVM-Translator.
-  std::optional<MCRegister>
-  emitDebugTypePointer(const DIDerivedType *PT, MCRegister ExtInstSetReg,
-                       SPIRV::ModuleAnalysisInfo &MAI);
+  /// Return the id for the type or scope \p S, emitting it and the types and
+  /// scopes it names first. One already in \c DebugScopeRegs is Emitted. A null
+  /// \p S or one in \c FailedScopes is Unsupported. One already in
+  /// \c ScopesInProgress is the back edge of a cycle and is InProgress; nothing
+  /// is emitted for that edge. An Unsupported result is recorded in
+  /// \c FailedScopes, an InProgress one is not.
+  EmitResult getOrCreateDebugScope(const DIScope *S);
+
+  /// Emit the instruction for \p S. Only \c getOrCreateDebugScope calls this
+  /// and records the result.
+  EmitResult emitDebugScope(const DIScope *S);
+
+  /// Emit the \c DebugType* instruction for \p CT, picked by its tag.
+  EmitResult emitDebugTypeForCompositeType(const DICompositeType *CT,
+                                           MCRegister VoidTypeReg,
+                                           MCRegister I32TypeReg,
+                                           MCRegister ExtInstSetReg,
+                                           SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit the \c DebugType* instruction for \p DT, picked by its tag.
+  EmitResult emitDebugTypeForDerivedType(const DIDerivedType *DT,
+                                         MCRegister VoidTypeReg,
+                                         MCRegister I32TypeReg,
+                                         MCRegister ExtInstSetReg,
+                                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeBasic for \p BT. Unsupported when the size does not fit
+  /// in 32 bits.
+  EmitResult emitDebugTypeBasic(const DIBasicType *BT, MCRegister VoidTypeReg,
+                                MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypePointer for \p PT. Unsupported without a DWARF address
+  /// space, which gives the storage class.
+  EmitResult emitDebugTypePointer(const DIDerivedType *PT,
+                                  MCRegister ExtInstSetReg,
+                                  SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit one DebugTypeFunction for ST when every DI operand maps to a debug
-  /// type id; otherwise emit nothing and return std::nullopt.
-  std::optional<MCRegister>
+  /// type id; otherwise emit nothing and return the first failing slot's
+  /// status.
+  EmitResult
   emitDebugTypeFunctionForSubroutineType(const DISubroutineType *ST,
                                          MCRegister ExtInstSetReg,
                                          SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit \c DebugFunctionDeclaration for a \c DISubprogram that is not a
-  /// definition (\p SP must satisfy \c !isDefinition()).
-  ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p SP is null, is a definition, has no \c
-  /// DISubroutineType type, the signature type was not emitted in \c
-  /// DebugScopeRegs, no path
-  /// \c OpString was recorded for \p SP in section 7, or
-  /// \c resolveScope returns no id for the \c Parent operand.
-  std::optional<MCRegister>
-  emitDebugFunctionDeclaration(const DISubprogram *SP, MCRegister VoidTypeReg,
+  /// Emit \c DebugFunctionDeclaration for the non-defining subprogram \p SP.
+  EmitResult emitDebugFunctionDeclaration(const DISubprogram *SP,
+                                          MCRegister VoidTypeReg,
+                                          MCRegister I32TypeReg,
+                                          MCRegister ExtInstSetReg,
+                                          SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugFunction for the defining subprogram \p SP.
+  EmitResult emitDebugFunction(const DISubprogram *SP, MCRegister VoidTypeReg,
                                MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
-
-  /// Emit \c DebugFunction for a defining \c DISubprogram (\p SP must satisfy
-  /// \c isDefinition()).
-  std::optional<MCRegister> emitDebugFunction(const DISubprogram *SP,
-                                              MCRegister VoidTypeReg,
-                                              MCRegister I32TypeReg,
-                                              MCRegister ExtInstSetReg,
-                                              SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugLocalVariable for the source local variable \p LV:
   /// Name, Type, Source, Line, Column, Parent, Flags, and an optional Arg
@@ -560,13 +607,13 @@ private:
 
   /// Emit \c DebugTypeVector for the vector composite type \p VT.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p VT has no \c DIBasicType base type, if the base type
-  /// has not been emitted yet, if \p VT has more than one \c DISubrange
-  /// element, or if the component count is not a compile-time constant.
-  std::optional<MCRegister> emitDebugTypeVector(const DICompositeType *VT,
-                                                MCRegister ExtInstSetReg,
-                                                SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns Emitted with the result id on success. Unsupported, emitting
+  /// nothing, if \p VT has no \c DIBasicType base type, if \p VT has more than
+  /// one \c DISubrange element, or if the component count is not a
+  /// compile-time constant. If the base cannot be emitted, returns its status.
+  EmitResult emitDebugTypeVector(const DICompositeType *VT,
+                                 MCRegister ExtInstSetReg,
+                                 SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypeArray for the array composite type \p AT.
   ///
@@ -576,12 +623,11 @@ private:
   /// matrix arrives here as a multi-subrange array and is emitted with one
   /// count per dimension.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p AT's element type has not been emitted into
-  /// \c DebugScopeRegs.
-  std::optional<MCRegister> emitDebugTypeArray(const DICompositeType *AT,
-                                               MCRegister ExtInstSetReg,
-                                               SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns Emitted with the result id on success. If \p AT's element type
+  /// cannot be emitted, emits nothing and returns the element's status.
+  EmitResult emitDebugTypeArray(const DICompositeType *AT,
+                                MCRegister ExtInstSetReg,
+                                SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypeMember for the data member \p M (a \c DIDerivedType with
   /// \c DW_TAG_member). Operands: Name, Type, Source, Line, Column, Offset,
@@ -589,23 +635,27 @@ private:
   /// enclosing \c DebugTypeComposite references its members, not the reverse.
   ///
   /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p M's type has not been emitted into \c DebugScopeRegs.
+  /// emits nothing if \p M's type cannot be emitted.
   std::optional<MCRegister> emitDebugTypeMember(const DIDerivedType *M,
                                                 MCRegister VoidTypeReg,
                                                 MCRegister I32TypeReg,
                                                 MCRegister ExtInstSetReg,
                                                 SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit \c DebugTypeComposite for the struct, class, or union \p CT, listing
-  /// the already-emitted \p MemberRegs in its Members operand. A forward
-  /// declaration emits \c DebugInfoNone for Size and no members.
+  /// Emit \c DebugTypeComposite for the struct, class, or union \p CT, after a
+  /// \c DebugTypeMember for each data member whose type can be emitted. A
+  /// forward declaration emits \c DebugInfoNone for Size and no members.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if the Parent scope cannot be resolved.
-  std::optional<MCRegister> emitDebugTypeComposite(
-      const DICompositeType *CT, ArrayRef<MCRegister> MemberRegs,
-      MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
-      SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns Emitted with the result id on success. Emits nothing and returns
+  /// the parent's status if the Parent scope cannot be resolved, or
+  /// Unsupported if the size does not fit in 32 bits. Both are checked before
+  /// any member is streamed. A member whose type fails is dropped, whatever
+  /// the reason, and does not fail the composite.
+  EmitResult emitDebugTypeComposite(const DICompositeType *CT,
+                                    MCRegister VoidTypeReg,
+                                    MCRegister I32TypeReg,
+                                    MCRegister ExtInstSetReg,
+                                    SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypedef for the typedef derived type \p TD (a \c
   /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,
@@ -613,19 +663,16 @@ private:
   /// is an emitted \c DIType, otherwise the first module \c
   /// DebugCompilationUnit.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p TD's base type has not been emitted into \c
-  /// DebugScopeRegs.
-  std::optional<MCRegister> emitDebugTypedef(const DIDerivedType *TD,
-                                             MCRegister VoidTypeReg,
-                                             MCRegister I32TypeReg,
-                                             MCRegister ExtInstSetReg,
-                                             SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns The base's or Parent's status if either fails.
+  EmitResult emitDebugTypedef(const DIDerivedType *TD, MCRegister VoidTypeReg,
+                              MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                              SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for
-  /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugScopeRegs; if
-  /// the type was never emitted, returns \c std::nullopt.
+  /// \c DebugTypeFunction. A non-null \p Ty is created through
+  /// \c getOrCreateDebugScope, and its status is returned. A null \p Ty is not
+  /// a \c getOrCreateDebugScope call and is always Emitted.
   ///
   /// LLVM encodes a void return as a null first element (and may use null in
   /// later slots). NonSemantic \c DebugTypeFunction
@@ -633,9 +680,8 @@ private:
   /// \p Ty is null, this returns \p VoidTypeReg (\c OpTypeVoid). When
   /// \p ReturnType is false and \p Ty is null, this returns
   /// \c CachedDebugInfoNoneReg (\c DebugInfoNone).
-  std::optional<MCRegister> mapDISignatureTypeToReg(const DIType *Ty,
-                                                    MCRegister VoidTypeReg,
-                                                    bool ReturnType);
+  EmitResult mapDISignatureTypeToReg(const DIType *Ty, MCRegister VoidTypeReg,
+                                     bool ReturnType);
 
   /// Map a DWARF source language code to a NonSemantic.Shader.DebugInfo.100
   /// source language code.
@@ -658,28 +704,25 @@ private:
 
   /// Map \p Scope to the NonSemantic debug id used as a \c Parent operand.
   ///
-  /// Checks \c DebugScopeRegs in order by scope kind. When \p Scope is null, a
+  /// A \c DIType, \c DILexicalBlock, \c DINamespace, or \c DISubprogram scope
+  /// is created through \c getOrCreateDebugScope. When \p Scope is null, a
   /// \c DIFile, or another scope without a dedicated debug instruction, falls
-  /// back to \p FallbackCU or the first module \c DebugCompilationUnit
-  /// recorded in \c DebugScopeRegs.
-  ///
-  /// \returns \c std::nullopt when \p Scope names an emitted scope that has
-  /// not been recorded yet, or when no fallback compile unit is available.
-  std::optional<MCRegister>
-  resolveScope(const DIScope *Scope,
-               const DICompileUnit *FallbackCU = nullptr) const;
+  /// back to \p FallbackCU or the first module \c DebugCompilationUnit recorded
+  /// in \c DebugScopeRegs; no such compile unit is Unsupported.
+  EmitResult resolveScope(const DIScope *Scope,
+                          const DICompileUnit *FallbackCU = nullptr);
 
   /// Emit \c DebugLexicalBlock for \p S, which must be a \c DILexicalBlock or
   /// a \c DINamespace. A \c DILexicalBlock supplies Line/Column
   /// from \c getLine()/getColumn(); a \c DINamespace has neither, so both are
   /// emitted as 0, and its Name is appended as an extra \c OpString operand.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \c resolveScope returns no id for \c S->getScope().
-  std::optional<MCRegister>
-  emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
-                        MCRegister I32TypeReg, MCRegister ExtInstSetReg,
-                        SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns Emitted with the result id on success. If \c resolveScope cannot
+  /// emit \c S->getScope(), emits nothing and returns that status.
+  EmitResult emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
+                                   MCRegister I32TypeReg,
+                                   MCRegister ExtInstSetReg,
+                                   SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Return a cached \c DebugInlinedAt id for \p IA, or emit one (recursing
   /// into \c IA->getInlinedAt() first for the optional Inlined operand, so
