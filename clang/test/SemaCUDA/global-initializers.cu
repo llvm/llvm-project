@@ -135,4 +135,12 @@ namespace ns2 {
   unsigned twotimes1 = ns1::value_func() + ns1::value_func();
   // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
 
+  __device__ constexpr int devicefoo() { return 1; }
+
+  __device__ void static testfps() {
+    static constexpr int b = value_func();
+    static int b1 = devicefoo();
+    [](){ static int b2 = devicefoo(); }();
+  }
+
 }

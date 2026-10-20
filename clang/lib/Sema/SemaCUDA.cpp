@@ -766,6 +766,7 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
       IsDependentVar(VD))
     return;
   const Expr *Init = VD->getInit();
+
   if (IsDeviceOrConstantVar || IsSharedVar) {
     if (HasAllowedCUDADeviceStaticInitializer(
             *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))
@@ -774,7 +775,7 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
          IsSharedVar ? diag::err_shared_var_init : diag::err_dynamic_var_init)
         << Init->getSourceRange();
     VD->setInvalidDecl();
-  } else {
+  } else if (IdentifyTarget(VD) == CVT_Host) {
     // This is a host-side global variable.  Check that the initializer is
     // callable from the host side.
 
