@@ -17,4 +17,6 @@ if(PROJECT_IS_TOP_LEVEL)
   include(AddLLDB)
 endif()
 
+add_compile_options("$<$<COMPILE_LANGUAGE:Swift>:-explicit-module-build>")
+
 add_subdirectory(Sources)
