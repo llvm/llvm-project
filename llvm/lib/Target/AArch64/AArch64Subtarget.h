@@ -345,6 +345,13 @@ public:
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetUEFI() const { return TargetTriple.isUEFI(); }
+  /// UEFI follows the Windows ARM64 ABI and produces PE/COFF images, so most
+  /// of the Windows specific ABI handling (calling convention, callee saved
+  /// registers, frame chain, stack probing and unwind info) applies to it.
+  bool isTargetWindowsOrUEFI() const {
+    return TargetTriple.isOSWindowsOrUEFI();
+  }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
