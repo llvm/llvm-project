@@ -1619,7 +1619,7 @@ bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
       RBI.constrainGenericRegister(Dst, RISCV::GPRRegClass, *MRI);
       MachineInstr &C = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                  TII.get(TargetOpcode::COPY), Dst)
-                             .addReg(Src, RegState::NoFlags, SubIdx);
+                             .addReg(Src, {}, SubIdx);
       constrainSelectedInstRegOperands(C, TII, TRI, RBI);
     };
     ExtractHalf(Lo, RISCV::sub_gpr_even);
