@@ -1308,30 +1308,68 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
-/// Returns true if `value` is computed, through elementwise ops only, from an
-/// op whose result layout the hardware fixes (`dpas`, `dpas_mx`, `load_nd`).
-/// Other producers, such as broadcasts, reductions, and gather or matrix loads,
-/// can take the layout a consumer asks for, so the walk stops there.
+/// Returns the innermost lane_data of the op whose result layout the hardware
+/// fixes and from which `value` is computed through elementwise ops only, or
+/// std::nullopt when there is no such op. Those ops are `dpas`, `dpas_mx`, and
+/// `load_nd`. Other producers, such as broadcasts, reductions, and gather or
+/// matrix loads, can take the layout a consumer asks for, so the walk stops
+/// there.
 ///
-/// A store picks its `lane_data` before propagation reaches the producer. If it
-/// widens `lane_data` for such a value, the fixed result needs a `lane_data`
-/// repack across lanes, which costs more than the wider store saves.
-static bool hasFixedLayoutProducer(Value value) {
+/// The lane_data is the op's anchor layout when it has one. Otherwise it is
+/// the native one: 1 for a `dpas` / `dpas_mx` result, and for a plain
+/// `load_nd` the elements one lane packs into the block load's packed format
+/// (2 for an 8-bit type). Several such ops give the gcd of their lane_data.
+///
+/// A store picks its lane_data before propagation reaches the producer. Any
+/// lane_data other than the producer's adds a lane_data repack across lanes on
+/// the producer's result.
+static std::optional<int64_t>
+getFixedProducerLaneData(Value value, const xegpu::uArch::uArch *uArch) {
+  std::optional<int64_t> laneData;
+  auto record = [&](int64_t data) {
+    laneData = laneData ? std::gcd(*laneData, data) : data;
+  };
   SmallVector<Value> worklist{value};
   llvm::SmallPtrSet<Operation *, 8> visited;
   while (!worklist.empty()) {
     Operation *def = worklist.pop_back_val().getDefiningOp();
     if (!def || !visited.insert(def).second)
       continue;
-    if (isa<xegpu::DpasOp, xegpu::DpasMxOp, xegpu::LoadNdOp>(def))
-      return true;
+    if (isa<xegpu::DpasOp, xegpu::DpasMxOp, xegpu::LoadNdOp>(def)) {
+      xegpu::DistributeLayoutAttr anchor =
+          cast<xegpu::AnchorLayoutInterface>(def).getAnchorLayout();
+      SmallVector<int64_t> anchorLaneData =
+          anchor ? anchor.getEffectiveLaneDataAsInt() : SmallVector<int64_t>{};
+      if (!anchorLaneData.empty()) {
+        record(anchorLaneData.back());
+        continue;
+      }
+      auto load = dyn_cast<xegpu::LoadNdOp>(def);
+      if (!load || load.getPacked() || load.getTranspose()) {
+        record(1);
+        continue;
+      }
+      const auto *uArchInstruction =
+          dyn_cast_if_present<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+      unsigned bitWidth =
+          load.getType().getElementType().getIntOrFloatBitWidth();
+      record(uArchInstruction
+                 ? std::max<int64_t>(
+                       1, llvm::divideCeil(
+                              uArchInstruction->getPackedFormatBitSize(),
+                              bitWidth))
+                 : 1);
+      continue;
+    }
     if (!OpTrait::hasElementwiseMappableTraits(def))
       continue;
     for (Value operand : def->getOperands())
       if (isa<VectorType>(operand.getType()))
         worklist.push_back(operand);
   }
-  return false;
+  return laneData;
 }
 
 /// Set the layout for the value, tensor descriptor, offset and mask operands
@@ -1351,12 +1389,15 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // single access. Absent, only one element per lane is safe. The lowering
   // gates a lane's whole access on one mask bit, so a mask that is not uniform
   // also limits the access to one element.
-  // A value from a fixed-layout producer also stays at one element per lane;
-  // see `hasFixedLayoutProducer`.
-  int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask()) &&
-                                !hasFixedLayoutProducer(storeScatter.getValue())
+  int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask())
                             ? storeScatter.getContiguity().value_or(1)
                             : 1;
+  // Match a fixed-layout producer (see `getFixedProducerLaneData`). Runs of
+  // gcd(contiguity, its lane_data) are still contiguous, and they make the
+  // store take the producer's lane_data when the runs allow it.
+  if (std::optional<int64_t> producerLaneData =
+          getFixedProducerLaneData(storeScatter.getValue(), uArch))
+    contigChunkSize = std::gcd<int64_t>(contigChunkSize, *producerLaneData);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
@@ -1475,11 +1516,12 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     }
   } else {
     // `contiguity` says how many neighbouring elements one lane may write in a
-    // single access. Absent, or for a value from a fixed-layout producer (see
-    // `hasFixedLayoutProducer`), only one element per lane is used.
-    int contigChunkSize = hasFixedLayoutProducer(storeMatrix.getData())
-                              ? 1
-                              : storeMatrix.getContiguity().value_or(1);
+    // single access. Absent, only one element per lane is safe. Match a
+    // fixed-layout producer the same way as `visitStoreScatterOp` does.
+    int contigChunkSize = storeMatrix.getContiguity().value_or(1);
+    if (std::optional<int64_t> producerLaneData =
+            getFixedProducerLaneData(storeMatrix.getData(), uArch))
+      contigChunkSize = std::gcd<int64_t>(contigChunkSize, *producerLaneData);
     auto numSgOrErr =
         getNumSgOrFail(storeMatrix, uArch->getSubgroupSize(), nullptr);
     if (failed(numSgOrErr))

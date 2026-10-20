@@ -951,3 +951,92 @@ func.func @store_matrix_after_broadcast_widens(%s: vector<8x1xf32>,
   return
 }
 }
+
+// -----
+// A packed 8-bit load_nd holds 2 elements per lane. The store takes the same
+// lane_data, so no lane_data repack is needed.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_matches_packed_load_nd(
+// CHECK: %[[EXT:.*]] = arith.extsi %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}
+// CHECK: xegpu.store_matrix %[[EXT]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_matches_packed_load_nd(%src: memref<8x32xi8>, %dst: !xegpu.mem_desc<8x32xi16>) {
+  %td = xegpu.create_nd_tdesc %src : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
+  %v = xegpu.load_nd %td[0, 0] <{layout = #xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> : !xegpu.tensor_desc<8x32xi8> -> vector<8x32xi8>
+  %w = arith.extsi %v : vector<8x32xi8> to vector<8x32xi16>
+  xegpu.store_matrix %w, %dst[0, 0] : vector<8x32xi16>, !xegpu.mem_desc<8x32xi16>
+  return
+}
+}
+
+// -----
+// Without an anchor layout, the load_nd's native lane_data for 8 bits is 2, so
+// the store takes 2 and the load_nd gets a layout it can deliver.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_matches_native_load_nd(
+// CHECK: xegpu.load_nd %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_matches_native_load_nd(%src: memref<8x32xi8>, %dst: !xegpu.mem_desc<8x32xi16>) {
+  %td = xegpu.create_nd_tdesc %src : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
+  %v = xegpu.load_nd %td[0, 0] : !xegpu.tensor_desc<8x32xi8> -> vector<8x32xi8>
+  %w = arith.extsi %v : vector<8x32xi8> to vector<8x32xi16>
+  xegpu.store_matrix %w, %dst[0, 0] : vector<8x32xi16>, !xegpu.mem_desc<8x32xi16>
+  return
+}
+}
+
+// -----
+// The scatter store follows the same rule: its value comes from a dpas, so it
+// keeps the dpas result's one element per lane.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_scatter_after_dpas_no_widening(
+// CHECK: xegpu.store %{{.*}}, %{{.*}}[%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_scatter_after_dpas_no_widening(%a: vector<8x16xf16>, %b: vector<16x32xf16>, %dst: memref<256xf32>) {
+  %acc = arith.constant dense<0.0> : vector<8x32xf32>
+  %c = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x32xf16>, vector<8x32xf32> -> vector<8x32xf32>
+  %e = math.exp %c : vector<8x32xf32>
+  %step = vector.step : vector<32xindex>
+  %offsets = vector.broadcast %step : vector<32xindex> to vector<8x32xindex>
+  %mask = arith.constant dense<true> : vector<8x32xi1>
+  xegpu.store %e, %dst[%offsets], %mask : vector<8x32xf32>, memref<256xf32>, vector<8x32xindex>, vector<8x32xi1>
+  return
+}
+}
+
+// -----
+// One input of the add is a dpas, the other a load_matrix that could follow any
+// layout. The dpas decides.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_mixed_inputs(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_after_mixed_inputs(%a: vector<8x16xf16>, %b: vector<16x32xf16>, %src: !xegpu.mem_desc<8x64xf32>, %dst: !xegpu.mem_desc<8x64xf32>) {
+  %acc = arith.constant dense<0.0> : vector<8x32xf32>
+  %c = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x32xf16>, vector<8x32xf32> -> vector<8x32xf32>
+  %l = xegpu.load_matrix %src[0, 0] : !xegpu.mem_desc<8x64xf32> -> vector<8x32xf32>
+  %s = arith.addf %l, %c : vector<8x32xf32>
+  xegpu.store_matrix %s, %dst[0, 0] : vector<8x32xf32>, !xegpu.mem_desc<8x64xf32>
+  return
+}
+}
+
+// -----
+// A dpas_mx result is fixed like a dpas result.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_dpas_mx_no_widening(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_after_dpas_mx_no_widening(%arg0: memref<16x1024xf8E5M2>, %arg1: memref<1024x32xf8E5M2>,
+    %arg3: memref<16x32xf8E8M0FNU>, %arg4: memref<32x32xf8E8M0FNU>, %dst: !xegpu.mem_desc<16x64xbf16>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<16x32xbf16>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x1024xf8E5M2> -> !xegpu.tensor_desc<16x1024xf8E5M2>
+  %1 = xegpu.create_nd_tdesc %arg1 : memref<1024x32xf8E5M2> -> !xegpu.tensor_desc<1024x32xf8E5M2>
+  %2 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x1024xf8E5M2> -> vector<16x1024xf8E5M2>
+  %3 = xegpu.load_nd %1[0, 0] : !xegpu.tensor_desc<1024x32xf8E5M2> -> vector<1024x32xf8E5M2>
+  %4 = xegpu.create_nd_tdesc %arg3 : memref<16x32xf8E8M0FNU> -> !xegpu.tensor_desc<16x32xf8E8M0FNU>
+  %5 = xegpu.load_nd %4[0, 0] : !xegpu.tensor_desc<16x32xf8E8M0FNU> -> vector<16x32xf8E8M0FNU>
+  %6 = xegpu.create_nd_tdesc %arg4 : memref<32x32xf8E8M0FNU> -> !xegpu.tensor_desc<32x32xf8E8M0FNU>
+  %7 = xegpu.load_nd %6[0, 0] : !xegpu.tensor_desc<32x32xf8E8M0FNU> -> vector<32x32xf8E8M0FNU>
+  %8 = xegpu.dpas_mx %2, %3, %cst scale_a = %5 scale_b = %7 : (vector<16x1024xf8E5M2>, vector<1024x32xf8E5M2>, vector<16x32xbf16>, vector<16x32xf8E8M0FNU>, vector<32x32xf8E8M0FNU>) -> vector<16x32xbf16>
+  %9 = math.exp %8 : vector<16x32xbf16>
+  xegpu.store_matrix %9, %dst[0, 0] : vector<16x32xbf16>, !xegpu.mem_desc<16x64xbf16>
+  return
+}
+}
