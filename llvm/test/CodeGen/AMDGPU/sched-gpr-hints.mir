@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=amdgpu-sched-bank -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=amdgpu-sched-gpr -o - %s | FileCheck %s
 
-# The AMDGPUSchedBank pass attaches exact register allocation hints (not
+# The AMDGPUSchedGPR pass attaches exact register allocation hints (not
 # printed in MIR) and lowers each schedule pseudo to a plain COPY.
 
 ---
