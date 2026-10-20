@@ -324,19 +324,10 @@ function(add_libc_testsuite suite_name)
     add_custom_target(${suite_name})
   endif()
 
-  set(created_build_target FALSE)
   if(NOT TARGET ${suite_name}-build)
     add_custom_target(${suite_name}-build)
-    set(created_build_target TRUE)
-  endif()
-
-  if(created_build_target)
-    if(TARGET libc-tests)
-      add_dependencies(libc-tests ${suite_name})
-    endif()
-    if(TARGET libc-tests-build)
-      add_dependencies(libc-tests-build ${suite_name}-build)
-    endif()
+    add_dependencies(libc-tests ${suite_name})
+    add_dependencies(libc-tests-build ${suite_name}-build)
   endif()
 endfunction()
 
@@ -398,7 +389,7 @@ endfunction()
 # Helper function for create_libc_test: collects fully qualified dependencies
 # for a test target, including base test framework libraries, hermetic runtime
 # entrypoints, subprocess support, and coverage dependencies.
-function(_get_libc_test_dependencies output_var user_depends startup_target_dep is_c_test)
+function(_get_libc_test_dependencies output_var user_depends startup_target_dep is_c_test is_fp_test)
   get_fq_deps_list(fq_deps_list ${user_depends})
   list(APPEND fq_deps_list
     libc.src.__support.StringUtil.error_to_string
@@ -409,6 +400,13 @@ function(_get_libc_test_dependencies output_var user_depends startup_target_dep 
     list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
   else()
     list(APPEND fq_deps_list libc.test.UnitTest.LibcDeathTestExecutors)
+  endif()
+  if(is_fp_test)
+    list(APPEND fq_deps_list
+      libc.hdr.math_macros
+      libc.hdr.stdint_proxy
+      libc.test.UnitTest.FPTestHelpers
+    )
   endif()
 
   if(LLVM_LIBC_FULL_BUILD)
@@ -462,30 +460,6 @@ function(_get_libc_test_dependencies output_var user_depends startup_target_dep 
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
   set(${output_var} ${fq_deps_list} PARENT_SCOPE)
-endfunction()
-
-# Helper function for create_libc_test: inspects dependencies and extracts
-# standard CMake library targets (STATIC, SHARED, INTERFACE) that do not have
-# a custom TARGET_TYPE (e.g. libc.utils.MPFRWrapper, libc.utils.MPCWrapper).
-function(_get_libc_test_link_libraries output_var fq_deps_list)
-  set(link_libs "")
-  foreach(dep IN LISTS fq_deps_list)
-    if(TARGET ${dep})
-      get_target_property(aliased_target ${dep} "ALIASED_TARGET")
-      if(aliased_target)
-        set(dep ${aliased_target})
-      endif()
-      get_target_property(dep_type ${dep} "TARGET_TYPE")
-      get_target_property(cmake_type ${dep} TYPE)
-      if(NOT dep_type AND cmake_type MATCHES ".*_LIBRARY")
-        list(APPEND link_libs ${dep})
-      endif()
-    endif()
-  endforeach()
-  if(link_libs)
-    list(REMOVE_DUPLICATES link_libs)
-  endif()
-  set(${output_var} ${link_libs} PARENT_SCOPE)
 endfunction()
 
 # Helper function for create_libc_test: configures linking for full-build hermetic
@@ -661,16 +635,10 @@ function(_register_libc_test_with_suite fq_target_name fq_build_target_name suit
   if(suite)
     add_libc_testsuite(${suite})
     add_dependencies(${suite} ${fq_target_name})
-    if(TARGET ${suite}-build)
-      add_dependencies(${suite}-build ${fq_build_target_name})
-    endif()
+    add_dependencies(${suite}-build ${fq_build_target_name})
   else()
-    if(TARGET libc-tests)
-      add_dependencies(libc-tests ${fq_target_name})
-    endif()
-    if(TARGET libc-tests-build)
-      add_dependencies(libc-tests-build ${fq_build_target_name})
-    endif()
+    add_dependencies(libc-tests ${fq_target_name})
+    add_dependencies(libc-tests-build ${fq_build_target_name})
   endif()
 endfunction()
 
@@ -682,7 +650,47 @@ function(create_libc_test fq_target_name)
 
   llvm_libc_parse_arguments(TEST ${ARGN})
 
-  # 1. Validate build mode and target platform
+  # 1. Validate build mode, target platform, and external library requirements
+  if(TEST_NEED_MPC)
+    set(TEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TESTS_CAN_USE_MPC)
+      message(VERBOSE "Complex test ${fq_target_name} will be skipped as MPC library is not available.")
+      return()
+    endif()
+    list(APPEND TEST_LINK_LIBRARIES libc.utils.MPCWrapper)
+  endif()
+
+  if(TEST_NEED_MPFR_F80)
+    set(TEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+      message(VERBOSE "Math test ${fq_target_name} will be skipped as float80 support in MPFR is not available.")
+      return()
+    endif()
+  endif()
+
+  # TODO: To be removed when we find a workaround to run MPFR tests for
+  # emulated type where compiler doesn't support the native float128
+  # TODO: Check mpfr_buildopt_float128_p() returns non-zero.
+  if(TEST_NEED_MPFR_F128)
+    set(TEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TYPES_HAS_NATIVE_FLOAT128)
+      message(VERBOSE "Math test ${fq_target_name} will be skipped as native float128 support in MPFR is not available.")
+      return()
+    endif()
+  endif()
+
+  if(TEST_NEED_MPFR)
+    if(TEST_FULL_BUILD_ONLY)
+      message(FATAL_ERROR "Full-build test cannot require MPFR.")
+    endif()
+    if(NOT LIBC_TESTS_CAN_USE_MPFR)
+      message(VERBOSE "Test ${fq_target_name} will be skipped as MPFR library is not available.")
+      return()
+    endif()
+    set(TEST_OVERLAY_ONLY TRUE)
+    list(APPEND TEST_LINK_LIBRARIES libc.utils.MPFRWrapper)
+  endif()
+
   if(LLVM_LIBC_FULL_BUILD AND TEST_OVERLAY_ONLY)
     return()
   endif()
@@ -727,7 +735,13 @@ function(create_libc_test fq_target_name)
   endif()
 
   # 2. Resolve dependencies and link objects
-  _get_libc_test_dependencies(fq_deps_list "${TEST_DEPENDS}" "${startup_target_dep}" "${TEST_C_TEST}")
+  _get_libc_test_dependencies(
+    fq_deps_list
+    "${TEST_DEPENDS}"
+    "${startup_target_dep}"
+    "${TEST_C_TEST}"
+    "${TEST_FP_TEST}"
+  )
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding test ${fq_target_name}")
@@ -749,10 +763,6 @@ function(create_libc_test fq_target_name)
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
-
-  # Collect standard library targets from dependencies that do not provide raw object files.
-  _get_libc_test_link_libraries(dep_link_libraries "${fq_deps_list}")
-  list(APPEND TEST_LINK_LIBRARIES ${dep_link_libraries})
   if(TEST_LINK_LIBRARIES)
     list(REMOVE_DUPLICATES TEST_LINK_LIBRARIES)
   endif()
@@ -836,14 +846,6 @@ function(create_libc_test fq_target_name)
   else()
     _register_libc_test_with_suite(${fq_target_name} ${fq_build_target_name} "${TEST_SUITE}")
   endif()
-endfunction()
-
-function(_add_libc_test target_name)
-  add_target_with_flags(
-    ${target_name}
-    CREATE_TARGET create_libc_test
-    ${ARGN}
-  )
 endfunction()
 
 
@@ -1152,68 +1154,10 @@ endfunction()
 # NEED_MPFR / NEED_MPFR_F80 / NEED_MPFR_F128: link against MPFR; tests requiring MPFR run only in overlay mode.
 # NEED_MPC: link against MPC and MPFR; tests requiring MPC run only in overlay mode.
 function(add_libc_test test_name)
-  llvm_libc_parse_arguments(LIBC_TEST ${ARGN})
-
-  if(LIBC_TEST_NEED_MPC)
-    set(LIBC_TEST_NEED_MPFR TRUE)
-    if(NOT LIBC_TESTS_CAN_USE_MPC)
-      message(VERBOSE "Complex test ${test_name} will be skipped as MPC library is not available.")
-      return()
-    endif()
-    list(APPEND LIBC_TEST_DEPENDS libc.utils.MPCWrapper)
-  endif()
-
-  if(LIBC_TEST_NEED_MPFR_F80)
-    set(LIBC_TEST_NEED_MPFR TRUE)
-    if(NOT LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-      message(VERBOSE "Math test ${test_name} will be skipped as float80 support in MPFR is not available.")
-      return()
-    endif()
-  endif()
-
-  # TODO: To be removed when we find a workaround to run MPFR tests for
-  # emulated type where compiler doesn't support the native float128
-  # TODO: Check mpfr_buildopt_float128_p() returns non-zero.
-  if(LIBC_TEST_NEED_MPFR_F128)
-    set(LIBC_TEST_NEED_MPFR TRUE)
-    if(NOT LIBC_TYPES_HAS_NATIVE_FLOAT128)
-      message(VERBOSE "Math test ${test_name} will be skipped as native float128 support in MPFR is not available.")
-      return()
-    endif()
-  endif()
-
-  if(LIBC_TEST_NEED_MPFR)
-    if(LIBC_TEST_FULL_BUILD_ONLY)
-      message(FATAL_ERROR "Full-build test cannot require MPFR.")
-    endif()
-    if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message(VERBOSE "Test ${test_name} will be skipped as MPFR library is not available.")
-      return()
-    endif()
-    set(LIBC_TEST_OVERLAY_ONLY TRUE)
-    list(APPEND LIBC_TEST_DEPENDS libc.utils.MPFRWrapper)
-  endif()
-
-  if(LIBC_TEST_FP_TEST)
-    list(APPEND LIBC_TEST_DEPENDS
-      libc.hdr.math_macros
-      libc.test.UnitTest.FPTestHelpers
-      libc.hdr.stdint_proxy
-    )
-  endif()
-
-  if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_OVERLAY_ONLY)
-    return()
-  endif()
-  if(NOT LLVM_LIBC_FULL_BUILD AND LIBC_TEST_FULL_BUILD_ONLY)
-    return()
-  endif()
-
-  forward_arguments(LIBC_TEST forwarded_args)
-  _add_libc_test(
+  add_target_with_flags(
     ${test_name}
-    ${forwarded_args}
-    ${LIBC_TEST_UNPARSED_ARGUMENTS}
+    CREATE_TARGET create_libc_test
+    ${ARGN}
   )
 endfunction()
 
