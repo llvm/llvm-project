@@ -143,6 +143,10 @@ static const unsigned MaxMemDepDistance = 160;
 /// regions to be handled.
 static const int MinScheduleRegionSize = 16;
 
+/// If the reduction budget is exhausted, we allow small reduction trees to be
+/// handled.
+static const unsigned MinReductionTreeSize = 2048;
+
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
@@ -33374,6 +33378,24 @@ public:
       };
       bool AnyVectorized = false;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
+      // The overlapping windows rebuild almost the same trees. Like the
+      // scheduling region, the size of the next tree, estimated by the last
+      // rejected one, is limited by the budget, reduced by the sizes of the
+      // rejected trees, but not below the minimal size. The non-power-of-2
+      // widths get only the minimal size for the rejected trees. The budget
+      // limits only the series of the rejected trees, the vectorized tree
+      // starts a new series.
+      unsigned ReductionBudget = Opts.slp_reduction_budget;
+      unsigned LastRejectedTreeSize = 1;
+      unsigned NonPowerOf2RejectedSize = 0;
+      auto RejectTree = [&]() {
+        LastRejectedTreeSize = V.getTreeSize();
+        const unsigned Size = ReduxWidth * LastRejectedTreeSize;
+        ReductionBudget -= std::min(ReductionBudget, Size);
+        ReductionBudget = std::max(ReductionBudget, MinReductionTreeSize);
+        if (!has_single_bit(ReduxWidth))
+          NonPowerOf2RejectedSize += Size;
+      };
       // Same small-group allowance for the vector width, if it covers the
       // whole group.
       const unsigned MinReduxWidth =
@@ -33391,10 +33413,12 @@ public:
         }
         PrevReduxWidth = ReduxWidth;
         ArrayRef<Value *> VL(std::next(Candidates.begin(), Pos), ReduxWidth);
-        // Been analyzed already - skip.
-        if (IgnoredCandidates.contains(std::make_pair(Pos, ReduxWidth)) ||
+        // Been analyzed already or out of budget - skip.
+        if (ReduxWidth * LastRejectedTreeSize > ReductionBudget ||
+            IgnoredCandidates.contains(std::make_pair(Pos, ReduxWidth)) ||
             (!has_single_bit(ReduxWidth) &&
-             (IgnoredCandidates.contains(
+             (NonPowerOf2RejectedSize > MinReductionTreeSize ||
+              IgnoredCandidates.contains(
                   std::make_pair(Pos, bit_floor(ReduxWidth))) ||
               IgnoredCandidates.contains(
                   std::make_pair(Pos + (ReduxWidth - bit_floor(ReduxWidth)),
@@ -33416,6 +33440,7 @@ public:
         }
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
+          RejectTree();
           constexpr unsigned CandidatesLimit = 64;
           if (!AdjustReducedVals(RK == ReductionOrdering::Ordered &&
                                  Candidates.size() >= CandidatesLimit))
@@ -33541,6 +33566,7 @@ public:
                    << " and threshold "
                    << ore::NV("Threshold", -V.getCostThreshold());
           });
+          RejectTree();
           if (!AdjustReducedVals()) {
             MarkAnalyzedVals(VL);
             unsigned Offset = Pos == Start ? Pos : Pos - 1;
@@ -33565,6 +33591,9 @@ public:
 
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing horizontal reduction at cost:"
                           << Cost << ". (HorRdx)\n");
+        ReductionBudget = Opts.slp_reduction_budget;
+        LastRejectedTreeSize = 1;
+        NonPowerOf2RejectedSize = 0;
         V.getORE()->emit([&]() {
           return OptimizationRemark(SV_NAME, "VectorizedHorizontalReduction",
                                     ReducedValsToOps.at(VL[0]).front())
