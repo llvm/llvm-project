@@ -12,6 +12,8 @@
 ; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_i16_bf16
 ; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_i8_bf16
 ; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_i8_bf16
+; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_i128_bf16
+; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_i128_bf16
 ; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_v2i64_v2bf16
 ; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_v2i64_v2bf16
 ; CHECK-NOFP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_v3i64_v3bf16
@@ -70,6 +72,8 @@
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_i16_bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_i8_bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_i8_bf16
+; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_i128_bf16
+; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_i128_bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_v2i64_v2bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_v2i64_v2bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_v3i64_v3bf16
@@ -373,6 +377,72 @@ define bfloat @utofp_i8_bf16(i8 %a) {
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = uitofp i8 %a to bfloat
+  ret bfloat %c
+}
+
+define bfloat @stofp_i128_bf16(i128 %a) {
+; CHECK-NOFP16-LABEL: stofp_i128_bf16:
+; CHECK-NOFP16:       // %bb.0:
+; CHECK-NOFP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOFP16-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOFP16-NEXT:    .cfi_offset w30, -16
+; CHECK-NOFP16-NEXT:    bl __floattidf
+; CHECK-NOFP16-NEXT:    fcvtxn s0, d0
+; CHECK-NOFP16-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NOFP16-NEXT:    fmov w9, s0
+; CHECK-NOFP16-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NOFP16-NEXT:    add w8, w9, w8
+; CHECK-NOFP16-NEXT:    add w8, w10, w8
+; CHECK-NOFP16-NEXT:    lsr w8, w8, #16
+; CHECK-NOFP16-NEXT:    fmov s0, w8
+; CHECK-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-LABEL: stofp_i128_bf16:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FP16-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-FP16-NEXT:    .cfi_offset w30, -16
+; CHECK-FP16-NEXT:    bl __floattidf
+; CHECK-FP16-NEXT:    fcvtxn s0, d0
+; CHECK-FP16-NEXT:    bfcvt h0, s0
+; CHECK-FP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-FP16-NEXT:    ret
+  %c = sitofp i128 %a to bfloat
+  ret bfloat %c
+}
+
+define bfloat @utofp_i128_bf16(i128 %a) {
+; CHECK-NOFP16-LABEL: utofp_i128_bf16:
+; CHECK-NOFP16:       // %bb.0:
+; CHECK-NOFP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOFP16-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOFP16-NEXT:    .cfi_offset w30, -16
+; CHECK-NOFP16-NEXT:    bl __floatuntidf
+; CHECK-NOFP16-NEXT:    fcvtxn s0, d0
+; CHECK-NOFP16-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NOFP16-NEXT:    fmov w9, s0
+; CHECK-NOFP16-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-NOFP16-NEXT:    add w8, w9, w8
+; CHECK-NOFP16-NEXT:    add w8, w10, w8
+; CHECK-NOFP16-NEXT:    lsr w8, w8, #16
+; CHECK-NOFP16-NEXT:    fmov s0, w8
+; CHECK-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-LABEL: utofp_i128_bf16:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FP16-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-FP16-NEXT:    .cfi_offset w30, -16
+; CHECK-FP16-NEXT:    bl __floatuntidf
+; CHECK-FP16-NEXT:    fcvtxn s0, d0
+; CHECK-FP16-NEXT:    bfcvt h0, s0
+; CHECK-FP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-FP16-NEXT:    ret
+  %c = uitofp i128 %a to bfloat
   ret bfloat %c
 }
 

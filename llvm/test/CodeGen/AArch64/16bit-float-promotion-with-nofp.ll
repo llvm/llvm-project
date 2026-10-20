@@ -29,6 +29,36 @@ entry:
   ret bfloat %0
 }
 
+define bfloat @si128_to_bf16(i128 %a) {
+; CHECK-LABEL: si128_to_bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl __floattisf
+; CHECK-NEXT:    bl __truncsfbf2
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = sitofp i128 %a to bfloat
+  ret bfloat %0
+}
+
+define bfloat @ui128_to_bf16(i128 %a) {
+; CHECK-LABEL: ui128_to_bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl __floatuntisf
+; CHECK-NEXT:    bl __truncsfbf2
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = uitofp i128 %a to bfloat
+  ret bfloat %0
+}
+
 define double @select_f64(double %a, double %b, i1 %c) {
 ; CHECK-LABEL: select_f64:
 ; CHECK:       // %bb.0: // %entry

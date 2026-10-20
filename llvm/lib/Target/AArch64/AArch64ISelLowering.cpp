@@ -5646,6 +5646,14 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
                  : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
                                DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
+
+    // There is no i128 -> bf16 libcall, so promote to f64 (which has an
+    // i128 -> f64 libcall) and round from there, like x86 does through f32.
+    // FIXME: values needing more than 53 significant bits may give a wrong
+    // result due to double rounding (i128 -> f64 -> bf16) and can be off by
+    // one ulp.
+    if (SrcVal.getValueType() == MVT::i128)
+      return IntToFpViaPromotion(MVT::f64);
   }
 
   // f16 conversions are promoted to f32 when full fp16 is not supported.
