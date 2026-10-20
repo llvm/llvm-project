@@ -103,6 +103,42 @@ TEST(LlvmLibcRegexMatcherTest, OverlappingPrefixMatch) {
   EXPECT_EQ(match(pool, *pat, "abababab"), MatchResult::NoMatch);
 }
 
+TEST(LlvmLibcRegexMatcherTest, WildcardMatchingAndNewlineFlag) {
+  ExprPool pool;
+  ErrorOr<ExprId> pat = parse_ere("a.c", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat.has_value());
+  EXPECT_EQ(pool.num_byte_sets(), size_t(1));
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+
+  EXPECT_EQ(match(pool, *pat, "xx abc yy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat, "a\nc"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat,
+                  "a\xff"
+                  "c"),
+            MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat, "ac"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "abbc"), MatchResult::NoMatch);
+
+  const size_t warm_nodes = pool.size();
+  const size_t warm_bytes = pool.allocated_bytes();
+  EXPECT_EQ(match(pool, *pat, "xx abc yy"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
+  EXPECT_EQ(pool.allocated_bytes(), warm_bytes);
+
+  // A second '.' wildcard in the same mode shares the existing ByteSet slot.
+  ErrorOr<ExprId> pat2 = parse_ere("a.b.c", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat2.has_value());
+  EXPECT_EQ(pool.num_byte_sets(), size_t(1));
+  EXPECT_EQ(match(pool, *pat2, "axbyc"), MatchResult::Match);
+
+  // Under REG_NEWLINE, '.' matches any byte except '\n'.
+  ErrorOr<ExprId> nl_pat = parse_ere("a.c", REG_EXTENDED | REG_NEWLINE, pool);
+  ASSERT_TRUE(nl_pat.has_value());
+  EXPECT_EQ(pool.num_byte_sets(), size_t(2));
+  EXPECT_EQ(match(pool, *nl_pat, "abc"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *nl_pat, "a\nc"), MatchResult::NoMatch);
+}
+
 TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   ExprPool pool;
   ErrorOr<ExprId> escaped_dot = parse_ere(R"(a\.b)", REG_EXTENDED, pool);
@@ -122,11 +158,11 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   EXPECT_EQ(trailing_escape.error(), REG_EESCAPE);
 
   const string_view bad_patterns[] = {
-      ".",     "^",     "$",     "*",     "+",     "?",     "(",
-      ")",     "[",     "{",     "|",     R"(\1)", R"(\2)", R"(\3)",
-      R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)", R"(\9)", R"(\b)",
-      R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')",
-      R"(\w)", R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
+      "^",     "$",     "*",     "+",     "?",     "(",     ")",
+      "[",     "{",     "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)",
+      R"(\5)", R"(\6)", R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)",
+      R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')", R"(\w)",
+      R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -168,4 +204,12 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
 
   EXPECT_EQ(match(pool, need_bc, "a"), MatchResult::OutOfMemory);
   EXPECT_EQ(match(pool, ab, "a"), MatchResult::OutOfMemory);
+
+  ErrorOr<ExprId> dot_exhausted = parse_ere(".", REG_EXTENDED, pool);
+  ASSERT_FALSE(dot_exhausted.has_value());
+  EXPECT_EQ(dot_exhausted.error(), REG_ESPACE);
+
+  ErrorOr<ExprId> concat_exhausted = parse_ere("ba", REG_EXTENDED, pool);
+  ASSERT_FALSE(concat_exhausted.has_value());
+  EXPECT_EQ(concat_exhausted.error(), REG_ESPACE);
 }
