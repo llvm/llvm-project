@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Core.h"
+#include "llvm-c/Support.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -48,4 +49,14 @@ TEST(LibraryOptionsContextTest, CAPI) {
                                                  "", &Err));
   EXPECT_NE(StringRef(Err).find("print-inst-addrs"), StringRef::npos);
   LLVMDisposeMessage(Err);
+}
+
+TEST(LibraryOptionsContextTest, CAPIWarnsLibraryOptions) {
+  const char *Args[] = {"prog", "-print-inst-addrs"};
+  testing::internal::CaptureStderr();
+  LLVMParseCommandLineOptions(std::size(Args), Args, "");
+  EXPECT_EQ(testing::internal::GetCapturedStderr(),
+            "prog: warning: library options are not set in any LLVMContext; "
+            "use LLVMContextParseCommandLineOptions: -print-inst-addrs\n");
+  cl::ResetAllOptionOccurrences();
 }

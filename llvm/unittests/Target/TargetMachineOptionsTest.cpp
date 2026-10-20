@@ -17,6 +17,8 @@
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -63,12 +65,18 @@ TEST(TargetMachineCTest, TargetMachineCreation) {
   // non-default options; they might cause fatal errors.
 
   auto *Options = LLVMCreateTargetMachineOptions();
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMTargetMachineOptionsSetLibraryOptions(Options, C);
   auto *TM = LLVMCreateTargetMachineWithOptions(Target, Triple, Options);
   ASSERT_NE(TM, nullptr);
+  EXPECT_EQ(
+      reinterpret_cast<TargetMachine *>(TM)->Options.MCOptions.LibraryOptions,
+      &unwrap(C)->getLibraryOptions());
 
   LLVMDisposeMessage(Triple);
   LLVMDisposeTargetMachineOptions(Options);
   LLVMDisposeTargetMachine(TM);
+  LLVMContextDispose(C);
 }
 
 } // namespace llvm
