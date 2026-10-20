@@ -1639,5 +1639,1650 @@ define amdgpu_kernel void @atomicrmw_umax_uniform_base_divergent_offset(ptr addr
   store i32 %val, ptr addrspace(1) %output_ptr, align 4
   ret void
 }
+
+define amdgpu_kernel void @atomicrmw_add_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_add_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W32-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_add_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W64-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = add i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_add_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i16 100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw add ptr addrspace(1) %ptr, i16 100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_sub_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_sub_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W32-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_sub_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W64-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_sub_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i16 100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw sub ptr addrspace(1) %ptr, i16 100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_and_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_and_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = and i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_and_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = and i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = and i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_and_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i16 100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw and ptr addrspace(1) %ptr, i16 100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_or_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_or_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = or i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = or i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_or_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = or i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = or i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_or_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i16 100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw or ptr addrspace(1) %ptr, i16 100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_xor_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_xor_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = xor i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = xor i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_xor_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = xor i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i16 [[TMP4]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = xor i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_xor_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i16 100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw xor ptr addrspace(1) %ptr, i16 100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_min_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_min_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 -100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp slt i32 -100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = sext i16 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp slt i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_min_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 -100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp slt i32 -100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = sext i16 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp slt i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_min_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i16 -100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw min ptr addrspace(1) %ptr, i16 -100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_max_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_max_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 -100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp sgt i32 -100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = sext i16 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp sgt i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_max_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 -100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp sgt i32 -100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = sext i16 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp sgt i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_max_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i16 -100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw max ptr addrspace(1) %ptr, i16 -100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_umin_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_umin_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 65436, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp ult i32 65436, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 65436, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = zext i16 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp ult i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_umin_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 65436, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp ult i32 65436, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 65436, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = zext i16 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp ult i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_umin_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i16 -100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw umin ptr addrspace(1) %ptr, i16 -100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_umax_i16_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_umax_i16_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 65436, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp ugt i32 65436, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 65436, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = zext i16 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp ugt i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_umax_i16_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 65436, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp ugt i32 65436, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 65436, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i16 [[TMP5]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i16 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = zext i16 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp ugt i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_umax_i16_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i16 -100 seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i16], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw umax ptr addrspace(1) %ptr, i16 -100 seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %val, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @test_atomicrmw_max_i16_divergent_base_divergent_offset(ptr addrspace(1) %base_ptrs, ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @test_atomicrmw_max_i16_divergent_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[BASE_PTRS:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:  [[ENTRY:.*]]:
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[BASE_PTR_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE_PTRS]], i32 [[TID]]
+; GFX13W32-NEXT:    [[BASE_PTR_I32:%.*]] = load i32, ptr addrspace(1) [[BASE_PTR_ADDR]], align 4
+; GFX13W32-NEXT:    [[BASE_PTR:%.*]] = inttoptr i32 [[BASE_PTR_I32]] to ptr addrspace(1)
+; GFX13W32-NEXT:    [[PTR_OFFSET:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE_PTR]], i32 4
+; GFX13W32-NEXT:    [[PTR_DIVERGENT:%.*]] = getelementptr i16, ptr addrspace(1) [[PTR_OFFSET]], i32 [[TID]]
+; GFX13W32-NEXT:    [[TID16:%.*]] = trunc i32 [[TID]] to i16
+; GFX13W32-NEXT:    [[VALUE:%.*]] = sub i16 0, [[TID16]]
+; GFX13W32-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[PTR_DIVERGENT]] to i64
+; GFX13W32-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; GFX13W32-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; GFX13W32-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; GFX13W32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP1]], i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP3]], i32 [[TMP3]])
+; GFX13W32-NEXT:    [[TMP6:%.*]] = and i32 [[TMP4]], [[TMP5]]
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sext i16 [[VALUE]] to i32
+; GFX13W32-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 [[TMP7]], i32 [[TMP6]])
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP7]], [[TMP8]]
+; GFX13W32-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP7]], i32 [[TMP8]]
+; GFX13W32-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i16
+; GFX13W32-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP13:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP6]], i1 true)
+; GFX13W32-NEXT:    [[TMP14:%.*]] = sub i32 31, [[TMP13]]
+; GFX13W32-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP12]], [[TMP14]]
+; GFX13W32-NEXT:    br i1 [[TMP15]], label %[[BB16:.*]], label %[[BB18:.*]]
+; GFX13W32:       [[BB16]]:
+; GFX13W32-NEXT:    [[TMP17:%.*]] = atomicrmw max ptr addrspace(1) [[PTR_DIVERGENT]], i16 [[TMP11]] seq_cst, align 2
+; GFX13W32-NEXT:    br label %[[BB18]]
+; GFX13W32:       [[BB18]]:
+; GFX13W32-NEXT:    [[TMP19:%.*]] = phi i16 [ poison, %[[ENTRY]] ], [ [[TMP17]], %[[BB16]] ]
+; GFX13W32-NEXT:    [[TMP20:%.*]] = mul i32 [[TMP14]], 4
+; GFX13W32-NEXT:    [[TMP21:%.*]] = sext i16 [[TMP19]] to i32
+; GFX13W32-NEXT:    [[TMP22:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP20]], i32 [[TMP21]])
+; GFX13W32-NEXT:    [[TMP23:%.*]] = icmp sgt i32 [[TMP22]], [[TMP8]]
+; GFX13W32-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], i32 [[TMP22]], i32 [[TMP8]]
+; GFX13W32-NEXT:    [[TMP25:%.*]] = trunc i32 [[TMP24]] to i16
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i16 [[TMP25]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @test_atomicrmw_max_i16_divergent_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[BASE_PTRS:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:  [[ENTRY:.*]]:
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[BASE_PTR_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE_PTRS]], i32 [[TID]]
+; GFX13W64-NEXT:    [[BASE_PTR_I32:%.*]] = load i32, ptr addrspace(1) [[BASE_PTR_ADDR]], align 4
+; GFX13W64-NEXT:    [[BASE_PTR:%.*]] = inttoptr i32 [[BASE_PTR_I32]] to ptr addrspace(1)
+; GFX13W64-NEXT:    [[PTR_OFFSET:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE_PTR]], i32 4
+; GFX13W64-NEXT:    [[PTR_DIVERGENT:%.*]] = getelementptr i16, ptr addrspace(1) [[PTR_OFFSET]], i32 [[TID]]
+; GFX13W64-NEXT:    [[TID16:%.*]] = trunc i32 [[TID]] to i16
+; GFX13W64-NEXT:    [[VALUE:%.*]] = sub i16 0, [[TID16]]
+; GFX13W64-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[PTR_DIVERGENT]] to i64
+; GFX13W64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; GFX13W64-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; GFX13W64-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; GFX13W64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP1]], i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP3]], i32 [[TMP3]])
+; GFX13W64-NEXT:    [[TMP6:%.*]] = and i32 [[TMP4]], [[TMP5]]
+; GFX13W64-NEXT:    [[TMP7:%.*]] = sext i16 [[VALUE]] to i32
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 [[TMP7]], i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP7]], [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP7]], i32 [[TMP8]]
+; GFX13W64-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i16
+; GFX13W64-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP12]])
+; GFX13W64-NEXT:    [[TMP14:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP6]], i1 true)
+; GFX13W64-NEXT:    [[TMP15:%.*]] = sub i32 31, [[TMP14]]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP13]], 31
+; GFX13W64-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP16]], [[TMP15]]
+; GFX13W64-NEXT:    br i1 [[TMP17]], label %[[BB18:.*]], label %[[BB20:.*]]
+; GFX13W64:       [[BB18]]:
+; GFX13W64-NEXT:    [[TMP19:%.*]] = atomicrmw max ptr addrspace(1) [[PTR_DIVERGENT]], i16 [[TMP11]] seq_cst, align 2
+; GFX13W64-NEXT:    br label %[[BB20]]
+; GFX13W64:       [[BB20]]:
+; GFX13W64-NEXT:    [[TMP21:%.*]] = phi i16 [ poison, %[[ENTRY]] ], [ [[TMP19]], %[[BB18]] ]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = and i32 [[TMP13]], 32
+; GFX13W64-NEXT:    [[TMP23:%.*]] = or i32 [[TMP15]], [[TMP22]]
+; GFX13W64-NEXT:    [[TMP24:%.*]] = mul i32 [[TMP23]], 4
+; GFX13W64-NEXT:    [[TMP25:%.*]] = sext i16 [[TMP21]] to i32
+; GFX13W64-NEXT:    [[TMP26:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP24]], i32 [[TMP25]])
+; GFX13W64-NEXT:    [[TMP27:%.*]] = icmp sgt i32 [[TMP26]], [[TMP8]]
+; GFX13W64-NEXT:    [[TMP28:%.*]] = select i1 [[TMP27]], i32 [[TMP26]], i32 [[TMP8]]
+; GFX13W64-NEXT:    [[TMP29:%.*]] = trunc i32 [[TMP28]] to i16
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i16 [[TMP29]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @test_atomicrmw_max_i16_divergent_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[BASE_PTRS:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:  [[ENTRY:.*:]]
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[BASE_PTR_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE_PTRS]], i32 [[TID]]
+; GFX12-NEXT:    [[BASE_PTR_I32:%.*]] = load i32, ptr addrspace(1) [[BASE_PTR_ADDR]], align 4
+; GFX12-NEXT:    [[BASE_PTR:%.*]] = inttoptr i32 [[BASE_PTR_I32]] to ptr addrspace(1)
+; GFX12-NEXT:    [[PTR_OFFSET:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE_PTR]], i32 4
+; GFX12-NEXT:    [[PTR_DIVERGENT:%.*]] = getelementptr i16, ptr addrspace(1) [[PTR_OFFSET]], i32 [[TID]]
+; GFX12-NEXT:    [[TID16:%.*]] = trunc i32 [[TID]] to i16
+; GFX12-NEXT:    [[VALUE:%.*]] = sub i16 0, [[TID16]]
+; GFX12-NEXT:    [[OLD:%.*]] = atomicrmw max ptr addrspace(1) [[PTR_DIVERGENT]], i16 [[VALUE]] seq_cst, align 2
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i16 [[OLD]], ptr addrspace(1) [[OUTPUT_PTR]], align 2
+; GFX12-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %base_ptr_addr = getelementptr i32, ptr addrspace(1) %base_ptrs, i32 %tid
+  %base_ptr_i32 = load i32, ptr addrspace(1) %base_ptr_addr
+  %base_ptr = inttoptr i32 %base_ptr_i32 to ptr addrspace(1)
+  %ptr_offset = getelementptr i8, ptr addrspace(1) %base_ptr, i32 4
+  %ptr_divergent = getelementptr i16, ptr addrspace(1) %ptr_offset, i32 %tid
+  %tid16 = trunc i32 %tid to i16
+  %value = sub i16 0, %tid16
+  %old = atomicrmw max ptr addrspace(1) %ptr_divergent, i16 %value seq_cst, align 2
+  %output_ptr = getelementptr i16, ptr addrspace(1) %output, i32 %tid
+  store i16 %old, ptr addrspace(1) %output_ptr, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_add_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_add_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W32-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_add_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W64-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = add i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_add_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i8 100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw add ptr addrspace(1) %ptr, i8 100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_sub_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_sub_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W32-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_sub_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 100, i32 [[TMP1]], i1 false)
+; GFX13W64-NEXT:    [[TMP3:%.*]] = add i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_sub_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i8 100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw sub ptr addrspace(1) %ptr, i8 100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_and_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_and_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = and i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_and_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = and i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = and i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_and_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i8 100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw and ptr addrspace(1) %ptr, i8 100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_or_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_or_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = or i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = or i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_or_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = or i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = or i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_or_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i8 100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw or ptr addrspace(1) %ptr, i8 100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_xor_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_xor_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = xor i32 100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sub i32 31, [[TMP6]]
+; GFX13W32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], [[TMP7]]
+; GFX13W32-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
+; GFX13W32:       [[BB9]]:
+; GFX13W32-NEXT:    [[TMP10:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB11]]
+; GFX13W32:       [[BB11]]:
+; GFX13W32-NEXT:    [[TMP12:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP10]], %[[BB9]] ]
+; GFX13W32-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP7]], 4
+; GFX13W32-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; GFX13W32-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP13]], i32 [[TMP14]])
+; GFX13W32-NEXT:    [[TMP16:%.*]] = xor i32 [[TMP15]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP17]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_xor_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = xor i32 100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP5]])
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W64-NEXT:    [[TMP9:%.*]] = and i32 [[TMP6]], 31
+; GFX13W64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], [[TMP8]]
+; GFX13W64-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB13:.*]]
+; GFX13W64:       [[BB11]]:
+; GFX13W64-NEXT:    [[TMP12:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i8 [[TMP4]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB13]]
+; GFX13W64:       [[BB13]]:
+; GFX13W64-NEXT:    [[TMP14:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP12]], %[[BB11]] ]
+; GFX13W64-NEXT:    [[TMP15:%.*]] = and i32 [[TMP6]], 32
+; GFX13W64-NEXT:    [[TMP16:%.*]] = or i32 [[TMP8]], [[TMP15]]
+; GFX13W64-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 4
+; GFX13W64-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP14]] to i32
+; GFX13W64-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP17]], i32 [[TMP18]])
+; GFX13W64-NEXT:    [[TMP20:%.*]] = xor i32 [[TMP19]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP21]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_xor_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i8 100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw xor ptr addrspace(1) %ptr, i8 100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_min_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_min_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 -100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp slt i32 -100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp slt i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_min_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 -100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp slt i32 -100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = sext i8 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp slt i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_min_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i8 -100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw min ptr addrspace(1) %ptr, i8 -100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_max_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_max_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 -100, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp sgt i32 -100, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp sgt i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_max_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 -100, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp sgt i32 -100, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 -100, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = sext i8 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp sgt i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_max_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i8 -100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw max ptr addrspace(1) %ptr, i8 -100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_umin_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_umin_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 156, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp ult i32 156, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 156, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp ult i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_umin_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 156, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp ult i32 156, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 156, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = zext i8 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp ult i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_umin_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i8 -100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw umin ptr addrspace(1) %ptr, i8 -100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @atomicrmw_umax_i8_uniform_base_divergent_offset(ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @atomicrmw_umax_i8_uniform_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 156, i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP3:%.*]] = icmp ugt i32 156, [[TMP2]]
+; GFX13W32-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 156, i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W32-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W32-NEXT:    [[TMP8:%.*]] = sub i32 31, [[TMP7]]
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP6]], [[TMP8]]
+; GFX13W32-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
+; GFX13W32:       [[BB10]]:
+; GFX13W32-NEXT:    [[TMP11:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB12]]
+; GFX13W32:       [[BB12]]:
+; GFX13W32-NEXT:    [[TMP13:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP11]], %[[BB10]] ]
+; GFX13W32-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP8]], 4
+; GFX13W32-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP13]] to i32
+; GFX13W32-NEXT:    [[TMP16:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP14]], i32 [[TMP15]])
+; GFX13W32-NEXT:    [[TMP17:%.*]] = icmp ugt i32 [[TMP16]], [[TMP2]]
+; GFX13W32-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], i32 [[TMP16]], i32 [[TMP2]]
+; GFX13W32-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP19]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @atomicrmw_umax_i8_uniform_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX13W64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID]], i32 [[TID]])
+; GFX13W64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 156, i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP3:%.*]] = icmp ugt i32 156, [[TMP2]]
+; GFX13W64-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 156, i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; GFX13W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; GFX13W64-NEXT:    [[TMP9:%.*]] = sub i32 31, [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = and i32 [[TMP7]], 31
+; GFX13W64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP9]]
+; GFX13W64-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB14:.*]]
+; GFX13W64:       [[BB12]]:
+; GFX13W64-NEXT:    [[TMP13:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i8 [[TMP5]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB14]]
+; GFX13W64:       [[BB14]]:
+; GFX13W64-NEXT:    [[TMP15:%.*]] = phi i8 [ poison, [[TMP0:%.*]] ], [ [[TMP13]], %[[BB12]] ]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP7]], 32
+; GFX13W64-NEXT:    [[TMP17:%.*]] = or i32 [[TMP9]], [[TMP16]]
+; GFX13W64-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 4
+; GFX13W64-NEXT:    [[TMP19:%.*]] = zext i8 [[TMP15]] to i32
+; GFX13W64-NEXT:    [[TMP20:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP18]], i32 [[TMP19]])
+; GFX13W64-NEXT:    [[TMP21:%.*]] = icmp ugt i32 [[TMP20]], [[TMP2]]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = select i1 [[TMP21]], i32 [[TMP20]], i32 [[TMP2]]
+; GFX13W64-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP23]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @atomicrmw_umax_i8_uniform_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 [[TID]]
+; GFX12-NEXT:    [[VAL:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i8 -100 seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr = getelementptr inbounds [64 x i8], ptr addrspace(1) @histogram_bins, i64 0, i32 %tid
+  %val = atomicrmw umax ptr addrspace(1) %ptr, i8 -100 seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %val, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
+define amdgpu_kernel void @test_atomicrmw_max_i8_divergent_base_divergent_offset(ptr addrspace(1) %base_ptrs, ptr addrspace(1) %output) {
+; GFX13W32-LABEL: define amdgpu_kernel void @test_atomicrmw_max_i8_divergent_base_divergent_offset(
+; GFX13W32-SAME: ptr addrspace(1) [[BASE_PTRS:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W32-NEXT:  [[ENTRY:.*]]:
+; GFX13W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W32-NEXT:    [[BASE_PTR_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE_PTRS]], i32 [[TID]]
+; GFX13W32-NEXT:    [[BASE_PTR_I32:%.*]] = load i32, ptr addrspace(1) [[BASE_PTR_ADDR]], align 4
+; GFX13W32-NEXT:    [[BASE_PTR:%.*]] = inttoptr i32 [[BASE_PTR_I32]] to ptr addrspace(1)
+; GFX13W32-NEXT:    [[PTR_OFFSET:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE_PTR]], i32 4
+; GFX13W32-NEXT:    [[PTR_DIVERGENT:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR_OFFSET]], i32 [[TID]]
+; GFX13W32-NEXT:    [[TID8:%.*]] = trunc i32 [[TID]] to i8
+; GFX13W32-NEXT:    [[VALUE:%.*]] = sub i8 0, [[TID8]]
+; GFX13W32-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[PTR_DIVERGENT]] to i64
+; GFX13W32-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; GFX13W32-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; GFX13W32-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; GFX13W32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP1]], i32 [[TMP1]])
+; GFX13W32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP3]], i32 [[TMP3]])
+; GFX13W32-NEXT:    [[TMP6:%.*]] = and i32 [[TMP4]], [[TMP5]]
+; GFX13W32-NEXT:    [[TMP7:%.*]] = sext i8 [[VALUE]] to i32
+; GFX13W32-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 [[TMP7]], i32 [[TMP6]])
+; GFX13W32-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP7]], [[TMP8]]
+; GFX13W32-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP7]], i32 [[TMP8]]
+; GFX13W32-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i8
+; GFX13W32-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W32-NEXT:    [[TMP13:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP6]], i1 true)
+; GFX13W32-NEXT:    [[TMP14:%.*]] = sub i32 31, [[TMP13]]
+; GFX13W32-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP12]], [[TMP14]]
+; GFX13W32-NEXT:    br i1 [[TMP15]], label %[[BB16:.*]], label %[[BB18:.*]]
+; GFX13W32:       [[BB16]]:
+; GFX13W32-NEXT:    [[TMP17:%.*]] = atomicrmw max ptr addrspace(1) [[PTR_DIVERGENT]], i8 [[TMP11]] seq_cst, align 1
+; GFX13W32-NEXT:    br label %[[BB18]]
+; GFX13W32:       [[BB18]]:
+; GFX13W32-NEXT:    [[TMP19:%.*]] = phi i8 [ poison, %[[ENTRY]] ], [ [[TMP17]], %[[BB16]] ]
+; GFX13W32-NEXT:    [[TMP20:%.*]] = mul i32 [[TMP14]], 4
+; GFX13W32-NEXT:    [[TMP21:%.*]] = sext i8 [[TMP19]] to i32
+; GFX13W32-NEXT:    [[TMP22:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP20]], i32 [[TMP21]])
+; GFX13W32-NEXT:    [[TMP23:%.*]] = icmp sgt i32 [[TMP22]], [[TMP8]]
+; GFX13W32-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], i32 [[TMP22]], i32 [[TMP8]]
+; GFX13W32-NEXT:    [[TMP25:%.*]] = trunc i32 [[TMP24]] to i8
+; GFX13W32-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W32-NEXT:    store i8 [[TMP25]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W32-NEXT:    ret void
+;
+; GFX13W64-LABEL: define amdgpu_kernel void @test_atomicrmw_max_i8_divergent_base_divergent_offset(
+; GFX13W64-SAME: ptr addrspace(1) [[BASE_PTRS:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) #[[ATTR0]] {
+; GFX13W64-NEXT:  [[ENTRY:.*]]:
+; GFX13W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX13W64-NEXT:    [[BASE_PTR_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE_PTRS]], i32 [[TID]]
+; GFX13W64-NEXT:    [[BASE_PTR_I32:%.*]] = load i32, ptr addrspace(1) [[BASE_PTR_ADDR]], align 4
+; GFX13W64-NEXT:    [[BASE_PTR:%.*]] = inttoptr i32 [[BASE_PTR_I32]] to ptr addrspace(1)
+; GFX13W64-NEXT:    [[PTR_OFFSET:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE_PTR]], i32 4
+; GFX13W64-NEXT:    [[PTR_DIVERGENT:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR_OFFSET]], i32 [[TID]]
+; GFX13W64-NEXT:    [[TID8:%.*]] = trunc i32 [[TID]] to i8
+; GFX13W64-NEXT:    [[VALUE:%.*]] = sub i8 0, [[TID8]]
+; GFX13W64-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[PTR_DIVERGENT]] to i64
+; GFX13W64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; GFX13W64-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
+; GFX13W64-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; GFX13W64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP1]], i32 [[TMP1]])
+; GFX13W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TMP3]], i32 [[TMP3]])
+; GFX13W64-NEXT:    [[TMP6:%.*]] = and i32 [[TMP4]], [[TMP5]]
+; GFX13W64-NEXT:    [[TMP7:%.*]] = sext i8 [[VALUE]] to i32
+; GFX13W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 [[TMP7]], i32 [[TMP6]])
+; GFX13W64-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP7]], [[TMP8]]
+; GFX13W64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP7]], i32 [[TMP8]]
+; GFX13W64-NEXT:    [[TMP11:%.*]] = trunc i32 [[TMP10]] to i8
+; GFX13W64-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; GFX13W64-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP12]])
+; GFX13W64-NEXT:    [[TMP14:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP6]], i1 true)
+; GFX13W64-NEXT:    [[TMP15:%.*]] = sub i32 31, [[TMP14]]
+; GFX13W64-NEXT:    [[TMP16:%.*]] = and i32 [[TMP13]], 31
+; GFX13W64-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP16]], [[TMP15]]
+; GFX13W64-NEXT:    br i1 [[TMP17]], label %[[BB18:.*]], label %[[BB20:.*]]
+; GFX13W64:       [[BB18]]:
+; GFX13W64-NEXT:    [[TMP19:%.*]] = atomicrmw max ptr addrspace(1) [[PTR_DIVERGENT]], i8 [[TMP11]] seq_cst, align 1
+; GFX13W64-NEXT:    br label %[[BB20]]
+; GFX13W64:       [[BB20]]:
+; GFX13W64-NEXT:    [[TMP21:%.*]] = phi i8 [ poison, %[[ENTRY]] ], [ [[TMP19]], %[[BB18]] ]
+; GFX13W64-NEXT:    [[TMP22:%.*]] = and i32 [[TMP13]], 32
+; GFX13W64-NEXT:    [[TMP23:%.*]] = or i32 [[TMP15]], [[TMP22]]
+; GFX13W64-NEXT:    [[TMP24:%.*]] = mul i32 [[TMP23]], 4
+; GFX13W64-NEXT:    [[TMP25:%.*]] = sext i8 [[TMP21]] to i32
+; GFX13W64-NEXT:    [[TMP26:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[TMP24]], i32 [[TMP25]])
+; GFX13W64-NEXT:    [[TMP27:%.*]] = icmp sgt i32 [[TMP26]], [[TMP8]]
+; GFX13W64-NEXT:    [[TMP28:%.*]] = select i1 [[TMP27]], i32 [[TMP26]], i32 [[TMP8]]
+; GFX13W64-NEXT:    [[TMP29:%.*]] = trunc i32 [[TMP28]] to i8
+; GFX13W64-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX13W64-NEXT:    store i8 [[TMP29]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX13W64-NEXT:    ret void
+;
+; GFX12-LABEL: define amdgpu_kernel void @test_atomicrmw_max_i8_divergent_base_divergent_offset(
+; GFX12-SAME: ptr addrspace(1) [[BASE_PTRS:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) {
+; GFX12-NEXT:  [[ENTRY:.*:]]
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[BASE_PTR_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[BASE_PTRS]], i32 [[TID]]
+; GFX12-NEXT:    [[BASE_PTR_I32:%.*]] = load i32, ptr addrspace(1) [[BASE_PTR_ADDR]], align 4
+; GFX12-NEXT:    [[BASE_PTR:%.*]] = inttoptr i32 [[BASE_PTR_I32]] to ptr addrspace(1)
+; GFX12-NEXT:    [[PTR_OFFSET:%.*]] = getelementptr i8, ptr addrspace(1) [[BASE_PTR]], i32 4
+; GFX12-NEXT:    [[PTR_DIVERGENT:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR_OFFSET]], i32 [[TID]]
+; GFX12-NEXT:    [[TID8:%.*]] = trunc i32 [[TID]] to i8
+; GFX12-NEXT:    [[VALUE:%.*]] = sub i8 0, [[TID8]]
+; GFX12-NEXT:    [[OLD:%.*]] = atomicrmw max ptr addrspace(1) [[PTR_DIVERGENT]], i8 [[VALUE]] seq_cst, align 1
+; GFX12-NEXT:    [[OUTPUT_PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[OUTPUT]], i32 [[TID]]
+; GFX12-NEXT:    store i8 [[OLD]], ptr addrspace(1) [[OUTPUT_PTR]], align 1
+; GFX12-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %base_ptr_addr = getelementptr i32, ptr addrspace(1) %base_ptrs, i32 %tid
+  %base_ptr_i32 = load i32, ptr addrspace(1) %base_ptr_addr
+  %base_ptr = inttoptr i32 %base_ptr_i32 to ptr addrspace(1)
+  %ptr_offset = getelementptr i8, ptr addrspace(1) %base_ptr, i32 4
+  %ptr_divergent = getelementptr i8, ptr addrspace(1) %ptr_offset, i32 %tid
+  %tid8 = trunc i32 %tid to i8
+  %value = sub i8 0, %tid8
+  %old = atomicrmw max ptr addrspace(1) %ptr_divergent, i8 %value seq_cst, align 1
+  %output_ptr = getelementptr i8, ptr addrspace(1) %output, i32 %tid
+  store i8 %old, ptr addrspace(1) %output_ptr, align 1
+  ret void
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; IR: {{.*}}
