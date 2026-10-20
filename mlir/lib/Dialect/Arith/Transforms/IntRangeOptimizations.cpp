@@ -429,6 +429,19 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
         for (OpResult res : newOp->getResults()) {
           res.setType(targetType);
         }
+        // Retain an overflow flag only when the casts preserve operand and
+        // result values in the flag's signed or unsigned interpretation.
+        if (auto overflowOp =
+                dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(newOp)) {
+          auto flags = overflowOp.getOverflowAttr().getValue();
+          if (castKind == CastKind::Unsigned)
+            flags = bitEnumClear(flags, IntegerOverflowFlags::nsw);
+          else if (castKind == CastKind::Signed)
+            flags = bitEnumClear(flags, IntegerOverflowFlags::nuw);
+          newOp->setAttr(
+              overflowOp.getIntegerOverflowAttrName(),
+              IntegerOverflowFlagsAttr::get(rewriter.getContext(), flags));
+        }
       });
       SmallVector<Value> newResults;
       for (auto [newRes, oldRes] :
