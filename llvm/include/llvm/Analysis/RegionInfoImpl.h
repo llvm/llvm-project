@@ -271,9 +271,7 @@ void RegionBase<Tr>::verifyWalk(BlockT *BB, std::set<BlockT *> *visited) const {
 
 template <class Tr>
 void RegionBase<Tr>::verifyRegion() const {
-  // Only do verification when user wants to, otherwise this expensive check
-  // will be invoked by PMDataManager::verifyPreservedAnalysis when
-  // a regionpass (marked PreservedAll) finish.
+  // Only do verification when user wants to.
   if (!RegionInfoBase<Tr>::VerifyRegionInfo)
     return;
 

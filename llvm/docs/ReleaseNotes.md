@@ -199,6 +199,9 @@ Makes programs 10x faster by doing Special New Thing.
   `machine-function-splitter` pass name are removed;
   `createBasicBlockSectionsPass()` takes a `SplitWithPGO` argument instead.
 
+* Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
+  which no longer had any users.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)

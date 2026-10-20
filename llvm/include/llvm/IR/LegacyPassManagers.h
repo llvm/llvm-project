@@ -100,7 +100,6 @@ enum PassDebuggingString {
   FREEING_MSG, // " Freeing Pass '" + PassName
   ON_FUNCTION_MSG, // "' on Function '" + FunctionName + "'...\n"
   ON_MODULE_MSG, // "' on Module '" + ModuleName + "'...\n"
-  ON_REGION_MSG, // "' on Region '" + Msg + "'...\n'"
   ON_LOOP_MSG, // "' on Loop '" + Msg + "'...\n'"
   ON_CG_MSG // "' on Call Graph Nodes '" + Msg + "'...\n'"
 };
