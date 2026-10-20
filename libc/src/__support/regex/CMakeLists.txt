@@ -6,11 +6,14 @@ add_object_library(
     regex_expr_pool.h
     regex_ast.h
   DEPENDS
+    libc.hdr.limits_macros
     libc.hdr.regex_macros
     libc.hdr.stdint_proxy
     libc.src.__support.alloc_checker
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.bitset
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.scope
     libc.src.__support.CPP.span
     libc.src.__support.CPP.utility
     libc.src.__support.error_or
@@ -40,4 +43,18 @@ add_object_library(
     .regex_expr_pool
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
+)
+
+add_object_library(
+  regex_parser
+  SRCS
+    regex_parser.cpp
+  HDRS
+    regex_parser.h
+  DEPENDS
+    .regex_expr_pool
+    libc.hdr.regex_macros
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )

@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextPOSIXCore_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"

@@ -182,6 +182,36 @@ TEST_P(olMemcpyTest, SuccessDtoHSync) {
   ASSERT_SUCCESS(olMemFree(Context, Alloc));
 }
 
+TEST_P(olMemcpyTest, SuccessNullHostDevice) {
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input.data(), nullptr, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Output.data(), nullptr, Alloc, Device, Size));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+  for (uint8_t Val : Output) {
+    ASSERT_EQ(Val, 42);
+  }
+  ASSERT_SUCCESS(olMemFree(Context, Alloc));
+}
+
+TEST_P(olMemcpyTest, SuccessNullHostDeviceHtoH) {
+  constexpr size_t Size = 1024;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+
+  ASSERT_SUCCESS(
+      olMemcpy(nullptr, Output.data(), nullptr, Input.data(), nullptr, Size));
+
+  for (uint8_t Val : Output) {
+    ASSERT_EQ(Val, 42);
+  }
+}
+
 TEST_P(olMemcpyTest, SuccessSizeZero) {
   constexpr size_t Size = 1024;
   std::vector<uint8_t> Input(Size, 42);
