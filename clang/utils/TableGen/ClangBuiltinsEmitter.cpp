@@ -152,8 +152,6 @@ struct Builtin {
   }
 };
 
-static bool isIdentifierChar(char C) { return isAlnum(C) || C == '_'; }
-
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
@@ -167,6 +165,8 @@ public:
   std::string takeTypeString() && { return std::move(Type); }
 
 private:
+  static bool isIdentifierChar(char C) { return isAlnum(C) || C == '_'; }
+
   void ParsePrototype(StringRef Prototype) {
     Prototype = Prototype.trim();
 

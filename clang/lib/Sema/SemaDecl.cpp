@@ -2551,11 +2551,15 @@ static bool isCompatibleBuiltinParamOrReturnType(ASTContext &Context,
     return true;
 
   // Allow transparent_union wrappers (such as glibc's __SOCKADDR_ARG for
-  // struct sockaddr * in recvfrom) when the builtin expects a pointer.
-  if (BuiltinTy->isPointerType()) {
-    if (const auto *RT = DeclTy->getAs<RecordType>())
-      if (RT->getDecl()->hasAttr<TransparentUnionAttr>())
-        return true;
+  // struct sockaddr * in recvfrom) if any member of the union is compatible
+  // with the expected builtin type.
+  if (const auto *RT = DeclTy->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->hasAttr<TransparentUnionAttr>())
+      return llvm::any_of(RD->fields(), [&](const FieldDecl *FD) {
+        return isCompatibleBuiltinParamOrReturnType(Context, FD->getType(),
+                                                    BuiltinTy, IsTargetTypedef);
+      });
   }
 
   const auto *DeclPtr = DeclTy->getAs<PointerType>();
