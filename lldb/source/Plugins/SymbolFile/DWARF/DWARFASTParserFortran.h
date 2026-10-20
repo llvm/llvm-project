@@ -43,6 +43,11 @@ public:
       const lldb_private::SymbolContext &sc,
       const lldb_private::plugin::dwarf::DWARFDIE &die, lldb::TypeSP type_sp);
 
+  void ParseChildParameters(
+      const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
+      llvm::SmallVectorImpl<lldb_private::CompilerType> &function_param_types,
+      llvm::SmallVectorImpl<llvm::StringRef> &function_param_names);
+
   lldb::TypeSP
   ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                      const lldb_private::plugin::dwarf::DWARFDIE &die,
