@@ -731,7 +731,7 @@ static bool isPromotableLoopSchedule(ASTContext &Ctx,
 void CGOpenMPRuntimeGPU::checkAndSetPromotableLoopDirective(
     const OMPExecutableDirective &D) {
   NoLoopDirective = nullptr;
-  StridedLoopDirective = nullptr;
+  GridStrideLoopDirective = nullptr;
 
   ASTContext &Ctx = CGM.getContext();
   const LangOptions &LangOpts = Ctx.getLangOpts();
@@ -783,7 +783,7 @@ void CGOpenMPRuntimeGPU::checkAndSetPromotableLoopDirective(
     if (OneIterationPerThread)
       NoLoopDirective = LD;
     else
-      StridedLoopDirective = LD;
+      GridStrideLoopDirective = LD;
   };
 
   if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(LD))
@@ -872,9 +872,9 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
     if (NoLoopDirective)
       Attrs.ExecFlags =
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-    else if (StridedLoopDirective)
-      Attrs.ExecFlags =
-          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_STRIDED_LOOP;
+    else if (GridStrideLoopDirective)
+      Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::
+          OMP_TGT_EXEC_MODE_SPMD_GRID_STRIDE_LOOP;
   }
 
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
