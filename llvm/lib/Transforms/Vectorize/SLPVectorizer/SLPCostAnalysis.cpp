@@ -37,6 +37,16 @@ using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
+ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  if (!Stride)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = Stride->getValue() * ElementSize;
+  return ConstantInt::get(Stride->getContext(), IsReverse ? -Bytes : Bytes);
+}
+
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                const TTI::TargetCostKind CostKind,
@@ -61,6 +71,60 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
                             /*CtxI=*/nullptr, VIC);
+}
+
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse) {
+  Value *Stride = getStrideBytesIfConstant(
+      dyn_cast_if_present<ConstantInt>(StrideVal), ScalarTy, DL, IsReverse);
+  InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                 StridedLoadTy, Ptr,
+                                 /*VariableMask=*/false, CommonAlignment,
+                                 /*I=*/nullptr, Stride),
+      CostKind);
+  if (StridedLoadTy != VecTy)
+    StridedCost +=
+        getWidenedStridedCastCost(TTI, StridedLoadTy, VecTy, DL, Ctx, CostKind);
+  return StridedCost;
+}
+
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind) {
+  if (Info.InterleaveFactor) {
+    assert(!Info.IsMasked && "Masked interleaved loads are not supported");
+    return TTI.getInterleavedMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, Info.InterleaveFactor, {},
+        LI0->getAlign(), LI0->getPointerAddressSpace(), CostKind);
+  }
+
+  InstructionCost Cost;
+  if (Info.IsMasked) {
+    Cost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, Info.LoadVecTy,
+                                   LI0->getAlign(),
+                                   LI0->getPointerAddressSpace()),
+        CostKind);
+  } else {
+    Cost = TTI.getMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, LI0->getAlign(),
+        LI0->getPointerAddressSpace(), CostKind,
+        TargetTransformInfo::getOperandInfo(LI0->getPointerOperand()));
+  }
+  // For REVEC the emitted shuffle uses the compress mask expanded to the
+  // individual elements of the vector scalars.
+  SmallVector<int> CompressCostMask(Info.CompressMask);
+  transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                         CompressCostMask);
+  // TODO: include this cost into CommonCost.
+  Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy,
+                         CostKind, CompressCostMask);
+  return Cost;
 }
 
 std::pair<InstructionCost, InstructionCost>
