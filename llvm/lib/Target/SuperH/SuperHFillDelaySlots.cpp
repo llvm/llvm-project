@@ -133,8 +133,18 @@ bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
     LLVM_DEBUG(dbgs() << "Swapping " << TII->getName(MI.getOpcode()) << " and "
                       << TII->getName(Candidate->getOpcode()) << " @ "
                       << MBB.getParent()->getName() << "\n");
-
+    
     MBB.insertAfter(MBBI, Candidate->removeFromParent());
+
+    // If the instruction we moved in defines an operand that we use,
+    // mark it as live-in. This is neccesary as undefined operands
+    // are invalid in SSA form, but the delay slot puts the defining
+    // instruction AFTER the user.
+    if (Candidate->getDesc().NumDefs > 0 && Candidate->getOperand(0).isReg()) {
+      auto ResultReg = Candidate->getOperand(0).getReg();
+      MBB.addLiveIn(ResultReg);
+    }
+
     return true;
   }
 
@@ -142,8 +152,7 @@ bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
                     << " @ " << MBB.getParent()->getName() << "\n");
 
   // Otherwise just insert a NOP.
-  MBB.insertAfter(MBBI,
-                  MF.CreateMachineInstr(TII->get(SH::NOP), MI.getDebugLoc()));
+  MBB.insertAfter(MBBI, MF.CreateMachineInstr(TII->get(SH::NOP), MI.getDebugLoc()));
   return true;
 }
 

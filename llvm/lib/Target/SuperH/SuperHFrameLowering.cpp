@@ -111,17 +111,17 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
   // Store previous frame pointer.
   if (HasFP) {
     StackOff += 4;
-    BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), FP)
-        .addReg(SP)
-        .setMIFlag(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM)) 
+      .addReg(FP)
+      .addReg(SP)
+      .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // Store Return address on stack (if needed)
   if (MFI.hasCalls()) {
     StackOff += 4;
-    BuildMI(MBB, MBBI, DL, TII.get(SH::STSMPR))
-        .addReg(SP)
-        .setMIFlag(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII.get(SH::STSMPR), SP)
+      .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // Create new stack frame.
@@ -130,6 +130,12 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), FP)
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameSetup);
+
+  
+    // Mark the FramePtr as live-in in every block except the entry.
+    for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF)) {
+      MBBJ.addLiveIn(FP);
+    }
   }
 
   MFI.setOffsetAdjustment(StackOff);

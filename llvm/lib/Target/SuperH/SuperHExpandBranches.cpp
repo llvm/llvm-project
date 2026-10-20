@@ -24,6 +24,7 @@
 #include "SuperHSubtarget.h"
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -57,8 +58,29 @@ private:
 
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
+
+  // ensureTargetSym - Ensures that a branch target has a symbol
+  // generated for it. This is neccesary because we generate 
+  // relocations for the indirect branches when a BB is used
+  // directly.
+  MachineBasicBlock *ensureTargetSym(MachineBasicBlock *BB);
+
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
 };
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                                 Helpers
+//===----------------------------------------------------------------------===//
+MachineBasicBlock *
+SuperHExpandBR::ensureTargetSym(MachineBasicBlock *BB) {
+  if (!BB->hasLabelMustBeEmitted())
+    BB->setLabelMustBeEmitted();
+
+  return BB;
+}
 
 
 
@@ -110,7 +132,7 @@ bool SuperHExpandBR::expand<SH::BRCC>(Block &MBB, BlockIt MBBI) {
 
   // Otherwise just do a basic direct conditional jump.
   BuildMI(MBB, MBBI, DL, TII->getBrCond(CC, HasDelaySlot))
-    .addMBB(DstBB);
+    .addMBB(ensureTargetSym(DstBB));
 
   MI.eraseFromParent();
   return true;
@@ -120,11 +142,11 @@ template <>
 bool SuperHExpandBR::expand<SH::BR>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
-  auto DstBB = MI.getOperand(0).getMBB();
+  auto *DstBB = MI.getOperand(0).getMBB();
 
   BuildMI(MBB, MBBI, DL, TII->get(SH::BRA))
-    .addMBB(DstBB);
-  
+    .addMBB(ensureTargetSym(DstBB));
+
   MI.eraseFromParent();
   return true;
 }
