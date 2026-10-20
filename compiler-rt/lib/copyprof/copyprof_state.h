@@ -27,12 +27,14 @@ namespace __copyprof {
 // In the `COPY` context, shadow memory is marked as copy.
 // In the `CTOR` context, shadow memory is marked as non-copy.
 // In the `DTOR` context, shadow memory is not updated (to avoid false negatives
-// during destruction), except that newly constructed objects are marked as
-// copy, so that destroying temporaries does not cause false negatives either
-// (see TemporaryObjectInDtorDoesNotSuppressReport). Note that newly created
-// temporary objects inside d'tors would still check their shadow memory when
-// destroyed, but if that is never updated when constructed, its state wouldn't
-// be meaningful. That's why shadow memory is marked as copy in d'tors as well.
+// during destruction), except that newly allocated or constructed memory is
+// marked as copy, so that freeing or destroying temporaries does not cause
+// false negatives either (see TemporaryObjectInDtorDoesNotSuppressReport). Note
+// that newly created temporary objects inside d'tors would still check their
+// shadow memory when destroyed, but if that is never updated when constructed,
+// its state wouldn't be meaningful. That's why shadow memory is marked as copy
+// in d'tors as well (see DISABLED_CopyModifiedByAnotherDtorIsNotReported for a
+// contrived example where this leads to FPs).
 // Once control flow leaves (any nested) special member functions, the context
 // is set to `NONE`. In this state, any stores mark shadow memory as non-copy.
 enum class SmfContext : u8 {
@@ -42,8 +44,8 @@ enum class SmfContext : u8 {
   DTOR,
 };
 
-// Whether memory that is newly constructed in `ctx` is marked as copy (see
-// `SmfContext`).
+// Whether memory that is newly allocated or constructed in `ctx` is marked as
+// copy (see `SmfContext`).
 inline bool ShouldMarkNewMemoryAsCopy(SmfContext ctx) {
   return ctx == SmfContext::COPY || ctx == SmfContext::DTOR;
 }
