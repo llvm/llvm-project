@@ -9271,6 +9271,14 @@ static bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
           return !isValidElementType(Arg->getType(), Opts.slp_revec);
         }))
       return false;
+    // A call, used only as a select operand, may get the values rejected by the
+    // select condition, which the vector library call handles on its slow path.
+    if (!CI->use_empty() && !CI->hasNUsesOrMore(UsesLimit) &&
+        all_of(CI->users(), [&](User *U) {
+          return match(
+              U, m_Select(m_Unless(m_Specific(CI)), m_Value(), m_Value()));
+        }))
+      return false;
     if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
       auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
       return CheckCached(Cache.CheapIntrinsics.contains(Key),

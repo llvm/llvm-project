@@ -9,27 +9,24 @@ define void @pow_select(ptr noalias %in, ptr noalias %out, float %g0, float %g1,
 ; CHECK-LABEL: define void @pow_select(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], float [[G0:%.*]], float [[G1:%.*]], float [[G2:%.*]], float [[G3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[IN]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[G0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[G1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[G2]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[G3]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP4]])
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
+; CHECK-NEXT:    [[IN1:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 4
+; CHECK-NEXT:    [[IN2:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 8
+; CHECK-NEXT:    [[IN3:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 12
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[IN1]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[IN2]], align 4
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[IN3]], align 4
+; CHECK-NEXT:    [[PW0:%.*]] = call float @llvm.pow.f32(float [[X0]], float [[G0]])
+; CHECK-NEXT:    [[PW1:%.*]] = call float @llvm.pow.f32(float [[X1]], float [[G1]])
+; CHECK-NEXT:    [[PW2:%.*]] = call float @llvm.pow.f32(float [[X2]], float [[G2]])
+; CHECK-NEXT:    [[PW3:%.*]] = call float @llvm.pow.f32(float [[X3]], float [[G3]])
 ; CHECK-NEXT:    [[C0:%.*]] = fcmp ole float [[X0]], 1.000000e+00
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[C1:%.*]] = fcmp ole float [[X1]], 2.000000e+00
-; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[C2:%.*]] = fcmp ole float [[X2]], 3.000000e+00
-; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x float> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[C3:%.*]] = fcmp ugt float [[X3]], 4.000000e+00
-; CHECK-NEXT:    [[PW0:%.*]] = extractelement <4 x float> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C0]], float [[X0]], float [[PW0]]
-; CHECK-NEXT:    [[PW1:%.*]] = extractelement <4 x float> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C1]], float [[X1]], float [[PW1]]
-; CHECK-NEXT:    [[PW2:%.*]] = extractelement <4 x float> [[TMP5]], i64 2
 ; CHECK-NEXT:    [[R2:%.*]] = select i1 [[C2]], float [[X2]], float [[PW2]]
-; CHECK-NEXT:    [[PW3:%.*]] = extractelement <4 x float> [[TMP5]], i64 3
 ; CHECK-NEXT:    [[R3:%.*]] = select i1 [[C3]], float [[PW3]], float [[X3]]
 ; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 4
 ; CHECK-NEXT:    [[OUT2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 8
@@ -128,17 +125,14 @@ define void @pow_select_f64(ptr noalias %in, ptr noalias %out, double %g0, doubl
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], double [[G0:%.*]], double [[G1:%.*]], double [[G2:%.*]], double [[G3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[IN2:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 16
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[IN2]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[G2]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[G3]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[TMP6]], <2 x double> [[TMP8]])
-; CHECK-NEXT:    [[X2:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; CHECK-NEXT:    [[IN3:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 24
+; CHECK-NEXT:    [[X2:%.*]] = load double, ptr [[IN2]], align 8
+; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[IN3]], align 8
+; CHECK-NEXT:    [[PW2:%.*]] = call double @llvm.pow.f64(double [[X2]], double [[G2]])
+; CHECK-NEXT:    [[PW3:%.*]] = call double @llvm.pow.f64(double [[X3]], double [[G3]])
 ; CHECK-NEXT:    [[C2:%.*]] = fcmp ole double [[X2]], 3.000000e+00
-; CHECK-NEXT:    [[X3:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[C3:%.*]] = fcmp ugt double [[X3]], 4.000000e+00
-; CHECK-NEXT:    [[PW2:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
 ; CHECK-NEXT:    [[R2:%.*]] = select i1 [[C2]], double [[X2]], double [[PW2]]
-; CHECK-NEXT:    [[PW3:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
 ; CHECK-NEXT:    [[R3:%.*]] = select i1 [[C3]], double [[PW3]], double [[X3]]
 ; CHECK-NEXT:    [[OUT2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 16
 ; CHECK-NEXT:    [[OUT3:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 24
