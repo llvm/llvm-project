@@ -19811,7 +19811,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       return C;
     uint64_t Scale = EntryToScale.lookup(TE);
     if (!Scale)
-      Scale = getEntryEffectiveScale(*TE);
+      Scale = getEntryEffectiveScale(*TE, TE->Idx == 0 ? RdxRoot : nullptr);
     return C * Scale;
   };
   // A splat subtree pays off only if some surviving gather node reuses it and
@@ -33493,7 +33493,8 @@ public:
         }
         V.transformNodes();
         V.computeMinimumValueSizes();
-        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(
+            VL, cast<Instruction>(ReductionRoot));
         // A negated slice is subtracted in the final combine, it cannot be
         // accumulated lane-wise.
         const bool LoopAccCandidate =
