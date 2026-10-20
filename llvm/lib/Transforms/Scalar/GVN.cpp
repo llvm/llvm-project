@@ -882,22 +882,22 @@ uint32_t GVNValueTable::lookupOrAddCall(CallInst *C) {
   return NextValueNumber++;
 }
 
-/// Returns the value number for the specified load or store instruction.
-uint32_t GVNValueTable::computeLoadStoreVN(Instruction *I) {
-  if (!MSSA || !IsMSSAEnabled) {
-    ValueNumbering[I] = NextValueNumber;
+/// Returns the value number for the specified load instruction.
+uint32_t GVNValueTable::computeLoadVN(LoadInst *LI) {
+  if (!MSSA || !IsMSSAEnabled || !LI->isSimple()) {
+    ValueNumbering[LI] = NextValueNumber;
     return NextValueNumber++;
   }
 
   Expression Exp;
-  Exp.Ty = I->getType();
-  Exp.Opcode = I->getOpcode();
-  for (Use &Op : I->operands())
+  Exp.Ty = LI->getType();
+  Exp.Opcode = LI->getOpcode();
+  for (Use &Op : LI->operands())
     Exp.VarArgs.push_back(lookupOrAdd(Op));
-  addMemoryStateToExp(I, Exp);
+  addMemoryStateToExp(LI, Exp);
 
   auto [V, _] = assignExpNewValueNum(Exp);
-  ValueNumbering[I] = V;
+  ValueNumbering[LI] = V;
   return V;
 }
 
@@ -988,8 +988,7 @@ uint32_t GVNValueTable::lookupOrAdd(Value *V) {
       NumberingPhi[NextValueNumber] = cast<PHINode>(V);
       return NextValueNumber++;
     case Instruction::Load:
-    case Instruction::Store:
-      return computeLoadStoreVN(I);
+      return computeLoadVN(cast<LoadInst>(I));
     default:
       ValueNumbering[V] = NextValueNumber;
       return NextValueNumber++;
@@ -3285,7 +3284,7 @@ uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
   if (BasicBlock *BB = NumberingBB[Num]) {
     assert(MSSA && "NumberingBB is non-empty only when using MemorySSA");
     // Value numbers of basic blocks are used to represent memory state in
-    // load/store instructions and read-only function calls when said state is
+    // load instructions and read-only function calls when said state is
     // set by a MemoryPhi.
     if (BB != PhiBlock)
       return Num;
@@ -3825,7 +3824,7 @@ bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   this->LI = &LI;
   VN.setMemDep(MD);
   // Propagate the MSSA-enabled flag so the value-numbering paths in
-  // lookupOrAddCall() and computeLoadStoreVN(), which depends on whether
+  // lookupOrAddCall() and computeLoadVN(), which depends on whether
   // IsMSSAEnabled is turned on.
   VN.setMemorySSA(MSSA, isMemorySSAEnabled());
   ORE = RunORE;
