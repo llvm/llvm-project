@@ -530,7 +530,6 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
 
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-  // Floating-point operations on GPRs are not supported by GlobalISel yet.
   if (Subtarget.hasStdExtZfinx())
     return false;
 
