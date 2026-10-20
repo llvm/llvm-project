@@ -283,8 +283,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
     MulOp = Instruction::FMul;
   }
 
-  VPBuilder Builder(Plan->getVectorPreheader());
   // If the phi is truncated, truncate the start and step values.
+  VPBuilder Builder(Plan->getVectorPreheader());
   Type *StepTy = Step->getScalarType();
   if (Ty->getScalarSizeInBits() < StepTy->getScalarSizeInBits()) {
     assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
