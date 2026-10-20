@@ -18,6 +18,7 @@
 #include "copyprof_interceptors.h"
 #include "copyprof_interface_internal.h"
 #include "copyprof_shadow.h"
+#include "copyprof_state.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -36,7 +37,8 @@ using namespace __sanitizer;
 
 // Callbacks invoked by the sanitizer allocator whenever it maps or unmaps
 // memory. They are no-ops, as CopyProf does not need to track the allocator's
-// mappings.
+// mappings: shadow memory is updated per allocation instead (see
+// `CopyProfAllocator::Allocate`).
 struct CopyProfMapUnmapCallback {
   // Called when the primary allocator maps memory for a region from which it
   // serves small and medium sized allocations.
@@ -100,7 +102,7 @@ AllocatorCache* GetThreadCache() {
   return thread_cache;
 }
 
-// Custom allocator that keeps track of allocation sizes.
+// Custom allocator that updates shadow memory accordingly.
 struct CopyProfAllocator {
   // Heap allocations must be at least 8-byte aligned so independent
   // allocations never share a shadow byte (avoiding data races).
@@ -150,12 +152,19 @@ struct CopyProfAllocator {
       ReportOutOfMemory(size, &stack);
     }
     GetMetadata(allocated)->requested_size = size;
+    MarkApplicationMemory(
+        allocated, size,
+        ShouldMarkNewMemoryAsCopy(__copyprof_state.smf_context));
     return allocated;
   }
 
   void Deallocate(void* ptr) {
     if (UNLIKELY(!ptr))
       return;
+    if (__copyprof_state.smf_context == SmfContext::DTOR) {
+      __copyprof_state.is_transitive_copy &=
+          IsMarkedAsCopy(ptr, GetMetadata(ptr)->requested_size);
+    }
     if (AllocatorCache* cache = GetThreadCache()) {
       allocator.Deallocate(cache, ptr);
     } else {
@@ -182,8 +191,10 @@ struct CopyProfAllocator {
   }
 
   // Implemented via `Allocate` and `Deallocate` rather than
-  // `CombinedAllocator::Reallocate`, s.t. metadata is updated as for any other
-  // (de)allocation.
+  // `CombinedAllocator::Reallocate`, s.t. shadow memory and metadata are
+  // updated as for any other (de)allocation.
+  // Note that the shadow of the old memory is not carried over.
+  // TODO: figure out whether this assumption is a problem in practice.
   void* Reallocate(void* old_ptr, uptr new_size) {
     CHECK(old_ptr && new_size);
     void* new_ptr = Allocate(new_size);
