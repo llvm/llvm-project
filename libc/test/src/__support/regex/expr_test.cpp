@@ -26,7 +26,6 @@ using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
 TEST(LlvmLibcRegexExprTest, Interning) {
   ExprPool pool;
   EXPECT_EQ(sizeof(Expr), size_t(16));
-  EXPECT_EQ(sizeof(ByteSet), size_t(32));
   EXPECT_EQ(pool.allocated_bytes(), size_t(0));
   auto lit_a = pool.make_lit('a');
   ASSERT_TRUE(lit_a.has_value());

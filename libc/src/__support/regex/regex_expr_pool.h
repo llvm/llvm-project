@@ -54,6 +54,8 @@ class ExprPool {
   /// unique nodes at 70% max load factor while keeping initial pool footprint
   /// at 512B + 64B + 256B = 832B (< 1 KiB).
   static constexpr size_t INITIAL_HASH_CAPACITY = 64;
+  /// Scaling factor used when growing dynamic pool arrays and hash tables.
+  static constexpr size_t GROWTH_FACTOR = 2;
   /// Grow the hash table when occupancy reaches 70% to keep linear-probing
   /// chains short.
   static constexpr double MAX_LOAD_FACTOR = 0.7;

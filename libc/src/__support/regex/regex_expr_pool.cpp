@@ -140,8 +140,8 @@ ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
 bool ExprPool::allocate_block() {
   AllocChecker ac;
   if (block_count == blocks.size()) {
-    size_t new_cap =
-        blocks.empty() ? INITIAL_BLOCKS_CAPACITY : blocks.size() * 2;
+    size_t new_cap = blocks.empty() ? INITIAL_BLOCKS_CAPACITY
+                                    : blocks.size() * GROWTH_FACTOR;
     Block **new_blocks = new (ac) Block *[new_cap];
     if (!ac)
       return false;
@@ -162,7 +162,7 @@ bool ExprPool::allocate_block() {
 }
 
 bool ExprPool::grow_hashtable() {
-  size_t new_cap = hashtable.size() * 2;
+  size_t new_cap = hashtable.size() * GROWTH_FACTOR;
   AllocChecker ac;
   ExprId *raw_table = new (ac) ExprId[new_cap];
   if (!ac)
@@ -249,8 +249,8 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
   }
 
   if (byte_set_count == byte_sets.size()) {
-    size_t new_cap =
-        byte_sets.empty() ? INITIAL_BYTE_SETS_CAPACITY : byte_sets.size() * 2;
+    size_t new_cap = byte_sets.empty() ? INITIAL_BYTE_SETS_CAPACITY
+                                       : byte_sets.size() * GROWTH_FACTOR;
     AllocChecker ac;
     ByteSet *new_sets = new (ac) ByteSet[new_cap];
     if (!ac)
