@@ -2622,6 +2622,29 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedLeavesSemanticIndexGaps) {
                 {{/*Row=*/1, /*Col=*/0}, {/*Row=*/7, /*Col=*/0}});
 }
 
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedSkipsNotPackedElements) {
+  // SV_Coverage is part of the pixel output signature, but it is never
+  // allocated a register location.
+
+  // struct PSOut {
+  //   float4 Color : SV_Target1;
+  //   uint Mask    : SV_Coverage;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/1},
+       {dxbc::PSV::SemanticKind::Coverage, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout:
+  // reg0: unused.xyzw
+  // reg1: Color.xyzw
+  verifyPacking(PackingMethod::Indexed, Config, /*ExpectedRows=*/2,
+                {{/*Row=*/1, /*Col=*/0}, Unallocated});
+}
+
 TEST_F(HLSLSemanticSignaturePackingTest,
        IndexedRejectsOutOfRangeSemanticIndex) {
   // A semantic index outside the 32-row signature cannot be allocated.

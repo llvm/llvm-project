@@ -80,7 +80,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::SampleIndex,
                                            SemanticKind::ViewID,
                                            SemanticKind::PrimitiveID,
-                                           SemanticKind::StencilRef};
+                                           SemanticKind::StencilRef,
+                                           SemanticKind::Coverage};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -241,6 +242,17 @@ TEST(HLSLSemanticStagesTest, StencilRefSignaturePoints) {
       {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked},
   };
   expectOnlySignaturePoints(SemanticKind::StencilRef, Valid);
+}
+
+// The SV_Coverage pixel input is read with a dedicated operation and is never
+// placed in a signature, while the pixel output is in the signature but not
+// packed.
+TEST(HLSLSemanticStagesTest, CoverageSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
+      {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked},
+  };
+  expectOnlySignaturePoints(SemanticKind::Coverage, Valid);
 }
 
 } // namespace
