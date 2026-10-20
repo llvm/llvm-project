@@ -70,9 +70,11 @@ TEST(LlvmLibcUniquePtrTest, MoveAssignment) {
   int destruct_count2 = 0;
   {
     AllocChecker ac;
-    unique_ptr<DestructTracker> ptr1(new (ac) DestructTracker(&destruct_count1));
+    unique_ptr<DestructTracker> ptr1(new (ac)
+                                         DestructTracker(&destruct_count1));
     ASSERT_TRUE(static_cast<bool>(ac));
-    unique_ptr<DestructTracker> ptr2(new (ac) DestructTracker(&destruct_count2));
+    unique_ptr<DestructTracker> ptr2(new (ac)
+                                         DestructTracker(&destruct_count2));
     ASSERT_TRUE(static_cast<bool>(ac));
     ptr2 = LIBC_NAMESPACE::cpp::move(ptr1);
     ASSERT_FALSE(static_cast<bool>(ptr1));
