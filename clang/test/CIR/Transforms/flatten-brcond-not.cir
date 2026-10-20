@@ -1,0 +1,167 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @onTrue()
+  cir.func private @onFalse()
+  cir.func private @body()
+  cir.func private @cond() -> !cir.bool
+
+  cir.func @if_not(%arg0: !cir.bool) {
+    %0 = cir.not %arg0 : !cir.bool
+    cir.if %0 {
+      cir.call @onTrue() : () -> ()
+    } else {
+      cir.call @onFalse() : () -> ()
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @if_not(%arg0: !cir.bool)
+  // CHECK-NOT:     cir.not
+  // CHECK:         cir.brcond %arg0 ^[[FALSE:bb[0-9]+]], ^[[TRUE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.call @onTrue()
+  // CHECK:       ^[[FALSE]]:
+  // CHECK-NEXT:    cir.call @onFalse()
+
+  cir.func @if_not_no_else(%arg0: !cir.bool) {
+    %0 = cir.not %arg0 : !cir.bool
+    cir.if %0 {
+      cir.call @onTrue() : () -> ()
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @if_not_no_else(%arg0: !cir.bool)
+  // CHECK-NOT:     cir.not
+  // CHECK:         cir.brcond %arg0 ^[[CONT:bb[0-9]+]], ^[[TRUE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.call @onTrue()
+  // CHECK:       ^[[CONT]]:
+  // CHECK-NEXT:    cir.return
+
+  cir.func @ternary_not(%arg0: !cir.bool) {
+    %0 = cir.not %arg0 : !cir.bool
+    cir.ternary(%0, true {
+      cir.call @onTrue() : () -> ()
+      cir.yield
+    }, false {
+      cir.call @onFalse() : () -> ()
+      cir.yield
+    }) : (!cir.bool) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @ternary_not(%arg0: !cir.bool)
+  // CHECK-NOT:     cir.not
+  // CHECK:         cir.brcond %arg0 ^[[FALSE:bb[0-9]+]], ^[[TRUE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.call @onTrue()
+  // CHECK:       ^[[FALSE]]:
+  // CHECK-NEXT:    cir.call @onFalse()
+
+  cir.func @ternary_not_value(%arg0: !cir.bool, %arg1: !s32i, %arg2: !s32i) -> !s32i {
+    %0 = cir.not %arg0 : !cir.bool
+    %1 = cir.ternary(%0, true {
+      cir.yield %arg1 : !s32i
+    }, false {
+      cir.yield %arg2 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @ternary_not_value(%arg0: !cir.bool, %arg1: !s32i, %arg2: !s32i) -> !s32i
+  // CHECK-NOT:     cir.not
+  // CHECK:         cir.brcond %arg0 ^[[FALSE:bb[0-9]+]], ^[[TRUE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.br ^[[CONT:bb[0-9]+]](%arg1 : !s32i)
+  // CHECK:       ^[[FALSE]]:
+  // CHECK-NEXT:    cir.br ^[[CONT]](%arg2 : !s32i)
+  // CHECK:       ^[[CONT]](%[[RES:.*]]: !s32i):
+  // CHECK:         cir.return %[[RES]] : !s32i
+
+  cir.func @while_not() {
+    cir.while {
+      %0 = cir.call @cond() : () -> !cir.bool
+      %1 = cir.not %0 : !cir.bool
+      cir.condition(%1)
+    } do {
+      cir.call @body() : () -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // The cir.not feeding a loop condition is not folded into the branch.
+  // CHECK-LABEL: cir.func @while_not()
+  // CHECK:         %[[C:.*]] = cir.call @cond()
+  // CHECK-NEXT:    %[[N:.*]] = cir.not %[[C]] : !cir.bool
+  // CHECK-NEXT:    cir.brcond %[[N]] ^[[BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK-NEXT:    cir.call @body()
+  // CHECK:       ^[[EXIT]]:
+  // CHECK-NEXT:    cir.return
+
+  cir.func @if_double_not(%arg0: !cir.bool) {
+    %0 = cir.not %arg0 : !cir.bool
+    %1 = cir.not %0 : !cir.bool
+    cir.if %1 {
+      cir.call @onTrue() : () -> ()
+    } else {
+      cir.call @onFalse() : () -> ()
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @if_double_not(%arg0: !cir.bool)
+  // CHECK-NOT:     cir.not
+  // CHECK:         cir.brcond %arg0 ^[[TRUE:bb[0-9]+]], ^[[FALSE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.call @onTrue()
+  // CHECK:       ^[[FALSE]]:
+  // CHECK-NEXT:    cir.call @onFalse()
+
+  cir.func @if_double_not_inner_used(%arg0: !cir.bool, %arg1: !cir.ptr<!cir.bool>) {
+    %0 = cir.not %arg0 : !cir.bool
+    cir.store %0, %arg1 : !cir.bool, !cir.ptr<!cir.bool>
+    %1 = cir.not %0 : !cir.bool
+    cir.if %1 {
+      cir.call @onTrue() : () -> ()
+    } else {
+      cir.call @onFalse() : () -> ()
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @if_double_not_inner_used(%arg0: !cir.bool, %arg1: !cir.ptr<!cir.bool>)
+  // CHECK-NEXT:    %[[N:.*]] = cir.not %arg0 : !cir.bool
+  // CHECK-NEXT:    cir.store %[[N]], %arg1
+  // CHECK-NEXT:    cir.brcond %arg0 ^[[TRUE:bb[0-9]+]], ^[[FALSE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.call @onTrue()
+  // CHECK:       ^[[FALSE]]:
+  // CHECK-NEXT:    cir.call @onFalse()
+
+  cir.func @if_not_other_use(%arg0: !cir.bool, %arg1: !cir.ptr<!cir.bool>) {
+    %0 = cir.not %arg0 : !cir.bool
+    cir.store %0, %arg1 : !cir.bool, !cir.ptr<!cir.bool>
+    cir.if %0 {
+      cir.call @onTrue() : () -> ()
+    } else {
+      cir.call @onFalse() : () -> ()
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @if_not_other_use(%arg0: !cir.bool, %arg1: !cir.ptr<!cir.bool>)
+  // CHECK-NEXT:    %[[N:.*]] = cir.not %arg0 : !cir.bool
+  // CHECK-NEXT:    cir.store %[[N]], %arg1
+  // CHECK-NEXT:    cir.brcond %arg0 ^[[FALSE:bb[0-9]+]], ^[[TRUE:bb[0-9]+]]
+  // CHECK:       ^[[TRUE]]:
+  // CHECK-NEXT:    cir.call @onTrue()
+  // CHECK:       ^[[FALSE]]:
+  // CHECK-NEXT:    cir.call @onFalse()
+}
