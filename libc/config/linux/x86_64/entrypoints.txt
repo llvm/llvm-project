@@ -58,6 +58,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.posix_fadvise64
     libc.src.fcntl.posix_fallocate
 
+    # ftw.h entrypoints
+    libc.src.ftw.ftw
+
     # grp.h entrypoints
     libc.src.grp.endgrent
     libc.src.grp.getgrent

@@ -1,0 +1,27 @@
+add_custom_target(libc-ftw-tests)
+
+add_libc_test(
+  ftw_test
+  SUITE
+    libc-ftw-tests
+  SRCS
+    ftw_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.ftw_macros
+    libc.hdr.types.struct_stat
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.fcntl.open
+    libc.src.ftw.ftw
+    libc.src.sys.stat.chmod
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.close
+    libc.src.unistd.geteuid
+    libc.src.unistd.rmdir
+    libc.src.unistd.symlink
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

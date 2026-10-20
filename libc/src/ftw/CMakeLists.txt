@@ -1,0 +1,43 @@
+add_object_library(
+  ftw_impl
+  SRCS
+    ftw_impl.cpp
+  HDRS
+    ftw_impl.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.ftw_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.__ftw_func_t
+    libc.hdr.types.dev_t
+    libc.hdr.types.ino_t
+    libc.hdr.types.struct_dirent
+    libc.hdr.types.struct_stat
+    libc.src.__support.alloc_checker
+    libc.src.__support.CPP.expected
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.File.dir
+    libc.src.__support.File.platform_dir
+    libc.src.__support.File.scoped_dir
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
+  ftw
+  SRCS
+    ftw.cpp
+  HDRS
+    ftw.h
+  DEPENDS
+    .ftw_impl
+    libc.hdr.types.__ftw_func_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
