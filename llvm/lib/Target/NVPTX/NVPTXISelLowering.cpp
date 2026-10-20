@@ -122,6 +122,18 @@ static cl::opt<bool> AllowFTZAtomics(
              "FTZ behavior does not match the function's denormal mode."),
     cl::init(true));
 
+// Experimental: a floating-point identity does not preserve arbitrary bits in
+// the neighboring lane, in particular NaN encodings. Enabling this option also
+// permits accessing the entire enclosing 32-bit word atomically.
+// PTX half-precision arithmetic returns an unspecified NaN:
+// https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#half-precision-floating-point-instructions
+static cl::opt<bool> WidenFP16Atomics(
+    "nvptx-widen-fp16-atomics", cl::Hidden,
+    cl::desc("Widen scalar fp16/bf16 atomics to packed atomics, assuming the "
+             "neighboring lane is safe to access atomically and contains no "
+             "NaN"),
+    cl::init(false));
+
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
 static cl::opt<bool> UseApproxLog2F32(
@@ -8239,6 +8251,26 @@ static unsigned getWidestNativeAtomicRMWVectorWidth(
   return HasPackedAdd ? 2 : 0;
 }
 
+static bool canWidenFP16AtomicRMW(const AtomicRMWInst *AI,
+                                  bool IgnoreFTZMismatch,
+                                  const NVPTXSubtarget &STI) {
+  if (!WidenFP16Atomics || AI->isVolatile())
+    return false;
+
+  Type *Ty = AI->getType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    if (VecTy->getNumElements() != 1)
+      return false;
+    Ty = VecTy->getElementType();
+  }
+  if (!Ty->isHalfTy() && !Ty->isBFloatTy())
+    return false;
+
+  return getWidestNativeAtomicRMWVectorWidth(
+             AI->getOperation(), Ty, AI->getPointerAddressSpace(),
+             *AI->getFunction(), IgnoreFTZMismatch, STI) >= 2;
+}
+
 NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   const DataLayout &DL = AI->getDataLayout();
@@ -8248,6 +8280,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   const bool IgnoreFTZMismatch =
       AllowFTZAtomics ||
       AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+
+  if (canWidenFP16AtomicRMW(AI, IgnoreFTZMismatch, STI)) {
+    // Reprocess subtraction as addition before constructing the packed value.
+    if (Op == AtomicRMWInst::FSub)
+      return AtomicExpansionKind::Expand;
+    return AtomicExpansionKind::CustomExpand;
+  }
 
   if (AI->isElementwise() &&
       cast<FixedVectorType>(AI->getType())->getNumElements() > 1) {
@@ -8316,6 +8355,76 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
                                      *AI->getFunction(), IgnoreFTZMismatch,
                                      STI);
+}
+
+void NVPTXTargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  assert(shouldExpandAtomicRMWInIR(AI) == AtomicExpansionKind::CustomExpand &&
+         "Expected an eligible scalar fp16 atomic");
+  IRBuilder<> Builder(AI);
+  const DataLayout &DL = AI->getDataLayout();
+  Type *Ty = AI->getType()->getScalarType();
+  auto *VecTy = FixedVectorType::get(Ty, 2);
+  Value *Ptr = AI->getPointerOperand();
+  Type *IntPtrTy = DL.getIntPtrType(Ptr->getType());
+
+  // Select the original halfword in its enclosing aligned 32-bit word.
+  Value *IsHigh = Builder.getFalse();
+  Value *AlignedPtr = Ptr;
+  if (AI->getAlign() < Align(4)) {
+    Value *Addr = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+    Value *Halfword = Builder.CreateAnd(Addr, ConstantInt::get(IntPtrTy, 2));
+    IsHigh = Builder.CreateICmpNE(Halfword, ConstantInt::get(IntPtrTy, 0),
+                                  "atomic.high");
+    AlignedPtr = Builder.CreateIntrinsic(
+        Intrinsic::ptrmask, {Ptr->getType(), IntPtrTy},
+        {Ptr, ConstantInt::getSigned(IntPtrTy, -4)}, nullptr, "atomic.aligned");
+  }
+
+  // -0 preserves both signs of zero under round-to-nearest addition. Min/max
+  // use +infinity/-infinity. All forms preserve subnormals through .noftz.
+  // These identities require the neighboring lane's no-NaN assumption above.
+  Constant *Identity;
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::FAdd:
+    Identity = ConstantFP::getNegativeZero(Ty);
+    break;
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMinimumNum:
+    Identity = ConstantFP::getInfinity(Ty);
+    break;
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMaximumNum:
+    Identity = ConstantFP::getInfinity(Ty, /*Negative=*/true);
+    break;
+  default:
+    llvm_unreachable("Unsupported fp16 atomic widening");
+  }
+  Value *Val = AI->getValOperand();
+  if (AI->getType()->isVectorTy())
+    Val = Builder.CreateExtractElement(Val, Builder.getInt32(0));
+  // Keep vector indices constant: dynamic insertion can spill the pair to
+  // local memory during legalization.
+  Value *Lo = Builder.CreateSelect(IsHigh, Identity, Val);
+  Value *Hi = Builder.CreateSelect(IsHigh, Val, Identity);
+  Value *PackedVal = Builder.CreateInsertElement(PoisonValue::get(VecTy), Lo,
+                                                 Builder.getInt32(0));
+  PackedVal = Builder.CreateInsertElement(PackedVal, Hi, Builder.getInt32(1),
+                                          "atomic.packed");
+  auto *Wide = Builder.CreateAtomicRMW(AI->getOperation(), AlignedPtr,
+                                       PackedVal, Align(4), AI->getOrdering(),
+                                       AI->getSyncScopeID());
+  Wide->setElementwise(true);
+  // Widening may touch a different object, so do not copy alias metadata.
+  Wide->copyMetadata(*AI, {LLVMContext::MD_mem_cache_hint,
+                           LLVMContext::MD_atomic_ignore_denormal_mode});
+  Value *OldLo = Builder.CreateExtractElement(Wide, Builder.getInt32(0));
+  Value *OldHi = Builder.CreateExtractElement(Wide, Builder.getInt32(1));
+  Value *Old = Builder.CreateSelect(IsHigh, OldHi, OldLo, "atomic.old");
+  if (AI->getType()->isVectorTy())
+    Old = Builder.CreateInsertElement(PoisonValue::get(AI->getType()), Old,
+                                      Builder.getInt32(0));
+  AI->replaceAllUsesWith(Old);
+  AI->eraseFromParent();
 }
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(

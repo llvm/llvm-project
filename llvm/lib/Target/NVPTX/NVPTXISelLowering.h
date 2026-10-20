@@ -152,6 +152,8 @@ public:
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
+  void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
+
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
     // There's rarely any point of packing something into a vector type if we
     // already have the source data.
