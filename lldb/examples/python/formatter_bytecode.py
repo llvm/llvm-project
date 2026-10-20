@@ -541,7 +541,8 @@ _FMT_TOKEN = re.compile(
     | (?: %s )  # replacement
     | \{        # invalid replacement
     | [^{]+     # literal text
-    """ % _FMT_REPLACEMENT,
+    """
+    % _FMT_REPLACEMENT,
     re.VERBOSE,
 )
 
