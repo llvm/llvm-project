@@ -581,7 +581,7 @@ void foo18() {
 // LLVM-NEXT: [[F:%.*]] = getelementptr {{.*}}i8, ptr [[G]], i64 4
 // LLVM-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1) [[F]], i32 noundef 1)
 // LLVM: ret void
-// CIR: cir.func no_inline dso_local @_Z5foo19v() attributes {{{.*}}nothrow, optnone} {
+// CIR: cir.func no_inline dso_local @_Z5foo19v() attributes {{{.*}}no_trapping_math, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
 // CIR: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<![[STRUCT_G]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[G_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_G]]> -> !cir.ptr<!s32i>
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i

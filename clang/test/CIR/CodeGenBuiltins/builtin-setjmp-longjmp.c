@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 void test_setjmp(void *env) {
   // CIR-LABEL: test_setjmp
-  // CIR-SAME: [[ENV:%.*]]: 
+  // CIR-SAME: [[ENV:%[a-z0-9]+]]: 
   // CIR-NEXT: [[ENV_ALLOCA:%[0-9]+]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: cir.store [[ENV]], [[ENV_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: [[ENV_LOAD:%[0-9]+]] = cir.load align(8) [[ENV_ALLOCA]]
@@ -43,7 +43,7 @@ void test_setjmp(void *env) {
 
 void test_longjmp(void *env) {
   // CIR-LABEL: test_longjmp
-  // CIR-SAME: [[ENV:%.*]]: 
+  // CIR-SAME: [[ENV:%[a-z0-9]+]]: 
   // CIR-NEXT: [[ENV_ALLOCA:%[0-9]+]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: cir.store [[ENV]], [[ENV_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: [[ENV_LOAD:%[0-9]+]] = cir.load align(8) [[ENV_ALLOCA]]
