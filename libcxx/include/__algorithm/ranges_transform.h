@@ -44,7 +44,7 @@ using binary_transform_result = in_in_out_result<_I1, _I2, _O1>;
 struct __transform {
 private:
   template <class _InIter, class _Sent, class _OutIter, class _Func, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI static constexpr unary_transform_result<_InIter, _OutIter>
+  static constexpr unary_transform_result<_InIter, _OutIter>
   __unary(_InIter __first, _Sent __last, _OutIter __result, _Func& __operation, _Proj& __projection) {
     while (__first != __last) {
       *__result = std::invoke(__operation, std::invoke(__projection, *__first));
@@ -63,7 +63,7 @@ private:
             class _Func,
             class _Proj1,
             class _Proj2>
-  _LIBCPP_HIDE_FROM_ABI static constexpr binary_transform_result<_InIter1, _InIter2, _OutIter>
+  static constexpr binary_transform_result<_InIter1, _InIter2, _OutIter>
   __binary(_InIter1 __first1,
            _Sent1 __last1,
            _InIter2 __first2,
@@ -89,14 +89,14 @@ public:
             copy_constructible _Func,
             class _Proj = identity>
     requires indirectly_writable<_OutIter, indirect_result_t<_Func&, projected<_InIter, _Proj>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr unary_transform_result<_InIter, _OutIter>
+  constexpr unary_transform_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result, _Func __operation, _Proj __proj = {}) const {
     return __unary(std::move(__first), std::move(__last), std::move(__result), __operation, __proj);
   }
 
   template <input_range _Range, weakly_incrementable _OutIter, copy_constructible _Func, class _Proj = identity>
     requires indirectly_writable<_OutIter, indirect_result_t<_Func, projected<iterator_t<_Range>, _Proj>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr unary_transform_result<borrowed_iterator_t<_Range>, _OutIter>
+  constexpr unary_transform_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, _Func __operation, _Proj __projection = {}) const {
     return __unary(ranges::begin(__range), ranges::end(__range), std::move(__result), __operation, __projection);
   }
@@ -111,7 +111,7 @@ public:
             class _Proj2 = identity>
     requires indirectly_writable<_OutIter,
                                  indirect_result_t<_Func&, projected<_InIter1, _Proj1>, projected<_InIter2, _Proj2>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr binary_transform_result<_InIter1, _InIter2, _OutIter> operator()(
+  constexpr binary_transform_result<_InIter1, _InIter2, _OutIter> operator()(
       _InIter1 __first1,
       _Sent1 __last1,
       _InIter2 __first2,
@@ -140,9 +140,7 @@ public:
     requires indirectly_writable<
         _OutIter,
         indirect_result_t<_Func&, projected<iterator_t<_Range1>, _Proj1>, projected<iterator_t<_Range2>, _Proj2>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr binary_transform_result<borrowed_iterator_t<_Range1>,
-                                                          borrowed_iterator_t<_Range2>,
-                                                          _OutIter>
+  constexpr binary_transform_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>, _OutIter>
   operator()(_Range1&& __range1,
              _Range2&& __range2,
              _OutIter __result,

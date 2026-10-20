@@ -402,8 +402,8 @@ define void @ChecksExtractScores(ptr %storeArray, ptr %array, ptr %vecPtr1, ptr 
 ; AVX-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 1
 ; AVX-NEXT:    [[LOADVEC:%.*]] = load <2 x double>, ptr [[VECPTR1:%.*]], align 4
 ; AVX-NEXT:    [[LOADVEC2:%.*]] = load <2 x double>, ptr [[VECPTR2:%.*]], align 4
-; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[LOADA0:%.*]] = load double, ptr [[ARRAY]], align 4
+; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[LOADA0]], i64 0
 ; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; AVX-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[LOADVEC]], [[TMP2]]
@@ -552,8 +552,8 @@ define void @ChecksExtractScores_different_vectors(ptr %storeArray, ptr %array, 
 ; AVX-NEXT:    [[LOADVEC3:%.*]] = load <2 x double>, ptr [[VECPTR3:%.*]], align 4
 ; AVX-NEXT:    [[LOADVEC4:%.*]] = load <2 x double>, ptr [[VECPTR4:%.*]], align 4
 ; AVX-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAY:%.*]], align 4
-; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[LOADA0:%.*]] = load double, ptr [[ARRAY1]], align 4
+; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[LOADVEC2]], <2 x double> [[LOADVEC3]], <2 x i32> <i32 0, i32 3>
 ; AVX-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[LOADA0]], i64 0
 ; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <2 x i32> zeroinitializer

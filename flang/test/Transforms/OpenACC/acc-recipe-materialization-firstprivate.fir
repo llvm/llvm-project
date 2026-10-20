@@ -21,7 +21,7 @@ module {
     %c1336_i32 = arith.constant 1336 : i32
     %0 = fir.dummy_scope : !fir.dscope
     %1 = fir.alloca i32 {bindc_name = "t", uniq_name = "_QFfirstprivEt"}
-    %2 = fir.declare %1 {uniq_name = "_QFfirstprivEt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.declare %1 uniq_name("_QFfirstprivEt") : (!fir.ref<i32>) -> !fir.ref<i32>
     fir.store %c1336_i32 to %2 : !fir.ref<i32>
     %3 = acc.firstprivate varPtr(%2 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("t") -> !fir.ref<i32>
     acc.parallel firstprivate(%3 : !fir.ref<i32>) {

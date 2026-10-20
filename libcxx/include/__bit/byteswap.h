@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <integral _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp byteswap(_Tp __val) noexcept {
+[[nodiscard]] constexpr _Tp byteswap(_Tp __val) noexcept {
   // [bit.byteswap]/Mandates: T does not have padding bits.
   // bool is grandfathered: every shipping implementation admits it and the
   // size-1 identity path can't shuffle padding bits into value positions.

@@ -3,7 +3,7 @@
 ! CHECK-LABEL: func @_QPss1()
 subroutine ss1
   ! CHECK: %[[shape:[0-9]+]] = fir.shape {{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFss1Eaa"}
+  ! CHECK: %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} uniq_name("_QFss1Eaa")
   integer, parameter :: N = 2650000
   real aa(N)
   ! CHECK: hlfir.assign %{{.*}} to %[[aa]]#0
@@ -42,7 +42,7 @@ end
 
 ! CHECK-LABEL: func @_QPss2(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFss2Eaa"}
+! CHECK:   %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} uniq_name("_QFss2Eaa")
 ! CHECK:   hlfir.assign %{{.*}} to %[[aa]]#0
 ! CHECK:   %[[slice1:.*]] = hlfir.designate %[[aa]]#0 (%c1{{.*}}:%{{.*}}:%c1{{.*}})
 ! CHECK:   %[[res:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
@@ -63,7 +63,7 @@ end
 
 ! CHECK-LABEL: func @_QPss3(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFss3Eaa"}
+! CHECK:   %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} uniq_name("_QFss3Eaa")
 ! CHECK:   hlfir.assign %{{.*}} to %[[aa]]#0
 ! CHECK:   %[[slice1:.*]] = hlfir.designate %[[aa]]#0 (%c1{{.*}}:%{{.*}}:%c1{{.*}}, %c1{{.*}}:%{{.*}}:%c1{{.*}})
 ! CHECK:   %[[res:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<2>) -> !hlfir.expr<2x?xf32> {
@@ -84,7 +84,7 @@ end
 
 ! CHECK-LABEL: func @_QPss4(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFss4Eaa"}
+! CHECK:   %[[aa:[0-9]+]]:2 = hlfir.declare %{{.*}} uniq_name("_QFss4Eaa")
 ! CHECK:   hlfir.assign %{{.*}} to %[[aa]]#0
 ! CHECK:   %[[slice1:.*]] = hlfir.designate %[[aa]]#0 (%c1{{.*}}:%{{.*}}:%c1{{.*}}, %c1{{.*}}:%{{.*}}:%c1{{.*}})
 ! CHECK:   %[[res:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<2>) -> !hlfir.expr<?x2xf32> {
@@ -109,7 +109,7 @@ subroutine tt1
   ! CHECK: %[[temp:.*]] = fir.allocmem !fir.array<3xf32>
   ! CHECK: %[[temp_decl:.*]]:2 = hlfir.declare %[[temp]]
   ! CHECK: fir.do_loop %[[arg:.*]] =
-  ! CHECK:   %[[const:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1xr4.0"}
+  ! CHECK:   %[[const:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QQro.1xr4.0") fortran_attrs<parameter>
   ! CHECK:   %[[expr:.*]] = hlfir.as_expr %[[const]]#0
   ! CHECK:   %[[assoc:.*]]:3 = hlfir.associate %[[expr]]
   ! CHECK:   %[[box:.*]] = fir.embox %[[assoc]]#0

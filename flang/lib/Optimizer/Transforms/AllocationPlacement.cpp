@@ -200,6 +200,7 @@ void AllocationPlacementPass::runOnOperation() {
 
     fir::AllocationInfo info;
     info.op = op;
+    info.context = op;
     info.isCurrentlyOnStack = static_cast<bool>(alloca);
     info.isTemporary = isTemporaryAllocation(op);
     info.isDynamic =

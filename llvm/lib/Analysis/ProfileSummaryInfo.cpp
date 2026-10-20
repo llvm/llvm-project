@@ -106,6 +106,10 @@ bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) const {
 bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) const {
   if (!F)
     return false;
+  // The hot attribute is a manual alternative to profile data, and takes
+  // precedence over it.
+  if (hasHotAttr(F))
+    return false;
   if (F->hasFnAttribute(Attribute::Cold))
     return true;
   if (!hasProfileSummary())

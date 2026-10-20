@@ -6,6 +6,7 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL,AVX512VLDQ
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512bw,avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL,AVX512VLBW
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vbmi2,avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL,AVX512VBMI2
 
 ;
 ; vXf64
@@ -242,6 +243,14 @@ define void @compressstore_v8f64_v8i1(ptr %base, <8 x double> %V, <8 x i1> %mask
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v8f64_v8i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $15, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovw2m %xmm1, %k1
+; AVX512VBMI2-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v8f64(<8 x double> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
@@ -562,6 +571,22 @@ define void @compressstore_v16f64_v16i1(ptr %base, <16 x double> %V, <16 x i1> %
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v16f64_v16i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $7, %xmm2, %xmm2
+; AVX512VBMI2-NEXT:    vpmovb2m %xmm2, %k1
+; AVX512VBMI2-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512VBMI2-NEXT:    kmovb %k1, %eax
+; AVX512VBMI2-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VBMI2-NEXT:    shrl $3, %eax
+; AVX512VBMI2-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VBMI2-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VBMI2-NEXT:    shrl $28, %eax
+; AVX512VBMI2-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
+; AVX512VBMI2-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v16f64(<16 x double> %V, ptr %base, <16 x i1> %mask)
   ret void
 }
@@ -664,6 +689,14 @@ define void @compressstore_v2f32_v2i32(ptr %base, <2 x float> %V, <2 x i32> %tri
 ; AVX512VLBW-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v2f32_v2i32:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vptestnmd %xmm1, %xmm1, %k0
+; AVX512VBMI2-NEXT:    kshiftlb $6, %k0, %k0
+; AVX512VBMI2-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VBMI2-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   call void @llvm.masked.compressstore.v2f32(<2 x float> %V, ptr %base, <2 x i1> %mask)
   ret void
@@ -807,6 +840,13 @@ define void @compressstore_v4f32_v4i1(ptr %base, <4 x float> %V, <4 x i1> %mask)
 ; AVX512VLBW-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v4f32_v4i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovd2m %xmm1, %k1
+; AVX512VBMI2-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v4f32(<4 x float> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
@@ -1128,6 +1168,14 @@ define void @compressstore_v8f32_v8i1(ptr %base, <8 x float> %V, <8 x i1> %mask)
 ; AVX512VLBW-NEXT:    vcompressps %ymm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v8f32_v8i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $15, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovw2m %xmm1, %k1
+; AVX512VBMI2-NEXT:    vcompressps %ymm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v8f32(<8 x float> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
@@ -1229,6 +1277,14 @@ define void @compressstore_v16f32_const(ptr %base, <16 x float> %V) {
 ; AVX512VLBW-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v16f32_const:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    movw $-2049, %ax ## imm = 0xF7FF
+; AVX512VBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VBMI2-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v16f32(<16 x float> %V, ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
@@ -2518,6 +2574,13 @@ define void @compressstore_v2i64_v2i1(ptr %base, <2 x i64> %V, <2 x i1> %mask) {
 ; AVX512VLBW-NEXT:    vptestmq %xmm1, %xmm1, %k1
 ; AVX512VLBW-NEXT:    vpcompressq %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v2i64_v2i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpsllq $63, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovq2m %xmm1, %k1
+; AVX512VBMI2-NEXT:    vpcompressq %xmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v2i64(<2 x i64> %V, ptr %base, <2 x i1> %mask)
   ret void
 }
@@ -2693,6 +2756,14 @@ define void @compressstore_v4i64_v4i1(ptr %base, <4 x i64> %V, <4 x i1> %mask) {
 ; AVX512VLBW-NEXT:    vpcompressq %ymm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v4i64_v4i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovd2m %xmm1, %k1
+; AVX512VBMI2-NEXT:    vpcompressq %ymm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v4i64(<4 x i64> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
@@ -3001,6 +3072,14 @@ define void @compressstore_v8i64_v8i1(ptr %base, <8 x i64> %V, <8 x i1> %mask) {
 ; AVX512VLBW-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v8i64_v8i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $15, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovw2m %xmm1, %k1
+; AVX512VBMI2-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
   call void @llvm.masked.compressstore.v8i64(<8 x i64> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
@@ -3580,6 +3659,12 @@ define void @compressstore_v8i16_v8i16(ptr %base, <8 x i16> %V, <8 x i16> %trigg
 ; AVX512VLBW-NEXT:  LBB11_15: ## %cond.store19
 ; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v8i16_v8i16:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vptestnmw %xmm1, %xmm1, %k1
+; AVX512VBMI2-NEXT:    vpcompressw %xmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    retq
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
   call void @llvm.masked.compressstore.v8i16(<8 x i16> %V, ptr %base, <8 x i1> %mask)
   ret void
@@ -4375,6 +4460,12 @@ define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLBW-NEXT:  LBB12_31: ## %cond.store43
 ; AVX512VLBW-NEXT:    vpextrb $15, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: compressstore_v16i8_v16i8:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vptestnmb %xmm1, %xmm1, %k1
+; AVX512VBMI2-NEXT:    vpcompressb %xmm0, (%rdi) {%k1}
+; AVX512VBMI2-NEXT:    retq
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
   call void @llvm.masked.compressstore.v16i8(<16 x i8> %V, ptr %base, <16 x i1> %mask)
   ret void

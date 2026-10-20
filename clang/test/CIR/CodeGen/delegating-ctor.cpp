@@ -246,7 +246,7 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   cir.store %[[INVOID_ARG]], %[[INVOID_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_ZN4BaseC2Ev(%[[BASE]])
 // CIR:   %[[VPTR_GLOBAL:.*]] = cir.vtable.address_point(@_ZTV7Derived, address_point = <index = 0, offset = 4>) : !cir.vptr
 // CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>
@@ -283,8 +283,8 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // OGCG:   store ptr %[[INVOID_ARG]], ptr %[[INVOID_ADDR]]
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // OGCG:   call void @_ZN4BaseC2Ev(ptr {{.*}} %[[THIS]])
-// OGCG:   store ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV7Derived, i32 0, i32 0, i32 4), ptr %[[THIS]]
-// OGCG:   store ptr getelementptr inbounds inrange(-32, 8) ({ [5 x ptr] }, ptr @_ZTV7Derived, i32 0, i32 0, i32 4), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV7Derived, i64 32), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-32, 8) (i8, ptr @_ZTV7Derived, i64 32), ptr %[[THIS]]
 // OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
 // OGCG:   %[[SQUAWK_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i64 0
 // OGCG:   %[[SQUAWK:.*]] = load ptr, ptr %[[SQUAWK_ADDR]]
@@ -320,7 +320,7 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
 // OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV4Base, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
 // OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
 // OGCG:   %[[SQUAWK_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i64 0
 // OGCG:   %[[SQUAWK:.*]] = load ptr, ptr %[[SQUAWK_ADDR]]

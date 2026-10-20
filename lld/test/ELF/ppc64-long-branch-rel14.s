@@ -11,7 +11,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
 # RUN: ld.lld -pie -T %t.lds %t.o -o %t
-# RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC-PI -DOFF0=a0b0 -DOFF1=a0b8 %s
+# RUN: llvm-readelf -d -r %t | FileCheck --check-prefixes=DYN,SEC-PI -DOFF0=a0e0 -DOFF1=a0e8 %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## --pic-veneer selects PI long-branch thunks in a non-PIC link.
@@ -20,6 +20,10 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # SEC: There are no relocations in this file.
+
+## .dynamic is recomputed after the thunk adds relative relocations.
+# DYN:         (RELASZ) 48 (bytes)
+# DYN:         (NULL) 0x0
 
 # SEC-PI:      Relocation section '.rela.dyn' {{.*}} contains 2 entries:
 # SEC-PI:      {{0+}}[[OFF0]] {{[0-9a-f]+}} R_PPC64_RELATIVE a004

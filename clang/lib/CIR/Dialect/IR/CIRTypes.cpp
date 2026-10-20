@@ -64,13 +64,8 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
 static bool isPureCIRType(mlir::Type ty) {
   if (!ty)
     return true;
-  return !ty.walk([](mlir::Type t) {
-              if (!t)
-                return mlir::WalkResult::advance();
-              return mlir::isa<cir::CIRDialect>(t.getDialect())
-                         ? mlir::WalkResult::advance()
-                         : mlir::WalkResult::interrupt();
-            }).wasInterrupted();
+  return ty.getContext()->getOrLoadDialect<cir::CIRDialect>()->isPureCIRType(
+      ty);
 }
 
 //===----------------------------------------------------------------------===//
@@ -587,7 +582,8 @@ mlir::Type UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==
                     dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+                dataLayout.getTypeAllocSize(lhs) <
+                    dataLayout.getTypeAllocSize(rhs));
       });
   // A union's storage is bytes, and stands in for every variant rather than
   // for the one bit-field that happened to be widest, so a bit-field variant
@@ -837,7 +833,8 @@ StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return computeStructAlignment(dataLayout);
 }
 
-// Sums the storage member (if present) with the padding field (if present).
+// Sums the storage member's alloc size (if present) with the padding field's
+// size (if present).
 // A union whose member list came out empty has no storage type, so its whole
 // size lives in the padding, which lowerUnion sizes from the ASTRecordLayout.
 llvm::TypeSize
@@ -845,7 +842,7 @@ UnionType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                              mlir::DataLayoutEntryListRef params) const {
   llvm::TypeSize size = llvm::TypeSize::getFixed(0);
   if (mlir::Type storage = getUnionStorageType(dataLayout))
-    size += dataLayout.getTypeSizeInBits(storage);
+    size += dataLayout.getTypeAllocSize(storage) * 8;
   if (mlir::Type pad = getPadding())
     size += dataLayout.getTypeSizeInBits(pad);
   return size;
@@ -879,9 +876,9 @@ StructType::computeStructSize(const mlir::DataLayout &dataLayout) const {
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
 
     // Add padding to the struct size to align it to the abi alignment of the
-    // element type before adding the size of the element.
+    // element type before adding the element's alloc size.
     recordSize = llvm::alignTo(recordSize, tyAlign);
-    recordSize += dataLayout.getTypeSize(ty);
+    recordSize += dataLayout.getTypeAllocSize(ty);
 
     // The alignment requirement of a struct is equal to the strictest
     // alignment requirement of its elements.
@@ -916,7 +913,7 @@ StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
     recordSize = llvm::alignTo(recordSize, tyAlign);
-    recordSize += dataLayout.getTypeSize(ty);
+    recordSize += dataLayout.getTypeAllocSize(ty);
   }
   return recordSize;
 }
@@ -966,7 +963,7 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
     const llvm::Align tyAlign = llvm::Align(
         getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[i]));
     offset = llvm::alignTo(offset, tyAlign);
-    offset += dataLayout.getTypeSize(members[i]);
+    offset += dataLayout.getTypeAllocSize(members[i]);
   }
 
   const llvm::Align tyAlign = llvm::Align(
@@ -1420,7 +1417,7 @@ uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  return getSize() * dataLayout.getTypeSizeInBits(getElementType());
+  return getSize() * dataLayout.getTypeAllocSize(getElementType()) * 8;
 }
 
 uint64_t
@@ -1487,14 +1484,6 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return 1;
 }
 
-std::optional<uint64_t> BitFieldType::getSoleDeclaredExtentInBits(
-    const mlir::DataLayout &dataLayout) const {
-  if (getFields().size() != 1)
-    return std::nullopt;
-  return dataLayout.getTypeSizeInBits(getFields().front().getDeclaredType())
-      .getFixedValue();
-}
-
 //===----------------------------------------------------------------------===//
 // VectorType Definitions
 //===----------------------------------------------------------------------===//
@@ -1502,8 +1491,20 @@ std::optional<uint64_t> BitFieldType::getSoleDeclaredExtentInBits(
 llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
+  // Clang packs a fixed-length bool vector one bit per element and rounds the
+  // vector's size up to a power of two of at least a byte.
+  if (mlir::isa<cir::BoolType>(getElementType()) && !getIsScalable()) {
+    assert(!cir::MissingFeatures::hlsl());
+    return llvm::TypeSize::getFixed(llvm::PowerOf2Ceil(getBoolStorageWidth()));
+  }
   return llvm::TypeSize::getFixed(
       getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t cir::VectorType::getBoolStorageWidth() const {
+  assert(mlir::isa<cir::BoolType>(getElementType()) &&
+         "only a bool vector is stored as an integer");
+  return std::max<uint64_t>(getSize(), 8);
 }
 
 uint64_t
@@ -1592,6 +1593,34 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(
+      getNumRows() * getNumColumns() *
+      dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t
+cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
+
+mlir::LogicalResult cir::MatrixType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type elementType, uint64_t row, uint64_t column) {
+  if (row == 0)
+    return emitError() << "the number of matrix rows must be non-zero";
+  if (column == 0)
+    return emitError() << "the number of matrix columns must be non-zero";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AddressSpace definitions
 //===----------------------------------------------------------------------===//
 
@@ -1607,30 +1636,32 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::Default:
     return LangAddressSpace::Default;
   case LangAS::opencl_global:
+  case LangAS::sycl_global:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_local:
   case LangAS::cuda_shared:
-    // Local means local among the work-group (OpenCL) or block (CUDA).
+  case LangAS::sycl_local:
+    // Local means local among the work-group (OpenCL, SYCL) or block (CUDA).
     // All threads inside the kernel can access local memory.
     return LangAddressSpace::OffloadLocal;
   case LangAS::cuda_device:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_constant:
   case LangAS::cuda_constant:
+  case LangAS::sycl_constant:
     return LangAddressSpace::OffloadConstant;
   case LangAS::opencl_private:
+  case LangAS::sycl_private:
     return LangAddressSpace::OffloadPrivate;
   case LangAS::opencl_generic:
+  case LangAS::sycl_generic:
     return LangAddressSpace::OffloadGeneric;
   case LangAS::opencl_global_device:
+  case LangAS::sycl_global_device:
     return LangAddressSpace::OffloadGlobalDevice;
   case LangAS::opencl_global_host:
-    return LangAddressSpace::OffloadGlobalHost;
-  case LangAS::sycl_global:
-  case LangAS::sycl_global_device:
   case LangAS::sycl_global_host:
-  case LangAS::sycl_local:
-  case LangAS::sycl_private:
+    return LangAddressSpace::OffloadGlobalHost;
   case LangAS::ptr32_sptr:
   case LangAS::ptr32_uptr:
   case LangAS::ptr64:

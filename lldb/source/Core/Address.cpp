@@ -196,7 +196,7 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
     return 0;
   const size_t k_buf_len = 256;
   char buf[k_buf_len + 1];
-  buf[k_buf_len] = '\0'; // NULL terminate
+  buf[k_buf_len] = '\0'; // null-terminate
 
   // Byte order and address size don't matter for C string dumping..
   DataExtractor data(buf, sizeof(buf), endian::InlHostByteOrder(), 4);

@@ -1,9 +1,18 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":obj2yaml" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("obj2yaml") {
   deps = [
+    ":Opts",
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [

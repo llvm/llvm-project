@@ -24,7 +24,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPflush_optional(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "unit", fir.optional}) {
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFflush_optionalEunit"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} uniq_name("_QFflush_optionalEunit") fortran_attrs<optional> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK: %[[UNIT:.*]] = fir.if %[[IS_PRESENT]] -> (i32) {
 ! CHECK:   %[[LOADED:.*]] = fir.load %[[DECL]]#0 : !fir.ref<i32>

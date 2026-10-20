@@ -29,8 +29,6 @@ public:
                       MachineDominatorTree *MDT, const LegalizerInfo *LI,
                       const SPIRVSubtarget &STI);
 
-  bool matchLengthToDistance(MachineInstr &MI) const;
-  void applySPIRVDistance(MachineInstr &MI) const;
   bool matchFDivToNormalize(MachineInstr &MI) const;
   void applySPIRVNormalize(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;

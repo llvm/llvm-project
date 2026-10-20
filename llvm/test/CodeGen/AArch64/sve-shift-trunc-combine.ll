@@ -17,10 +17,9 @@ define void @lshr_trunc_i16_load_scalable(ptr %src, ptr %dst) #0 {
 ;
 ; BE-LABEL: lshr_trunc_i16_load_scalable:
 ; BE:       // %bb.0:
-; BE-NEXT:    ptrue p0.h
+; BE-NEXT:    ptrue p0.b
 ; BE-NEXT:    ld1h { z0.h }, p0/z, [x0, #1, mul vl]
 ; BE-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; BE-NEXT:    ptrue p0.b
 ; BE-NEXT:    uzp2 z0.b, z1.b, z0.b
 ; BE-NEXT:    st1b { z0.b }, p0, [x1]
 ; BE-NEXT:    ret
@@ -65,10 +64,9 @@ define void @ashr_trunc_i16_load(ptr %src, ptr %dst)#0 {
 ;
 ; BE-LABEL: ashr_trunc_i16_load:
 ; BE:       // %bb.0:
-; BE-NEXT:    ptrue p0.h
+; BE-NEXT:    ptrue p0.b
 ; BE-NEXT:    ld1h { z0.h }, p0/z, [x0, #1, mul vl]
 ; BE-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; BE-NEXT:    ptrue p0.b
 ; BE-NEXT:    uzp2 z0.b, z1.b, z0.b
 ; BE-NEXT:    st1b { z0.b }, p0, [x1]
 ; BE-NEXT:    ret
@@ -90,10 +88,9 @@ define void @lshr_trunc_i32_load(ptr %src, ptr %dst) #0 {
 ;
 ; BE-LABEL: lshr_trunc_i32_load:
 ; BE:       // %bb.0:
-; BE-NEXT:    ptrue p0.s
+; BE-NEXT:    ptrue p0.h
 ; BE-NEXT:    ld1w { z0.s }, p0/z, [x0, #1, mul vl]
 ; BE-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; BE-NEXT:    ptrue p0.h
 ; BE-NEXT:    uzp2 z0.h, z1.h, z0.h
 ; BE-NEXT:    st1h { z0.h }, p0, [x1]
 ; BE-NEXT:    ret
@@ -115,10 +112,9 @@ define void @lshr_trunc_i64_load(ptr %src, ptr %dst) #0 {
 ;
 ; BE-LABEL: lshr_trunc_i64_load:
 ; BE:       // %bb.0:
-; BE-NEXT:    ptrue p0.d
+; BE-NEXT:    ptrue p0.s
 ; BE-NEXT:    ld1d { z0.d }, p0/z, [x0, #1, mul vl]
 ; BE-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; BE-NEXT:    ptrue p0.s
 ; BE-NEXT:    uzp2 z0.s, z1.s, z0.s
 ; BE-NEXT:    st1w { z0.s }, p0, [x1]
 ; BE-NEXT:    ret
@@ -143,10 +139,9 @@ define void @lshr_trunc_wrong_amount(ptr %src, ptr %dst) #0 {
 ;
 ; BE-LABEL: lshr_trunc_wrong_amount:
 ; BE:       // %bb.0:
-; BE-NEXT:    ptrue p0.h
+; BE-NEXT:    ptrue p0.b
 ; BE-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; BE-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
-; BE-NEXT:    ptrue p0.b
 ; BE-NEXT:    lsr z1.h, z1.h, #7
 ; BE-NEXT:    lsr z0.h, z0.h, #7
 ; BE-NEXT:    uzp1 z0.b, z0.b, z1.b

@@ -18,7 +18,6 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -211,23 +210,31 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand(0);
     Value rhs = op.getOperand(1);
-    auto maybeModulus = getConstantIntValue(rhs);
-    if (!maybeModulus.has_value())
+    // TODO: Support index types once integer range inference can use the target
+    // index bitwidth, e.g. from DLTI.
+    if (isa<IndexType>(getElementTypeOrSelf(lhs.getType())))
       return failure();
-    int64_t modulus = *maybeModulus;
-    if (modulus <= 0)
+    APInt modulus;
+    bool isUnsigned = isa<RemUIOp>(op);
+    // Any nonzero bit pattern is a valid unsigned modulus. Keep the existing
+    // positive-modulus restriction for signed remainder.
+    if (!matchPattern(rhs, m_ConstantInt(&modulus)) || modulus.isZero() ||
+        (!isUnsigned && modulus.isNegative()))
       return failure();
     auto *maybeLhsRange = solver.lookupState<IntegerValueRangeLattice>(lhs);
     if (!maybeLhsRange || maybeLhsRange->getValue().isUninitialized())
       return failure();
     const ConstantIntRanges &lhsRange = maybeLhsRange->getValue().getValue();
-    const APInt &min = isa<RemUIOp>(op) ? lhsRange.umin() : lhsRange.smin();
-    const APInt &max = isa<RemUIOp>(op) ? lhsRange.umax() : lhsRange.smax();
-    // The minima and maxima here are given as closed ranges, we must be
-    // strictly less than the modulus.
-    if (min.isNegative() || min.uge(modulus))
+    const APInt &min = isUnsigned ? lhsRange.umin() : lhsRange.smin();
+    const APInt &max = isUnsigned ? lhsRange.umax() : lhsRange.smax();
+    if (min.getBitWidth() != modulus.getBitWidth() ||
+        max.getBitWidth() != modulus.getBitWidth())
       return failure();
-    if (max.isNegative() || max.uge(modulus))
+    // The minima and maxima here are given as closed ranges, we must be
+    // non-negative for signed remainder and strictly less than the modulus.
+    if ((!isUnsigned && min.isNegative()) || min.uge(modulus))
+      return failure();
+    if ((!isUnsigned && max.isNegative()) || max.uge(modulus))
       return failure();
     if (!min.ule(max))
       return failure();
@@ -352,7 +359,7 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
                     ArrayRef<unsigned> target)
       : OpTraitRewritePattern(context), solver(s), targetBitwidths(target) {}
 
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() == 0)
@@ -383,14 +390,15 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
         if (castKind == CastKind::None)
           break;
       }
-      // For operations that explicitly treat the values as signed, we should
-      // only do signed casts, if those are deemed possible as such based on the
-      // value range.
+      // Constrain the cast kind to preserve the interpretation required by the
+      // operation.
       auto castKindForOp =
           llvm::TypeSwitch<Operation *, CastKind>(op)
               .Case<arith::DivSIOp, arith::CeilDivSIOp, arith::FloorDivSIOp,
                     arith::RemSIOp, arith::MaxSIOp, arith::MinSIOp,
                     arith::ShRSIOp>([](auto) { return CastKind::Signed; })
+              .Case<arith::DivUIOp, arith::CeilDivUIOp, arith::RemUIOp,
+                    arith::ShRUIOp>([](auto) { return CastKind::Unsigned; })
               .Default(CastKind::Both);
       castKind = mergeCastKinds(castKind, castKindForOp);
       if (castKind == CastKind::None)
@@ -420,6 +428,19 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
       rewriter.modifyOpInPlace(newOp, [&]() {
         for (OpResult res : newOp->getResults()) {
           res.setType(targetType);
+        }
+        // Retain an overflow flag only when the casts preserve operand and
+        // result values in the flag's signed or unsigned interpretation.
+        if (auto overflowOp =
+                dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(newOp)) {
+          auto flags = overflowOp.getOverflowAttr().getValue();
+          if (castKind == CastKind::Unsigned)
+            flags = bitEnumClear(flags, IntegerOverflowFlags::nsw);
+          else if (castKind == CastKind::Signed)
+            flags = bitEnumClear(flags, IntegerOverflowFlags::nuw);
+          newOp->setAttr(
+              overflowOp.getIntegerOverflowAttrName(),
+              IntegerOverflowFlagsAttr::get(rewriter.getContext(), flags));
         }
       });
       SmallVector<Value> newResults;

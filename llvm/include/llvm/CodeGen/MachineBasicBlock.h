@@ -46,7 +46,6 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
-class LiveVariables;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
@@ -212,8 +211,6 @@ private:
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
-
-  SmallVector<unsigned> PrefetchTargets;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -515,6 +512,11 @@ public:
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
+
+  /// Return true if any part of \p Reg is live in, accounting for live-ins of
+  /// overlapping registers and their lane masks.
+  LLVM_ABI bool isLiveInOverlappedWith(MCRegister Reg,
+                                       const TargetRegisterInfo &TRI) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
@@ -1005,41 +1007,42 @@ public:
   /// Split the critical edge from this block to the given successor block, and
   /// return the newly created block, or null if splitting is not possible.
   ///
-  /// This function updates LiveVariables, MachineDominatorTree, and
+  /// This function updates LiveIntervals, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
+  ///
+  /// If \p LiveOutSets is provided, it must hold the indexes of the virtual
+  /// registers live out of each block, indexed by block number. Only those
+  /// registers are considered when updating LiveIntervals, and the set for the
+  /// new block is added.
   struct SplitCriticalEdgeAnalyses {
     LiveIntervals *LIS;
     SlotIndexes *SI;
-    LiveVariables *LV;
     MachineLoopInfo *MLI;
+    std::vector<SparseBitVector<>> *LiveOutSets = nullptr;
   };
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr) {
-    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
+    return SplitCriticalEdge(Succ, &P, nullptr, MDTU);
   }
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     MachineFunctionAnalysisManager &MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr) {
-    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, MDTU);
   }
 
   // Helper method for new pass manager migration.
   LLVM_ABI MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     const SplitCriticalEdgeAnalyses &Analyses,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr);
 
   LLVM_ABI MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
                     MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr);
 
   /// Check if the edge between this block and the given successor \p
@@ -1475,8 +1478,6 @@ public:
   }
   MachineBasicBlock::iterator end() { return E; }
   bool empty() { return begin() == end(); }
-
-  MachineBasicBlock::iterator getInitial() { return I; }
 };
 
 /// Increment \p It until it points to a non-debug instruction or to \p End

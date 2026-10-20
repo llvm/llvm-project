@@ -72,12 +72,10 @@ public:
 
   bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }
   void setGlibcHWCAPAccess(bool Val = true) const { HasGlibcHWCAPAccess = Val; }
-  bool isPPC64() const {
-    const Triple &TT = getTargetTriple();
-    return (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
-  };
+  bool isPPC64() const { return getTargetTriple().isPPC64(); }
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
   }

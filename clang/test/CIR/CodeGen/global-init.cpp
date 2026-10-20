@@ -37,7 +37,7 @@ struct NeedsCtor {
 
 NeedsCtor needsCtor;
 
-// CIR-BEFORE-LPP: cir.global external @needsCtor = ctor : !rec_NeedsCtor {
+// CIR-BEFORE-LPP: cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor ctor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsCtorC1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtor> {{.*}}) -> ()
 
@@ -85,7 +85,7 @@ struct NeedsCtorDtor {
 
 NeedsCtorDtor needsCtorDtor;
 
-// CIR-BEFORE-LPP: cir.global external @needsCtorDtor = ctor : !rec_NeedsCtorDtor {
+// CIR-BEFORE-LPP: cir.global external @needsCtorDtor = #cir.zero : !rec_NeedsCtorDtor ctor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN13NeedsCtorDtorC1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtorDtor> {{.*}}) -> ()
 // CIR-BEFORE-LPP: } dtor {
@@ -115,7 +115,7 @@ float num;
 float _Complex a = {num, num};
 
 // CIR-BEFORE-LPP: cir.global external @num = #cir.fp<0.000000e+00> : !cir.float
-// CIR-BEFORE-LPP: cir.global external @a = ctor : !cir.complex<!cir.float> {
+// CIR-BEFORE-LPP: cir.global external @a = #cir.zero : !cir.complex<!cir.float> ctor {
 // CIR-BEFORE-LPP:  %[[THIS:.*]] = cir.get_global @a : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE-LPP:  %[[NUM:.*]] = cir.get_global @num : !cir.ptr<!cir.float>
 // CIR-BEFORE-LPP:  %[[REAL:.*]] = cir.load{{.*}} %[[NUM]] : !cir.ptr<!cir.float>, !cir.float
@@ -152,7 +152,7 @@ float _Complex a = {num, num};
 float fp;
 int i = (int)fp;
 
-// CIR-BEFORE-LPP: cir.global external @i = ctor : !s32i {
+// CIR-BEFORE-LPP: cir.global external @i = #cir.int<0> : !s32i ctor {
 // CIR-BEFORE-LPP:   %[[I:.*]] = cir.get_global @i : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:   %[[FP:.*]] = cir.get_global @fp : !cir.ptr<!cir.float>
 // CIR-BEFORE-LPP:   %[[FP_VAL:.*]] = cir.load{{.*}} %[[FP]] : !cir.ptr<!cir.float>, !cir.float
@@ -194,8 +194,9 @@ ArrayDtor arrDtor[16];
 
 // CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
 // CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
+// CIR:   %[[ARR:.*]] = cir.cast bitcast %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[CONST16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!rec_ArrayDtor>
+// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[CONST16]] : (!cir.ptr<!rec_ArrayDtor>, !u64i) -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[CUR_ADDR:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:   cir.store %[[END]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
@@ -270,7 +271,7 @@ ArrayDtor arrDtor[16];
 int globalInt;
 double &&globalDoubleRef = static_cast<double &&>(globalInt);
 // CIR-BEFORE-LPP: cir.global external @globalInt = #cir.int<0> : !s32i
-// CIR-BEFORE-LPP: cir.global external @globalDoubleRef = ctor : !cir.ptr<!cir.double> {
+// CIR-BEFORE-LPP: cir.global external @globalDoubleRef = #cir.ptr<null> : !cir.ptr<!cir.double> ctor {
 // CIR-BEFORE-LPP:   %[[GET_SELF:.*]] = cir.get_global @globalDoubleRef : !cir.ptr<!cir.ptr<!cir.double>>
 // CIR-BEFORE-LPP:   %[[GET_BACKING_VAR:.*]] = cir.get_global @_ZGR15globalDoubleRef_ : !cir.ptr<!cir.double>
 // CIR-BEFORE-LPP:   %[[GET_INT_VAR:.*]] = cir.get_global @globalInt : !cir.ptr<!s32i>

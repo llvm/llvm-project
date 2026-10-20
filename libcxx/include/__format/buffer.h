@@ -250,6 +250,10 @@ public:
       __first += __chunk;
       __n -= __chunk;
     } while (__n);
+
+    // push_back needs a free code unit, which the last chunk may have used.
+    if (__size_ == __capacity_)
+      __prepare_write(0);
   }
 
   /// A std::transform wrapper.
@@ -276,6 +280,10 @@ public:
       __first += __chunk;
       __n -= __chunk;
     } while (__n);
+
+    // push_back needs a free code unit, which the last chunk may have used.
+    if (__size_ == __capacity_)
+      __prepare_write(0);
   }
 
   /// A \c fill_n wrapper.
@@ -293,6 +301,10 @@ public:
       __size_ += __chunk;
       __n -= __chunk;
     } while (__n);
+
+    // push_back needs a free code unit, which the last chunk may have used.
+    if (__size_ == __capacity_)
+      __prepare_write(0);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __capacity() const { return __capacity_; }
