@@ -337,6 +337,15 @@ end subroutine
 ! CHECK: omp.declare_mapper.info map_iterated(%[[ITER]]
 
 !--- cleanup.f90
+! Parentheses add no control flow to the single-block mapper region.
+subroutine declare_mapper_paren_range()
+  type :: t
+    integer :: n
+    integer :: a(4)
+  end type
+  !$omp declare mapper(m: t :: v) map(iterator(i = 1:(v%n)): v%a(i))
+end
+
 ! Cleanups for the range expression stay inside the single-block mapper region.
 subroutine declare_mapper_range_cleanup()
   interface
@@ -359,4 +368,10 @@ end
 ! CHECK-NEXT: hlfir.end_associate %[[TMP]]#1, %[[TMP]]#2
 ! CHECK-NEXT: omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
+! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_paren_rangem
+! CHECK:   %[[N:.*]] = hlfir.no_reassoc
+! CHECK:   %[[IT:.*]] = omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[N]] step
+! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+! LLVM: define void @declare_mapper_paren_range_()
 ! LLVM: define void @declare_mapper_range_cleanup_()

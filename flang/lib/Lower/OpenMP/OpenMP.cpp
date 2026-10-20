@@ -7021,7 +7021,7 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
     bool mayAddLoops =
         hasIterator && mlir::isa<hlfir::hlfirDialect>(op.getDialect()) &&
         !mlir::isa<hlfir::DeclareOp, hlfir::DesignateOp, hlfir::AssociateOp,
-                   hlfir::EndAssociateOp>(op);
+                   hlfir::EndAssociateOp, hlfir::NoReassocOp>(op);
     if (mayAddLoops ||
         (op.getNumRegions() != 0 && !mlir::isa<mlir::omp::IteratorOp>(op)))
       TODO(loc, "declare mapper with control flow");
