@@ -97,6 +97,7 @@
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -141,6 +142,10 @@ static const unsigned MaxMemDepDistance = 160;
 /// If the ScheduleRegionSizeBudget is exhausted, we allow small scheduling
 /// regions to be handled.
 static const int MinScheduleRegionSize = 16;
+
+/// If the reduction budget is exhausted, we allow small reduction trees to be
+/// handled.
+static const unsigned MinReductionTreeSize = 2048;
 
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
@@ -316,6 +321,42 @@ public:
   /// Enables or disables dropping runtime-checkable may-alias dependencies in
   /// favor of runtime alias checks for the current vectorization attempt.
   void setTryRuntimeAliasChecks(bool V) { TryRuntimeAliasChecks = V; }
+
+  /// Splits the stored values of the root stores into halves, vectorized as
+  /// separate subtrees, while the returned guard is alive.
+  [[nodiscard]] SaveAndRestore<bool> splitStoredValues() {
+    return SaveAndRestore<bool>(SplitStoredValues, true);
+  }
+
+  /// Checks if the graph is built for the \p Stores and their stored values,
+  /// looking through the vectorized cast node, are vectorized as the alternate
+  /// node with the different opcodes in the halves.
+  bool canSplitStoredValues(ArrayRef<Value *> Stores) const {
+    if (VectorizableTree.empty() || getRootNode().isGather() ||
+        getRootNodeScalars() != Stores)
+      return false;
+    const TreeEntry *E = getOperandEntry(&getRootNode(), 0);
+    bool IsCast = E->State == TreeEntry::Vectorize && !E->isAltShuffle() &&
+                  E->getMainOp()->isCast();
+    if (IsCast)
+      E = getOperandEntry(E, 0);
+    if (E->State != TreeEntry::Vectorize || !E->isAltShuffle())
+      return false;
+    auto GetOpcode = [&](Value *V) -> unsigned {
+      V = cast<StoreInst>(V)->getValueOperand();
+      if (auto *CI = dyn_cast<CastInst>(V); CI && IsCast)
+        V = CI->getOperand(0);
+      auto *I = dyn_cast<Instruction>(V);
+      return I ? I->getOpcode() : 0;
+    };
+    unsigned Opcode0 = GetOpcode(Stores.front());
+    unsigned Opcode1 = GetOpcode(Stores.back());
+    ArrayRef<Value *> Half = Stores.take_front(Stores.size() / 2);
+    return Opcode0 != Opcode1 &&
+           all_of(Half, [&](Value *V) { return GetOpcode(V) == Opcode0; }) &&
+           all_of(Stores.drop_front(Half.size()),
+                  [&](Value *V) { return GetOpcode(V) == Opcode1; });
+  }
 
   /// Resets the runtime alias check data.
   void resetRuntimeAliasCheckState() {
@@ -991,7 +1032,7 @@ public:
             !LI2->isSimple())
           return CheckSameEntryOrFail();
 
-        std::optional<int64_t> Dist = getPointersDiff(
+        std::optional<int64_t> Dist = R.getPointersDiff(
             LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
             LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
         if (!Dist || *Dist == 0) {
@@ -1093,7 +1134,8 @@ public:
             (S.getMainOp()->getNumOperands() <= 2 || !MainAltOps.empty() ||
              !S.isAltShuffle()) &&
             all_of(make_isa_range<Instruction>(Ops), [&S](Instruction *I) {
-              return I->getNumOperands() == S.getMainOp()->getNumOperands();
+              return I->getNumOperands() == S.getMainOp()->getNumOperands() ||
+                     (S.getOpcode() == Instruction::ICmp && isa<TruncInst>(I));
             }))
           return S.isAltShuffle() ? LookAheadHeuristics::ScoreAltOpcodes
                                   : LookAheadHeuristics::ScoreSameOpcode;
@@ -2067,6 +2109,17 @@ public:
 
   /// Checks if the instruction is marked for deletion.
   bool isDeleted(Instruction *I) const { return DeletedInstructions.count(I); }
+
+  /// llvm::getPointersDiff through a cache shared by everything that works on
+  /// this tree. Building and pricing trees asks for the distance between the
+  /// same pointers over and over.
+  std::optional<int64_t>
+  getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
+                  const DataLayout &DL, ScalarEvolution &SE,
+                  bool StrictCheck = false, bool CheckType = true) const {
+    return PtrsDiffCache.get(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE, StrictCheck,
+                             CheckType);
+  }
 
   /// Checks if the value is used only by the assume-like intrinsics.
   bool isEphemeralValue(const Value *V) const { return EphValues.contains(V); }
@@ -3552,6 +3605,10 @@ private:
   /// checks instead.
   bool TryRuntimeAliasChecks = false;
 
+  /// When true, the stored values of the root store node are split into
+  /// halves, which are vectorized as separate subtrees.
+  bool SplitStoredValues = false;
+
   /// Runtime alias checks collected during the last optimistic buildTree().
   RuntimeAliasCheckInfo RTChecks;
 
@@ -3612,6 +3669,9 @@ private:
   /// can happen if a new instruction is allocated at the same address as a
   /// previously deleted instruction.
   DenseSet<Instruction *> DeletedInstructions;
+
+  /// Distances between pointers, see getPointersDiff().
+  mutable PointersDiffCache PtrsDiffCache;
 
   /// Set of the instruction, being analyzed already for reductions.
   SmallPtrSet<Instruction *, 16> AnalyzedReductionsRoots;
@@ -6249,7 +6309,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               return areAllUsersVectorized(cast<Instruction>(V),
                                            UserIgnoreList);
             },
-            Opts.slp_revec))
+            Opts.slp_revec, PtrsDiffCache))
       return LoadsState::CompressVectorize;
     // Widened strided loads must be legal for every group, not just the first
     // pointer, which may have a stronger alignment than the remaining loads.
@@ -6520,7 +6580,8 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   BoUpSLP::OrdersType Order;
   if (!LoadEntriesToVectorize.contains(TE.Idx) &&
       clusterSortPtrAccesses(Ptrs, BBs, ScalarTy, *DL, *SE,
-                             Opts.slp_recursion_max_depth, Order))
+                             Opts.slp_recursion_max_depth, Order,
+                             PtrsDiffCache))
     return std::move(Order);
   return std::nullopt;
 }
@@ -8337,7 +8398,7 @@ static void gatherPossiblyVectorizableLoads(
                                      R.Opts.slp_recursion_max_depth) &&
              "Expected loads with the same type, same parent and same "
              "underlying pointer.");
-      std::optional<int64_t> Dist = getPointersDiff(
+      std::optional<int64_t> Dist = R.getPointersDiff(
           LI->getType(), LI->getPointerOperand(), Data.front().first->getType(),
           Data.front().first->getPointerOperand(), DL, SE,
           /*StrictCheck=*/true);
@@ -8375,10 +8436,10 @@ static void gatherPossiblyVectorizableLoads(
               LI->getType() != Data.front().first->getType())
             continue;
           std::optional<int64_t> Dist =
-              getPointersDiff(LI->getType(), LI->getPointerOperand(),
-                              Data.front().first->getType(),
-                              Data.front().first->getPointerOperand(), DL, SE,
-                              /*StrictCheck=*/true);
+              R.getPointersDiff(LI->getType(), LI->getPointerOperand(),
+                                Data.front().first->getType(),
+                                Data.front().first->getPointerOperand(), DL, SE,
+                                /*StrictCheck=*/true);
           if (!Dist)
             continue;
           SmallSet<int64_t, 4> DataDists;
@@ -9695,7 +9756,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (Opts.slp_enable_masked_stores &&
           isMaskedStoreCompress(VL, PointerOps, CurrentOrder, *TTI, *DL, *SE,
                                 CommonAlignment, ReuseShuffleIndices,
-                                StoreVecTy)) {
+                                StoreVecTy, PtrsDiffCache)) {
         SPtrInfo.Ty = StoreVecTy;
         return TreeEntry::ExpandVectorize;
       }
@@ -10259,12 +10320,14 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   return false;
 }
 
+/// The nodes with no more than this number of elements are not split.
+static constexpr unsigned SmallNodeSize = 4;
+
 bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                                 const InstructionsState &LocalState,
                                 SmallVectorImpl<Value *> &Op1,
                                 SmallVectorImpl<Value *> &Op2,
                                 OrdersType &ReorderIndices) const {
-  constexpr unsigned SmallNodeSize = 4;
   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
       !Opts.slp_split_alternate_instructions)
     return false;
@@ -10850,6 +10913,25 @@ class InstructionsCompatibilityAnalysis {
         Op = LI->getPointerOperand();
       }
       return;
+    case Instruction::ICmp:
+      // With trunc X to i1 lanes the node is the bit tests of and A, B: the
+      // compares give the operands of their ands, trunc X gives X and 1.
+      if (any_of(VL, IsaPred<TruncInst>)) {
+        Type *Ty = VL0->getOperand(0)->getType();
+        Operands.assign(2, {VL.size(), PoisonValue::get(Ty)});
+        for (auto [Idx, V] : enumerate(VL)) {
+          if (auto *TI = dyn_cast<TruncInst>(V)) {
+            Operands[0][Idx] = TI->getOperand(0);
+            Operands[1][Idx] = ConstantInt::get(Ty, 1);
+          } else if (auto *CI = dyn_cast<ICmpInst>(V)) {
+            auto *And = cast<BinaryOperator>(CI->getOperand(0));
+            Operands[0][Idx] = And->getOperand(0);
+            Operands[1][Idx] = And->getOperand(1);
+          }
+        }
+        return;
+      }
+      [[fallthrough]];
     case Instruction::ZExt:
     case Instruction::SExt:
     case Instruction::FPToUI:
@@ -10863,7 +10945,6 @@ class InstructionsCompatibilityAnalysis {
     case Instruction::Trunc:
     case Instruction::FPTrunc:
     case Instruction::BitCast:
-    case Instruction::ICmp:
     case Instruction::FCmp:
     case Instruction::FNeg:
     case Instruction::Add:
@@ -12196,11 +12277,17 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<Value *> VL(VLRef);
 
   // Tries to build split node.
-  auto TrySplitNode = [&](const InstructionsState &LocalState) {
+  auto TrySplitNode = [&](const InstructionsState &LocalState,
+                          bool SplitInHalves = false) {
     SmallVector<Value *> Op1, Op2;
     OrdersType ReorderIndices;
-    if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
+    if (SplitInHalves) {
+      auto *Mid = std::next(VL.begin(), VL.size() / 2);
+      Op1.assign(VL.begin(), Mid);
+      Op2.assign(Mid, VL.end());
+    } else if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices)) {
       return false;
+    }
 
     auto Invalid = ScheduleBundle::invalid();
     auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
@@ -12262,13 +12349,19 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return;
   }
 
+  if (SplitStoredValues && S && UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->Idx == 0 && TrySplitNode(S, /*SplitInHalves=*/true))
+    return;
+
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
   if (S.isAltShuffle() && TrySplitNode(S))
     return;
 
   // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
-  // try the split by the original predicates, like the alternate nodes.
-  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle()) {
+  // try the split by the original predicates, like the alternate nodes. The
+  // trunc X to i1 lanes have no original predicate.
+  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle() &&
+      none_of(VL, IsaPred<TruncInst>)) {
     auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
       return CI->getPredicate() == P ||
              CI->getPredicate() == CmpInst::getSwappedPredicate(P);
@@ -12796,6 +12889,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                                    ReuseShuffleIndices);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CmpInst).\n";
                  TE->dump());
+      // The ands of the bit tests are peeled into the operands of the node.
+      if (any_of(VL, IsaPred<TruncInst>)) {
+        for (ICmpInst *CI : make_isa_range<ICmpInst>(VL))
+          ReassocScalars.push_back(CI->getOperand(0));
+        RegisterReassocScalars(TE);
+      }
 
       VLOperands Ops(VL, Operands, S, *this);
       if (cast<CmpInst>(VL0)->isCommutative()) {
@@ -12812,7 +12911,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         // already have their operands adjusted, no need to commute them.
         for (auto [Idx, V] :
              make_filter_range(enumerate(VL), [](const auto &P) {
-               return !isa<PoisonValue>(P.value());
+               return isa<CmpInst>(P.value());
              })) {
           auto *Cmp = cast<CmpInst>(V);
           if (Cmp->getPredicate() != P0 &&
@@ -15432,7 +15531,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
-      if (Value *V1 = InVectors.front().Vec.dyn_cast<Value *>()) {
+      if (Value *V1 = dyn_cast<Value *>(InVectors.front().Vec)) {
         VF = std::max(VF, getVF(V1));
       } else {
         const auto *E = cast<const TreeEntry *>(InVectors.front().Vec);
@@ -15523,7 +15622,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 TTI::VectorInstrContext Ctx2 = TTI::VectorInstrContext::None) {
     ShuffleCostBuilder Builder(TTI, CostKind);
     SmallVector<int> CommonMask(Mask);
-    Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
+    Value *V1 = dyn_cast<Value *>(P1), *V2 = dyn_cast_if_present<Value *>(P2);
     unsigned CommonVF = Mask.size();
     InstructionCost ExtraCost = 0;
     auto GetNodeMinBWAffectedCost = [&](const TreeEntry &E,
@@ -15980,7 +16079,7 @@ public:
       transformMaskAfterShuffle(CommonMask, CommonMask);
       VF = std::max<unsigned>(VF, CommonMask.size());
     } else if (const auto *InTE =
-                   InVectors.front().Vec.dyn_cast<const TreeEntry *>()) {
+                   dyn_cast<const TreeEntry *>(InVectors.front().Vec)) {
       VF = std::max(VF, InTE->getVectorFactor());
     } else {
       VF = std::max(VF, cast<FixedVectorType>(
@@ -17206,13 +17305,21 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       SwappedVecPred = VecPred = ScalarTy->isFloatingPointTy()
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
+    // The bit tests of trunc X to i1 lanes compare and A, B with a constant.
+    const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
-      if (!isa<SelectInst>(UniqueValues[Idx]))
-        return TTI->getInstructionCost(cast<Instruction>(UniqueValues[Idx]),
-                                       CostKind);
+      if (!isa<SelectInst>(UniqueValues[Idx])) {
+        auto *I = cast<Instruction>(UniqueValues[Idx]);
+        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+        // The and of the bit test is erased with the compare.
+        if (IsBitTest && isa<ICmpInst>(I))
+          Cost += TTI->getInstructionCost(cast<Instruction>(I->getOperand(0)),
+                                          CostKind);
+        return Cost;
+      }
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
       CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
@@ -17315,6 +17422,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             TTI::getOperandInfo(
                 E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
             VL0);
+        if (IsBitTest)
+          VecCost +=
+              TTI->getArithmeticInstrCost(Instruction::And, VecTy, CostKind);
         if (isa<SelectInst>(VL0)) {
           unsigned CondNumElements = getNumElements(MaskTy);
           unsigned VecTyNumElements = getNumElements(VecTy);
@@ -17734,7 +17844,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy);
+            IsMasked, InterleaveFactor, CompressMask, LoadVecTy, PtrsDiffCache);
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
         Align CommonAlignment = LI0->getAlign();
@@ -24181,12 +24291,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       bool SignFlip =
           !SignChange &&
           any_of(make_isa_range<ICmpInst>(E->Scalars), [&](ICmpInst *LaneCI) {
-            auto *OrigC = dyn_cast<ConstantInt>(LaneCI->getOperand(1));
-            if (!OrigC)
-              return false;
-            ConstantInt *AdjC =
+            const APInt *OrigC, *AdjC;
+            Constant *Adj =
                 CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
-            return AdjC && AdjC->isNegative() != OrigC->isNegative();
+            return Adj && match(LaneCI->getOperand(1), m_APInt(OrigC)) &&
+                   match(Adj, m_APInt(AdjC)) &&
+                   AdjC->isNegative() != OrigC->isNegative();
           });
       if (SignChange || SignFlip)
         ICmp->setSameSign(/*B=*/false);
@@ -24600,6 +24710,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
+      // The bit tests compare and L, R with 0, the eq bit tests compare the
+      // trunc X to i1 lanes with 1, exactly in the narrowed type.
+      const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
+      if (IsBitTest) {
+        L = Builder.CreateAnd(L, R);
+        const bool IsEq =
+            CmpSamePredicateHelper::canConvertTo(VL0, CmpInst::ICMP_EQ);
+        P0 = IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+        Type *EltTy = L->getType()->getScalarType();
+        SmallVector<Constant *> Consts;
+        for (Value *V : E->Scalars)
+          Consts.append(getNumElements(VL0->getType()),
+                        ConstantInt::get(EltTy, IsEq && isa<TruncInst>(V)));
+        R = ConstantVector::get(Consts);
+      }
       // A compare with both operands narrowed to the same type preserves the
       // result only if the predicate matches the operand signedness: signed
       // predicates need both operands sign-extended from the narrow type,
@@ -24610,7 +24735,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       auto *LTy = cast<FixedVectorType>(L->getType());
       auto *OrigOpTy =
           dyn_cast<IntegerType>(VL0->getOperand(0)->getType()->getScalarType());
-      if (OrigOpTy && L->getType() == R->getType() &&
+      if (!IsBitTest && OrigOpTy && L->getType() == R->getType() &&
           LTy->getElementType()->getIntegerBitWidth() <
               OrigOpTy->getBitWidth()) {
         bool IsSigned0 = GetOperandSignedness(0);
@@ -27076,6 +27201,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
+  // The cached distances refer to the code just rewritten.
+  PtrsDiffCache.clear();
 
   // The new vector code may capture pointers that were previously not captured
   // (e.g. the pointer operands of a masked gather), so the capture results
@@ -29687,6 +29814,23 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
                                        unsigned &Size) {
   std::optional<bool> Res = vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size);
+  // Retry the non-profitable tree, wider than the vector register, with the
+  // alternate stored values (looking through the cast) split into halves. The
+  // halves share the common operands instead of extracting them for the scalar
+  // stores of the other half.
+  if (Res && !*Res && Chain.size() > SmallNodeSize && Chain.size() % 2 == 0 &&
+      Chain.size() * R.getVectorElementSize(Chain.front()) >
+          R.getMaxVecRegSize() &&
+      R.canSplitStoredValues(Chain)) {
+    SaveAndRestore<bool> SplitGuard = R.splitStoredValues();
+    unsigned SplitSize;
+    std::optional<bool> SplitRes =
+        vectorizeStoreChainImpl(Chain, R, Idx, MinVF, SplitSize);
+    if (SplitRes.value_or(false)) {
+      Size = SplitSize;
+      return SplitRes;
+    }
+  }
   assert(!R.isTryingRuntimeAliasChecks() &&
          "Unexpected nested runtime alias check attempt");
   // Retry once with runtime alias checks, but only when the normal attempt
@@ -33234,6 +33378,24 @@ public:
       };
       bool AnyVectorized = false;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
+      // The overlapping windows rebuild almost the same trees. Like the
+      // scheduling region, the size of the next tree, estimated by the last
+      // rejected one, is limited by the budget, reduced by the sizes of the
+      // rejected trees, but not below the minimal size. The non-power-of-2
+      // widths get only the minimal size for the rejected trees. The budget
+      // limits only the series of the rejected trees, the vectorized tree
+      // starts a new series.
+      unsigned ReductionBudget = Opts.slp_reduction_budget;
+      unsigned LastRejectedTreeSize = 1;
+      unsigned NonPowerOf2RejectedSize = 0;
+      auto RejectTree = [&]() {
+        LastRejectedTreeSize = V.getTreeSize();
+        const unsigned Size = ReduxWidth * LastRejectedTreeSize;
+        ReductionBudget -= std::min(ReductionBudget, Size);
+        ReductionBudget = std::max(ReductionBudget, MinReductionTreeSize);
+        if (!has_single_bit(ReduxWidth))
+          NonPowerOf2RejectedSize += Size;
+      };
       // Same small-group allowance for the vector width, if it covers the
       // whole group.
       const unsigned MinReduxWidth =
@@ -33251,10 +33413,12 @@ public:
         }
         PrevReduxWidth = ReduxWidth;
         ArrayRef<Value *> VL(std::next(Candidates.begin(), Pos), ReduxWidth);
-        // Been analyzed already - skip.
-        if (IgnoredCandidates.contains(std::make_pair(Pos, ReduxWidth)) ||
+        // Been analyzed already or out of budget - skip.
+        if (ReduxWidth * LastRejectedTreeSize > ReductionBudget ||
+            IgnoredCandidates.contains(std::make_pair(Pos, ReduxWidth)) ||
             (!has_single_bit(ReduxWidth) &&
-             (IgnoredCandidates.contains(
+             (NonPowerOf2RejectedSize > MinReductionTreeSize ||
+              IgnoredCandidates.contains(
                   std::make_pair(Pos, bit_floor(ReduxWidth))) ||
               IgnoredCandidates.contains(
                   std::make_pair(Pos + (ReduxWidth - bit_floor(ReduxWidth)),
@@ -33276,6 +33440,7 @@ public:
         }
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
+          RejectTree();
           constexpr unsigned CandidatesLimit = 64;
           if (!AdjustReducedVals(RK == ReductionOrdering::Ordered &&
                                  Candidates.size() >= CandidatesLimit))
@@ -33401,6 +33566,7 @@ public:
                    << " and threshold "
                    << ore::NV("Threshold", -V.getCostThreshold());
           });
+          RejectTree();
           if (!AdjustReducedVals()) {
             MarkAnalyzedVals(VL);
             unsigned Offset = Pos == Start ? Pos : Pos - 1;
@@ -33425,6 +33591,9 @@ public:
 
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing horizontal reduction at cost:"
                           << Cost << ". (HorRdx)\n");
+        ReductionBudget = Opts.slp_reduction_budget;
+        LastRejectedTreeSize = 1;
+        NonPowerOf2RejectedSize = 0;
         V.getORE()->emit([&]() {
           return OptimizationRemark(SV_NAME, "VectorizedHorizontalReduction",
                                     ReducedValsToOps.at(VL[0]).front())
