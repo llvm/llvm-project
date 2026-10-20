@@ -145,7 +145,10 @@ bool AGXLowerGenericAddresses::runOnFunction(Function &F) {
     Value *P = genericPointer(*I);
     IRBuilder<> B(I);
     Value *Bits = B.CreatePtrToInt(P, I64);
-    Value *IsShared = B.CreateICmpSLT(Bits, ConstantInt::get(I64, 0));
+    // The tag is the sign of the high word, which is cheaper to test than the
+    // sign of the 64-bit value.
+    Value *Hi = B.CreateTrunc(B.CreateLShr(Bits, 32), I32);
+    Value *IsShared = B.CreateICmpSLT(Hi, ConstantInt::get(I32, 0));
     Instruction *ThenT, *ElseT;
     SplitBlockAndInsertIfThenElse(IsShared, I, &ThenT, &ElseT);
     // Threadgroup access.

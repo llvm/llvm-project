@@ -12,13 +12,14 @@ declare i32 @llvm.agx.thread.position.in.threadgroup.x()
 ; IR: %[[OFF:.*]] = ptrtoint ptr addrspace(3) %{{.*}} to i32
 ; IR: zext i32 %[[OFF]] to i64
 ; IR: or i64 %{{.*}}, -9223372036854775808
-; IR: icmp slt i64 %{{.*}}, 0
+; IR: lshr i64 %{{.*}}, 32
+; IR: icmp slt i32 %{{.*}}, 0
 ; IR: load i32, ptr addrspace(3)
 ; IR: load i32, ptr addrspace(1)
 ; IR: phi i32
 ; CHECK-LABEL: select_load:
-; CHECK: threadgroup_load
-; CHECK: device_load
+; CHECK-DAG: threadgroup_load
+; CHECK-DAG: device_load
 define agx_kernel void @select_load(ptr addrspace(1) %out, ptr addrspace(1) %dev, i32 %sel) {
   %t = call i32 @llvm.agx.thread.position.in.threadgroup.x()
   %s = getelementptr [64 x i32], ptr addrspace(3) @buf, i32 0, i32 %t
@@ -33,12 +34,10 @@ define agx_kernel void @select_load(ptr addrspace(1) %out, ptr addrspace(1) %dev
   ret void
 }
 
+; A cast pair folds away before the lowering.
 ; IR-LABEL: @round_trip
-; IR: %[[G:.*]] = or i64
-; IR: %[[B:.*]] = trunc i64 %{{.*}} to i32
-; IR: inttoptr i32 %[[B]] to ptr addrspace(3)
-; IR-NOT: icmp slt
-; IR: ret void
+; IR-NOT: ptrtoint
+; IR: store i32 %v, ptr addrspace(3) %s
 define agx_kernel void @round_trip(i32 %v) {
   %t = call i32 @llvm.agx.thread.position.in.threadgroup.x()
   %s = getelementptr [64 x i32], ptr addrspace(3) @buf, i32 0, i32 %t
@@ -48,10 +47,24 @@ define agx_kernel void @round_trip(i32 %v) {
   ret void
 }
 
+; A generic pointer cast to a threadgroup one keeps its low 32 bits.
+; IR-LABEL: @from_generic
+; IR: %[[I:.*]] = ptrtoint ptr %g to i64
+; IR: %[[B:.*]] = trunc i64 %[[I]] to i32
+; IR: %[[S:.*]] = inttoptr i32 %[[B]] to ptr addrspace(3)
+; IR: store i32 %v, ptr addrspace(3) %[[S]]
+; CHECK-LABEL: from_generic:
+; CHECK: threadgroup_store
+define agx_kernel void @from_generic(ptr %g, i32 %v) {
+  %s = addrspacecast ptr %g to ptr addrspace(3)
+  store i32 %v, ptr addrspace(3) %s
+  ret void
+}
+
 ; Functions without casts to or from threadgroup pointers keep their generic
 ; accesses as device accesses.
 ; IR-LABEL: @device_only
-; IR-NOT: icmp slt
+; IR-NOT: lshr
 ; IR: store i32 %v, ptr %p
 define agx_kernel void @device_only(ptr %p, i32 %v) {
   store i32 %v, ptr %p
