@@ -225,7 +225,7 @@ namespace {
 // appropriate type conversions / materializations, we need a dummy pattern.
 class ConvertYieldOpTypes : public OpConversionPattern<scf::YieldOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(scf::YieldOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
