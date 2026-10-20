@@ -1132,8 +1132,8 @@ def MEMORY_BARRIER : AGXPseudo<(outs), (ins i32imm:$a, i32imm:$b, i32imm:$c),
   let SchedRW = [WriteBarrier];
 }
 
-// Device scope barrier, as emitted for fences.
-def : Pat<(atomic_fence (i64 timm), (i64 timm)), (MEMORY_BARRIER 1, 2, 9)>;
+// Fences are custom lowered to the barrier sequence of their scope and
+// ordering (AGXTargetLowering::lowerATOMIC_FENCE).
 
 let hasSideEffects = 1 in
 def WAIT : AGXPseudo<(outs), (ins i32imm:$slot), [(int_agx_wait timm:$slot)]> {

@@ -27,6 +27,7 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSETCC64(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift64(SDValue Op, SelectionDAG &DAG) const;
@@ -53,6 +54,16 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT VT) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
+  // Ordered atomics are monotonic accesses between fences, so that fences
+  // carry the measured barrier sequences (see lowerATOMIC_FENCE).
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+    return true;
+  }
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;

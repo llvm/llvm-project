@@ -141,6 +141,13 @@ define agx_kernel void @fence() {
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    memory_barrier 1, 2, 9
+; CHECK-NEXT:    memory_barrier 0, 3, 3
+; CHECK-NEXT:    memory_barrier 2, 2, 9
+; CHECK-NEXT:    memory_barrier 3, 2, 9
+; CHECK-NEXT:    memory_barrier 0, 3, 0
+; CHECK-NEXT:    memory_barrier 2, 1, 9
+; CHECK-NEXT:    wait 0
+; CHECK-NEXT:    memory_barrier 3, 1, 9
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap

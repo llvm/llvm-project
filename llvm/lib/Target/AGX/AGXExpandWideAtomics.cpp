@@ -146,7 +146,8 @@ static void expand(Instruction &I, unsigned Bits, GlobalVariable *Locks) {
   B.CreateCondBr(B.CreateExtractValue(Acq, 1), Crit, Latch);
 
   B.SetInsertPoint(Crit);
-  B.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  // Lock semantics: acquire after taking the lock, release before freeing it.
+  B.CreateFence(AtomicOrdering::Acquire);
   auto Word = [&](unsigned K) {
     return B.CreateConstGEP1_32(B.getInt8Ty(), Ptr, 4 * K);
   };
@@ -191,7 +192,7 @@ static void expand(Instruction &I, unsigned Bits, GlobalVariable *Locks) {
       B.SetInsertPoint(After);
     }
   }
-  B.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  B.CreateFence(AtomicOrdering::Release);
   B.CreateAtomicRMW(AtomicRMWInst::Xchg, Lock, B.getInt32(0), MaybeAlign(4),
                     AtomicOrdering::Monotonic);
   BasicBlock *CritEnd = B.GetInsertBlock();

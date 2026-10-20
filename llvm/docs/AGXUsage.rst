@@ -302,6 +302,36 @@ in functions whose ``denormal_fpenv`` flushes ``half`` denormals, the
 operands and results of ``half`` arithmetic, comparisons and conversions are
 flushed explicitly.
 
+Fences and ordered atomics follow the barriers measured with cross-core
+litmus tests on G14C (M2 Max). ``memory_barrier`` with operands ``a, b, c``
+is the 16-bit word ``0xf5 | b << 8 | a << 10 | c << 12``:
+
+.. table:: AGX fences
+   :name: agx-fences-table
+
+   ===================================== ====================================
+   Fence                                 Barriers
+   ===================================== ====================================
+   ``singlethread``                      none
+   ``workgroup``, any ordering           ``f596`` (threads of a threadgroup
+                                         share a core; no reordering was
+                                         observed there)
+   device or system, ``release``         ``f533`` (the store release)
+   device or system, ``acquire``         ``wait 0``, ``f59d``
+   device or system, ``acq_rel``         ``f533``, ``wait 0``, ``f59d``
+   device or system, ``seq_cst``         Mesa's sequence ``f596 f533 f59a
+                                         f59e f503 f599``, ``wait 0``,
+                                         ``f59d`` (the only one that orders
+                                         store buffering in every case)
+   ===================================== ====================================
+
+``f596`` alone, which Mesa uses below queue-family scope, does not order
+stores between cores, and a device atomic is no release by itself. Ordered
+atomic operations are monotonic accesses between the fences of their scope
+(a release fence before, an acquire fence after). The release costs about
+25 ns before a store and 250 ns after a load; the sequentially consistent
+sequence costs 0.4 to 0.65 us.
+
 Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
 precision`_; diagnosed as unsupported), vector memory
 operations (vectors are scalarized), textures and graphics shaders, calls

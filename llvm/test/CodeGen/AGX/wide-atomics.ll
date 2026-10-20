@@ -12,11 +12,11 @@
 ; CHECK: wide.atomic:
 ; CHECK: cmpxchg ptr addrspace(1) %{{.*}}, i32 0, i32 1 monotonic monotonic
 ; CHECK: wide.atomic.locked:
-; CHECK: fence seq_cst
+; CHECK: fence acquire
 ; CHECK-COUNT-2: atomicrmw or ptr addrspace(1) %{{.*}}, i32 0 monotonic
 ; CHECK: add i64
 ; CHECK-COUNT-2: atomicrmw xchg ptr addrspace(1) %{{.*}}, i32 %{{.*}} monotonic
-; CHECK: fence seq_cst
+; CHECK: fence release
 ; CHECK: atomicrmw xchg ptr addrspace(1) %{{.*}}, i32 0 monotonic
 ; CHECK: wide.atomic.latch:
 ; ASM-LABEL: add64:

@@ -77,6 +77,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
   setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_VOID},
                      MVT::Other, Custom);
+  // Fences become the barrier sequences measured for their scope and ordering.
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
   setTargetDAGCombine(ISD::BRCOND);
@@ -364,6 +366,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return lowerINTRINSIC_VOID(Op, DAG);
+  case ISD::ATOMIC_FENCE:
+    return lowerATOMIC_FENCE(Op, DAG);
   case ISD::BRCOND:
     return lowerBRCOND(Op, DAG);
   case ISD::SETCC:
@@ -491,6 +495,89 @@ SDValue AGXTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   default:
     return SDValue();
   }
+}
+
+// The memory barriers of G13/G14, by their 16-bit encodings (memory_barrier
+// a, b, c is 0xf5 | b << 8 | a << 10 | c << 12). Their effect was measured
+// with cross-core litmus tests on G14C (M2 Max) under Asahi Linux
+// (Apple-M2-Playground novel-results 2026-10-11-memory-ordering,
+// 2026-10-18-sb-lb, 2026-10-18-atomic-release, 2026-10-18-fence-cost):
+//   f596 (Mesa's memory_barrier) does not order stores between cores;
+//   f533 is the store release (also needed before an atomic flag);
+//   wait 0 then f59d is the acquire;
+//   store buffering needs the whole sequence Mesa uses at queue-family scope.
+// Threads of one threadgroup run on one core, where no reordering was seen.
+enum AGXBarrier : unsigned { F596, F533, F59D, F59A, F59E, F503, F599 };
+
+static SDValue emitBarrier(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                           AGXBarrier B) {
+  static const unsigned Ops[][3] = {
+      {1, 2, 9}, {0, 3, 3}, {3, 1, 9}, {2, 2, 9}, {3, 2, 9}, {0, 3, 0},
+      {2, 1, 9}};
+  SDValue Args[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::agx_memory_barrier, DL, MVT::i32),
+      DAG.getTargetConstant(Ops[B][0], DL, MVT::i32),
+      DAG.getTargetConstant(Ops[B][1], DL, MVT::i32),
+      DAG.getTargetConstant(Ops[B][2], DL, MVT::i32)};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Args);
+}
+
+static SDValue emitWait(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain) {
+  SDValue Args[] = {Chain,
+                    DAG.getTargetConstant(Intrinsic::agx_wait, DL, MVT::i32),
+                    DAG.getTargetConstant(0, DL, MVT::i32)};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Args);
+}
+
+SDValue AGXTargetLowering::lowerATOMIC_FENCE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  auto Ordering = static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
+  auto Scope = static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+  if (Scope == SyncScope::SingleThread)
+    return Chain;
+  LLVMContext &Ctx = *DAG.getContext();
+  if (Scope == Ctx.getOrInsertSyncScopeID("workgroup") ||
+      Scope == Ctx.getOrInsertSyncScopeID("workgroup-one-as"))
+    return emitBarrier(DAG, DL, Chain, F596);
+  // Device and system scope.
+  switch (Ordering) {
+  case AtomicOrdering::Acquire:
+    return emitBarrier(DAG, DL, emitWait(DAG, DL, Chain), F59D);
+  case AtomicOrdering::Release:
+    return emitBarrier(DAG, DL, Chain, F533);
+  case AtomicOrdering::AcquireRelease:
+    Chain = emitBarrier(DAG, DL, Chain, F533);
+    return emitBarrier(DAG, DL, emitWait(DAG, DL, Chain), F59D);
+  default:
+    for (AGXBarrier B : {F596, F533, F59A, F59E, F503, F599})
+      Chain = emitBarrier(DAG, DL, Chain, B);
+    return emitBarrier(DAG, DL, emitWait(DAG, DL, Chain), F59D);
+  }
+}
+
+Instruction *AGXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                 Instruction *Inst,
+                                                 AtomicOrdering Ord) const {
+  if (isReleaseOrStronger(Ord) && Inst->hasAtomicStore())
+    return Builder.CreateFence(isAcquireOrStronger(Ord) ? AtomicOrdering::Release
+                                                        : Ord,
+                               getAtomicSyncScopeID(Inst).value_or(
+                                   SyncScope::System));
+  return nullptr;
+}
+
+Instruction *AGXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                  Instruction *Inst,
+                                                  AtomicOrdering Ord) const {
+  if (isAcquireOrStronger(Ord))
+    return Builder.CreateFence(
+        Ord == AtomicOrdering::SequentiallyConsistent
+            ? AtomicOrdering::SequentiallyConsistent
+            : AtomicOrdering::Acquire,
+        getAtomicSyncScopeID(Inst).value_or(SyncScope::System));
+  return nullptr;
 }
 
 SDValue AGXTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
