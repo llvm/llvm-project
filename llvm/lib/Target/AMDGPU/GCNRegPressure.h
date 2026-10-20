@@ -266,12 +266,14 @@ public:
   unsigned getMaxVGPRs() const {
     return UnifiedRF ? MaxUnifiedVGPRs : MaxVGPRs;
   }
+  unsigned getMaxArchVGPRs() const { return MaxArchVGPRs; }
+  unsigned getMaxAGPRs() const { return MaxAGPRs; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
     OS << "Actual/Target: " << Target.RP.getSGPRNum() << '/' << Target.MaxSGPRs
-       << " SGPRs, " << Target.RP.getArchVGPRNum() << '/' << Target.MaxVGPRs
-       << " ArchVGPRs, " << Target.RP.getAGPRNum() << '/' << Target.MaxVGPRs
+       << " SGPRs, " << Target.RP.getArchVGPRNum() << '/' << Target.MaxArchVGPRs
+       << " ArchVGPRs, " << Target.RP.getAGPRNum() << '/' << Target.MaxAGPRs
        << " AGPRs";
 
     if (Target.MaxUnifiedVGPRs) {
@@ -293,6 +295,10 @@ private:
   unsigned MaxSGPRs = 0;
   /// Target number of ArchVGPRs and AGPRs.
   unsigned MaxVGPRs = 0;
+  /// Per-class limits the register allocator can use. With a unified RF these
+  /// reflect how the vector register budget is split between the classes.
+  unsigned MaxArchVGPRs = 0;
+  unsigned MaxAGPRs = 0;
   /// Target number of overall VGPRs for subtargets with unified RFs. Always 0
   /// for subtargets with non-unified RFs.
   unsigned MaxUnifiedVGPRs = 0;

@@ -124,23 +124,22 @@ struct RegExcess {
     unsigned WaveSize = ST.getWavefrontSize();
     unsigned VGPRForSGPRSpills = divideCeil(SGPR, WaveSize);
 
-    unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
-
     // Unified excess pressure conditions, accounting for VGPRs used for SGPR
     // spills
     VGPR = std::max(static_cast<int>(RP.getVGPRNum(ST.hasGFX90AInsts()) +
                                      VGPRForSGPRSpills - MaxVGPRs),
                     0);
 
-    unsigned ArchVGPRLimit = ST.hasGFX90AInsts() ? MaxArchVGPRs : MaxVGPRs;
     // Arch VGPR excess pressure conditions, accounting for VGPRs used for SGPR
     // spills
-    ArchVGPR = std::max(static_cast<int>(RP.getArchVGPRNum() +
-                                         VGPRForSGPRSpills - ArchVGPRLimit),
-                        0);
+    ArchVGPR =
+        std::max(static_cast<int>(RP.getArchVGPRNum() + VGPRForSGPRSpills -
+                                  Target.getMaxArchVGPRs()),
+                 0);
 
     // AGPR excess pressure conditions
-    AGPR = std::max(static_cast<int>(RP.getAGPRNum() - ArchVGPRLimit), 0);
+    AGPR =
+        std::max(static_cast<int>(RP.getAGPRNum() - Target.getMaxAGPRs()), 0);
   }
 };
 } // namespace
@@ -405,8 +404,10 @@ void GCNRPTarget::setTarget(unsigned NumSGPRs, unsigned NumVGPRs) {
         MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
     MaxUnifiedVGPRs =
         std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs);
+    std::tie(MaxArchVGPRs, MaxAGPRs) = ST.getMaxNumVectorRegs(MF.getFunction());
   } else {
     MaxUnifiedVGPRs = 0;
+    MaxArchVGPRs = MaxAGPRs = MaxVGPRs;
   }
 }
 
@@ -467,7 +468,9 @@ unsigned GCNRPTarget::getNumRegsBenefit(const GCNRegPressure &SaveRP) const {
 bool GCNRPTarget::satisfied(const GCNRegPressure &TestRP) const {
   if (TestRP.getSGPRNum() > MaxSGPRs || TestRP.getVGPRNum(false) > MaxVGPRs)
     return false;
-  if (UnifiedRF && TestRP.getVGPRNum(true) > MaxUnifiedVGPRs)
+  if (UnifiedRF && (TestRP.getVGPRNum(true) > MaxUnifiedVGPRs ||
+                    TestRP.getArchVGPRNum() > MaxArchVGPRs ||
+                    TestRP.getAGPRNum() > MaxAGPRs))
     return false;
   return true;
 }

@@ -2024,14 +2024,18 @@ void GCNSchedStage::checkScheduling() {
   // The maximum number of arch VGPR on non-unified register file, or the
   // maximum VGPR + AGPR in the unified register file case.
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
-  // The maximum number of arch VGPR for both unified and non-unified register
-  // file.
-  unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
+  // The maximum number of arch VGPRs and AGPRs the register allocator can use.
+  // With a unified register file this reflects how the budget is split between
+  // the two classes.
+  auto [MaxArchVGPRs, MaxAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
+  MaxArchVGPRs = std::min(MaxArchVGPRs, ST.getAddressableNumArchVGPRs());
+  if (!ST.hasGFX90AInsts())
+    MaxAGPRs = MaxArchVGPRs;
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
       PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
-      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
+      PressureAfter.getAGPRNum() > MaxAGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
