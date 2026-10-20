@@ -285,7 +285,7 @@ defm : ValueField<"slp-runtime-alias-checks-max-scalar-cost-percent", "unsigned"
 // Limits the size of scheduling regions in a block. It avoid long compile times
 // for _very_ large blocks where vector instructions are spread over a wide
 // range. This limit is way higher than needed by real-world functions.
-defm : ValueField<"slp-schedule-budget", "int", "100000",
+defm : ValueField<"slp-schedule-budget", "int", "200000",
   "Limit the size of the SLP scheduling region per block">;
 defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;
