@@ -8,6 +8,7 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/FoldUtils.h"
+#include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 
@@ -33,20 +34,19 @@ struct TestSingleFold : public PassWrapper<TestSingleFold, OperationPass<>>,
   StringRef getDescription() const final {
     return "Test single-pass operation folding and dead constant elimination";
   }
-  // All constants in the operation post folding.
-  SmallVector<Operation *> existingConstants;
+  // Moves can report the same constant more than once. Keep each constant
+  // once so that cleanup cannot visit an operation after erasing it.
+  llvm::SmallSetVector<Operation *, 8> existingConstants;
 
   void foldOperation(Operation *op, OperationFolder &helper);
   void runOnOperation() override;
 
   void notifyOperationInserted(Operation *op,
                                OpBuilder::InsertPoint previous) override {
-    existingConstants.push_back(op);
+    existingConstants.insert(op);
   }
   void notifyOperationErased(Operation *op) override {
-    auto *it = llvm::find(existingConstants, op);
-    if (it != existingConstants.end())
-      existingConstants.erase(it);
+    existingConstants.remove(op);
   }
 
   Option<int> maxIterations{*this, "max-iterations",
