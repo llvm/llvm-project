@@ -43,15 +43,15 @@ buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOP
 // GFX13: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x03,0x00,0x03,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B
-// GFX1250-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:87: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x03,0x01,0x03,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B
-// GFX1250-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:87: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x03,0x02,0x03,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B
-// GFX1250-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:87: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_load_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_LOAD_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x03,0x03,0x03,0xc4,0x05,0x10,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_load_b64 v[5:6], off, s[8:11], s3 offset:8388607
@@ -638,15 +638,15 @@ buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SC
 // GFX13: buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x00,0x06,0xc4,0x01,0x18,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_128B
-// GFX1250-ERR: :[[@LINE-1]]:93: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:89: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x04,0x01,0x06,0xc4,0x01,0x18,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_64B
-// GFX1250-ERR: :[[@LINE-1]]:93: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:89: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x04,0x02,0x06,0xc4,0x01,0x18,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_32B
-// GFX1250-ERR: :[[@LINE-1]]:93: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:89: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_store_b8 v1, off, s[12:15], s4 offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x04,0x03,0x06,0xc4,0x01,0x18,0xbc,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_store_b16 v1, off, s[12:15], s4 offset:8388607
@@ -1086,15 +1086,15 @@ buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_N
 // GFX13: buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV ; encoding: [0x03,0x00,0x15,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_128B
-// GFX1250-ERR: :[[@LINE-1]]:103: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:99: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_128B ; encoding: [0x03,0x01,0x15,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_64B
-// GFX1250-ERR: :[[@LINE-1]]:103: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:99: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_64B ; encoding: [0x03,0x02,0x15,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_32B
-// GFX1250-ERR: :[[@LINE-1]]:103: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:99: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_32B ; encoding: [0x03,0x03,0x15,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_add_u32 v5, off, s[8:11], s3 offset:8388607
@@ -2364,15 +2364,15 @@ buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT
 // GFX13: buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV ; encoding: [0x03,0x80,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_128B
-// GFX1250-ERR: :[[@LINE-1]]:102: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:98: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_128B ; encoding: [0x03,0x81,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_64B
-// GFX1250-ERR: :[[@LINE-1]]:102: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:98: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_64B ; encoding: [0x03,0x82,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_32B
-// GFX1250-ERR: :[[@LINE-1]]:102: error: Cache fill size is not supported on this GPU
+// GFX1250-ERR: :[[@LINE-1]]:98: error: Cache fill size is not supported on this GPU
 // GFX13: buffer_atomic_or_b32 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV cfs:CFS_32B ; encoding: [0x03,0x83,0x0e,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_or_b64 v[5:6], off, s[8:11], s3 offset:8388607

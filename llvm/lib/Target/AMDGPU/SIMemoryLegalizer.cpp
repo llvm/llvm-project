@@ -2615,9 +2615,11 @@ bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
   // Handle volatile and/or nontemporal markers on direct-to-LDS loads and
   // stores. The operation is treated as a volatile/nontemporal store
   // to its second argument.
-  return CC->enableVolatileAndOrNonTemporal(
+  bool Changed = CC->enableVolatileAndOrNonTemporal(
       MI, MOI.getInstrAddrSpace(), OpKind, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+  return Changed;
 }
 
 bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {

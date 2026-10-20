@@ -5323,7 +5323,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     if (!hasCacheFillSize()) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("CFS")]);
+      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("cfs")]);
       Error(S, "Cache fill size is not supported on this GPU");
     } else if (!validateCFSBits(Inst, Operands)) {
       return false;

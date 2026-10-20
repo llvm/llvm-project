@@ -104,15 +104,15 @@ tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:10 offset:8388607 scope
 // GFX13: tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_SSCALED] offset:8388607 scope:SCOPE_SE ; encoding: [0x03,0x40,0x3a,0xc4,0x04,0xe0,0x04,0x05,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:10 offset:8388607 scope:SCOPE_SE cfs:CFS_128B
-// GFX12-ERR: :[[@LINE-1]]:95: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_SSCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_128B ; encoding: [0x03,0x41,0x3a,0xc4,0x04,0xe0,0x04,0x05,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:10 offset:8388607 scope:SCOPE_SE cfs:CFS_64B
-// GFX12-ERR: :[[@LINE-1]]:95: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_SSCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_64B ; encoding: [0x03,0x42,0x3a,0xc4,0x04,0xe0,0x04,0x05,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:10 offset:8388607 scope:SCOPE_SE cfs:CFS_32B
-// GFX12-ERR: :[[@LINE-1]]:95: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_load_d16_format_xy v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_SSCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_32B ; encoding: [0x03,0x43,0x3a,0xc4,0x04,0xe0,0x04,0x05,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_d16_format_xyz v[4:5], off, s[8:11], s3 format:[BUF_FMT_16_UINT] offset:8388607
@@ -258,15 +258,15 @@ tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:25 offset:8388607 scope:SCOP
 // GFX13: tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_16_USCALED] offset:8388607 scope:SCOPE_SE ; encoding: [0x03,0x00,0x38,0xc4,0x04,0xe0,0x84,0x0c,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:25 offset:8388607 scope:SCOPE_SE cfs:CFS_128B
-// GFX12-ERR: :[[@LINE-1]]:90: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:86: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_16_USCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_128B ; encoding: [0x03,0x01,0x38,0xc4,0x04,0xe0,0x84,0x0c,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:25 offset:8388607 scope:SCOPE_SE cfs:CFS_64B
-// GFX12-ERR: :[[@LINE-1]]:90: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:86: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_16_USCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_64B ; encoding: [0x03,0x02,0x38,0xc4,0x04,0xe0,0x84,0x0c,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:25 offset:8388607 scope:SCOPE_SE cfs:CFS_32B
-// GFX12-ERR: :[[@LINE-1]]:90: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:86: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_load_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_16_16_USCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_32B ; encoding: [0x03,0x03,0x38,0xc4,0x04,0xe0,0x84,0x0c,0x00,0xff,0xff,0x7f]
 
 tbuffer_load_format_xy v[4:5], off, s[8:11], s3 format:[BUF_FMT_16_16_SSCALED] offset:8388607
@@ -454,15 +454,15 @@ tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:45 offset:8388607 scope
 // GFX13: tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_8_8_8_SSCALED] offset:8388607 scope:SCOPE_SE ; encoding: [0x03,0x00,0x3b,0xc4,0x04,0xe0,0x84,0x16,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:45 offset:8388607 scope:SCOPE_SE cfs:CFS_128B
-// GFX12-ERR: :[[@LINE-1]]:95: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_8_8_8_SSCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_128B ; encoding: [0x03,0x01,0x3b,0xc4,0x04,0xe0,0x84,0x16,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:45 offset:8388607 scope:SCOPE_SE cfs:CFS_64B
-// GFX12-ERR: :[[@LINE-1]]:95: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_8_8_8_SSCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_64B ; encoding: [0x03,0x02,0x3b,0xc4,0x04,0xe0,0x84,0x16,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:45 offset:8388607 scope:SCOPE_SE cfs:CFS_32B
-// GFX12-ERR: :[[@LINE-1]]:95: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:91: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_store_d16_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_8_8_8_SSCALED] offset:8388607 scope:SCOPE_SE cfs:CFS_32B ; encoding: [0x03,0x03,0x3b,0xc4,0x04,0xe0,0x84,0x16,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_d16_format_xy v4, off, s[8:11], s3 format:[BUF_FMT_8_8_8_8_UINT] offset:8388607
@@ -647,15 +647,15 @@ tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:
 // GFX13: tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x03,0x00,0x39,0xc4,0x04,0xe0,0x3c,0x02,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_128B
-// GFX12-ERR: :[[@LINE-1]]:128: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:124: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_128B ; encoding: [0x03,0x01,0x39,0xc4,0x04,0xe0,0x3c,0x02,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_64B
-// GFX12-ERR: :[[@LINE-1]]:128: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:124: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_64B ; encoding: [0x03,0x02,0x39,0xc4,0x04,0xe0,0x3c,0x02,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_32B
-// GFX12-ERR: :[[@LINE-1]]:128: error: Cache fill size is not supported on this GPU
+// GFX12-ERR: :[[@LINE-1]]:124: error: Cache fill size is not supported on this GPU
 // GFX13: tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_SSCALED] offset:8388607 th:TH_STORE_BYPASS scope:SCOPE_SYS cfs:CFS_32B ; encoding: [0x03,0x03,0x39,0xc4,0x04,0xe0,0x3c,0x02,0x00,0xff,0xff,0x7f]
 
 tbuffer_store_format_x v4, off, ttmp[4:7], s3 format:[BUF_FMT_8_UINT] offset:8388607 scope:SCOPE_SE
