@@ -1890,14 +1890,15 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
 
         for (unsigned TupleSize : {4, 2}) {
           if (auto LowReg = GetZPRTupleLowestReg(TupleSize)) {
-            // Note: ST1B has the same offset constraints .
+            // Note: ST1B has the same offset constraints.
             unsigned Opcode =
                 TupleSize == 4 ? AArch64::LD1B_4Z_IMM : AArch64::LD1B_2Z_IMM;
             const int Offset =
                 (ScalableByteOffset + StackFillDir * TupleSize * Scale);
-            if (isValidMemOpOffset(TII, Opcode, Offset))
+            if (isValidMemOpOffset(TII, Opcode, Offset)) {
               RGI.Reg2 = *LowReg;
-            break;
+              break;
+            }
           }
         }
 
