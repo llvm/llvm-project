@@ -9,8 +9,7 @@ define i1 @covariant_select(i1 %c) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
-; CHECK-NEXT:    [[RF:%.*]] = icmp eq i64 [[S]], 1
-; CHECK-NEXT:    ret i1 [[RF]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = select i1 %c, i64 0, i64 1
@@ -31,11 +30,9 @@ define i1 @covariant_select_variable_operand(i1 %c, i64 %a) {
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i64 [[A:%.*]], i64 1
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[RT:%.*]] = icmp eq i64 [[S]], [[A]]
-; CHECK-NEXT:    ret i1 [[RT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
-; CHECK-NEXT:    [[RF:%.*]] = icmp eq i64 [[S]], 1
-; CHECK-NEXT:    ret i1 [[RF]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = select i1 %c, i64 %a, i64 1
@@ -57,8 +54,7 @@ define i64 @covariant_select_cond_and(i1 %c, i1 %d) {
 ; CHECK-NEXT:    [[A:%.*]] = and i1 [[C]], [[D:%.*]]
 ; CHECK-NEXT:    br i1 [[A]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[RT:%.*]] = add i64 [[S]], 10
-; CHECK-NEXT:    ret i64 [[RT]]
+; CHECK-NEXT:    ret i64 10
 ; CHECK:       f:
 ; CHECK-NEXT:    [[RF:%.*]] = add i64 [[S]], 20
 ; CHECK-NEXT:    ret i64 [[RF]]
@@ -109,10 +105,10 @@ define i32 @covariant_select_aggregate(i1 %c, {i32, i32} %a, {i32, i32} %b) {
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], { i32, i32 } [[A:%.*]], { i32, i32 } [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[XT:%.*]] = extractvalue { i32, i32 } [[S]], 0
+; CHECK-NEXT:    [[XT:%.*]] = extractvalue { i32, i32 } [[A]], 0
 ; CHECK-NEXT:    ret i32 [[XT]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[XF:%.*]] = extractvalue { i32, i32 } [[S]], 1
+; CHECK-NEXT:    [[XF:%.*]] = extractvalue { i32, i32 } [[B]], 1
 ; CHECK-NEXT:    ret i32 [[XF]]
 ;
 entry:
@@ -134,10 +130,10 @@ define i32 @covariant_select_vector(i1 %c, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[XT:%.*]] = extractelement <2 x i32> [[S]], i32 0
+; CHECK-NEXT:    [[XT:%.*]] = extractelement <2 x i32> [[A]], i32 0
 ; CHECK-NEXT:    ret i32 [[XT]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[XF:%.*]] = extractelement <2 x i32> [[S]], i32 1
+; CHECK-NEXT:    [[XF:%.*]] = extractelement <2 x i32> [[B]], i32 1
 ; CHECK-NEXT:    ret i32 [[XF]]
 ;
 entry:
@@ -161,8 +157,7 @@ define i1 @covariant_select_single_dominated_use(i1 %c) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       f:
-; CHECK-NEXT:    [[RF:%.*]] = icmp eq i64 [[S]], 1
-; CHECK-NEXT:    ret i1 [[RF]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = select i1 %c, i64 0, i64 1
@@ -208,7 +203,7 @@ define i64 @duplicate_select_in_successor(i1 %c, i64 %x) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i64 [[X:%.*]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[RF:%.*]] = add i64 [[S]], [[X]]
+; CHECK-NEXT:    [[RF:%.*]] = add i64 1, [[X]]
 ; CHECK-NEXT:    ret i64 [[RF]]
 ;
 entry:
@@ -233,10 +228,9 @@ define i64 @select_phi_user(i1 %c) {
 ; CHECK:       t:
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[Y:%.*]] = add i64 [[S]], 1
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[S]], [[T]] ], [ [[Y]], [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 0, [[T]] ], [ 2, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -290,11 +284,9 @@ define i64 @select_cond_is_logical_and(i1 %c, i1 %d) {
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[A]], i64 0, i64 1
 ; CHECK-NEXT:    br i1 [[A]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[RT:%.*]] = add i64 [[S]], 10
-; CHECK-NEXT:    ret i64 [[RT]]
+; CHECK-NEXT:    ret i64 10
 ; CHECK:       f:
-; CHECK-NEXT:    [[RF:%.*]] = add i64 [[S]], 20
-; CHECK-NEXT:    ret i64 [[RF]]
+; CHECK-NEXT:    ret i64 21
 ;
 entry:
   %a = select i1 %c, i1 %d, i1 false
@@ -315,8 +307,7 @@ define i64 @select_after_assume(i1 %c, i64 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i64 7, i64 [[X:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[S]], 5
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 12
 ;
 entry:
   %s = select i1 %c, i64 7, i64 %x
@@ -332,10 +323,9 @@ define i32 @select_pointer_load(i1 %c, ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[P]], ptr [[Q:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[S]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 42
 ; CHECK:       f:
-; CHECK-NEXT:    [[W:%.*]] = load i32, ptr [[S]], align 4
+; CHECK-NEXT:    [[W:%.*]] = load i32, ptr [[Q]], align 4
 ; CHECK-NEXT:    ret i32 [[W]]
 ;
 entry:
@@ -358,9 +348,9 @@ define i64 @select_loop_carried(i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[PREV:%.*]] = phi i64 [ 100, [[ENTRY]] ], [ [[S:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[PREV:%.*]] = phi i64 [ 100, [[ENTRY]] ], [ 1, [[LATCH]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[I]], [[N:%.*]]
-; CHECK-NEXT:    [[S]] = select i1 [[C]], i64 1, i64 2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 1, i64 2
 ; CHECK-NEXT:    br i1 [[C]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
