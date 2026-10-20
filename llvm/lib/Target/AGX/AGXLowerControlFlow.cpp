@@ -24,7 +24,9 @@
 // ones, whose register may hold anything. Register indices are therefore
 // passed in r0h (like Mesa's agx_lower_divergent_shuffle), which is zero at
 // entry and set back to zero after each shuffle, so the threads that are
-// inactive at a shuffle read zero.
+// inactive at a shuffle read zero. A reset followed in its block by another
+// shuffle index, with no change of the execution mask between them, is left
+// out: the same threads are active at both shuffles.
 //
 //===----------------------------------------------------------------------===//
 
@@ -119,6 +121,39 @@ static bool lowerShuffleIndex(MachineInstr &MI, const AGXInstrInfo &TII) {
           AGX::R0H)
       .addImm(0);
   return true;
+}
+
+/// Remove the r0h resets that the next shuffle index of their block
+/// overwrites before the execution mask can change.
+static void removeRedundantIndexResets(MachineFunction &MF) {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  for (MachineBasicBlock &MBB : MF) {
+    MachineInstr *Reset = nullptr;
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      bool IsReset = MI.getOpcode() == AGX::MOV_IMM16 &&
+                     MI.getOperand(0).getReg() == AGX::R0H &&
+                     MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 0;
+      if (IsReset) {
+        Reset = &MI;
+        continue;
+      }
+      if (!Reset)
+        continue;
+      if (AGXInstrInfo::isExecMaskOp(MI) || MI.isTerminator() || MI.isCall() ||
+          MI.modifiesRegister(AGX::R0L, TRI)) {
+        Reset = nullptr;
+        continue;
+      }
+      if (MI.readsRegister(AGX::R0H, TRI)) {
+        Reset = nullptr;
+        continue;
+      }
+      if (MI.modifiesRegister(AGX::R0H, TRI)) {
+        Reset->eraseFromParent();
+        Reset = nullptr;
+      }
+    }
+  }
 }
 
 bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
@@ -224,6 +259,9 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       MI.eraseFromParent();
     }
   }
+
+  if (HasShuffleIndex)
+    removeRedundantIndexResets(MF);
 
   MachineBasicBlock &Entry = MF.front();
   if (HasShuffleIndex)

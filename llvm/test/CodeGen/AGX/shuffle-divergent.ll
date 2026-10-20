@@ -10,14 +10,17 @@ declare float @llvm.agx.simd.shuffle.f32(float, i32)
 declare float @llvm.agx.simd.shuffle.down.f32(float, i32)
 declare float @llvm.agx.quad.shuffle.f32(float, i32)
 
+; Within a block the execution mask does not change between the four
+; shuffles, so only the last one resets r0h.
 ; CHECK-LABEL: divergent:
 ; CHECK:         mov_imm r0h, 0
+; CHECK-NOT:     mov_imm r0h
 ; CHECK:         simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
-; CHECK-NEXT:    mov_imm r0h, 0
+; CHECK-NOT:     mov_imm r0h
 ; CHECK:         simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
-; CHECK-NEXT:    mov_imm r0h, 0
+; CHECK-NOT:     mov_imm r0h
 ; CHECK:         simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
-; CHECK-NEXT:    mov_imm r0h, 0
+; CHECK-NOT:     mov_imm r0h
 ; CHECK:         simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
 ; CHECK-NEXT:    mov_imm r0h, 0
 ; CHECK-NOT:     simd_shuffle
@@ -88,6 +91,32 @@ define agx_kernel void @known_bits(ptr addrspace(1) %out, float %x) {
   %r = call float @llvm.agx.simd.shuffle.f32(float %x, i32 %idx)
   %idx2 = shl i32 %lane, 2
   %r2 = call float @llvm.agx.simd.shuffle.f32(float %r, i32 %idx2)
+  %p = getelementptr float, ptr addrspace(1) %out, i32 %lane
+  store float %r2, ptr addrspace(1) %p
+  ret void
+}
+
+; A reset before a change of the execution mask stays: the threads inactive
+; in the if must read zero at the shuffle after it.
+; CHECK-LABEL: across_if:
+; CHECK:         simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
+; CHECK-NEXT:    mov_imm r0h, 0
+; CHECK:         pop_exec
+; CHECK:         simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
+; CHECK-NEXT:    mov_imm r0h, 0
+; CHECK:         stop
+define agx_kernel void @across_if(ptr addrspace(1) %out, float %x) {
+entry:
+  %lane = call i32 @llvm.agx.thread.index.in.simdgroup()
+  %idx = shl i32 %lane, 2
+  %c = icmp ult i32 %lane, 5
+  br i1 %c, label %then, label %join
+then:
+  %r = call float @llvm.agx.simd.shuffle.f32(float %x, i32 %idx)
+  br label %join
+join:
+  %v = phi float [ %r, %then ], [ %x, %entry ]
+  %r2 = call float @llvm.agx.simd.shuffle.f32(float %v, i32 %idx)
   %p = getelementptr float, ptr addrspace(1) %out, i32 %lane
   store float %r2, ptr addrspace(1) %p
   ret void
